@@ -6,70 +6,36 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
-class ArgumentOperatorTest extends CypherFunSuite {
+import scala.language.postfixOps
 
-  private val resources = new QueryResources(mock[CursorFactory])
-
-  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+class ArgumentOperatorTest extends MorselUnitTest {
 
   test("should copy argument over and produce a single row") {
-    // Given
+    val given = new Given()
+      .operator(new ArgumentOperator(workId, SlotConfiguration.Size(1, 1)))
+      .inputRow(Longs(1, 2, 3), Refs(Values.stringValue("a")))
+      .inputRow(Longs(4, 5, 6), Refs(Values.stringValue("b")))
+      .inputRow(Longs(7, 8, 9), Refs(Values.stringValue("c")))
+      .output(2 longs)
+      .output(2 refs)
+      .output(1 rows)
 
-    // input data
-    val inputLongs = 3
-    val inputRefs = 1
-    val inputRows = 3
-    val inputMorsel = new Morsel(
-      Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9),
-      Array[AnyValue](Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c")))
-    val inputRow = MorselExecutionContext(inputMorsel, inputLongs, inputRefs, inputRows)
+    var task = given.whenInit().shouldReturnNTasks(1).head
+    task.whenOperate
+        .shouldReturnRow(Longs(1, 0), Refs(Values.stringValue("a"), null))
+        .shouldBeDone()
 
-    // output data
-    val outputLongs = 2
-    val outputRefs = 2
-    val outputMorsel = new Morsel(
-      new Array[Long](outputLongs),
-      new Array[AnyValue](outputRefs))
-    val outputRow = MorselExecutionContext(outputMorsel, outputLongs, outputRefs, 1)
+    task = given.whenInit(rowNum = 1).shouldReturnNTasks(1).head
+    task.whenOperate
+      .shouldReturnRow(Longs(4, 0), Refs(Values.stringValue("b"), null))
+      .shouldBeDone()
 
-    // operator and argument size
-    val operator = new ArgumentOperator(workId, SlotConfiguration.Size(1, 1))
-
-    // When
-    operator.init(null, null, inputRow, resources).operate(outputRow, null, EmptyQueryState(), resources)
-
-    // Then
-    outputMorsel.longs should equal(Array(1, 0))
-    outputMorsel.refs should equal(Array(Values.stringValue("a"), null))
-    outputRow.getValidRows should equal(1)
-
-    // And when
-    inputRow.moveToNextRow()
-    outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow, resources).operate(outputRow, null, EmptyQueryState(), resources)
-
-    // Then
-    outputMorsel.longs should equal(Array(4, 0))
-    outputMorsel.refs should equal(Array(Values.stringValue("b"), null))
-    outputRow.getValidRows should equal(1)
-
-    // And when
-    inputRow.moveToNextRow()
-    outputRow.resetToFirstRow()
-    operator.init(null, null, inputRow, resources).operate(outputRow, null, EmptyQueryState(), resources)
-
-    // Then
-    outputMorsel.longs should equal(Array(7, 0))
-    outputMorsel.refs should equal(Array(Values.stringValue("c"), null))
-    outputRow.getValidRows should equal(1)
+    task = given.whenInit(rowNum = 2).shouldReturnNTasks(1).head
+    task.whenOperate
+      .shouldReturnRow(Longs(7, 0), Refs(Values.stringValue("c"), null))
+      .shouldBeDone()
   }
 
 }

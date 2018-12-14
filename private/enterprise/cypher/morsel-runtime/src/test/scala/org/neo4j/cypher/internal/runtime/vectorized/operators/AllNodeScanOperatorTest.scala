@@ -8,92 +8,45 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
-class AllNodeScanOperatorTest extends CypherFunSuite {
+import scala.language.postfixOps
 
-  private val resources = mock[QueryResources](RETURNS_DEEP_STUBS)
-
-  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+class AllNodeScanOperatorTest extends MorselUnitTest {
 
   test("should copy argument over for every row") {
-    // Given
-
-    // input data
-    val inputLongs = 3
-    val inputRefs = 3
-    val inputRows = 2
-    val inputMorsel = new Morsel(
-      Array[Long](1, 2, 3,
-                  4, 5, 6),
-      Array[AnyValue](Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c"),
-                      Values.stringValue("d"), Values.stringValue("e"), Values.stringValue("f")))
-    val inputRow = MorselExecutionContext(inputMorsel, inputLongs, inputRefs, inputRows)
-
-    // output data (that can fit everything)
-    val outputLongs = 3
-    val outputRefs = 2
-    val outputRows = 5
-    val outputMorsel = new Morsel(
-      new Array[Long](outputLongs * outputRows),
-      new Array[AnyValue](outputRefs * outputRows))
-    val outputRow = MorselExecutionContext(outputMorsel, outputLongs, outputRefs, outputRows)
-
-    // operator and argument size
-    val operator = new AllNodeScanOperator(workId, 2, SlotConfiguration.Size(2, 2))
-
     // mock cursor
     val context = mock[QueryContext](RETURNS_DEEP_STUBS)
-    val cursor1 = mock[NodeCursor]
-    val cursor2 = mock[NodeCursor]
-    when(cursor1.next()).thenReturn(true, true, true, true, true, false)
-    when(cursor2.next()).thenReturn(true, true, true, true, true, false)
-    when(cursor1.nodeReference()).thenReturn(10, 11, 12, 13, 14)
-    when(cursor2.nodeReference()).thenReturn(10, 11, 12, 13, 14)
+    val cursor1 = nodeCursor(10, 11, 12, 13, 14)
+    val cursor2 = nodeCursor(10, 11, 12, 13, 14)
     when(resources.cursorPools.nodeCursorPool.allocate()).thenReturn(cursor1, cursor2)
 
-    // When
-    operator.init(context, null, inputRow, resources).operate(outputRow, context, EmptyQueryState(), resources)
+    val given = new Given()
+      .operator(new AllNodeScanOperator(workId, 2, SlotConfiguration.Size(2, 2)))
+      .inputRow(Longs(1, 2, 3), Refs(Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c")))
+      .inputRow(Longs(4, 5, 6), Refs(Values.stringValue("d"), Values.stringValue("e"), Values.stringValue("f")))
+      .output(3 longs, 2 refs, 6 rows)
+      .context(context)
+      .state(EmptyQueryState())
 
-    // Then
-    outputMorsel.longs should equal(Array(
-      1, 2, 10,
-      1, 2, 11,
-      1, 2, 12,
-      1, 2, 13,
-      1, 2, 14))
-    outputMorsel.refs should equal(Array(
-      Values.stringValue("a"), Values.stringValue("b"),
-      Values.stringValue("a"), Values.stringValue("b"),
-      Values.stringValue("a"), Values.stringValue("b"),
-      Values.stringValue("a"), Values.stringValue("b"),
-      Values.stringValue("a"), Values.stringValue("b")))
-    outputRow.getValidRows should equal(5)
+    val task = given.whenInit().shouldReturnNTasks(1).head
 
-    // And when
-    inputRow.moveToNextRow()
-    outputRow.resetToFirstRow()
-    operator.init(context, null, inputRow, resources).operate(outputRow, context, EmptyQueryState(), resources)
+    task.whenOperate
+      .shouldReturnRow(Longs(1, 2, 10), Refs(Values.stringValue("a"), Values.stringValue("b")))
+      .shouldReturnRow(Longs(1, 2, 11), Refs(Values.stringValue("a"), Values.stringValue("b")))
+      .shouldReturnRow(Longs(1, 2, 12), Refs(Values.stringValue("a"), Values.stringValue("b")))
+      .shouldReturnRow(Longs(1, 2, 13), Refs(Values.stringValue("a"), Values.stringValue("b")))
+      .shouldReturnRow(Longs(1, 2, 14), Refs(Values.stringValue("a"), Values.stringValue("b")))
+      .shouldReturnRow(Longs(4, 5, 10), Refs(Values.stringValue("d"), Values.stringValue("e")))
+      .shouldContinue()
 
-    // Then
-    outputMorsel.longs should equal(Array(
-      4, 5, 10,
-      4, 5, 11,
-      4, 5, 12,
-      4, 5, 13,
-      4, 5, 14))
-    outputMorsel.refs should equal(Array(
-      Values.stringValue("d"), Values.stringValue("e"),
-      Values.stringValue("d"), Values.stringValue("e"),
-      Values.stringValue("d"), Values.stringValue("e"),
-      Values.stringValue("d"), Values.stringValue("e"),
-      Values.stringValue("d"), Values.stringValue("e")))
-    outputRow.getValidRows should equal(5)
+    task.whenOperate
+      .shouldReturnRow(Longs(4, 5, 11), Refs(Values.stringValue("d"), Values.stringValue("e")))
+      .shouldReturnRow(Longs(4, 5, 12), Refs(Values.stringValue("d"), Values.stringValue("e")))
+      .shouldReturnRow(Longs(4, 5, 13), Refs(Values.stringValue("d"), Values.stringValue("e")))
+      .shouldReturnRow(Longs(4, 5, 14), Refs(Values.stringValue("d"), Values.stringValue("e")))
+      .shouldBeDone()
   }
 
 }

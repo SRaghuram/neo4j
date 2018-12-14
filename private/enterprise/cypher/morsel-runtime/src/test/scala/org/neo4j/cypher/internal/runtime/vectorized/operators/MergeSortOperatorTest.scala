@@ -7,270 +7,295 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.LongSlot
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
-import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTNode
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.values.AnyValue
 
-class MergeSortOperatorTest extends CypherFunSuite {
+import scala.language.postfixOps
 
-  private val resources = new QueryResources(mock[CursorFactory])
+class MergeSortOperatorTest extends MorselUnitTest {
 
-  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
-
-  test("sort a single morsel") {
-    val numberOfLongs = 1
-    val numberOfReferences = 0
+  test("merge sort a single sorted morsel") {
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
+    val input = new Input()
+      .row(Longs(1))
+      .row(Longs(2))
+      .row(Longs(3))
+      .row(Longs(4))
+      .row(Longs(5))
+      .row(Longs(6))
+      .row(Longs(7))
+      .row(Longs(8))
+      .row(Longs(9))
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering))
+      .addInput(input)
+      .output(1 longs)
+      .output(0 refs)
+      .output(9 rows)
 
-    val longs = Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9)
-    val in = new Morsel(longs, Array[AnyValue]())
-    val out = new Morsel(new Array[Long](longs.length), Array[AnyValue]())
-
-    val operator = new MergeSortOperator(workId, columnOrdering)
-    val task = operator.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences, longs.length)), resources)
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, longs.length), null, null, resources)
-    task.canContinue should be(false)
-    out.longs should equal(longs)
+    given.whenInit().whenOperate
+      .shouldReturnRow(Longs(1)).shouldReturnRow(Longs(2)).shouldReturnRow(Longs(3)).shouldReturnRow(Longs(4)).shouldReturnRow(Longs(5))
+      .shouldReturnRow(Longs(6)).shouldReturnRow(Longs(7)).shouldReturnRow(Longs(8)).shouldReturnRow(Longs(9))
+      .shouldBeDone()
   }
 
   test("top on a single morsel") {
-    val numberOfLongs = 1
-    val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
+    val input = new Input()
+      .row(Longs(1))
+      .row(Longs(2))
+      .row(Longs(3))
+      .row(Longs(4))
+      .row(Longs(5))
+      .row(Longs(6))
+      .row(Longs(7))
+      .row(Longs(8))
+      .row(Longs(9))
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering, Some(Literal(3))))
+      .addInput(input)
+      .output(1 longs)
+      .output(0 refs)
+      .output(9 rows)
+      .state(EmptyQueryState())
 
-    val longs = Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9)
-    val in = new Morsel(longs, Array[AnyValue]())
-    val out = new Morsel(new Array[Long](longs.length), Array[AnyValue]())
-
-    val operator = new MergeSortOperator(workId, columnOrdering, Some(Literal(3)))
-    val inputRow = MorselExecutionContext(in, numberOfLongs, numberOfReferences, longs.length)
-    val task = operator.init(null, EmptyQueryState(), Array(inputRow), resources)
-    val outputRow = MorselExecutionContext(out, numberOfLongs, numberOfReferences, longs.length)
-    task.operate(outputRow, null, EmptyQueryState(), resources)
-    task.canContinue should be(false)
-    out.longs.take(3) should equal(Array[Long](1, 2, 3))
-    outputRow.getValidRows shouldBe 3
+    given.whenInit().whenOperate
+      .shouldReturnRow(Longs(1)).shouldReturnRow(Longs(2)).shouldReturnRow(Longs(3))
+      .shouldBeDone()
   }
 
-  test("sort two morsels") {
-    val numberOfLongs = 1
-    val numberOfReferences = 0
+  test("merge sort two sorted morsels") {
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
+    val input1 = new Input()
+      .row(Longs(1))
+      .row(Longs(2))
+      .row(Longs(3))
+      .row(Longs(4))
+      .row(Longs(6))
+      .row(Longs(7))
+      .row(Longs(8))
+      .row(Longs(9))
+    val input2 = new Input()
+      .row(Longs(5))
+      .row(Longs(7))
+      .row(Longs(9))
+      .row(Longs(14))
+      .row(Longs(86))
+      .row(Longs(92))
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering))
+      .addInput(input1)
+      .addInput(input2)
+      .output(1 longs)
+      .output(0 refs)
+      .output(5 rows)
 
-    val long1 = Array[Long](1, 2, 3, 4, 6, 7, 8, 9)
-    val long2 = Array[Long](5, 7, 9, 14, 86, 92)
-    val in1 = new Morsel(long1, Array[AnyValue]())
-    val in2 = new Morsel(long2, Array[AnyValue]())
-    val out = new Morsel(new Array[Long](5), Array[AnyValue]())
+    val task = given.whenInit()
 
-    val operator = new MergeSortOperator(workId, columnOrdering)
+    task.whenOperate
+      .shouldReturnRow(Longs(1)).shouldReturnRow(Longs(2)).shouldReturnRow(Longs(3)).shouldReturnRow(Longs(4)).shouldReturnRow(Longs(5))
+      .shouldContinue()
 
-    val task = operator.init(null, null, Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences, long1.length),
-                                                                  MorselExecutionContext(in2, numberOfLongs, numberOfReferences, long2.length)), resources)
-    val outputRow1 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, 5)
-    task.operate(outputRow1, null, null, resources)
-    task.canContinue should be(true)
-    out.longs should equal(Array(1, 2, 3, 4, 5))
-    outputRow1.getValidRows shouldBe 5
+    task.whenOperate
+      .shouldReturnRow(Longs(6)).shouldReturnRow(Longs(7)).shouldReturnRow(Longs(7)).shouldReturnRow(Longs(8)).shouldReturnRow(Longs(9))
+      .shouldContinue()
 
-    val outputRow2 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, 5)
-    task.operate(outputRow2, null, null, resources)
-    task.canContinue should be(true)
-    out.longs should equal(Array(6, 7, 7, 8, 9))
-    outputRow2.getValidRows shouldBe 5
-
-    val outputRow3 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, 5)
-    task.operate(outputRow3, null, null, resources)
-    task.canContinue should be(false)
-    out.longs.take(4) should equal(Array(9, 14, 86,92))
-    outputRow3.getValidRows shouldBe 4
+    task.whenOperate
+      .shouldReturnRow(Longs(9)).shouldReturnRow(Longs(14)).shouldReturnRow(Longs(86)).shouldReturnRow(Longs(92))
+      .shouldBeDone()
   }
 
-  test("sort two morsels with additional column") {
-    val numberOfLongs = 2
-    val numberOfReferences = 0
-
+  test("merge sort two sorted morsels with additional column") {
     val slot1 = LongSlot(0, nullable = false, CTNode)
-    val slot2 = LongSlot(1, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot1))
 
-    val long1 = Array[Long](
-      1, 101,
-      3, 103,
-      5, 105,
-      7, 107,
-      9, 109
-    )
-    val long2 = Array[Long](
-      2, 102,
-      4, 104,
-      6, 106,
-      8, 108,
-      10, 110
-    )
-    val length1 = long1.length / numberOfLongs
-    val length2 = long2.length / numberOfLongs
-    val in1 = new Morsel(long1, Array[AnyValue]())
-    val in2 = new Morsel(long2, Array[AnyValue]())
+    val input1 = new Input()
+      .row(Longs(1, 101))
+      .row(Longs(3, 103))
+      .row(Longs(5, 105))
+      .row(Longs(7, 107))
+      .row(Longs(9, 109))
+    val input2 = new Input()
+      .row(Longs(2, 102))
+      .row(Longs(4, 104))
+      .row(Longs(6, 106))
+      .row(Longs(8, 108))
+      .row(Longs(10, 110))
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering))
+      .addInput(input1)
+      .addInput(input2)
+      .output(2 longs)
+      .output(0 refs)
+      .output(4 rows)
 
-    val outputRowsPerMorsel = 4
-    val out = new Morsel(new Array[Long](numberOfLongs * outputRowsPerMorsel), Array[AnyValue]())
+    val task = given.whenInit()
 
-    val operator = new MergeSortOperator(workId, columnOrdering)
+    task.whenOperate
+      .shouldReturnRow(Longs(1, 101))
+      .shouldReturnRow(Longs(2, 102))
+      .shouldReturnRow(Longs(3, 103))
+      .shouldReturnRow(Longs(4, 104))
+      .shouldContinue()
 
-    val task = operator.init(null, null,
-      Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences, length1),
-            MorselExecutionContext(in2, numberOfLongs, numberOfReferences, length2)), resources)
-    val outputRow1 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, outputRowsPerMorsel)
-    task.operate(outputRow1, null, null, resources)
-    task.canContinue should be(true)
-    out.longs should equal(Array(1, 101, 2, 102, 3, 103, 4, 104))
-    outputRow1.getValidRows shouldBe outputRowsPerMorsel
+    task.whenOperate
+      .shouldReturnRow(Longs(5, 105))
+      .shouldReturnRow(Longs(6, 106))
+      .shouldReturnRow(Longs(7, 107))
+      .shouldReturnRow(Longs(8, 108))
+      .shouldContinue()
 
-    val outputRow2 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, outputRowsPerMorsel)
-    task.operate(outputRow2, null, null, resources)
-    task.canContinue should be(true)
-    out.longs should equal(Array(5, 105, 6, 106, 7, 107, 8, 108))
-    outputRow2.getValidRows shouldBe outputRowsPerMorsel
-
-    val outputRow3 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, outputRowsPerMorsel)
-    task.operate(outputRow3, null, null, resources)
-    task.canContinue should be(false)
-    out.longs.take(4) should equal(Array(9, 109, 10, 110))
-    outputRow3.getValidRows shouldBe 2
+    task.whenOperate
+      .shouldReturnRow(Longs(9, 109))
+      .shouldReturnRow(Longs(10, 110))
+      .shouldBeDone()
   }
 
-  test("sort two morsels by two columns") {
-    val numberOfLongs = 2
-    val numberOfReferences = 0
-
+  test("merge sort two sorted morsels by two columns") {
     val slot1 = LongSlot(0, nullable = false, CTNode)
     val slot2 = LongSlot(1, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot1), Ascending(slot2))
 
-    val long1 = Array[Long](
-      1, 101,
-      1, 102,
-      2, 202,
-      5, 501,
-      7, 701
-    )
-    val long2 = Array[Long](
-      1, 103,
-      2, 201,
-      3, 301,
-      5, 502,
-      5, 503
-    )
-    val length1 = long1.length / numberOfLongs
-    val length2 = long2.length / numberOfLongs
-    val in1 = new Morsel(long1, Array[AnyValue]())
-    val in2 = new Morsel(long2, Array[AnyValue]())
+    val input1 = new Input()
+      .row(Longs(1, 101))
+      .row(Longs(1, 102))
+      .row(Longs(2, 202))
+      .row(Longs(5, 501))
+      .row(Longs(7, 701))
+    val input2 = new Input()
+      .row(Longs(1, 103))
+      .row(Longs(2, 201))
+      .row(Longs(3, 301))
+      .row(Longs(5, 502))
+      .row(Longs(5, 503))
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering))
+      .addInput(input1)
+      .addInput(input2)
+      .output(2 longs, 0 refs, 4 rows)
 
-    val outputRowsPerMorsel = 4
-    val out = new Morsel(new Array[Long](numberOfLongs * outputRowsPerMorsel), Array[AnyValue]())
+    val task = given.whenInit()
 
-    val operator = new MergeSortOperator(workId, columnOrdering)
+    task.whenOperate
+      .shouldReturnRow(Longs(1, 101))
+      .shouldReturnRow(Longs(1, 102))
+      .shouldReturnRow(Longs(1, 103))
+      .shouldReturnRow(Longs(2, 201))
+      .shouldContinue()
 
-    val task = operator.init(null, null,
-      Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences, length1),
-            MorselExecutionContext(in2, numberOfLongs, numberOfReferences, length2)), resources)
-    val outputRow1 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, outputRowsPerMorsel)
-    task.operate(outputRow1, null, null, resources)
-    task.canContinue should be(true)
-    out.longs should equal(Array(1, 101, 1, 102, 1, 103, 2, 201))
-    outputRow1.getValidRows shouldBe outputRowsPerMorsel
+    task.whenOperate
+      .shouldReturnRow(Longs(2, 202))
+      .shouldReturnRow(Longs(3, 301))
+      .shouldReturnRow(Longs(5, 501))
+      .shouldReturnRow(Longs(5, 502))
+      .shouldContinue()
 
-    val outputRow2 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, outputRowsPerMorsel)
-    task.operate(outputRow2, null, null, resources)
-    task.canContinue should be(true)
-    out.longs should equal(Array(2, 202, 3, 301, 5, 501, 5, 502))
-    outputRow2.getValidRows shouldBe outputRowsPerMorsel
-
-    val outputRow3 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, outputRowsPerMorsel)
-    task.operate(outputRow3, null, null, resources)
-    task.canContinue should be(false)
-    out.longs.take(4) should equal(Array(5, 503, 7, 701))
-    outputRow3.getValidRows shouldBe 2
+    task.whenOperate
+      .shouldReturnRow(Longs(5, 503))
+      .shouldReturnRow(Longs(7, 701))
+      .shouldBeDone()
   }
 
   test("top on two morsels") {
-    val numberOfLongs = 1
-    val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
+    val input1 = new Input()
+      .row(Longs(1))
+      .row(Longs(2))
+      .row(Longs(3))
+      .row(Longs(4))
+      .row(Longs(6))
+      .row(Longs(7))
+      .row(Longs(8))
+      .row(Longs(9))
+    val input2 = new Input()
+      .row(Longs(5))
+      .row(Longs(7))
+      .row(Longs(9))
+      .row(Longs(14))
+      .row(Longs(86))
+      .row(Longs(92))
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering, Some(Literal(9))))
+      .addInput(input1)
+      .addInput(input2)
+      .output(1 longs)
+      .output(0 refs)
+      .output(5 rows)
+      .state(EmptyQueryState())
 
-    val long1 = Array[Long](1, 2, 3, 4, 6, 7, 8, 9)
-    val long2 = Array[Long](5, 7, 9, 14, 86, 92)
-    val length1 = long1.length
-    val length2 = long2.length
-    val in1 = new Morsel(long1, Array[AnyValue]())
-    val in2 = new Morsel(long2, Array[AnyValue]())
-    val out = new Morsel(new Array[Long](5), Array[AnyValue]())
+    val task = given.whenInit()
 
-    val operator = new MergeSortOperator(workId, columnOrdering, Some(Literal(9)))
+    task.whenOperate
+      .shouldReturnRow(Longs(1)).shouldReturnRow(Longs(2)).shouldReturnRow(Longs(3)).shouldReturnRow(Longs(4)).shouldReturnRow(Longs(5))
+      .shouldContinue()
 
-    val task = operator.init(null, EmptyQueryState(),
-      Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences, length1),
-            MorselExecutionContext(in2, numberOfLongs, numberOfReferences, length2)), resources)
-    val outputRow = MorselExecutionContext(out, numberOfLongs, numberOfReferences, 5)
-    task.operate(outputRow, null, EmptyQueryState(), resources)
-    task.canContinue should be(true)
-    out.longs should equal(Array(1, 2, 3, 4, 5))
-    outputRow.getValidRows shouldBe 5
-
-    val outputRow2 = MorselExecutionContext(out, numberOfLongs, numberOfReferences, 5)
-    task.operate(outputRow2, null, EmptyQueryState(), resources)
-    task.canContinue should be(false)
-    out.longs.take(4) should equal(Array(6, 7, 7, 8))
-    outputRow2.getValidRows shouldBe 4
+    task.whenOperate
+      .shouldReturnRow(Longs(6)).shouldReturnRow(Longs(7)).shouldReturnRow(Longs(7)).shouldReturnRow(Longs(8))
+      .shouldBeDone()
   }
 
   test("sort two morsels with one empty array") {
-    val numberOfLongs = 1
-    val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
+    val input1 = new Input()
+      .row(Longs(1))
+      .row(Longs(2))
+      .row(Longs(3))
+      .row(Longs(4))
+      .row(Longs(5))
+      .row(Longs(6))
+      .row(Longs(7))
+      .row(Longs(8))
+      .row(Longs(9))
+    val input2 = new Input()
+      .noRows(1,0)
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering))
+      .addInput(input1)
+      .addInput(input2)
+      .output(1 longs)
+      .output(0 refs)
+      .output(9 rows)
 
-    val long1 = Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9)
-    val long2 = Array.empty[Long]
-    val in1 = new Morsel(long1, Array[AnyValue]())
-    val in2 = new Morsel(long2, Array[AnyValue]())
-    val out = new Morsel(new Array[Long](9), Array[AnyValue]())
+    val task = given.whenInit()
 
-    val operator = new MergeSortOperator(workId, columnOrdering)
-    val task = operator.init(null, null,
-      Array(MorselExecutionContext(in1, numberOfLongs, numberOfReferences, long1.length),
-            MorselExecutionContext(in2, numberOfLongs, numberOfReferences, long2.length)), resources)
-    task.operate(MorselExecutionContext(out, numberOfLongs, numberOfReferences, 9), null, null, resources)
-    task.canContinue should be(false)
-    out.longs should equal(long1)
+    task.whenOperate
+      .shouldReturnRow(Longs(1)).shouldReturnRow(Longs(2)).shouldReturnRow(Longs(3)).shouldReturnRow(Longs(4)).shouldReturnRow(Longs(5))
+      .shouldReturnRow(Longs(6)).shouldReturnRow(Longs(7)).shouldReturnRow(Longs(8)).shouldReturnRow(Longs(9))
+      .shouldBeDone()
   }
 
   test("sort with too many output slots") {
-    val numberOfLongs = 1
-    val numberOfReferences = 0
     val slot = LongSlot(0, nullable = false, CTNode)
     val columnOrdering = Seq(Ascending(slot))
+    val input = new Input()
+      .row(Longs(1))
+      .row(Longs(2))
+      .row(Longs(3))
+      .row(Longs(4))
+      .row(Longs(5))
+      .row(Longs(6))
+      .row(Longs(7))
+      .row(Longs(8))
+      .row(Longs(9))
+    val given = new Given()
+      .operator(new MergeSortOperator(workId, columnOrdering))
+      .addInput(input)
+      .output(1 longs)
+      .output(0 refs)
+      .output(14 rows)
 
-    val longs = Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9)
-    val in = new Morsel(longs, Array[AnyValue]())
-    val out = new Morsel(new Array[Long](longs.length + 5), Array[AnyValue]())
+    val task = given.whenInit()
 
-    val operator = new MergeSortOperator(workId, columnOrdering)
-    val task = operator.init(null, null, Array(MorselExecutionContext(in, numberOfLongs, numberOfReferences, longs.length)), resources)
-    val outputRow = MorselExecutionContext(out, numberOfLongs, numberOfReferences, longs.length + 5)
-    task.operate(outputRow, null, null, resources)
-    task.canContinue should be(false)
-    out.longs should equal(Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0))
-    outputRow.getValidRows should equal(longs.length)
+    task.whenOperate
+      .shouldReturnRow(Longs(1)).shouldReturnRow(Longs(2)).shouldReturnRow(Longs(3)).shouldReturnRow(Longs(4)).shouldReturnRow(Longs(5))
+      .shouldReturnRow(Longs(6)).shouldReturnRow(Longs(7)).shouldReturnRow(Longs(8)).shouldReturnRow(Longs(9))
+      .shouldBeDone()
   }
 
 }

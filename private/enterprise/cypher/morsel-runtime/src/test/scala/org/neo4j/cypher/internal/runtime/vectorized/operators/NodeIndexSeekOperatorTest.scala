@@ -6,27 +6,29 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.mockito.Mockito.when
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlottedIndexedProperty
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{ListLiteral, Literal}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexMockingHelp, LockingUniqueIndexSeek}
-import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext, QueryResources}
-import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, PropertyKeyName, PropertyKeyToken}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ListLiteral
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexMockingHelp
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockingUniqueIndexSeek
+import org.neo4j.cypher.internal.runtime.vectorized.EmptyQueryState
+import org.neo4j.cypher.internal.v4_0.expressions.LabelName
+import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
+import org.neo4j.cypher.internal.v4_0.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.v4_0.expressions.PropertyKeyToken
 import org.neo4j.cypher.internal.v4_0.logical.plans._
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTNode}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
-import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.values.AnyValue
+import org.neo4j.cypher.internal.v4_0.util.LabelId
+import org.neo4j.cypher.internal.v4_0.util.PropertyKeyId
+import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
+import org.neo4j.cypher.internal.v4_0.util.symbols.CTNode
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.NodeValue
 
-class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos with IndexMockingHelp {
+import scala.language.postfixOps
 
-  private val resources = new QueryResources(mock[CursorFactory])
-
-  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+class NodeIndexSeekOperatorTest extends MorselUnitTest with ImplicitDummyPos with IndexMockingHelp {
 
   private val label = LabelToken(LabelName("LabelName") _, LabelId(11))
   private val propertyKey = Seq(PropertyKeyToken(PropertyKeyName("PropertyName") _, PropertyKeyId(10)))
@@ -47,39 +49,23 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       Seq("bye") -> Seq(nodeValueHit(node2, "bye"))
     )
 
-    // input data
-    val inputRow = MorselExecutionContext.createSingleRow()
-
-    // output data
-    val numberOfLongs = 1
-    val numberOfReferences = 1
-    val outputRows = 2
-    val outputMorsel =  new Morsel(
-      new Array[Long](numberOfLongs * outputRows),
-      new Array[AnyValue](numberOfReferences * outputRows))
-    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences, outputRows)
-
-    // operator
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
-      ManyQueryExpression(ListLiteral(
-        Literal("hello"),
-        Literal("bye")
+    val given = new Given()
+      .operator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+        ManyQueryExpression(ListLiteral(Literal("hello"), Literal("bye")))
       ))
-    )
+      .inputRow()
+      .output(1 longs, 1 refs, 3 rows)
+      .context(queryContext)
+      .state(EmptyQueryState())
 
-    // When
-    operator.init(queryContext, EmptyQueryState(), inputRow, resources).operate(outputRow, queryContext, EmptyQueryState(), resources)
-
-    // then
-    outputMorsel.longs should equal(Array(
-      node.id, node2.id))
-    outputMorsel.refs should equal(Array(
-      Values.stringValue("hello"), Values.stringValue("bye")))
-    outputRow.getValidRows should equal(2)
-
+    val task = given.whenInit().shouldReturnNTasks(1).head
+    task.whenOperate
+      .shouldReturnRow(Longs(node.id), Refs(Values.stringValue("hello")))
+      .shouldReturnRow(Longs(node2.id), Refs(Values.stringValue("bye")))
+      .shouldBeDone()
   }
 
   test("should use composite index provided values when available") {
@@ -89,42 +75,31 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
       Seq("bye", "cruel") -> Seq(nodeValueHit(node2, "bye", "cruel"))
     )
 
-    // input data
-    val inputRow = MorselExecutionContext.createSingleRow()
-
-    // output data
-    val numberOfLongs = 1
-    val numberOfReferences = 2
-    val outputRows = 2
-    val outputMorsel = new Morsel(
-      new Array[Long](numberOfLongs * outputRows),
-      new Array[AnyValue](numberOfReferences * outputRows))
-    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences, outputRows)
-
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKeys(0).name, nullable = false, CTAny)
       .newReference("n." + propertyKeys(1).name, nullable = false, CTAny)
     val properties = propertyKeys.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
-    val operator = new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
-      CompositeQueryExpression(Seq(
-        ManyQueryExpression(ListLiteral(
-          Literal("hello"), Literal("bye")
-        )),
-        ManyQueryExpression(ListLiteral(
-          Literal("world"), Literal("cruel")
-        ))))
-    )
-    // When
-    operator.init(queryContext, EmptyQueryState(), inputRow, resources).operate(outputRow, queryContext, EmptyQueryState(), resources)
 
-    // then
-    outputMorsel.longs should equal(Array(
-      node.id,
-      node2.id))
-    outputMorsel.refs should equal(Array(
-      Values.stringValue("hello"), Values.stringValue("world"),
-      Values.stringValue("bye"), Values.stringValue("cruel")))
-    outputRow.getValidRows should equal(2)
+    val given = new Given()
+      .operator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+        CompositeQueryExpression(Seq(
+          ManyQueryExpression(ListLiteral(
+            Literal("hello"), Literal("bye")
+          )),
+          ManyQueryExpression(ListLiteral(
+            Literal("world"), Literal("cruel")
+          ))))
+      ))
+      .inputRow()
+      .output(1 longs, 2 refs, 3 rows)
+      .context(queryContext)
+      .state(EmptyQueryState())
+
+    val task = given.whenInit().shouldReturnNTasks(1).head
+    task.whenOperate
+      .shouldReturnRow(Longs(node.id), Refs(Values.stringValue("hello"), Values.stringValue("world")))
+      .shouldReturnRow(Longs(node2.id), Refs(Values.stringValue("bye"), Values.stringValue("cruel")))
+      .shouldBeDone()
   }
 
   test("should use locking unique index provided values when available") {
@@ -134,35 +109,23 @@ class NodeIndexSeekOperatorTest extends CypherFunSuite with ImplicitDummyPos wit
         Seq("world") -> Seq(nodeValueHit(node2, "bye"))
     )
 
-    // input data
-    val inputRow = MorselExecutionContext.createSingleRow()
-
-    // output data
-    val numberOfLongs = 1
-    val numberOfReferences = 1
-    val outputRows = 2
-    val outputMorsel = new Morsel(
-      new Array[Long](numberOfLongs * outputRows),
-      new Array[AnyValue](numberOfReferences * outputRows))
-    val outputRow = MorselExecutionContext(outputMorsel, numberOfLongs, numberOfReferences, outputRows)
-
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
 
-    val operator = new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
-      ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek)
+    val given = new Given()
+      .operator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+        ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek)
+      )
+      .inputRow()
+      .output(1 longs, 1 refs, 3 rows)
+      .context(queryContext)
+      .state(EmptyQueryState())
 
-    // When
-    operator.init(queryContext, EmptyQueryState(), inputRow, resources).operate(outputRow, queryContext, EmptyQueryState(), resources)
-
-
-    // then
-    outputMorsel.longs should equal(Array(
-      node.id,
-      node2.id))
-    outputMorsel.refs should equal(Array(
-      Values.stringValue("hello"), Values.stringValue("bye")))
-    outputRow.getValidRows should equal(2)
+    val task = given.whenInit().shouldReturnNTasks(1).head
+    task.whenOperate
+      .shouldReturnRow(Longs(node.id), Refs(Values.stringValue("hello")))
+      .shouldReturnRow(Longs(node2.id), Refs(Values.stringValue("bye")))
+      .shouldBeDone()
   }
 }

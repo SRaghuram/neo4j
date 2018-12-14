@@ -5,54 +5,49 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.runtime.parallel.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.vectorized.{EmptyQueryState, Morsel, MorselExecutionContext, QueryResources}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.values.AnyValue
+import org.neo4j.cypher.internal.runtime.vectorized.EmptyQueryState
 import org.neo4j.values.storable.Values
 
-class AggregationMapperOperatorNoGroupingTest extends CypherFunSuite {
-
-  private val resources = new QueryResources(mock[CursorFactory])
-
-  private val workId: WorkIdentity = WorkIdentityImpl(42, "Work Identity Description")
+class AggregationMapperOperatorNoGroupingTest extends MorselUnitTest {
 
   test("single aggregation on a single morsel") {
-    // Given
-    val numberOfLongs = 1
-    val numberOfReferences = 1
-    val aggregation = new AggregationMapperOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
-    val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)
-    val refs = new Array[AnyValue](10)
-    val data = new Morsel(longs, refs)
+    val given = new Given()
+      .operator(new AggregationMapperOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0)))))
+      .state(EmptyQueryState())
+      .inputRow(Longs(0), Refs(Values.NO_VALUE))
+      .inputRow(Longs(1), Refs(Values.NO_VALUE))
+      .inputRow(Longs(2), Refs(Values.NO_VALUE))
+      .inputRow(Longs(3), Refs(Values.NO_VALUE))
+      .inputRow(Longs(4), Refs(Values.NO_VALUE))
+      .inputRow(Longs(5), Refs(Values.NO_VALUE))
+      .inputRow(Longs(6), Refs(Values.NO_VALUE))
+      .inputRow(Longs(7), Refs(Values.NO_VALUE))
+      .inputRow(Longs(8), Refs(Values.NO_VALUE))
+      .inputRow(Longs(9), Refs(Values.NO_VALUE))
 
-    // When
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, longs.length), null, EmptyQueryState(), resources)
-
-    // Then
-    data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
+    given.whenOperate()
+        .shouldReturnRow(Longs(0), Refs(Values.longArray(Array(0,2,4,6,8))))
+        .shouldBeDone()
   }
 
   test("multiple aggregations on a single morsel") {
-    val numberOfLongs = 2
-    val numberOfReferences = 1
-
     val aggregation = new AggregationMapperOperatorNoGrouping(
       workId,
       Array(
         AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0)),
         AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(1))
       ))
+    val given = new Given()
+      .operator(aggregation)
+      .state(EmptyQueryState())
+      .inputRow(Longs(0, 1), Refs(Values.NO_VALUE))
+      .inputRow(Longs(2, 3), Refs(Values.NO_VALUE))
+      .inputRow(Longs(4, 5), Refs(Values.NO_VALUE))
+      .inputRow(Longs(6, 7), Refs(Values.NO_VALUE))
+      .inputRow(Longs(8, 9), Refs(Values.NO_VALUE))
 
-    //this is interpreted as n1,n2,n1,n2...
-    val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)
-    val refs = new Array[AnyValue](5)
-    val data = new Morsel(longs, refs)
-
-    aggregation.operate(MorselExecutionContext(data, numberOfLongs, numberOfReferences, validRows = 5), null, EmptyQueryState(), resources)
-
-    data.refs(0) should equal(Values.longArray(Array(0,2,4,6,8)))
-    data.refs(1) should equal(Values.longArray(Array.empty))
+    given.whenOperate()
+      .shouldReturnRow(Longs(0, 1), Refs(Values.longArray(Array(0,2,4,6,8))))
+      .shouldBeDone()
   }
 }
