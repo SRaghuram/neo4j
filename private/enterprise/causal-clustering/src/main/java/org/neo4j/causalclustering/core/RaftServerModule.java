@@ -23,7 +23,6 @@ import org.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolServerI
 import org.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import org.neo4j.causalclustering.core.server.CoreServerModule;
 import org.neo4j.causalclustering.core.state.RaftMessageApplier;
-import org.neo4j.causalclustering.error_handling.PanicService;
 import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.causalclustering.logging.MessageLogger;
@@ -55,8 +54,10 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_in_q
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_in_queue_size;
 import static org.neo4j.kernel.recovery.Recovery.recoveryRequiredChecker;
 
-class RaftServerModule
+public class RaftServerModule
 {
+    public static final String RAFT_SERVER_NAME = "raft-server";
+
     private final PlatformModule platformModule;
     private final ConsensusModule consensusModule;
     private final IdentityModule identityModule;
@@ -121,7 +122,8 @@ class RaftServerModule
         ListenSocketAddress raftListenAddress = platformModule.config.get( CausalClusteringSettings.raft_listen_address );
         Executor raftServerExecutor = platformModule.jobScheduler.executor( Group.RAFT_SERVER );
         Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider, platformModule.logService.getUserLogProvider(),
-                raftListenAddress, "raft-server", raftServerExecutor );
+                raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor );
+        platformModule.dependencies.satisfyDependency( raftServer ); // resolved in tests
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =
                 new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );
