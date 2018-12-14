@@ -210,7 +210,6 @@ public class BoltFailuresIT
         // it is not allowed to throw exceptions from monitors
         // make the given sessionMonitor be returned as is, without any proxying
         when( monitors.newMonitor( BoltConnectionMetricsMonitor.class ) ).thenReturn( sessionMonitor );
-        when( monitors.hasListeners( BoltConnectionMetricsMonitor.class ) ).thenReturn( true );
         return monitors;
     }
 
