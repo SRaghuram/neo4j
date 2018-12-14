@@ -6,7 +6,7 @@
 package org.neo4j.upgrade;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
@@ -31,7 +31,7 @@ public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
     @Parameterized.Parameters( name = "{0}" )
     public static Collection<RecordFormats> versions()
     {
-        return singletonList( HighLimitV3_0_0.RECORD_FORMATS );
+        return singletonList( HighLimitV3_4_0.RECORD_FORMATS );
     }
 
     @Override
@@ -59,9 +59,9 @@ public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
 
     private static File findFormatStoreDirectoryForVersion( String version, File databaseDirectory ) throws IOException
     {
-        if ( version.equals( HighLimitV3_0_0.STORE_VERSION ) )
+        if ( version.equals( HighLimitV3_4_0.STORE_VERSION ) )
         {
-            return highLimit3_0Store( databaseDirectory );
+            return highLimit3_4Store( databaseDirectory );
         }
         else
         {
@@ -69,8 +69,8 @@ public class EnterpriseStoreUpgraderTest extends StoreUpgraderTest
         }
     }
 
-    private static File highLimit3_0Store( File databaseDirectory ) throws IOException
+    private static File highLimit3_4Store( File databaseDirectory ) throws IOException
     {
-        return Unzip.unzip( EnterpriseStoreUpgraderTest.class, "upgradeTest30HighLimitDb.zip", databaseDirectory );
+        return Unzip.unzip( EnterpriseStoreUpgraderTest.class, "upgradeTest34HighLimitDb.zip", databaseDirectory );
     }
 }

@@ -5,7 +5,6 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit;
 
-import com.neo4j.kernel.impl.store.format.highlimit.v300.PropertyRecordFormatV3_0_0;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -166,30 +165,30 @@ public class PropertyRecordFormatTest
         verifySameReferences( source, target);
     }
 
-    @Test
-    public void readSingleUnitRecordStoredNotInFixedReferenceFormat()
-    {
-        PropertyRecord oldFormatRecord = new PropertyRecord( 1 );
-        PropertyRecord newFormatRecord = new PropertyRecord( 1 );
-        oldFormatRecord.initialize( true, randomFixedReference(), randomFixedReference() );
+//    @Test
+//    public void readSingleUnitRecordStoredNotInFixedReferenceFormat()
+//    {
+//        PropertyRecord oldFormatRecord = new PropertyRecord( 1 );
+//        PropertyRecord newFormatRecord = new PropertyRecord( 1 );
+//        oldFormatRecord.initialize( true, randomFixedReference(), randomFixedReference() );
+//
+//        writeRecordWithOldFormat( oldFormatRecord );
+//
+//        assertFalse( "This should be single unit record.", oldFormatRecord.hasSecondaryUnitId() );
+//        assertFalse( "Old format is not aware about fixed references.", oldFormatRecord.isUseFixedReferences() );
+//
+//        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, PropertyRecordFormat.RECORD_SIZE );
+//        verifySameReferences( oldFormatRecord, newFormatRecord );
+//    }
 
-        writeRecordWithOldFormat( oldFormatRecord );
-
-        assertFalse( "This should be single unit record.", oldFormatRecord.hasSecondaryUnitId() );
-        assertFalse( "Old format is not aware about fixed references.", oldFormatRecord.isUseFixedReferences() );
-
-        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, PropertyRecordFormat.RECORD_SIZE );
-        verifySameReferences( oldFormatRecord, newFormatRecord );
-    }
-
-    private void writeRecordWithOldFormat( PropertyRecord oldFormatRecord )
-    {
-        int oldRecordSize = PropertyRecordFormatV3_0_0.RECORD_SIZE;
-        PropertyRecordFormatV3_0_0 recordFormatV30 = new PropertyRecordFormatV3_0_0();
-        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence );
-        recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize );
-        pageCursor.setOffset( 0 );
-    }
+//    private void writeRecordWithOldFormat( PropertyRecord oldFormatRecord )
+//    {
+//        int oldRecordSize = PropertyRecordFormatV3_0_0.RECORD_SIZE;
+//        PropertyRecordFormatV3_0_0 recordFormatV30 = new PropertyRecordFormatV3_0_0();
+//        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence );
+//        recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize );
+//        pageCursor.setOffset( 0 );
+//    }
 
     private void verifySameReferences( PropertyRecord recordA, PropertyRecord recordB )
     {

@@ -5,7 +5,7 @@
  */
 package org.neo4j.commandline.dbms;
 
-import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -60,7 +60,7 @@ class StoreInfoCommandEnterpriseTest
     @Test
     void readsEnterpriseStoreVersionCorrectly() throws Exception
     {
-        prepareNeoStoreFile( HighLimitV3_0_0.RECORD_FORMATS.storeVersion() );
+        prepareNeoStoreFile( HighLimitV3_4_0.RECORD_FORMATS.storeVersion() );
 
         execute( databaseDirectory.toString() );
 
@@ -68,9 +68,9 @@ class StoreInfoCommandEnterpriseTest
 
         assertEquals(
                 Arrays.asList(
-                        "Store format version:         vE.H.0",
-                        "Store format introduced in:   3.0.0",
-                        "Store format superseded in:   3.0.6" ),
+                        "Store format version:         vE.H.4",
+                        "Store format introduced in:   3.4.0",
+                        "Store format superseded in:   4.0.0" ),
                 outCaptor.getAllValues() );
     }
 

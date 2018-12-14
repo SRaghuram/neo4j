@@ -7,10 +7,9 @@ package org.neo4j.upgrade;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
@@ -19,7 +18,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Exceptions;
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
@@ -32,29 +31,28 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class RecordFormatsMigrationIT
+class RecordFormatsMigrationIT
 {
     private static final Label LABEL = Label.label( "Centipede" );
     private static final String PROPERTY = "legs";
     private static final int VALUE = 42;
 
-    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
-    private final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemRule.get() );
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( testDirectory ).around( fileSystemRule );
+    @Inject
+    private DefaultFileSystemAbstraction fileSystem;
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void migrateLatestStandardToLatestHighLimit() throws Exception
+    void migrateLatestStandardToLatestHighLimit() throws Exception
     {
         executeAndStopDb( startStandardFormatDb(), RecordFormatsMigrationIT::createNode );
         assertLatestStandardStore();
@@ -64,30 +62,23 @@ public class RecordFormatsMigrationIT
     }
 
     @Test
-    public void migrateHighLimitV3_0ToLatestHighLimit() throws Exception
+    void migrateHighLimitV3_4ToLatestHighLimit() throws Exception
     {
-        executeAndStopDb( startDb( HighLimitV3_0_0.NAME ), RecordFormatsMigrationIT::createNode );
-        assertStoreFormat( HighLimitV3_0_0.RECORD_FORMATS );
+        executeAndStopDb( startDb( HighLimitV3_4_0.NAME ), RecordFormatsMigrationIT::createNode );
+        assertStoreFormat( HighLimitV3_4_0.RECORD_FORMATS );
 
         executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::assertNodeExists );
         assertLatestHighLimitStore();
     }
 
     @Test
-    public void migrateHighLimitToStandard() throws Exception
+    void migrateHighLimitToStandard() throws Exception
     {
         executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::createNode );
         assertLatestHighLimitStore();
 
-        try
-        {
-            startStandardFormatDb();
-            fail( "Should not be possible to downgrade" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( Exceptions.rootCause( e ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
-        }
+        Exception exception = assertThrows( Exception.class, this::startStandardFormatDb );
+        assertThat( getRootCause( exception ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
         assertLatestHighLimitStore();
     }
 
@@ -143,12 +134,12 @@ public class RecordFormatsMigrationIT
     {
         Config config = Config.defaults( GraphDatabaseSettings.pagecache_memory, "8m" );
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
-              PageCache pageCache = ConfigurableStandalonePageCacheFactory.createPageCache( fileSystemRule.get(), config, jobScheduler ) )
+              PageCache pageCache = ConfigurableStandalonePageCacheFactory.createPageCache( fileSystem, config, jobScheduler ) )
         {
             RecordFormats actual = RecordFormatSelector.selectForStoreOrConfig( config, testDirectory.databaseLayout(),
-                    fileSystemRule, pageCache, NullLogProvider.getInstance() );
+                    fileSystem, pageCache, NullLogProvider.getInstance() );
             assertNotNull( actual );
-            assertEquals( expected.storeVersion(), actual.storeVersion() );
+            Assertions.assertEquals( expected.storeVersion(), actual.storeVersion() );
         }
     }
 

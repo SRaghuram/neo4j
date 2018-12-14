@@ -5,14 +5,14 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit.v30;
 
-import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 
 import org.neo4j.kernel.impl.store.format.AbstractRecordFormatTest;
 
-public class HighLimitV3_0RecordFormatTest extends AbstractRecordFormatTest
+public class HighLimitV3_4RecordFormatTest extends AbstractRecordFormatTest
 {
-    public HighLimitV3_0RecordFormatTest()
+    public HighLimitV3_4RecordFormatTest()
     {
-        super( HighLimitV3_0_0.RECORD_FORMATS, 50, 50 );
+        super( HighLimitV3_4_0.RECORD_FORMATS, 50, 50 );
     }
 }
