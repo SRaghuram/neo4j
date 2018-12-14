@@ -83,6 +83,35 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
     }
   }
 
+  override def toGroupingExpression(id: Id,
+                                    projections: Map[String, ast.Expression],
+                                    self: ExpressionConverters): Option[GroupingExpression] = {
+    try {
+      val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
+      if (totalSize > COMPILE_LIMIT) {
+        val slots = physicalPlan.slotConfigurations(id)
+        val compiler = new IntermediateCodeGeneration(slots)
+        val compiled = for {(k, v) <- projections
+                            c <- compiler.compileExpression(v)} yield slots(k) -> c
+        if (compiled.size < projections.size) None
+        else {
+          log.debug(s" Compiling grouping expressions: $projections")
+          val (setter, getter) = compiler.compileDistinct(compiled)
+          Some(CompileWrappingDistinctGroupingExpression(CodeGeneration.compileDistinctProjection(setter, getter),
+                                                         projections.isEmpty))
+        }
+      } else None
+    }
+    catch {
+      case t: Throwable =>
+        //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
+        //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
+        //converter
+        log.debug(s"Failed to compile projection: $projections", t)
+        None
+    }
+  }
+
 //  def toDistinctCommandProjection(id: Id, projections: Map[String, ast.Expression],
 //                          self: ExpressionConverters): Option[DistinctGroupingExpression] = {
 //    try {
@@ -110,9 +139,6 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 //        None
 //    }
 //  }
-  override def toGroupingExpression(id: Id,
-                                    groupings: Map[String, ast.Expression],
-                                    self: ExpressionConverters): Option[GroupingExpression] = None
 }
 
 object CompiledExpressionConverter {

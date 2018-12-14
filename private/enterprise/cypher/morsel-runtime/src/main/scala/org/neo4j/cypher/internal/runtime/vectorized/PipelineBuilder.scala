@@ -5,9 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlottedIndexedProperty
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{RefSlot, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
@@ -17,9 +16,9 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColu
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationExpressionOperator
 import org.neo4j.cypher.internal.runtime.vectorized.operators._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
+import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 class PipelineBuilder(physicalPlan: PhysicalPlan,
                       converters: ExpressionConverters,
@@ -139,10 +138,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           new ExpandAllOperator(WorkIdentity.fromPlan(plan), fromOffset, relOffset, toOffset, dir, lazyTypes)
 
         case plans.Projection(_, expressions) =>
-          val projectionOps = expressions.map {
-            case (key, e) => slots(key) -> converters.toCommandExpression(id, e)
-          }
-          new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps)
+          new ProjectOperator(WorkIdentity.fromPlan(plan), converters.toCommandProjection(id, expressions))
 
         case plans.Sort(_, sortItems) =>
           val ordering = sortItems.map(translateColumnOrder(slots, _))
