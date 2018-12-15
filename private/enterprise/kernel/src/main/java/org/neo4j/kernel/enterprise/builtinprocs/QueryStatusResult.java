@@ -89,7 +89,7 @@ public class QueryStatusResult
         this.query = query.queryText();
         this.parameters = asRawMap( query.queryParameters(), new ParameterWriter( manager ) );
         this.startTime = formatTime( query.startTimestampMillis(), zoneId );
-        this.elapsedTimeMillis = TimeUnit.MICROSECONDS.toMillis( query.elapsedTimeMicros() );
+        this.elapsedTimeMillis = asMillis( query.elapsedTimeMicros() );
         this.elapsedTime = formatInterval( elapsedTimeMillis );
         ClientConnectionInfo clientConnection = query.clientConnection();
         this.connectionDetails = clientConnection.asConnectionDetails();
@@ -97,12 +97,12 @@ public class QueryStatusResult
         this.clientAddress = clientConnection.clientAddress();
         this.requestUri = clientConnection.requestURI();
         this.metaData = query.transactionAnnotationData();
-        this.cpuTimeMillis = TimeUnit.MICROSECONDS.toMillis( query.cpuTimeMicros() );
+        this.cpuTimeMillis = asMillis( query.cpuTimeMicros() );
         this.status = query.status();
         this.resourceInformation = query.resourceInformation();
         this.activeLockCount = query.activeLockCount();
-        this.waitTimeMillis = TimeUnit.MICROSECONDS.toMillis( query.waitTimeMicros() );
-        this.idleTimeMillis = TimeUnit.MICROSECONDS.toMillis( query.idleTimeMicros() );
+        this.waitTimeMillis = asMillis( query.waitTimeMicros() );
+        this.idleTimeMillis = asMillis( query.idleTimeMicros() );
         this.planner = query.planner();
         this.runtime = query.runtime();
         this.indexes = query.indexes();
@@ -110,6 +110,11 @@ public class QueryStatusResult
         this.pageHits = query.pageHits();
         this.pageFaults = query.pageFaults();
         this.connectionId = clientConnection.connectionId();
+    }
+
+    private Long asMillis( Long micros )
+    {
+        return micros == null ? null : TimeUnit.MICROSECONDS.toMillis( micros );
     }
 
     private Map<String,Object> asRawMap( MapValue mapValue, ParameterWriter writer )
