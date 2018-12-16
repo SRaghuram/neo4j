@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -116,36 +115,6 @@ class OnlineBackupContextFactoryTest
     {
         IncorrectUsage error = assertThrows( IncorrectUsage.class, () -> new OnlineBackupContextFactory( homeDir, configDir ).createContext() );
         assertThat( error.getMessage(), containsString( "Missing argument 'backup-dir'" ) );
-    }
-
-    @Test
-    void shouldDefaultTimeoutToTwentyMinutes() throws Exception
-    {
-        OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
-        OnlineBackupContext context = handler.createContext( "--backup-dir=/", "--name=mybackup" );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
-
-        assertEquals( Duration.ofMinutes( 20 ), requiredArguments.getTimeout() );
-    }
-
-    @Test
-    void shouldInterpretAUnitlessTimeoutAsSeconds() throws Exception
-    {
-        OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
-        OnlineBackupContext context = handler.createContext( "--timeout=10", "--backup-dir=/", "--name=mybackup" );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
-
-        assertEquals( Duration.ofSeconds( 10 ), requiredArguments.getTimeout() );
-    }
-
-    @Test
-    void shouldParseATimeoutWithUnits() throws Exception
-    {
-        OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
-        OnlineBackupContext context = handler.createContext( requiredAnd( "--timeout=10h" ) );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
-
-        assertEquals( Duration.ofHours( 10 ), requiredArguments.getTimeout() );
     }
 
     @Test

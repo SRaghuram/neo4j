@@ -8,7 +8,6 @@ package org.neo4j.backup.impl;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Optional;
 
 import org.neo4j.commandline.admin.CommandFailed;
@@ -19,7 +18,6 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.commandline.arguments.common.MandatoryCanonicalPath;
 import org.neo4j.commandline.arguments.common.OptionalCanonicalPath;
-import org.neo4j.helpers.TimeUtil;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
@@ -44,11 +42,6 @@ class OnlineBackupContextFactory
     static final String ARG_NAME_DATABASE_NAME = "database";
     static final String ARG_DESC_DATABASE_NAME = "Name of the remote database to backup.";
     static final String ARG_DFLT_DATABASE_NAME = null;
-
-    static final String ARG_NAME_TIMEOUT = "timeout";
-    static final String ARG_DESC_TIMEOUT =
-            "Timeout in the form <time>[ms|s|m|h], where the default unit is seconds.";
-    static final String ARG_DFLT_TIMEOUT = "20m";
 
     static final String ARG_NAME_PAGECACHE = "pagecache";
     static final String ARG_DESC_PAGECACHE = "The size of the page cache to use for the backup process.";
@@ -107,8 +100,6 @@ class OnlineBackupContextFactory
                 .withArgument( new OptionalBooleanArg(
                         ARG_NAME_FALLBACK_FULL, true, ARG_DESC_FALLBACK_FULL ) )
                 .withArgument( new OptionalNamedArg(
-                        ARG_NAME_TIMEOUT, "timeout", ARG_DFLT_TIMEOUT, ARG_DESC_TIMEOUT ) )
-                .withArgument( new OptionalNamedArg(
                         ARG_NAME_PAGECACHE, "8m", ARG_DFLT_PAGECACHE, ARG_DESC_PAGECACHE ) )
                 .withArgument( new OptionalBooleanArg(
                         ARG_NAME_CHECK_CONSISTENCY, true, ARG_DESC_CHECK_CONSISTENCY ) )
@@ -164,7 +155,6 @@ class OnlineBackupContextFactory
                     .withBackupName( backupName )
                     .withBackupDirectory( backupDirectory )
                     .withFallbackToFullBackup( arguments.getBoolean( ARG_NAME_FALLBACK_FULL ) )
-                    .withTimeout( Duration.ofMillis( arguments.get( ARG_NAME_TIMEOUT, TimeUtil.parseTimeMillis ) ) )
                     .withReportsDirectory( getReportDirectory( arguments ) )
                     .withConsistencyCheck( arguments.getBoolean( ARG_NAME_CHECK_CONSISTENCY ) )
                     .withConsistencyCheckGraph( getBoolean( arguments, ARG_NAME_CHECK_GRAPH ) )

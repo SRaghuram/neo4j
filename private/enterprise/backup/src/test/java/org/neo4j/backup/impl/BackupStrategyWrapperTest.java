@@ -13,7 +13,6 @@ import org.mockito.InOrder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Duration;
 
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
@@ -508,7 +507,7 @@ class BackupStrategyWrapperTest
     {
         File databaseDirectory = desiredBackupLayout.databaseDirectory();
         return new OnlineBackupRequiredArguments( userProvidedAddress, databaseName, desiredBackupLayout.getStoreLayout().storeDirectory().toPath(),
-                databaseDirectory.getName(), fallbackToFull, true, Duration.ofMillis( 1000 ), reportDir );
+                databaseDirectory.getName(), fallbackToFull, true, reportDir );
     }
 
     private static ConsistencyFlags consistencyFlags()

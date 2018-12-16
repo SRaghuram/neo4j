@@ -34,8 +34,7 @@ class OnlineBackupCommandTest
 
         assertEquals( format( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>%n" +
                               "                          [--from=<address>] [--database=<graph.db>]%n" +
-                              "                          [--fallback-to-full[=<true|false>]]%n" +
-                              "                          [--timeout=<timeout>] [--pagecache=<8m>]%n" +
+                              "                          [--fallback-to-full[=<true|false>]] [--pagecache=<8m>]%n" +
                               "                          [--check-consistency[=<true|false>]]%n" +
                               "                          [--cc-report-dir=<directory>]%n" +
                               "                          [--additional-config=<config-file-path>]%n" +
@@ -74,9 +73,6 @@ class OnlineBackupCommandTest
                               "                                           will move the old backup to%n" +
                               "                                           <name>.err.<N> and fallback to a full%n" +
                               "                                           backup instead. [default:true]%n" +
-                              "  --timeout=<timeout>                      Timeout in the form <time>[ms|s|m|h],%n" +
-                              "                                           where the default unit is seconds.%n" +
-                              "                                           [default:20m]%n" +
                               "  --pagecache=<8m>                         The size of the page cache to use for%n" +
                               "                                           the backup process. [default:8m]%n" +
                               "  --check-consistency=<true|false>         If a consistency check should be%n" +

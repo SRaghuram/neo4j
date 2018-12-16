@@ -6,7 +6,6 @@
 package org.neo4j.backup.impl;
 
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Optional;
 
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
@@ -19,11 +18,10 @@ class OnlineBackupRequiredArguments
     private final String name;
     private final boolean fallbackToFull;
     private final boolean doConsistencyCheck;
-    private final Duration timeout;
     private final Path reportDir;
 
     OnlineBackupRequiredArguments( OptionalHostnamePort address, String databaseName, Path directory, String name,
-            boolean fallbackToFull, boolean doConsistencyCheck, Duration timeout, Path reportDir )
+            boolean fallbackToFull, boolean doConsistencyCheck, Path reportDir )
     {
         this.address = address;
         this.databaseName = databaseName;
@@ -31,7 +29,6 @@ class OnlineBackupRequiredArguments
         this.name = name;
         this.fallbackToFull = fallbackToFull;
         this.doConsistencyCheck = doConsistencyCheck;
-        this.timeout = timeout;
         this.reportDir = reportDir;
     }
 
@@ -63,12 +60,6 @@ class OnlineBackupRequiredArguments
     public boolean isDoConsistencyCheck()
     {
         return doConsistencyCheck;
-    }
-
-    // todo: this should be used by the catchup client!
-    public Duration getTimeout()
-    {
-        return timeout;
     }
 
     public Path getReportDir()

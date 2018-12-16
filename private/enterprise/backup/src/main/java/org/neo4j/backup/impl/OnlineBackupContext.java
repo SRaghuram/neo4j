@@ -9,7 +9,6 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 
 import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
@@ -64,7 +63,6 @@ public class OnlineBackupContext
         private String backupName;
         private Path reportsDirectory;
         private boolean fallbackToFullBackup = true;
-        private Duration timeout;
         private Config config;
         private boolean consistencyCheck = true;
         private Boolean consistencyCheckGraph;
@@ -115,12 +113,6 @@ public class OnlineBackupContext
         public Builder withFallbackToFullBackup( boolean fallbackToFullBackup )
         {
             this.fallbackToFullBackup = fallbackToFullBackup;
-            return this;
-        }
-
-        public Builder withTimeout( Duration timeout )
-        {
-            this.timeout = timeout;
             return this;
         }
 
@@ -203,7 +195,7 @@ public class OnlineBackupContext
                 reportsDirectory = Paths.get( "." );
             }
             return new OnlineBackupRequiredArguments( address, databaseName, backupDirectory, backupName,
-                    fallbackToFullBackup, consistencyCheck, timeout, reportsDirectory );
+                    fallbackToFullBackup, consistencyCheck, reportsDirectory );
         }
 
         private ConsistencyFlags buildConsistencyFlags()

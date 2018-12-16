@@ -19,8 +19,7 @@ public class BackupHelpOutput
 
         lines.add( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>" );
         lines.add( "                          [--from=<address>] [--database=<graph.db>]" );
-        lines.add( "                          [--fallback-to-full[=<true|false>]]" );
-        lines.add( "                          [--timeout=<timeout>] [--pagecache=<8m>]" );
+        lines.add( "                          [--fallback-to-full[=<true|false>]] [--pagecache=<8m>]" );
         lines.add( "                          [--check-consistency[=<true|false>]]" );
         lines.add( "                          [--cc-report-dir=<directory>]" );
         lines.add( "                          [--additional-config=<config-file-path>]" );
@@ -57,9 +56,6 @@ public class BackupHelpOutput
         lines.add( "                                           will move the old backup to" );
         lines.add( "                                           <name>.err.<N> and fallback to a full" );
         lines.add( "                                           backup instead. [default:true]" );
-        lines.add( "  --timeout=<timeout>                      Timeout in the form <time>[ms|s|m|h]," );
-        lines.add( "                                           where the default unit is seconds." );
-        lines.add( "                                           [default:20m]" );
         lines.add( "  --pagecache=<8m>                         The size of the page cache to use for" );
         lines.add( "                                           the backup process. [default:8m]" );
         lines.add( "  --check-consistency=<true|false>         If a consistency check should be" );
