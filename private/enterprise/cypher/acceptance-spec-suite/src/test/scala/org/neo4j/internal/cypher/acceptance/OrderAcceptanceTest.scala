@@ -532,4 +532,55 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
                             errorType = Seq("SyntaxException"))
   }
 
+  test("Should be able to reuse unprojected node variable after WITH ORDER BY") {
+
+    val query = "MATCH (a) WITH a.name AS n ORDER BY a.foo MATCH (a) RETURN a.age"
+    val result = executeWith(Configs.All, query)
+
+    // a.prop is written as `a`.prop in the plan due to the reuse of the variable
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Projection").containingArgument("{n : `a`.name}")
+      .onTopOf(aPlan("Sort")
+        .onTopOf(aPlan("Projection").containingArgument("{ : `a`.foo}"))
+      )
+
+    result.toSet should equal(Set(
+      Map("a.age" -> 10),
+      Map("a.age" -> 9),
+      Map("a.age" -> 12),
+      Map("a.age" -> 16),
+      Map("a.age" -> 14),
+      Map("a.age" -> 4)
+    ))
+  }
+
+  test("Should be able to reuse unprojected node and rel variables after WITH ORDER BY") {
+
+    graph.execute("MATCH (a {name: 'A'}), (b {name: 'B'}), (c {name: 'C'}) CREATE (a)-[:Rel]->(b)-[:Rel]->(c)")
+
+    val query =
+      """
+        |MATCH (n)-[r]->(m)
+        |WITH n.name as name ORDER BY n.foo
+        |MATCH (n)-[r]->(m)
+        |RETURN n.age ORDER BY n.age
+      """.stripMargin
+
+    val result = executeWith(Configs.All, query)
+
+    // n.prop is written as `n`.prop in the plan due to the reuse of the variable
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Projection").containingArgument("{name : `n`.name}")
+      .onTopOf(aPlan("Sort")
+        .onTopOf(aPlan("Projection").containingArgument("{ : `n`.foo}"))
+      )
+
+    // First MATCH gives two rows
+    result.toList should equal(List(
+      Map("n.age" -> 9),
+      Map("n.age" -> 9),
+      Map("n.age" -> 10),
+      Map("n.age" -> 10)
+    ))
+  }
 }
