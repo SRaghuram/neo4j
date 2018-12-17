@@ -105,6 +105,7 @@ class EagerReducePipeline(start: EagerReduceOperator,
 
       if (tasksLeft == 0) {
         val inputMorsels: Array[MorselExecutionContext] = eagerData.asScala.toArray
+        eagerData.clear()
         val reduceTask = start.init(context, state, inputMorsels, resources)
         // init next reduce
         val nextState = initDownstreamReduce(state)
