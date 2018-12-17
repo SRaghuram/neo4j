@@ -38,7 +38,7 @@ object CodeGeneration {
   private val PACKAGE_NAME = "org.neo4j.codegen"
   private val EXPRESSION = classOf[CompiledExpression]
   private val PROJECTION = classOf[CompiledProjection]
-  private val DISTINCT_PROJECTION = classOf[CompiledDistinctProjection]
+  private val GROUPING_EXPRESSION = classOf[CompiledGroupingExpression]
   private val COMPUTE_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",
                                                                  param(classOf[ExecutionContext], "context"),
                                                                  param(classOf[DbAccess], "dbAccess"),
@@ -50,14 +50,18 @@ object CodeGeneration {
                                                                  param(classOf[MapValue], "params"),
                                                                  param(classOf[ExpressionCursors], "cursors"))
 
-  private val DISTINCT_SET_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "project",
+  private val GROUPING_KEY_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "computeGroupingKey",
                                                                       param(classOf[ExecutionContext], "context"),
                                                                       param(classOf[DbAccess], "dbAccess"),
                                                                       param(classOf[MapValue], "params"),
-                                                                      param(classOf[ExpressionCursors], "cursors"),
-                                                                      param(classOf[ExecutionContext], "outgoing"))
+                                                                      param(classOf[ExpressionCursors], "cursors"))
 
-  private val DISTINCT_GET_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "get", param(classOf[ExecutionContext], "context"))
+  private val GROUPING_PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "projectGroupingKey",
+                                                                          param(classOf[ExecutionContext], "context"),
+                                                                          param(classOf[AnyValue], "key"))
+
+  private val GROUPING_GET_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "getGroupingKey",
+                                                                          param(classOf[ExecutionContext], "context"))
 
   private def className(): String = "Expression" + System.nanoTime()
 
@@ -103,33 +107,45 @@ object CodeGeneration {
     clazz.newInstance().asInstanceOf[CompiledProjection]
   }
 
-  def compileDistinctProjection(setter: IntermediateExpression, getter: IntermediateExpression): CompiledDistinctProjection = {
-    val handle = using(generator.generateClass(PACKAGE_NAME, className(), DISTINCT_PROJECTION)) { clazz: ClassGenerator =>
+  def compileGroupingExpression(grouping: IntermediateGroupingExpression): CompiledGroupingExpression = {
+    val handle = using(generator.generateClass(PACKAGE_NAME, className(), GROUPING_EXPRESSION)) { clazz: ClassGenerator =>
 
-      generateConstructor(clazz, setter.fields ++ getter.fields)
-      using(clazz.generate(DISTINCT_SET_METHOD)) { block =>
-        setter.variables.distinct.foreach { v =>
+      generateConstructor(clazz, grouping.computeKey.fields ++ grouping.projectKey.fields ++ grouping.getKey.fields)
+      using(clazz.generate(GROUPING_PROJECT_METHOD)) { block =>
+        grouping.projectKey.variables.distinct.foreach { v =>
           block.assign(v.typ, v.name, compileExpression(v.value, block))
         }
-        block.expression(compileExpression(setter.ir, block))
+        block.expression(compileExpression(grouping.projectKey.ir, block))
       }
-      using(clazz.generate(DISTINCT_GET_METHOD)) { block =>
-        getter.variables.distinct.foreach { v =>
+      using(clazz.generate(GROUPING_KEY_METHOD)) { block =>
+        grouping.computeKey.variables.distinct.foreach { v =>
           block.assign(v.typ, v.name, compileExpression(v.value, block))
         }
         val noValue = getStatic(staticField(classOf[Values], classOf[Value], "NO_VALUE"))
-        if (getter.nullCheck.nonEmpty) {
-          val test = getter.nullCheck.map(e => compileExpression(e, block))
+        if (grouping.computeKey.nullCheck.nonEmpty) {
+          val test = grouping.computeKey.nullCheck.map(e => compileExpression(e, block))
             .reduceLeft((acc, current) => Expression.or(acc, current))
 
-          block.returns(Expression.ternary(test, noValue, compileExpression(getter.ir, block)))
-        } else block.returns(compileExpression(getter.ir, block))
+          block.returns(Expression.ternary(test, noValue, compileExpression(grouping.computeKey.ir, block)))
+        } else block.returns(compileExpression(grouping.computeKey.ir, block))
+      }
+      using(clazz.generate(GROUPING_GET_METHOD)) { block =>
+        grouping.getKey.variables.distinct.foreach { v =>
+          block.assign(v.typ, v.name, compileExpression(v.value, block))
+        }
+        val noValue = getStatic(staticField(classOf[Values], classOf[Value], "NO_VALUE"))
+        if (grouping.getKey.nullCheck.nonEmpty) {
+          val test = grouping.getKey.nullCheck.map(e => compileExpression(e, block))
+            .reduceLeft((acc, current) => Expression.or(acc, current))
+
+          block.returns(Expression.ternary(test, noValue, compileExpression(grouping.getKey.ir, block)))
+        } else block.returns(compileExpression(grouping.getKey.ir, block))
       }
       clazz.handle()
     }
     val clazz = handle.loadAnonymousClass()
-    setConstants(clazz, setter.fields ++ getter.fields)
-    clazz.newInstance().asInstanceOf[CompiledDistinctProjection]
+    setConstants(clazz, grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields)
+    clazz.newInstance().asInstanceOf[CompiledGroupingExpression]
   }
 
   private def setConstants(clazz: Class[_], fields: Seq[Field]): Unit = {

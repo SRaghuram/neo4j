@@ -5,17 +5,16 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import java.lang.Math.PI
+import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
 import org.mockito.ArgumentMatchers.{any, anyInt}
-import org.mockito.Mockito
-import org.mockito.Mockito.when
+import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, MapExecutionContext}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
@@ -79,7 +78,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("sin function") {
     val arg = random.nextDouble()
-    compile(function("sin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(Math.sin(arg)))
+    compile(function("sin", literalFloat(arg))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(doubleValue(sin(arg)))
     compile(function("sin", nullLiteral)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(NO_VALUE)
   }
 
@@ -1575,9 +1574,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.project(context, db, map(Array("param"), Array(NO_VALUE)), cursors)
 
     //then
-    Mockito.verify(context).setRefAt(0, stringValue("hello"))
-    Mockito.verify(context).setRefAt(1, NO_VALUE)
-    Mockito.verifyNoMoreInteractions(context)
+    verify(context).setRefAt(0, stringValue("hello"))
+    verify(context).setRefAt(1, NO_VALUE)
+    verifyNoMoreInteractions(context)
   }
 
   test("single in list function local access only") {
@@ -2578,6 +2577,67 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compile(udf).evaluate(ctx, access, EMPTY_MAP, cursors) should equal(stringValue("success"))
   }
 
+  test("should compile grouping key with single expression") {
+    //given
+    val context = mock[ExecutionContext]
+    val projections: Map[Slot, Expression] = Map(RefSlot(0, nullable = false, symbols.CTAny) -> literal("hello"))
+    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections)
+
+    //when
+    val key = compiled.computeGroupingKey(context, db, EMPTY_MAP, cursors)
+    compiled.projectGroupingKey(context, key)
+
+    //then
+    key should equal(stringValue("hello"))
+    verify(context).setRefAt(0, stringValue("hello"))
+  }
+
+  test("should compile grouping key with multiple expressions") {
+    //given
+    val context = mock[ExecutionContext]
+    val nodeId = 1337
+    val nodeValue = node(nodeId)
+    when(context.getLongAt(0)).thenReturn(nodeId)
+    when(db.nodeById(nodeId)).thenReturn(nodeValue)
+    val projections: Map[Slot, Expression] = Map(RefSlot(0, nullable = false, symbols.CTAny) -> literal("hello"),
+                                                 LongSlot(1, nullable = false, symbols.CTNode) -> NodeFromSlot(0, "node"))
+    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections)
+
+    //when
+    val key = compiled.computeGroupingKey(context, db, EMPTY_MAP, cursors)
+    compiled.projectGroupingKey(context, key)
+
+    //then
+    key should equal(VirtualValues.list(stringValue("hello"), nodeValue))
+    verify(context).setRefAt(0, stringValue("hello"))
+    verify(context).setLongAt(1, nodeId)
+  }
+
+  test("should compile grouping key with multiple expressions all primitive") {
+    //given
+    val context = mock[ExecutionContext]
+    val nodeId = 1337
+    val relId = 42
+    val relationshipValue = relationship(relId)
+    val nodeValue = node(nodeId)
+    when(context.getLongAt(0)).thenReturn(relId)
+    when(context.getLongAt(1)).thenReturn(nodeId)
+    when(db.nodeById(nodeId)).thenReturn(nodeValue)
+    when(db.relationshipById(relId)).thenReturn(relationshipValue)
+    val projections: Map[Slot, Expression] = Map(LongSlot(42, nullable = false, symbols.CTRelationship) -> RelationshipFromSlot(0, "relationship"),
+                                                 LongSlot(47, nullable = false, symbols.CTNode) -> NodeFromSlot(1, "node"))
+    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections)
+
+    //when
+    val key = compiled.computeGroupingKey(context, db, EMPTY_MAP, cursors)
+    compiled.projectGroupingKey(context, key)
+
+    //then
+    key should equal(VirtualValues.list( relationshipValue, nodeValue))
+    verify(context).setLongAt(42, relId)
+    verify(context).setLongAt(47, nodeId)
+  }
+
   private def mapProjection(name: String, includeAllProps: Boolean, items: (String,Expression)*) =
     DesugaredMapProjection(varFor(name), items.map(kv => LiteralEntry(PropertyKeyName(kv._1)(pos), kv._2)(pos)), includeAllProps)(pos)
 
@@ -2605,6 +2665,12 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val compiler = new IntermediateCodeGeneration(SlotConfiguration.empty)
     val compiled = for ((s,e) <- projections) yield s -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
     CodeGeneration.compileProjection(compiler.compileProjection(compiled))
+  }
+
+  private def compileGroupingExpression(projections: Map[Slot, Expression]): CompiledGroupingExpression = {
+    val compiler = new IntermediateCodeGeneration(SlotConfiguration.empty)
+    val compiled = for ((s,e) <- projections) yield s -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
+    CodeGeneration.compileGroupingExpression(compiler.compileGroupingExpression(compiled))
   }
 
   private def add(l: Expression, r: Expression) = expressions.Add(l, r)(pos)

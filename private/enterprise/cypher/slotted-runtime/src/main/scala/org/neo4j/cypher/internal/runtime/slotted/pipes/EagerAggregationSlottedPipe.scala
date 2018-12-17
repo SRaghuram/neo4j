@@ -62,7 +62,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
 
     // Consume all input and aggregate
     input.foreach(ctx => {
-      val groupingValue = groupingExpression.groupingKey(ctx, state)
+      val groupingValue = groupingExpression.computeGroupingKey(ctx, state)
       val functions = result.getOrElseUpdate(groupingValue, aggregationFunctions.map(_.createAggregationFunction))
       functions.foreach(func => func(ctx, state))
     })

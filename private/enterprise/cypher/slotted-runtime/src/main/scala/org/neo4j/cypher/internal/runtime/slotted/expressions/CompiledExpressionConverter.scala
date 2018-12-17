@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
@@ -96,9 +97,8 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         if (compiled.size < projections.size) None
         else {
           log.debug(s" Compiling grouping expressions: $projections")
-          val (setter, getter) = compiler.compileDistinct(compiled)
-          Some(CompileWrappingDistinctGroupingExpression(CodeGeneration.compileDistinctProjection(setter, getter),
-                                                         projections.isEmpty))
+          Some(CompileWrappingDistinctGroupingExpression(
+            compileGroupingExpression(compiler.compileGroupingExpression(compiled)), projections.isEmpty))
         }
       } else None
     }
@@ -108,41 +108,14 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
         log.debug(s"Failed to compile projection: $projections", t)
+        t.printStackTrace()
         None
     }
   }
-
-//  def toDistinctCommandProjection(id: Id, projections: Map[String, ast.Expression],
-//                          self: ExpressionConverters): Option[DistinctGroupingExpression] = {
-//    try {
-//      val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
-//      if (totalSize > COMPILE_LIMIT) {
-//        val slots = physicalPlan.slotConfigurations(id)
-//        val compiler = new IntermediateCodeGeneration(slots)
-//        val compiled = for {(k, v) <- projections
-//                            c <- compiler.compileExpression(v)} yield slots(k) -> c
-//        if (compiled.size < projections.size) None
-//        else {
-//          log.debug(s" Compiling projection: $projections")
-//          val (setter, getter) = compiler.compileDistinct(compiled)
-//          Some(CompileWrappingDistinctGroupingExpression(CodeGeneration.compileDistinctProjection(setter, getter),
-//                                                         projections.isEmpty))
-//        }
-//      } else None
-//    }
-//    catch {
-//      case t: Throwable =>
-//        //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
-//        //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
-//        //converter
-//        log.debug(s"Failed to compile projection: $projections", t)
-//        None
-//    }
-//  }
 }
 
 object CompiledExpressionConverter {
-  private val COMPILE_LIMIT = 2
+  private val COMPILE_LIMIT = 0
 }
 
 case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
@@ -151,12 +124,15 @@ case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupin
 
   override type T = AnyValue
 
-  override def groupingKey(context: ExecutionContext,
-                           state: QueryState): AnyValue =
-    projection.groupingKey(context, state.query, state.params, state.cursors)
+  override def computeGroupingKey(context: ExecutionContext,
+                                  state: QueryState): AnyValue =
+    projection.computeGroupingKey(context, state.query, state.params, state.cursors)
+
+
+  override def getGroupingKey(context: ExecutionContext): AnyValue = projection.getGroupingKey(context)
 
   override def project(context: ExecutionContext, groupingKey: AnyValue): Unit =
-    projection.project(context, groupingKey.asInstanceOf[AnyValue])
+    projection.projectGroupingKey(context, groupingKey.asInstanceOf[AnyValue])
 }
 
 case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Boolean) extends CommandProjection {

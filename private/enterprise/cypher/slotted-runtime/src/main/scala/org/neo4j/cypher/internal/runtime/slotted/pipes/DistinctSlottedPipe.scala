@@ -31,7 +31,7 @@ case class DistinctSlottedPipe(source: Pipe,
         while (input.nonEmpty) {
           val next: ExecutionContext = input.next()
 
-          val key = distinctProjection.groupingKey(next, state)
+          val key = distinctProjection.computeGroupingKey(next, state)
           if (seen.add(key)) {
             // Found something! Set it as the next element to yield, and exit
             val outgoing = SlottedExecutionContext(slots)

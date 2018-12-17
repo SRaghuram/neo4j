@@ -31,6 +31,7 @@ import org.neo4j.values.virtual._
 
 import scala.collection.mutable
 
+
 /**
   * Produces IntermediateRepresentation from a Cypher Expression
   */
@@ -67,32 +68,63 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                                 projections.values.flatMap(_.variables).toSeq, Set.empty)
   }
 
-  def compileDistinctSetter(projections: Map[Slot, IntermediateExpression]): IntermediateExpression = {
-    val setter = projections.toSeq.map {
-      case (LongSlot(offset, _, _), value) => setLongAt(offset, Some(load("outgoing")),
-                                                               if (value.nullCheck.isEmpty) value.ir
-                                                               else ternary(value.nullCheck.reduceLeft(
-                                                                 (acc, current) => or(acc, current)), noValue, value.ir))
-
-      case (RefSlot(offset, _, _), value) => setRefAt(offset,
-                                                             Some(load("outgoing")),
-                                                             if (value.nullCheck.isEmpty) value.ir
-                                                             else ternary(value.nullCheck.reduceLeft(
-                                                               (acc, current) => or(acc, current)), noValue, value.ir))
+  def compileGroupingExpression(projections: Map[Slot, IntermediateExpression]): IntermediateGroupingExpression = {
+    assert(projections.nonEmpty)
+    val listVar = namer.nextVariableName()
+    val singleValue = projections.size == 1
+    def id[T](value: IntermediateRepresentation, nullable: Boolean)(implicit m: Manifest[T]) =  {
+      val getId = invoke(cast[T](value), method[T, Long]("id"))
+      if (!nullable) getId
+      else ternary(equal(value, noValue), constant(-1), getId)
     }
 
-    val getter = projections.toSeq.map {
-      case (LongSlot(offset, nullable, CTNode), _) =>
-        invokeStatic(method[VirtualValues, NodeValue, Long]("node"), getLongAt(offset, None))
-
-      case (RefSlot(offset, _, _), _) => setRefAt(offset,
-                                                      None,
-                                                      if (value.nullCheck.isEmpty) value.ir
-                                                      else ternary(value.nullCheck.reduceLeft(
-                                                        (acc, current) => or(acc, current)), noValue, value.ir))
+    def accessValue(i: Int) =  {
+      if (singleValue) load("key")
+      else invoke(load(listVar), method[ListValue, AnyValue, Int]("value"), constant(i))
     }
-    IntermediateExpression(block(setter:_*), projections.values.flatMap(_.fields).toSeq,
-                           projections.values.flatMap(_.variables).toSeq, Set.empty)
+    val groupingsOrdered = projections.toSeq.sortBy(_._1.offset)
+
+    val projectKeyOps = groupingsOrdered.map(_._1).zipWithIndex.map {
+      case (LongSlot(offset, nullable, CTNode), index) =>
+        setLongAt(offset, None, id[VirtualNodeValue](accessValue(index), nullable))
+      case (LongSlot(offset, nullable, CTRelationship), index) =>
+        setLongAt(offset, None, id[VirtualRelationshipValue](accessValue(index), nullable))
+      case (RefSlot(offset, _, _), index) =>
+          setRefAt(offset, None, accessValue(index))
+      case slot =>
+        throw new InternalException(s"Do not know how to make setter for slot $slot")
+    }
+    val projectKey =
+      if (singleValue) projectKeyOps
+      else Seq(declare[ListValue](listVar), assign(listVar, cast[ListValue](load("key")))) ++ projectKeyOps
+
+    val getKeyOps = groupingsOrdered.map(_._1).map {
+      case LongSlot(offset, nullable, CTNode) =>
+        val getter = invokeStatic(method[VirtualValues, NodeValue, Long]("node"), getLongAt(offset, None))
+        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1)), noValue, getter)
+        else getter
+      case LongSlot(offset, nullable, CTRelationship) =>
+        val getter = invokeStatic(method[VirtualValues, RelationshipValue, Long]("relationship"), getLongAt(offset, None))
+        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1)), noValue, getter)
+        else getter
+      case RefSlot(offset, _, _) => getRefAt(offset, None)
+      case slot =>
+        throw new InternalException(s"Do not know how to make getter for slot $slot")
+    }
+
+    val getKey =
+      if (singleValue) getKeyOps.head
+      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf(getKeyOps:_*))
+
+    val computeKeyOps = projections.values.map(p => nullCheck(p)(p.ir)).toArray
+    val computeKey =
+      if (singleValue) computeKeyOps.head
+      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf(computeKeyOps:_*))
+
+    IntermediateGroupingExpression(
+      IntermediateExpression(block(projectKey:_*), Seq.empty, Seq.empty, Set.empty),
+      IntermediateExpression(computeKey, projections.values.flatMap(_.fields).toSeq, projections.values.flatMap(_.variables).toSeq, Set.empty),
+      IntermediateExpression(getKey, Seq.empty, Seq.empty, Set.empty))
   }
 
   def compileExpression(expression: Expression): Option[IntermediateExpression] = internalCompileExpression(expression, None)
@@ -1844,7 +1876,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                      constant(offset), value)
 
   private def setLongAt(offset: Int, currentContext: Option[IntermediateRepresentation], value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(loadContext(currentContext), method[ExecutionContext, Unit, Int, AnyValue]("setLongAt"),
+    invokeSideEffect(loadContext(currentContext), method[ExecutionContext, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
   private def loadContext(currentContext: Option[IntermediateRepresentation]) = currentContext.getOrElse(load("context"))

@@ -337,6 +337,8 @@ case class Method(owner: TypeReference, output: TypeReference, name: String, par
 case class IntermediateExpression(ir: IntermediateRepresentation, fields: Seq[Field],
                                   variables: Seq[LocalVariable], nullCheck: Set[IntermediateRepresentation])
 
+case class IntermediateGroupingExpression(projectKey: IntermediateExpression, computeKey: IntermediateExpression,
+                                          getKey: IntermediateExpression)
 sealed trait Field {
   def typ: TypeReference
   def name: String

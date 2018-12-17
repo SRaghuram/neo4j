@@ -42,7 +42,7 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
             val outgoing = SlottedExecutionContext(slots)
             outgoing.copyCachedFrom(next)
             outgoing.setLinenumber(next.getLinenumber)
-            groupingExpression.project(outgoing, groupingExpression.groupingKey(next, state))
+            groupingExpression.project(outgoing, groupingExpression.computeGroupingKey(next, state))
             return Some(outgoing)
           }
         }
