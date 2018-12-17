@@ -49,7 +49,6 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 import static java.lang.String.format;
 
 public class CommercialEditionModule extends EnterpriseEditionModule
@@ -95,12 +94,9 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         createCommercialEditionDatabases( databaseManager, config );
     }
 
-    public static void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
+    private static void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
     {
-        if ( isSystemDatabaseEnabled( config ) )
-        {
-            databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        }
+        databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 

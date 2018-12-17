@@ -38,7 +38,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -176,22 +175,22 @@ class SystemDatabaseIT
     }
 
     @Test
-    void systemDatabaseDisabledByDefault()
+    void systemDatabaseEnabledByDefault()
     {
-        GraphDatabaseService databaseWithoutSystemDb = null;
+        GraphDatabaseService databaseWithSystemDb = null;
 
         try
         {
-            File disabledSystemDbDirectory = testDirectory.databaseDir( "disabledSystemDb" );
-            databaseWithoutSystemDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
-            DatabaseManager databaseManager = getDatabaseManager( databaseWithoutSystemDb );
-            assertFalse( databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME ).isPresent() );
+            File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
+            databaseWithSystemDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
+            DatabaseManager databaseManager = getDatabaseManager( databaseWithSystemDb );
+            assertTrue( databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME ).isPresent() );
         }
         finally
         {
-            if ( databaseWithoutSystemDb != null )
+            if ( databaseWithSystemDb != null )
             {
-                databaseWithoutSystemDb.shutdown();
+                databaseWithSystemDb.shutdown();
             }
         }
     }

@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseManagerIT
@@ -274,17 +275,18 @@ class MultiDatabaseManagerIT
     void listAvailableDatabases()
     {
         List<String> initialDatabases = databaseManager.listDatabases();
-        assertThat( initialDatabases, hasSize( 1 ) );
+        assertThat( initialDatabases, hasSize( 2 ) );
         assertEquals( CUSTOM_DATABASE_NAME, initialDatabases.get( 0 ) );
         String myAnotherDatabase = "myAnotherDatabase";
         String aMyAnotherDatabase = "aMyAnotherDatabase";
         databaseManager.createDatabase( myAnotherDatabase );
         databaseManager.createDatabase( aMyAnotherDatabase );
         List<String> postCreationDatabasesNames = databaseManager.listDatabases();
-        assertThat( postCreationDatabasesNames, hasSize( 3 ) );
+        assertThat( postCreationDatabasesNames, hasSize( 4 ) );
         assertEquals( aMyAnotherDatabase, postCreationDatabasesNames.get( 0 ) );
         assertEquals( CUSTOM_DATABASE_NAME, postCreationDatabasesNames.get( 1 ) );
         assertEquals( myAnotherDatabase, postCreationDatabasesNames.get( 2 ) );
+        assertEquals( SYSTEM_DATABASE_NAME, postCreationDatabasesNames.get( 3 ) );
     }
 
     @Test

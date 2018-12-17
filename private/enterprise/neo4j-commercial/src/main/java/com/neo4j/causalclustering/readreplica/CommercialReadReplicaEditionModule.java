@@ -43,8 +43,6 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
-import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
-
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
  * that are specific to the Commercial Read Replica edition.
@@ -88,10 +86,7 @@ public class CommercialReadReplicaEditionModule extends EnterpriseReadReplicaEdi
 
     private void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
     {
-        if ( isSystemDatabaseEnabled( config ) )
-        {
-            createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        }
+        createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 

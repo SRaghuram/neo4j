@@ -45,7 +45,6 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 
-import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 /**
@@ -101,10 +100,7 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
 
     private void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
     {
-        if ( isSystemDatabaseEnabled( config ) )
-        {
-            createDatabase( databaseManager, SYSTEM_DATABASE_NAME );
-        }
+        createDatabase( databaseManager, SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 

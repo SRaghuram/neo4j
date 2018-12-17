@@ -27,8 +27,6 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.READ_REPLICA;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialCoreEditionModuleTest
@@ -41,7 +39,6 @@ class CommercialCoreEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
-        config.augment( auth_provider, SYSTEM_GRAPH_REALM_NAME );
         PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
         {
             @Override

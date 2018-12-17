@@ -24,8 +24,6 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMERCIAL;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialEditionModuleTest
@@ -38,7 +36,6 @@ class CommercialEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults();
-        config.augment( auth_provider, SYSTEM_GRAPH_REALM_NAME );
         PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, COMMERCIAL, newDependencies() )
         {
             @Override
