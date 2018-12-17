@@ -42,14 +42,10 @@ class OnlineBackupCommand implements AdminCommand
         {
             backupExecutor.executeBackup( onlineBackupContext );
         }
-        catch ( BackupExecutionException e )
-        {
-            throw new CommandFailed( "Execution of backup failed", e.getCause() != null ? e.getCause() : e );
-        }
         catch ( ConsistencyCheckExecutionException e )
         {
             int exitCode = e.consistencyCheckFailedToExecute() ? STATUS_CONSISTENCY_CHECK_ERROR : STATUS_CONSISTENCY_CHECK_INCONSISTENT;
-            throw new CommandFailed( e.getMessage(), e.getCause(), exitCode );
+            throw new CommandFailed( e.getMessage(), e, exitCode );
         }
         catch ( Exception e )
         {
