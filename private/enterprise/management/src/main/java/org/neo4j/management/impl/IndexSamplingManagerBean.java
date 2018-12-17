@@ -25,6 +25,7 @@ import org.neo4j.storageengine.api.StorageEngine;
 import static org.neo4j.internal.kernel.api.TokenRead.NO_TOKEN;
 
 @Service.Implementation( ManagementBeanProvider.class )
+@Deprecated
 public final class IndexSamplingManagerBean extends ManagementBeanProvider
 {
     public IndexSamplingManagerBean()

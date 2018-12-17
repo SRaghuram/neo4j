@@ -18,6 +18,7 @@ import org.neo4j.kernel.info.LockInfo;
 import org.neo4j.management.LockManager;
 
 @Service.Implementation( ManagementBeanProvider.class )
+@Deprecated
 public final class LockManagerBean extends ManagementBeanProvider
 {
     public LockManagerBean()

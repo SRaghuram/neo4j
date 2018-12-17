@@ -15,6 +15,7 @@ import javax.management.ObjectName;
 
 import org.neo4j.helpers.Exceptions;
 
+@Deprecated
 public class BeanProxy
 {
     private static final BeanProxy INSTANCE = new BeanProxy();

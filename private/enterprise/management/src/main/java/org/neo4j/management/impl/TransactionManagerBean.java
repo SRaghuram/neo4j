@@ -18,6 +18,7 @@ import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.management.TransactionManager;
 
 @Service.Implementation( ManagementBeanProvider.class )
+@Deprecated
 public final class TransactionManagerBean extends ManagementBeanProvider
 {
     public TransactionManagerBean()
