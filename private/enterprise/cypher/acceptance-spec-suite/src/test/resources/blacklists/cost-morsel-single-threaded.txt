@@ -38,6 +38,8 @@ Feature "IndexAcceptance": Scenario "Merge with an index must properly handle mu
 ?Feature "IndexAcceptance": Scenario "Should allow AND and OR with index and STARTS WITH predicates"
 ?Feature "IndexAcceptance": Scenario "Should allow AND and OR with index and equality predicates"
 ?Feature "IndexAcceptance": Scenario "Should allow AND and OR with index and inequality predicates"
+?Feature "IndexAcceptance": Scenario "Should allow AND and OR with index and regex predicates"
+?Feature "IndexAcceptance": Scenario "Should allow OR with index and regex predicates"
 Feature "IndexAcceptance": Scenario "Should be able to merge using property from match with index"
 Feature "IndexAcceptance": Scenario "Works fine with index"
 Feature "IndexAcceptance": Scenario "Works with indexed and unindexed property"
