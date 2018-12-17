@@ -9,4 +9,5 @@ $verbose = "$args" -match "-v|-verbose"
 $actualArgs = $args -notmatch "-v|-verbose"
 
 Import-Module "$PSScriptRoot\Neo4j-Management.psd1"
-Exit (Invoke-Neo4jAdmin -Verbose:$verbose -CommandArgs $actualArgs)
+$Arguments = Get-Args $args
+Exit (Invoke-Neo4jAdmin -Verbose:$Arguments.Verbose -CommandArgs $Arguments.Args)
