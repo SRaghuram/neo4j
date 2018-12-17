@@ -69,7 +69,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "RETURN" +
@@ -85,7 +85,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should list comprehension on values") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN [s IN ['1','22','1','333']] AS result")
 
     result.toList.head should equal(Map("result" -> List("1", "22", "1", "333")))
@@ -120,7 +120,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "RETURN [n IN nodes(p)] AS result")
@@ -134,7 +134,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "RETURN [n IN nodes(p) WHERE n.x <= 2] AS result")
@@ -148,7 +148,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "RETURN [n IN nodes(p) WHERE n.x <= 2 | n.x] AS result")
@@ -178,7 +178,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "RETURN" +
@@ -218,7 +218,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE all(n IN nodes(p) WHERE n:Label)" +
@@ -262,7 +262,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE any(n IN nodes(p) WHERE n:Label) " +
@@ -307,7 +307,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE none(n IN nodes(p) WHERE n:Fake) " +
@@ -364,7 +364,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
           "WHERE single(n IN nodes(p) WHERE n.x = 1) " +

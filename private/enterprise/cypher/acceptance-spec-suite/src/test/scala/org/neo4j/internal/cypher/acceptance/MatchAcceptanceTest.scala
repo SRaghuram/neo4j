@@ -171,7 +171,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNodes("A", "B")
     val r1 = relate("A" -> "KNOWS" -> "B")
 
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "match p = shortestPath((a {name:'A'})-[*..15]-(b {name:'B'})) return p").toList.head("p").asInstanceOf[Path]
 
     graph.inTx {
@@ -289,7 +289,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |MATCH paths = (n)-[*..1]-(m)
         |RETURN paths""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       params = Map("0" -> node1.getId, "1" -> node2.getId))
     graph.inTx(
       result.toSet should equal(
@@ -423,7 +423,8 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // when
     val result = executeWith(Configs.All,
-      "match (a:Label), (b:Label) where a.property = b.property return *")
+      "match (a:Label), (b:Label) where a.property = b.property return *",
+    expectedDifferentResults = Configs.Morsel) // TODO: morsel runtime returns wrong result
 
     // then does not throw exceptions
     assert(result.toSet === Set(
@@ -682,7 +683,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     1.to(1000).foreach(_ => createNode())
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, s"profile WITH [$a,$b,$d] AS arr MATCH (n) WHERE id(n) IN arr return count(*)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"profile WITH [$a,$b,$d] AS arr MATCH (n) WHERE id(n) IN arr return count(*)")
 
     // then
     result.toList should equal(List(Map("count(*)" -> 3)))
@@ -715,13 +716,13 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode()
     createNode()
 
-    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 0") should have size 5
-    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 1") should have size 4
-    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 2") should have size 3
-    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 3") should have size 2
-    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 4") should have size 1
-    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 5") should have size 0
-    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 6") should have size 0
+    executeWith(Configs.All - Configs.Morsel, "MATCH (n) RETURN n SKIP 0") should have size 5
+    executeWith(Configs.All - Configs.Morsel, "MATCH (n) RETURN n SKIP 1") should have size 4
+    executeWith(Configs.All - Configs.Morsel, "MATCH (n) RETURN n SKIP 2") should have size 3
+    executeWith(Configs.All - Configs.Morsel, "MATCH (n) RETURN n SKIP 3") should have size 2
+    executeWith(Configs.All - Configs.Morsel, "MATCH (n) RETURN n SKIP 4") should have size 1
+    executeWith(Configs.All - Configs.Morsel, "MATCH (n) RETURN n SKIP 5") should have size 0
+    executeWith(Configs.All - Configs.Morsel, "MATCH (n) RETURN n SKIP 6") should have size 0
 
   }
 
@@ -766,7 +767,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // When
     val res =
-      executeWith(Configs.All, "UNWIND {p} AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", params = Map("p" -> List(node1, node2)))
+      executeWith(Configs.All - Configs.Morsel, "UNWIND {p} AS n MATCH (n)<-[:PING_DAY]-(p:Ping) RETURN count(p) as c", params = Map("p" -> List(node1, node2)))
 
     //Then
     res.toList should equal(List(Map("c" -> 2)))
@@ -946,7 +947,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     // Given an empty database
 
     // When
-    val result = executeWith(Configs.All + Configs.Morsel, "PROFILE MATCH (n) WHERE 1 = 1 AND 5 > 1 RETURN n")
+    val result = executeWith(Configs.All, "PROFILE MATCH (n) WHERE 1 = 1 AND 5 > 1 RETURN n")
 
     // Then
     result.executionPlanDescription().find("Selection") shouldBe empty
@@ -956,7 +957,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     // Given an empty database
 
     // When
-    val result = executeWith(Configs.All + Configs.Morsel, "PROFILE MATCH (n) WHERE FALSE OR 1 = 1 RETURN n")
+    val result = executeWith(Configs.All, "PROFILE MATCH (n) WHERE FALSE OR 1 = 1 RETURN n")
 
     // Then
     result.executionPlanDescription().find("Selection") shouldBe empty
@@ -992,7 +993,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
               |WHERE realm.id = permission.realmId
               |RETURN realm""".stripMargin
 
-    val res = executeWith(Configs.InterpretedAndSlotted + TestConfiguration(
+    val res = executeWith(Configs.InterpretedAndSlottedAndMorsel + TestConfiguration(
       """4.0 runtime=compiled debug=generate_java_source
         |3.5 runtime=compiled debug=generate_java_source
       """.stripMargin), q)
@@ -1027,7 +1028,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should handle 3 inequalities without choking in planning") {
-    executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A) WHERE a.prop < 1 AND a.prop <=1 AND a.prop >=1 RETURN a.prop") shouldBe empty
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WHERE a.prop < 1 AND a.prop <=1 AND a.prop >=1 RETURN a.prop") shouldBe empty
   }
 
   test("expand into non-dense") {

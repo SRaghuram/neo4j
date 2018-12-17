@@ -29,7 +29,7 @@ class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuit
   test("should fail to to create composite uniqueness constraints") {
     // When
 
-    failWithError(Configs.All + Configs.Morsel,
+    failWithError(Configs.All,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS UNIQUE",
       List("Only single property uniqueness constraints are supported"))
 

@@ -71,12 +71,12 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
         |RETURN n
       """.stripMargin
 
-    val resultNoIndex = executeWith(Configs.InterpretedAndSlotted, query)
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     graph.createIndex("Runner", "results")
     resampleIndexes()
 
-    val resultIndex = executeWith(Configs.InterpretedAndSlotted, query,
+    val resultIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek")
@@ -133,7 +133,7 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
         | RETURN n
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")))
 
     result.toList should equal(List(Map("n" -> node2)))

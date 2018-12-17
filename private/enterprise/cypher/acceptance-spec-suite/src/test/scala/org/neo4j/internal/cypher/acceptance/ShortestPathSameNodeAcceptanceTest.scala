@@ -33,7 +33,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   test("shortest paths with explicit same start and end nodes should throw exception by default") {
     setupModel(graph)
     val query = "MATCH p=shortestPath((a)-[*]-(a)) RETURN p"
-    failWithError(Configs.InterpretedAndSlotted, query, List("The shortest path algorithm does not work when the start and end nodes are the same."))
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, List("The shortest path algorithm does not work when the start and end nodes are the same."))
   }
 
   test("shortest paths with explicit same start and end nodes should throw exception when configured to do so") {
@@ -57,7 +57,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   test("shortest paths that discover at runtime that the start and end nodes are the same should throw exception by default") {
     setupModel(graph)
     val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*]-(b)) RETURN p"
-    failWithError(Configs.InterpretedAndSlotted, query, List("The shortest path algorithm does not work when the start and end nodes are the same."))
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, List("The shortest path algorithm does not work when the start and end nodes are the same."))
   }
 
   test("shortest paths that discover at runtime that the start and end nodes are the same should throw exception when configured to do so") {
@@ -81,7 +81,7 @@ class ShortestPathSameNodeAcceptanceTest extends ExecutionEngineFunSuite with Ru
   test("shortest paths with min length 0 that discover at runtime that the start and end nodes are the same should not throw exception by default") {
     setupModel(graph)
     val query = "MATCH (a), (b) MATCH p=shortestPath((a)-[*0..]-(b)) RETURN p"
-    executeWith(Configs.InterpretedAndSlotted, query).toList.length should be(9)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList.length should be(9)
   }
 
   test("shortest paths with min length 0 that discover at runtime that the start and end nodes are the same should throw exception even when when configured to do so") {

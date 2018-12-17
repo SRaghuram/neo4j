@@ -38,7 +38,7 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
     createLabeledNode(Map("prop" -> "www123"), "Address")
     createLabeledNode(Map("prop" -> "www"), "Address")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a")
 
     result.executionPlanDescription() should not(includeSomewhere.aPlan(IndexSeekByRange.name))
   }
@@ -57,7 +57,7 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
         drain(graph.execute("MATCH (u:User {name: 'Stefanie'}) SET u.name = 'steffi'"))
       }
 
-      executeWith(Configs.InterpretedAndSlotted, "MATCH (u:User) WHERE u.name STARTS WITH 'Ste' RETURN u.name as name", executeBefore = executeBefore,
+      executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (u:User) WHERE u.name STARTS WITH 'Ste' RETURN u.name as name", executeBefore = executeBefore,
         resultAssertionInTx = Some(result => {
           result.toSet should equal(Set(Map("name" -> "Stefan"),Map("name" -> "Steven")))
         }))

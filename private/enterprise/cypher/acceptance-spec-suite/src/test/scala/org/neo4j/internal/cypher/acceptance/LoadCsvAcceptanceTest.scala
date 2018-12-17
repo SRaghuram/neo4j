@@ -246,7 +246,7 @@ class LoadCsvAcceptanceTest
         writer.println("5,'Emerald',")
     })
     for (url <- urls) {
-      val result =executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV WITH HEADERS FROM '$url' AS line RETURN line.x")
+      val result =executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV WITH HEADERS FROM '$url' AS line RETURN line.x")
       resourceMonitor.assertClosedAndClear(1)
       assert(result.toList === List(
         Map("line.x" -> "0"),
@@ -269,7 +269,7 @@ class LoadCsvAcceptanceTest
         writer.println("5,'Emerald',")
     })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV WITH HEADERS FROM '$url' AS line WITH line WHERE line.x IS NOT NULL RETURN line.name")
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV WITH HEADERS FROM '$url' AS line WITH line WHERE line.x IS NOT NULL RETURN line.name")
       resourceMonitor.assertClosedAndClear(1)
       assert(result.toList === List(
         Map("line.name" -> "'Aardvark'"),
@@ -288,7 +288,7 @@ class LoadCsvAcceptanceTest
         writer.println( """"String with ""quotes"" in it"""")
     })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line RETURN line as string").toList
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line RETURN line as string").toList
       resourceMonitor.assertClosedAndClear(1)
       assert(result === List(
         Map("string" -> Seq("String without quotes")),
@@ -307,7 +307,7 @@ class LoadCsvAcceptanceTest
     })
 
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line RETURN line")
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line RETURN line")
       resourceMonitor.assertClosedAndClear(1)
       assert(result.toList === List(Map("line" -> Seq("1", "'Aadvark'", "0")), Map("line" -> Seq("2", "'Babs'")),
         Map("line" -> Seq("3", "'Cash'", "1"))))
@@ -322,7 +322,7 @@ class LoadCsvAcceptanceTest
         writer.print("3,'Cash',1\n")
     })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line RETURN line")
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line RETURN line")
       resourceMonitor.assertClosedAndClear(1)
       assert(result.toList === List(Map("line" -> Seq("1", "'Aadvark'", "0")), Map("line" -> Seq("2", "'Babs'")),
         Map("line" -> Seq("3", "'Cash'", "1"))))
@@ -337,7 +337,7 @@ class LoadCsvAcceptanceTest
         writer.print("3,'Cash',1\r")
     })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line RETURN line")
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line RETURN line")
       resourceMonitor.assertClosedAndClear(1)
       assert(result.toList === List(Map("line" -> Seq("1", "'Aadvark'", "0")), Map("line" -> Seq("2", "'Babs'")),
         Map("line" -> Seq("3", "'Cash'", "1"))))
@@ -352,7 +352,7 @@ class LoadCsvAcceptanceTest
         writer.println("3;'Cash';1")
     })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line FIELDTERMINATOR ';' RETURN line")
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line FIELDTERMINATOR ';' RETURN line")
       resourceMonitor.assertClosedAndClear(1)
       assert(result.toList === List(Map("line" -> Seq("1", "'Aadvark'", "0")), Map("line" -> Seq("2", "'Babs'")),
         Map("line" -> Seq("3", "'Cash'", "1"))))
@@ -366,7 +366,7 @@ class LoadCsvAcceptanceTest
         writer.println("something")
     })
 
-    val result = executeWith(Configs.InterpretedAndSlotted, "LOAD CSV FROM \"" + url + "\" AS line RETURN line as string").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "LOAD CSV FROM \"" + url + "\" AS line RETURN line as string").toList
     resourceMonitor.assertClosedAndClear(1)
     assert(result === List(Map("string" -> Seq("something"))))
   }
@@ -378,7 +378,7 @@ class LoadCsvAcceptanceTest
         writer.println("something")
     })
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line RETURN line as string").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line RETURN line as string").toList
     resourceMonitor.assertClosedAndClear(1)
     assert(result === List(Map("string" -> Seq("something"))))
   }
@@ -423,7 +423,7 @@ class LoadCsvAcceptanceTest
         writer.println("010-1015;MFG - Engineering HQ;")
     })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV WITH HEADERS FROM '$url' AS line FIELDTERMINATOR ';' RETURN *").toList
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV WITH HEADERS FROM '$url' AS line FIELDTERMINATOR ';' RETURN *").toList
       resourceMonitor.assertClosedAndClear(1)
       assert(result === List(
         Map("line" -> Map("DEPARTMENT ID" -> "010-1010", "DEPARTMENT NAME" -> "MFG Supplies",
@@ -466,7 +466,7 @@ class LoadCsvAcceptanceTest
   test("should be able to download data from the web") {
     val url = s"http://127.0.0.1:$port/test.csv".cypherEscape
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line RETURN count(line)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line RETURN count(line)")
     resourceMonitor.assertClosedAndClear(1)
     result.columnAs[Long]("count(line)").toList should equal(List(3))
   }
@@ -474,7 +474,7 @@ class LoadCsvAcceptanceTest
   test("should be able to download from a website when redirected and cookies are set") {
     val url = s"http://127.0.0.1:$port/redirect_test.csv".cypherEscape
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line RETURN count(line)")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"LOAD CSV FROM '$url' AS line RETURN count(line)")
     resourceMonitor.assertClosedAndClear(1)
     result.columnAs[Long]("count(line)").toList should equal(List(3))
   }
@@ -673,7 +673,7 @@ class LoadCsvAcceptanceTest
   test("empty headers file should not throw") {
     val urls = csvUrls({ _ => {} })
     for (url <- urls) {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"LOAD CSV WITH HEADERS FROM '$url' AS line RETURN count(*)"
       )
 

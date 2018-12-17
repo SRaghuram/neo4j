@@ -18,7 +18,7 @@ class HintAcceptanceTest
 
   test("should use a simple hint") {
     val query = "MATCH (a)--(b)--(c) USING JOIN ON b RETURN a,b,c"
-    executeWith(Configs.All, query, planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeHashJoin")))
+    executeWith(Configs.All - Configs.Morsel, query, planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeHashJoin")))
   }
 
   test("should not plan multiple joins for one hint - left outer join") {

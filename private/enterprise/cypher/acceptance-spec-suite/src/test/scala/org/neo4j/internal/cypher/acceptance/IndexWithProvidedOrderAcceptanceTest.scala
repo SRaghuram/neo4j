@@ -60,7 +60,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
   for (TestOrder(cypherToken, expectedOrder, providedOrder) <- List(ASCENDING, DESCENDING)) {
 
     test(s"$cypherToken: should use index order for range predicate when returning that property") {
-      val result = executeWith(Configs.InterpretedAndSlotted, s"MATCH (n:Awesome) WHERE n.prop2 > 1 RETURN n.prop2 ORDER BY n.prop2 $cypherToken", executeBefore = createSomeNodes)
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"MATCH (n:Awesome) WHERE n.prop2 > 1 RETURN n.prop2 ORDER BY n.prop2 $cypherToken",
+        executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should not (includeSomewhere.aPlan("Sort"))
       result.toList should be(expectedOrder(List(
@@ -76,11 +77,12 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken: Order by index backed property renamed in an earlier WITH") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"""MATCH (n:Awesome) WHERE n.prop3 STARTS WITH 'foo'
            |WITH n AS nnn
            |MATCH (m)<-[r]-(nnn)
-           |RETURN nnn.prop3 ORDER BY nnn.prop3 $cypherToken""".stripMargin, executeBefore = createSomeNodes)
+           |RETURN nnn.prop3 ORDER BY nnn.prop3 $cypherToken""".stripMargin,
+        executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
         not(includeSomewhere.aPlan("Sort")) and
@@ -125,7 +127,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with an aggregation and an expand") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (a:Awesome)-[r]->(b) WHERE a.prop2 > 1 RETURN a.prop2, count(b) ORDER BY a.prop2 $cypherToken", executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
@@ -178,9 +180,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     test(s"$cypherToken: Order by index backed property should plan with provided order (contains scan)") {
       createStringyNodes()
 
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop3 CONTAINS 'cat' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
-        executeBefore = createStringyNodes)
+        executeBefore = createStringyNodes,
+        expectedDifferentResults = Configs.Morsel) // TODO: morsel runtime returns wrong result
 
       result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
       result.toList should be(expectedOrder(List(
@@ -197,7 +200,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     test(s"$cypherToken: Order by index backed property should plan with provided order (ends with scan)") {
       createStringyNodes()
 
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop3 ENDS WITH 'og' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
         executeBefore = createStringyNodes)
 
@@ -358,7 +361,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order for prop2 when ORDER BY prop1") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 WITH n.prop1 AS prop1, n.prop2 as prop2 ORDER BY prop1 RETURN $functionName(prop2)",
         executeBefore = createSomeNodes)
 
@@ -400,7 +403,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       graph.execute("CREATE (:Awesome {prop3: 'ha'})")
 
       //should give the length of the shortest/longest prop3 string
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(n.prop3)) AS agg", executeBefore = createSomeNodes)
 
       val expected = expectedOrder(List(
@@ -414,7 +417,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       graph.execute("CREATE (:Awesome {prop3: 'ha'})")
 
       //should give the length of the shortest/longest prop3 string
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop3 > '' RETURN $functionName(size(trim(replace(n.prop3, 'a', 'aa')))) AS agg",
         executeBefore = createSomeNodes)
 
@@ -427,7 +430,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
 
     // The planer doesn't yet support composite range scans, so we can't avoid the aggregation
     test(s"$cypherToken-$functionName: cannot use provided index order from composite index") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 AND n.prop2 > 0 RETURN $functionName(n.prop1), $functionName(n.prop2)",
         executeBefore = createSomeNodes)
 
@@ -441,7 +444,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order with multiple aggregations") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1), count(n.prop1)", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()
@@ -455,7 +458,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken-$functionName: cannot use provided index order with grouping expression (caused by return n.prop2)") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop1 > 0 RETURN $functionName(n.prop1), n.prop2", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()
@@ -482,7 +485,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken-$functionName: should plan aggregation for index scan") {
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) RETURN $functionName(n.prop1)", executeBefore = createSomeNodes)
 
       // index scan provide values but not order, since we don't know the property type
@@ -501,7 +504,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
 
       createLabeledNode(Map("foo" -> 2), "B")
 
-      val result = executeWith(Configs.InterpretedAndSlotted,
+      val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:B) WHERE n.foo > 0 RETURN $functionName(n.foo)", executeBefore = createSomeNodes)
 
       val plan = result.executionPlanDescription()

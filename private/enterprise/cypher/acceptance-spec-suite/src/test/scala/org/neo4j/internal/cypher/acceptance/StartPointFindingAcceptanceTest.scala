@@ -60,14 +60,14 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   test("Seek relationship by id given on the left") {
     val rel = relate(createNode("a"), createNode("b"))
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"match ()-[r]->() where ${rel.getId} = id(r) return r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match ()-[r]->() where ${rel.getId} = id(r) return r")
     result.columnAs[Node]("r").toList should equal(List(rel))
   }
 
   test("Seek relationship by id given on the right") {
     val rel = relate(createNode("a"), createNode("b"))
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"match ()-[r]->() where id(r) = ${rel.getId} return r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match ()-[r]->() where id(r) = ${rel.getId} return r")
     result.columnAs[Node]("r").toList should equal(List(rel))
   }
 
@@ -85,7 +85,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     val b = createNode("x")
     val r = relate(a, b)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"match (a)-[r]-(b) where id(r) = ${r.getId} return a,r,b")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match (a)-[r]-(b) where id(r) = ${r.getId} return a,r,b")
     result.toSet should equal(Set(
       Map("r" -> r, "a" -> a, "b" -> b),
       Map("r" -> r, "a" -> b, "b" -> a)))
@@ -96,7 +96,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
     val b = createNode("x")
     val r = relate(a, b)
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"PROFILE UNWIND [${r.getId}] as rId match (a)-[r]->(b) where id(r) = rId return a,r,b",
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"PROFILE UNWIND [${r.getId}] as rId match (a)-[r]->(b) where id(r) = rId return a,r,b",
       planComparisonStrategy = ComparePlansWithAssertion(_.toString should include("RelationshipById")))
 
     result.toList should equal(List(Map("r" -> r, "a" -> a, "b" -> b)))
@@ -105,7 +105,7 @@ class StartPointFindingAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   test("Seek relationship by id with type that is not matching") {
     val r = relate(createNode("x"), createNode("y"), "FOO")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, s"match ()-[r:BAR]-() where id(r) = ${r.getId} return r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match ()-[r:BAR]-() where id(r) = ${r.getId} return r")
     result.toList shouldBe empty
   }
 

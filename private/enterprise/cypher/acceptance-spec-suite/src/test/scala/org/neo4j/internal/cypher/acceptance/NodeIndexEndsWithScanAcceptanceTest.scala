@@ -30,7 +30,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -52,7 +52,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -75,7 +75,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -98,7 +98,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -122,7 +122,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) USING INDEX l:Location(name) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
     // RULE has bug with this query
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")))
 
     result.toList should equal(List(Map("l" -> london)))
@@ -144,7 +144,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH {param} RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexEndsWithScan")),
       params = Map("param" -> null))
 
@@ -165,7 +165,7 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     graph.createUniqueConstraint("Location", "name")
 
-    val config = Configs.InterpretedAndSlotted
+    val config = Configs.InterpretedAndSlottedAndMorsel
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH {param} RETURN l"
     val message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42")
 

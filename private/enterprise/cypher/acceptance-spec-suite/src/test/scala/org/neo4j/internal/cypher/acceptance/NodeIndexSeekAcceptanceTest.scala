@@ -244,7 +244,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN m""".stripMargin
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
         planDescription.toString() shouldNot include("index")
       }))
@@ -271,7 +271,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN m""".stripMargin
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
         planDescription.toString() shouldNot include("index")
       }))
@@ -292,7 +292,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("uuid" -> "z"), "Company")
 
     // When
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.All - Configs.Morsel,
       "MATCH (root:Company) WHERE root.uuid IN {uuids} RETURN DISTINCT root",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))),
       params = Map("uuids" -> Array("a", "b", "c")))
@@ -310,7 +310,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     createLabeledNode(Map("uuid" -> 6), "Company")
 
     // When
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.All - Configs.Morsel,
       "MATCH (root:Company) WHERE root.uuid IN {uuids} RETURN DISTINCT root",
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeIndexSeek"))),
       params = Map("uuids" -> Array(1, 2, 3)))
@@ -415,7 +415,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     resampleIndexes()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     // Then
@@ -441,7 +441,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     resampleIndexes()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4")))
 
     // Then

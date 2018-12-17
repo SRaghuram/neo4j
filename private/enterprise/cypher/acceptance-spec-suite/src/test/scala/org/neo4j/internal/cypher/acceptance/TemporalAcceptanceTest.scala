@@ -336,7 +336,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   test("should not create date time with conflicting time zones") {
     val query = "WITH datetime('1984-07-07T12:34+03:00[Europe/Stockholm]') as d RETURN d"
     val errorMsg = "Timezone and offset do not match"
-    failWithError(Configs.InterpretedAndSlotted, query, Seq(errorMsg), Seq("InvalidArgumentException"))
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq(errorMsg), Seq("InvalidArgumentException"))
   }
 
   // Failing when providing wrong values
@@ -412,8 +412,8 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     val query1 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN localdatetime({time:x})"
     val query2 = s"WITH localtime({hour: 12, minute: 34, second: 56}) as x RETURN datetime({time:x})"
 
-    failWithError(Configs.InterpretedAndSlotted, query1, Seq("year must be specified"), Seq("InvalidArgumentException"))
-    failWithError(Configs.InterpretedAndSlotted, query2, Seq("year must be specified"), Seq("InvalidArgumentException"))
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, query1, Seq("year must be specified"), Seq("InvalidArgumentException"))
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, query2, Seq("year must be specified"), Seq("InvalidArgumentException"))
   }
 
   test("should not select only date for datetime and localdatetime") {
@@ -730,7 +730,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (arg <- Seq("P1.5Y1M", "P1Y1.5M1D", "P1Y1M1.5DT1H", "P1Y1M1DT1.5H1M", "P1Y1M1DT1H1.5M1S")) {
       val query = s"RETURN duration('$arg')"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlotted, query, Seq("Text cannot be parsed to a Duration"))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("Text cannot be parsed to a Duration"))
       }
     }
   }
@@ -739,7 +739,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (arg <- Seq("2018-04-01T12:45:45+45", "2018-04-01T12:45:65+05", "2018-04-01T12:65:45+05", "2018-04-01T65:45:45+05", "2018-04-65T12:45:45+05", "2018-65-01T12:45:45+05")) {
       val query = s"RETURN datetime('$arg') as value"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlotted, query, Seq("Invalid value for", "not in valid range"))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("Invalid value for", "not in valid range"))
       }
     }
   }
@@ -786,7 +786,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- Seq("inMonths", "inDays"); arg1 <- args; arg2 <- args) {
       val query = s"RETURN duration.$func($arg1, $arg2)"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlotted, query, Seq.empty, Seq("CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq.empty, Seq("CypherTypeException"))
       }
     }
   }
@@ -810,7 +810,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (op <- Seq("<", "<=", ">", ">=")) {
       val query = "RETURN $d1 " + op + " $d2 as x"
       withClue(s"Executing $query") {
-        val res = executeWith(Configs.InterpretedAndSlotted, query, params = Map("d1" -> DurationValue.duration(1, 0, 0 ,0), "d2" -> DurationValue.duration(0, 30, 0 ,0))).toList
+        val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, params = Map("d1" -> DurationValue.duration(1, 0, 0 ,0), "d2" -> DurationValue.duration(0, 30, 0 ,0))).toList
         res should be(List(Map("x" -> null)))
       }
     }
@@ -840,7 +840,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     )
     for(returnQuery <- returnQueries) {
       withClue("executing " + returnQuery) {
-        failWithError(Configs.InterpretedAndSlotted, "MATCH (n) RETURN " + returnQuery, Seq("Invalid call signature", "Can't coerce"), Seq("CypherExecutionException", "CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN " + returnQuery, Seq("Invalid call signature", "Can't coerce"), Seq("CypherExecutionException", "CypherTypeException"))
       }
     }
   }
@@ -854,7 +854,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN t
       """.stripMargin
 
-    failWithError(Configs.InterpretedAndSlotted, query, Seq("Text cannot be parsed to a Time"))
+    failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq("Text cannot be parsed to a Time"))
   }
 
   test("create time with named time zone should be supported") {
@@ -866,7 +866,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN time({hour: 12, minute: 34, second: 56, timezone:'Europe/Stockholm'}) = currentCorrectTime as comparison
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     result.toList should equal(List(Map("comparison" -> true)))
   }
 
@@ -877,7 +877,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         | RETURN toString(time({time:dt})) as t1, toString(time.truncate('second', dt)) as t2
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     result.toList should equal(List(Map("t1" -> "12:31:14+02:00", "t2" -> "12:31:14+02:00")))
   }
 
@@ -891,7 +891,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |        time.truncate('second', ld, {timezone: 'Europe/Stockholm'}) = currentCorrectTime as comp2
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     result.toList should equal(List(Map("comp1" -> true, "comp2" -> true)))
   }
 
@@ -901,7 +901,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (receiver <- receivers; arg <- args) {
       val query = s"RETURN $receiver.truncate('$truncationUnit', $arg)"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlotted, query, Seq(errorMsg), Seq("CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, Seq(errorMsg), Seq("CypherTypeException"))
       }
     }
   }
@@ -920,7 +920,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     for (func <- returnFuncs; arg <- args) {
       val query = s"WITH $withX as x RETURN $func($arg)"
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlotted, query, validErrorMessages, Seq(errorType))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, validErrorMessages, Seq(errorType))
       }
     }
   }
@@ -930,7 +930,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $typ($args).$acc"
       val validErrorMessages = Seq("No such field", "Unsupported field", "Cannot get the offset of", "Cannot get the time zone of", "not supported")
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlotted, query, validErrorMessages, Seq("CypherTypeException"))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, validErrorMessages, Seq("CypherTypeException"))
       }
     }
   }
@@ -940,7 +940,7 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
       val query = s"RETURN $func($arg)"
       val validErrorMessages = Seq("Cannot assign", "cannot be selected together with", "cannot be specified without", "must be specified", "Invalid value")
       withClue(s"Executing $query") {
-        failWithError(Configs.InterpretedAndSlotted, query, validErrorMessages, Seq("CypherTypeException", "InvalidArgumentException", "SyntaxException"))
+        failWithError(Configs.InterpretedAndSlottedAndMorsel, query, validErrorMessages, Seq("CypherTypeException", "InvalidArgumentException", "SyntaxException"))
       }
     }
   }

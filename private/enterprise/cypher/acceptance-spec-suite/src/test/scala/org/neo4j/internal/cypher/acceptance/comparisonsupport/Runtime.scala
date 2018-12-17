@@ -10,7 +10,7 @@ case class Runtimes(runtimes: Runtime*)
 object Runtimes {
   implicit def runtimeToRuntimes(runtime: Runtime): Runtimes = Runtimes(runtime)
 
-  val all = Runtimes(CompiledBytecode, CompiledSource, Slotted, SlottedWithCompiledExpressions, Interpreted)
+  val all = Runtimes(CompiledBytecode, CompiledSource, Slotted, SlottedWithCompiledExpressions, Interpreted, Morsel, MorselSingleThreaded)
 
   def definedBy(preParserArgs: Array[String]): Runtimes = {
     val runtimes = all.runtimes.filter(_.isDefinedBy(preParserArgs))
@@ -27,9 +27,10 @@ object Runtimes {
 
   object Interpreted extends Runtime(Set("INTERPRETED", "PROCEDURE"), "runtime=interpreted")
 
-  // Not included in `all`
+  // Only 4.0 version is included in `all`
   object Morsel extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel")
 
+  // Only 4.0 version is included in `all`
   object MorselSingleThreaded extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel debug=singlethreaded")
 
 }

@@ -40,7 +40,8 @@ object Configs {
     * Even if not explicitly requested, they are executed to check if they unexpectedly succeed to make sure that
     * test coverage is kept up-to-date with new features.
     */
-  def All: TestConfiguration = TestConfiguration(Versions.all, Planners.all, Runtimes.all)
+  def All: TestConfiguration = TestConfiguration(Versions.all, Planners.all, Runtimes.all) -
+    TestConfiguration(V3_5, Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
 
   /**
     * These experimental configurations will only be executed if you explicitly specify them in the test expectation.

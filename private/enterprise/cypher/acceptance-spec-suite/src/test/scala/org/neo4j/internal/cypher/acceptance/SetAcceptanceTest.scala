@@ -59,7 +59,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     node should haveProperty("property")
 
     // and
-    val result2 = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) WHERE n.property = ['foo','bar'] RETURN count(*)")
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE n.property = ['foo','bar'] RETURN count(*)")
     result2.columnAs("count(*)").toList should be(List(1))
   }
 

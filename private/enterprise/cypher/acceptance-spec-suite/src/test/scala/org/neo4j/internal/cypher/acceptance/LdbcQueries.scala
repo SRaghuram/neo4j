@@ -310,7 +310,7 @@ object LdbcQueries {
       Map("personId" -> 2, "messageId" -> 13, "personLastName" -> "last2-ᚠさ丵פش",
         "messageContent" -> "[f2Comment1] content", "messageDate" -> 2, "personFirstName" -> "f2"))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
 
   }
 
@@ -1449,7 +1449,7 @@ object LdbcQueries {
       Map("friendLastName" -> "2", "tagNames" -> Seq("tag111-ᚠさ丵פش"), "friendId" -> 2, "count" -> 1, "friendFirstName" -> "f"),
       Map("friendLastName" -> "3", "tagNames" -> Seq("tag11-ᚠさ丵פش"), "friendId" -> 3, "count" -> 1, "friendFirstName" -> "f"))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
 
   }
 

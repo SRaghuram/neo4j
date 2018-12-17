@@ -20,7 +20,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     // one non-loop
     relate(n, createNode())
 
-    val resultStar = executeWith(Configs.InterpretedAndSlotted, "MATCH (a)-->(a) RETURN count(*)")
+    val resultStar = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a)-->(a) RETURN count(*)")
     val resultVar = executeWith(Configs.All, "MATCH (a)-[r]->(a) RETURN count(r)")
 
     resultStar.toList should equal(List(Map("count(*)" -> 2)))
@@ -76,8 +76,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     val query = "MATCH (n:User) RETURN count(n) > 0"
 
     // Then
-    compareCount(query, false, Configs.InterpretedAndSlotted)
-    compareCount(query, true, Configs.InterpretedAndSlotted, executeBefore = executeBefore)
+    compareCount(query, false, Configs.InterpretedAndSlottedAndMorsel)
+    compareCount(query, true, Configs.InterpretedAndSlottedAndMorsel, executeBefore = executeBefore)
   }
 
   test("counts nodes using count store and projection expression with variable") {
@@ -302,9 +302,9 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     val query = "MATCH (n:User) RETURN count(n) > 1"
 
     // Then
-    compareCount(query, false, Configs.InterpretedAndSlotted)
+    compareCount(query, false, Configs.InterpretedAndSlottedAndMorsel)
     setupBigModel(label1 = "Admin")
-    compareCount(query, true, Configs.InterpretedAndSlotted, assertCountInTransaction = true, executeBefore = executeBefore)
+    compareCount(query, true, Configs.InterpretedAndSlottedAndMorsel, assertCountInTransaction = true, executeBefore = executeBefore)
   }
 
   test("counts nodes using count store and projection expression with variable considering transaction state") {
@@ -357,9 +357,9 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     val query = "MATCH ()-[r]->() RETURN count(r) > 2"
 
     // Then
-    compareCount(query, false, Configs.InterpretedAndSlotted, expectedLogicalPlan = "RelationshipCountFromCountStore")
+    compareCount(query, false, Configs.InterpretedAndSlottedAndMorsel, expectedLogicalPlan = "RelationshipCountFromCountStore")
     setupBigModel()
-    compareCount(query, true, Configs.InterpretedAndSlotted, expectedLogicalPlan = "RelationshipCountFromCountStore", assertCountInTransaction = true, executeBefore = executeBefore)
+    compareCount(query, true, Configs.InterpretedAndSlottedAndMorsel, expectedLogicalPlan = "RelationshipCountFromCountStore", assertCountInTransaction = true, executeBefore = executeBefore)
   }
 
   test("counts relationships using count store and projection with expression and variable considering transaction state") {

@@ -42,7 +42,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     createLabeledNode("Place")
     graph.execute("MATCH (p:Place) SET p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -193,7 +193,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     val query = "MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point"
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
@@ -211,7 +211,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("MATCH (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (p:Place) WHERE p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -234,7 +234,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({x: 1.2, y: 3.4, z: 5.601})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (p:Place) WHERE p.location = point({x: 1.2, y: 3.4, z: 5.6}) RETURN p.location as point",
       planComparisonStrategy = ComparePlansWithAssertion({ plan =>
         plan should includeSomewhere
@@ -255,7 +255,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -274,7 +274,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location < point({x: 0, y: 0}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location < point({x: 0, y: 0}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -294,7 +294,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({x: 100000, y: -100000})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) AND p.location < point({x: 200000, y: 200000}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location > point({x: 0, y: 0}) AND p.location < point({x: 200000, y: 200000}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -313,7 +313,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: -10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -331,7 +331,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.700001, longitude: 12.7800001, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location = point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -371,7 +371,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.0, longitude: 12.0, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -391,7 +391,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -411,7 +411,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location > point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -431,7 +431,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -451,7 +451,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
     graph.execute("CREATE (p:Place) SET p.location = point({latitude: 56.7, longitude: 10.78, crs: 'WGS-84'})")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'}) AND p.location < point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CYPHER MATCH (p:Place) WHERE p.location >= point({latitude: 55.7, longitude: 11.78, crs: 'WGS-84'}) AND p.location < point({latitude: 56.7, longitude: 12.78, crs: 'WGS-84'}) RETURN p.location as point")
 
     // Then
     val plan = result.executionPlanDescription()
@@ -647,7 +647,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.InterpretedAndSlotted,
+        Configs.InterpretedAndSlottedAndMorsel,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s":$LABEL($PROPERTY) > min AND :$LABEL($PROPERTY) < max"))
@@ -677,7 +677,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.InterpretedAndSlotted,
+        Configs.InterpretedAndSlottedAndMorsel,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s":$LABEL($PROPERTY) > point({x: min.x, y: min.y}) AND :$LABEL($PROPERTY) < max"))

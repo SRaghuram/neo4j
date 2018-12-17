@@ -35,27 +35,36 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   // Compiled does not support NodeIndexScan so in cases when index provided values are used,
   // count is not supported in compiled anymore.
   private val countConfig: TestConfiguration = Configs.InterpretedAndSlotted + Configs.Version3_5
+  private val countConfigWithMorsel: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel + Configs.Version3_5
 
-  for ((i, func, funcBody, property, supportsCompiled) <-
+  for ((i, func, funcBody, property, supportsCompiled, supportsMorsel, correctResultFromMorselSingle) <-
          List(
-           (0, "min", "n.prop3", "n.prop3", false),
-           (1, "max", "n.prop3", "n.prop3", false),
-           (2, "sum", "n.prop2", "n.prop2", false),
-           (3, "avg", "n.prop2", "n.prop2", false),
-           (4, "stDev", "n.prop2", "n.prop2", false),
-           (5, "stDevP", "n.prop2", "n.prop2", false),
-           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false),
-           (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false),
-           (8, "count", "n.prop1", "n.prop1", true),
-           (9, "count", "DISTINCT n.prop2", "n.prop2", true)
+           (0, "min", "n.prop3", "n.prop3", false, true, true),
+           (1, "max", "n.prop3", "n.prop3", false, true, true),
+           (2, "sum", "n.prop2", "n.prop2", false, false, true),
+           (3, "avg", "n.prop2", "n.prop2", false, true, true),
+           (4, "stDev", "n.prop2", "n.prop2", false, false, true),
+           (5, "stDevP", "n.prop2", "n.prop2", false, false, true),
+           (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, false, true),
+           (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false, false, true),
+           (8, "count", "n.prop1", "n.prop1", true, true, true),
+           (9, "count", "DISTINCT n.prop2", "n.prop2", true, true, false) // TODO: count DISTINCT returns wrong result with morsel
          )
   ) {
     // Simple aggregation functions implicitly gives exists
 
+    val configsWithWrongResult = if (correctResultFromMorselSingle) Configs.Empty else Configs.Morsel
+
     test(s"$i-$func: should use index provided values") {
-      val config = if (supportsCompiled) countConfig else Configs.InterpretedAndSlotted
+      // Compiled does not support NodeIndexScan so this query is not supported in compiled anymore.
+      val config =
+        if (supportsCompiled && supportsMorsel) countConfigWithMorsel
+        else if (supportsCompiled) countConfig
+        else if (supportsMorsel) Configs.InterpretedAndSlottedAndMorsel
+        else Configs.InterpretedAndSlotted
+
       val query = s"MATCH (n:Awesome) RETURN $func($funcBody) as aggregation"
-      val result = executeWith(config, query, executeBefore = createSomeNodes)
+      val result = executeWith(config, query, executeBefore = createSomeNodes, expectedDifferentResults = configsWithWrongResult)
 
       result.executionPlanDescription() should
         includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[$property]")
@@ -67,9 +76,14 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     // Combination of aggregation and grouping expression does not implicitly give exist
     test(s"$i-$func: cannot use index provided values with grouping expression without exists") {
-      val config = if (supportsCompiled) Configs.All else Configs.InterpretedAndSlotted
+      val config =
+        if (supportsCompiled && supportsMorsel) Configs.All
+        else if (supportsCompiled) Configs.All - Configs.Morsel
+        else if (supportsMorsel) Configs.InterpretedAndSlottedAndMorsel
+        else Configs.InterpretedAndSlotted
+
       val query = s"MATCH (n:Awesome) RETURN $property as res1, $func($funcBody) as res2"
-      val result = executeWith(config, query, executeBefore = createSomeNodes)
+      val result = executeWith(config, query, executeBefore = createSomeNodes, expectedDifferentResults = configsWithWrongResult)
 
       result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan")
 
@@ -91,9 +105,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     test(s"$i-$func: should use index provided values with grouping expression with exists") {
       //Compiled does not support exists
-      val config = Configs.InterpretedAndSlotted
+      val config = if(supportsMorsel) Configs.InterpretedAndSlottedAndMorsel else Configs.InterpretedAndSlotted
       val query = s"MATCH (n:Awesome) WHERE exists($property) RETURN $property as res1, $func($funcBody) as res2"
-      val result = executeWith(config, query, executeBefore = createSomeNodes)
+      val result = executeWith(config, query, executeBefore = createSomeNodes, expectedDifferentResults = configsWithWrongResult)
 
       result.executionPlanDescription() should
         includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[$property]")
@@ -127,7 +141,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values with renamed property") {
     val query = "MATCH (n: Awesome) WITH n.prop1 AS property RETURN min(property)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
@@ -137,7 +151,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values after renaming multiple properties") {
     val query = "MATCH (n: Awesome) WITH n.prop1 AS property, n.prop2 AS prop RETURN min(property)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
@@ -154,7 +168,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         | RETURN min(prop)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
@@ -164,7 +178,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values with renamed variable") {
     val query = "MATCH (n:Awesome) WITH n as m RETURN min(m.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
@@ -174,7 +188,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values with renamed variable and property") {
     val query = "MATCH (n:Awesome) WITH n as m WITH m.prop1 AS prop RETURN min(prop)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
@@ -191,7 +205,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         | RETURN min(prop)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
@@ -208,7 +222,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
         | RETURN min(property)
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", "cached[n.prop1]")
@@ -228,7 +242,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values for multiple aggregations on same property") {
     val query = "MATCH (n: Awesome) RETURN min(n.prop1) AS min, max(n.prop1) AS max, avg(n.prop1) AS avg"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[n.prop1]")
@@ -243,7 +257,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     resampleIndexes()
 
     val query = "MATCH (n: Label) RETURN min(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     /*
      * Even if range scans for composite indexes become supported,
@@ -263,7 +277,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     resampleIndexes()
 
     val query = "MATCH (n: Awesome) RETURN count(n.prop3), count(n.prop4)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     /*
      * Even if range scans for composite indexes become supported,
@@ -283,7 +297,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop2")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN count(m.prop2) AS count"
-    val result = executeWith(countConfig, query, executeBefore = createSomeNodes)
+    val result = executeWith(countConfigWithMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -300,7 +314,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     createLabeledNode(Map("prop1" -> 2), "Label")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN min(n.prop1) AS min, count(m.prop1) AS count"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -318,7 +332,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("Label", "prop1")
 
     val query = "MATCH (n:Awesome), (m:Label) RETURN min(n.prop1) AS min, count(m.prop1) AS count"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("CartesianProduct")
@@ -343,7 +357,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count"
-    val result = executeWith(countConfig, query, executeBefore = createSomeNodes)
+    val result = executeWith(countConfigWithMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[n.prop2]")
@@ -365,7 +379,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count, avg(m.prop1) AS avg"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
@@ -393,6 +407,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     //With NodeIndexScan only 6 new nodes will be created, but it should be 10 new nodes
     result1.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan")
+    result1.toList should equal(List(Map("avg(prop)" -> 41)))
     result1.toList should equal(List(Map("avg(prop)" -> 41)))
 
     val result2 = executeWith(Configs.All, "MATCH (n:New) RETURN count(n)")
@@ -436,7 +451,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values when UNWIND before aggregation") {
     val query = "UNWIND [1,2,3] AS i MATCH (n: Awesome) RETURN count(n.prop1)"
-    val result = executeWith(countConfig, query, executeBefore = createSomeNodes)
+    val result = executeWith(countConfigWithMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
@@ -447,7 +462,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values when complex UNWIND before aggregation") {
     val query = "MATCH (n: Awesome) UNWIND labels(n) + [n.prop1, n.prop2, 1, 'abc'] AS i RETURN count(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
@@ -476,7 +491,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     })
 
     val query = s"LOAD CSV WITH HEADERS FROM '$url' AS row MATCH (n:Awesome) WHERE toInt(row.Value) > 20 RETURN count(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
@@ -487,7 +502,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values when procedure call before aggregation") {
     val query = "MATCH (n:Awesome) CALL db.labels() YIELD label RETURN count(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingVariables("cached[n.prop1]")
@@ -497,7 +512,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should handle aggregation with label not in the semantic table") {
     val query = "MATCH (n: NotExistingLabel) RETURN min(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")

@@ -394,7 +394,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY previously unprojected DISTINCT column in WITH and project and return it") {
-    val result = executeWith(Configs.All,
+    val result = executeWith(Configs.All - Configs.Morsel,
       """
       MATCH (a:A)
       WITH DISTINCT a.age AS age
@@ -422,7 +422,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY column that isn't referenced in WITH DISTINCT") {
-    val result = executeWith(Configs.All, "MATCH (a:A) WITH DISTINCT a.name AS name, a ORDER BY a.age RETURN name")
+    val result = executeWith(Configs.All - Configs.Morsel, "MATCH (a:A) WITH DISTINCT a.name AS name, a ORDER BY a.age RETURN name")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")

@@ -24,7 +24,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
     createNode()
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "MATCH (n) RETURN n")
+    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN n")
 
     result.executionPlanDescription() should (
       includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
@@ -37,7 +37,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
 
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "MATCH (n) RETURN (n:Foo)")
+    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN (n:Foo)")
 
     result.executionPlanDescription() should (
       includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
@@ -53,7 +53,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
 
     executeWith(
-      Configs.All + Configs.Morsel,
+      Configs.All,
       "PROFILE MATCH (n) RETURN n.foo",
       planComparisonStrategy = ComparePlansWithAssertion(
         _ should
@@ -228,7 +228,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
 
     //GIVEN
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "MATCH (n) RETURN n.foo")
+    val result = profileWithExecute(Configs.All, "MATCH (n) RETURN n.foo")
 
     //WHEN THEN
     result.executionPlanDescription() should (
@@ -243,7 +243,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
 
     // WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlotted, "MATCH (n) optional match (n)-->(x) return x")
+    // TODO: morsel runtime returns wrong result
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) optional match (n)-->(x) return x", Configs.Morsel)
 
     // THEN
     result.executionPlanDescription() should (
@@ -266,7 +267,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
     createNode()
     createNode()
-    val result = profileWithExecute(Configs.All, """MATCH (n) RETURN n LIMIT 1""")
+    val result = profileWithExecute(Configs.All - Configs.Morsel, """MATCH (n) RETURN n LIMIT 1""")
 
     // WHEN
     result.toList
@@ -282,19 +283,19 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("LIMIT should influence cardinality estimation even when parameterized") {
     (0 until 100).map(i => createLabeledNode("Person"))
-    val result = executeWith(Configs.All, s"PROFILE MATCH (p:Person) RETURN p LIMIT {limit}", params = Map("limit" -> 10))
+    val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) RETURN p LIMIT {limit}", params = Map("limit" -> 10))
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(GraphStatistics.DEFAULT_LIMIT_CARDINALITY.amount.toInt)
   }
 
   test("LIMIT should influence cardinality estimation with literal") {
     (0 until 100).map(i => createLabeledNode("Person"))
-    val result = executeWith(Configs.All, s"PROFILE MATCH (p:Person) RETURN p LIMIT 10")
+    val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) RETURN p LIMIT 10")
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(10)
   }
 
   test("LIMIT should influence cardinality estimation with literal and parameters") {
     (0 until 100).map(i => createLabeledNode("Person"))
-    val result = executeWith(Configs.All, s"PROFILE MATCH (p:Person) WHERE 50 = {fifty} RETURN p LIMIT 10", params = Map("fifty" -> 50))
+    val result = executeWith(Configs.All - Configs.Morsel, s"PROFILE MATCH (p:Person) WHERE 50 = {fifty} RETURN p LIMIT 10", params = Map("fifty" -> 50))
     result.executionPlanDescription() should includeSomewhere.aPlan("Limit").withEstimatedRows(10)
   }
 
@@ -344,14 +345,14 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should support profiling optional match queries") {
     createLabeledNode(Map("x" -> 1), "Label")
-    val result = profileWithExecute(Configs.InterpretedAndSlotted, "match (a:Label {x: 1}) optional match (a)-[:REL]->(b) return a.x as A, b.x as B").toList.head
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (a:Label {x: 1}) optional match (a)-[:REL]->(b) return a.x as A, b.x as B").toList.head
     result("A") should equal(1)
     result("B") should equal(null.asInstanceOf[Int])
   }
 
   test("should support profiling optional match and with") {
     createLabeledNode(Map("x" -> 1), "Label")
-    val executionResult = profileWithExecute(Configs.InterpretedAndSlotted, "match (n) optional match (n)--(m) with n, m where m is null return n.x as A")
+    val executionResult = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) optional match (n)--(m) with n, m where m is null return n.x as A")
     val result = executionResult.toList.head
     result("A") should equal(1)
   }
@@ -393,7 +394,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("does not use Apply for aggregation and order by") {
-    val a = profileWithExecute(Configs.InterpretedAndSlotted, "match (n) return n, count(*) as c order by c")
+    val a = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (n) return n, count(*) as c order by c")
 
     a.executionPlanDescription().toString should not include "Apply"
   }
@@ -437,13 +438,13 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("should show expand without types in a simple form") {
-    val a = profileWithExecute(Configs.All + Configs.Morsel, "match (n)-->() return *")
+    val a = profileWithExecute(Configs.All, "match (n)-->() return *")
 
     a.executionPlanDescription().toString should include("()<--(n)")
   }
 
   test("should show expand with types in a simple form") {
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n)-[r:T]->() return *")
+    val result = profileWithExecute(Configs.All, "match (n)-[r:T]->() return *")
 
     result.executionPlanDescription().toString should include("()<-[r:T]-(n)")
   }
@@ -464,7 +465,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(createNode(), createNode())
 
     // when
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n)-->(x) return x")
+    val result = profileWithExecute(Configs.All, "match (n)-->(x) return x")
 
     // then
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHits(3)
@@ -472,7 +473,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should report correct dbhits and rows for literal addition") {
     // when
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "return 5 + 3")
+    val result = profileWithExecute(Configs.All, "return 5 + 3")
 
     // then
     result.executionPlanDescription() should (
@@ -486,7 +487,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode("name" -> "foo")
 
     // when
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n) return n.name + 3")
+    val result = profileWithExecute(Configs.All, "match (n) return n.name + 3")
 
     // then
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1)
@@ -497,7 +498,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode("name" -> 10)
 
     // when
-    val result = profileWithExecute(Configs.All + Configs.Morsel, "match (n) return n.name - 3")
+    val result = profileWithExecute(Configs.All, "match (n) return n.name - 3")
 
     // then
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection").withRows(1).withDBHits(1)
@@ -698,8 +699,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     result
   }
 
-  def profileWithExecute(configuration: TestConfiguration, q: String): RewindableExecutionResult = {
-    val result = executeWith(configuration, "profile " + q)
+  def profileWithExecute(configuration: TestConfiguration, q: String, configsWithDifferentResult: TestConfiguration = Configs.Empty): RewindableExecutionResult = {
+    val result = executeWith(configuration, "profile " + q, expectedDifferentResults = configsWithDifferentResult)
     result.executionMode should equal(ProfileMode)
 
     val planDescription: InternalPlanDescription = result.executionPlanDescription()

@@ -16,7 +16,7 @@ class IdAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupp
     val expected = createNode().getId
 
     // WHEN
-    val result = executeWith(Configs.All + Configs.Morsel, "MATCH (n) RETURN id(n)")
+    val result = executeWith(Configs.All, "MATCH (n) RETURN id(n)")
 
     // THEN
     result.toList should equal(List(Map("id(n)" -> expected)))
@@ -27,7 +27,7 @@ class IdAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupp
     val expected = relate(createNode(), createNode()).getId
 
     // WHEN
-    val result = executeWith(Configs.All + Configs.Morsel, "MATCH ()-[r]->() RETURN id(r)")
+    val result = executeWith(Configs.All, "MATCH ()-[r]->() RETURN id(r)")
 
     // THEN
     result.toList should equal(List(Map("id(r)" -> expected)))

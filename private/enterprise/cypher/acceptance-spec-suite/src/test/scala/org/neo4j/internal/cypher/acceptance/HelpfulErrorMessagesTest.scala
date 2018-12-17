@@ -40,7 +40,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("should provide sensible error message for invalid regex syntax together with index") {
     graph.execute("CREATE (n:Person {text:'abcxxxdefyyyfff'})")
-    failWithError(Configs.InterpretedAndSlotted,
+    failWithError(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (x:Person) WHERE x.text =~ '*xxx*yyy*' RETURN x.text", List("Invalid Regex:"))
   }
 

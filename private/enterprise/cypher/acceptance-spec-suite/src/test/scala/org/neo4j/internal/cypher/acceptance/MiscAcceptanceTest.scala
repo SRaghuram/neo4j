@@ -84,7 +84,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     // If we would use Ints for storing the limit, then we would end up with "limit 0"
     // thus, if we actually return the two nodes, then it proves that we used a long
     val query = "MATCH (n) RETURN n LIMIT " + limit
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.All - Configs.Morsel, query)
     result.toList should equal(List(Map("n" -> a), Map("n" -> b)))
   }
 

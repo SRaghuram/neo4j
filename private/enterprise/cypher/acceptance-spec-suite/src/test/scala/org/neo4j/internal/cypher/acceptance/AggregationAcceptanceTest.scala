@@ -29,8 +29,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                    |RETURN id(selectedFriendship) AS friendshipId, selectedFriendship.propFive AS propertyValue""".stripMargin
     val params = Map("param" -> 3)
 
-    val result1 = executeWith(Configs.InterpretedAndSlotted, query1, params = params).toList
-    val result2 = executeWith(Configs.InterpretedAndSlotted, query2, params = params).toList
+    val result1 = executeWith(Configs.InterpretedAndSlottedAndMorsel, query1, params = params).toList
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndMorsel, query2, params = params).toList
 
     result1.size should equal(result2.size)
   }
@@ -40,7 +40,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node2 = createNode()
     relate(node1, node2)
     relate(node2, node1)
-    val result = executeWith(Configs.All, "MATCH (a)--() RETURN DISTINCT a")
+    val result = executeWith(Configs.All - Configs.Morsel, "MATCH (a)--() RETURN DISTINCT a")
 
     result.toSet should equal(Set(Map("a" -> node1), Map("a" -> node2)))
   }
@@ -49,7 +49,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode("prop"-> Array(42))
     createNode("prop"-> Array(42))
     createNode("prop"-> Array(1337))
-    val result = executeWith(Configs.All, "MATCH (a) RETURN DISTINCT a.prop")
+    val result = executeWith(Configs.All - Configs.Morsel, "MATCH (a) RETURN DISTINCT a.prop")
 
     result.toComparableResult.toSet should equal(Set(Map("a.prop" -> List(1337)), Map("a.prop" -> List(42))))
   }
@@ -126,7 +126,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node2 = createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a ORDER BY a.prop SKIP 1 LIMIT 1"
 
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.All - Configs.Morsel, query)
 
     result.toList should equal(List(Map("a" -> node2)))
   }
@@ -136,7 +136,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node2 = createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1 LIMIT 1"
 
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.All - Configs.Morsel, query)
 
     result.toList should equal(List(Map("a.prop" -> 2)))
   }
@@ -146,7 +146,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node2 = createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1"
 
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.All - Configs.Morsel, query)
 
     result.toList should equal(List(Map("a.prop" -> 2)))
   }
@@ -156,7 +156,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node2 = createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop LIMIT 1"
 
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.All - Configs.Morsel, query)
 
     result.toList should equal(List(Map("a.prop" -> 1)))
   }
