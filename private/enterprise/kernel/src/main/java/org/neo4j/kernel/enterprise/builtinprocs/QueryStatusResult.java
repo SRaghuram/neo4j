@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -88,7 +89,7 @@ public class QueryStatusResult
         this.query = query.queryText();
         this.parameters = asRawMap( query.queryParameters(), new ParameterWriter( manager ) );
         this.startTime = formatTime( query.startTimestampMillis(), zoneId );
-        this.elapsedTimeMillis = query.elapsedTimeMillis();
+        this.elapsedTimeMillis = asMillis( query.elapsedTimeMicros() );
         this.elapsedTime = formatInterval( elapsedTimeMillis );
         ClientConnectionInfo clientConnection = query.clientConnection();
         this.connectionDetails = clientConnection.asConnectionDetails();
@@ -96,12 +97,12 @@ public class QueryStatusResult
         this.clientAddress = clientConnection.clientAddress();
         this.requestUri = clientConnection.requestURI();
         this.metaData = query.transactionAnnotationData();
-        this.cpuTimeMillis = query.cpuTimeMillis();
+        this.cpuTimeMillis = asMillis( query.cpuTimeMicros() );
         this.status = query.status();
         this.resourceInformation = query.resourceInformation();
         this.activeLockCount = query.activeLockCount();
-        this.waitTimeMillis = query.waitTimeMillis();
-        this.idleTimeMillis = query.idleTimeMillis();
+        this.waitTimeMillis = asMillis( query.waitTimeMicros() );
+        this.idleTimeMillis = asMillis( query.idleTimeMicros() );
         this.planner = query.planner();
         this.runtime = query.runtime();
         this.indexes = query.indexes();
@@ -109,6 +110,11 @@ public class QueryStatusResult
         this.pageHits = query.pageHits();
         this.pageFaults = query.pageFaults();
         this.connectionId = clientConnection.connectionId();
+    }
+
+    private Long asMillis( Long micros )
+    {
+        return micros == null ? null : TimeUnit.MICROSECONDS.toMillis( micros );
     }
 
     private Map<String,Object> asRawMap( MapValue mapValue, ParameterWriter writer )
