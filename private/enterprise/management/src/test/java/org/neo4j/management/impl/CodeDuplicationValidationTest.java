@@ -10,11 +10,9 @@ import org.junit.jupiter.api.Test;
 import javax.management.ObjectName;
 
 import org.neo4j.jmx.Kernel;
-import org.neo4j.jmx.Primitives;
 import org.neo4j.jmx.impl.ManagementSupport;
 import org.neo4j.management.IndexSamplingManager;
 import org.neo4j.management.LockManager;
-import org.neo4j.management.TransactionManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -58,9 +56,7 @@ class CodeDuplicationValidationTest
     void interfacesGetsTheSameBeanNames()
     {
         assertEqualBeanName( Kernel.class );
-        assertEqualBeanName( Primitives.class );
         assertEqualBeanName( LockManager.class );
-        assertEqualBeanName( TransactionManager.class );
         assertEqualBeanName( IndexSamplingManager.class );
     }
 

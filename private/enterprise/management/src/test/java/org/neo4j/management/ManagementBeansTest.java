@@ -12,7 +12,6 @@ import org.junit.Test;
 import java.util.Map;
 
 import org.neo4j.jmx.Kernel;
-import org.neo4j.jmx.Primitives;
 import org.neo4j.jmx.impl.JmxKernelExtension;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.EmbeddedDbmsRule;
@@ -39,15 +38,6 @@ public class ManagementBeansTest
                 .getSingleManagementBean( Kernel.class );
         assertNotNull( "kernel bean is null", kernel );
         assertNotNull( "MBeanQuery of kernel bean is null", kernel.getMBeanQuery() );
-    }
-
-    @Test
-    public void canAccessPrimitivesBean()
-    {
-        Primitives primitives = graphDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
-                .getSingleManagementBean( Primitives.class );
-        assertNotNull( "primitives bean is null", primitives );
-        primitives.getNumberOfNodeIdsInUse();
     }
 
     @Test
@@ -81,23 +71,5 @@ public class ManagementBeansTest
     public void canIndexSamplingManagerBean()
     {
         assertNotNull( getManager().getIndexSamplingManagerBean() );
-    }
-
-    @Test
-    public void canGetPrimitivesBean()
-    {
-        assertNotNull( getManager().getPrimitivesBean() );
-    }
-
-    @Test
-    public void canGetTransactionManagerBean()
-    {
-        assertNotNull( getManager().getTransactionManagerBean() );
-    }
-
-    @Test
-    public void canGetPageCacheBean()
-    {
-        assertNotNull( getManager().getPageCacheBean() );
     }
 }

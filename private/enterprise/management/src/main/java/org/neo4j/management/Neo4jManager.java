@@ -29,7 +29,6 @@ import javax.management.remote.rmi.RMIConnectorServer;
 import javax.rmi.ssl.SslRMIClientSocketFactory;
 
 import org.neo4j.jmx.Kernel;
-import org.neo4j.jmx.Primitives;
 import org.neo4j.jmx.impl.ConfigurationBean;
 import org.neo4j.management.impl.KernelProxy;
 
@@ -217,21 +216,6 @@ public final class Neo4jManager extends KernelProxy implements Kernel
     public IndexSamplingManager getIndexSamplingManagerBean()
     {
         return getBean( IndexSamplingManager.class );
-    }
-
-    public Primitives getPrimitivesBean()
-    {
-        return getBean( Primitives.class );
-    }
-
-    public TransactionManager getTransactionManagerBean()
-    {
-        return getBean( TransactionManager.class );
-    }
-
-    public PageCache getPageCacheBean()
-    {
-        return getBean( PageCache.class );
     }
 
     public Object getConfigurationParameter( String key )
