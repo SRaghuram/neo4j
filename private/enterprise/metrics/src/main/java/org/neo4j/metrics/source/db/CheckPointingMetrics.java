@@ -9,7 +9,6 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
@@ -25,32 +24,31 @@ import static java.util.Collections.emptySortedMap;
 @Documented( ".Database checkpointing metrics" )
 public class CheckPointingMetrics extends LifecycleAdapter
 {
-    private static final String CHECK_POINT_PREFIX = "neo4j.check_point";
-
     @Documented( "The total number of check point events executed so far" )
-    public static final String CHECK_POINT_EVENTS = name( CHECK_POINT_PREFIX, "events" );
+    private final String checkPointEvents;
     @Documented( "The total time spent in check pointing so far" )
-    public static final String CHECK_POINT_TOTAL_TIME = name( CHECK_POINT_PREFIX, "total_time" );
+    private final String checkPointTotalTime;
     @Documented( "The duration of the check point event" )
-    // This setting will be renamed to "duration" in the next major release
-    @Deprecated
-    public static final String CHECK_POINT_DURATION = name( CHECK_POINT_PREFIX, "check_point_duration" );
+    private final String checkPointDuration;
 
     private final MetricRegistry registry;
     private final Monitors monitors;
-    private final Supplier<CheckPointerMonitor> checkPointerMonitorSupplier;
+    private final CheckPointerMonitor checkPointerMonitor;
     private final DefaultCheckPointerTracer.Monitor listener;
 
-    public CheckPointingMetrics( EventReporter reporter, MetricRegistry registry,
-            Monitors monitors, Supplier<CheckPointerMonitor> checkPointerMonitorSupplier )
+    public CheckPointingMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
+            Monitors monitors, CheckPointerMonitor checkPointerMonitor )
     {
+        checkPointEvents = name( metricsPrefix, "check_point.events" );
+        checkPointTotalTime = name( metricsPrefix, "check_point.total_time" );
+        checkPointDuration = name( metricsPrefix, "check_point.check_point_duration" );
         this.registry = registry;
         this.monitors = monitors;
-        this.checkPointerMonitorSupplier = checkPointerMonitorSupplier;
+        this.checkPointerMonitor = checkPointerMonitor;
         this.listener = durationMillis ->
         {
             TreeMap<String,Gauge> gauges = new TreeMap<>();
-            gauges.put( CHECK_POINT_DURATION, () -> durationMillis );
+            gauges.put( checkPointDuration, () -> durationMillis );
             reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
         };
     }
@@ -60,9 +58,8 @@ public class CheckPointingMetrics extends LifecycleAdapter
     {
         monitors.addMonitorListener( listener );
 
-        CheckPointerMonitor checkPointerMonitor = checkPointerMonitorSupplier.get();
-        registry.register( CHECK_POINT_EVENTS, new MetricsCounter( checkPointerMonitor::numberOfCheckPointEvents ) );
-        registry.register( CHECK_POINT_TOTAL_TIME, new MetricsCounter( checkPointerMonitor::checkPointAccumulatedTotalTimeMillis ) );
+        registry.register( checkPointEvents, new MetricsCounter( checkPointerMonitor::numberOfCheckPointEvents ) );
+        registry.register( checkPointTotalTime, new MetricsCounter( checkPointerMonitor::checkPointAccumulatedTotalTimeMillis ) );
     }
 
     @Override
@@ -70,7 +67,7 @@ public class CheckPointingMetrics extends LifecycleAdapter
     {
         monitors.removeMonitorListener( listener );
 
-        registry.remove( CHECK_POINT_EVENTS );
-        registry.remove( CHECK_POINT_TOTAL_TIME );
+        registry.remove( checkPointEvents );
+        registry.remove( checkPointTotalTime );
     }
 }

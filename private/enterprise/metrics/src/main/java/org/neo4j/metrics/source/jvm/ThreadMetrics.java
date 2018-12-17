@@ -15,29 +15,31 @@ import static com.codahale.metrics.MetricRegistry.name;
 
 public class ThreadMetrics extends JvmMetrics
 {
-    public static final String THREAD_COUNT = name( JvmMetrics.NAME_PREFIX, "thread.count" );
-    public static final String THREAD_TOTAL = name( JvmMetrics.NAME_PREFIX, "thread.total" );
+    private final String threadCount;
+    private final String threadTotal;
 
     private final MetricRegistry registry;
     private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
 
-    public ThreadMetrics( MetricRegistry registry )
+    public ThreadMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
+        this.threadCount = name( metricsPrefix, VM_NAME_PREFIX, "thread.count" );
+        this.threadTotal = name( metricsPrefix, VM_NAME_PREFIX, "thread.total" );
     }
 
     @Override
     public void start()
     {
-        registry.register( THREAD_COUNT, (Gauge<Integer>) Thread::activeCount );
-        registry.register( THREAD_TOTAL, (Gauge<Integer>) threadMXBean::getThreadCount );
+        registry.register( threadCount, (Gauge<Integer>) Thread::activeCount );
+        registry.register( threadTotal, (Gauge<Integer>) threadMXBean::getThreadCount );
     }
 
     @Override
     public void stop()
     {
-        registry.remove( THREAD_COUNT );
-        registry.remove( THREAD_TOTAL );
+        registry.remove( threadCount );
+        registry.remove( threadTotal );
     }
 }
 

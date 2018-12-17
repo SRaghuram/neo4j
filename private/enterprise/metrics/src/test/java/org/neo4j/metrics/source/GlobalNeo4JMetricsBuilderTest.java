@@ -17,7 +17,8 @@ import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.metrics.output.EventReporter;
+import org.neo4j.metrics.global.GlobalMetricsBuilder;
+import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory;
 import org.neo4j.metrics.source.server.ServerMetrics;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -27,12 +28,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
 
 @ExtendWith( TestDirectoryExtension.class )
-class Neo4jMetricsBuilderTest
+class GlobalNeo4JMetricsBuilderTest
 {
     @Inject
     private TestDirectory testDir;
@@ -55,10 +55,10 @@ class Neo4jMetricsBuilderTest
         KernelContext kernelContext = new SimpleKernelContext( testDir.databaseDir(), COMMUNITY, mock( DependencySatisfier.class ) );
         LifeSupport life = new LifeSupport();
 
-        Neo4jMetricsBuilder builder = new Neo4jMetricsBuilder( new MetricRegistry(), mock( EventReporter.class ), config, NullLogService.getInstance(),
-                kernelContext, mock( Neo4jMetricsBuilder.Dependencies.class ), life );
+        GlobalMetricsBuilder builder = new GlobalMetricsBuilder( new MetricRegistry(), config, NullLogService.getInstance(),
+                kernelContext, mock( GlobalMetricsKernelExtensionFactory.Dependencies.class ), life );
 
-        assertTrue( builder.build() );
+        builder.build();
 
         if ( serverMetricsEnabled )
         {

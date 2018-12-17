@@ -10,7 +10,6 @@ import com.codahale.metrics.MetricRegistry;
 
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.function.Supplier;
 
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.impl.api.DefaultTransactionTracer;
@@ -26,32 +25,31 @@ import static java.util.Collections.emptySortedMap;
 @Documented( ".Database log rotation metrics" )
 public class LogRotationMetrics extends LifecycleAdapter
 {
-    private static final String LOG_ROTATION_PREFIX = "neo4j.log_rotation";
-
     @Documented( "The total number of transaction log rotations executed so far" )
-    public static final String LOG_ROTATION_EVENTS = name( LOG_ROTATION_PREFIX, "events" );
+    private final String logRotationEvents;
     @Documented( "The total time spent in rotating transaction logs so far" )
-    public static final String LOG_ROTATION_TOTAL_TIME = name( LOG_ROTATION_PREFIX, "total_time" );
+    private final String logRotationTotalTime;
     @Documented( "The duration of the log rotation event" )
-    // This setting will be renamed to "duration" in the next major release
-    @Deprecated
-    public static final String LOG_ROTATION_DURATION = name( LOG_ROTATION_PREFIX, "log_rotation_duration" );
+    private final String logRotationDuration;
 
     private final MetricRegistry registry;
     private final Monitors monitors;
-    private final Supplier<LogRotationMonitor> logRotationMonitorSupplier;
+    private final LogRotationMonitor logRotationMonitor;
     private final DefaultTransactionTracer.Monitor listener;
 
-    public LogRotationMetrics( EventReporter reporter, MetricRegistry registry,
-            Monitors monitors, Supplier<LogRotationMonitor> logRotationMonitorSupplier )
+    public LogRotationMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
+            Monitors monitors, LogRotationMonitor logRotationMonitor )
     {
+        this.logRotationEvents = name( metricsPrefix, "log_rotation.events" );
+        this.logRotationTotalTime = name( metricsPrefix, "log_rotation.total_time" );
+        this.logRotationDuration = name( metricsPrefix, "log_rotation.log_rotation_duration" );
         this.registry = registry;
         this.monitors = monitors;
-        this.logRotationMonitorSupplier = logRotationMonitorSupplier;
+        this.logRotationMonitor = logRotationMonitor;
         this.listener = durationMillis ->
         {
             final SortedMap<String,Gauge> gauges = new TreeMap<>();
-            gauges.put( LOG_ROTATION_DURATION, () -> durationMillis );
+            gauges.put( logRotationDuration, () -> durationMillis );
             reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
         };
     }
@@ -61,9 +59,8 @@ public class LogRotationMetrics extends LifecycleAdapter
     {
         monitors.addMonitorListener( listener );
 
-        LogRotationMonitor monitor = this.logRotationMonitorSupplier.get();
-        registry.register( LOG_ROTATION_EVENTS, new MetricsCounter( monitor::numberOfLogRotationEvents ) );
-        registry.register( LOG_ROTATION_TOTAL_TIME, new MetricsCounter( monitor::logRotationAccumulatedTotalTimeMillis ) );
+        registry.register( logRotationEvents, new MetricsCounter( logRotationMonitor::numberOfLogRotationEvents ) );
+        registry.register( logRotationTotalTime, new MetricsCounter( logRotationMonitor::logRotationAccumulatedTotalTimeMillis ) );
     }
 
     @Override
@@ -71,7 +68,7 @@ public class LogRotationMetrics extends LifecycleAdapter
     {
         monitors.removeMonitorListener( listener );
 
-        registry.remove( LOG_ROTATION_EVENTS );
-        registry.remove( LOG_ROTATION_TOTAL_TIME );
+        registry.remove( logRotationEvents );
+        registry.remove( logRotationTotalTime );
     }
 }

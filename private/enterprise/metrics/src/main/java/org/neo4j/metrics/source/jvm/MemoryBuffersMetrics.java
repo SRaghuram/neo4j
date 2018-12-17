@@ -15,13 +15,13 @@ import static com.codahale.metrics.MetricRegistry.name;
 
 public class MemoryBuffersMetrics extends JvmMetrics
 {
-    public static final String MEMORY_BUFFER = name( JvmMetrics.NAME_PREFIX, "memory.buffer" );
-
+    private final String memoryBuffer;
     private final MetricRegistry registry;
 
-    public MemoryBuffersMetrics( MetricRegistry registry )
+    public MemoryBuffersMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
+        this.memoryBuffer = name( metricsPrefix, VM_NAME_PREFIX, "memory.buffer" );
     }
 
     @Override
@@ -30,11 +30,11 @@ public class MemoryBuffersMetrics extends JvmMetrics
         for ( final BufferPoolMXBean pool : ManagementFactory.getPlatformMXBeans( BufferPoolMXBean.class ) )
         {
             registry.register(
-                    name( MEMORY_BUFFER, prettifyName( pool.getName() ), "count" ), (Gauge<Long>) pool::getCount );
+                    name( memoryBuffer, prettifyName( pool.getName() ), "count" ), (Gauge<Long>) pool::getCount );
             registry.register(
-                    name( MEMORY_BUFFER, prettifyName( pool.getName() ), "used" ), (Gauge<Long>) pool::getMemoryUsed );
+                    name( memoryBuffer, prettifyName( pool.getName() ), "used" ), (Gauge<Long>) pool::getMemoryUsed );
             registry.register(
-                    name( MEMORY_BUFFER, prettifyName( pool.getName() ), "capacity" ),
+                    name( memoryBuffer, prettifyName( pool.getName() ), "capacity" ),
                     (Gauge<Long>) pool::getTotalCapacity );
         }
     }
@@ -42,6 +42,6 @@ public class MemoryBuffersMetrics extends JvmMetrics
     @Override
     public void stop()
     {
-        registry.removeMatching( ( name, metric ) -> name.startsWith( MEMORY_BUFFER ) );
+        registry.removeMatching( ( name, metric ) -> name.startsWith( memoryBuffer ) );
     }
 }

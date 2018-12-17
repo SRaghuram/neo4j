@@ -22,46 +22,44 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Core metrics" )
 public class CoreMetrics extends LifecycleAdapter
 {
-    private static final String CAUSAL_CLUSTERING_PREFIX = "neo4j.causal_clustering.core";
-
     @Documented( "Append index of the RAFT log" )
-    public static final String APPEND_INDEX = name( CAUSAL_CLUSTERING_PREFIX, "append_index" );
+    private final String appendIndex;
     @Documented( "Commit index of the RAFT log" )
-    public static final String COMMIT_INDEX = name( CAUSAL_CLUSTERING_PREFIX, "commit_index" );
+    private final String commitIndex;
     @Documented( "RAFT Term of this server" )
-    public static final String TERM = name( CAUSAL_CLUSTERING_PREFIX, "term" );
+    private final String term;
     @Documented( "Transaction retries" )
-    public static final String TX_RETRIES = name( CAUSAL_CLUSTERING_PREFIX, "tx_retries" );
+    private final String txRetries;
     @Documented( "Is this server the leader?" )
-    public static final String IS_LEADER = name( CAUSAL_CLUSTERING_PREFIX, "is_leader" );
+    private final String isLeader;
     @Documented( "In-flight cache total bytes" )
-    public static final String TOTAL_BYTES = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "total_bytes" );
+    private final String totalBytes;
     @Documented( "In-flight cache max bytes" )
-    public static final String MAX_BYTES = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "max_bytes" );
+    private final String maxBytes;
     @Documented( "In-flight cache element count" )
-    public static final String ELEMENT_COUNT = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "element_count" );
+    private final String elementCount;
     @Documented( "In-flight cache maximum elements" )
-    public static final String MAX_ELEMENTS = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "max_elements" );
+    private final String maxElements;
     @Documented( "In-flight cache hits" )
-    public static final String HITS = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "hits" );
+    private final String hits;
     @Documented( "In-flight cache misses" )
-    public static final String MISSES = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "misses" );
+    private final String misses;
     @Documented( "Delay between RAFT message receive and process" )
-    public static final String DELAY = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_delay" );
+    private final String delay;
     @Documented( "Timer for RAFT message processing" )
-    public static final String TIMER = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
+    private final String timer;
     @Documented( "Raft replication new request count" )
-    public static final String REPLICATION_NEW = name( CAUSAL_CLUSTERING_PREFIX, "replication_new" );
+    private final String replicationNew;
     @Documented( "Raft replication attempt count" )
-    public static final String REPLICATION_ATTEMPT = name( CAUSAL_CLUSTERING_PREFIX, "replication_attempt" );
+    private final String replicationAttempt;
     @Documented( "Raft Replication success count" )
-    public static final String REPLICATION_SUCCESS = name( CAUSAL_CLUSTERING_PREFIX, "replication_success" );
+    private final String replicationSuccess;
     @Documented( "Raft Replication fail count" )
-    public static final String REPLICATION_FAIL = name( CAUSAL_CLUSTERING_PREFIX, "replication_fail" );
+    private final String replicationFail;
 
-    private Monitors monitors;
-    private MetricRegistry registry;
-    private Supplier<CoreMetaData> coreMetaData;
+    private final Monitors monitors;
+    private final MetricRegistry registry;
+    private final Supplier<CoreMetaData> coreMetaData;
 
     private final RaftLogCommitIndexMetric raftLogCommitIndexMetric = new RaftLogCommitIndexMetric();
     private final RaftLogAppendIndexMetric raftLogAppendIndexMetric = new RaftLogAppendIndexMetric();
@@ -72,8 +70,25 @@ public class CoreMetrics extends LifecycleAdapter
     private final RaftMessageProcessingMetric raftMessageProcessingMetric = RaftMessageProcessingMetric.create();
     private final ReplicationMetric replicationMetric = new ReplicationMetric();
 
-    public CoreMetrics( Monitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
+    public CoreMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
     {
+        this.appendIndex = name( metricsPrefix, "causal_clustering.core", "append_index" );
+        this.commitIndex = name( metricsPrefix, "causal_clustering.core", "commit_index" );
+        this.term = name( metricsPrefix, "causal_clustering.core", "term" );
+        this.txRetries = name( metricsPrefix, "causal_clustering.core", "tx_retries" );
+        this.isLeader = name( metricsPrefix, "causal_clustering.core", "is_leader" );
+        this.totalBytes = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "total_bytes" );
+        this.maxBytes = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "max_bytes" );
+        this.elementCount = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "element_count" );
+        this.maxElements = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "max_elements" );
+        this.hits = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "hits" );
+        this.misses = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "misses" );
+        this.delay = name( metricsPrefix, "causal_clustering.core", "message_processing_delay" );
+        this.timer = name( metricsPrefix, "causal_clustering.core", "message_processing_timer" );
+        this.replicationNew = name( metricsPrefix, "causal_clustering.core", "replication_new" );
+        this.replicationAttempt = name( metricsPrefix, "causal_clustering.core", "replication_attempt" );
+        this.replicationSuccess = name( metricsPrefix, "causal_clustering.core", "replication_success" );
+        this.replicationFail = name( metricsPrefix, "causal_clustering.core", "replication_fail" );
         this.monitors = monitors;
         this.registry = registry;
         this.coreMetaData = coreMetaData;
@@ -91,23 +106,23 @@ public class CoreMetrics extends LifecycleAdapter
         monitors.addMonitorListener( raftMessageProcessingMetric );
         monitors.addMonitorListener( replicationMetric );
 
-        registry.register( COMMIT_INDEX, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
-        registry.register( APPEND_INDEX, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
-        registry.register( TERM, (Gauge<Long>) raftTermMetric::term );
-        registry.register( TX_RETRIES, new MetricsCounter( txRetryMetric::transactionsRetries ) );
-        registry.register( IS_LEADER, new LeaderGauge() );
-        registry.register( TOTAL_BYTES, (Gauge<Long>) inFlightCacheMetric::getTotalBytes );
-        registry.register( HITS, new MetricsCounter( inFlightCacheMetric::getHits ) );
-        registry.register( MISSES, new MetricsCounter( inFlightCacheMetric::getMisses ) );
-        registry.register( MAX_BYTES, (Gauge<Long>) inFlightCacheMetric::getMaxBytes );
-        registry.register( MAX_ELEMENTS, (Gauge<Long>) inFlightCacheMetric::getMaxElements );
-        registry.register( ELEMENT_COUNT, (Gauge<Long>) inFlightCacheMetric::getElementCount );
-        registry.register( DELAY, (Gauge<Long>) raftMessageProcessingMetric::delay );
-        registry.register( TIMER, raftMessageProcessingMetric.timer() );
-        registry.register( REPLICATION_NEW, new MetricsCounter( replicationMetric::newReplicationCount ) );
-        registry.register( REPLICATION_ATTEMPT, new MetricsCounter( replicationMetric::attemptCount ) );
-        registry.register( REPLICATION_SUCCESS, new MetricsCounter( replicationMetric::successCount ) );
-        registry.register( REPLICATION_FAIL, new MetricsCounter( replicationMetric::failCount ) );
+        registry.register( commitIndex, (Gauge<Long>) raftLogCommitIndexMetric::commitIndex );
+        registry.register( appendIndex, (Gauge<Long>) raftLogAppendIndexMetric::appendIndex );
+        registry.register( term, (Gauge<Long>) raftTermMetric::term );
+        registry.register( txRetries, new MetricsCounter( txRetryMetric::transactionsRetries ) );
+        registry.register( isLeader, new LeaderGauge() );
+        registry.register( totalBytes, (Gauge<Long>) inFlightCacheMetric::getTotalBytes );
+        registry.register( hits, new MetricsCounter( inFlightCacheMetric::getHits ) );
+        registry.register( misses, new MetricsCounter( inFlightCacheMetric::getMisses ) );
+        registry.register( maxBytes, (Gauge<Long>) inFlightCacheMetric::getMaxBytes );
+        registry.register( maxElements, (Gauge<Long>) inFlightCacheMetric::getMaxElements );
+        registry.register( elementCount, (Gauge<Long>) inFlightCacheMetric::getElementCount );
+        registry.register( delay, (Gauge<Long>) raftMessageProcessingMetric::delay );
+        registry.register( timer, raftMessageProcessingMetric.timer() );
+        registry.register( replicationNew, new MetricsCounter( replicationMetric::newReplicationCount ) );
+        registry.register( replicationAttempt, new MetricsCounter( replicationMetric::attemptCount ) );
+        registry.register( replicationSuccess, new MetricsCounter( replicationMetric::successCount ) );
+        registry.register( replicationFail, new MetricsCounter( replicationMetric::failCount ) );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
@@ -118,23 +133,23 @@ public class CoreMetrics extends LifecycleAdapter
     @Override
     public void stop()
     {
-        registry.remove( COMMIT_INDEX );
-        registry.remove( APPEND_INDEX );
-        registry.remove( TERM );
-        registry.remove( TX_RETRIES );
-        registry.remove( IS_LEADER );
-        registry.remove( TOTAL_BYTES );
-        registry.remove( HITS );
-        registry.remove( MISSES );
-        registry.remove( MAX_BYTES );
-        registry.remove( MAX_ELEMENTS );
-        registry.remove( ELEMENT_COUNT );
-        registry.remove( DELAY );
-        registry.remove( TIMER );
-        registry.remove( REPLICATION_NEW );
-        registry.remove( REPLICATION_ATTEMPT );
-        registry.remove( REPLICATION_SUCCESS );
-        registry.remove( REPLICATION_FAIL );
+        registry.remove( commitIndex );
+        registry.remove( appendIndex );
+        registry.remove( term );
+        registry.remove( txRetries );
+        registry.remove( isLeader );
+        registry.remove( totalBytes );
+        registry.remove( hits );
+        registry.remove( misses );
+        registry.remove( maxBytes );
+        registry.remove( maxElements );
+        registry.remove( elementCount );
+        registry.remove( delay );
+        registry.remove( timer );
+        registry.remove( replicationNew );
+        registry.remove( replicationAttempt );
+        registry.remove( replicationSuccess );
+        registry.remove( replicationFail );
 
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
@@ -153,7 +168,7 @@ public class CoreMetrics extends LifecycleAdapter
 
     private String messageTimerName( RaftMessages.Type type )
     {
-        return name( TIMER, type.name().toLowerCase() );
+        return name( timer, type.name().toLowerCase() );
     }
 
     private class LeaderGauge implements Gauge<Integer>

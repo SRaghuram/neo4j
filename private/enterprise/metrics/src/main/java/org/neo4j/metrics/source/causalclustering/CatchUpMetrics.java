@@ -17,17 +17,16 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".CatchUp Metrics" )
 public class CatchUpMetrics extends LifecycleAdapter
 {
-    private static final String CAUSAL_CLUSTERING_PREFIX = "neo4j.causal_clustering.catchup";
-
     @Documented( "TX pull requests received from read replicas" )
-    public static final String TX_PULL_REQUESTS_RECEIVED = name( CAUSAL_CLUSTERING_PREFIX, "tx_pull_requests_received" );
+    private final String txPullRequestsReceived;
 
     private Monitors monitors;
     private MetricRegistry registry;
     private final TxPullRequestsMetric txPullRequestsMetric = new TxPullRequestsMetric();
 
-    public CatchUpMetrics( Monitors monitors, MetricRegistry registry )
+    public CatchUpMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry )
     {
+        this.txPullRequestsReceived = name( metricsPrefix, "causal_clustering.catchup.tx_pull_requests_received" );
         this.monitors = monitors;
         this.registry = registry;
     }
@@ -36,13 +35,13 @@ public class CatchUpMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( txPullRequestsMetric );
-        registry.register( TX_PULL_REQUESTS_RECEIVED, new MetricsCounter( txPullRequestsMetric::txPullRequestsReceived ) );
+        registry.register( txPullRequestsReceived, new MetricsCounter( txPullRequestsMetric::txPullRequestsReceived ) );
     }
 
     @Override
     public void stop()
     {
-        registry.remove( TX_PULL_REQUESTS_RECEIVED );
+        registry.remove( txPullRequestsReceived );
         monitors.removeMonitorListener( txPullRequestsMetric );
     }
 }

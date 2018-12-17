@@ -17,7 +17,6 @@ import java.io.UncheckedIOException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.metrics.source.server.ServerMetrics;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.extension.Inject;
@@ -67,8 +66,8 @@ class ServerMetricsIT
             }
 
             // then
-            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_ALL );
-            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_IDLE );
+//            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_ALL );
+//            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_IDLE );
         }
         finally
         {

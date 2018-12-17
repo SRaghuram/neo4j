@@ -8,8 +8,6 @@ package org.neo4j.metrics.source.db;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 
-import java.util.function.Supplier;
-
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -19,42 +17,43 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Database data metrics" )
 public class EntityCountMetrics extends LifecycleAdapter
 {
-    private static final String COUNTS_PREFIX = "neo4j.ids_in_use";
-
     @Documented( "The total number of different relationship types stored in the database" )
-    public static final String COUNTS_RELATIONSHIP_TYPE = name( COUNTS_PREFIX, "relationship_type" );
+    private final String countsRelationshipType;
     @Documented( "The total number of different property names used in the database" )
-    public static final String COUNTS_PROPERTY = name( COUNTS_PREFIX, "property" );
+    private final String countsProperty;
     @Documented( "The total number of relationships stored in the database" )
-    public static final String COUNTS_RELATIONSHIP = name( COUNTS_PREFIX, "relationship" );
+    private final String countsRelationship;
     @Documented( "The total number of nodes stored in the database" )
-    public static final String COUNTS_NODE = name( COUNTS_PREFIX, "node" );
+    private final String countsNode;
 
     private final MetricRegistry registry;
-    private final Supplier<StoreEntityCounters> storeEntityCountersSupplier;
+    private final StoreEntityCounters storeEntityCounters;
 
-    public EntityCountMetrics( MetricRegistry registry, Supplier<StoreEntityCounters> storeEntityCountersSupplier )
+    public EntityCountMetrics( String metricsPrefix, MetricRegistry registry, StoreEntityCounters storeEntityCounters )
     {
+        this.countsRelationshipType = name( metricsPrefix, "ids_in_use.relationship_type" );
+        this.countsProperty = name( metricsPrefix, "ids_in_use.property" );
+        this.countsRelationship = name( metricsPrefix, "ids_in_use.relationship" );
+        this.countsNode = name( metricsPrefix, "ids_in_use.node" );
         this.registry = registry;
-        this.storeEntityCountersSupplier = storeEntityCountersSupplier;
+        this.storeEntityCounters = storeEntityCounters;
     }
 
     @Override
     public void start()
     {
-        StoreEntityCounters counters = storeEntityCountersSupplier.get();
-        registry.register( COUNTS_NODE, (Gauge<Long>) counters::nodes );
-        registry.register( COUNTS_RELATIONSHIP, (Gauge<Long>) counters::relationships );
-        registry.register( COUNTS_PROPERTY, (Gauge<Long>) counters::properties );
-        registry.register( COUNTS_RELATIONSHIP_TYPE, (Gauge<Long>) counters::relationshipTypes );
+        registry.register( countsNode, (Gauge<Long>) storeEntityCounters::nodes );
+        registry.register( countsRelationship, (Gauge<Long>) storeEntityCounters::relationships );
+        registry.register( countsProperty, (Gauge<Long>) storeEntityCounters::properties );
+        registry.register( countsRelationshipType, (Gauge<Long>) storeEntityCounters::relationshipTypes );
     }
 
     @Override
     public void stop()
     {
-        registry.remove( COUNTS_NODE );
-        registry.remove( COUNTS_RELATIONSHIP );
-        registry.remove( COUNTS_PROPERTY );
-        registry.remove( COUNTS_RELATIONSHIP_TYPE );
+        registry.remove( countsNode );
+        registry.remove( countsRelationship );
+        registry.remove( countsProperty );
+        registry.remove( countsRelationshipType );
     }
 }

@@ -32,7 +32,7 @@ public class GraphiteOutput implements Lifecycle, EventReporter
 
     private GraphiteReporter graphiteReporter;
 
-    public GraphiteOutput( HostnamePort hostnamePort, long period, MetricRegistry registry, Log logger, String prefix )
+    GraphiteOutput( HostnamePort hostnamePort, long period, MetricRegistry registry, Log logger, String prefix )
     {
         this.hostnamePort = hostnamePort;
         this.period = period;

@@ -15,9 +15,9 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
              "finally the number of active threads running." )
 public abstract class JvmMetrics extends LifecycleAdapter
 {
-    public static final String NAME_PREFIX = "vm";
+    static final String VM_NAME_PREFIX = "vm";
 
-    public static String prettifyName( String name )
+    static String prettifyName( String name )
     {
         return name.toLowerCase().replace( ' ', '_' );
     }

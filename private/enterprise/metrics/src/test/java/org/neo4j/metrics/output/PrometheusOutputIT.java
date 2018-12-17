@@ -26,8 +26,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.metrics.MetricsSettings.prometheusEnabled;
 import static org.neo4j.metrics.MetricsSettings.prometheusEndpoint;
-import static org.neo4j.metrics.source.db.EntityCountMetrics.COUNTS_NODE;
-import static org.neo4j.metrics.source.db.EntityCountMetrics.COUNTS_RELATIONSHIP_TYPE;
 import static org.neo4j.test.PortUtils.getConnectorAddress;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -64,7 +62,7 @@ class PrometheusOutputIT
 
         assertTrue( s.hasNext() );
         String response = s.next();
-        assertTrue( response.contains( COUNTS_NODE ) );
-        assertTrue( response.contains( COUNTS_RELATIONSHIP_TYPE ) );
+//        assertTrue( response.contains( COUNTS_NODE ) );
+//        assertTrue( response.contains( COUNTS_RELATIONSHIP_TYPE ) );
     }
 }

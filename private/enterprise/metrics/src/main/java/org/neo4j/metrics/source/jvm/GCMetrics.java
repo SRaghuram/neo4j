@@ -16,15 +16,18 @@ import static com.codahale.metrics.MetricRegistry.name;
 
 public class GCMetrics extends JvmMetrics
 {
-    public static final String GC_PREFIX = name( NAME_PREFIX, "gc" );
-    public static final String GC_TIME = name( GC_PREFIX, "time" );
-    public static final String GC_COUNT = name( GC_PREFIX, "count" );
+    private final String gcPrefix;
+    private final String gcTime;
+    private final String gcCount;
 
     private final MetricRegistry registry;
 
-    public GCMetrics( MetricRegistry registry )
+    public GCMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
+        this.gcPrefix = name( metricsPrefix, VM_NAME_PREFIX, "gc" );
+        this.gcTime = name( gcPrefix, "time" );
+        this.gcCount = name( gcPrefix, "count" );
     }
 
     @Override
@@ -32,14 +35,14 @@ public class GCMetrics extends JvmMetrics
     {
         for ( final GarbageCollectorMXBean gcBean : ManagementFactory.getGarbageCollectorMXBeans() )
         {
-            registry.register( name( GC_TIME, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionTime ) );
-            registry.register( name( GC_COUNT, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionCount ) );
+            registry.register( name( gcTime, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionTime ) );
+            registry.register( name( gcCount, prettifyName( gcBean.getName() ) ), new MetricsCounter( gcBean::getCollectionCount ) );
         }
     }
 
     @Override
     public void stop()
     {
-        registry.removeMatching( ( name, metric ) -> name.startsWith( GC_PREFIX ) );
+        registry.removeMatching( ( name, metric ) -> name.startsWith( gcPrefix ) );
     }
 }

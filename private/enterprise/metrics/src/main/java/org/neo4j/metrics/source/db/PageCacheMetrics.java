@@ -18,61 +18,70 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Database page cache metrics" )
 public class PageCacheMetrics extends LifecycleAdapter
 {
-    private static final String PAGE_CACHE_PREFIX = "neo4j.page_cache";
+    private static final String PAGE_CACHE_PREFIX = "page_cache";
 
     @Documented( "The total number of exceptions seen during the eviction process in the page cache" )
-    public static final String PC_EVICTION_EXCEPTIONS = name( PAGE_CACHE_PREFIX, "eviction_exceptions" );
+    private final String pcEvictionExceptions;
     @Documented( "The total number of flushes executed by the page cache" )
-    public static final String PC_FLUSHES = name( PAGE_CACHE_PREFIX, "flushes" );
+    private final String pcFlushes;
     @Documented( "The total number of page unpins executed by the page cache" )
-    public static final String PC_UNPINS = name( PAGE_CACHE_PREFIX, "unpins" );
+    private final String pcUnpins;
     @Documented( "The total number of page pins executed by the page cache" )
-    public static final String PC_PINS = name( PAGE_CACHE_PREFIX, "pins" );
+    private final String pcPins;
     @Documented( "The total number of page evictions executed by the page cache" )
-    public static final String PC_EVICTIONS = name( PAGE_CACHE_PREFIX, "evictions" );
+    private final String pcEvictions;
     @Documented( "The total number of page faults happened in the page cache" )
-    public static final String PC_PAGE_FAULTS = name( PAGE_CACHE_PREFIX, "page_faults" );
+    private final String pcPageFaults;
     @Documented( "The total number of page hits happened in the page cache" )
-    public static final String PC_HITS = name( PAGE_CACHE_PREFIX, "hits" );
+    private final String pcHits;
     @Documented( "The ratio of hits to the total number of lookups in the page cache" )
-    public static final String PC_HIT_RATIO = name( PAGE_CACHE_PREFIX, "hit_ratio" );
+    private final String pcHitRatio;
     @Documented( "The ratio of number of used pages to total number of available pages" )
-    public static final String PC_USAGE_RATIO = name( PAGE_CACHE_PREFIX, "usage_ratio" );
+    private final String pcUsageRatio;
 
     private final MetricRegistry registry;
     private final PageCacheCounters pageCacheCounters;
 
-    public PageCacheMetrics( MetricRegistry registry, PageCacheCounters pageCacheCounters )
+    public PageCacheMetrics( String metricsPrefix, MetricRegistry registry, PageCacheCounters pageCacheCounters )
     {
         this.registry = registry;
         this.pageCacheCounters = pageCacheCounters;
+        this.pcEvictionExceptions = name( metricsPrefix, PAGE_CACHE_PREFIX, "eviction_exceptions" );
+        this.pcFlushes = name( metricsPrefix, PAGE_CACHE_PREFIX, "flushes" );
+        this.pcUnpins = name( metricsPrefix, PAGE_CACHE_PREFIX, "unpins" );
+        this.pcPins = name( metricsPrefix, PAGE_CACHE_PREFIX, "pins" );
+        this.pcEvictions = name( metricsPrefix, PAGE_CACHE_PREFIX, "evictions" );
+        this.pcPageFaults = name( metricsPrefix, PAGE_CACHE_PREFIX, "page_faults" );
+        this.pcHits = name( metricsPrefix, PAGE_CACHE_PREFIX, "hits" );
+        this.pcHitRatio = name( metricsPrefix, PAGE_CACHE_PREFIX, "hit_ratio" );
+        this.pcUsageRatio = name( metricsPrefix, PAGE_CACHE_PREFIX, "usage_ratio" );
     }
 
     @Override
     public void start()
     {
-        registry.register( PC_PAGE_FAULTS, new MetricsCounter( pageCacheCounters::faults ) );
-        registry.register( PC_EVICTIONS, new MetricsCounter( pageCacheCounters::evictions ) );
-        registry.register( PC_PINS, new MetricsCounter( pageCacheCounters::pins ) );
-        registry.register( PC_UNPINS, new MetricsCounter( pageCacheCounters::unpins ) );
-        registry.register( PC_HITS, new MetricsCounter( pageCacheCounters::hits ) );
-        registry.register( PC_FLUSHES, new MetricsCounter( pageCacheCounters::flushes ) );
-        registry.register( PC_EVICTION_EXCEPTIONS, new MetricsCounter( pageCacheCounters::evictionExceptions ) );
-        registry.register( PC_HIT_RATIO, (Gauge<Double>) pageCacheCounters::hitRatio );
-        registry.register( PC_USAGE_RATIO, (Gauge<Double>) pageCacheCounters::usageRatio );
+        registry.register( pcPageFaults, new MetricsCounter( pageCacheCounters::faults ) );
+        registry.register( pcEvictions, new MetricsCounter( pageCacheCounters::evictions ) );
+        registry.register( pcPins, new MetricsCounter( pageCacheCounters::pins ) );
+        registry.register( pcUnpins, new MetricsCounter( pageCacheCounters::unpins ) );
+        registry.register( pcHits, new MetricsCounter( pageCacheCounters::hits ) );
+        registry.register( pcFlushes, new MetricsCounter( pageCacheCounters::flushes ) );
+        registry.register( pcEvictionExceptions, new MetricsCounter( pageCacheCounters::evictionExceptions ) );
+        registry.register( pcHitRatio, (Gauge<Double>) pageCacheCounters::hitRatio );
+        registry.register( pcUsageRatio, (Gauge<Double>) pageCacheCounters::usageRatio );
     }
 
     @Override
     public void stop()
     {
-        registry.remove( PC_PAGE_FAULTS );
-        registry.remove( PC_EVICTIONS );
-        registry.remove( PC_PINS );
-        registry.remove( PC_UNPINS );
-        registry.remove( PC_HITS );
-        registry.remove( PC_FLUSHES );
-        registry.remove( PC_EVICTION_EXCEPTIONS );
-        registry.remove( PC_HIT_RATIO );
-        registry.remove( PC_USAGE_RATIO );
+        registry.remove( pcPageFaults );
+        registry.remove( pcEvictions );
+        registry.remove( pcPins );
+        registry.remove( pcUnpins );
+        registry.remove( pcHits );
+        registry.remove( pcFlushes );
+        registry.remove( pcEvictionExceptions );
+        registry.remove( pcHitRatio );
+        registry.remove( pcUsageRatio );
     }
 }

@@ -8,7 +8,6 @@ package org.neo4j.metrics.output;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jmx.JmxReporter;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
@@ -31,19 +30,19 @@ public class EventReporterBuilder
     private final Config config;
     private final MetricRegistry registry;
     private final Log logger;
-    private final KernelContext kernelContext;
+    private final KernelContext context;
     private final LifeSupport life;
     private final ConnectorPortRegister portRegister;
     private FileSystemAbstraction fileSystem;
     private JobScheduler scheduler;
 
-    public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, KernelContext kernelContext,
+    public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, KernelContext context,
             LifeSupport life, FileSystemAbstraction fileSystem, JobScheduler scheduler, ConnectorPortRegister portRegister )
     {
         this.config = config;
         this.registry = registry;
         this.logger = logger;
-        this.kernelContext = kernelContext;
+        this.context = context;
         this.life = life;
         this.fileSystem = fileSystem;
         this.scheduler = scheduler;
@@ -56,7 +55,7 @@ public class EventReporterBuilder
         final String prefix = createMetricsPrefix( config );
         if ( config.get( csvEnabled ) )
         {
-            CsvOutput csvOutput = new CsvOutput( config, registry, logger, kernelContext, fileSystem, scheduler );
+            CsvOutput csvOutput = new CsvOutput( config, registry, logger, context, fileSystem, scheduler );
             reporter.add( csvOutput );
             life.add( csvOutput );
         }
@@ -80,7 +79,7 @@ public class EventReporterBuilder
 
         if ( config.get( MetricsSettings.jmxEnabled ) )
         {
-            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( "metrics." + config.get( GraphDatabaseSettings.active_database ) ).build();
+            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( prefix + ".metrics" ).build();
             life.add( new JmxOutput( jmxReporter ) );
         }
 

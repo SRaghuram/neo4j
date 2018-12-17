@@ -15,12 +15,13 @@ import static com.codahale.metrics.MetricRegistry.name;
 
 public class MemoryPoolMetrics extends JvmMetrics
 {
-    public static final String MEMORY_POOL = name( JvmMetrics.NAME_PREFIX, "memory.pool" );
+    private final String memoryPool;
     private final MetricRegistry registry;
 
-    public MemoryPoolMetrics( MetricRegistry registry )
+    public MemoryPoolMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
+        this.memoryPool = name( metricsPrefix, VM_NAME_PREFIX, "memory.pool" );
     }
 
     @Override
@@ -28,7 +29,7 @@ public class MemoryPoolMetrics extends JvmMetrics
     {
         for ( final MemoryPoolMXBean memPool : ManagementFactory.getMemoryPoolMXBeans() )
         {
-            registry.register( name( MEMORY_POOL, prettifyName( memPool.getName() ) ),
+            registry.register( name( memoryPool, prettifyName( memPool.getName() ) ),
                     (Gauge<Long>) () -> memPool.getUsage().getUsed() );
         }
     }
@@ -36,6 +37,6 @@ public class MemoryPoolMetrics extends JvmMetrics
     @Override
     public void stop()
     {
-        registry.removeMatching( ( name, metric ) -> name.startsWith( MEMORY_POOL ) );
+        registry.removeMatching( ( name, metric ) -> name.startsWith( memoryPool ) );
     }
 }

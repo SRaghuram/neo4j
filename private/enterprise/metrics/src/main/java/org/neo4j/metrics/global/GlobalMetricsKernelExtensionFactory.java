@@ -3,22 +3,27 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.metrics;
+package org.neo4j.metrics.global;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.metrics.source.Neo4jMetricsBuilder;
 import org.neo4j.scheduler.JobScheduler;
 
-public class MetricsKernelExtensionFactory extends KernelExtensionFactory<MetricsKernelExtensionFactory.Dependencies>
+public class GlobalMetricsKernelExtensionFactory extends KernelExtensionFactory<GlobalMetricsKernelExtensionFactory.Dependencies>
 {
-    public interface Dependencies extends Neo4jMetricsBuilder.Dependencies
+    public interface Dependencies
     {
+        Monitors monitors();
+
+        PageCacheCounters pageCacheCounters();
+
         Config configuration();
 
         LogService logService();
@@ -30,7 +35,7 @@ public class MetricsKernelExtensionFactory extends KernelExtensionFactory<Metric
         ConnectorPortRegister portRegister();
     }
 
-    public MetricsKernelExtensionFactory()
+    public GlobalMetricsKernelExtensionFactory()
     {
         super( "metrics" );
     }
@@ -38,6 +43,6 @@ public class MetricsKernelExtensionFactory extends KernelExtensionFactory<Metric
     @Override
     public Lifecycle newInstance( KernelContext context, Dependencies dependencies )
     {
-        return new MetricsExtension( context, dependencies );
+        return new GlobalMetricsExtension( context, dependencies );
     }
 }

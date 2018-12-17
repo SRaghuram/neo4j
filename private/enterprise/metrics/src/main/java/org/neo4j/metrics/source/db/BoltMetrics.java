@@ -21,53 +21,62 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Bolt metrics" )
 public class BoltMetrics extends LifecycleAdapter
 {
-    private static final String NAME_PREFIX = "neo4j.bolt";
-
     @Documented( "The total number of Bolt sessions started since this instance started. This includes both " +
                  "succeeded and failed sessions (deprecated, use connections_opened instead)." )
-    public static final String SESSIONS_STARTED = name( NAME_PREFIX, "sessions_started" );
+    private final String sessionsStarted;
 
     @Documented( "The total number of Bolt connections opened since this instance started. This includes both " +
             "succeeded and failed connections." )
-    public static final String CONNECTIONS_OPENED = name( NAME_PREFIX, "connections_opened" );
+    private final String connectionsOpened;
 
     @Documented( "The total number of Bolt connections closed since this instance started. This includes both " +
             "properly and abnormally ended connections." )
-    public static final String CONNECTIONS_CLOSED = name( NAME_PREFIX, "connections_closed" );
+    private final String connectionsClosed;
 
     @Documented( "The total number of Bolt connections currently being executed." )
-    public static final String CONNECTIONS_RUNNING = name( NAME_PREFIX, "connections_running" );
+    private final String connectionsRunning;
 
     @Documented( "The total number of Bolt connections sitting idle." )
-    public static final String CONNECTIONS_IDLE = name( NAME_PREFIX, "connections_idle" );
+    private final String connectionsIdle;
 
     @Documented( "The total number of messages received via Bolt since this instance started." )
-    public static final String MESSAGES_RECEIVED = name( NAME_PREFIX, "messages_received" );
+    private final String messagesReceived;
 
     @Documented( "The total number of messages that began processing since this instance started. This is different " +
                  "from messages received in that this counter tracks how many of the received messages have" +
                  "been taken on by a worker thread." )
-    public static final String MESSAGES_STARTED = name( NAME_PREFIX, "messages_started" );
+    private final String messagesStarted;
 
     @Documented( "The total number of messages that completed processing since this instance started. This includes " +
                  "successful, failed and ignored Bolt messages." )
-    public static final String MESSAGES_DONE = name( NAME_PREFIX, "messages_done" );
+    private final String messagesDone;
 
     @Documented( "The total number of messages that failed processing since this instance started." )
-    public static final String MESSAGES_FAILED = name( NAME_PREFIX, "messages_failed" );
+    private final String messagesFailed;
 
     @Documented( "The accumulated time messages have spent waiting for a worker thread." )
-    public static final String TOTAL_QUEUE_TIME = name( NAME_PREFIX, "accumulated_queue_time" );
+    private final String totalQueueTime;
 
     @Documented( "The accumulated time worker threads have spent processing messages." )
-    public static final String TOTAL_PROCESSING_TIME = name( NAME_PREFIX, "accumulated_processing_time" );
+    private final String totalProcessingTime;
 
     private final MetricRegistry registry;
     private final Monitors monitors;
     private final BoltMetricsMonitor boltMonitor = new BoltMetricsMonitor();
 
-    public BoltMetrics( MetricRegistry registry, Monitors monitors )
+    public BoltMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
     {
+        this.sessionsStarted = name( metricsPrefix, "bolt.sessions_started" );
+        this.connectionsOpened = name( metricsPrefix, "bolt.connections_opened" );
+        this.connectionsClosed = name( metricsPrefix, "bolt.connections_closed" );
+        this.connectionsRunning = name( metricsPrefix, "bolt.connections_running" );
+        this.connectionsIdle = name( metricsPrefix, "bolt.connections_idle" );
+        this.messagesReceived = name( metricsPrefix, "bolt.messages_received" );
+        this.messagesStarted = name( metricsPrefix, "bolt.messages_started" );
+        this.messagesDone = name( metricsPrefix, "bolt.messages_done" );
+        this.messagesFailed = name( metricsPrefix, "bolt.messages_failed" );
+        this.totalQueueTime = name( metricsPrefix, "bolt.accumulated_queue_time" );
+        this.totalProcessingTime = name( metricsPrefix, "bolt.accumulated_processing_time" );
         this.registry = registry;
         this.monitors = monitors;
     }
@@ -76,33 +85,33 @@ public class BoltMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( boltMonitor );
-        registry.register( SESSIONS_STARTED, new MetricsCounter( boltMonitor.connectionsOpened::get ) );
-        registry.register( CONNECTIONS_OPENED, new MetricsCounter( boltMonitor.connectionsOpened::get ) );
-        registry.register( CONNECTIONS_CLOSED, new MetricsCounter( boltMonitor.connectionsClosed::get ) );
-        registry.register( CONNECTIONS_RUNNING, (Gauge<Long>) boltMonitor.connectionsActive::get );
-        registry.register( CONNECTIONS_IDLE, (Gauge<Long>) boltMonitor.connectionsIdle::get );
-        registry.register( MESSAGES_RECEIVED, new MetricsCounter( boltMonitor.messagesReceived::get ) );
-        registry.register( MESSAGES_STARTED, new MetricsCounter( boltMonitor.messagesStarted::get ) );
-        registry.register( MESSAGES_DONE, new MetricsCounter( boltMonitor.messagesDone::get ) );
-        registry.register( MESSAGES_FAILED, new MetricsCounter( boltMonitor.messagesFailed::get ) );
-        registry.register( TOTAL_QUEUE_TIME, new MetricsCounter( boltMonitor.queueTime::get ) );
-        registry.register( TOTAL_PROCESSING_TIME, new MetricsCounter( boltMonitor.processingTime::get ) );
+        registry.register( sessionsStarted, new MetricsCounter( boltMonitor.connectionsOpened::get ) );
+        registry.register( connectionsOpened, new MetricsCounter( boltMonitor.connectionsOpened::get ) );
+        registry.register( connectionsClosed, new MetricsCounter( boltMonitor.connectionsClosed::get ) );
+        registry.register( connectionsRunning, (Gauge<Long>) boltMonitor.connectionsActive::get );
+        registry.register( connectionsIdle, (Gauge<Long>) boltMonitor.connectionsIdle::get );
+        registry.register( messagesReceived, new MetricsCounter( boltMonitor.messagesReceived::get ) );
+        registry.register( messagesStarted, new MetricsCounter( boltMonitor.messagesStarted::get ) );
+        registry.register( messagesDone, new MetricsCounter( boltMonitor.messagesDone::get ) );
+        registry.register( messagesFailed, new MetricsCounter( boltMonitor.messagesFailed::get ) );
+        registry.register( totalQueueTime, new MetricsCounter( boltMonitor.queueTime::get ) );
+        registry.register( totalProcessingTime, new MetricsCounter( boltMonitor.processingTime::get ) );
     }
 
     @Override
     public void stop()
     {
-        registry.remove( SESSIONS_STARTED );
-        registry.remove( CONNECTIONS_OPENED );
-        registry.remove( CONNECTIONS_CLOSED );
-        registry.remove( CONNECTIONS_IDLE );
-        registry.remove( CONNECTIONS_RUNNING );
-        registry.remove( MESSAGES_RECEIVED );
-        registry.remove( MESSAGES_STARTED );
-        registry.remove( MESSAGES_DONE );
-        registry.remove( MESSAGES_FAILED );
-        registry.remove( TOTAL_QUEUE_TIME );
-        registry.remove( TOTAL_PROCESSING_TIME );
+        registry.remove( sessionsStarted );
+        registry.remove( connectionsOpened );
+        registry.remove( connectionsClosed );
+        registry.remove( connectionsIdle );
+        registry.remove( connectionsRunning );
+        registry.remove( messagesReceived );
+        registry.remove( messagesStarted );
+        registry.remove( messagesDone );
+        registry.remove( messagesFailed );
+        registry.remove( totalQueueTime );
+        registry.remove( totalProcessingTime );
         monitors.removeMonitorListener( boltMonitor );
     }
 

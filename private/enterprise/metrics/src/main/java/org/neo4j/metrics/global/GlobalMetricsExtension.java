@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.metrics;
+package org.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
 
@@ -14,19 +14,20 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory.Dependencies;
 import org.neo4j.metrics.output.CompositeEventReporter;
+import org.neo4j.metrics.output.EventReporter;
 import org.neo4j.metrics.output.EventReporterBuilder;
-import org.neo4j.metrics.source.Neo4jMetricsBuilder;
 import org.neo4j.scheduler.JobScheduler;
 
-public class MetricsExtension implements Lifecycle
+public class GlobalMetricsExtension implements Lifecycle, MetricsProvider
 {
     private final LifeSupport life = new LifeSupport();
-    private Log logger;
-    private CompositeEventReporter reporter;
-    private boolean metricsBuilt;
+    private final Log logger;
+    private final CompositeEventReporter reporter;
+    private final MetricRegistry registry;
 
-    MetricsExtension( KernelContext kernelContext, MetricsKernelExtensionFactory.Dependencies dependencies )
+    GlobalMetricsExtension( KernelContext context, Dependencies dependencies )
     {
         LogService logService = dependencies.logService();
         Config configuration = dependencies.configuration();
@@ -34,28 +35,19 @@ public class MetricsExtension implements Lifecycle
         JobScheduler scheduler = dependencies.scheduler();
         logger = logService.getUserLog( getClass() );
 
-        MetricRegistry registry = new MetricRegistry();
-        reporter = new EventReporterBuilder( configuration, registry, logger, kernelContext, life, fileSystem,
-                scheduler, dependencies.portRegister() ).build();
-        metricsBuilt = new Neo4jMetricsBuilder( registry, reporter, configuration, logService, kernelContext,
-                                                dependencies, life ).build();
+        registry = new MetricRegistry();
+        reporter = new EventReporterBuilder( configuration, registry, logger, context, life, fileSystem, scheduler, dependencies.portRegister() ).build();
+        new GlobalMetricsBuilder( registry, configuration, logService, context, dependencies, life ).build();
     }
 
     @Override
     public void init()
     {
-        logger.info( "Initiating metrics..." );
-        if ( metricsBuilt && reporter.isEmpty() )
+        if ( reporter.isEmpty() )
         {
-            logger.warn( "Several metrics were enabled but no exporting option was configured to report values to. " +
-                         "Disabling kernel metrics extension." );
-            life.clear();
-        }
-
-        if ( !reporter.isEmpty() && !metricsBuilt )
-        {
-            logger.warn( "Exporting tool have been configured to report values to but no metrics were enabled. " +
-                         "Disabling kernel metrics extension." );
+            logger.warn( "Metrics extension reporting is not configured. Please configure one of the available exporting options to be able to use metrics. " +
+                    "Metrics extension is disabled." );
+            //TODO: we need to carry this knowledge to all database level extentions that will be registered later on.
             life.clear();
         }
 
@@ -78,5 +70,17 @@ public class MetricsExtension implements Lifecycle
     public void shutdown()
     {
         life.shutdown();
+    }
+
+    @Override
+    public EventReporter getReporter()
+    {
+        return reporter;
+    }
+
+    @Override
+    public MetricRegistry getRegistry()
+    {
+        return registry;
     }
 }

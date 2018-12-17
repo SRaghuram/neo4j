@@ -18,20 +18,20 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Cypher metrics" )
 public class CypherMetrics extends LifecycleAdapter
 {
-    private static final String NAME_PREFIX = "neo4j.cypher";
-
     @Documented( "The total number of times Cypher has decided to re-plan a query" )
-    public static final String REPLAN_EVENTS = name( NAME_PREFIX, "replan_events" );
+    private final String replanEvents;
 
     @Documented( "The total number of seconds waited between query replans" )
-    public static final String REPLAN_WAIT_TIME = name( NAME_PREFIX, "replan_wait_time" );
+    private final String replanWaitTime;
 
     private final MetricRegistry registry;
     private final Monitors monitors;
     private final PlanCacheMetricsMonitor cacheMonitor = new PlanCacheMetricsMonitor();
 
-    public CypherMetrics( MetricRegistry registry, Monitors monitors )
+    public CypherMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
     {
+        replanEvents = name( metricsPrefix, "cypher.replan_events" );
+        replanWaitTime = name( metricsPrefix, "cypher.replan_wait_time" );
         this.registry = registry;
         this.monitors = monitors;
     }
@@ -40,15 +40,15 @@ public class CypherMetrics extends LifecycleAdapter
     public void start()
     {
         monitors.addMonitorListener( cacheMonitor );
-        registry.register( REPLAN_EVENTS, new MetricsCounter( cacheMonitor::numberOfReplans ) );
-        registry.register( REPLAN_WAIT_TIME, new MetricsCounter( cacheMonitor::replanWaitTime ) );
+        registry.register( replanEvents, new MetricsCounter( cacheMonitor::numberOfReplans ) );
+        registry.register( replanWaitTime, new MetricsCounter( cacheMonitor::replanWaitTime ) );
     }
 
     @Override
     public void stop()
     {
-        registry.remove( REPLAN_EVENTS );
-        registry.remove( REPLAN_WAIT_TIME );
+        registry.remove( replanEvents );
+        registry.remove( replanWaitTime );
         monitors.removeMonitorListener( cacheMonitor );
     }
 }

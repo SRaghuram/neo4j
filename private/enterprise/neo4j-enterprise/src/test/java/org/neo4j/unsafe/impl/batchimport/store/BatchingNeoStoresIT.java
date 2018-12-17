@@ -21,8 +21,8 @@ import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.metrics.MetricsExtension;
 import org.neo4j.metrics.MetricsSettings;
+import org.neo4j.metrics.global.GlobalMetricsExtension;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.rule.TestDirectory;
@@ -64,7 +64,7 @@ public class BatchingNeoStoresIT
         {
             batchingNeoStores.createNew();
         }
-        provider.assertNone( AssertableLogProvider.inLog( MetricsExtension.class ).any() );
+        provider.assertNone( AssertableLogProvider.inLog( GlobalMetricsExtension.class ).any() );
     }
 
     @Test
