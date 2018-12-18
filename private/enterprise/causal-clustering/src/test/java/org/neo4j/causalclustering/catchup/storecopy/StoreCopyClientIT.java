@@ -56,6 +56,10 @@ import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Collections.emptyList;
+import static org.hamcrest.CoreMatchers.any;
+import static org.hamcrest.CoreMatchers.both;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
@@ -316,7 +320,7 @@ public class StoreCopyClientIT
         catch ( StoreCopyFailedException e )
         {
             assertableLogProvider.containsMatchingLogCall( inLog( StoreCopyClient.class )
-                    .warn( anyString(), equalTo( "Connection refused: localhost/127.0.0.1:" + port ) ) );
+                    .warn( any( String.class ), equalTo( "Connection refused: localhost/127.0.0.1:" + port ) ) );
         }
     }
 
