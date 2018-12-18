@@ -9,7 +9,6 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.util.TestHelpers;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -18,10 +17,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -33,7 +31,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
-import java.util.stream.LongStream;
 
 import org.neo4j.causalclustering.ClusterHelper;
 import org.neo4j.causalclustering.common.Cluster;
@@ -70,7 +67,8 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
-import static java.util.stream.Collectors.joining;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -305,26 +303,15 @@ public class OnlineBackupCommandCcIT
     }
 
     @Test
-    @Ignore( "Highest tx id assertion fails and need to be fixed" )
-    public void onlyTheLatestTransactionIsKeptAfterIncrementalBackup() throws Exception
+    public void incrementalBackupRotatesLogFiles() throws Exception
     {
         // given database exists with data
         Cluster<?> cluster = startCluster( recordFormat );
         createSomeData( cluster );
 
         // and backup client is told to rotate conveniently
-        Config config = Config
-                .builder()
-                .withSetting( GraphDatabaseSettings.logical_log_rotation_threshold, "1m" )
-                .build();
         File configOverrideFile = testDirectory.file( "neo4j-backup.conf" );
-
-        try ( OutputStream outputStream = Files.newOutputStream( configOverrideFile.toPath() ) )
-        {
-            Properties properties = new Properties();
-            properties.putAll( config.getRaw() );
-            properties.store( outputStream, "" );
-        }
+        writeConfigWithLogRotationThreshold( configOverrideFile, "1m" );
 
         // and we have a full backup
         final String backupName = "backupName" + recordFormat;
@@ -336,9 +323,12 @@ public class OnlineBackupCommandCcIT
                 "--additional-config=" + configOverrideFile,
                 "--name=" + backupName ) );
 
-        // and the database contains a few more transactions
-        transactions1M( cluster );
-        transactions1M( cluster ); // rotation, second tx log file
+        LogFiles backupLogFiles = logFilesFromBackup( backupName );
+        assertEquals( 0, backupLogFiles.getHighestLogVersion() );
+        assertEquals( 0, backupLogFiles.getLowestLogVersion() );
+
+        // and the database contains a few more transactions that cause backup to perform a rotation
+        insert20MbOfData( cluster );
 
         // when we perform an incremental backup
         assertEquals( 0, runBackupToolAndGetExitCode(
@@ -350,13 +340,9 @@ public class OnlineBackupCommandCcIT
                 arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
         // then there has been a rotation
-        LogFiles logFiles = BackupTransactionLogFilesHelper.readLogFiles( DatabaseLayout.of( new File( backupStoreDir, backupName ) ) );
-        long highestTxIdInLogFiles = logFiles.getHighestLogVersion();
-        assertEquals( 2, highestTxIdInLogFiles );
-
+        assertThat( backupLogFiles.getHighestLogVersion(), greaterThan( 0L ) );
         // and the original log has not been removed since the transactions are applied at start
-        long lowestTxIdInLogFiles = logFiles.getLowestLogVersion();
-        assertEquals( 0, lowestTxIdInLogFiles );
+        assertEquals( 0, backupLogFiles.getLowestLogVersion() );
     }
 
     @Test
@@ -390,7 +376,7 @@ public class OnlineBackupCommandCcIT
         assertNotEquals( firstDatabaseRepresentation, secondDatabaseRepresentation );
     }
 
-    private int runBackupOtherJvm( String customAddress, String databaseName ) throws Exception
+    private int runBackupOtherJvm( String customAddress, String databaseName )
     {
         return runBackupToolAndGetExitCode(
                 "--from", customAddress,
@@ -441,57 +427,6 @@ public class OnlineBackupCommandCcIT
     static String arg( String key, Object value )
     {
         return "--" + key + "=" + value;
-    }
-
-    static PrintStream wrapWithNormalOutput( PrintStream normalOutput, PrintStream nullAbleOutput )
-    {
-        if ( nullAbleOutput == null )
-        {
-            return normalOutput;
-        }
-        return duplexPrintStream( normalOutput, nullAbleOutput );
-    }
-
-    private static PrintStream duplexPrintStream( PrintStream first, PrintStream second )
-    {
-        return new PrintStream( first )
-        {
-
-            @Override
-            public void write( int i )
-            {
-                super.write( i );
-                second.write( i );
-            }
-
-            @Override
-            public void write( byte[] bytes, int i, int i1 )
-            {
-                super.write( bytes, i, i1 );
-                second.write( bytes, i, i1 );
-            }
-
-            @Override
-            public void write( byte[] bytes ) throws IOException
-            {
-                super.write( bytes );
-                second.write( bytes );
-            }
-
-            @Override
-            public void flush()
-            {
-                super.flush();
-                second.flush();
-            }
-
-            @Override
-            public void close()
-            {
-                super.close();
-                second.close();
-            }
-        };
     }
 
     private static void repeatedlyPopulateDatabase( Cluster<?> cluster, AtomicBoolean continueFlagReference )
@@ -548,17 +483,18 @@ public class OnlineBackupCommandCcIT
         return cluster;
     }
 
-    private static void transactions1M( Cluster<?> cluster ) throws Exception
+    private static void insert20MbOfData( Cluster<?> cluster ) throws Exception
     {
         int numberOfTransactions = 500;
-        long sizeOfTransaction = (ByteUnit.mebiBytes( 1 ) / numberOfTransactions) + 1;
+        int sizeOfTransaction = (int) ((ByteUnit.mebiBytes( 20 ) / numberOfTransactions) + 1);
+        byte[] data = new byte[sizeOfTransaction];
+        Arrays.fill( data, (byte) 42 );
         for ( int txId = 0; txId < numberOfTransactions; txId++ )
         {
             cluster.coreTx( ( coreGraphDatabase, transaction ) ->
             {
                 Node node = coreGraphDatabase.createNode();
-                String longString = LongStream.range( 0, sizeOfTransaction ).map( l -> l % 10 ).mapToObj( Long::toString ).collect( joining( "" ) );
-                node.setProperty( "name", longString );
+                node.setProperty( "data", data );
                 coreGraphDatabase.createNode().createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
                 transaction.success();
             } );
@@ -589,9 +525,29 @@ public class OnlineBackupCommandCcIT
         return DbRepresentation.of( DatabaseLayout.of( storeDir, name ).databaseDirectory(), config );
     }
 
-    private int runBackupToolAndGetExitCode( String... args ) throws Exception
+    private int runBackupToolAndGetExitCode( String... args )
     {
         File neo4jHome = testDirectory.absolutePath();
-        return TestHelpers.runBackupToolFromOtherJvmToGetExitCode( neo4jHome, args );
+        return TestHelpers.runBackupToolFromSameJvm( neo4jHome, args );
+    }
+
+    private LogFiles logFilesFromBackup( String backupName ) throws IOException
+    {
+        DatabaseLayout backupLayout = DatabaseLayout.of( new File( backupStoreDir, backupName ) );
+        return BackupTransactionLogFilesHelper.readLogFiles( backupLayout );
+    }
+
+    private static void writeConfigWithLogRotationThreshold( File conf, String value ) throws IOException
+    {
+        Config config = Config.builder()
+                .withSetting( GraphDatabaseSettings.logical_log_rotation_threshold, value )
+                .build();
+
+        try ( BufferedWriter writer = Files.newBufferedWriter( conf.toPath() ) )
+        {
+            Properties properties = new Properties();
+            properties.putAll( config.getRaw() );
+            properties.store( writer, "" );
+        }
     }
 }
