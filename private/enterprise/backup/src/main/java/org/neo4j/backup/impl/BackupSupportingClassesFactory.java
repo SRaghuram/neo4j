@@ -49,7 +49,7 @@ public class BackupSupportingClassesFactory
     protected final Monitors monitors;
     protected final FileSystemAbstraction fileSystemAbstraction;
     protected final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
-    protected final OutputStream logDestination;
+    protected final OutputStream outputStream;
     private final JobScheduler jobScheduler;
 
     protected BackupSupportingClassesFactory( BackupModule backupModule )
@@ -60,7 +60,7 @@ public class BackupSupportingClassesFactory
         this.fileSystemAbstraction = backupModule.getFileSystem();
         this.transactionLogCatchUpFactory = backupModule.getTransactionLogCatchUpFactory();
         this.jobScheduler = backupModule.jobScheduler();
-        this.logDestination = backupModule.getOutputStream();
+        this.outputStream = backupModule.getOutputStream();
     }
 
     /**
@@ -71,7 +71,7 @@ public class BackupSupportingClassesFactory
      */
     BackupSupportingClasses createSupportingClasses( OnlineBackupContext context )
     {
-        monitors.addMonitorListener( new BackupOutputMonitor( logDestination ) );
+        monitors.addMonitorListener( new BackupOutputMonitor( outputStream ) );
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler );
         return new BackupSupportingClasses(
                 backupDelegatorFromConfig( pageCache, context.getConfig(), context.getRequiredArguments() ),
