@@ -5,12 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationMapper
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 import scala.collection.mutable
@@ -24,11 +24,6 @@ the subsequent reduce steps these local aggregations are merged into a single gl
 class AggregationMapperOperator(val workIdentity: WorkIdentity,
                                 aggregations: Array[AggregationOffsets],
                                 groupings: GroupingExpression) extends StatelessOperator {
-
-  //These are assigned at compile time to save some time at runtime
-//  private val groupingFunction = AggregationHelper.groupingFunction(groupings)
-//  private val addGroupingValuesToResult = AggregationHelper.computeGroupingSetter(groupings)(_.mapperOutputSlot)
-
   override def operate(currentRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,

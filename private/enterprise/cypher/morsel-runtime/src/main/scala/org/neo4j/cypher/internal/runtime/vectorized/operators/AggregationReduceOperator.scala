@@ -19,10 +19,6 @@ Responsible for reducing the output of AggregationMapperOperatorNoGrouping
 class AggregationReduceOperator(val workIdentity: WorkIdentity,
                                 aggregations: Array[AggregationOffsets],
                                 groupings: GroupingExpression) extends EagerReduceOperator {
-
-  //These are assigned at compile time to save some time at runtime
- // private val getGroupingKey = AggregationHelper.computeGroupingGetter(groupings)
-
   private type GroupingKey = groupings.T
 
   override def init(queryContext: QueryContext,
