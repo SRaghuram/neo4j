@@ -400,6 +400,7 @@ class BackupIT
     }
 
     @TestWithRecordFormats
+    @Disabled( "This test should use new tx log location setting" )
     void backupDatabaseWithCustomTransactionLogsLocation( String recordFormatName ) throws Exception
     {
         String customTxLogsLocation = "customLogLocation";
