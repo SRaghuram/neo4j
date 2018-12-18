@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.runtime.vectorized.expressions.{AggregationHelper, AggregationMapper}
+import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationMapper
+import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 
@@ -23,18 +23,18 @@ the subsequent reduce steps these local aggregations are merged into a single gl
  */
 class AggregationMapperOperator(val workIdentity: WorkIdentity,
                                 aggregations: Array[AggregationOffsets],
-                                groupings: Array[GroupingOffsets]) extends StatelessOperator {
+                                groupings: GroupingExpression) extends StatelessOperator {
 
   //These are assigned at compile time to save some time at runtime
-  private val groupingFunction = AggregationHelper.groupingFunction(groupings)
-  private val addGroupingValuesToResult = AggregationHelper.computeGroupingSetter(groupings)(_.mapperOutputSlot)
+//  private val groupingFunction = AggregationHelper.groupingFunction(groupings)
+//  private val addGroupingValuesToResult = AggregationHelper.computeGroupingSetter(groupings)(_.mapperOutputSlot)
 
   override def operate(currentRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val result = mutable.LinkedHashMap[AnyValue, Array[(Int,AggregationMapper)]]()
+    val result = mutable.LinkedHashMap[groupings.T, Array[(Int,AggregationMapper)]]()
 
     val queryState = new OldQueryState(context,
                                        resources = null,
@@ -44,7 +44,7 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.hasMoreRows) {
-      val groupingValue: AnyValue = groupingFunction(currentRow, queryState)
+      val groupingValue = groupings.computeGroupingKey(currentRow, queryState)
       val functions = result
         .getOrElseUpdate(groupingValue, aggregations.map(a => a.mapperOutputSlot -> a.aggregation.createAggregationMapper))
       functions.foreach(f => f._2.map(currentRow, queryState))
@@ -55,7 +55,7 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
     currentRow.resetToFirstRow()
     result.foreach {
       case (key, aggregator) =>
-        addGroupingValuesToResult(currentRow, key)
+        groupings.project(currentRow, key)
         var i = 0
         while (i < aggregations.length) {
           val (offset, mapper) = aggregator(i)

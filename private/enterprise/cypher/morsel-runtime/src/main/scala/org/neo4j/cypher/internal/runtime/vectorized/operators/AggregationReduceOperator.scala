@@ -6,10 +6,10 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.runtime.vectorized.expressions.{AggregationHelper, AggregationReducer}
-import org.neo4j.values.AnyValue
+import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationReducer
 
 import scala.collection.mutable
 
@@ -18,13 +18,12 @@ Responsible for reducing the output of AggregationMapperOperatorNoGrouping
  */
 class AggregationReduceOperator(val workIdentity: WorkIdentity,
                                 aggregations: Array[AggregationOffsets],
-                                groupings: Array[GroupingOffsets]) extends EagerReduceOperator {
+                                groupings: GroupingExpression) extends EagerReduceOperator {
 
   //These are assigned at compile time to save some time at runtime
-  private val addGroupingValuesToResult = AggregationHelper.computeGroupingSetter(groupings)(_.reducerOutputSlot)
-  private val getGroupingKey = AggregationHelper.computeGroupingGetter(groupings)
+ // private val getGroupingKey = AggregationHelper.computeGroupingGetter(groupings)
 
-  type GroupingKey = AnyValue
+  private type GroupingKey = groupings.T
 
   override def init(queryContext: QueryContext,
                     state: QueryState,
@@ -47,7 +46,7 @@ class AggregationReduceOperator(val workIdentity: WorkIdentity,
       }
       while (aggregates.hasNext && outputRow.hasMoreRows) {
         val (key, reducers) = aggregates.next()
-        addGroupingValuesToResult(outputRow, key)
+        groupings.project(outputRow, key)
         var i = 0
         while (i < aggregations.length) {
           val reducer = reducers(i)
@@ -62,12 +61,13 @@ class AggregationReduceOperator(val workIdentity: WorkIdentity,
     override def canContinue: Boolean = aggregates.hasNext
 
     private def aggregateInputs(inputMorsels: Array[MorselExecutionContext]) = {
+
       var morselPos = 0
       val result =  mutable.LinkedHashMap[GroupingKey, Array[AggregationReducer]]()
       while (morselPos < inputMorsels.length) {
         val currentIncomingRow = inputMorsels(morselPos)
         while (currentIncomingRow.hasMoreRows) {
-          val key = getGroupingKey(currentIncomingRow)
+          val key = groupings.getGroupingKey(currentIncomingRow)
           val reducersForKey = result.getOrElseUpdate(key, aggregations.map(_.aggregation.createAggregationReducer))
           var i = 0
           while (i < aggregations.length) {

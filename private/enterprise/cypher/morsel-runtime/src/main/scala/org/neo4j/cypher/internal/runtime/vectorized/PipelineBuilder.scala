@@ -169,16 +169,14 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           new AggregationReduceOperatorNoGrouping(WorkIdentity.fromPlan(plan), aggregations)
 
         case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
-          val groupings = groupingExpressions.map {
-            case (key, expression) =>
+          groupingExpressions.keys.foreach{key =>
               val currentSlot = slots(key)
               //we need to make room for storing grouping value in source slot
               if (currentSlot.isLongSlot)
                 source.slots.newLong(key, currentSlot.nullable, currentSlot.typ)
               else
                 source.slots.newReference(key, currentSlot.nullable, currentSlot.typ)
-              GroupingOffsets(source.slots(key), currentSlot, converters.toCommandExpression(id, expression))
-          }.toArray
+          }
 
           val aggregations = aggregationExpression.map {
             case (key, expression) =>
@@ -191,6 +189,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           }.toArray
 
           //add mapper to source
+          val groupings = converters.toGroupingExpression(id, groupingExpressions)
           source.addOperator(new AggregationMapperOperator(WorkIdentity.fromPlan(plan), aggregations, groupings))
           new AggregationReduceOperator(WorkIdentity.fromPlan(plan), aggregations, groupings)
 
