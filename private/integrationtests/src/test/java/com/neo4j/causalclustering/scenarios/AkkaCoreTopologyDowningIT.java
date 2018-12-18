@@ -6,10 +6,16 @@
 package com.neo4j.causalclustering.scenarios;
 
 import akka.actor.Address;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
+import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
+import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
+import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Test;
@@ -28,19 +34,13 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver;
-import com.neo4j.causalclustering.discovery.NoOpHostnameResolver;
-import com.neo4j.causalclustering.discovery.NoRetriesStrategy;
-import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
-import com.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.assertion.Assert;
+import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.

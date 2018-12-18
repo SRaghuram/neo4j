@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.core.consensus.schedule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.neo4j.kernel.lifecycle.LifeRule;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.rule.LifeRule;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;

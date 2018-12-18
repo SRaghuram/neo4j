@@ -12,11 +12,11 @@ import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.kernel.lifecycle.LifeRule;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.rule.LifeRule;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;

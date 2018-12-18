@@ -5,11 +5,19 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DefaultCluster;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.test.causalclustering.ClusterRule;
 import com.neo4j.util.TestHelpers;
 import org.junit.Before;
 import org.junit.Rule;
@@ -36,13 +44,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
 import org.neo4j.backup.clusteringsupport.ClusterHelper;
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
@@ -56,9 +57,8 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.test.DbRepresentation;
-import com.neo4j.test.causalclustering.ClusterRule;
+import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;

@@ -29,10 +29,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.neo4j.helpers.collection.Iterables;
-import org.neo4j.kernel.lifecycle.LifeRule;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.rule.LifeRule;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;

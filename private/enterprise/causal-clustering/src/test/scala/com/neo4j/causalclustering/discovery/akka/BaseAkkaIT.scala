@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.junit.runner.RunWith
 import org.neo4j.kernel.configuration.Config
-import org.neo4j.ports.allocation.PortAuthority
+import org.neo4j.test.ports.PortAuthority
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 

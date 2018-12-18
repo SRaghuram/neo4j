@@ -16,9 +16,9 @@ import org.junit.Test;
 
 import java.util.List;
 
-import org.neo4j.kernel.lifecycle.LifeRule;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
+import org.neo4j.test.rule.LifeRule;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState.Marshal;

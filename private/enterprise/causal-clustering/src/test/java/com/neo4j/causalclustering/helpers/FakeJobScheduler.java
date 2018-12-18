@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.helpers;
 
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
-import org.neo4j.scheduler.JobSchedulerAdapter;
+import org.neo4j.test.scheduler.JobSchedulerAdapter;
 
 import static org.mockito.Mockito.mock;
 

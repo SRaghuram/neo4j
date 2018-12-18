@@ -5,19 +5,17 @@
  */
 package org.neo4j.backup.clusteringsupport;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.graphdb.Node;
@@ -26,8 +24,8 @@ import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.restore.RestoreDatabaseCommand;
+import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 import static org.junit.Assert.assertEquals;

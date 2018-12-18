@@ -24,10 +24,10 @@ import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.helper.Workload;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.kernel.diagnostics.utils.DumpUtils;
-import org.neo4j.scheduler.DaemonThreadFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.scheduler.DaemonThreadFactory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;

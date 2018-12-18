@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.MimeTypes;
@@ -34,20 +35,18 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
+import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.causalclustering.discovery.RetryStrategyTest.testRetryStrategy;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
-import static com.neo4j.causalclustering.discovery.RetryStrategyTest.testRetryStrategy;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
 public class KubernetesResolverIT

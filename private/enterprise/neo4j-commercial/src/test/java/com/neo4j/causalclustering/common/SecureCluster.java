@@ -5,28 +5,28 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreEditionModule;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.IpFamily;
+import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+
 import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.IntFunction;
 
-import com.neo4j.causalclustering.core.CoreEditionModule;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
-
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.ports.allocation.PortAuthority;
+import org.neo4j.test.ports.PortAuthority;
 
 public class SecureCluster extends Cluster<SslDiscoveryServiceFactory>
 {

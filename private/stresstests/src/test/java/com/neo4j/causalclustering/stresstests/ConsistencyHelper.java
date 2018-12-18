@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
+import com.neo4j.causalclustering.catchup.storecopy.TemporaryStoreDirectory;
+
 import java.io.File;
 import java.io.PrintStream;
 
-import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
-import com.neo4j.causalclustering.catchup.storecopy.TemporaryStoreDirectory;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -17,7 +18,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.neo4j.consistency.ConsistencyCheckTool.runConsistencyCheckTool;
 import static org.neo4j.io.NullOutputStream.NULL_OUTPUT_STREAM;

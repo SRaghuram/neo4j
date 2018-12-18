@@ -56,7 +56,7 @@ import org.neo4j.collection.Streams;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.ports.allocation.PortAuthority;
+import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.RAFT_1;

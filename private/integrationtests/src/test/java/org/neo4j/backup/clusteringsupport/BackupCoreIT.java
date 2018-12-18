@@ -5,6 +5,10 @@
  */
 package org.neo4j.backup.clusteringsupport;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -12,12 +16,8 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.DbRepresentation;
-import com.neo4j.test.causalclustering.ClusterRule;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static com.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;

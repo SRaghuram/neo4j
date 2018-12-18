@@ -57,9 +57,9 @@ import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.test.ports.PortAuthority;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;

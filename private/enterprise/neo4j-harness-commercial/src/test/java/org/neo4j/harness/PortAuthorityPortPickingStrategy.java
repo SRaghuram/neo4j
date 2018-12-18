@@ -10,7 +10,7 @@ import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.ports.allocation.PortAuthority;
+import org.neo4j.test.ports.PortAuthority;
 
 
 public class PortAuthorityPortPickingStrategy implements CausalClusterInProcessBuilder.PortPickingStrategy
