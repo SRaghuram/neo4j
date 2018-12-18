@@ -9,8 +9,6 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Scan
 
@@ -79,7 +77,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                          val cursor: NodeCursor,
                          val batchSizeHint: Int) extends ContinuableOperatorTask {
 
-    var _canContinue: Boolean = true
+    private var _canContinue: Boolean = true
     private var deferredRow: Boolean = false
 
     /**
@@ -123,7 +121,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
         }
       }
 
-      false // because scala compiler doesn't realize that this line is unreachable
+      throw new IllegalStateException("Unreachable code")
     }
 
     override def canContinue: Boolean = _canContinue

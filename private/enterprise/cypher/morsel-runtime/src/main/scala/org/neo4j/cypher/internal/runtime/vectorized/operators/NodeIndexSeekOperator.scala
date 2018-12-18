@@ -5,15 +5,19 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlottedIndexedProperty
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeek, IndexSeekMode, NodeIndexSeeker, QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
-import org.neo4j.cypher.internal.v4_0.logical.plans.{IndexOrder, QueryExpression}
+import org.neo4j.cypher.internal.v4_0.logical.plans.IndexOrder
+import org.neo4j.cypher.internal.v4_0.logical.plans.QueryExpression
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.Value
 
@@ -56,7 +60,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
           return false
         }
       }
-      false // because scala compiler doesn't realize that this line is unreachable
+      throw new IllegalStateException("Unreachable code")
     }
 
     override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
