@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{LongArray, Values}
 
 case class DistinctSlottedPrimitivePipe(source: Pipe,
@@ -30,7 +29,7 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[ExecutionContext],
                                       state: QueryState): Iterator[ExecutionContext] = {
     new PrefetchingIterator[ExecutionContext] {
-      private val seen = Sets.mutable.empty[AnyValue]()
+      private val seen = Sets.mutable.empty[LongArray]()
 
       override def produceNext(): Option[ExecutionContext] = {
         while (input.nonEmpty) {
@@ -38,7 +37,7 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
 
           val array = buildKey(next)
           if (seen.add(array)) {
-            // Found something! Set it as the next element to yield, and exit
+            // Found unseen key! Set it as the next element to yield, and exit
             val outgoing = SlottedExecutionContext(slots)
             outgoing.copyCachedFrom(next)
             outgoing.setLinenumber(next.getLinenumber)

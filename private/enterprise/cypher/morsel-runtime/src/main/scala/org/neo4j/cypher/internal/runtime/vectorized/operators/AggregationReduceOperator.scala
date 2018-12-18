@@ -19,7 +19,7 @@ Responsible for reducing the output of AggregationMapperOperatorNoGrouping
 class AggregationReduceOperator(val workIdentity: WorkIdentity,
                                 aggregations: Array[AggregationOffsets],
                                 groupings: GroupingExpression) extends EagerReduceOperator {
-  private type GroupingKey = groupings.T
+  private type GroupingKey = groupings.KeyType
 
   override def init(queryContext: QueryContext,
                     state: QueryState,

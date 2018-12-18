@@ -30,7 +30,7 @@ class EagerAggregationSlottedPipeTest extends CypherFunSuite with SlottedPipeTes
     val grouping = createReturnItemsFor(slots,"a", "b")
     val aggregation = Map(slots("count(*)").offset -> CountStar())
     def aggregationPipe = EagerAggregationSlottedPipe(source, slots,
-                                                      SlottedGroupingExpression(grouping), aggregation)()
+                                                      SlottedGroupingExpression(grouping.map(t => SlotExpression(t._1, t._2)).toArray), aggregation)()
 
     testableResult(aggregationPipe.createResults(QueryStateHelper.empty), slots) should be(List(
       Map[String, AnyValue]("a" -> intValue(1), "b" -> intValue(1), "count(*)" -> longValue(2)),

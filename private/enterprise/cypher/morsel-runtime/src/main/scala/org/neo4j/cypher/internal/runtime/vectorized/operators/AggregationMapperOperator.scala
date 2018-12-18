@@ -29,7 +29,7 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val result = mutable.LinkedHashMap[groupings.T, Array[(Int,AggregationMapper)]]()
+    val result = mutable.LinkedHashMap[groupings.KeyType, Array[(Int,AggregationMapper)]]()
 
     val queryState = new OldQueryState(context,
                                        resources = null,

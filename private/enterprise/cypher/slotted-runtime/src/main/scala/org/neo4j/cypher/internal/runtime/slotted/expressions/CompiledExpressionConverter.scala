@@ -108,21 +108,20 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
         log.debug(s"Failed to compile projection: $projections", t)
-        t.printStackTrace()
         None
     }
   }
 }
 
 object CompiledExpressionConverter {
-  private val COMPILE_LIMIT = 0
+  private val COMPILE_LIMIT = 2
 }
 
 case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
 
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
-  override type T = AnyValue
+  override type KeyType = AnyValue
 
   override def computeGroupingKey(context: ExecutionContext,
                                   state: QueryState): AnyValue =

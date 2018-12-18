@@ -15,8 +15,10 @@ import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.VirtualValues.list
 
+case class SlotExpression(slot: Slot, expression: Expression)
+
 case object EmptyGroupingExpression extends GroupingExpression {
-  override type T = AnyValue
+  override type KeyType = AnyValue
   override def registerOwningPipe(pipe: Pipe): Unit = {}
   override def computeGroupingKey(context: ExecutionContext,
                                   state: QueryState): AnyValue = Values.NO_VALUE
@@ -28,7 +30,7 @@ case object EmptyGroupingExpression extends GroupingExpression {
 }
 
 case class SlottedGroupingExpression1(slot: Slot, expression: Expression) extends GroupingExpression {
-  override type T = AnyValue
+  override type KeyType = AnyValue
   private val setter = makeSetValueInSlotFunctionFor(slot)
   private val getter = makeGetValueFromSlotFunctionFor(slot)
 
@@ -51,7 +53,7 @@ case class SlottedGroupingExpression2( slot1: Slot, e1: Expression,
   private val getter2 = makeGetValueFromSlotFunctionFor(slot2)
 
 
-  override type T = ListValue
+  override type KeyType = ListValue
 
   override def registerOwningPipe(pipe: Pipe): Unit = {
     e1.registerOwningPipe(pipe)
@@ -81,7 +83,7 @@ case class SlottedGroupingExpression3( slot1: Slot, e1: Expression,
   private val getter2 = makeGetValueFromSlotFunctionFor(slot2)
   private val getter3 = makeGetValueFromSlotFunctionFor(slot3)
 
-  override type T = ListValue
+  override type KeyType = ListValue
 
   override def registerOwningPipe(pipe: Pipe): Unit = {
     e1.registerOwningPipe(pipe)
@@ -103,16 +105,16 @@ case class SlottedGroupingExpression3( slot1: Slot, e1: Expression,
   }
 }
 
-case class SlottedGroupingExpression(groupingExpressions: Map[Slot, Expression]) extends GroupingExpression {
+case class SlottedGroupingExpression(groupingExpressions: Array[SlotExpression]) extends GroupingExpression {
 
-  private val setters = groupingExpressions.toSeq.sortBy(_._1.offset).map(_._1).map(makeSetValueInSlotFunctionFor).toArray
-  private val getters = groupingExpressions.toSeq.sortBy(_._1.offset).map(_._1).map(makeGetValueFromSlotFunctionFor).toArray
-  private val expressions = groupingExpressions.toSeq.sortBy(_._1.offset).map(_._2).toArray
+  private val setters = groupingExpressions.map(e => makeSetValueInSlotFunctionFor(e.slot))
+  private val getters = groupingExpressions.map(e => makeGetValueFromSlotFunctionFor(e.slot))
+  private val expressions = groupingExpressions.map(_.expression)
 
-  override type T = ListValue
+  override type KeyType = ListValue
 
   override def registerOwningPipe(pipe: Pipe): Unit = {
-    groupingExpressions.values.foreach(_.registerOwningPipe(pipe))
+    groupingExpressions.foreach(e => e.expression.registerOwningPipe(pipe))
   }
   override def computeGroupingKey(context: ExecutionContext,
                                   state: QueryState): ListValue = {

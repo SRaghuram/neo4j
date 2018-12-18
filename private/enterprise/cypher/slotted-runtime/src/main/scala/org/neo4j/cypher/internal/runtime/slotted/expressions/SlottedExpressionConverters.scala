@@ -35,7 +35,7 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
       case (slot, e)::Nil => Some(SlottedGroupingExpression1(slot, e))
       case (s1, e1)::(s2, e2)::Nil => Some(SlottedGroupingExpression2(s1, e1, s2, e2))
       case (s1, e1)::(s2, e2)::(s3, e3)::Nil => Some(SlottedGroupingExpression3(s1, e1, s2, e2, s3, e3))
-      case _ => Some(SlottedGroupingExpression(projected))
+      case _ => Some(SlottedGroupingExpression(projected.map(t => SlotExpression(t._1, t._2)).toArray))
     }
   }
 

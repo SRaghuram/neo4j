@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
 import org.neo4j.cypher.internal.runtime.slotted.pipes
-import org.neo4j.cypher.internal.runtime.slotted.pipes.{SlottedGroupingExpression, SlottedGroupingExpression1, SlottedGroupingExpression2, SlottedGroupingExpression3}
+import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.vectorized.Morsel
 import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
@@ -105,12 +105,12 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
     val groupSlot5 = RefSlot(4, nullable = false, CTAny)
     val aggregation = new AggregationReduceOperator(workId,
                                                     Array(AggregationOffsets(5, 5, DummyEvenNodeIdAggregation(0))),
-                                                    pipes
-                                                      .SlottedGroupingExpression(Map(groupSlot1 -> new DummyExpression(),
-                                                                                 groupSlot2 -> new DummyExpression(),
-                                                                                 groupSlot3 -> new DummyExpression(),
-                                                                                 groupSlot4 -> new DummyExpression(),
-                                                                                 groupSlot5 -> new DummyExpression())))
+                                                    SlottedGroupingExpression(
+                                                      Array(SlotExpression(groupSlot1, new DummyExpression()),
+                                                            SlotExpression(groupSlot2, new DummyExpression()),
+                                                            SlotExpression(groupSlot3, new DummyExpression()),
+                                                            SlotExpression(groupSlot4, new DummyExpression()),
+                                                            SlotExpression(groupSlot5, new DummyExpression()))))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
         .addRow(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.stringValue("k13"), Values.stringValue("k14"), Values.stringValue("k15"), Values.longArray(Array(2 * i))))

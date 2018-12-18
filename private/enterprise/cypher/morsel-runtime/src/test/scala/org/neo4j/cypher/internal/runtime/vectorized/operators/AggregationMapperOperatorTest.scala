@@ -6,7 +6,8 @@
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.RefSlot
-import org.neo4j.cypher.internal.runtime.slotted.pipes.{SlottedGroupingExpression, SlottedGroupingExpression1, SlottedGroupingExpression2, SlottedGroupingExpression3}
+import org.neo4j.cypher.internal.runtime.slotted.pipes
+import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.vectorized.EmptyQueryState
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
 import org.neo4j.values.storable.Values
@@ -114,13 +115,13 @@ class AggregationMapperOperatorTest extends MorselUnitTest {
     val groupSlot5 = RefSlot(4, nullable = false, CTAny)
     val aggregation = new AggregationMapperOperator(workId,
                                                     Array(AggregationOffsets(5, 5, DummyEvenNodeIdAggregation(0))),
-                                                    SlottedGroupingExpression(Map(
-                                                      groupSlot1 -> new DummyExpression(stringValue("A"),
-                                                                                        stringValue("B")),
-                                                      groupSlot2 -> new DummyExpression(stringValue("C"), stringValue("D")),
-                                                      groupSlot3 -> new DummyExpression(stringValue("E"), stringValue("F")),
-                                                      groupSlot4 -> new DummyExpression(stringValue("G"), stringValue("H")),
-                                                      groupSlot5 -> new DummyExpression(stringValue("I"), stringValue("J")))))
+                                                    SlottedGroupingExpression(Array(
+                                                      SlotExpression(groupSlot1, new DummyExpression(stringValue("A"), stringValue("B"))),
+                                                      SlotExpression(groupSlot2, new DummyExpression(stringValue("C"), stringValue("D"))),
+                                                      SlotExpression(groupSlot3, new DummyExpression(stringValue("E"), stringValue("F"))),
+                                                      SlotExpression(groupSlot4, new DummyExpression(stringValue("G"), stringValue("H"))),
+                                                      SlotExpression(groupSlot5, new DummyExpression(stringValue("I"), stringValue("J"))))))
+    val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)
     val given = new Given()
       .withOperator(aggregation)
       .withQueryState(EmptyQueryState())

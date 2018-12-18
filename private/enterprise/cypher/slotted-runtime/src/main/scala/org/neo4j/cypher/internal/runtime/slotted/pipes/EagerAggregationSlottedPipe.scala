@@ -37,7 +37,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[ExecutionContext],
                                       state: QueryState): Iterator[ExecutionContext] = {
 
-    val result = mutable.LinkedHashMap[groupingExpression.T, Seq[AggregationFunction]]()
+    val result = mutable.LinkedHashMap[groupingExpression.KeyType, Seq[AggregationFunction]]()
 
     // Used when we have no input and no grouping expressions. In this case, we'll return a single row
     def createEmptyResult(params: MapValue): Iterator[ExecutionContext] = {
@@ -51,7 +51,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
       Iterator.single(context)
     }
 
-    def writeAggregationResultToContext(groupingKey: groupingExpression.T, aggregator: Seq[AggregationFunction]): ExecutionContext = {
+    def writeAggregationResultToContext(groupingKey: groupingExpression.KeyType, aggregator: Seq[AggregationFunction]): ExecutionContext = {
       val context = SlottedExecutionContext(slots)
       groupingExpression.project(context, groupingKey)
       (aggregationOffsets zip aggregator.map(_.result(state))).foreach {
