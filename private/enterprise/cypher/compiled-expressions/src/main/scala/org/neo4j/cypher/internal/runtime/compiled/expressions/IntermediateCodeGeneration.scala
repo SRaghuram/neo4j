@@ -116,7 +116,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       if (singleValue) getKeyOps.head
       else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf(getKeyOps:_*))
 
-    val computeKeyOps = projections.values.map(p => nullCheck(p)(p.ir)).toArray
+    val computeKeyOps = groupingsOrdered.map(_._2).map(p => nullCheck(p)(p.ir)).toArray
     val computeKey =
       if (singleValue) computeKeyOps.head
       else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf(computeKeyOps:_*))
