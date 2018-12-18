@@ -49,13 +49,13 @@ class NodeIndexContainsScanOperatorTest extends MorselUnitTest with ImplicitDumm
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference(nDotProp, nullable = false, CTAny)
     val given = new Given()
-      .operator(new NodeIndexContainsScanOperator(workId, slots.getLongOffsetFor("n"), label.nameId.id,
+      .withOperator(new NodeIndexContainsScanOperator(workId, slots.getLongOffsetFor("n"), label.nameId.id,
         SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), Literal("hell"), SlotConfiguration.Size.zero)
       )
-      .inputRow()
-      .output(1 longs, 1 refs, 2 rows)
-      .context(queryContext)
-      .state(EmptyQueryState())
+      .addInputRow()
+      .withOutput(1 longs, 1 refs, 2 rows)
+      .withContext(queryContext)
+      .withQueryState(EmptyQueryState())
 
     val task = given.whenInit().shouldReturnNTasks(1).head
     task.whenOperate

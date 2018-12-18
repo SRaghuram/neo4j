@@ -23,12 +23,12 @@ class AllNodeScanOperatorTest extends MorselUnitTest {
     when(resources.cursorPools.nodeCursorPool.allocate()).thenReturn(cursor1, cursor2)
 
     val given = new Given()
-      .operator(new AllNodeScanOperator(workId, 2, SlotConfiguration.Size(2, 2)))
-      .inputRow(Longs(1, 2, 3), Refs(Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c")))
-      .inputRow(Longs(4, 5, 6), Refs(Values.stringValue("d"), Values.stringValue("e"), Values.stringValue("f")))
-      .output(3 longs, 2 refs, 6 rows)
-      .context(context)
-      .state(EmptyQueryState())
+      .withOperator(new AllNodeScanOperator(workId, 2, SlotConfiguration.Size(2, 2)))
+      .addInputRow(Longs(1, 2, 3), Refs(Values.stringValue("a"), Values.stringValue("b"), Values.stringValue("c")))
+      .addInputRow(Longs(4, 5, 6), Refs(Values.stringValue("d"), Values.stringValue("e"), Values.stringValue("f")))
+      .withOutput(3 longs, 2 refs, 6 rows)
+      .withContext(context)
+      .withQueryState(EmptyQueryState())
 
     val task = given.whenInit().shouldReturnNTasks(1).head
 

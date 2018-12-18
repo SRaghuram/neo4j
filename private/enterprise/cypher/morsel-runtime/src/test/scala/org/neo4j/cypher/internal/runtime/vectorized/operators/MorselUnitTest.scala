@@ -63,20 +63,20 @@ abstract class MorselUnitTest extends CypherFunSuite {
       }
     }
 
-    def noRows(longSlots: Int, refSlots: Int): this.type = {
+    def withNoRows(longSlots: Int, refSlots: Int): this.type = {
       setLongSlots(longSlots)
       setRefSlots(refSlots)
       this
     }
 
-    def row(): this.type = {
+    def addRow(): this.type = {
       _rows += 1
       setLongSlots(0)
       setRefSlots(0)
       this
     }
 
-    def row(refs:Refs): this.type = {
+    def addRow(refs:Refs): this.type = {
       _rows += 1
       setLongSlots(0)
       setRefSlots(refs.refs.size)
@@ -84,7 +84,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def row(longs:Longs): this.type = {
+    def addRow(longs:Longs): this.type = {
       _rows += 1
       setLongSlots(longs.longs.size)
       setRefSlots(0)
@@ -92,7 +92,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def row(longs:Longs, refs:Refs): this.type = {
+    def addRow(longs:Longs, refs:Refs): this.type = {
       _rows += 1
       setLongSlots(longs.longs.size)
       setRefSlots(refs.refs.size)
@@ -106,31 +106,31 @@ abstract class MorselUnitTest extends CypherFunSuite {
     protected var context: QueryContext = _
     protected var state: QueryState = _
 
-    def context(context: QueryContext): this.type = {
+    def withContext(context: QueryContext): this.type = {
       this.context = context
       this
     }
 
-    def state(state: QueryState): this.type = {
+    def withQueryState(state: QueryState): this.type = {
       this.state = state
       this
     }
 
-    def operator(operator: StreamingOperator): StreamingOperatorGiven = {
+    def withOperator(operator: StreamingOperator): StreamingOperatorGiven = {
       val res = new StreamingOperatorGiven(operator)
       res.context = this.context
       res.state = this.state
       res
     }
 
-    def operator(operator: StatelessOperator): StatelessOperatorGiven = {
+    def withOperator(operator: StatelessOperator): StatelessOperatorGiven = {
       val res = new StatelessOperatorGiven(operator)
       res.context = this.context
       res.state = this.state
       res
     }
 
-    def operator(operator: EagerReduceOperator): EagerReduceOperatorGiven = {
+    def withOperator(operator: EagerReduceOperator): EagerReduceOperatorGiven = {
       val res = new EagerReduceOperatorGiven(operator)
       res.context = this.context
       res.state = this.state
@@ -138,45 +138,47 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
   }
 
-  trait OneInputGiven extends Given {
+  trait HasOneInput {
+    self: Given =>
     protected val input = new Input()
 
-    def noInputRow(longSlots: Int, refSlots: Int): this.type = {
-      input.noRows(longSlots, refSlots)
+    def withNoInputRow(longSlots: Int, refSlots: Int): this.type = {
+      input.withNoRows(longSlots, refSlots)
       this
     }
 
-    def inputRow(): this.type = {
-      input.row()
+    def addInputRow(): this.type = {
+      input.addRow()
       this
     }
 
-    def inputRow(refs:Refs): this.type = {
-      input.row(refs)
+    def addInputRow(refs:Refs): this.type = {
+      input.addRow(refs)
       this
     }
 
-    def inputRow(longs:Longs): this.type = {
-      input.row(longs)
+    def addInputRow(longs:Longs): this.type = {
+      input.addRow(longs)
       this
     }
 
-    def inputRow(longs:Longs, refs:Refs): this.type = {
-      input.row(longs, refs)
+    def addInputRow(longs:Longs, refs:Refs): this.type = {
+      input.addRow(longs, refs)
       this
     }
   }
 
-  trait OutputGiven extends Given {
+  trait HasOutput {
+    self: Given =>
     protected var output = Counts(0, 0, 0)
 
-    def output(setters: (Counts => Counts)*): this.type = {
+    def withOutput(setters: (Counts => Counts)*): this.type = {
       output = setters.foldLeft(output)((o, setter) => setter(o))
       this
     }
   }
 
-  class StreamingOperatorGiven(operator: StreamingOperator) extends OneInputGiven with OutputGiven {
+  class StreamingOperatorGiven(operator: StreamingOperator) extends Given with HasOneInput with HasOutput {
 
     def whenInit(rowNum: Int = 0): ThenTasks = {
       val morsel = new Morsel(input.longs, input.refs)
@@ -189,7 +191,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
   }
 
-  class StatelessOperatorGiven(operator: StatelessOperator) extends OneInputGiven {
+  class StatelessOperatorGiven(operator: StatelessOperator) extends Given with HasOneInput {
 
     def whenOperate(): ThenOutput = {
       val morsel = new Morsel(input.longs, input.refs)
@@ -199,7 +201,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
   }
 
-  class EagerReduceOperatorGiven(operator: EagerReduceOperator) extends OutputGiven {
+  class EagerReduceOperatorGiven(operator: EagerReduceOperator) extends Given with HasOutput {
     private var inputs = Array.newBuilder[Input]
 
     def addInput(input: Input): this.type = {

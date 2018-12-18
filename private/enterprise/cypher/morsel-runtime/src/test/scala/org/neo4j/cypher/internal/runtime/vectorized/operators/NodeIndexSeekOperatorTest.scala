@@ -53,13 +53,13 @@ class NodeIndexSeekOperatorTest extends MorselUnitTest with ImplicitDummyPos wit
       .newReference("n." + propertyKey(0).name, nullable = false, CTAny)
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
     val given = new Given()
-      .operator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+      .withOperator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
         ManyQueryExpression(ListLiteral(Literal("hello"), Literal("bye")))
       ))
-      .inputRow()
-      .output(1 longs, 1 refs, 3 rows)
-      .context(queryContext)
-      .state(EmptyQueryState())
+      .addInputRow()
+      .withOutput(1 longs, 1 refs, 3 rows)
+      .withContext(queryContext)
+      .withQueryState(EmptyQueryState())
 
     val task = given.whenInit().shouldReturnNTasks(1).head
     task.whenOperate
@@ -81,7 +81,7 @@ class NodeIndexSeekOperatorTest extends MorselUnitTest with ImplicitDummyPos wit
     val properties = propertyKeys.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
 
     val given = new Given()
-      .operator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+      .withOperator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
         CompositeQueryExpression(Seq(
           ManyQueryExpression(ListLiteral(
             Literal("hello"), Literal("bye")
@@ -90,10 +90,10 @@ class NodeIndexSeekOperatorTest extends MorselUnitTest with ImplicitDummyPos wit
             Literal("world"), Literal("cruel")
           ))))
       ))
-      .inputRow()
-      .output(1 longs, 2 refs, 3 rows)
-      .context(queryContext)
-      .state(EmptyQueryState())
+      .addInputRow()
+      .withOutput(1 longs, 2 refs, 3 rows)
+      .withContext(queryContext)
+      .withQueryState(EmptyQueryState())
 
     val task = given.whenInit().shouldReturnNTasks(1).head
     task.whenOperate
@@ -114,13 +114,13 @@ class NodeIndexSeekOperatorTest extends MorselUnitTest with ImplicitDummyPos wit
     val properties = propertyKey.map(pk => SlottedIndexedProperty(pk.nameId.id, Some(slots.getReferenceOffsetFor("n." + pk.name)))).toArray
 
     val given = new Given()
-      .operator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
+      .withOperator(new NodeIndexSeekOperator(workId, slots.getLongOffsetFor("n"), label, properties, 0, IndexOrderNone, SlotConfiguration.Size.zero,
         ManyQueryExpression(ListLiteral(Literal("hello"), Literal("world"))), LockingUniqueIndexSeek)
       )
-      .inputRow()
-      .output(1 longs, 1 refs, 3 rows)
-      .context(queryContext)
-      .state(EmptyQueryState())
+      .addInputRow()
+      .withOutput(1 longs, 1 refs, 3 rows)
+      .withContext(queryContext)
+      .withQueryState(EmptyQueryState())
 
     val task = given.whenInit().shouldReturnNTasks(1).head
     task.whenOperate

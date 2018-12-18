@@ -14,13 +14,13 @@ class ArgumentOperatorTest extends MorselUnitTest {
 
   test("should copy argument over and produce a single row") {
     val given = new Given()
-      .operator(new ArgumentOperator(workId, SlotConfiguration.Size(1, 1)))
-      .inputRow(Longs(1, 2, 3), Refs(Values.stringValue("a")))
-      .inputRow(Longs(4, 5, 6), Refs(Values.stringValue("b")))
-      .inputRow(Longs(7, 8, 9), Refs(Values.stringValue("c")))
-      .output(2 longs)
-      .output(2 refs)
-      .output(1 rows)
+      .withOperator(new ArgumentOperator(workId, SlotConfiguration.Size(1, 1)))
+      .addInputRow(Longs(1, 2, 3), Refs(Values.stringValue("a")))
+      .addInputRow(Longs(4, 5, 6), Refs(Values.stringValue("b")))
+      .addInputRow(Longs(7, 8, 9), Refs(Values.stringValue("c")))
+      .withOutput(2 longs)
+      .withOutput(2 refs)
+      .withOutput(1 rows)
 
     var task = given.whenInit().shouldReturnNTasks(1).head
     task.whenOperate

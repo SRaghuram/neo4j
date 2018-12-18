@@ -24,14 +24,14 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
                                                     Array(GroupingOffsets(groupSlot, groupSlot, new DummyExpression())))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
-        .row(Refs(Values.stringValue("k1"), Values.longArray(Array(2 * i))))
-        .row(Refs(Values.stringValue("k2"), Values.longArray(Array(20 * i))))
+        .addRow(Refs(Values.stringValue("k1"), Values.longArray(Array(2 * i))))
+        .addRow(Refs(Values.stringValue("k2"), Values.longArray(Array(20 * i))))
     }
 
     val given = new Given()
-      .operator(aggregation)
-      .state(EmptyQueryState())
-      .output(0 longs, 2 refs, 2 rows)
+      .withOperator(aggregation)
+      .withQueryState(EmptyQueryState())
+      .withOutput(0 longs, 2 refs, 2 rows)
     inputs.foreach(given.addInput)
 
     given.whenInit().whenOperate
@@ -52,14 +52,14 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
                                                           ))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
-        .row(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.longArray(Array(2 * i))))
-        .row(Refs(Values.stringValue("k21"), Values.stringValue("k22"), Values.longArray(Array(20 * i))))
+        .addRow(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.longArray(Array(2 * i))))
+        .addRow(Refs(Values.stringValue("k21"), Values.stringValue("k22"), Values.longArray(Array(20 * i))))
     }
 
     val given = new Given()
-      .operator(aggregation)
-      .state(EmptyQueryState())
-      .output(0 longs, 3 refs, 2 rows)
+      .withOperator(aggregation)
+      .withQueryState(EmptyQueryState())
+      .withOutput(0 longs, 3 refs, 2 rows)
     inputs.foreach(given.addInput)
 
     given.whenInit().whenOperate
@@ -80,14 +80,14 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
                                                     ))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
-        .row(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.stringValue("k13"), Values.longArray(Array(2 * i))))
-        .row(Refs(Values.stringValue("k21"), Values.stringValue("k22"), Values.stringValue("k23"), Values.longArray(Array(20 * i))))
+        .addRow(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.stringValue("k13"), Values.longArray(Array(2 * i))))
+        .addRow(Refs(Values.stringValue("k21"), Values.stringValue("k22"), Values.stringValue("k23"), Values.longArray(Array(20 * i))))
     }
 
     val given = new Given()
-      .operator(aggregation)
-      .state(EmptyQueryState())
-      .output(0 longs, 4 refs, 2 rows)
+      .withOperator(aggregation)
+      .withQueryState(EmptyQueryState())
+      .withOutput(0 longs, 4 refs, 2 rows)
     inputs.foreach(given.addInput)
 
     given.whenInit().whenOperate
@@ -113,14 +113,14 @@ class AggregationReducerOperatorTest extends MorselUnitTest {
                                                     ))
     val inputs = for (i <- 1 to 5) yield {
       new Input()
-        .row(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.stringValue("k13"), Values.stringValue("k14"), Values.stringValue("k15"), Values.longArray(Array(2 * i))))
-        .row(Refs(Values.stringValue("k21"), Values.stringValue("k22"), Values.stringValue("k23"), Values.stringValue("k24"), Values.stringValue("k25"), Values.longArray(Array(20 * i))))
+        .addRow(Refs(Values.stringValue("k11"), Values.stringValue("k12"), Values.stringValue("k13"), Values.stringValue("k14"), Values.stringValue("k15"), Values.longArray(Array(2 * i))))
+        .addRow(Refs(Values.stringValue("k21"), Values.stringValue("k22"), Values.stringValue("k23"), Values.stringValue("k24"), Values.stringValue("k25"), Values.longArray(Array(20 * i))))
     }
 
     val given = new Given()
-      .operator(aggregation)
-      .state(EmptyQueryState())
-      .output(0 longs, 6 refs, 2 rows)
+      .withOperator(aggregation)
+      .withQueryState(EmptyQueryState())
+      .withOutput(0 longs, 6 refs, 2 rows)
     inputs.foreach(given.addInput)
 
     given.whenInit().whenOperate

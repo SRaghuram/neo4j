@@ -16,13 +16,13 @@ class AggregationReducerOperatorNoGroupingTest extends MorselUnitTest {
     val aggregation = new AggregationReduceOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
 
     val input = new Input()
-      .row(Longs(0), Refs(Values.longArray(Array(2, 4, 42))))
+      .addRow(Longs(0), Refs(Values.longArray(Array(2, 4, 42))))
 
     val given = new Given()
-      .operator(aggregation)
-      .state(EmptyQueryState())
+      .withOperator(aggregation)
+      .withQueryState(EmptyQueryState())
       .addInput(input)
-      .output(0 longs, 1 refs, 1 rows)
+      .withOutput(0 longs, 1 refs, 1 rows)
 
     given.whenInit().whenOperate
       .shouldReturnRow(Refs(Values.longArray(Array(2, 4, 42))))
@@ -33,13 +33,13 @@ class AggregationReducerOperatorNoGroupingTest extends MorselUnitTest {
     // Given
     val aggregation = new AggregationReduceOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
     val inputs = for (i <- 1 to 10) yield {
-      new Input().row(Longs(0), Refs(Values.longArray(Array(2 * i))))
+      new Input().addRow(Longs(0), Refs(Values.longArray(Array(2 * i))))
     }
 
     val given = new Given()
-      .operator(aggregation)
-      .state(EmptyQueryState())
-      .output(0 longs, 1 refs, 1 rows)
+      .withOperator(aggregation)
+      .withQueryState(EmptyQueryState())
+      .withOutput(0 longs, 1 refs, 1 rows)
     inputs.foreach(given.addInput)
 
     given.whenInit().whenOperate
