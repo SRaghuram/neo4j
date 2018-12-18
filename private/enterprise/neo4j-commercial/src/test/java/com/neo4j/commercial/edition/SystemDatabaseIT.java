@@ -5,8 +5,7 @@
  */
 package com.neo4j.commercial.edition;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,10 +63,9 @@ class SystemDatabaseIT
     @BeforeEach
     void setUp()
     {
-        database = new CommercialGraphDatabaseFactory()
+        database = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( auth_provider, SYSTEM_GRAPH_REALM_NAME )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, "false" )
                 .newGraphDatabase();
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
@@ -185,10 +183,7 @@ class SystemDatabaseIT
         try
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "disabledSystemDb" );
-            databaseWithoutSystemDb = new CommercialGraphDatabaseFactory()
-                    .newEmbeddedDatabaseBuilder( disabledSystemDbDirectory )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, "false" )
-                    .newGraphDatabase();
+            databaseWithoutSystemDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
             DatabaseManager databaseManager = getDatabaseManager( databaseWithoutSystemDb );
             assertFalse( databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME ).isPresent() );
         }

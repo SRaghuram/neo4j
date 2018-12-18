@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.transaction.stats;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ class GlobalTransactionStatsIT
     @BeforeEach
     void setUp()
     {
-        database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
+        database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.storeDir() );
     }
 
     @AfterEach

@@ -26,8 +26,6 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -36,8 +34,6 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -72,13 +68,9 @@ class FulltextIndexBackupIT
     private GraphDatabaseAPI backupDb;
 
     @BeforeEach
-    void setUpPorts()
+    void setUp()
     {
-        GraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( dir.databaseDir() );
-        builder.setConfig( online_backup_enabled, "true" );
-        builder.setConfig( online_backup_listen_address, "127.0.0.1:0" );
-        db = (GraphDatabaseAPI) builder.newGraphDatabase();
+        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.databaseDir() );
     }
 
     @AfterEach

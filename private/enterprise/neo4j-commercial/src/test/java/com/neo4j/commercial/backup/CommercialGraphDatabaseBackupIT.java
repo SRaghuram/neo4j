@@ -81,7 +81,6 @@ class CommercialGraphDatabaseBackupIT
         return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( backupEnabled ) )
-                .setConfig( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" )
                 .newGraphDatabase();
     }
 

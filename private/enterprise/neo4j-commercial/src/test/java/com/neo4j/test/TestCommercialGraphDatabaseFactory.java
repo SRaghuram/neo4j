@@ -6,6 +6,7 @@
 package com.neo4j.test;
 
 import com.neo4j.commercial.edition.CommercialEditionModule;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 
@@ -51,6 +52,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
                 config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
                 config.augment( GraphDatabaseSettings.active_database, storeDir.getName() );
                 config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
+                config.augment( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" );
                 return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, CommercialEditionModule::new )
                 {
                     @Override

@@ -728,8 +728,7 @@ class BackupIT
     {
         GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( path )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( onlineBackupEnabled ) )
-                .setConfig( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" );
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( onlineBackupEnabled ) );
 
         if ( recordFormatName != null )
         {

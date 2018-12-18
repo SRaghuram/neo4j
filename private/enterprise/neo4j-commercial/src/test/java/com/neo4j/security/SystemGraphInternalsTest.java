@@ -5,7 +5,7 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class SystemGraphInternalsTest
     @BeforeEach
     void setUp() throws Throwable
     {
-        CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
+        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         File storeDir = testDirectory.databaseDir();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.SYSTEM_GRAPH_REALM_NAME );

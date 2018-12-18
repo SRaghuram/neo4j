@@ -5,8 +5,7 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import java.util.Map;
 
@@ -20,8 +19,8 @@ class SystemGraphEmbeddedInteraction extends EmbeddedInteraction
 {
     SystemGraphEmbeddedInteraction( Map<String, String> config, TestDirectory testDirectory ) throws Throwable
     {
-        CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
-        final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
+        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
+        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
         init( builder, config );
     }
 
@@ -29,7 +28,6 @@ class SystemGraphEmbeddedInteraction extends EmbeddedInteraction
     protected void init( GraphDatabaseBuilder builder, Map<String, String> config ) throws Throwable
     {
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
-        builder.setConfig( OnlineBackupSettings.online_backup_enabled, "false" );
         super.init( builder, config );
     }
 
