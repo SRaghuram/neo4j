@@ -138,7 +138,10 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           new ExpandAllOperator(WorkIdentity.fromPlan(plan), fromOffset, relOffset, toOffset, dir, lazyTypes)
 
         case plans.Projection(_, expressions) =>
-          new ProjectOperator(WorkIdentity.fromPlan(plan), converters.toCommandProjection(id, expressions))
+          val projectionOps = expressions.map {
+            case (key, e) => slots(key) -> converters.toCommandExpression(id, e)
+          }
+          new ProjectOperator(WorkIdentity.fromPlan(plan), projectionOps)
 
         case plans.Sort(_, sortItems) =>
           val ordering = sortItems.map(translateColumnOrder(slots, _))
