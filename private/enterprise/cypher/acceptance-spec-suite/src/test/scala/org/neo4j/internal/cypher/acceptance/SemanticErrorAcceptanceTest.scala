@@ -478,7 +478,6 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       fail(s"Did not get the expected error, expected: $expectedErrorString")
     } catch {
       case x: QueryExecutionException =>
-        x.printStackTrace()
         val actual = x.getMessage.lines.next().trim
         if (!correctError(actual, expected)) {
           fail(s"Did not get the expected error, expected: $expectedErrorString actual: '$actual'")
