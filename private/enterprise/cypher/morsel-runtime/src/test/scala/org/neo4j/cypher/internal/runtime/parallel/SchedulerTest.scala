@@ -5,8 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.parallel
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
@@ -34,7 +36,8 @@ abstract class SchedulerTest extends CypherFunSuite {
           taskThreadId.set(Thread.currentThread().getId)
         })))
 
-    queryExecution.await()
+    val result = queryExecution.await()
+    result shouldBe empty // no exception
 
     sb.result() should equal("great success")
     if (s.isMultiThreaded)
@@ -52,7 +55,7 @@ abstract class SchedulerTest extends CypherFunSuite {
                   map.put(i, Thread.currentThread().getId)
                 })))
 
-    futures.foreach(f => f.await())
+    futures.foreach(f => f.await() shouldBe empty)
 
     if (s.isMultiThreaded) {
       val countsPerThread = map.toSeq.groupBy(kv => kv._2).mapValues(_.size)
@@ -64,17 +67,67 @@ abstract class SchedulerTest extends CypherFunSuite {
 
     val s = newScheduler(2)
 
-    val result: mutable.Set[String] = java.util.concurrent.ConcurrentHashMap.newKeySet[String]()
+    val mutableSet: mutable.Set[String] = java.util.concurrent.ConcurrentHashMap.newKeySet[String]()
 
     val queryExecution = s.execute(tracer, IndexedSeq(SubTasker(List(
-            NoopTask(() => result += "once"),
-            NoopTask(() => result += "upon"),
-            NoopTask(() => result += "a"),
-            NoopTask(() => result += "time")
+            NoopTask(() => mutableSet += "once"),
+            NoopTask(() => mutableSet += "upon"),
+            NoopTask(() => mutableSet += "a"),
+            NoopTask(() => mutableSet += "time")
+      )), tracer)
+
+    val result = queryExecution.await()
+    result shouldBe empty // no exception
+    mutableSet should equal(Set("once", "upon", "a", "time"))
+  }
+
+  test("abort in flight tasks on failure") {
+
+    val s = newScheduler(2)
+
+    val mutableSet: mutable.Set[String] = java.util.concurrent.ConcurrentHashMap.newKeySet[String]()
+
+    val queryExecution = s.execute(
+      SubTasker(List(
+        NoopTask(() => mutableSet += "a"),
+        // This task will on the first invocation fail and on the second do the provided function.
+        // The second should never happen.
+        FailTask(() => mutableSet += "b"),
+        NoopTask(() => mutableSet += "c") // Depending on the scheduler, this task might execute
+      )), tracer)
+
+    val result = queryExecution.await()
+    result shouldBe defined // we got an exception
+    mutableSet should(equal(Set("a")) or equal(Set("a", "c")))
+  }
+
+  test("abort should not affect other query executions") {
+
+    val s = newScheduler(2)
+
+    val mutableSet: mutable.Set[String] = java.util.concurrent.ConcurrentHashMap.newKeySet[String]()
+
+    val queryExecution1 = s.execute(
+      SubTasker(List(
+        NoopTask(() => mutableSet += "a"),
+        // This task will on the first invocation fail and on the second do the provided function.
+        // The second should never happen.
+        FailTask(() => mutableSet += "b"),
+        NoopTask(() => mutableSet += "c") // Depending on the scheduler, this task might execute
           ))))
 
-    queryExecution.await()
-    result should equal(Set("once", "upon", "a", "time"))
+    val queryExecution2 = s.execute(
+      SubTasker(List(
+        NoopTask(() => mutableSet += "once"),
+        NoopTask(() => mutableSet += "upon"),
+        NoopTask(() => mutableSet += "time")
+      )), tracer)
+
+    val result1 = queryExecution1.await()
+    val result2 = queryExecution2.await()
+    result1 shouldBe defined // we got an exception
+    result2 shouldBe empty // no exception
+    mutableSet should contain allOf ("once", "upon", "a", "time")
   }
 
   test("execute reduce-like task tree") {
@@ -89,7 +142,9 @@ abstract class SchedulerTest extends CypherFunSuite {
 
     val queryExecution = s.execute(tracer, IndexedSeq(tasks))
 
-    queryExecution.await()
+    val result = queryExecution.await()
+    result shouldBe empty // no exception
+
     aggregator.sum.get() should be(111111)
   }
 
@@ -181,6 +236,26 @@ abstract class SchedulerTest extends CypherFunSuite {
     override def canContinue: Boolean = false
 
     override def workId: Int = 3
+
+    override def workDescription: String = getClass.getSimpleName
+  }
+
+  case class FailTask(f: () => Any) extends Task[Resource.type ] {
+
+    @volatile
+    private var failedAlready = false
+
+    override def executeWorkUnit(threadLocalResource: Resource.type): Seq[Task[Resource.type]] = if (failedAlready) {
+      f()
+      Nil
+    } else {
+      failedAlready = true
+      throw new Exception("Task failed")
+    }
+
+    override def canContinue: Boolean = true
+
+    override def workId: Int = 4
 
     override def workDescription: String = getClass.getSimpleName
   }

@@ -29,15 +29,17 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: E
   override def execute(tracer: SchedulerTracer, tasks: IndexedSeq[Task[THREAD_LOCAL_RESOURCE]]): QueryExecution = {
     dprintln(() => s"SimpleScheduler execute $tasks")
     val queryTracer: QueryExecutionTracer = tracer.traceQuery()
-    new SimpleQueryExecution(tasks.map(schedule(_, None, queryTracer)), this, queryTracer, waitTimeout.toMillis)
+    new SimpleQueryExecution(tasks.map(schedule(_, None, queryTracer)), queryTracer, waitTimeout.toMillis)
   }
 
-  def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult[THREAD_LOCAL_RESOURCE]] = {
+  override def isMultiThreaded: Boolean = true
+
+  def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult] = {
     dprintln(() => s"SimpleScheduler schedule $task")
     val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit)
     val callableTask =
-      new Callable[TaskResult[THREAD_LOCAL_RESOURCE]] {
-        override def call(): TaskResult[THREAD_LOCAL_RESOURCE] = {
+      new Callable[TaskResult] {
+        override def call(): TaskResult = {
           dprintln(() => s"SimpleScheduler running $task")
           val workUnitEvent = scheduledWorkUnitEvent.start()
           try {
@@ -52,25 +54,24 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: E
     executorService.submit(callableTask)
   }
 
-  class SimpleQueryExecution(initialTasks: IndexedSeq[Future[TaskResult[THREAD_LOCAL_RESOURCE]]],
-                             scheduler: SimpleScheduler[THREAD_LOCAL_RESOURCE],
+  class SimpleQueryExecution(initialTasks: IndexedSeq[Future[TaskResult]],
                              queryTracer: QueryExecutionTracer,
                              waitTimeoutMilli: Long) extends QueryExecution {
 
-    var inFlightTasks = new ArrayBuffer[Future[TaskResult[THREAD_LOCAL_RESOURCE]]]
+    var inFlightTasks = new ArrayBuffer[Future[TaskResult]]
     inFlightTasks ++= initialTasks
 
     override def await(): Option[Throwable] = {
       while (inFlightTasks.nonEmpty) {
-        val newInFlightTasks = new ArrayBuffer[Future[TaskResult[THREAD_LOCAL_RESOURCE]]]
+        val newInFlightTasks = new ArrayBuffer[Future[TaskResult]]
         for (future <- inFlightTasks) {
           try {
             val taskResult = future.get(waitTimeoutMilli, TimeUnit.MILLISECONDS)
             for (newTask <- taskResult.newDownstreamTasks)
-              newInFlightTasks += scheduler.schedule(newTask, Some(taskResult.workUnitEvent), queryTracer)
+              newInFlightTasks += SimpleScheduler.this.schedule(newTask, Some(taskResult.workUnitEvent), queryTracer)
 
             if (taskResult.task.canContinue)
-              newInFlightTasks += scheduler.schedule(taskResult.task, Some(taskResult.workUnitEvent), queryTracer)
+              newInFlightTasks += SimpleScheduler.this.schedule(taskResult.task, Some(taskResult.workUnitEvent), queryTracer)
           } catch {
             case e: TimeoutException =>
               // got tired of waiting for future to complete, put it back into the queue
@@ -90,8 +91,8 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: E
     }
   }
 
-}
+  case class TaskResult(task: Task[THREAD_LOCAL_RESOURCE],
+                        workUnitEvent: WorkUnitEvent,
+                        newDownstreamTasks: Seq[Task[THREAD_LOCAL_RESOURCE]])
 
-case class TaskResult[THREAD_LOCAL_RESOURCE <: AutoCloseable](task: Task[THREAD_LOCAL_RESOURCE],
-                                                              workUnitEvent: WorkUnitEvent,
-                                                              newDownstreamTasks: Seq[Task[THREAD_LOCAL_RESOURCE]])
+}

@@ -16,10 +16,10 @@ trait Scheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
     * also be executed in the same fashion. Each call to executeWorkUnit() may happen on
     * a separate thread at the Scheduler convenience.
     *
-    * @param task the initial task to execute
+    * @param tasks the initial tasks to execute
     * @return QueryExecution representing the ongoing execution
     */
-  def execute(tracer: SchedulerTracer, task: IndexedSeq[Task[THREAD_LOCAL_RESOURCE]]): QueryExecution
+  def execute(tracer: SchedulerTracer, tasks: IndexedSeq[Task[THREAD_LOCAL_RESOURCE]]): QueryExecution
 
   def numberOfWorkers: Int
 
