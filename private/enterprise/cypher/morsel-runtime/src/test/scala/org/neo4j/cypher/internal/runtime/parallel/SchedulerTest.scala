@@ -24,6 +24,10 @@ abstract class SchedulerTest extends CypherFunSuite {
 
   def newScheduler(maxConcurrency: Int): Scheduler[Resource.type]
 
+  def shutDown(): Unit
+
+  override protected def stopTest(): Unit = shutDown()
+
   test("execute simple task") {
     val s = newScheduler( 1 )
 
@@ -175,7 +179,6 @@ abstract class SchedulerTest extends CypherFunSuite {
     order.verifyNoMoreInteractions()
   }
 
-  // TODO flaky with LockFreeScheduler
   test("execute 1000 simple tasks, spread over 4 threads") {
     val concurrency = 4
     val s = newScheduler(concurrency)
@@ -184,8 +187,10 @@ abstract class SchedulerTest extends CypherFunSuite {
     val futures =
       for ( i <- 0 until 1000 ) yield
         s.execute(tracer, IndexedSeq(NoopTask(() => {
-                  map.put(i, Thread.currentThread().getId)
-                })))
+          map.put(i, Thread.currentThread().getId)
+          // If we make the tasks too fast, it might be that one worker doesn't get any share of the work
+          Thread.sleep(1)
+        })))
 
     futures.foreach(f => f.await() shouldBe empty)
 
@@ -262,24 +267,23 @@ abstract class SchedulerTest extends CypherFunSuite {
     mutableSet should contain allOf ("once", "upon", "a", "time")
   }
 
-  // TODO seems to hang with LockFreeScheduler
-//  test("execute reduce-like task tree") {
-//
-//    val s = newScheduler(64)
-//
-//    val aggregator = SumAggregator()
-//
-//    val tasks = SubTasker(List(
-//      PushToEager(List(1,10,100), aggregator),
-//      PushToEager(List(1000,10000,100000), aggregator)))
-//
-//    val queryExecution = s.execute(tracer, IndexedSeq(tasks))
-//
-//    val result = queryExecution.await()
-//    result shouldBe empty // no exception
-//
-//    aggregator.sum.get() should be(111111)
-//  }
+  test("execute reduce-like task tree") {
+
+    val s = newScheduler(64)
+
+    val aggregator = SumAggregator()
+
+    val tasks = SubTasker(List(
+      PushToEager(List(1,10,100), aggregator),
+      PushToEager(List(1000,10000,100000), aggregator)))
+
+    val queryExecution = s.execute(tracer, IndexedSeq(tasks))
+
+    val result = queryExecution.await()
+    result shouldBe empty // no exception
+
+    aggregator.sum.get() should be(111111)
+  }
 
   test("should execute multiple initial tasks") {
     val concurrency = 4

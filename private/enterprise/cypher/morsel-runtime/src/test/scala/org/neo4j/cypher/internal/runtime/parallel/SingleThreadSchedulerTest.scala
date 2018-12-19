@@ -7,4 +7,6 @@ package org.neo4j.cypher.internal.runtime.parallel
 
 class SingleThreadSchedulerTest extends SchedulerTest {
   override def newScheduler(maxConcurrency: Int): Scheduler[Resource.type] = new SingleThreadScheduler(() => Resource)
+
+  override def shutDown(): Unit = {} // Nothing to do
 }

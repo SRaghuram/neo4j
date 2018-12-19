@@ -5,11 +5,23 @@
  */
 package org.neo4j.cypher.internal.runtime.parallel
 
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.{Executors, TimeUnit}
 
 import scala.concurrent.duration.Duration
 
 class SimpleSchedulerTest extends SchedulerTest {
-  override def newScheduler(maxConcurrency: Int): Scheduler[Resource.type] =
-    new SimpleScheduler(Executors.newFixedThreadPool(maxConcurrency), Duration(1, TimeUnit.SECONDS), () => Resource, maxConcurrency)
+   private var _service: ExecutorService = _
+
+  override def newScheduler(maxConcurrency: Int): Scheduler[Resource.type] = {
+    val service: ExecutorService = Executors.newFixedThreadPool(maxConcurrency)
+    _service = service
+    new SimpleScheduler(service, Duration(1, TimeUnit.SECONDS), () => Resource, maxConcurrency)
+  }
+
+  override def shutDown(): Unit = {
+    if (_service != null) {
+      _service.shutdown()
+    }
+  }
 }
