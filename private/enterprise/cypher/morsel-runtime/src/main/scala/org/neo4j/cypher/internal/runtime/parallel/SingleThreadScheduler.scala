@@ -30,7 +30,7 @@ class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () =
 
       val threadLocalResource = threadLocalResourceFactory()
 
-      try {
+      val result = try {
         while (jobStack.nonEmpty) {
           val nextTaskAndEvent = jobStack.pop()
           val nextTask = nextTaskAndEvent._1
@@ -58,6 +58,8 @@ class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () =
       } finally {
         threadLocalResource.close()
       }
+      tracer.stopQuery()
+      result
     }
 
     private def schedule(task: Task[T], upstreamWorkUnitEvent: Option[WorkUnitEvent]): Unit = {

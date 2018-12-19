@@ -39,13 +39,14 @@ class LockFreeQueryExecution[THREAD_LOCAL_RESOURCE <: AutoCloseable](queryTracer
           val workUnitEvent = scheduledWorkUnitEvent.start()
           try {
             val newDownstreamTasks = task.executeWorkUnit(threadLocalResource.get())
-            TaskResult(task, this, LockFreeQueryExecution.this, workUnitEvent, newDownstreamTasks)
+            val result = TaskResult(task, this, LockFreeQueryExecution.this, workUnitEvent, newDownstreamTasks)
+            workUnitEvent.stop()
+            result
           } catch {
             case t: Throwable => // Stop the query immediately
+              workUnitEvent.stop()
               stop(Some(t))
               throw new QueryAbortedException(t)
-          } finally {
-            workUnitEvent.stop()
           }
         }
       }
