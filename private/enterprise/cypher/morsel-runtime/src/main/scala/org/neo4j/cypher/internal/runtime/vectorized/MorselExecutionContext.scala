@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ResourceLinenumber}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException

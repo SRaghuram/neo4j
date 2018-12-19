@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.compatibility.v4_0.runtime
 
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.logical.plans.{CachedNodeProperty, LogicalPlan}
-import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
+import org.neo4j.values.AnyValue
 
 import scala.collection.{immutable, mutable}
 

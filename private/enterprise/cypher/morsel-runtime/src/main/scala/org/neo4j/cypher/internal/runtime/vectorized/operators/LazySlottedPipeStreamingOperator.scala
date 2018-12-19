@@ -8,11 +8,11 @@ package org.neo4j.cypher.internal.runtime.vectorized.operators
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{InCheckContainer, SingleThreadedLRUCache}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => _, _}
-import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, ExecutionContext, pipes}
+import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, pipes}
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedQueryState}
 import org.neo4j.cypher.internal.runtime.vectorized._
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession

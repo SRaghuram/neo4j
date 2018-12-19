@@ -6,9 +6,10 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.Slot
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
-import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils.{makeGetValueFromSlotFunctionFor, makeSetValueInSlotFunctionFor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values

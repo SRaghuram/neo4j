@@ -8,9 +8,8 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.IteratorBasedResult
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{BaseExecutionResultBuilderFactory, ExecutionResultBuilder}
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext, QueryIndexes}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, QueryContext, QueryIndexes}
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.virtual.MapValue

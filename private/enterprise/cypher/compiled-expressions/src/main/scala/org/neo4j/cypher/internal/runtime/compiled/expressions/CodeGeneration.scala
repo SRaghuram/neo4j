@@ -18,8 +18,7 @@ import org.neo4j.codegen.TypeReference.{OBJECT, typeReference}
 import org.neo4j.codegen._
 import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._

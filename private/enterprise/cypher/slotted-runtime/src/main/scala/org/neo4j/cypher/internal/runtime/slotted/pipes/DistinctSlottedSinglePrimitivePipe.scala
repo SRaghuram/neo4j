@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.eclipse.collections.impl.factory.primitive.LongSets
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext

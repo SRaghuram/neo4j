@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.helpers.PrimitiveLongHelper
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull

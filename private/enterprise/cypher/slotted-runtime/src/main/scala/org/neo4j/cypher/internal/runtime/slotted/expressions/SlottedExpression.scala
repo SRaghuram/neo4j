@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 trait SlottedExpression {
   self: Expression =>
 
-  override def rewrite(f: (Expression) => Expression): Expression = f(this)
+  override def rewrite(f: Expression => Expression): Expression = f(this)
 
   override def arguments: Seq[Expression] = Seq.empty
 

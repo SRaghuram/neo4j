@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
 import org.neo4j.cypher.internal.runtime.DbAccess;
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext;
+import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;

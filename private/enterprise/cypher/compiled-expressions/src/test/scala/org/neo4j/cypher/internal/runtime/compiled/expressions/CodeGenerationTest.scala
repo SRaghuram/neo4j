@@ -15,8 +15,9 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, MapExecutionContext}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, MapExecutionContext}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions._

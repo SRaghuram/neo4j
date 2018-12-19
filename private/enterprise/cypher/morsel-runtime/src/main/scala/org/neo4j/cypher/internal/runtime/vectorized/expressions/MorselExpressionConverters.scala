@@ -6,7 +6,8 @@
 package org.neo4j.cypher.internal.runtime.vectorized.expressions
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
-import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, ExecutionContext}
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandexpressions}

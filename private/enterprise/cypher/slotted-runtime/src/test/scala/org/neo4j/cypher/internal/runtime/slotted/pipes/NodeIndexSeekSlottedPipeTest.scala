@@ -8,17 +8,18 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration.Size
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{ListLiteral, Literal}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexMockingHelp, LockingUniqueIndexSeek}
-import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ImplicitDummyPos, QueryStateHelper}
+import org.neo4j.cypher.internal.runtime.interpreted.{ImplicitDummyPos, QueryStateHelper}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedExecutionContextFactory}
-import org.neo4j.cypher.internal.v4_0.logical.plans.{CompositeQueryExpression, IndexOrderNone, ManyQueryExpression}
-import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.NodeValue
 import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, PropertyKeyName, PropertyKeyToken}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{CompositeQueryExpression, IndexOrderNone, ManyQueryExpression}
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.NodeValue
 
 class NodeIndexSeekSlottedPipeTest extends CypherFunSuite with ImplicitDummyPos with SlottedPipeTestHelper with IndexMockingHelp {
 

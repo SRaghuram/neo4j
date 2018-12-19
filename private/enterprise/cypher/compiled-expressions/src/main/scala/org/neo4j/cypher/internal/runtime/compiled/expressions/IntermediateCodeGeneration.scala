@@ -11,9 +11,8 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{invoke, load, method, variable}
-import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
