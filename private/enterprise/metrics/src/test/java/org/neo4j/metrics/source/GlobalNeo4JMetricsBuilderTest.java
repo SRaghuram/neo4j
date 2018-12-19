@@ -17,7 +17,7 @@ import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.metrics.global.GlobalMetricsBuilder;
+import org.neo4j.metrics.global.GlobalMetricsExporter;
 import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory;
 import org.neo4j.metrics.source.server.ServerMetrics;
 import org.neo4j.test.extension.Inject;
@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
 
 @ExtendWith( TestDirectoryExtension.class )
@@ -55,10 +56,10 @@ class GlobalNeo4JMetricsBuilderTest
         KernelContext kernelContext = new SimpleKernelContext( testDir.databaseDir(), COMMUNITY, mock( DependencySatisfier.class ) );
         LifeSupport life = new LifeSupport();
 
-        GlobalMetricsBuilder builder = new GlobalMetricsBuilder( new MetricRegistry(), config, NullLogService.getInstance(),
+        GlobalMetricsExporter exporter = new GlobalMetricsExporter( new MetricRegistry(), config, NullLogService.getInstance(),
                 kernelContext, mock( GlobalMetricsKernelExtensionFactory.Dependencies.class ), life );
 
-        builder.build();
+        exporter.export();
 
         if ( serverMetricsEnabled )
         {
@@ -74,7 +75,7 @@ class GlobalNeo4JMetricsBuilderTest
     {
         return Config.builder()
                 .withSetting( new HttpConnector( "http" ).enabled, Boolean.toString( enabled ) )
-                .withSetting( MetricsSettings.neoServerEnabled, "true" )
+                .withSetting( MetricsSettings.neoServerEnabled, TRUE )
                 .build();
     }
 }

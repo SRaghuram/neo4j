@@ -7,10 +7,8 @@ package org.neo4j.metrics.database;
 
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.api.LogRotationMonitor;
 import org.neo4j.kernel.impl.spi.KernelContext;
@@ -20,7 +18,9 @@ import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.metrics.global.MetricsProvider;
+import org.neo4j.metrics.global.MetricsManager;
+
+import static org.neo4j.kernel.extension.ExtensionType.DATABASE;
 
 public class DatabaseMetricsKernelExtensionFactory extends KernelExtensionFactory<DatabaseMetricsKernelExtensionFactory.Dependencies>
 {
@@ -30,7 +30,7 @@ public class DatabaseMetricsKernelExtensionFactory extends KernelExtensionFactor
 
         Config configuration();
 
-        MetricsProvider metricsProvider();
+        MetricsManager metricsManager();
 
         Database database();
 
@@ -43,13 +43,11 @@ public class DatabaseMetricsKernelExtensionFactory extends KernelExtensionFactor
         LogRotationMonitor logRotationMonitor();
 
         StoreEntityCounters storeEntityCounters();
-
-        Supplier<CoreMetaData> coreMetadataSupplier();
     }
 
     public DatabaseMetricsKernelExtensionFactory()
     {
-        super( ExtensionType.DATABASE, "databaseMetrics" );
+        super( DATABASE, "databaseMetrics" );
     }
 
     @Override

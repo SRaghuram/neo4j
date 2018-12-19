@@ -25,6 +25,8 @@ import static java.util.Collections.emptySortedMap;
 @Documented( ".Database log rotation metrics" )
 public class LogRotationMetrics extends LifecycleAdapter
 {
+    private static final String LOG_ROTATION_PREFIX = "log_rotation";
+
     @Documented( "The total number of transaction log rotations executed so far" )
     private final String logRotationEvents;
     @Documented( "The total time spent in rotating transaction logs so far" )
@@ -40,9 +42,9 @@ public class LogRotationMetrics extends LifecycleAdapter
     public LogRotationMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
             Monitors monitors, LogRotationMonitor logRotationMonitor )
     {
-        this.logRotationEvents = name( metricsPrefix, "log_rotation.events" );
-        this.logRotationTotalTime = name( metricsPrefix, "log_rotation.total_time" );
-        this.logRotationDuration = name( metricsPrefix, "log_rotation.log_rotation_duration" );
+        this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_PREFIX, "events" );
+        this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_PREFIX, "total_time" );
+        this.logRotationDuration = name( metricsPrefix, LOG_ROTATION_PREFIX, "log_rotation_duration" );
         this.registry = registry;
         this.monitors = monitors;
         this.logRotationMonitor = logRotationMonitor;

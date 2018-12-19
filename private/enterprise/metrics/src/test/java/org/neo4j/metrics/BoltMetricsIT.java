@@ -27,8 +27,14 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.test.PortUtils.getBoltPort;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( TestDirectoryExtension.class )
 class BoltMetricsIT
@@ -36,10 +42,17 @@ class BoltMetricsIT
     @Inject
     private TestDirectory testDirectory;
 
+    private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
+
     private GraphDatabaseAPI db;
     private TransportConnection conn;
 
-    private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
+    @AfterEach
+    void cleanup() throws Exception
+    {
+        conn.disconnect();
+        db.shutdown();
+    }
 
     @Test
     void shouldMonitorBolt() throws Throwable
@@ -47,7 +60,7 @@ class BoltMetricsIT
         // Given
         File metricsFolder = testDirectory.directory( "metrics" );
         db = (GraphDatabaseAPI) new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+                .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )
@@ -68,27 +81,20 @@ class BoltMetricsIT
                         map("scheme", "basic", "principal", "neo4j", "credentials", "neo4j") ) ) );
 
         // Then
-//        assertEventually( "session shows up as started",
-//                () -> readLongCounterValue( metricsCsv( metricsFolder, SESSIONS_STARTED ) ), equalTo( 1L ), 5, SECONDS );
-//        assertEventually( "init request shows up as received",
-//                () -> readLongCounterValue( metricsCsv( metricsFolder, MESSAGES_RECEIVED ) ), equalTo( 1L ), 5, SECONDS );
-//        assertEventually( "init request shows up as started",
-//                () -> readLongCounterValue( metricsCsv( metricsFolder, MESSAGES_STARTED ) ), equalTo( 1L ), 5, SECONDS );
-//        assertEventually( "init request shows up as done",
-//                () -> readLongCounterValue( metricsCsv( metricsFolder, MESSAGES_DONE ) ), equalTo( 1L ), 5, SECONDS );
-//
-//        assertEventually( "queue time shows up",
-//                () -> readLongCounterValue( metricsCsv( metricsFolder, TOTAL_QUEUE_TIME ) ),
-//                greaterThanOrEqualTo( 0L ), 5, SECONDS );
-//        assertEventually( "processing time shows up",
-//                () -> readLongCounterValue( metricsCsv( metricsFolder, TOTAL_PROCESSING_TIME ) ),
-//                greaterThanOrEqualTo( 0L ), 5, SECONDS );
-    }
+        assertEventually( "session shows up as started",
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.sessions_started" ) ), equalTo( 1L ), 5, SECONDS );
+        assertEventually( "init request shows up as received",
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_received" ) ), equalTo( 1L ), 5, SECONDS );
+        assertEventually( "init request shows up as started",
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_started" ) ), equalTo( 1L ), 5, SECONDS );
+        assertEventually( "init request shows up as done",
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_done" ) ), equalTo( 1L ), 5, SECONDS );
 
-    @AfterEach
-    void cleanup() throws Exception
-    {
-        conn.disconnect();
-        db.shutdown();
+        assertEventually( "queue time shows up",
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.accumulated_queue_time" ) ),
+                greaterThanOrEqualTo( 0L ), 5, SECONDS );
+        assertEventually( "processing time shows up",
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.accumulated_processing_time" ) ),
+                greaterThanOrEqualTo( 0L ), 5, SECONDS );
     }
 }

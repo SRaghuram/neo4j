@@ -22,6 +22,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Core metrics" )
 public class CoreMetrics extends LifecycleAdapter
 {
+    private static final String CAUSAL_CLUSTERING_PREFIX = "causal_clustering.core";
+
     @Documented( "Append index of the RAFT log" )
     private final String appendIndex;
     @Documented( "Commit index of the RAFT log" )
@@ -72,23 +74,23 @@ public class CoreMetrics extends LifecycleAdapter
 
     public CoreMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
     {
-        this.appendIndex = name( metricsPrefix, "causal_clustering.core", "append_index" );
-        this.commitIndex = name( metricsPrefix, "causal_clustering.core", "commit_index" );
-        this.term = name( metricsPrefix, "causal_clustering.core", "term" );
-        this.txRetries = name( metricsPrefix, "causal_clustering.core", "tx_retries" );
-        this.isLeader = name( metricsPrefix, "causal_clustering.core", "is_leader" );
-        this.totalBytes = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "total_bytes" );
-        this.maxBytes = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "max_bytes" );
-        this.elementCount = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "element_count" );
-        this.maxElements = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "max_elements" );
-        this.hits = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "hits" );
-        this.misses = name( metricsPrefix, "in_flight_cache", "causal_clustering.core", "misses" );
-        this.delay = name( metricsPrefix, "causal_clustering.core", "message_processing_delay" );
-        this.timer = name( metricsPrefix, "causal_clustering.core", "message_processing_timer" );
-        this.replicationNew = name( metricsPrefix, "causal_clustering.core", "replication_new" );
-        this.replicationAttempt = name( metricsPrefix, "causal_clustering.core", "replication_attempt" );
-        this.replicationSuccess = name( metricsPrefix, "causal_clustering.core", "replication_success" );
-        this.replicationFail = name( metricsPrefix, "causal_clustering.core", "replication_fail" );
+        this.appendIndex = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "append_index" );
+        this.commitIndex = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "commit_index" );
+        this.term = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "term" );
+        this.txRetries = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "tx_retries" );
+        this.isLeader = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "is_leader" );
+        this.totalBytes = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "total_bytes" );
+        this.maxBytes = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "max_bytes" );
+        this.elementCount = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "element_count" );
+        this.maxElements = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "max_elements" );
+        this.hits = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "hits" );
+        this.misses = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "misses" );
+        this.delay = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "message_processing_delay" );
+        this.timer = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
+        this.replicationNew = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_new" );
+        this.replicationAttempt = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_attempt" );
+        this.replicationSuccess = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_success" );
+        this.replicationFail = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_fail" );
         this.monitors = monitors;
         this.registry = registry;
         this.coreMetaData = coreMetaData;

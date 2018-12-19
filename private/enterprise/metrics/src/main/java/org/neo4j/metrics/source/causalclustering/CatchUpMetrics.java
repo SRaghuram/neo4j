@@ -20,8 +20,8 @@ public class CatchUpMetrics extends LifecycleAdapter
     @Documented( "TX pull requests received from read replicas" )
     private final String txPullRequestsReceived;
 
-    private Monitors monitors;
-    private MetricRegistry registry;
+    private final Monitors monitors;
+    private final MetricRegistry registry;
     private final TxPullRequestsMetric txPullRequestsMetric = new TxPullRequestsMetric();
 
     public CatchUpMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry )

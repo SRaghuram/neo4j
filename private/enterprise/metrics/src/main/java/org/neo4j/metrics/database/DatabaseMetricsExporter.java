@@ -9,23 +9,18 @@ import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.Edition;
-import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.metrics.database.DatabaseMetricsKernelExtensionFactory.Dependencies;
 import org.neo4j.metrics.output.EventReporter;
-import org.neo4j.metrics.source.causalclustering.CatchUpMetrics;
-import org.neo4j.metrics.source.causalclustering.CoreMetrics;
-import org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
-import org.neo4j.metrics.source.db.BoltMetrics;
 import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
 import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.LogRotationMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
 
-public class DatabaseMetricsBuilder
+public class DatabaseMetricsExporter
 {
     private final MetricRegistry registry;
     private final LifeSupport life;
@@ -34,7 +29,8 @@ public class DatabaseMetricsBuilder
     private final KernelContext context;
     private final Dependencies dependencies;
 
-    DatabaseMetricsBuilder( MetricRegistry registry, EventReporter reporter, Config config, KernelContext context, Dependencies dependencies, LifeSupport life )
+    DatabaseMetricsExporter( MetricRegistry registry, EventReporter reporter, Config config, KernelContext context, Dependencies dependencies,
+            LifeSupport life )
     {
         this.registry = registry;
         this.reporter = reporter;
@@ -44,7 +40,7 @@ public class DatabaseMetricsBuilder
         this.life = life;
     }
 
-    public void build()
+    public void export()
     {
         String metricsPrefix = databaseMetricsPrefix();
 
@@ -74,26 +70,6 @@ public class DatabaseMetricsBuilder
         if ( config.get( MetricsSettings.cypherPlanningEnabled ) )
         {
             life.add( new CypherMetrics( metricsPrefix, registry, dependencies.monitors() ) );
-        }
-
-        if ( config.get( MetricsSettings.boltMessagesEnabled ) )
-        {
-            life.add( new BoltMetrics( metricsPrefix, registry, dependencies.monitors() ) );
-        }
-
-        if ( config.get( MetricsSettings.causalClusteringEnabled ) )
-        {
-            OperationalMode mode = context.databaseInfo().operationalMode;
-            if ( mode == OperationalMode.CORE )
-            {
-                life.add( new CoreMetrics( metricsPrefix, dependencies.monitors(), registry, dependencies.coreMetadataSupplier() ) );
-                life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
-            }
-            else if ( mode == OperationalMode.READ_REPLICA )
-            {
-                life.add( new ReadReplicaMetrics( metricsPrefix, dependencies.monitors(), registry ) );
-                life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
-            }
         }
     }
 

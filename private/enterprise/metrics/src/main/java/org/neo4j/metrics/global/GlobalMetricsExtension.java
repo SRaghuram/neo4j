@@ -7,7 +7,6 @@ package org.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
 
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -18,39 +17,41 @@ import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory.Dependencies
 import org.neo4j.metrics.output.CompositeEventReporter;
 import org.neo4j.metrics.output.EventReporter;
 import org.neo4j.metrics.output.EventReporterBuilder;
-import org.neo4j.scheduler.JobScheduler;
 
-public class GlobalMetricsExtension implements Lifecycle, MetricsProvider
+public class GlobalMetricsExtension implements Lifecycle, MetricsManager
 {
     private final LifeSupport life = new LifeSupport();
     private final Log logger;
     private final CompositeEventReporter reporter;
     private final MetricRegistry registry;
+    private final KernelContext context;
+    private final GlobalMetricsKernelExtensionFactory.Dependencies dependencies;
+    private boolean configured;
 
     GlobalMetricsExtension( KernelContext context, Dependencies dependencies )
     {
         LogService logService = dependencies.logService();
-        Config configuration = dependencies.configuration();
-        FileSystemAbstraction fileSystem = dependencies.fileSystemAbstraction();
-        JobScheduler scheduler = dependencies.scheduler();
-        logger = logService.getUserLog( getClass() );
-
-        registry = new MetricRegistry();
-        reporter = new EventReporterBuilder( configuration, registry, logger, context, life, fileSystem, scheduler, dependencies.portRegister() ).build();
-        new GlobalMetricsBuilder( registry, configuration, logService, context, dependencies, life ).build();
+        this.context = context;
+        this.dependencies = dependencies;
+        this.logger = logService.getUserLog( getClass() );
+        this.registry = new MetricRegistry();
+        this.reporter = new EventReporterBuilder( dependencies.configuration(), registry, logger, context, life, dependencies.fileSystemAbstraction(),
+                dependencies.scheduler(), dependencies.portRegister() ).build();
     }
 
     @Override
     public void init()
     {
-        if ( reporter.isEmpty() )
+        configured = !reporter.isEmpty();
+        if ( !configured )
         {
             logger.warn( "Metrics extension reporting is not configured. Please configure one of the available exporting options to be able to use metrics. " +
                     "Metrics extension is disabled." );
-            //TODO: we need to carry this knowledge to all database level extentions that will be registered later on.
-            life.clear();
+            return;
         }
-
+        LogService logService = dependencies.logService();
+        Config configuration = dependencies.configuration();
+        new GlobalMetricsExporter( registry, configuration, logService, context, dependencies, life ).export();
         life.init();
     }
 
@@ -82,5 +83,11 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsProvider
     public MetricRegistry getRegistry()
     {
         return registry;
+    }
+
+    @Override
+    public boolean isConfigured()
+    {
+        return configured;
     }
 }

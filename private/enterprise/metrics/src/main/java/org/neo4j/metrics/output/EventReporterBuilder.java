@@ -22,19 +22,22 @@ import static org.neo4j.metrics.MetricsSettings.csvEnabled;
 import static org.neo4j.metrics.MetricsSettings.graphiteEnabled;
 import static org.neo4j.metrics.MetricsSettings.graphiteInterval;
 import static org.neo4j.metrics.MetricsSettings.graphiteServer;
+import static org.neo4j.metrics.MetricsSettings.metricsPrefix;
 import static org.neo4j.metrics.MetricsSettings.prometheusEnabled;
 import static org.neo4j.metrics.MetricsSettings.prometheusEndpoint;
 
 public class EventReporterBuilder
 {
+    private static final String METRICS_JMX_BEAN_SUFFIX = ".metrics";
+
     private final Config config;
     private final MetricRegistry registry;
     private final Log logger;
     private final KernelContext context;
     private final LifeSupport life;
     private final ConnectorPortRegister portRegister;
-    private FileSystemAbstraction fileSystem;
-    private JobScheduler scheduler;
+    private final FileSystemAbstraction fileSystem;
+    private final JobScheduler scheduler;
 
     public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, KernelContext context,
             LifeSupport life, FileSystemAbstraction fileSystem, JobScheduler scheduler, ConnectorPortRegister portRegister )
@@ -79,7 +82,7 @@ public class EventReporterBuilder
 
         if ( config.get( MetricsSettings.jmxEnabled ) )
         {
-            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( prefix + ".metrics" ).build();
+            JmxReporter jmxReporter = JmxReporter.forRegistry( registry ).inDomain( prefix + METRICS_JMX_BEAN_SUFFIX ).build();
             life.add( new JmxOutput( jmxReporter ) );
         }
 
@@ -88,6 +91,6 @@ public class EventReporterBuilder
 
     private String createMetricsPrefix( Config config )
     {
-        return config.get( MetricsSettings.metricsPrefix );
+        return config.get( metricsPrefix );
     }
 }

@@ -17,6 +17,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Database data metrics" )
 public class EntityCountMetrics extends LifecycleAdapter
 {
+    private static final String COUNTS_PREFIX = "ids_in_use";
+
     @Documented( "The total number of different relationship types stored in the database" )
     private final String countsRelationshipType;
     @Documented( "The total number of different property names used in the database" )
@@ -31,10 +33,10 @@ public class EntityCountMetrics extends LifecycleAdapter
 
     public EntityCountMetrics( String metricsPrefix, MetricRegistry registry, StoreEntityCounters storeEntityCounters )
     {
-        this.countsRelationshipType = name( metricsPrefix, "ids_in_use.relationship_type" );
-        this.countsProperty = name( metricsPrefix, "ids_in_use.property" );
-        this.countsRelationship = name( metricsPrefix, "ids_in_use.relationship" );
-        this.countsNode = name( metricsPrefix, "ids_in_use.node" );
+        this.countsRelationshipType = name( metricsPrefix, COUNTS_PREFIX, "relationship_type" );
+        this.countsProperty = name( metricsPrefix, COUNTS_PREFIX, "property" );
+        this.countsRelationship = name( metricsPrefix, COUNTS_PREFIX, "relationship" );
+        this.countsNode = name( metricsPrefix, COUNTS_PREFIX, "node" );
         this.registry = registry;
         this.storeEntityCounters = storeEntityCounters;
     }

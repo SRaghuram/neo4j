@@ -21,6 +21,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Bolt metrics" )
 public class BoltMetrics extends LifecycleAdapter
 {
+    private static final String BOLT_PREFIX = "bolt";
+
     @Documented( "The total number of Bolt sessions started since this instance started. This includes both " +
                  "succeeded and failed sessions (deprecated, use connections_opened instead)." )
     private final String sessionsStarted;
@@ -66,17 +68,17 @@ public class BoltMetrics extends LifecycleAdapter
 
     public BoltMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
     {
-        this.sessionsStarted = name( metricsPrefix, "bolt.sessions_started" );
-        this.connectionsOpened = name( metricsPrefix, "bolt.connections_opened" );
-        this.connectionsClosed = name( metricsPrefix, "bolt.connections_closed" );
-        this.connectionsRunning = name( metricsPrefix, "bolt.connections_running" );
-        this.connectionsIdle = name( metricsPrefix, "bolt.connections_idle" );
-        this.messagesReceived = name( metricsPrefix, "bolt.messages_received" );
-        this.messagesStarted = name( metricsPrefix, "bolt.messages_started" );
-        this.messagesDone = name( metricsPrefix, "bolt.messages_done" );
-        this.messagesFailed = name( metricsPrefix, "bolt.messages_failed" );
-        this.totalQueueTime = name( metricsPrefix, "bolt.accumulated_queue_time" );
-        this.totalProcessingTime = name( metricsPrefix, "bolt.accumulated_processing_time" );
+        this.sessionsStarted = name( metricsPrefix, BOLT_PREFIX, "sessions_started" );
+        this.connectionsOpened = name( metricsPrefix, BOLT_PREFIX, "connections_opened" );
+        this.connectionsClosed = name( metricsPrefix, BOLT_PREFIX, "connections_closed" );
+        this.connectionsRunning = name( metricsPrefix, BOLT_PREFIX, "connections_running" );
+        this.connectionsIdle = name( metricsPrefix, BOLT_PREFIX, "connections_idle" );
+        this.messagesReceived = name( metricsPrefix, BOLT_PREFIX, "messages_received" );
+        this.messagesStarted = name( metricsPrefix, BOLT_PREFIX, "messages_started" );
+        this.messagesDone = name( metricsPrefix, BOLT_PREFIX, "messages_done" );
+        this.messagesFailed = name( metricsPrefix, BOLT_PREFIX, "messages_failed" );
+        this.totalQueueTime = name( metricsPrefix, BOLT_PREFIX, "accumulated_queue_time" );
+        this.totalProcessingTime = name( metricsPrefix, BOLT_PREFIX, "accumulated_processing_time" );
         this.registry = registry;
         this.monitors = monitors;
     }

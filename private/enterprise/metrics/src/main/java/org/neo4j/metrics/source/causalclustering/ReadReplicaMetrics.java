@@ -17,6 +17,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Read Replica Metrics" )
 public class ReadReplicaMetrics extends LifecycleAdapter
 {
+    private static final String CAUSAL_CLUSTERING_PREFIX = "causal_clustering.read_replica";
+
     @Documented( "The total number of pull requests made by this instance" )
     private final String pullUpdates;
     @Documented( "The highest transaction id requested in a pull update by this instance" )
@@ -24,18 +26,18 @@ public class ReadReplicaMetrics extends LifecycleAdapter
     @Documented( "The highest transaction id that has been pulled in the last pull updates by this instance" )
     private final String pullUpdateHighestTxIdReceived;
 
-    private Monitors monitors;
-    private MetricRegistry registry;
+    private final Monitors monitors;
+    private final MetricRegistry registry;
 
     private final PullRequestMetric pullRequestMetric = new PullRequestMetric();
 
     public ReadReplicaMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry )
     {
-        this.pullUpdates = name( metricsPrefix, "causal_clustering.read_replica", "pull_updates" );
+        this.pullUpdates = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "pull_updates" );
         this.pullUpdateHighestTxIdRequested = name( metricsPrefix,
-                "causal_clustering.read_replica", "pull_update_highest_tx_id_requested" );
+                CAUSAL_CLUSTERING_PREFIX, "pull_update_highest_tx_id_requested" );
         this.pullUpdateHighestTxIdReceived = name( metricsPrefix,
-                "causal_clustering.read_replica", "pull_update_highest_tx_id_received" );
+                CAUSAL_CLUSTERING_PREFIX, "pull_update_highest_tx_id_received" );
         this.monitors = monitors;
         this.registry = registry;
     }

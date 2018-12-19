@@ -23,6 +23,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.metrics.MetricsSettings.prometheusEnabled;
 import static org.neo4j.metrics.MetricsSettings.prometheusEndpoint;
@@ -39,7 +41,7 @@ class PrometheusOutputIT
     @BeforeEach
     void setUp()
     {
-        database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( prometheusEnabled, Settings.TRUE )
                 .setConfig( prometheusEndpoint, "localhost:0" )
                 .newGraphDatabase();
@@ -62,7 +64,7 @@ class PrometheusOutputIT
 
         assertTrue( s.hasNext() );
         String response = s.next();
-//        assertTrue( response.contains( COUNTS_NODE ) );
-//        assertTrue( response.contains( COUNTS_RELATIONSHIP_TYPE ) );
+        assertThat( response, containsString( "neo4j.graph.db.ids_in_use.node" ) );
+        assertThat( response, containsString( "neo4j.graph.db.ids_in_use.relationship_type" ) );
     }
 }

@@ -21,6 +21,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Database transaction metrics" )
 public class TransactionMetrics extends LifecycleAdapter
 {
+    private static final String TRANSACTION_PREFIX = "transaction";
+
     @Documented( "The total number of started transactions" )
     private final String txStarted;
     @Documented( "The highest peak of concurrent transactions" )
@@ -66,22 +68,22 @@ public class TransactionMetrics extends LifecycleAdapter
     public TransactionMetrics( String metricsPrefix, MetricRegistry registry,
             Supplier<TransactionIdStore> transactionIdStoreSupplier, TransactionCounters transactionCounters )
     {
-        txStarted = name( metricsPrefix, "started" );
-        txPeakConcurrent = name( metricsPrefix, "peak_concurrent" );
-        txActive = name( metricsPrefix, "active" );
-        readTxActive = name( metricsPrefix, "active_read" );
-        writeTxActive = name( metricsPrefix, "active_write" );
-        txCommitted = name( metricsPrefix, "committed" );
-        readTxCommitted = name( metricsPrefix, "committed_read" );
-        writeTxCommitted = name( metricsPrefix, "committed_write" );
-        txRollbacks = name( metricsPrefix, "rollbacks" );
-        readTxRollbacks = name( metricsPrefix, "rollbacks_read" );
-        writeTxRollbacks = name( metricsPrefix, "rollbacks_write" );
-        txTerminated = name( metricsPrefix, "terminated" );
-        readTxTerminated = name( metricsPrefix, "terminated_read" );
-        writeTxTerminated = name( metricsPrefix, "terminated_write" );
-        lastCommittedTxId = name( metricsPrefix, "last_committed_tx_id" );
-        lastClosedTxId = name( metricsPrefix, "last_closed_tx_id" );
+        this.txStarted = name( metricsPrefix, TRANSACTION_PREFIX, "started" );
+        this.txPeakConcurrent = name( metricsPrefix, TRANSACTION_PREFIX, "peak_concurrent" );
+        this.txActive = name( metricsPrefix, TRANSACTION_PREFIX, "active" );
+        this.readTxActive = name( metricsPrefix, TRANSACTION_PREFIX, "active_read" );
+        this.writeTxActive = name( metricsPrefix, TRANSACTION_PREFIX, "active_write" );
+        this.txCommitted = name( metricsPrefix, TRANSACTION_PREFIX, "committed" );
+        this.readTxCommitted = name( metricsPrefix, TRANSACTION_PREFIX, "committed_read" );
+        this.writeTxCommitted = name( metricsPrefix, TRANSACTION_PREFIX, "committed_write" );
+        this.txRollbacks = name( metricsPrefix, TRANSACTION_PREFIX, "rollbacks" );
+        this.readTxRollbacks = name( metricsPrefix, TRANSACTION_PREFIX, "rollbacks_read" );
+        this.writeTxRollbacks = name( metricsPrefix, TRANSACTION_PREFIX, "rollbacks_write" );
+        this.txTerminated = name( metricsPrefix, TRANSACTION_PREFIX, "terminated" );
+        this.readTxTerminated = name( metricsPrefix, TRANSACTION_PREFIX, "terminated_read" );
+        this.writeTxTerminated = name( metricsPrefix, TRANSACTION_PREFIX, "terminated_write" );
+        this.lastCommittedTxId = name( metricsPrefix, TRANSACTION_PREFIX, "last_committed_tx_id" );
+        this.lastClosedTxId = name( metricsPrefix, TRANSACTION_PREFIX, "last_closed_tx_id" );
         this.registry = registry;
         this.transactionIdStoreSupplier = transactionIdStoreSupplier;
         this.transactionCounters = transactionCounters;

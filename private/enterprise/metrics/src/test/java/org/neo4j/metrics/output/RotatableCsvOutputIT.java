@@ -7,41 +7,48 @@ package org.neo4j.metrics.output;
 
 import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.function.BiPredicate;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.metrics.MetricsSettings.csvMaxArchives;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.csvRotationThreshold;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class RotatableCsvOutputIT
+@ExtendWith( TestDirectoryExtension.class )
+class RotatableCsvOutputIT
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
 
     private File outputPath;
     private GraphDatabaseService database;
     private static final BiPredicate<Long,Long> MONOTONIC = ( newValue, currentValue ) -> newValue >= currentValue;
     private static final int MAX_ARCHIVES = 20;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         outputPath = testDirectory.directory( "metrics" );
-        database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
+        database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( csvPath, outputPath.getAbsolutePath() )
                 .setConfig( csvRotationThreshold, "21" )
                 .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )
@@ -49,33 +56,34 @@ public class RotatableCsvOutputIT
                 .newGraphDatabase();
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         database.shutdown();
     }
 
-//    @Test
-//    public void rotateMetricsFile() throws InterruptedException, IOException
-//    {
-//        // Commit a transaction and wait for rotation to happen
-//        doTransaction();
-//        waitForRotation( outputPath, TransactionMetrics.TX_COMMITTED );
-//
-//        // Latest file should now have recorded the transaction
-//        File metricsFile = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
-//        long committedTransactions = readLongCounterAndAssert( metricsFile, MONOTONIC );
-//        assertEquals( 1, committedTransactions );
-//
-//        // Commit yet another transaction and wait for rotation to happen again
-//        doTransaction();
-//        waitForRotation( outputPath, TransactionMetrics.TX_COMMITTED );
-//
-//        // Latest file should now have recorded the new transaction
-//        File metricsFile2 = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
-//        long committedTransactions2 = readLongCounterAndAssert( metricsFile2, MONOTONIC );
-//        assertEquals( 2, committedTransactions2 );
-//    }
+    @Test
+    void rotateMetricsFile() throws InterruptedException, IOException
+    {
+        // Commit a transaction and wait for rotation to happen
+        doTransaction();
+        String committedTxMetric = "neo4j.graph.db.transaction.committed";
+        waitForRotation( outputPath, committedTxMetric );
+
+        // Latest file should now have recorded the transaction
+        File metricsFile = metricsCsv( outputPath, committedTxMetric );
+        long committedTransactions = readLongCounterAndAssert( metricsFile, MONOTONIC );
+        assertEquals( 1, committedTransactions );
+
+        // Commit yet another transaction and wait for rotation to happen again
+        doTransaction();
+        waitForRotation( outputPath, committedTxMetric );
+
+        // Latest file should now have recorded the new transaction
+        File metricsFile2 = metricsCsv( outputPath, committedTxMetric );
+        long committedTransactions2 = readLongCounterAndAssert( metricsFile2, MONOTONIC );
+        assertEquals( 2, committedTransactions2 );
+    }
 
     private void doTransaction()
     {

@@ -7,8 +7,8 @@ package org.neo4j.server.enterprise.functional;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,30 +19,31 @@ import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class ServerMetricsIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class ServerMetricsIT
 {
-    @Rule
-    public final TestDirectory folder = TestDirectory.testDirectory();
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Inject
+    private TestDirectory directory;
 
     @Test
-    public void shouldShowServerMetrics() throws Throwable
+    void shouldShowServerMetrics() throws Throwable
     {
         // Given
-        File metrics = folder.file( "metrics" );
+        File metrics = directory.file( "metrics" );
         NeoServer server = EnterpriseServerBuilder.serverOnRandomPorts()
-                .usingDataDir( folder.databaseDir().getAbsolutePath() )
+                .usingDataDir( directory.databaseDir().getAbsolutePath() )
                 .withProperty( MetricsSettings.metricsEnabled.name(), "true" )
                 .withProperty( MetricsSettings.csvEnabled.name(), "true" )
                 .withProperty( MetricsSettings.csvPath.name(), metrics.getPath() )
@@ -65,8 +66,8 @@ public class ServerMetricsIT
             }
 
             // then
-//            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_ALL );
-//            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_IDLE );
+            assertMetricsExists( metrics, "neo4j.server.threads.jetty.all" );
+            assertMetricsExists( metrics, "neo4j.server.threads.jetty.idle" );
         }
         finally
         {

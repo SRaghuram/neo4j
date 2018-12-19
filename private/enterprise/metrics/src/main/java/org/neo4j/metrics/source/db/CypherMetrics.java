@@ -18,6 +18,8 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".Cypher metrics" )
 public class CypherMetrics extends LifecycleAdapter
 {
+    private static final String CYPHER_PREFIX = "cypher";
+
     @Documented( "The total number of times Cypher has decided to re-plan a query" )
     private final String replanEvents;
 
@@ -30,8 +32,8 @@ public class CypherMetrics extends LifecycleAdapter
 
     public CypherMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
     {
-        replanEvents = name( metricsPrefix, "cypher.replan_events" );
-        replanWaitTime = name( metricsPrefix, "cypher.replan_wait_time" );
+        this.replanEvents = name( metricsPrefix, CYPHER_PREFIX, "replan_events" );
+        this.replanWaitTime = name( metricsPrefix, CYPHER_PREFIX, "replan_wait_time" );
         this.registry = registry;
         this.monitors = monitors;
     }

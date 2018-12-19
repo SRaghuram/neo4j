@@ -8,11 +8,16 @@ package org.neo4j.metrics.global;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory.Dependencies;
+import org.neo4j.metrics.source.causalclustering.CatchUpMetrics;
+import org.neo4j.metrics.source.causalclustering.CoreMetrics;
+import org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
+import org.neo4j.metrics.source.db.BoltMetrics;
 import org.neo4j.metrics.source.db.PageCacheMetrics;
 import org.neo4j.metrics.source.jvm.GCMetrics;
 import org.neo4j.metrics.source.jvm.MemoryBuffersMetrics;
@@ -20,7 +25,7 @@ import org.neo4j.metrics.source.jvm.MemoryPoolMetrics;
 import org.neo4j.metrics.source.jvm.ThreadMetrics;
 import org.neo4j.metrics.source.server.ServerMetrics;
 
-public class GlobalMetricsBuilder
+public class GlobalMetricsExporter
 {
     private final MetricRegistry registry;
     private final LifeSupport life;
@@ -29,7 +34,7 @@ public class GlobalMetricsBuilder
     private final KernelContext context;
     private final Dependencies dependencies;
 
-    public GlobalMetricsBuilder( MetricRegistry registry, Config config, LogService logService,
+    public GlobalMetricsExporter( MetricRegistry registry, Config config, LogService logService,
             KernelContext context, Dependencies dependencies, LifeSupport life )
     {
         this.registry = registry;
@@ -40,7 +45,7 @@ public class GlobalMetricsBuilder
         this.life = life;
     }
 
-    public void build()
+    public void export()
     {
         String globalMetricsPrefix = config.get( MetricsSettings.metricsPrefix );
         if ( config.get( MetricsSettings.neoPageCacheEnabled ) )
@@ -66,6 +71,26 @@ public class GlobalMetricsBuilder
         if ( config.get( MetricsSettings.jvmBuffersEnabled ) )
         {
             life.add( new MemoryBuffersMetrics( globalMetricsPrefix, registry ) );
+        }
+
+        if ( config.get( MetricsSettings.boltMessagesEnabled ) )
+        {
+            life.add( new BoltMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
+        }
+
+        if ( config.get( MetricsSettings.causalClusteringEnabled ) )
+        {
+            OperationalMode mode = context.databaseInfo().operationalMode;
+            if ( mode == OperationalMode.CORE )
+            {
+                life.add( new CoreMetrics( globalMetricsPrefix, dependencies.monitors(), registry, dependencies.coreMetadataSupplier() ) );
+                life.add( new CatchUpMetrics( globalMetricsPrefix, dependencies.monitors(), registry ) );
+            }
+            else if ( mode == OperationalMode.READ_REPLICA )
+            {
+                life.add( new ReadReplicaMetrics( globalMetricsPrefix, dependencies.monitors(), registry ) );
+                life.add( new CatchUpMetrics( globalMetricsPrefix, dependencies.monitors(), registry ) );
+            }
         }
 
         boolean httpOrHttpsEnabled = !config.enabledHttpConnectors().isEmpty();

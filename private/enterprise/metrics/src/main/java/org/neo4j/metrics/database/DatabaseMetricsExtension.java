@@ -7,30 +7,35 @@ package org.neo4j.metrics.database;
 
 import com.codahale.metrics.MetricRegistry;
 
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.metrics.database.DatabaseMetricsKernelExtensionFactory.Dependencies;
-import org.neo4j.metrics.global.MetricsProvider;
+import org.neo4j.metrics.global.MetricsManager;
 import org.neo4j.metrics.output.EventReporter;
 
 public class DatabaseMetricsExtension implements Lifecycle
 {
     private final LifeSupport life = new LifeSupport();
+    private final KernelContext context;
+    private final DatabaseMetricsKernelExtensionFactory.Dependencies dependencies;
 
     DatabaseMetricsExtension( KernelContext context, Dependencies dependencies )
     {
-        Config configuration = dependencies.configuration();
-        MetricsProvider metricsProvider = dependencies.metricsProvider();
-        MetricRegistry metricRegistry = metricsProvider.getRegistry();
-        EventReporter eventReporter = metricsProvider.getReporter();
-        new DatabaseMetricsBuilder( metricRegistry, eventReporter, configuration, context, dependencies, life ).build();
+        this.context = context;
+        this.dependencies = dependencies;
     }
 
     @Override
     public void init()
     {
+        MetricsManager metricsManager = dependencies.metricsManager();
+        if ( metricsManager.isConfigured() )
+        {
+            MetricRegistry metricRegistry = metricsManager.getRegistry();
+            EventReporter eventReporter = metricsManager.getReporter();
+            new DatabaseMetricsExporter( metricRegistry, eventReporter, dependencies.configuration(), context, dependencies, life ).export();
+        }
         life.init();
     }
 

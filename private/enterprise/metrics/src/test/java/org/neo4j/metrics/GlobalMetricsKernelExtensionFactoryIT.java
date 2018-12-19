@@ -37,14 +37,12 @@ import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.StubResourceManager;
 import org.neo4j.kernel.builtinprocs.JmxQueryProcedure;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cypher_min_replan_interval;
@@ -54,6 +52,8 @@ import static org.neo4j.metrics.MetricsSettings.csvEnabled;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.graphiteInterval;
 import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
+import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 
 public class GlobalMetricsKernelExtensionFactoryIT
 {
@@ -70,7 +70,7 @@ public class GlobalMetricsKernelExtensionFactoryIT
     @Before
     public void setup()
     {
-        outputPath = new File( directory.databaseDir(), "metrics" );
+        outputPath = new File( directory.storeDir(), "metrics" );
         Map<Setting<?>, String> config = new HashMap<>();
         config.put( MetricsSettings.neoEnabled, Settings.TRUE );
         config.put( metricsEnabled, Settings.TRUE );
@@ -86,122 +86,21 @@ public class GlobalMetricsKernelExtensionFactoryIT
     }
 
     @Test
-    public void shouldShowTxCommittedMetricsWhenMetricsEnabled() throws Throwable
-    {
-        // GIVEN
-        long lastCommittedTransactionId = db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
-                .getLastCommittedTransactionId();
-
-        // Create some activity that will show up in the metrics data.
-        addNodes( 1000 );
-//        File metricsFile = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
-
-//        // WHEN
-//        // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
-//        long committedTransactions = readLongCounterAndAssert( metricsFile,
-//                ( newValue, currentValue ) -> newValue >= currentValue );
-//
-//        // THEN
-//        assertThat( committedTransactions, greaterThanOrEqualTo( lastCommittedTransactionId ) );
-//        assertThat( committedTransactions, lessThanOrEqualTo( lastCommittedTransactionId + 1001L ) );
-    }
-
-    @Test
-    public void shouldShowEntityCountMetricsWhenMetricsEnabled() throws Throwable
-    {
-        // GIVEN
-        // Create some activity that will show up in the metrics data.
-        addNodes( 1000 );
-//        File metricsFile = metricsCsv( outputPath, EntityCountMetrics.COUNTS_NODE );
-//
-//        // WHEN
-//        // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
-//        long committedTransactions = readLongGaugeAndAssert( metricsFile,
-//                ( newValue, currentValue ) -> newValue >= currentValue );
-//
-//        // THEN
-//        assertThat( committedTransactions, lessThanOrEqualTo( 1001L ) );
-    }
-
-    @Test
-    public void showReplanEvents() throws Throwable
-    {
-        // GIVEN
-        try ( Transaction tx = db.beginTx() )
-        {
-            db.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
-            tx.success();
-        }
-
-        //add some data, should make plan stale
-        addNodes( 10 );
-
-        // WHEN
-        for ( int i = 0; i < 10; i++ )
-        {
-            try ( Transaction tx = db.beginTx() )
-            {
-                db.execute( "match (n:Label {name: 'Pontus'}) return n.name" ).close();
-                tx.success();
-            }
-            addNodes( 1 );
-        }
-
-//        File replanCountMetricFile = metricsCsv( outputPath, CypherMetrics.REPLAN_EVENTS );
-//        File replanWaitMetricFile = metricsCsv( outputPath, CypherMetrics.REPLAN_WAIT_TIME );
-//
-//        // THEN see that the replan metric have pickup up at least one replan event
-//        // since reporting happens in an async fashion then give it some time and check now and then
-//        long endTime = currentTimeMillis() + TimeUnit.SECONDS.toMillis( 10 );
-//        long events = 0;
-//        while ( currentTimeMillis() < endTime && events == 0 )
-//        {
-//            readLongCounterAndAssert( replanWaitMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
-//            events = readLongCounterAndAssert( replanCountMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
-//            if ( events == 0 )
-//            {
-//                Thread.sleep( 300 );
-//            }
-//        }
-//        assertThat( events, greaterThan( 0L ) );
-    }
-
-    @Test
-    public void shouldUseEventBasedReportingCorrectly() throws Throwable
-    {
-        // GIVEN
-        addNodes( 100 );
-
-        // WHEN
-        CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
-        checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
-
-        // wait for the file to be written before shutting down the cluster
-//        TODO:
-//        File metricFile = metricsCsv( outputPath, CheckPointingMetrics.CHECK_POINT_DURATION );
-//
-//        long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
-//
-//        // THEN
-//        assertThat( result, greaterThanOrEqualTo( 0L ) );
-    }
-
-    @Test
     public void shouldShowMetricsForThreads() throws Throwable
     {
         // WHEN
         addNodes( 100 );
 
         // wait for the file to be written before shutting down the cluster
-//        File threadTotalFile = metricsCsv( outputPath, ThreadMetrics.THREAD_TOTAL );
-//        File threadCountFile = metricsCsv( outputPath, ThreadMetrics.THREAD_COUNT );
-//
-//        long threadTotalResult = readLongGaugeAndAssert( threadTotalFile, ( newValue, currentValue ) -> newValue >= 0 );
-//        long threadCountResult = readLongGaugeAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
-//
-//        // THEN
-//        assertThat( threadTotalResult, greaterThanOrEqualTo( 0L ) );
-//        assertThat( threadCountResult, greaterThanOrEqualTo( 0L ) );
+        File threadTotalFile = metricsCsv( outputPath, "neo4j.vm.thread.total" );
+        File threadCountFile = metricsCsv( outputPath, "neo4j.vm.thread.count" );
+
+        long threadTotalResult = readLongGaugeAndAssert( threadTotalFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long threadCountResult = readLongGaugeAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
+
+        // THEN
+        assertThat( threadTotalResult, greaterThanOrEqualTo( 0L ) );
+        assertThat( threadCountResult, greaterThanOrEqualTo( 0L ) );
     }
 
     @Test
@@ -237,7 +136,7 @@ public class GlobalMetricsKernelExtensionFactoryIT
         QualifiedName qualifiedName = ProcedureSignature.procedureName( "metricsQuery" );
         JmxQueryProcedure procedure = new JmxQueryProcedure( qualifiedName, mBeanServer );
 
-        String jmxQuery = "metrics." + GraphDatabaseSettings.DEFAULT_DATABASE_NAME + ":*";
+        String jmxQuery = "neo4j.metrics:*";
         RawIterator<Object[],ProcedureException> result = procedure.apply( null, new Object[]{jmxQuery}, resourceTracker );
 
         List<Object[]> queryResult = asList( result );
@@ -262,14 +161,14 @@ public class GlobalMetricsKernelExtensionFactoryIT
         @Override
         protected boolean matchesSafely( Object[] item )
         {
-            return item.length > 2 && "metrics.graph.db:name=neo4j.transaction.rollbacks_read".equals( item[0] ) &&
+            return item.length > 2 && "neo4j.metrics:name=neo4j.vm.memory.pool.code_cache".equals( item[0] ) &&
                     "Information on the management interface of the MBean".equals( item[1] );
         }
 
         @Override
         public void describeTo( Description description )
         {
-            description.appendText( "Expected to see neo4j.transaction.rollbacks_read in result set" );
+            description.appendText( "Expected to see neo4j.vm.memory.pool.code_cache in result set" );
         }
     }
 }

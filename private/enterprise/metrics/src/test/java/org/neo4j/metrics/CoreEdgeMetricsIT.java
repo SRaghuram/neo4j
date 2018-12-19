@@ -10,6 +10,8 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
@@ -23,17 +25,18 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.causalclustering.ClusterRule;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
+import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-
-//import static org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics.PULL_UPDATES;
-//import static org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics.PULL_UPDATE_HIGHEST_TX_ID_RECEIVED;
-//import static org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics.PULL_UPDATE_HIGHEST_TX_ID_REQUESTED;
 
 public class CoreEdgeMetricsIT
 {
@@ -88,50 +91,50 @@ public class CoreEdgeMetricsIT
 
         File coreMetricsDir = new File( coreMember.homeDir(), csvPath.getDefaultValue() );
 
-//        assertEventually( "append index eventually accurate",
-//                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.APPEND_INDEX ) ),
-//                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
-//
-//        assertEventually( "commit index eventually accurate",
-//                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.COMMIT_INDEX ) ),
-//                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
-//
-//        assertEventually( "term eventually accurate",
-//                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.TERM ) ),
-//                greaterThanOrEqualTo( 0L ), TIMEOUT, TimeUnit.SECONDS );
-//
-//        assertEventually( "tx pull requests received eventually accurate", () ->
-//        {
-//            long total = 0;
-//            for ( final File homeDir : cluster.coreMembers().stream().map( CoreClusterMember::homeDir ).collect( Collectors.toList()) )
-//            {
-//                File metricsDir = new File( homeDir, "metrics" );
-//                total += readLongCounterValue( metricsCsv( metricsDir, CatchUpMetrics.TX_PULL_REQUESTS_RECEIVED ) );
-//            }
-//            return total;
-//        }, greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
-//
-//        assertEventually( "tx retries eventually accurate",
-//                () -> readLongCounterValue( metricsCsv( coreMetricsDir, CoreMetrics.TX_RETRIES ) ), equalTo( 0L ),
-//                TIMEOUT, TimeUnit.SECONDS );
-//
-//        assertEventually( "is leader eventually accurate",
-//                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, CoreMetrics.IS_LEADER ) ),
-//                greaterThanOrEqualTo( 0L ), TIMEOUT, TimeUnit.SECONDS );
-//
-//        File readReplicaMetricsDir = new File( cluster.getReadReplicaById( 0 ).homeDir(), "metrics" );
-//
-//        assertEventually( "pull update request registered",
-//                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATES ) ),
-//                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
-//
-//        assertEventually( "pull update request registered",
-//                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATE_HIGHEST_TX_ID_REQUESTED ) ),
-//                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
-//
-//        assertEventually( "pull update response received",
-//                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, PULL_UPDATE_HIGHEST_TX_ID_RECEIVED ) ),
-//                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
+        assertEventually( "append index eventually accurate",
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, "neo4j.causal_clustering.core.append_index" ) ),
+                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
+
+        assertEventually( "commit index eventually accurate",
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, "neo4j.causal_clustering.core.commit_index" ) ),
+                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
+
+        assertEventually( "term eventually accurate",
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, "neo4j.causal_clustering.core.term" ) ),
+                greaterThanOrEqualTo( 0L ), TIMEOUT, TimeUnit.SECONDS );
+
+        assertEventually( "tx pull requests received eventually accurate", () ->
+        {
+            long total = 0;
+            for ( final File homeDir : cluster.coreMembers().stream().map( CoreClusterMember::homeDir ).collect( Collectors.toList()) )
+            {
+                File metricsDir = new File( homeDir, "metrics" );
+                total += readLongCounterValue( metricsCsv( metricsDir, "neo4j.causal_clustering.catchup.tx_pull_requests_received" ) );
+            }
+            return total;
+        }, greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
+
+        assertEventually( "tx retries eventually accurate",
+                () -> readLongCounterValue( metricsCsv( coreMetricsDir, "neo4j.causal_clustering.core.tx_retries" ) ), equalTo( 0L ),
+                TIMEOUT, TimeUnit.SECONDS );
+
+        assertEventually( "is leader eventually accurate",
+                () -> readLongGaugeValue( metricsCsv( coreMetricsDir, "neo4j.causal_clustering.core.is_leader" ) ),
+                greaterThanOrEqualTo( 0L ), TIMEOUT, TimeUnit.SECONDS );
+
+        File readReplicaMetricsDir = new File( cluster.getReadReplicaById( 0 ).homeDir(), "metrics" );
+
+        assertEventually( "pull update request registered",
+                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, "neo4j.causal_clustering.read_replica.pull_updates" ) ),
+                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
+
+        assertEventually( "pull update request registered",
+                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, "neo4j.causal_clustering.read_replica.pull_update_highest_tx_id_requested" ) ),
+                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
+
+        assertEventually( "pull update response received",
+                () -> readLongCounterValue( metricsCsv( readReplicaMetricsDir, "neo4j.causal_clustering.read_replica.pull_update_highest_tx_id_received" ) ),
+                greaterThan( 0L ), TIMEOUT, TimeUnit.SECONDS );
     }
 
     private void assertAllNodesVisible( GraphDatabaseAPI db ) throws Exception

@@ -5,6 +5,9 @@
  */
 package org.neo4j.metrics.global;
 
+import java.util.function.Supplier;
+
+import org.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;
@@ -32,12 +35,14 @@ public class GlobalMetricsKernelExtensionFactory extends KernelExtensionFactory<
 
         JobScheduler scheduler();
 
+        Supplier<CoreMetaData> coreMetadataSupplier();
+
         ConnectorPortRegister portRegister();
     }
 
     public GlobalMetricsKernelExtensionFactory()
     {
-        super( "metrics" );
+        super( "globalMetrics" );
     }
 
     @Override

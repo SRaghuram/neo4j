@@ -66,8 +66,8 @@ class ServerMetricsIT
             }
 
             // then
-//            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_ALL );
-//            assertMetricsExists( metrics, ServerMetrics.THREAD_JETTY_IDLE );
+            assertMetricsExists( metrics, "neo4j.threads.jetty.all" );
+            assertMetricsExists( metrics, "neo4j.threads.jetty.idle" );
         }
         finally
         {

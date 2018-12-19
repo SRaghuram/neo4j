@@ -9,9 +9,11 @@ import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.metrics.output.EventReporter;
 
-public interface MetricsProvider
+public interface MetricsManager
 {
     EventReporter getReporter();
 
     MetricRegistry getRegistry();
+
+    boolean isConfigured();
 }
