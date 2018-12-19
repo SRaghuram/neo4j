@@ -17,7 +17,8 @@ import scala.concurrent.duration.Duration
   * All Worker threads do some cooperative scheduling, thus there is
   * no need to have a dedicated Scheduler Thread.
   */
-class LockFreeScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](override val numberOfWorkers: Int,
+class LockFreeScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](threadFactory: ThreadFactory,
+                                                                override val numberOfWorkers: Int,
                                                                 waitTimeout: Duration,
                                                                 threadLocalResourceFactory: () => THREAD_LOCAL_RESOURCE
                                                                ) extends Scheduler[THREAD_LOCAL_RESOURCE] {
@@ -49,7 +50,7 @@ class LockFreeScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](override val num
   // Kick off all the workers in the beginning
   for (_ <- 0 until numberOfWorkers) {
     val worker = new Worker(schedulerClient)
-    new Thread(worker).start()
+    threadFactory.newThread(worker).start()
   }
 
   override def isMultiThreaded: Boolean = true

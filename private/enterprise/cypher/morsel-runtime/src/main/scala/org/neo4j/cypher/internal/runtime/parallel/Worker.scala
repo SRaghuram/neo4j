@@ -9,7 +9,7 @@ import java.util.concurrent.Callable
 
 class Worker[TASK_RESULT](schedulerClient: SchedulerClient[TASK_RESULT]) extends Runnable {
   override def run(): Unit = {
-    while (true) {
+    while (!Thread.interrupted()) {
       // Grep the first available task
       val task = schedulerClient.nextTask()
       if (task != null) {
@@ -30,6 +30,9 @@ class Worker[TASK_RESULT](schedulerClient: SchedulerClient[TASK_RESULT]) extends
         // TODO sleep?
       }
     }
+    // TODO we should probably have some post-shutdown cleanup
+    // TODO in order to remove all tasks and let Threads potentially
+    // TODO waiting on them wake up.
   }
 }
 

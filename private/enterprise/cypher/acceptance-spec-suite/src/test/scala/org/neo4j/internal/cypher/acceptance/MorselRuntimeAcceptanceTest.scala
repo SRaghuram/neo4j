@@ -406,8 +406,8 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val ms = new ArrayBuffer[Node]()
 
     graph.inTx {
-      for (i <- 1 to SIZE) ns += createLabeledNode("N")
-      for (i <- 1 to SIZE) ms += createLabeledNode("M")
+      for (_ <- 1 to SIZE) ns += createLabeledNode("N")
+      for (_ <- 1 to SIZE) ms += createLabeledNode("M")
     }
 
     graph.inTx {

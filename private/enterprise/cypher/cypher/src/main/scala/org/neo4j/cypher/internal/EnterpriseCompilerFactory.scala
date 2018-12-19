@@ -113,9 +113,10 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration,
       if (config.workers == 1) new SingleThreadScheduler(() => new QueryResources(cursors))
       else {
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
-        val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
+        //val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
         //new SimpleScheduler(executorService, config.waitTimeout, () => new QueryResources(cursors), numberOfThreads)
-        new LockFreeScheduler(numberOfThreads, config.waitTimeout, () => new QueryResources(cursors))
+        val threadFactory = jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER)
+        new LockFreeScheduler(threadFactory, numberOfThreads, config.waitTimeout, () => new QueryResources(cursors))
       }
     val transactionBinder =
       if (config.workers == 1) NO_TRANSACTION_BINDER
