@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.parallel
 
 import java.util.concurrent.Callable
-import java.util.concurrent.TimeoutException
 
 class Worker[TASK_RESULT](schedulerClient: SchedulerClient[TASK_RESULT]) extends Runnable {
   override def run(): Unit = {
@@ -17,12 +16,8 @@ class Worker[TASK_RESULT](schedulerClient: SchedulerClient[TASK_RESULT]) extends
         // Execute the task
         var taskResult: TASK_RESULT = null.asInstanceOf[TASK_RESULT]
         try {
-          taskResult = task.call() // TODO time out `call`
+          taskResult = task.call()
         } catch {
-          case _: TimeoutException =>
-          // got tired of waiting to complete, put it back into the queue
-          // TODO we should call `abort` or similar on the workUnitEvent of the tracer
-          //tasks.add(task)
           case _: QueryAbortedException =>
           // Do we need to do anything here?
         }

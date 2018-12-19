@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.parallel
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeoutException
 
 import org.neo4j.cypher.internal.runtime.parallel.LockFreeScheduler.TaskResult
 
@@ -42,8 +41,6 @@ class LockFreeQueryExecution[THREAD_LOCAL_RESOURCE <: AutoCloseable](queryTracer
             val newDownstreamTasks = task.executeWorkUnit(threadLocalResource.get())
             TaskResult(task, this, LockFreeQueryExecution.this, workUnitEvent, newDownstreamTasks)
           } catch {
-            case e: TimeoutException => // Handled by the worker. Rethrow
-              throw e
             case t: Throwable => // Stop the query immediately
               stop(Some(t))
               throw new QueryAbortedException(t)
