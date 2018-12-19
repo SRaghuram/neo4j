@@ -27,9 +27,6 @@ object Runtimes {
 
   object Interpreted extends Runtime(Set("INTERPRETED", "PROCEDURE"), "runtime=interpreted")
 
-  // Not included in `all`
-  object Morsel extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel")
-
 }
 
 case class Runtime(acceptedRuntimeNames: Set[String], preparserOption: String) {

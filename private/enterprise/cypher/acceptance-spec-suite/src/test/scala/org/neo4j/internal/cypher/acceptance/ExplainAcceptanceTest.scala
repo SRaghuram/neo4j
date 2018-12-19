@@ -13,7 +13,7 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
 
   test("normal query is marked as such") {
     createNode()
-    val result = executeWith(Configs.All + Configs.Morsel, "match (n) return n")
+    val result = executeWith(Configs.All, "match (n) return n")
 
     result.executionMode should equal(NormalMode)
     result shouldNot be(empty)
@@ -21,7 +21,7 @@ class ExplainAcceptanceTest extends ExecutionEngineFunSuite with CypherCompariso
 
   test("explain query is marked as such") {
     createNode()
-    val result = executeWith(Configs.All + Configs.Morsel, "explain match (n) return n")
+    val result = executeWith(Configs.All, "explain match (n) return n")
 
     result.executionMode should equal(ExplainMode)
     result should be(empty)

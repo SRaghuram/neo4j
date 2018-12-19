@@ -132,7 +132,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where (case when id(n) >= 0 then length((n)-->()) else 42 end) > 0 return n",
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where (case when id(n) >= 0 then length((n)-->()) else 42 end) > 0 return n",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
 
     result.toList should equal(List(
@@ -145,7 +145,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where (case when id(n) < 0 then length((n)-->()) else 42 end) > 0 return n")
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where (case when id(n) < 0 then length((n)-->()) else 42 end) > 0 return n")
 
     result should have size 3
   }
@@ -155,7 +155,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "match (n) where (case when id(n) < 0 then length((n)-[:X]->()) else 42 end) > 0 return n")
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where (case when id(n) < 0 then length((n)-[:X]->()) else 42 end) > 0 return n")
 
     result should have size 3
   }
@@ -384,7 +384,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   test("use getDegree for simple pattern expression with rel-type ORs") {
     setup()
 
-    executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, "MATCH (n) WHERE length((n)-[:X|Y]->()) > 2 RETURN n",
+    executeWith(Configs.InterpretedAndSlotted, "MATCH (n) WHERE length((n)-[:X|Y]->()) > 2 RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
 

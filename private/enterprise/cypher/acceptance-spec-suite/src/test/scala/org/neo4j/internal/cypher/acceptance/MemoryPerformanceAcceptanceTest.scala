@@ -14,7 +14,7 @@ class MemoryPerformanceAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   test("check for contents of collection that contains only a single null") {
     createNode()
 
-    val result = executeWith(Configs.All + Configs.Morsel,
+    val result = executeWith(Configs.All,
       "MATCH (a) WHERE 42 IN [a.prop] RETURN *", params = Map("param" -> null)
     )
 
@@ -51,7 +51,7 @@ class MemoryPerformanceAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
                   |RETURN ID(a), ID(b), type(r)""".stripMargin
 
     // when
-    executeWith(Configs.InterpretedAndSlotted + Configs.Morsel, query)
+    executeWith(Configs.InterpretedAndSlotted, query)
     // then it should not fail or run out of memory
   }
 
