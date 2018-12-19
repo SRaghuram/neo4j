@@ -48,6 +48,7 @@ public class OnlineBackupCommandBuilder
     private Boolean consistencyCheckIndexes;
     private Boolean consistencyCheckLabel;
     private Boolean consistencyCheckOwners;
+    private String database;
     private OutputStream output;
     private Optional<String[]> rawArgs = Optional.empty();
 
@@ -60,6 +61,12 @@ public class OnlineBackupCommandBuilder
     public OnlineBackupCommandBuilder withHost( String host )
     {
         this.host = host;
+        return this;
+    }
+
+    public OnlineBackupCommandBuilder withDatabase( String databaseName )
+    {
+        this.database = databaseName;
         return this;
     }
 
@@ -168,6 +175,7 @@ public class OnlineBackupCommandBuilder
                 argBackupName( targetLocation ),
                 argBackupLocation( targetLocation ),
                 argFrom(),
+                argDatabase(),
                 argFallbackToFull(),
                 argSelectedProtocol(),
                 argTimeout(),
@@ -225,6 +233,13 @@ public class OnlineBackupCommandBuilder
                 .map( File::getName )
                 .orElseThrow( wrongArguments( "No target location specified" ) );
         return format( "--name=%s", backupName );
+    }
+
+    private String argDatabase()
+    {
+        return Optional.ofNullable( database )
+                .map( value -> format( "--database=%s", value ) )
+                .orElse( "" );
     }
 
     private static Supplier<IllegalArgumentException> wrongArguments( String message )

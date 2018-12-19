@@ -19,6 +19,7 @@ import org.neo4j.commandline.arguments.Arguments;
 import org.neo4j.commandline.arguments.MandatoryNamedArg;
 import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
+import org.neo4j.commandline.arguments.common.Database;
 import org.neo4j.commandline.arguments.common.MandatoryCanonicalPath;
 import org.neo4j.commandline.arguments.common.OptionalCanonicalPath;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
@@ -155,6 +156,7 @@ class OnlineBackupContextFactory
             OptionalHostnamePort address = toOptionalHostnamePortFromRawAddress(
                     arguments.get( ARG_NAME_BACKUP_SOURCE ) );
             String databaseName = arguments.get( ARG_NAME_DATABASE_NAME );
+
             Path folder = getBackupDirectory( arguments );
             String name = arguments.get( ARG_NAME_BACKUP_NAME );
             boolean fallbackToFull = arguments.getBoolean( ARG_NAME_FALLBACK_FULL );
