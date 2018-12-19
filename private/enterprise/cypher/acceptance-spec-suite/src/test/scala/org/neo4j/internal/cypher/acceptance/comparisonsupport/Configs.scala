@@ -14,8 +14,6 @@ object Configs {
   // Configurations with runtimes
   def Compiled: TestConfiguration = TestConfiguration(V3_4 -> V3_5, Planners.all, Runtimes(CompiledSource, CompiledBytecode))
 
-  def Morsel: TestConfiguration = TestConfiguration(V3_4 -> V3_5, Planners.all, Runtimes(Runtimes.Morsel))
-
   def InterpretedRuntime: TestConfiguration =
     TestConfiguration(Versions.all, Planners.all, Runtimes(Interpreted))
 
@@ -74,7 +72,6 @@ object Configs {
     * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
     */
   def Experimental: TestConfiguration =
-  //TestConfiguration(Versions.Default, Planners.Default, Runtimes(Runtimes.Morsel))
     TestConfiguration.empty
 
   def Empty: TestConfiguration = TestConfiguration.empty
