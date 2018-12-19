@@ -36,12 +36,6 @@ public final class CompiledHelpers
         return (Value) value;
     }
 
-    //TODO this could be inlined in generated code
-    public static AnyValue loadVariable( ExecutionContext ctx, String name )
-    {
-        return ctx.getByName( name );
-    }
-
     public static Value cachedProperty( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey,
             int propertyOffset )
     {

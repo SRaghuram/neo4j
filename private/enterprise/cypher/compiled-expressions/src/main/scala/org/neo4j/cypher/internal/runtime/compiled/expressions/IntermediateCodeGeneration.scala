@@ -2166,9 +2166,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val local = namer.nextVariableName()
       (block(oneTime(
        assign(local,
-                 invokeStatic(
-                   method[CompiledHelpers, AnyValue, ExecutionContext, String]("loadVariable"),
-                   loadContext(currentContext), constant(name)))), load(local)),
+                 invoke(loadContext(currentContext),
+                   method[ExecutionContext, AnyValue, String]("getByName"), constant(name)))), load(local)),
         Some(equal(load(local), noValue)), Some(variable[AnyValue](local, constant(null))))
   }
 
