@@ -16,8 +16,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.driver.v1.AuthToken;
 import org.neo4j.driver.v1.AuthTokens;
@@ -56,7 +60,7 @@ import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 
 public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestUnit
 {
-    private static final Config config = Config.build().withLogging( DEV_NULL_LOGGING ).toConfig();
+    private static final Config config = Config.build().withLogging( DEV_NULL_LOGGING ).withConnectionTimeout( 10000, TimeUnit.MILLISECONDS ).toConfig();
 
     private TestDirectory testDirectory = TestDirectory.testDirectory( getClass() );
 
@@ -68,11 +72,12 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     @Before
     public void setup() throws Exception
     {
+        String host = InetAddress.getLoopbackAddress().getHostAddress() + ":0";
         dbRule.withSetting( GraphDatabaseSettings.auth_enabled, "true" )
               .withSetting( new BoltConnector( "bolt" ).type, "BOLT" )
               .withSetting( new BoltConnector( "bolt" ).enabled, "true" )
               .withSetting( new BoltConnector( "bolt" ).encryption_level, OPTIONAL.name() )
-              .withSetting( new BoltConnector( "bolt" ).listen_address, "localhost:0" );
+              .withSetting( new BoltConnector( "bolt" ).listen_address, host );
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
         dbRule.resolveDependency( Procedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
@@ -88,6 +93,26 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     void restartServerWithOverriddenSettings( String... configChanges ) throws IOException
     {
         dbRule.restartDatabase( configChanges );
+    }
+
+    void checkIfLdapServerIsReachable( String host, int port )
+    {
+        if ( !portIsReachable( host, port, 10000 ) )
+        {
+            throw new IllegalStateException( "Ldap Server is not reachable on " + host + ":" + port + "." );
+        }
+    }
+
+    private boolean portIsReachable( String host, int port, int timeOutMS )
+    {
+        try ( Socket serverSocket = new Socket(); )
+        {
+            serverSocket.connect( new InetSocketAddress( host, port ), timeOutMS );
+            return true;
+        }
+        catch ( final IOException e )
+        { /* Ignore, Port not reachable */ }
+        return false;
     }
 
     void assertAuth( String username, String password )
@@ -238,12 +263,29 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         {
             token = AuthTokens.basic( username, password, realm );
         }
-        return connectDriver( token );
+        return connectDriver( token, username, password );
     }
 
     private Driver connectDriver( AuthToken token )
     {
-        return GraphDatabase.driver( "bolt://" + dbRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" ).toString(), token, config );
+        return connectDriver( token, null, null );
+    }
+
+    private Driver connectDriver( AuthToken token, String username, String password )
+    {
+        try
+        {
+            return GraphDatabase.driver( "bolt://" +
+                            dbRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" ).toString(), token, config );
+        }
+        catch ( AuthenticationException e )
+        {
+            if ( username != null && password != null )
+            {
+                throw new FullCredentialsAuthenticationException( e, username, password );
+            }
+            throw e;
+        }
     }
 
     void assertRoles( Driver driver, String... roles )

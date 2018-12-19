@@ -112,6 +112,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         sslLdapPort = ldapServer.getPortSSL();
         ldapServer.setConfidentialityRequired( false );
         super.setup();
+        checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapPort );
     }
 
     @Override

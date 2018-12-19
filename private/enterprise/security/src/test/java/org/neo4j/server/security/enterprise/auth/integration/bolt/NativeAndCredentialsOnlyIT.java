@@ -6,7 +6,9 @@
 package org.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 

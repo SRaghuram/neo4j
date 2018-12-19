@@ -80,6 +80,7 @@ public class ADAuthIT extends EnterpriseAuthenticationTestBase
         ldapPort = ldapServer.getPort();
         ldapServer.setConfidentialityRequired( false );
         super.setup();
+        checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapPort );
     }
 
     @SuppressWarnings( "deprecation" )

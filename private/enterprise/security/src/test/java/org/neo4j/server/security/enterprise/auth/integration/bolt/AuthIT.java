@@ -14,6 +14,7 @@ import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.annotations.LoadSchema;
 import org.apache.directory.server.core.integ.CreateLdapServerRule;
+import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -311,7 +312,8 @@ public class AuthIT extends AuthTestBase
     public void setup() throws Exception
     {
         super.setup();
-        ldapServerRule.getLdapServer().setConfidentialityRequired( confidentialityRequired );
+        LdapServer ldapServer = ldapServerRule.getLdapServer();
+        ldapServer.setConfidentialityRequired( confidentialityRequired );
 
         EnterpriseAuthAndUserManager authManager = dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
@@ -325,6 +327,7 @@ public class AuthIT extends AuthTestBase
             userManager.addRoleToUser( PredefinedRoles.PUBLISHER, WRITE_USER );
             userManager.newRole( "role1", PROC_USER );
         }
+        checkIfLdapServerIsReachable( ldapServer.getSaslHost(), ldapServer.getPort() );
     }
 
     @Override
