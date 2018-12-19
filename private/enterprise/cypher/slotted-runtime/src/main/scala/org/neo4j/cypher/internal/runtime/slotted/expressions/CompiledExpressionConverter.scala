@@ -131,7 +131,7 @@ case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupin
   override def getGroupingKey(context: ExecutionContext): AnyValue = projection.getGroupingKey(context)
 
   override def project(context: ExecutionContext, groupingKey: AnyValue): Unit =
-    projection.projectGroupingKey(context, groupingKey.asInstanceOf[AnyValue])
+    projection.projectGroupingKey(context, groupingKey)
 }
 
 case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Boolean) extends CommandProjection {

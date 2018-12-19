@@ -28,12 +28,12 @@ case class DistinctSlottedPipe(source: Pipe,
       private val seen = Sets.mutable.empty[AnyValue]()
 
       override def produceNext(): Option[ExecutionContext] = {
-        while (input.nonEmpty) {
+        while (input.hasNext) {
           val next: ExecutionContext = input.next()
 
           val key = distinctProjection.computeGroupingKey(next, state)
           if (seen.add(key)) {
-            // Found something! Set it as the next element to yield, and exit
+            // Found unseen key! Set it as the next element to yield, and exit
             val outgoing = SlottedExecutionContext(slots)
             outgoing.copyCachedFrom(next)
             outgoing.setLinenumber(next.getLinenumber)
