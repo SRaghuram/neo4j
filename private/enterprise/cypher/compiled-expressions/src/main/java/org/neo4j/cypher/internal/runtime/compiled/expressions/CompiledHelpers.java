@@ -5,11 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
-import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
-
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext;
-import org.neo4j.graphdb.NotFoundException;
+import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
@@ -38,13 +36,10 @@ public final class CompiledHelpers
         return (Value) value;
     }
 
+    //TODO this could be inlined in generated code
     public static AnyValue loadVariable( ExecutionContext ctx, String name )
     {
-        if ( !ctx.contains( name ) )
-        {
-            throw new NotFoundException( String.format( "Unknown variable `%s`.", name ) );
-        }
-        return ctx.apply( name );
+        return ctx.getByName( name );
     }
 
     public static Value cachedProperty( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey,

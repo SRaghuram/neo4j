@@ -10,10 +10,11 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.result.QueryResult
+import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
-import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 import scala.collection.mutable
 
@@ -85,25 +86,21 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
 
   override def release(): Unit = factory.releaseExecutionContext(this)
 
-  override def get(key: String): Option[AnyValue] = {
-    columnIndexMap.get(key) match {
-      case Some(index) => Some(resultArray(index))
-      case _=> None
-    }
-  }
-
-  override def iterator: Iterator[(String, AnyValue)] = {
-    columnIndexMap.iterator.map {
-      case (name, index) =>
-        (name, resultArray(index))
-    }
-  }
-
   override def fields(): Array[AnyValue] = {
     resultArray
   }
 
-  override def size: Int = resultArray.size
+  override def getByName(key: String): AnyValue = {
+    columnIndexMap.get(key) match {
+      case Some(index) => resultArray(index)
+      case _=> throw new NotFoundException(s"Unknown variable `$key`.")
+    }
+  }
+
+
+  override def numberOfColumns: Int = columnIndexMap.size
+
+  override def containsName(key: String): Boolean =  columnIndexMap.get(key).isDefined
 
   //---------------------------------------------------------------------------
   // This is an ExecutionContext by name only and does not support the full API
@@ -147,10 +144,6 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
   override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = fail()
 
   override def isNull(key: String): Boolean = fail()
-
-  override def +=(kv: (String, AnyValue)): ArrayResultExecutionContext.this.type = fail()
-
-  override def -=(key: String): ArrayResultExecutionContext.this.type = fail()
 
   override def setCachedProperty(key: CachedNodeProperty, value: Value): Unit = fail()
 

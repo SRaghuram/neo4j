@@ -1405,8 +1405,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("handle variables") {
     val variable = varFor("key")
     val compiled = compile(variable)
-    when(ctx.contains("key")).thenReturn(true)
-    when(ctx.apply("key")).thenReturn(stringValue("hello"))
+    when(ctx.getByName("key")).thenReturn(stringValue("hello"))
     compiled.evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
   }
 
@@ -1414,8 +1413,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val varName = "   k\te\ty   "
     val variable = varFor(varName)
     val compiled = compile(variable)
-    when(ctx.contains(varName)).thenReturn(true)
-    when(ctx.apply(varName)).thenReturn(stringValue("hello"))
+    when(ctx.getByName(varName)).thenReturn(stringValue("hello"))
     compiled.evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
   }
 
@@ -2396,8 +2394,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("map projection node with map context") {
       val propertyMap = map(Array("prop"), Array(stringValue("hello")))
       val node = nodeValue(1, EMPTY_TEXT_ARRAY, propertyMap)
-      when(ctx.contains("n")).thenReturn(true)
-      when(ctx.apply("n")).thenReturn(node)
+      when(ctx.getByName("n")).thenReturn(node)
       when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
 
       compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")))
@@ -2443,8 +2440,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
     val relationship = relationshipValue(1, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                          nodeValue(12, EMPTY_TEXT_ARRAY, EMPTY_MAP), stringValue("R"), propertyMap)
-    when(ctx.contains("r")).thenReturn(true)
-    when(ctx.apply("r")).thenReturn(relationship)
+    when(ctx.getByName("r")).thenReturn(relationship)
     when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
 
     compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")))
@@ -2490,8 +2486,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("map projection mapValue with map context") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    when(ctx.contains("map")).thenReturn(true)
-    when(ctx.apply("map")).thenReturn(propertyMap)
+    when(ctx.getByName("map")).thenReturn(propertyMap)
 
     compile(mapProjection("map", includeAllProps = true, "foo" -> literalString("projected")))
       .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))

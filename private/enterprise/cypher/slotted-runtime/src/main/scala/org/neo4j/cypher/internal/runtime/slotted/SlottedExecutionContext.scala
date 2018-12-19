@@ -9,12 +9,13 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, 
 import org.neo4j.cypher.internal.runtime.interpreted.ExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
-import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{Value, Values}
-import org.neo4j.values.virtual._
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
+import org.neo4j.graphdb.NotFoundException
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.{Value, Values}
+import org.neo4j.values.virtual._
 
 import scala.collection.mutable
 
@@ -37,7 +38,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   //java.util.Arrays.fill(longs, -2L) // When debugging long slot issues you can uncomment this to check for uninitialized long slots (also in getLongAt below)
   val refs = new Array[AnyValue](slots.numberOfReferences)
 
-  override def toString(): String = {
+  override def toString: String = {
     val iter = this.iterator
     val s: StringBuilder = StringBuilder.newBuilder
     s ++= s"\nSlottedExecutionContext {\n    $slots"
@@ -111,25 +112,13 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     value
   }
 
-  override def -=(key: String): Nothing = fail() // We do not expect this to be used
-
-  override def iterator: Iterator[(String, AnyValue)] = {
-    // This method implementation is for debug usage only (the debugger will invoke it when stepping).
-    // Please do not use in production code.
-    val longSlots = slots.getLongSlots
-    val longSlotValues = for (x <- longSlots)
-      yield (x.toString, Values.longValue(longs(x.slot.offset)))
-
-    val refSlots = slots.getRefSlots
-    val refSlotValues = for (x <- refSlots)
-      yield (x.toString, refs(x.slot.offset))
-
-    val cachedSlots = slots.getCachedPropertySlots
-    val cachedPropertySlotValues = for (x <- cachedSlots)
-      yield (x.toString, refs(x.slot.offset))
-
-    (longSlotValues ++ refSlotValues ++ cachedPropertySlotValues).iterator
+  override def getByName(name: String): AnyValue = {
+    slots.maybeGetter(name).map(g => g(this)).getOrElse(throw new NotFoundException(s"Unknown variable `$name`."))
   }
+
+  override def numberOfColumns: Int = refs.length + longs.length
+
+  override def containsName(name: String): Boolean = slots.maybeGetter(name).map(g => g(this)).isDefined
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = refs(offset) = value
 
@@ -146,19 +135,6 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   // Compatibility implementations of the old ExecutionContext API used by Community interpreted runtime pipes
   //-----------------------------------------------------------------------------------------------------------
 
-  override def get(key: String): Option[AnyValue] = {
-    slots.maybeGetter(key).map(g => g(this))
-  }
-
-  override def +=(kv: (String, AnyValue)): this.type = {
-    setValue(kv._1, kv._2)
-    this
-  }
-
-  override def getOrElse[B1 >: AnyValue](key: String, default: => B1): B1 = get(key) match {
-    case Some(v) => v
-    case None => default
-  }
 
   // The newWith methods are called from Community pipes. We should already have allocated slots for the given keys,
   // so we just set the values in the existing slots instead of creating a new context like in the MapExecutionContext.
@@ -322,4 +298,22 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
       case _ =>
         false
     }
+
+  private def iterator: Iterator[(String, AnyValue)] = {
+    // This method implementation is for debug usage only.
+    // Please do not use in production code.
+    val longSlots = slots.getLongSlots
+    val longSlotValues = for (x <- longSlots)
+      yield (x.toString, Values.longValue(longs(x.slot.offset)))
+
+    val refSlots = slots.getRefSlots
+    val refSlotValues = for (x <- refSlots)
+      yield (x.toString, refs(x.slot.offset))
+
+    val cachedSlots = slots.getCachedPropertySlots
+    val cachedPropertySlotValues = for (x <- cachedSlots)
+      yield (x.toString, refs(x.slot.offset))
+
+    (longSlotValues ++ refSlotValues ++ cachedPropertySlotValues).iterator
+  }
 }

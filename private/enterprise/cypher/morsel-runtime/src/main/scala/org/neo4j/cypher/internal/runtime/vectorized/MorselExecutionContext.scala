@@ -9,9 +9,9 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
-import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{Value, Values}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Value
 
 object MorselExecutionContext {
   def apply(morsel: Morsel, pipeline: Pipeline) = new MorselExecutionContext(morsel,
@@ -130,7 +130,7 @@ class MorselExecutionContext(private val morsel: Morsel,
     System.arraycopy(morsel.refs, refsAtCurrentRow, other.refs, 0, nRefs)
   }
 
-  override def copyCachedFrom(input: ExecutionContext): Unit = ???
+  override def copyCachedFrom(input: ExecutionContext): Unit = fail()
 
   override def toString(): String = {
     s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}]($morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, validRows=$validRows, currentRow=$currentRow)"
@@ -149,6 +149,12 @@ class MorselExecutionContext(private val morsel: Morsel,
   override def setRefAt(offset: Int, value: AnyValue): Unit = morsel.refs(currentRow * refsPerRow + offset) = value
 
   override def getRefAt(offset: Int): AnyValue = morsel.refs(currentRow * refsPerRow + offset)
+
+  override def getByName(name: String): AnyValue = fail()
+
+  override def containsName(name: String): Boolean = fail()
+
+  override def numberOfColumns: Int = longsPerRow + refsPerRow
 
   // The newWith methods are called from Community pipes. We should already have allocated slots for the given keys,
   // so we just set the values in the existing slots instead of creating a new context like in the MapExecutionContext.
@@ -191,23 +197,9 @@ class MorselExecutionContext(private val morsel: Morsel,
     slottedRow
   }
 
-  override def +=(kv: (String, AnyValue)): MorselExecutionContext.this.type = fail()
+  override def copyWith(key1: String, value1: AnyValue): ExecutionContext = fail()
 
-  override def -=(key: String): MorselExecutionContext.this.type = fail()
-
-  override def get(key: String): Option[AnyValue] = fail()
-
-  override def iterator: Iterator[(String, AnyValue)] = {
-    // This method implementation is for debug usage only (the debugger will invoke it when stepping).
-    // Please do not use in production code.
-    val longRow =  morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow)
-    val refRow =  morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow)
-    Iterator.single(s"${this.toString()}" -> Values.stringValue(s"""${longRow.mkString("[", ",", "]")}${refRow.mkString("[", ",", "]")}"""))
-  }
-
-  override def copyWith(key1: String, value1: AnyValue) = fail()
-
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue) = fail()
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): ExecutionContext = fail()
 
   override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): ExecutionContext = fail()
 
@@ -225,16 +217,16 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def getCachedPropertyAt(offset: Int): Value = getRefAt(offset).asInstanceOf[Value]
 
+  override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = fail()
+
+  override def setLinenumber(line: Option[ResourceLinenumber]): Unit = fail()
+
+  override def getLinenumber: Option[ResourceLinenumber] = fail()
+
   private def longsAtCurrentRow: Int = currentRow * longsPerRow
 
   private def refsAtCurrentRow: Int = currentRow * refsPerRow
 
   private def fail(): Nothing =
     throw new InternalException("Tried using a wrong context.")
-
-  override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = ???
-
-  override def setLinenumber(line: Option[ResourceLinenumber]): Unit = ???
-
-  override def getLinenumber: Option[ResourceLinenumber] = ???
 }
