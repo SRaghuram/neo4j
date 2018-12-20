@@ -103,7 +103,7 @@ object SlotAllocation {
           val argument = if (argumentStack.isEmpty) NO_ARGUMENT()
                          else argumentStack.top
           val slotsIncludingExpressions = allocateExpressions(current, nullable, sourceSlots, allocations, arguments)(semanticTable)
-          val result = allocate(current, nullable, slotsIncludingExpressions, recordArgument(_, argument))
+          val result = allocate(current, nullable, slotsIncludingExpressions, recordArgument(_, argument), semanticTable)
           allocations.set(current.id, result)
           resultStack.push(result)
 
@@ -302,7 +302,8 @@ object SlotAllocation {
   private def allocate(lp: LogicalPlan,
                        nullable: Boolean,
                        source: SlotConfiguration,
-                       recordArgument: LogicalPlan => Unit): SlotConfiguration =
+                       recordArgument: LogicalPlan => Unit,
+                       semanticTable: SemanticTable): SlotConfiguration =
     lp match {
 
       case Distinct(_, groupingExpressions) =>
@@ -404,7 +405,12 @@ object SlotAllocation {
         result.newReference(edge, nullable, CTList(CTRelationship))
         result
 
-      case PruningVarExpand(_, from, _, _, to, _, _, _) =>
+      case PruningVarExpand(_, from, _, _, to, _, _, predicates) =>
+        predicates.foreach {
+          case (node, _) if semanticTable.isNode(node) => source.newLong(node.name, false, CTNode)
+          case (rel, _) if semanticTable.isRelationship(rel) => source.newLong(rel.name, false, CTRelationship)
+          case _ => throw new IllegalArgumentException
+        }
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         val result = source.copy()
         result.newLong(from, nullable, CTNode)
