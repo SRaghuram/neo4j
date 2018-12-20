@@ -84,7 +84,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       * These 2 lines make sure that the first call to [[next]] is correct.
       */
     scan.reserveBatch(cursor, batchSizeHint)
-    inputRow.setToLastRow()
+    inputRow.setToAfterLastRow()
 
     override def operate(outputRow: MorselExecutionContext, context: QueryContext, queryState: QueryState, resources: QueryResources): Unit = {
       while (next(queryState) && outputRow.isValidRow) {

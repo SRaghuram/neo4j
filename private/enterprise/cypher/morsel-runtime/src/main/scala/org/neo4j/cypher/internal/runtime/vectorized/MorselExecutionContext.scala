@@ -54,7 +54,7 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   def resetToFirstRow(): Unit = currentRow = 0
   def resetToBeforeFirstRow(): Unit = currentRow = -1
-  def setToLastRow(): Unit = currentRow = validRows
+  def setToAfterLastRow(): Unit = currentRow = validRows
 
   def isValidRow: Boolean = currentRow < validRows
   def hasNextRow: Boolean = currentRow + 1 < validRows
