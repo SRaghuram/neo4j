@@ -5,6 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
+import org.neo4j.cypher.RuntimeUnsupportedException
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.planDescription.Argument
 import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{PlannerVersion => IPDPlannerVersion}
@@ -47,14 +48,26 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
 
   def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult]): Unit = {
     internalExecutionResult match {
-      case Failure(_) => // not unexpected
+      case Failure(_: RuntimeUnsupportedException) => // This is expected and ok
+      case Failure(e) =>
+        fail(s"""Failed at runtime using $name for query:
+                |
+                |$query
+                |
+                |(NOTE: This test is marked as expected to fail, but failing at runtime is not ok)
+                |""".stripMargin)
       case Success(result) =>
         val ScenarioConfig(reportedRuntimeName, reportedPlannerName, reportedVersionName, reportedPlannerVersionName) = extractConfiguration(result)
 
         if (runtime.acceptedRuntimeNames.contains(reportedRuntimeName)
           && planner.acceptedPlannerNames.contains(reportedPlannerName)
           && version.acceptedRuntimeVersionNames.contains(reportedVersionName)) {
-          fail(s"Unexpectedly succeeded using $name for query $query, with $reportedVersionName $reportedRuntimeName runtime and $reportedPlannerVersionName $reportedPlannerName planner.")
+          fail(s"""Unexpectedly succeeded using $name for query:
+                  |
+                  |$query
+                  |
+                  |(Actually executed with $reportedVersionName $reportedRuntimeName runtime and $reportedPlannerVersionName $reportedPlannerName planner)
+                  |""".stripMargin)
         }
     }
   }
