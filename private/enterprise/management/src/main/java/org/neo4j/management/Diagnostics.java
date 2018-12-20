@@ -10,6 +10,7 @@ import org.neo4j.jmx.ManagementInterface;
 
 @ManagementInterface( name = Diagnostics.NAME )
 @Description( "Diagnostics provided by Neo4j" )
+@Deprecated
 public interface Diagnostics
 {
     String NAME = "Diagnostics";

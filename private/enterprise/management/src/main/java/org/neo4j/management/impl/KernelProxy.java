@@ -23,6 +23,7 @@ import org.neo4j.jmx.ManagementInterface;
  * {@link org.neo4j.management.Neo4jManager} should be defined completely in
  * that class.
  */
+@Deprecated
 public abstract class KernelProxy
 {
     static final String KERNEL_BEAN_TYPE = "org.neo4j.jmx.Kernel";

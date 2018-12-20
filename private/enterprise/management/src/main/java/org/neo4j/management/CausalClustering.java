@@ -10,6 +10,7 @@ import org.neo4j.jmx.ManagementInterface;
 
 @ManagementInterface( name = CausalClustering.NAME )
 @Description( "Information about an instance participating in a causal cluster" )
+@Deprecated
 public interface CausalClustering
 {
     String NAME = "Causal Clustering";

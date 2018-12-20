@@ -13,6 +13,7 @@ import org.neo4j.kernel.info.LockInfo;
 
 @ManagementInterface( name = LockManager.NAME )
 @Description( "Information about the Neo4j lock status" )
+@Deprecated
 public interface LockManager
 {
     String NAME = "Locking";

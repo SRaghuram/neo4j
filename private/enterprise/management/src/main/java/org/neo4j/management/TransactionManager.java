@@ -10,6 +10,7 @@ import org.neo4j.jmx.ManagementInterface;
 
 @ManagementInterface( name = TransactionManager.NAME )
 @Description( "Information about the Neo4j transaction manager" )
+@Deprecated
 public interface TransactionManager
 {
     String NAME = "Transactions";

@@ -13,6 +13,7 @@ import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
 import org.neo4j.management.PageCache;
 
+@Deprecated
 public final class PageCacheBean extends ManagementBeanProvider
 {
     public PageCacheBean()

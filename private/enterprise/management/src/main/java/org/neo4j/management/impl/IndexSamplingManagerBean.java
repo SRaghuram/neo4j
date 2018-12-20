@@ -25,6 +25,7 @@ import static org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode.TRIGGER
 import static org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode.TRIGGER_REBUILD_UPDATED;
 
 @Service.Implementation( ManagementBeanProvider.class )
+@Deprecated
 public final class IndexSamplingManagerBean extends ManagementBeanProvider
 {
     public IndexSamplingManagerBean()
