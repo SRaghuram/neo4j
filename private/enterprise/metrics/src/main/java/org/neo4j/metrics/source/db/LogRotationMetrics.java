@@ -12,12 +12,14 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.neo4j.kernel.impl.annotations.Documented;
-import org.neo4j.kernel.impl.api.DefaultTransactionTracer;
-import org.neo4j.kernel.impl.api.LogRotationMonitor;
+import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
+import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitorAdapter;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.metrics.metric.MetricsCounter;
 import org.neo4j.metrics.output.EventReporter;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.util.Collections.emptySortedMap;
@@ -37,10 +39,10 @@ public class LogRotationMetrics extends LifecycleAdapter
     private final MetricRegistry registry;
     private final Monitors monitors;
     private final LogRotationMonitor logRotationMonitor;
-    private final DefaultTransactionTracer.Monitor listener;
+    private final LogRotationMonitor listener;
 
     public LogRotationMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
-            Monitors monitors, LogRotationMonitor logRotationMonitor )
+            Monitors monitors, LogRotationMonitor logRotationMonitor, JobScheduler jobScheduler )
     {
         this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_PREFIX, "events" );
         this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_PREFIX, "total_time" );
@@ -48,12 +50,7 @@ public class LogRotationMetrics extends LifecycleAdapter
         this.registry = registry;
         this.monitors = monitors;
         this.logRotationMonitor = logRotationMonitor;
-        this.listener = durationMillis ->
-        {
-            final SortedMap<String,Gauge> gauges = new TreeMap<>();
-            gauges.put( logRotationDuration, () -> durationMillis );
-            reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
-        };
+        this.listener = new ReportingLogRotationMonitor( reporter, jobScheduler, logRotationDuration );
     }
 
     @Override
@@ -61,7 +58,7 @@ public class LogRotationMetrics extends LifecycleAdapter
     {
         monitors.addMonitorListener( listener );
 
-        registry.register( logRotationEvents, new MetricsCounter( logRotationMonitor::numberOfLogRotationEvents ) );
+        registry.register( logRotationEvents, new MetricsCounter( logRotationMonitor::numberOfLogRotations ) );
         registry.register( logRotationTotalTime, new MetricsCounter( logRotationMonitor::logRotationAccumulatedTotalTimeMillis ) );
     }
 
@@ -72,5 +69,30 @@ public class LogRotationMetrics extends LifecycleAdapter
 
         registry.remove( logRotationEvents );
         registry.remove( logRotationTotalTime );
+    }
+
+    private static final class ReportingLogRotationMonitor extends LogRotationMonitorAdapter
+    {
+        private final EventReporter reporter;
+        private final JobScheduler scheduler;
+        private final String metricName;
+
+        ReportingLogRotationMonitor( EventReporter reporter, JobScheduler scheduler, String metricName )
+        {
+            this.reporter = reporter;
+            this.scheduler = scheduler;
+            this.metricName = metricName;
+        }
+
+        @Override
+        public void logRotation( long millis )
+        {
+            scheduler.schedule( Group.METRICS_EVENT, () ->
+            {
+                SortedMap<String,Gauge> gauges = new TreeMap<>();
+                gauges.put( metricName, () -> millis );
+                reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
+            } );
+        }
     }
 }

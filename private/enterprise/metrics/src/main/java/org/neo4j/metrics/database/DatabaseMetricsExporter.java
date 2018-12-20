@@ -51,12 +51,14 @@ public class DatabaseMetricsExporter
 
         if ( config.get( MetricsSettings.neoCheckPointingEnabled ) )
         {
-            life.add( new CheckPointingMetrics( metricsPrefix, reporter, registry, dependencies.monitors(), dependencies.checkPointerMonitor() ) );
+            life.add( new CheckPointingMetrics( metricsPrefix, reporter, registry, dependencies.monitors(), dependencies.checkPointerMonitor(),
+                    dependencies.scheduler() ) );
         }
 
         if ( config.get( MetricsSettings.neoLogRotationEnabled ) )
         {
-            life.add( new LogRotationMetrics( metricsPrefix, reporter, registry, dependencies.monitors(), dependencies.logRotationMonitor() ) );
+            life.add( new LogRotationMetrics( metricsPrefix, reporter, registry, dependencies.monitors(), dependencies.logRotationMonitor(),
+                    dependencies.scheduler() ) );
         }
 
         if ( config.get( MetricsSettings.neoCountsEnabled ) )

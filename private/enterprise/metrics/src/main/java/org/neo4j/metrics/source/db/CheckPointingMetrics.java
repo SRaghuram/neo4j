@@ -12,11 +12,13 @@ import java.util.TreeMap;
 
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
-import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckpointDurationMonitor;
+import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitorAdapter;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.metrics.metric.MetricsCounter;
 import org.neo4j.metrics.output.EventReporter;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 import static com.codahale.metrics.MetricRegistry.name;
 import static java.util.Collections.emptySortedMap;
@@ -36,23 +38,18 @@ public class CheckPointingMetrics extends LifecycleAdapter
     private final MetricRegistry registry;
     private final Monitors monitors;
     private final CheckPointerMonitor checkPointerMonitor;
-    private final CheckpointDurationMonitor listener;
+    private final CheckPointerMonitor listener;
 
-    public CheckPointingMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
-            Monitors monitors, CheckPointerMonitor checkPointerMonitor )
+    public CheckPointingMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry, Monitors monitors,
+            CheckPointerMonitor checkPointerMonitor, JobScheduler jobScheduler )
     {
-        this.checkPointEvents = name( metricsPrefix, CHECK_POINT_PREFIX,"events" );
-        this.checkPointTotalTime = name( metricsPrefix, CHECK_POINT_PREFIX,"total_time" );
+        this.checkPointEvents = name( metricsPrefix, CHECK_POINT_PREFIX, "events" );
+        this.checkPointTotalTime = name( metricsPrefix, CHECK_POINT_PREFIX, "total_time" );
         this.checkPointDuration = name( metricsPrefix, CHECK_POINT_PREFIX, "check_point_duration" );
         this.registry = registry;
         this.monitors = monitors;
         this.checkPointerMonitor = checkPointerMonitor;
-        this.listener = durationMillis ->
-        {
-            TreeMap<String,Gauge> gauges = new TreeMap<>();
-            gauges.put( checkPointDuration, () -> durationMillis );
-            reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
-        };
+        this.listener = new ReportingCheckPointerMonitor( reporter, jobScheduler, checkPointDuration );
     }
 
     @Override
@@ -60,7 +57,7 @@ public class CheckPointingMetrics extends LifecycleAdapter
     {
         monitors.addMonitorListener( listener );
 
-        registry.register( checkPointEvents, new MetricsCounter( checkPointerMonitor::numberOfCheckPointEvents ) );
+        registry.register( checkPointEvents, new MetricsCounter( checkPointerMonitor::numberOfCheckPoints ) );
         registry.register( checkPointTotalTime, new MetricsCounter( checkPointerMonitor::checkPointAccumulatedTotalTimeMillis ) );
     }
 
@@ -71,5 +68,31 @@ public class CheckPointingMetrics extends LifecycleAdapter
 
         registry.remove( checkPointEvents );
         registry.remove( checkPointTotalTime );
+    }
+
+    private static class ReportingCheckPointerMonitor extends CheckPointerMonitorAdapter
+    {
+        private final EventReporter reporter;
+        private final JobScheduler jobScheduler;
+        private final String metricName;
+
+        ReportingCheckPointerMonitor( EventReporter reporter, JobScheduler jobScheduler, String metricName )
+        {
+            this.reporter = reporter;
+            this.jobScheduler = jobScheduler;
+            this.metricName = metricName;
+        }
+
+        @Override
+        public void checkPointCompleted( long durationMillis )
+        {
+            // notify async
+            jobScheduler.schedule( Group.METRICS_EVENT, () ->
+            {
+                TreeMap<String,Gauge> gauges = new TreeMap<>();
+                gauges.put( metricName, () -> durationMillis );
+                reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
+            } );
+        }
     }
 }

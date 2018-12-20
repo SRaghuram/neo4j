@@ -182,7 +182,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
                 new CatchupProcessManager( catchupExecutor, serverModule.catchupComponents(), databaseService, servicesToStopOnStoreCopy,
                         databaseHealthSupplier, topologyService, serverModule.catchupClient(), upstreamDatabaseStrategySelector, timerService,
                         commandIndexTracker, platformModule.logService.getInternalLogProvider(), platformModule.versionContextSupplier,
-                        platformModule.tracers.pageCursorTracerSupplier, platformModule.config );
+                        platformModule.tracers.getPageCursorTracerSupplier(), platformModule.config );
 
         life.add( new ReadReplicaStartupProcess( catchupExecutor, databaseService, catchupProcessManager, upstreamDatabaseStrategySelector,
                 logProvider, userLogProvider, topologyService, serverModule.catchupComponents() ) );

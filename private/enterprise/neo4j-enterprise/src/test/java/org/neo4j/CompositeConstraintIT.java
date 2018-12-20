@@ -7,8 +7,8 @@ package org.neo4j;
 
 import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
@@ -20,21 +20,22 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class CompositeConstraintIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class CompositeConstraintIT
 {
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void compositeNodeKeyConstraintUpdate() throws Exception
+    void compositeNodeKeyConstraintUpdate() throws Exception
     {
         GraphDatabaseService database = new EnterpriseGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
@@ -70,7 +71,7 @@ public class CompositeConstraintIT
         database.shutdown();
 
         ConsistencyCheckService.Result consistencyCheckResult = checkDbConsistency( testDirectory.storeDir() );
-        assertTrue( "Database is consistent", consistencyCheckResult.isSuccessful() );
+        assertTrue( consistencyCheckResult.isSuccessful(), "Database is consistent" );
     }
 
     private static ConsistencyCheckService.Result checkDbConsistency( File databaseDirectory )

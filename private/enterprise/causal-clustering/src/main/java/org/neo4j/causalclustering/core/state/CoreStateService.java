@@ -42,7 +42,6 @@ import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCo
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
-import org.neo4j.causalclustering.error_handling.PanicService;
 import org.neo4j.causalclustering.error_handling.Panicker;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
@@ -133,7 +132,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
 
         versionContextSupplier = platformModule.versionContextSupplier;
-        cursorTracerSupplier = platformModule.tracers.pageCursorTracerSupplier;
+        cursorTracerSupplier = platformModule.tracers.getPageCursorTracerSupplier();
 
         dbStateMap = new CopyOnWriteHashMap<>();
         dispatchers = new AggregateStateMachinesCommandDispatcher( databaseService, this );
