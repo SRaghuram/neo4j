@@ -7,6 +7,7 @@ package org.neo4j.kernel;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.rule.CommercialDbmsRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -146,6 +147,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     }
 
     @Test
+    @Ignore
     public void cacheProfilesMustBeIncludedInOfflineBackups() throws Exception
     {
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
