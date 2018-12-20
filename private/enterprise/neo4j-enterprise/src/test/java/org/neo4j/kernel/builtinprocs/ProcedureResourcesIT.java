@@ -394,6 +394,10 @@ public class ProcedureResourcesIT
             // Grabs schema lock an so can not execute concurrently with node creation
             proc.skip = true;
             break;
+        case "db.index.fulltext.awaitIndex":
+            proc.withParam( ftsNodesIndex );
+            proc.withParam( 100 );
+            break;
         case "db.stats.retrieve":
             proc.withParam( "'TOKENS'" );
             break;
