@@ -20,6 +20,8 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                                     nodeOffset: Int,
                                     label: Int,
                                     property: SlottedIndexedProperty,
+                                    queryIndexId: Int,
+                                    indexOrder: IndexOrder,
                                     valueExpr: Expression,
                                     argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
@@ -53,7 +55,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
       value match {
         case value: TextValue =>
           val indexQuery = IndexQuery.stringContains(property.propertyKeyId, value)
-          read.nodeIndexSeek(index, cursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
+          read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
           true
 
         case Values.NO_VALUE =>

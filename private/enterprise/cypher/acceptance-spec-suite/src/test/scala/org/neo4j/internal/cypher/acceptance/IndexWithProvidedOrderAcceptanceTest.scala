@@ -184,8 +184,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
 
       val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (n:Awesome) WHERE n.prop3 CONTAINS 'cat' RETURN n.prop3 ORDER BY n.prop3 $cypherToken",
-        executeBefore = createStringyNodes,
-        expectedDifferentResults = Configs.Morsel) // TODO: morsel runtime returns wrong result
+        executeBefore = createStringyNodes)
 
       result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
       result.toList should be(expectedOrder(List(

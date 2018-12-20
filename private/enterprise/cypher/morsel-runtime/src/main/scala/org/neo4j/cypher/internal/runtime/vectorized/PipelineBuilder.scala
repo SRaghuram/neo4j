@@ -21,6 +21,8 @@ import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.internal.kernel.api
+import org.neo4j.internal.kernel.api.{IndexOrder => KernelIndexOrder}
 
 class PipelineBuilder(physicalPlan: PhysicalPlan,
                       converters: ExpressionConverters,
@@ -58,13 +60,14 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           LazyLabel(label)(SemanticTable()),
           argumentSize)
 
-      case plans.NodeIndexScan(column, labelToken, property, _, _) =>
+      case plans.NodeIndexScan(column, labelToken, property, _, indexOrder) =>
         new NodeIndexScanOperator(
           WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
           SlottedIndexedProperty(column, property, slots),
           queryIndexes.registerQueryIndex(labelToken, property),
+          asKernelIndexOrder(indexOrder),
           argumentSize)
 
       case NodeIndexContainsScan(column, labelToken, property, valueExpr, _, indexOrder) =>
@@ -73,6 +76,8 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
           SlottedIndexedProperty(column, property, slots),
+          queryIndexes.registerQueryIndex(labelToken, property),
+          asKernelIndexOrder(indexOrder),
           converters.toCommandExpression(id, valueExpr),
           argumentSize)
 
@@ -285,6 +290,12 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
       case p =>
         throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
     }
+  }
+
+  private def asKernelIndexOrder(indexOrder: IndexOrder): api.IndexOrder = indexOrder match {
+    case IndexOrderAscending => KernelIndexOrder.ASCENDING
+    case IndexOrderDescending => KernelIndexOrder.DESCENDING
+    case IndexOrderNone => KernelIndexOrder.NONE
   }
 }
 

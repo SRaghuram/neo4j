@@ -18,6 +18,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                             label: Int,
                             property: SlottedIndexedProperty,
                             queryIndexId: Int,
+                            indexOrder: IndexOrder,
                             argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, property.maybeCachedNodePropertySlot) {
 
@@ -36,7 +37,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
                                                resources: QueryResources): Boolean = {
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       val read = context.transactionalContext.dataRead
-      read.nodeIndexScan(index, cursor, IndexOrder.NONE, property.maybeCachedNodePropertySlot.isDefined)
+      read.nodeIndexScan(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined)
       true
     }
 

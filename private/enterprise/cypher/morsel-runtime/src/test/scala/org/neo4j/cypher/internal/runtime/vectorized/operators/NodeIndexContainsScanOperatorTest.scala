@@ -5,24 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.vectorized.operators
 
-import org.mockito.Mockito.RETURNS_DEEP_STUBS
-import org.mockito.Mockito.when
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlottedIndexedProperty
-import org.neo4j.cypher.internal.runtime.NodeValueHit
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.mockito.Mockito.{RETURNS_DEEP_STUBS, when}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexMockingHelp
 import org.neo4j.cypher.internal.runtime.vectorized.EmptyQueryState
-import org.neo4j.cypher.internal.v4_0.expressions.LabelName
-import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
-import org.neo4j.cypher.internal.v4_0.expressions.PropertyKeyName
-import org.neo4j.cypher.internal.v4_0.expressions.PropertyKeyToken
-import org.neo4j.cypher.internal.v4_0.util.LabelId
-import org.neo4j.cypher.internal.v4_0.util.PropertyKeyId
-import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
-import org.neo4j.cypher.internal.v4_0.util.symbols.CTNode
+import org.neo4j.cypher.internal.runtime.{NodeValueHit, QueryContext}
+import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, PropertyKeyName, PropertyKeyToken}
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTNode}
+import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
+import org.neo4j.internal.kernel.api.IndexOrder
 import org.neo4j.internal.kernel.api.helpers.StubNodeValueIndexCursor
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.NodeValue
@@ -49,8 +42,14 @@ class NodeIndexContainsScanOperatorTest extends MorselUnitTest with ImplicitDumm
     val slots = SlotConfiguration.empty.newLong("n", nullable = false, CTNode)
       .newReference(nDotProp, nullable = false, CTAny)
     val given = new Given()
-      .withOperator(new NodeIndexContainsScanOperator(workId, slots.getLongOffsetFor("n"), label.nameId.id,
-        SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))), Literal("hell"), SlotConfiguration.Size.zero)
+      .withOperator(new NodeIndexContainsScanOperator(workId,
+                                                      slots.getLongOffsetFor("n"),
+                                                      label.nameId.id,
+                                                      SlottedIndexedProperty(propertyKey.nameId.id, Some(slots.getReferenceOffsetFor(nDotProp))),
+                                                      0,
+                                                      IndexOrder.NONE,
+                                                      Literal("hell"),
+                                                      SlotConfiguration.Size.zero)
       )
       .addInputRow()
       .withOutput(1 longs, 1 refs, 2 rows)
