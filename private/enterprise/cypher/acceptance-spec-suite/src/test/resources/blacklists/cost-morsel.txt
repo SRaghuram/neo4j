@@ -1,7 +1,6 @@
 Feature "AggregationAcceptance": Scenario "Distinct should work with multiple equal grouping keys and only one different"
 Feature "AggregationAcceptance": Scenario "Using a optional match after aggregation and before an aggregation"
 Feature "AggregationAcceptance": Scenario "percentileDisc on empty data should return null"
-Feature "CaseExpression": Scenario "Shorthand case with filter should work as expected"
 Feature "ConstraintAcceptance": Scenario "Failing when creation would violate constraint"
 Feature "ConstraintAcceptance": Scenario "Merge node with prop and label and unique index when no match"
 Feature "ConstraintAcceptance": Scenario "Merge node with prop and label and unique index"
@@ -46,8 +45,6 @@ Feature "IndexAcceptance": Scenario "Should be able to merge using property from
 Feature "IndexAcceptance": Scenario "Works fine with index"
 Feature "IndexAcceptance": Scenario "Works with indexed and unindexed property"
 Feature "IndexAcceptance": Scenario "Works with two indexed properties"
-// TODO: FIXME: runtime failure - Missing implementation of one `set` method in MorselExecutionContext
-Feature "ListComprehensionAcceptance": Scenario "Should find all the variables in list comprehension"
 Feature "MatchAcceptance": Scenario "Filter with AND/OR"
 Feature "MatchAcceptance": Scenario "Should handle NOT EXISTS on node property when node is null"
 Feature "MatchAcceptance": Scenario "Should handle complex IS NOT NULL on node property when node is null"
@@ -72,7 +69,6 @@ Feature "PatternExpressionAcceptance": Scenario "Nested pattern comprehensions 2
 Feature "PatternExpressionAcceptance": Scenario "Nested pattern comprehensions 3"
 Feature "PatternExpressionAcceptance": Scenario "Nested pattern comprehensions 4"
 Feature "PatternExpressionAcceptance": Scenario "Nested pattern comprehensions"
-Feature "PatternExpressionAcceptance": Scenario "Pattern expression inside list comprehension"
 Feature "PatternExpressionAcceptance": Scenario "Pattern expressions and ORDER BY"
 Feature "PatternExpressionAcceptance": Scenario "Returning a pattern expression with bound nodes"
 Feature "PatternExpressionAcceptance": Scenario "Returning a pattern expression with label predicate"
@@ -106,7 +102,6 @@ Feature "PatternPredicates": Scenario "Undirected NOOP path predicate 2"
 Feature "PatternPredicates": Scenario "Using a pattern predicate after aggregation 1"
 Feature "PatternPredicates": Scenario "Using a pattern predicate after aggregation 2"
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure should fail if implicit argument is missing"
-Feature "ReturnAcceptance": Scenario "Filter should work"
 Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop side effects"
 Feature "ShortestPathAcceptance": Scenario "Find a combination of a shortest path and a pattern expression"
 // TODO: FIXME Flaky planner... - If we get an `Optional` in the plan this query is not supported
@@ -131,5 +126,4 @@ Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with empty
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with hits"
 // TODO: FIXME runtime failure - ClassCastException on PipelineArgument in CartesianProductOperator.initFromRhs
 Feature "UnwindAcceptance": Scenario "Primitive node type support in list literal"
-Feature "VarLengthAcceptance": Scenario "Handles checking properties on nodes in multistep path - using ALL() function on path node properties"
 Feature "VarLengthAcceptance": Scenario "Handles checking properties on relationships in multistep path - using ALL() function on path relationship properties"

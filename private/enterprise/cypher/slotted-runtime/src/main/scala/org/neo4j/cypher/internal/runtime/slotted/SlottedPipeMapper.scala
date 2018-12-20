@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast.{NodeFromSlot, RelationshipFromSlot}
 import org.neo4j.cypher.internal.ir.v4_0.VarPatternLength
@@ -16,8 +17,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Aggreg
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{Predicate, True}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{KeyTokenResolver, expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, ColumnOrder => _, _}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
@@ -166,9 +165,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
           relationships.map(r =>
             CreateRelationshipSlottedCommand(
               slots.getLongOffsetFor(r.idName),
-              SlottedPipeBuilderUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(r.startNode)),
+              SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(r.startNode)),
               LazyType(r.relType.name),
-              SlottedPipeBuilderUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(r.endNode)),
+              SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(r.endNode)),
               r.properties.map(convertExpressions),
               r.idName, r.startNode, r.endNode
             )
@@ -190,9 +189,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
           source,
           CreateRelationshipSlottedCommand(
             slots.getLongOffsetFor(idName),
-            SlottedPipeBuilderUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(startNode)),
+            SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(startNode)),
             LazyType(relType.name),
-            SlottedPipeBuilderUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(endNode)),
+            SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor(slots(endNode)),
             properties.map(convertExpressions),
             idName, startNode, endNode
           )
@@ -586,26 +585,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
 }
 
 object SlottedPipeMapper {
-
-  private[slotted] def generateSlotAccessorFunctions(slots: SlotConfiguration): Unit = {
-    slots.foreachSlot({
-      case (key, slot) =>
-        val getter = SlottedPipeBuilderUtils.makeGetValueFromSlotFunctionFor(slot)
-        val setter = SlottedPipeBuilderUtils.makeSetValueInSlotFunctionFor(slot)
-        val primitiveNodeSetter =
-          if (slot.typ.isAssignableFrom(CTNode))
-            Some(SlottedPipeBuilderUtils.makeSetPrimitiveNodeInSlotFunctionFor(slot))
-          else
-            None
-        val primitiveRelationshipSetter =
-          if (slot.typ.isAssignableFrom(CTRelationship))
-            Some(SlottedPipeBuilderUtils.makeSetPrimitiveRelationshipInSlotFunctionFor(slot))
-          else
-            None
-
-        slots.updateAccessorFunctions(key, getter, setter, primitiveNodeSetter, primitiveRelationshipSetter)
-    }, notDoingForCachedNodePropertiesYet => null)
-  }
 
   private def projectSlotExpression(slot: Slot): commandExpressions.Expression = slot match {
     case LongSlot(offset, false, CTNode) =>

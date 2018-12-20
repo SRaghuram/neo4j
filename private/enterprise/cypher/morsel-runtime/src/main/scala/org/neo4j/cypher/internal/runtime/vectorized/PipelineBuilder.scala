@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{RefSlot, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
@@ -39,6 +40,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
     val argumentSize = physicalPlan.argumentSizes(id)
+    generateSlotAccessorFunctions(slots)
 
     val thisOp = plan match {
       case plans.AllNodesScan(column, _) =>
@@ -122,6 +124,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
   override protected def onOneChildPlan(plan: LogicalPlan, source: Pipeline): Pipeline = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
+    generateSlotAccessorFunctions(slots)
 
       val thisOp = plan match {
         case plans.ProduceResult(_, columns) =>
@@ -261,6 +264,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
 
   override protected def onTwoChildPlanComingFromRight(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = {
     val slots = physicalPlan.slotConfigurations(plan.id)
+    generateSlotAccessorFunctions(slots)
 
     plan match {
       case _: plans.Apply =>

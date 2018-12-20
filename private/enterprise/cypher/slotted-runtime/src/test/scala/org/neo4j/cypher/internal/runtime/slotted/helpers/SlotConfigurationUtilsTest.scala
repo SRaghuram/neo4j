@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.helpers
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.cypher.internal.runtime.slotted.helpers.SlottedPipeBuilderUtils._
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfigurationUtils._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
@@ -16,8 +16,10 @@ import org.neo4j.cypher.internal.v4_0.util.ParameterWrongTypeException
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
+// TODO: Extract abstract base class in physical planning module, with subclass tests for both slotted and morsel runtimes
+
 // If this test class gets in your way you can just delete it
-class SlottedPipeBuilderUtilsTest extends CypherFunSuite {
+class SlotConfigurationUtilsTest extends CypherFunSuite {
   private val slots = SlotConfiguration.empty
     .newLong("n1", false, CTNode)
     .newLong("n2", true, CTNode)

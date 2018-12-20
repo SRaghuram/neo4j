@@ -3,23 +3,20 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.slotted.helpers
+package org.neo4j.cypher.internal.compatibility.v4_0.runtime
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship, CypherType}
+import org.neo4j.cypher.internal.v4_0.util.{AssertionUtils, InternalException, ParameterWrongTypeException}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue, VirtualValues}
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship, CypherType}
-import org.neo4j.cypher.internal.v4_0.util.{AssertionUtils, InternalException, ParameterWrongTypeException}
 
-object SlottedPipeBuilderUtils {
+object SlotConfigurationUtils {
   // TODO: Check if having try/catch blocks inside some of these generated functions prevents inlining or other JIT optimizations
   //       If so we may want to consider moving the handling and responsibility out to the pipes that use them
 
-  val UNDEFINED_NODE: Long = -1L
-  val UNDEFINED_REL: Long = -1L
+  val PRIMITIVE_NULL: Long = -1L
 
   /**
     * Use this to make a specialized getter function for a slot,
@@ -38,7 +35,7 @@ object SlottedPipeBuilderUtils {
       case LongSlot(offset, true, CTNode) =>
         (context: ExecutionContext) => {
           val nodeId = context.getLongAt(offset)
-          if (entityIsNull(nodeId))
+          if (nodeId == PRIMITIVE_NULL)
             Values.NO_VALUE
           else
             VirtualValues.node(nodeId)
@@ -46,7 +43,7 @@ object SlottedPipeBuilderUtils {
       case LongSlot(offset, true, CTRelationship) =>
         (context: ExecutionContext) => {
           val relId = context.getLongAt(offset)
-          if (entityIsNull(relId))
+          if (relId == PRIMITIVE_NULL)
             Values.NO_VALUE
           else
             VirtualValues.relationship(relId)
@@ -94,7 +91,7 @@ object SlottedPipeBuilderUtils {
           val value = context.getRefAt(offset)
           try {
             if (value == Values.NO_VALUE)
-              UNDEFINED_NODE
+              PRIMITIVE_NULL
             else
               value.asInstanceOf[VirtualNodeValue].id()
           } catch {
@@ -107,7 +104,7 @@ object SlottedPipeBuilderUtils {
           val value = context.getRefAt(offset)
           try {
             if (value == Values.NO_VALUE)
-              UNDEFINED_REL
+              PRIMITIVE_NULL
             else
               value.asInstanceOf[VirtualRelationshipValue].id()
           } catch {
@@ -160,7 +157,7 @@ object SlottedPipeBuilderUtils {
       case LongSlot(offset, true, CTNode) =>
         (context: ExecutionContext, value: AnyValue) =>
           if (value == Values.NO_VALUE)
-            context.setLongAt(offset, -1L)
+            context.setLongAt(offset, PRIMITIVE_NULL)
           else {
             try {
               context.setLongAt(offset, value.asInstanceOf[VirtualNodeValue].id())
@@ -173,7 +170,7 @@ object SlottedPipeBuilderUtils {
       case LongSlot(offset, true, CTRelationship) =>
         (context: ExecutionContext, value: AnyValue) =>
           if (value == Values.NO_VALUE)
-            context.setLongAt(offset, -1L)
+            context.setLongAt(offset, PRIMITIVE_NULL)
           else {
             try {
               context.setLongAt(offset, value.asInstanceOf[VirtualRelationshipValue].id())
@@ -200,7 +197,7 @@ object SlottedPipeBuilderUtils {
       case (LongSlot(offset, nullable, CTNode), CTNode) =>
         if (AssertionUtils.assertionsEnabled && !nullable) {
           (context: ExecutionContext, value: Long) =>
-            if (value == -1L)
+            if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setLongAt(offset, value)
         }
@@ -212,7 +209,7 @@ object SlottedPipeBuilderUtils {
       case (LongSlot(offset, nullable, CTRelationship), CTRelationship) =>
         if (AssertionUtils.assertionsEnabled && !nullable) {
           (context: ExecutionContext, value: Long) =>
-            if (value == -1L)
+            if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setLongAt(offset, value)
         }
@@ -224,7 +221,7 @@ object SlottedPipeBuilderUtils {
       case (RefSlot(offset, false, typ), CTNode) if typ.isAssignableFrom(CTNode) =>
         if (AssertionUtils.assertionsEnabled) {
           (context: ExecutionContext, value: Long) =>
-            if (value == -1L)
+            if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setRefAt(offset, VirtualValues.node(value))
         }
@@ -237,7 +234,7 @@ object SlottedPipeBuilderUtils {
       case (RefSlot(offset, false, typ), CTRelationship) if typ.isAssignableFrom(CTRelationship) =>
         if (AssertionUtils.assertionsEnabled) {
           (context: ExecutionContext, value: Long) =>
-            if (value == -1L)
+            if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setRefAt(offset, VirtualValues.relationship(value))
         }
@@ -249,14 +246,14 @@ object SlottedPipeBuilderUtils {
 
       case (RefSlot(offset, true, typ), CTNode) if typ.isAssignableFrom(CTNode) =>
         (context: ExecutionContext, value: Long) =>
-          if (value == -1L)
+          if (value == PRIMITIVE_NULL)
             context.setRefAt(offset, Values.NO_VALUE)
           else
             context.setRefAt(offset, VirtualValues.node(value))
 
       case (RefSlot(offset, true, typ), CTRelationship) if typ.isAssignableFrom(CTRelationship) =>
         (context: ExecutionContext, value: Long) =>
-          if (value == -1L)
+          if (value == PRIMITIVE_NULL)
             context.setRefAt(offset, Values.NO_VALUE)
           else
             context.setRefAt(offset, VirtualValues.relationship(value))
@@ -279,5 +276,26 @@ object SlottedPipeBuilderUtils {
   def makeSetPrimitiveRelationshipInSlotFunctionFor(slot: Slot): (ExecutionContext, Long) => Unit =
     makeSetPrimitiveInSlotFunctionFor(slot, CTRelationship)
 
+  /**
+    * Generate and update accessors for all slots in a SlotConfiguration
+    */
+  def generateSlotAccessorFunctions(slots: SlotConfiguration): Unit = {
+    slots.foreachSlot({
+      case (key, slot) =>
+        val getter = SlotConfigurationUtils.makeGetValueFromSlotFunctionFor(slot)
+        val setter = SlotConfigurationUtils.makeSetValueInSlotFunctionFor(slot)
+        val primitiveNodeSetter =
+          if (slot.typ.isAssignableFrom(CTNode))
+            Some(SlotConfigurationUtils.makeSetPrimitiveNodeInSlotFunctionFor(slot))
+          else
+            None
+        val primitiveRelationshipSetter =
+          if (slot.typ.isAssignableFrom(CTRelationship))
+            Some(SlotConfigurationUtils.makeSetPrimitiveRelationshipInSlotFunctionFor(slot))
+          else
+            None
 
+        slots.updateAccessorFunctions(key, getter, setter, primitiveNodeSetter, primitiveRelationshipSetter)
+    }, notDoingForCachedNodePropertiesYet => null)
+  }
 }

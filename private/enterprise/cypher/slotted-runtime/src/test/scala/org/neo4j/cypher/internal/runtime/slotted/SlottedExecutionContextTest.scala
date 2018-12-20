@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{SlotConfiguration, SlotConfigurationUtils}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
@@ -50,7 +50,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
 
   test("can merge nullable RefSlots which are null") {
     val leftSlots = slots(0, 0).newReference("a", nullable = true, CTAny)
-    SlottedPipeMapper.generateSlotAccessorFunctions(leftSlots)
+    SlotConfigurationUtils.generateSlotAccessorFunctions(leftSlots)
     val rightSlots = slots(0, 0).newReference("a", nullable = true, CTAny)
     SlottedExecutionContext(leftSlots).mergeWith(SlottedExecutionContext(rightSlots)) // should not fail
   }
