@@ -23,6 +23,7 @@ import org.neo4j.logging.FormattedLog;
 import org.neo4j.management.Diagnostics;
 
 @Service.Implementation( ManagementBeanProvider.class )
+@Deprecated
 public class DiagnosticsBean extends ManagementBeanProvider
 {
     public DiagnosticsBean()

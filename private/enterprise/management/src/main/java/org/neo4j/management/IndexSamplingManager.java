@@ -10,6 +10,7 @@ import org.neo4j.jmx.ManagementInterface;
 
 @ManagementInterface( name = IndexSamplingManager.NAME )
 @Description( "Handle index sampling." )
+@Deprecated
 public interface IndexSamplingManager
 {
     String NAME = "Index sampler";

@@ -12,6 +12,7 @@ import org.neo4j.jmx.impl.ConfigurationBean;
 import org.neo4j.jmx.impl.KernelBean;
 import org.neo4j.jmx.impl.ManagementSupport;
 
+@Deprecated
 abstract class AdvancedManagementSupport extends ManagementSupport
 {
     @Override
