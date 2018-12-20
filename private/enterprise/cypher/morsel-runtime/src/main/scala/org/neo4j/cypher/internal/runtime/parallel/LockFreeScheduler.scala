@@ -70,10 +70,12 @@ class LockFreeScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](threadFactory: T
     // Schedule in the query
     query.makeCallableTask(task, upstreamWorkUnit)
       .foreach { t =>
+        // Mark as scheduled.
+        // This has to happen before putting it into the actual queue.
+        // Otherwise another worker can complete the task before it has been marked as scheduled
+        query.taskScheduled(t)
         // Schedule in the global queue
         tasks.add(t)
-        // Mark as scheduled
-        query.taskScheduled(t)
       }
   }
 }

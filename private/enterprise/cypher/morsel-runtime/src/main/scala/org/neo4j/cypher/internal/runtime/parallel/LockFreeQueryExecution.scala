@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.parallel
 
 import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.runtime.parallel.LockFreeScheduler.TaskResult
 
@@ -16,7 +16,7 @@ class LockFreeQueryExecution[THREAD_LOCAL_RESOURCE <: AutoCloseable](queryTracer
   with QuerySchedulerClient[THREAD_LOCAL_RESOURCE, TaskResult[THREAD_LOCAL_RESOURCE]] {
 
   private val latch = new CountDownLatch(1)
-  private val scheduledTasks = new ConcurrentLinkedQueue[Callable[TaskResult[THREAD_LOCAL_RESOURCE]]]()
+  private val scheduledTasks = new AtomicLong(0)
   @volatile
   private var queryFailed: Option[Throwable] = None
 
@@ -54,12 +54,12 @@ class LockFreeQueryExecution[THREAD_LOCAL_RESOURCE <: AutoCloseable](queryTracer
   }
 
   override def taskScheduled(callableTask: Callable[TaskResult[THREAD_LOCAL_RESOURCE]]): Unit = {
-    scheduledTasks.add(callableTask)
+    scheduledTasks.incrementAndGet()
   }
 
   override def taskDone(taskResult: TaskResult[THREAD_LOCAL_RESOURCE]): Unit = {
-    scheduledTasks.remove(taskResult.callableTask)
-    if (scheduledTasks.isEmpty) {
+    val remaining = scheduledTasks.decrementAndGet()
+    if (remaining == 0) {
       stop(None)
     }
   }
