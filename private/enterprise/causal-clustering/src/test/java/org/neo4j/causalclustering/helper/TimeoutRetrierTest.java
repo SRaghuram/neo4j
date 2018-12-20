@@ -17,7 +17,7 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLog;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -70,14 +70,7 @@ class TimeoutRetrierTest
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         // when
-        try
-        {
-            retryFuture.get( FooException::new, logProvider.getLog( this.getClass() ) );
-            fail( "Should have eventually timed out and thrown!" );
-        }
-        catch ( FooException e )
-        { //do nothing
-        }
+        assertThrows( FooException.class, () -> retryFuture.get( FooException::new, logProvider.getLog( getClass() ) ) );
 
         // then
         logProvider.assertContainsLogCallContaining( "Request timed out" );
@@ -96,14 +89,7 @@ class TimeoutRetrierTest
         TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
 
         // when
-        try
-        {
-            retryFuture.get( FooException::new, NullLog.getInstance() );
-            fail( "Should have thrown immediately!" );
-        }
-        catch ( FooException e )
-        { //do nothing
-        }
+        assertThrows( FooException.class, () -> retryFuture.get( FooException::new, NullLog.getInstance() ) );
 
         // then
         verify( future, times( 1 ) ).get( anyLong(), any() );
@@ -126,11 +112,7 @@ class TimeoutRetrierTest
             // when
             try
             {
-                retryFuture.get( FooException::new, NullLog.getInstance() );
-                fail( "Should have thrown immediately!" );
-            }
-            catch ( FooException e )
-            { //do nothing
+                assertThrows( FooException.class, () -> retryFuture.get( FooException::new, NullLog.getInstance() ) );
             }
             finally
             {
