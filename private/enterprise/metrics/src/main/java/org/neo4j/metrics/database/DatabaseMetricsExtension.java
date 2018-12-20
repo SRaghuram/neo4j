@@ -7,6 +7,9 @@ package org.neo4j.metrics.database;
 
 import com.codahale.metrics.MetricRegistry;
 
+import java.util.Optional;
+
+import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -29,13 +32,16 @@ public class DatabaseMetricsExtension implements Lifecycle
     @Override
     public void init()
     {
-        MetricsManager metricsManager = dependencies.metricsManager();
-        if ( metricsManager.isConfigured() )
+        Optional<MetricsManager> optionalManager = getMetricsManager();
+        optionalManager.ifPresent( metricsManager ->
         {
-            MetricRegistry metricRegistry = metricsManager.getRegistry();
-            EventReporter eventReporter = metricsManager.getReporter();
-            new DatabaseMetricsExporter( metricRegistry, eventReporter, dependencies.configuration(), context, dependencies, life ).export();
-        }
+            if ( metricsManager.isConfigured() )
+            {
+                MetricRegistry metricRegistry = metricsManager.getRegistry();
+                EventReporter eventReporter = metricsManager.getReporter();
+                new DatabaseMetricsExporter( metricRegistry, eventReporter, dependencies.configuration(), context, dependencies, life ).export();
+            }
+        } );
         life.init();
     }
 
@@ -55,5 +61,17 @@ public class DatabaseMetricsExtension implements Lifecycle
     public void shutdown()
     {
         life.shutdown();
+    }
+
+    private Optional<MetricsManager> getMetricsManager()
+    {
+        try
+        {
+            return Optional.of( dependencies.metricsManager() );
+        }
+        catch ( UnsatisfiedDependencyException ude )
+        {
+            return Optional.empty();
+        }
     }
 }
