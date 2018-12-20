@@ -5,38 +5,45 @@
  */
 package org.neo4j.causalclustering.scenarios;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
+import org.neo4j.causalclustering.core.consensus.roles.Role;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
 import org.neo4j.test.causalclustering.ClusterConfig;
 import org.neo4j.test.causalclustering.ClusterExtension;
 import org.neo4j.test.causalclustering.ClusterFactory;
 import org.neo4j.test.extension.Inject;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 class RestartIT
@@ -45,12 +52,23 @@ class RestartIT
     private ClusterFactory clusterFactory;
 
     private Cluster<?> cluster;
+    private ExecutorService executor;
 
     @BeforeAll
     void startCluster() throws ExecutionException, InterruptedException
     {
         cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfReadReplicas( 0 ) );
         cluster.start();
+    }
+
+    @AfterEach
+    void tearDown() throws Exception
+    {
+        if ( executor != null )
+        {
+            executor.shutdownNow();
+            assertTrue( executor.awaitTermination( 1, MINUTES ) );
+        }
     }
 
     @Test
@@ -72,37 +90,38 @@ class RestartIT
     @Test
     void restartWhileDoingTransactions() throws Exception
     {
+        // given
+        executor = Executors.newSingleThreadExecutor();
+        CountDownLatch someTransactionsCommitted = new CountDownLatch( 5 );
+        AtomicBoolean done = new AtomicBoolean( false );
+
         // when
-        final GraphDatabaseService coreDB = cluster.getCoreMemberById( 0 ).database();
-
-        ExecutorService executor = Executors.newCachedThreadPool();
-
-        final AtomicBoolean done = new AtomicBoolean( false );
-        executor.execute( () ->
+        Future<CoreClusterMember> transactionsFuture = executor.submit( () ->
         {
+            CoreClusterMember lastWriter = null;
             while ( !done.get() )
             {
-                try ( Transaction tx = coreDB.beginTx() )
-                {
-                    Node node = coreDB.createNode( label( "boo" ) );
-                    node.setProperty( "foobar", "baz_bat" );
-                    tx.success();
-                }
-                catch ( AcquireLockTimeoutException | WriteOperationsNotAllowedException e )
-                {
-                    // expected sometimes
-                }
+                lastWriter = cluster.coreTx( this::createNode );
+                someTransactionsCommitted.countDown();
             }
+            return lastWriter;
         } );
-        Thread.sleep( 500 );
 
-        cluster.removeCoreMemberWithServerId( 1 );
-        cluster.addCoreMemberWithId( 1 ).start();
-        Thread.sleep( 500 );
+        someTransactionsCommitted.await();
+
+        int followerId = cluster.getMemberWithAnyRole( Role.FOLLOWER ).serverId();
+        cluster.removeCoreMemberWithServerId( followerId );
+        cluster.addCoreMemberWithId( followerId ).start();
 
         // then
+        assertEventually( () -> cluster.healthyCoreMembers(), hasSize( 3 ), 1, MINUTES );
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology(), equalTo( 3 ), 1, MINUTES );
+
         done.set( true );
-        executor.shutdown();
+
+        CoreClusterMember lastWriter = transactionsFuture.get( 1, MINUTES );
+        assertNotNull( lastWriter );
+        dataMatchesEventually( lastWriter, cluster.coreMembers() );
     }
 
     @Test
@@ -114,12 +133,7 @@ class RestartIT
         // when
         cluster.start();
 
-        CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        CoreClusterMember last = cluster.coreTx( this::createNode );
 
         // then
         dataMatchesEventually( last, cluster.coreMembers() );
@@ -133,12 +147,7 @@ class RestartIT
         cluster.start();
 
         // when
-        CoreClusterMember last = cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        CoreClusterMember last = cluster.coreTx( this::createNode );
 
         cluster.addCoreMemberWithId( 2 ).start();
         dataMatchesEventually( last, cluster.coreMembers() );
@@ -166,5 +175,12 @@ class RestartIT
                 assertTrue( result.isSuccessful(), "Inconsistent: " + readReplica );
             }
         }
+    }
+
+    private void createNode( GraphDatabaseService db, Transaction tx )
+    {
+        Node node = db.createNode( label( "boo" ) );
+        node.setProperty( "foobar", "baz_bat" );
+        tx.success();
     }
 }

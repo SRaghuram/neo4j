@@ -29,6 +29,7 @@ import org.neo4j.causalclustering.ReplicationModule;
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
@@ -43,6 +44,7 @@ import org.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import org.neo4j.causalclustering.core.server.CoreServerModule;
 import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.ClusteringModule;
+import org.neo4j.causalclustering.core.state.CoreLife;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.CoreStateService;
 import org.neo4j.causalclustering.core.state.CoreStateStorageService;
@@ -482,6 +484,18 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
     void disableCatchupServer() throws Throwable
     {
         coreServerModule.catchupServer().disable();
+    }
+
+    /**
+     * Returns {@code true} because {@link DatabaseManager}'s lifecycle is managed by {@link DatabaseService} via {@link CoreLife}.
+     * So {@link DatabaseManager} does not need to be included in the global lifecycle.
+     *
+     * @return always {@code true}.
+     */
+    @Override
+    public boolean handlesDatabaseManagerLifecycle()
+    {
+        return true;
     }
 
     @Override

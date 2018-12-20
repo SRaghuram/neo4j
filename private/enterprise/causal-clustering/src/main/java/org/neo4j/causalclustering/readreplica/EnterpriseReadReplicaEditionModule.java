@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.catchup.RegularCatchupServerHandler;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
@@ -283,6 +284,18 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
     public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
     {
         EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
+    }
+
+    /**
+     * Returns {@code true} because {@link DatabaseManager}'s lifecycle is managed by {@link DatabaseService} via {@link ReadReplicaStartupProcess}.
+     * So {@link DatabaseManager} does not need to be included in the global lifecycle.
+     *
+     * @return always {@code true}.
+     */
+    @Override
+    public boolean handlesDatabaseManagerLifecycle()
+    {
+        return true;
     }
 
     @Override
