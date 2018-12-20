@@ -16,13 +16,11 @@ import org.neo4j.cypher.internal.runtime.vectorized.Pipeline.dprintln
 /**
   * A simple implementation of the Scheduler trait
   */
-class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor,
+class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: ExecutorService,
                                                               waitTimeout: Duration,
                                                               threadLocalResourceFactory: () => THREAD_LOCAL_RESOURCE
                                                              ) extends Scheduler[THREAD_LOCAL_RESOURCE] {
 
-  private val completionQueue = new LinkedBlockingQueue[Future[TaskResult[THREAD_LOCAL_RESOURCE]]]
-  private val executionService = new ExecutorCompletionService[TaskResult[THREAD_LOCAL_RESOURCE]](executor, completionQueue)
   private val threadLocalResource = ThreadLocal.withInitial(new Supplier[THREAD_LOCAL_RESOURCE] {
     override def get(): THREAD_LOCAL_RESOURCE = threadLocalResourceFactory()
   })
@@ -52,7 +50,7 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
         }
       }
 
-    executionService.submit(callableTask)
+    executorService.submit(callableTask)
   }
 
   class SimpleQueryExecution(initialTask: Future[TaskResult[THREAD_LOCAL_RESOURCE]],
@@ -60,8 +58,6 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
                              queryTracer: QueryExecutionTracer,
                              waitTimeoutMilli: Long) extends QueryExecution {
 
-    // TODO: Move completionQueue and the ExecutorCompletionService into here and replace inFlightTasks
-    //       (possibly by switching to LinkedBlockingDeque for the completionQueue)
     var inFlightTasks = new ArrayBuffer[Future[TaskResult[THREAD_LOCAL_RESOURCE]]]
     inFlightTasks += initialTask
 
@@ -71,7 +67,6 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executor: Executor
         for (future <- inFlightTasks) {
           try {
             val taskResult = future.get(waitTimeoutMilli, TimeUnit.MILLISECONDS)
-            completionQueue.remove(future) // We need to clean up the completion queue!
             for (newTask <- taskResult.newDownstreamTasks)
               newInFlightTasks += scheduler.schedule(newTask, Some(taskResult.workUnitEvent), queryTracer)
 
