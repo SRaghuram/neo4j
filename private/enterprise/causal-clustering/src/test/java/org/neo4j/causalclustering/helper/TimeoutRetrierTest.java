@@ -132,6 +132,12 @@ class TimeoutRetrierTest
             catch ( FooException e )
             { //do nothing
             }
+            finally
+            {
+                // make sure interruption status of the current thread is cleared
+                // retrier re-interrupts the thread when InterruptedException is thrown
+                Thread.interrupted();
+            }
 
             // then
             verify( future, times( i + 1 ) ).cancel( anyBoolean() );
