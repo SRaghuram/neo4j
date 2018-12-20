@@ -11,13 +11,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -190,11 +191,14 @@ class MultiDatabaseManagerIT
         String databaseToDrop = "databaseToDrop";
         DatabaseContext database = databaseManager.createDatabase( databaseToDrop );
 
-        File databaseDirectory = database.getDatabase().getDatabaseLayout().databaseDirectory();
-        assertTrue( databaseDirectory.exists() );
+        DatabaseLayout databaseLayout = database.getDatabase().getDatabaseLayout();
+        assertNotEquals( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
+        assertTrue( databaseLayout.databaseDirectory().exists() );
+        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
 
         databaseManager.dropDatabase( databaseToDrop );
-        assertFalse( databaseDirectory.exists() );
+        assertFalse( databaseLayout.databaseDirectory().exists() );
+        assertFalse( databaseLayout.getTransactionLogsDirectory().exists() );
     }
 
     @Test
@@ -203,11 +207,13 @@ class MultiDatabaseManagerIT
         String databaseToStop = "databaseToStop";
         DatabaseContext database = databaseManager.createDatabase( databaseToStop );
 
-        File databaseDirectory = database.getDatabase().getDatabaseLayout().databaseDirectory();
-        assertTrue( databaseDirectory.exists() );
+        DatabaseLayout databaseLayout = database.getDatabase().getDatabaseLayout();
+        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
+        assertTrue( databaseLayout.databaseDirectory().exists() );
 
         databaseManager.stopDatabase( databaseToStop );
-        assertTrue( databaseDirectory.exists() );
+        assertTrue( databaseLayout.databaseDirectory().exists() );
+        assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
     }
 
     @Test
