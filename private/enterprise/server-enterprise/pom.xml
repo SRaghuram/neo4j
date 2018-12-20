@@ -60,7 +60,10 @@
             <artifactId>neo4j-security-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>annotations</artifactId>
