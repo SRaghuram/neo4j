@@ -5,13 +5,13 @@
   <parent>
     <groupId>com.neo4j</groupId>
     <artifactId>cypher-enterprise-parent</artifactId>
-    <version>3.5.1-SNAPSHOT</version>
+    <version>3.5.2-SNAPSHOT</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <artifactId>neo4j-cypher-morsel-runtime</artifactId>
   <packaging>jar</packaging>
-  <version>3.5.1-SNAPSHOT</version>
+  <version>3.5.2-SNAPSHOT</version>
   <name>Neo4j - Cypher Morsel Runtime</name>
   <description>Parallel runtime for Cypher</description>
   <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
