@@ -214,7 +214,10 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
              _: plans.Skip | // Skip pipe eagerly drops n rows upfront which does not work with feed pipe
              _: plans.Eager | // We do not support eager plans since the resulting iterators cannot be recreated and fed a single input row at a time
              _: plans.EmptyResult | // Eagerly exhausts the source iterator
-             _: plans.Distinct => // Even though the Distinct pipe is not really eager it still keeps state
+             _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
+             _: plans.ProcedureCall => // Even READ_ONLY Procedures are not allowed because they will/might access the
+                                       // transaction via Core API reads, which is not thread safe because of the transaction
+                                       // bound CursorFactory.
           throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
 
         // Fallback to use a lazy slotted pipe
