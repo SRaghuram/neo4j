@@ -75,6 +75,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
       while (outputRow.isValidRow && next()) {
+        outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, nodeCursor.nodeReference())
         var i = 0
         while (i < indexPropertyIndices.length) {

@@ -423,9 +423,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     graph.createIndex("Label", "property")
 
     // when
-    val result = executeWith(Configs.All,
-      "match (a:Label), (b:Label) where a.property = b.property return *",
-    expectedDifferentResults = Configs.Morsel) // TODO: morsel runtime returns wrong result
+    val result = executeWith(Configs.All, "MATCH (a:Label), (b:Label) WHERE a.property = b.property RETURN *")
 
     // then does not throw exceptions
     assert(result.toSet === Set(
