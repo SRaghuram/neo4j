@@ -220,7 +220,7 @@ class FulltextIndexBackupIT
         Path backupDir = dir.directory( BACKUP_DIR_NAME ).toPath();
 
         OnlineBackupContext context = OnlineBackupContext.builder()
-                .withHostnamePort( backupAddress.getHost(), backupAddress.getPort() )
+                .withAddress( backupAddress.getHost(), backupAddress.getPort() )
                 .withBackupName( backupName )
                 .withBackupDirectory( backupDir )
                 .withReportsDirectory( backupDir )

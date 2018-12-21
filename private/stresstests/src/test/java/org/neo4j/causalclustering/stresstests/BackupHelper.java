@@ -56,7 +56,7 @@ class BackupHelper
         try
         {
             OnlineBackupContext context = OnlineBackupContext.builder()
-                    .withHostnamePort( address.getHostname(), address.getPort() )
+                    .withAddress( address.getHostname(), address.getPort() )
                     .withBackupName( backupName )
                     .withBackupDirectory( baseBackupDir.toPath() )
                     .withReportsDirectory( baseBackupDir.toPath() )

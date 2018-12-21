@@ -18,17 +18,21 @@ import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.commandline.arguments.common.MandatoryCanonicalPath;
 import org.neo4j.commandline.arguments.common.OptionalCanonicalPath;
+import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.util.OptionalHostnamePort;
+import org.neo4j.kernel.impl.util.Converters;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.kernel.impl.util.Converters.toOptionalHostnamePortFromRawAddress;
 
 class OnlineBackupContextFactory
 {
+    static final String DEFAULT_BACKUP_HOSTNAME = "localhost";
+
     static final String ARG_NAME_BACKUP_DIRECTORY = "backup-dir";
     static final String ARG_DESC_BACKUP_DIRECTORY = "Directory to place backup in.";
 
@@ -38,7 +42,7 @@ class OnlineBackupContextFactory
 
     static final String ARG_NAME_BACKUP_SOURCE = "from";
     static final String ARG_DESC_BACKUP_SOURCE = "Host and port of Neo4j.";
-    static final String ARG_DFLT_BACKUP_SOURCE = "localhost:6362";
+    static final String ARG_DFLT_BACKUP_SOURCE = DEFAULT_BACKUP_HOSTNAME + ":" + DEFAULT_BACKUP_PORT;
 
     static final String ARG_NAME_DATABASE_NAME = "database";
     static final String ARG_DESC_DATABASE_NAME = "Name of the remote database to backup.";
@@ -125,7 +129,7 @@ class OnlineBackupContextFactory
             Arguments arguments = arguments();
             arguments.parse( args );
 
-            OptionalHostnamePort address = toOptionalHostnamePortFromRawAddress( arguments.get( ARG_NAME_BACKUP_SOURCE ) );
+            AdvertisedSocketAddress address = getAddress( arguments );
 
             Path backupDirectory = getBackupDirectory( arguments );
             String backupName = arguments.get( ARG_NAME_BACKUP_NAME );
@@ -153,7 +157,7 @@ class OnlineBackupContextFactory
             config.augment( "metrics.enabled", Settings.FALSE );
 
             return OnlineBackupContext.builder()
-                    .withHostnamePort( address )
+                    .withAddress( address )
                     .withDatabaseName( arguments.get( ARG_NAME_DATABASE_NAME ) )
                     .withBackupName( backupName )
                     .withBackupDirectory( backupDirectory )
@@ -175,6 +179,13 @@ class OnlineBackupContextFactory
         {
             throw new CommandFailed( e.getMessage(), e );
         }
+    }
+
+    private AdvertisedSocketAddress getAddress( Arguments arguments )
+    {
+        String addressString = arguments.get( ARG_NAME_BACKUP_SOURCE );
+        HostnamePort hostnamePort = new HostnamePort( addressString );
+        return Converters.toSocketAddress( hostnamePort, DEFAULT_BACKUP_HOSTNAME, DEFAULT_BACKUP_PORT, AdvertisedSocketAddress::new );
     }
 
     private Path getBackupDirectory( Arguments arguments ) throws CommandFailed

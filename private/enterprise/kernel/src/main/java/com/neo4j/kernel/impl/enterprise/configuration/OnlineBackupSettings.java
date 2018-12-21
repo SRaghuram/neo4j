@@ -26,11 +26,13 @@ import static org.neo4j.kernel.configuration.Settings.setting;
 @Description( "Online backup configuration settings" )
 public class OnlineBackupSettings implements LoadableConfig
 {
+    public static final int DEFAULT_BACKUP_PORT = 6362;
+
     @Description( "Enable support for running online backups." )
     public static final Setting<Boolean> online_backup_enabled = setting( "dbms.backup.enabled", BOOLEAN, TRUE );
 
     @Description( "Network interface and port for the backup server to listen on." )
-    public static final Setting<ListenSocketAddress> online_backup_listen_address = listenAddress( "dbms.backup.listen_address", 6362 );
+    public static final Setting<ListenSocketAddress> online_backup_listen_address = listenAddress( "dbms.backup.listen_address", DEFAULT_BACKUP_PORT );
 
     @Description( "Name of the SSL policy to be used by backup, as defined under the dbms.ssl.policy.* settings." +
             " If no policy is configured then the communication will not be secured." )

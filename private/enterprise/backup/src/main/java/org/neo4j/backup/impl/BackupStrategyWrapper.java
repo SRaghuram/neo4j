@@ -8,11 +8,11 @@ package org.neo4j.backup.impl;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
@@ -59,8 +59,7 @@ class BackupStrategyWrapper
     private void performBackupWithoutLifecycle( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
         Path backupLocation = onlineBackupContext.getResolvedLocationFromName();
-        OptionalHostnamePort userSpecifiedAddress = onlineBackupContext.getRequiredArguments().getAddress();
-        log.debug( "User specified address is %s:%s", userSpecifiedAddress.getHostname().toString(), userSpecifiedAddress.getPort().toString() );
+        AdvertisedSocketAddress address = onlineBackupContext.getRequiredArguments().getAddress();
         Config config = onlineBackupContext.getConfig();
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation.toFile() );
 
@@ -70,7 +69,7 @@ class BackupStrategyWrapper
         if ( previousBackupExists )
         {
             log.info( "Previous backup found, trying incremental backup." );
-            if ( tryIncrementalBackup( backupLayout, config, userSpecifiedAddress, fallbackToFull ) )
+            if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull ) )
             {
                 return;
             }
@@ -92,12 +91,12 @@ class BackupStrategyWrapper
         }
     }
 
-    private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, OptionalHostnamePort address, boolean fallbackToFullAllowed )
+    private boolean tryIncrementalBackup( DatabaseLayout backupLayout, Config config, AdvertisedSocketAddress address, boolean fallbackToFullAllowed )
             throws BackupExecutionException
     {
         try
         {
-            backupStrategy.performIncrementalBackup( backupLayout, config, address );
+            backupStrategy.performIncrementalBackup( backupLayout, address );
             performRecovery( config, backupLayout );
             clearIdFiles( backupLayout );
             return true;
@@ -131,9 +130,9 @@ class BackupStrategyWrapper
         Path userSpecifiedBackupLocation = onlineBackupContext.getResolvedLocationFromName();
         Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
 
-        OptionalHostnamePort address = onlineBackupContext.getRequiredArguments().getAddress();
+        AdvertisedSocketAddress address = onlineBackupContext.getRequiredArguments().getAddress();
         DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
-        backupStrategy.performFullBackup( backupLayout, onlineBackupContext.getConfig(), address );
+        backupStrategy.performFullBackup( backupLayout, address );
 
         performRecovery( onlineBackupContext.getConfig(), backupLayout );
         clearIdFiles( backupLayout );

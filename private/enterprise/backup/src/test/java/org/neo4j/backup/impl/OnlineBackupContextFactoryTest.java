@@ -27,6 +27,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -34,8 +35,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.backup.impl.OnlineBackupContextFactory.DEFAULT_BACKUP_HOSTNAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
@@ -61,25 +62,25 @@ class OnlineBackupContextFactoryTest
     }
 
     @Test
-    void unspecifiedHostnameIsEmptyOptional() throws Exception
+    void unspecifiedHostnameFallsBackToDefault() throws Exception
     {
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=:1234" ) );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertFalse( requiredArguments.getAddress().getHostname().isPresent() );
-        assertEquals( 1234, requiredArguments.getAddress().getPort().get().intValue() );
+        assertEquals( DEFAULT_BACKUP_HOSTNAME, requiredArguments.getAddress().getHostname() );
+        assertEquals( 1234, requiredArguments.getAddress().getPort() );
     }
 
     @Test
-    void unspecifiedPortIsEmptyOptional() throws Exception
+    void unspecifiedPortFallsBackToDefault() throws Exception
     {
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=abc" ) );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( "abc", requiredArguments.getAddress().getHostname().get() );
-        assertFalse( requiredArguments.getAddress().getPort().isPresent() );
+        assertEquals( "abc", requiredArguments.getAddress().getHostname() );
+        assertEquals( DEFAULT_BACKUP_PORT, requiredArguments.getAddress().getPort() );
     }
 
     @Test
@@ -88,8 +89,9 @@ class OnlineBackupContextFactoryTest
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=foo.bar.server:" ) );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
-        assertEquals( "foo.bar.server", requiredArguments.getAddress().getHostname().get() );
-        assertFalse( requiredArguments.getAddress().getPort().isPresent() );
+
+        assertEquals( "foo.bar.server", requiredArguments.getAddress().getHostname() );
+        assertEquals( DEFAULT_BACKUP_PORT, requiredArguments.getAddress().getPort() );
     }
 
     @Test
@@ -98,8 +100,9 @@ class OnlineBackupContextFactoryTest
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=:1234" ) );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
-        assertFalse( requiredArguments.getAddress().getHostname().isPresent() );
-        assertEquals( 1234, requiredArguments.getAddress().getPort().get().intValue() );
+
+        assertEquals( DEFAULT_BACKUP_HOSTNAME, requiredArguments.getAddress().getHostname() );
+        assertEquals( 1234, requiredArguments.getAddress().getPort() );
     }
 
     @Test
@@ -108,8 +111,9 @@ class OnlineBackupContextFactoryTest
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=foo.bar.server:1234" ) );
         OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
-        assertEquals( "foo.bar.server", requiredArguments.getAddress().getHostname().get() );
-        assertEquals( 1234, requiredArguments.getAddress().getPort().get().intValue() );
+
+        assertEquals( "foo.bar.server", requiredArguments.getAddress().getHostname() );
+        assertEquals( 1234, requiredArguments.getAddress().getPort() );
     }
 
     @Test
@@ -275,8 +279,8 @@ class OnlineBackupContextFactoryTest
         OnlineBackupContext context = builder.createContext( requiredAnd( "--from=[fd00:ce10::2]:6362" ) );
 
         // then
-        assertEquals( "fd00:ce10::2", context.getRequiredArguments().getAddress().getHostname().get() );
-        assertEquals( Integer.valueOf( 6362 ), context.getRequiredArguments().getAddress().getPort().get() );
+        assertEquals( "fd00:ce10::2", context.getRequiredArguments().getAddress().getHostname() );
+        assertEquals( 6362, context.getRequiredArguments().getAddress().getPort() );
     }
 
     private String[] requiredAnd( String... additionalArgs )

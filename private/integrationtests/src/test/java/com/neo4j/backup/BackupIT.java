@@ -768,7 +768,7 @@ class BackupIT
         Path dir = backupDatabasePath.getParentFile().toPath();
 
         OnlineBackupContext context = OnlineBackupContext.builder()
-                .withHostnamePort( hostname, port )
+                .withAddress( hostname, port )
                 .withBackupDirectory( dir )
                 .withReportsDirectory( dir )
                 .withFallbackToFullBackup( fallbackToFull )

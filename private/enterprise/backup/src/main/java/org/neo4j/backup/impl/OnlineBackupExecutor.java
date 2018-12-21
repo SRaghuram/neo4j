@@ -27,7 +27,6 @@ public class OnlineBackupExecutor
     private final ProgressMonitorFactory progressMonitorFactory;
     private final Monitors monitors;
 
-    private final AddressResolver addressResolver = new AddressResolver();
     private final ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
 
     private OnlineBackupExecutor( Builder builder )
@@ -58,7 +57,7 @@ public class OnlineBackupExecutor
             StoreFiles storeFiles = new StoreFiles( fs, pageCache );
             BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ) );
 
-            BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), addressResolver, logProvider, storeFiles );
+            BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), logProvider, storeFiles );
             BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, logProvider );
 
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, logProvider, progressMonitorFactory, wrapper );

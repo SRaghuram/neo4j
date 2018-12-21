@@ -77,7 +77,7 @@ class BackupLoad extends Workload
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         OnlineBackupContext context = OnlineBackupContext.builder()
-                .withHostnamePort( host, port )
+                .withAddress( host, port )
                 .withBackupDirectory( targetDir )
                 .withReportsDirectory( targetDir )
                 .withFallbackToFullBackup( true )

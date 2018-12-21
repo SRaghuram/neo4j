@@ -8,11 +8,11 @@ package org.neo4j.backup.impl;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import org.neo4j.kernel.impl.util.OptionalHostnamePort;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 
 class OnlineBackupRequiredArguments
 {
-    private final OptionalHostnamePort address;
+    private final AdvertisedSocketAddress address;
     private final String databaseName;
     private final Path directory;
     private final String name;
@@ -20,7 +20,7 @@ class OnlineBackupRequiredArguments
     private final boolean doConsistencyCheck;
     private final Path reportDir;
 
-    OnlineBackupRequiredArguments( OptionalHostnamePort address, String databaseName, Path directory, String name,
+    OnlineBackupRequiredArguments( AdvertisedSocketAddress address, String databaseName, Path directory, String name,
             boolean fallbackToFull, boolean doConsistencyCheck, Path reportDir )
     {
         this.address = address;
@@ -32,7 +32,7 @@ class OnlineBackupRequiredArguments
         this.reportDir = reportDir;
     }
 
-    public OptionalHostnamePort getAddress()
+    public AdvertisedSocketAddress getAddress()
     {
         return address;
     }

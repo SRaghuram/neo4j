@@ -15,8 +15,6 @@ import org.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedExcepti
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -26,22 +24,20 @@ import static java.lang.String.format;
 class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
 {
     private final BackupDelegator backupDelegator;
-    private final AddressResolver addressResolver;
     private final Log log;
     private final StoreFiles storeFiles;
 
-    DefaultBackupStrategy( BackupDelegator backupDelegator, AddressResolver addressResolver, LogProvider logProvider, StoreFiles storeFiles )
+    DefaultBackupStrategy( BackupDelegator backupDelegator, LogProvider logProvider, StoreFiles storeFiles )
     {
         this.backupDelegator = backupDelegator;
-        this.addressResolver = addressResolver;
         this.log = logProvider.getLog( DefaultBackupStrategy.class );
         this.storeFiles = storeFiles;
     }
 
     @Override
-    public void performFullBackup( DatabaseLayout targetDbLayout, Config config, OptionalHostnamePort address ) throws BackupExecutionException
+    public void performFullBackup( DatabaseLayout targetDbLayout, AdvertisedSocketAddress address ) throws BackupExecutionException
     {
-        BackupInfo backupInfo = prepareForBackup( targetDbLayout, config, address );
+        BackupInfo backupInfo = prepareForBackup( targetDbLayout, address );
 
         if ( backupInfo.localStoreId != null )
         {
@@ -61,9 +57,9 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     }
 
     @Override
-    public void performIncrementalBackup( DatabaseLayout targetDbLayout, Config config, OptionalHostnamePort address ) throws BackupExecutionException
+    public void performIncrementalBackup( DatabaseLayout targetDbLayout, AdvertisedSocketAddress address ) throws BackupExecutionException
     {
-        BackupInfo backupInfo = prepareForBackup( targetDbLayout, config, address );
+        BackupInfo backupInfo = prepareForBackup( targetDbLayout, address );
 
         if ( !Objects.equals( backupInfo.localStoreId, backupInfo.remoteStoreId ) )
         {
@@ -86,21 +82,19 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
         backupDelegator.stop();
     }
 
-    private BackupInfo prepareForBackup( DatabaseLayout databaseLayout, Config config, OptionalHostnamePort userProvidedAddress )
-            throws BackupExecutionException
+    private BackupInfo prepareForBackup( DatabaseLayout databaseLayout, AdvertisedSocketAddress address ) throws BackupExecutionException
     {
         try
         {
-            AdvertisedSocketAddress remoteAddress = addressResolver.resolveCorrectAddress( config, userProvidedAddress );
-            log.info( "Resolved address for backup is " + remoteAddress );
+            log.info( "Remote backup address is " + address );
 
-            StoreId remoteStoreId = backupDelegator.fetchStoreId( remoteAddress );
+            StoreId remoteStoreId = backupDelegator.fetchStoreId( address );
             log.info( "Remote store id is " + remoteStoreId );
 
             StoreId localStoreId = readLocalStoreId( databaseLayout );
             log.info( "Local store id is " + remoteStoreId );
 
-            return new BackupInfo( remoteAddress, remoteStoreId, localStoreId );
+            return new BackupInfo( address, remoteStoreId, localStoreId );
         }
         catch ( StoreIdDownloadFailedException e )
         {

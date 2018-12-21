@@ -13,9 +13,9 @@ import java.nio.file.Paths;
 import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 
 public class OnlineBackupContext
 {
@@ -57,7 +57,7 @@ public class OnlineBackupContext
 
     public static final class Builder
     {
-        private OptionalHostnamePort hostnamePort;
+        private AdvertisedSocketAddress address;
         private String databaseName;
         private Path backupDirectory;
         private String backupName;
@@ -74,15 +74,14 @@ public class OnlineBackupContext
         {
         }
 
-        public Builder withHostnamePort( String hostname, int port )
+        public Builder withAddress( String hostname, int port )
         {
-            this.hostnamePort = new OptionalHostnamePort( hostname, port, null );
-            return this;
+            return withAddress( new AdvertisedSocketAddress( hostname, port ) );
         }
 
-        public Builder withHostnamePort( OptionalHostnamePort hostnamePort )
+        public Builder withAddress( AdvertisedSocketAddress address )
         {
-            this.hostnamePort = hostnamePort;
+            this.address = address;
             return this;
         }
 
@@ -159,24 +158,24 @@ public class OnlineBackupContext
                 config = Config.defaults();
             }
 
-            OptionalHostnamePort address = buildAddress();
+            AdvertisedSocketAddress address = buildAddress();
             OnlineBackupRequiredArguments requiredArgs = buildRequiredArgs( address );
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
 
             return new OnlineBackupContext( requiredArgs, config, consistencyFlags );
         }
 
-        private OptionalHostnamePort buildAddress()
+        private AdvertisedSocketAddress buildAddress()
         {
-            if ( hostnamePort == null )
+            if ( address == null )
             {
-                ListenSocketAddress defaultAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
-                hostnamePort = new OptionalHostnamePort( defaultAddress.getHostname(), defaultAddress.getPort(), null );
+                ListenSocketAddress defaultListenAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
+                address = new AdvertisedSocketAddress( defaultListenAddress.getHostname(), defaultListenAddress.getPort() );
             }
-            return hostnamePort;
+            return address;
         }
 
-        private OnlineBackupRequiredArguments buildRequiredArgs( OptionalHostnamePort address )
+        private OnlineBackupRequiredArguments buildRequiredArgs( AdvertisedSocketAddress address )
         {
             if ( databaseName == null )
             {
