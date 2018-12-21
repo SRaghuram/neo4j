@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.cypher.RuntimeUnsupportedException
+import cypher.features.Phase
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.planDescription.Argument
 import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{PlannerVersion => IPDPlannerVersion}
@@ -46,16 +46,20 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
       fail(s"did not use ${version.acceptedPlannerVersionNames} planner version - instead $reportedPlannerVersion was used. Scenario $name")
   }
 
-  def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult]): Unit = {
+  def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult], maybePhase: Option[String]): Unit = {
     internalExecutionResult match {
-      case Failure(_: RuntimeUnsupportedException) => // This is expected and ok
+      case Failure(_) if maybePhase.contains(Phase.compile) =>
+        // A compile-time failure is expected and ok
+      case Failure(_) if maybePhase.isEmpty =>
+        // Not executed is also expected and ok
       case Failure(e) =>
-        fail(s"""Failed at runtime using $name for query:
+        val phase = maybePhase.get
+        fail(s"""Failed at $phase using $name for query:
                 |
                 |$query
                 |
-                |(NOTE: This test is marked as expected to fail, but failing at runtime is not ok)
-                |""".stripMargin)
+                |(NOTE: This test is marked as expected to fail, but failing at $phase is not ok)
+                |""".stripMargin, e)
       case Success(result) =>
         val ScenarioConfig(reportedRuntimeName, reportedPlannerName, reportedVersionName, reportedPlannerVersionName) = extractConfiguration(result)
 

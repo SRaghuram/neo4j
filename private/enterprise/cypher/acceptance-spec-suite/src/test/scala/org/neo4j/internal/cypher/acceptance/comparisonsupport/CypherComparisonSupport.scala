@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import cypher.features.Phase
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.v4_0.util.Eagerly
@@ -299,9 +300,10 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
 
     def execute() = {
       executeBefore()
+      val queryWithPreparserOptions = s"CYPHER ${scenario.preparserOptions} $query"
       val tryRes =
         if (expectedToSucceed || executeExpectedFailures) {
-          Try(innerExecute(s"CYPHER ${scenario.preparserOptions} $query", params))
+          Try(innerExecute(queryWithPreparserOptions, params))
         } else {
           Failure(NotExecutedException)
         }
@@ -324,7 +326,17 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
             fail(s"Expected to succeed in ${scenario.name} but got exception", e)
         }
       } else {
-        scenario.checkResultForFailure(query, tryRes)
+        val maybePhase = tryRes match {
+          case Success(_) => None
+          case Failure(NotExecutedException) => None
+          case Failure(_) =>
+            // Re-run the query with EXPLAIN to determine if the failure was at compile-time or runtime
+            Some(Try(innerExecute(s"EXPLAIN $queryWithPreparserOptions", params)) match {
+              case Failure(_) => Phase.compile
+              case Success(_) => Phase.runtime
+            })
+        }
+        scenario.checkResultForFailure(query, tryRes, maybePhase)
         None
       }
     }
