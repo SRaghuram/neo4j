@@ -855,7 +855,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate(n3, createNode())
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH p=(n)-[*0..3]-() RETURN size(COLLECT(DISTINCT p)) AS size", ignoreMorsel = true)
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH p=(n)-[*0..3]-() RETURN size(COLLECT(DISTINCT p)) AS size")
 
     // Then
     result.toList should equal(List(Map("size" -> 8)))

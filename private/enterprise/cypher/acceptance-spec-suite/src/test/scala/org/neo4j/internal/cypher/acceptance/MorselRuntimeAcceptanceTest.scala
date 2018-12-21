@@ -362,7 +362,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
                      |CREATE (zadie)-[:WROTE]->(:BOOK {book: "Swing Time"})""".stripMargin)
 
     // When
-    val result = graph.execute("CYPHER runtime=morsel MATCH (a)-[r]->(b) RETURN b.book as book, count(r), count(distinct a)")
+    val result = graph.execute("CYPHER runtime=morsel MATCH (a)-[r]->(b) RETURN b.book as book, count(r), count(a)")
 
     // Then
     asScalaResult(result).toList should not be empty

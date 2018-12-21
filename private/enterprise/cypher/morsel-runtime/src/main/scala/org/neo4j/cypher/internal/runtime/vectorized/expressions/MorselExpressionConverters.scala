@@ -27,17 +27,32 @@ object MorselExpressionConverters extends ExpressionConverter {
   override def toCommandExpression(id: Id, expression: ast.Expression,
                                    self: ExpressionConverters): Option[Expression] = expression match {
 
-    case c: FunctionInvocation if c.function == functions.Count =>
-      Some(CountOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
-    case c: FunctionInvocation if c.function == functions.Avg =>
-      Some(AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
-    case c: FunctionInvocation if c.function == functions.Max =>
-      Some(MaxOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
-    case c: FunctionInvocation if c.function == functions.Min =>
-      Some(MinOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
-    case c: FunctionInvocation if c.function == functions.Collect =>
-      Some(CollectOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
     case _: CountStar => Some(CountStarOperatorExpression)
+    case c: FunctionInvocation =>
+      c.function match {
+        case _: AggregatingFunction if c.distinct =>
+          throw new CantCompileQueryException("Distinct aggregating functions are not yet supported by the morsel runtime")
+
+        case functions.Count =>
+          Some(CountOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+
+        case functions.Avg =>
+          Some(AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+
+        case functions.Max =>
+          Some(MaxOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+
+        case functions.Min =>
+          Some(MinOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+
+        case functions.Collect =>
+          Some(CollectOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+
+        case _: AggregatingFunction if c.distinct =>
+          throw new CantCompileQueryException(s"Aggregating function ${c.name} is not yet supported by the morsel runtime")
+
+        case _ => None
+      }
 
     // We need to convert NestedPipeExpression here so we can register a noop dummy pipe as owner
     // TODO: Later we may want to establish a connection with the id of the operator for proper PROFILE support
@@ -48,7 +63,6 @@ object MorselExpressionConverters extends ExpressionConverter {
     }
 
     //Queries containing these expression cant be handled by morsel runtime yet
-    case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => throw new CantCompileQueryException()
     case e: NestedPlanExpression => throw new CantCompileQueryException(s"$e is not yet supported by the morsel runtime")
 
     //UDFs may contain arbitrary CORE API reads which are not thread-safe. We only allow those that are explicitly marked as such
