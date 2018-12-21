@@ -156,10 +156,9 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should correctly project cached node property through ORDER BY") {
-    // TODO: morsel runtime breaks order
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       "MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds",
-      executeBefore = createSomeNodes, ignoreMorselRuntimeFailures = true, expectedDifferentResults = Configs.Morsel)
+      executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Apply")
@@ -248,7 +247,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     val result = executeWith(Configs.InterpretedAndSlotted,
       "PROFILE MATCH (n:Awesome {prop1: 40})-[:R]-(b) WITH DISTINCT n, b MATCH (b)-[:R2]->() RETURN n.prop1",
-      executeBefore = createSomeNodes, expectedDifferentResults = Configs.Morsel) // TODO: morsel runtime returns wrong result
+      executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection")
@@ -395,8 +394,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |MATCH (n:Awesome) WHERE n.prop1 = 42
         |RETURN n.prop1, `n.prop1` AS trap""".stripMargin
 
-    // TODO: morsel fails at runtime with NullPointerException
-    val result = executeWith(Configs.All - Configs.Morsel, query, ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.All, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> 42, "trap" -> "Whoops!")))
   }

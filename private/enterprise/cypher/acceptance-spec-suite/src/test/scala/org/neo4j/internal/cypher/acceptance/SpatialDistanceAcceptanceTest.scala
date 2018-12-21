@@ -217,7 +217,6 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     }
   }
 
-  // TODO: morsel fails at runtime with NullPointerException
   test("indexed points with distance query and points within bbox") {
     // Given
     graph.createIndex("Place", "location")
@@ -274,7 +273,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, -10)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
     }
     // < geographic
     {
@@ -289,7 +288,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       val expected = Set(
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
     }
   }
 
@@ -316,8 +315,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
-      // TODO: morsel fails at runtime with NullPointerException
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
     }
   }
 
@@ -392,11 +390,9 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, -180, -10)),
       Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 180, -10))
     )
-    // TODO: morsel fails at runtime with NullPointerException
-    expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
+    expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
   }
 
-  // TODO: morsel fails at runtime with NullPointerException
   test("indexed 3D points with distance query and points within bbox") {
     // Given
     graph.createIndex("Place", "location")
@@ -457,7 +453,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, -1000000)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, 1000000))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
     }
     // < geographic
     {
@@ -474,11 +470,10 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, -1000000)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, 0, 1000000))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
     }
   }
 
-  // TODO: morsel fails at runtime with NullPointerException
   test("doughnut shape query uses the index") {
     // Given
     graph.createIndex("Place", "location")
@@ -532,7 +527,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, -10, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 0, -10))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
     }
     // < geographic
     {
@@ -545,11 +540,10 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
       // Then
       val expected = Set.empty
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
     }
   }
 
-  // TODO: morsel fails at runtime with NullPointerException
   test("doughnut shape query uses the index in 3D") {
     // Given
     graph.createIndex("Place", "location")
@@ -603,7 +597,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, -10, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84_3D, 0, -10, 0))
       )
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = true)
     }
     // < geographic
     {
@@ -616,7 +610,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
       // Then
       val expected = Set.empty
-      expectResultsAndIndexUsage(query, expected, inclusiveRange = false, Configs.InterpretedAndSlotted)
+      expectResultsAndIndexUsage(query, expected, inclusiveRange = false)
     }
   }
 
@@ -782,7 +776,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   private def expectResultsAndIndexUsage(query: String, expectedResults: Set[_ <: Any], inclusiveRange: Boolean,
                                          config: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel): Unit = {
-    val result = executeWith(config, query, ignoreMorselRuntimeFailures = true)
+    val result = executeWith(config, query)
 
     // Then
     val plan = result.executionPlanDescription()

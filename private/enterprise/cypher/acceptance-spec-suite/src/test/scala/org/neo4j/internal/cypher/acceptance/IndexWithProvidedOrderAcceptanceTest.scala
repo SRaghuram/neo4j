@@ -100,10 +100,9 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     }
 
     test(s"$cypherToken: Order by index backed property in a plan with an Apply") {
-      // TODO: morsel runtime breaks order
       val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
         s"MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds $cypherToken",
-        executeBefore = createSomeNodes, ignoreMorselRuntimeFailures = true, expectedDifferentResults = Configs.Morsel)
+        executeBefore = createSomeNodes)
 
       result.executionPlanDescription() should (
         not(includeSomewhere.aPlan("Sort")) and
