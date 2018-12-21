@@ -98,7 +98,7 @@ case class Constant(value: Any) extends IntermediateRepresentation
   *
   * @param values the values of the array
   */
-case class ArrayLiteral(values: Array[IntermediateRepresentation]) extends IntermediateRepresentation
+case class ArrayLiteral(typ: TypeReference, values: Array[IntermediateRepresentation]) extends IntermediateRepresentation
 
 /**
   * Defines ternary expression, i.e. {{{condition ? onTrue : onFalse}}}
@@ -446,7 +446,8 @@ object IntermediateRepresentation {
 
   def constant(value: Any): IntermediateRepresentation = Constant(value)
 
-  def arrayOf(values: IntermediateRepresentation*): IntermediateRepresentation = ArrayLiteral(values.toArray)
+  def arrayOf[T](values: IntermediateRepresentation*)(implicit t: Manifest[T]): IntermediateRepresentation =
+    ArrayLiteral(typeRef(t), values.toArray)
 
   def ternary(condition: IntermediateRepresentation,
               onTrue: IntermediateRepresentation,

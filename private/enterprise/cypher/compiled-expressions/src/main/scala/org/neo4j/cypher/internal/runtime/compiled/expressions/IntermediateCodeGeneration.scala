@@ -28,8 +28,9 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual._
 
+import scala.annotation.tailrec
 import scala.collection.mutable
-
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * Produces IntermediateRepresentation from a Cypher Expression
@@ -113,12 +114,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     val getKey =
       if (singleValue) getKeyOps.head
-      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf(getKeyOps:_*))
+      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](getKeyOps:_*))
 
     val computeKeyOps = groupingsOrdered.map(_._2).map(p => nullCheck(p)(p.ir)).toArray
     val computeKey =
       if (singleValue) computeKeyOps.head
-      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf(computeKeyOps:_*))
+      else invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](computeKeyOps:_*))
 
     IntermediateGroupingExpression(
       IntermediateExpression(block(projectKey:_*), Seq.empty, Seq.empty, Set.empty),
@@ -221,7 +222,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val fields: Seq[Field] = in.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields)
         val variables: Seq[LocalVariable] = in.foldLeft(Seq.empty[LocalVariable])((a, b) => a ++ b.variables)
         Some(IntermediateExpression(
-          invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf(in.map(_.ir): _*)),
+          invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](in.map(_.ir): _*)),
           fields, variables, Set.empty))
       }
 
@@ -1385,7 +1386,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           case Some(token) =>
             (oneTime(assign(variableName,
               invoke(DB_ACCESS, method[DbAccess, AnyValue, Int, Array[AnyValue], Array[String]]("callFunction"),
-                   constant(token), arrayOf(inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), None)
+                   constant(token), arrayOf[AnyValue](inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), None)
           case None =>
             import scala.collection.JavaConverters._
             val kernelName = new QualifiedName(signature.name.namespace.asJava, signature.name.name)
@@ -1393,11 +1394,25 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             val name = staticConstant[QualifiedName](namer.nextVariableName(), kernelName)
             (oneTime(assign(variableName,
             invoke(DB_ACCESS, method[DbAccess, AnyValue, QualifiedName, Array[AnyValue], Array[String]]("callFunction"),
-                   getStatic[QualifiedName](name.name), arrayOf(inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), Some(name))
+                   getStatic[QualifiedName](name.name), arrayOf[AnyValue](inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), Some(name))
         }
 
         Some(IntermediateExpression(block(ops, load(variableName)), fields ++ maybeField, variables, Set(equal(load(variableName), noValue))))
       }
+
+
+    case PathExpression(steps) =>
+
+      @tailrec
+      def isStaticallyKnown(step: PathStep): Boolean = step match {
+        case NodePathStep(_, next) => isStaticallyKnown(next)
+        case SingleRelationshipPathStep(_, _, next) => isStaticallyKnown(next)
+        case MultiRelationshipPathStep(_, _, _) => false
+        case NilPathStep => true
+      }
+
+      if (isStaticallyKnown(steps)) compileStaticPath(currentContext, steps)
+      else None
 
     //slotted operations
     case ReferenceFromSlot(offset, name) =>
@@ -2307,6 +2322,73 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
                              collection.variables ++ inner.variables,
                              collection.nullCheck)
+    }
+  }
+
+  /**
+    *
+    * Used when compiling paths where the size of the path is known at compile time, e.g. (a)-[r1]->(b)<-[r2]-(c)-[r3]-(d)
+    *
+    * The generated code will do something along the line of
+    *
+    * return VirtualValues.path( new NodeValue[]{a, b, c, d), new RelationshipValue[]{r1, r2, r3};
+    */
+  private def compileStaticPath(currentContext: Option[IntermediateRepresentation], steps: PathStep) = {
+
+    @tailrec
+    def compileSteps(step: PathStep,
+                     nodeOps: Seq[IntermediateExpression] = ArrayBuffer.empty,
+                     relOps: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[(Seq[IntermediateExpression], Seq[IntermediateExpression])] = step match {
+      case NodePathStep(node, next) => compileSteps(next, nodeOps ++ internalCompileExpression(node, currentContext), relOps)
+
+      case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, next) => internalCompileExpression(rel,
+                                                                                                      currentContext) match {
+        case Some(compiled) =>
+          val node = IntermediateExpression(
+            invoke(cast[RelationshipValue](compiled.ir),
+                   method[RelationshipValue, NodeValue, VirtualNodeValue]("otherNode"), nodeOps.last.ir),
+            compiled.fields, compiled.variables, compiled.nullCheck ++ nodeOps.last.nullCheck)
+          compileSteps(next, nodeOps :+ node, relOps :+ compiled)
+        case None => None
+      }
+
+      case SingleRelationshipPathStep(rel, direction, next) => internalCompileExpression(rel, currentContext) match {
+        case Some(compiled) =>
+          val methodName = if (direction == SemanticDirection.INCOMING) "startNode" else "endNode"
+          val node = IntermediateExpression(
+            invoke(cast[RelationshipValue](compiled.ir),
+                   method[RelationshipValue, NodeValue](methodName)),
+            compiled.fields, compiled.variables, compiled.nullCheck)
+          compileSteps(next, nodeOps :+ node, relOps :+ compiled)
+        case None => None
+      }
+
+      case MultiRelationshipPathStep(_, _, _) => throw new IllegalStateException("Cannot be used for static paths")
+      case NilPathStep => Some((nodeOps, relOps))
+    }
+
+    for ((nodeOps, relOps) <- compileSteps(steps) ) yield {
+      val variableName = namer.nextVariableName()
+      val local = variable[AnyValue](variableName, noValue)
+      val lazySet = oneTime(assign(variableName,
+                                   nullCheck(nodeOps ++ relOps: _*)(
+                                     invokeStatic(
+                                       method[VirtualValues, PathValue, Array[NodeValue], Array[RelationshipValue]](
+                                         "path"),
+                                       arrayOf[NodeValue](nodeOps.map(_.ir): _*),
+                                       arrayOf[RelationshipValue](relOps.map(_.ir): _*))
+                                   )))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks =
+        if (nodeOps.forall(_.nullCheck.isEmpty) && relOps.forall(_.nullCheck.isEmpty)) Set
+          .empty[IntermediateRepresentation]
+        else Set(block(lazySet, equal(load(variableName), noValue)))
+
+      IntermediateExpression(ops,
+                             nodeOps.flatMap(_.fields) ++ relOps.flatMap(_.fields),
+                             nodeOps.flatMap(_.variables) ++ relOps.flatMap(_.variables) :+ local,
+                             nullChecks)
     }
   }
 }

@@ -2634,6 +2634,114 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     verify(context).setLongAt(47, nodeId)
   }
 
+  test("single outgoing path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 2)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    addNodes(context, dbAccess, n1, n2)
+    addRelationships(context, dbAccess, r)
+
+    //when
+    //p = (n1)-[r]->(n2)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                   SemanticDirection.OUTGOING, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+  }
+
+  test("single incoming path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 2)
+    val r = RelAt(relationship(1337, n2.node, n1.node), 1)
+    addNodes(context, dbAccess, n1, n2)
+    addRelationships(context, dbAccess, r)
+
+    //when
+    //p = (n1)<-[r]-(n2)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                   SemanticDirection.INCOMING, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+  }
+
+  test("single undirected path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 2)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    addNodes(context, dbAccess, n1, n2)
+    addRelationships(context, dbAccess, r)
+
+    //when
+    val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                                  SemanticDirection.BOTH,
+                                                                                  NilPathStep))))
+    val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(2, "n2"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                            SemanticDirection.BOTH,
+                                                                            NilPathStep))))
+
+    //then
+    p1.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    p2.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
+  }
+
+  test("longer path with different direction") {
+    //given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(44), 2)
+    val n4 = NodeAt(node(45), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 =  RelAt(relationship(1338, n3.node, n2.node), 20)
+    val r3 =  RelAt(relationship(1339, n3.node, n4.node), 30)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+
+    //when
+    //p = (n1)-[r1]->(n2)<-[r2]-(n3)-[r3]-(n4)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(10, "r1"), SemanticDirection.OUTGOING,
+                                          SingleRelationshipPathStep(RelationshipFromSlot(20, "r2"), SemanticDirection.INCOMING,
+                                            SingleRelationshipPathStep(RelationshipFromSlot(30, "r3"), SemanticDirection.BOTH, NilPathStep)))))
+
+    // then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
+  }
+
+  case class NodeAt(node: NodeValue, slot: Int)
+  case class RelAt(rel: RelationshipValue, slot: Int)
+
+  private def addNodes(context: ExecutionContext, dbAccess: DbAccess, nodes: NodeAt*): Unit = {
+    for (node <- nodes) {
+      when(context.getLongAt(node.slot)).thenReturn(node.node.id())
+      when(dbAccess.nodeById(node.node.id())).thenReturn(node.node)
+    }
+  }
+
+  private def addRelationships(context: ExecutionContext, dbAccess: DbAccess, rels: RelAt*): Unit = {
+    for (rel <- rels) {
+      when(context.getLongAt(rel.slot)).thenReturn(rel.rel.id())
+      when(dbAccess.relationshipById(rel.rel.id())).thenReturn(rel.rel)
+    }
+  }
+  private def pathExpression(step: PathStep) = PathExpression(step)(pos)
+
   private def mapProjection(name: String, includeAllProps: Boolean, items: (String,Expression)*) =
     DesugaredMapProjection(varFor(name), items.map(kv => LiteralEntry(PropertyKeyName(kv._1)(pos), kv._2)(pos)), includeAllProps)(pos)
 
@@ -2649,7 +2757,10 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private def node(id: Int, props: MapValue = EMPTY_MAP) = nodeValue(id, EMPTY_TEXT_ARRAY, EMPTY_MAP)
 
   private def relationship(id: Int, props: MapValue = EMPTY_MAP) =
-    relationshipValue(id, node(id-1), node(id + 1), stringValue("R"), EMPTY_MAP)
+    relationshipValue(id, node(id-1), node(id + 1), stringValue("R"), props)
+
+  private def relationship(id: Int, from: NodeValue, to: NodeValue) =
+    relationshipValue(id, from, to, stringValue("R"), EMPTY_MAP)
 
   private def compile(e: Expression, slots: SlotConfiguration) =
     CodeGeneration.compileExpression(new IntermediateCodeGeneration(slots).compileExpression(e).getOrElse(fail()))

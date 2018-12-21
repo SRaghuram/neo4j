@@ -215,8 +215,7 @@ object CodeGeneration {
     case Constant(value) => constant(value)
 
     //new ArrayValue[]{p1, p2,...}
-    case ArrayLiteral(values) => newArray(typeReference(classOf[AnyValue]),
-                                          values.map(v => compileExpression(v, block)): _*)
+    case ArrayLiteral(typ, values) => newArray(typ, values.map(v => compileExpression(v, block)): _*)
 
     //Foo.BAR
     case GetStatic(owner, typ, name) => getStatic(staticField(owner.getOrElse(block.owner()), typ, name))
