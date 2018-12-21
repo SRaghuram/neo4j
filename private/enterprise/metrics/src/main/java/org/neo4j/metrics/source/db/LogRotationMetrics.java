@@ -85,12 +85,12 @@ public class LogRotationMetrics extends LifecycleAdapter
         }
 
         @Override
-        public void logRotation( long millis )
+        public void finishLogRotation( long currentLogVersion, long rotationMillis )
         {
             scheduler.schedule( Group.METRICS_EVENT, () ->
             {
                 SortedMap<String,Gauge> gauges = new TreeMap<>();
-                gauges.put( metricName, () -> millis );
+                gauges.put( metricName, () -> rotationMillis );
                 reporter.report( gauges, emptySortedMap(), emptySortedMap(), emptySortedMap(), emptySortedMap() );
             } );
         }
