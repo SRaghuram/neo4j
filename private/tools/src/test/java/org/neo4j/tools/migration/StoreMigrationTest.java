@@ -5,9 +5,9 @@
  */
 package org.neo4j.tools.migration;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
@@ -17,31 +17,32 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.Unzip;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-public class StoreMigrationTest
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class StoreMigrationTest
 {
-    @Rule
-    public final SuppressOutput mute = SuppressOutput.suppressAll();
-    @Rule
-    public final TestDirectory testDir = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory directory;
 
-    @Before
-    public void setUp() throws IOException
+    @BeforeEach
+    void setUp() throws IOException
     {
-        Unzip.unzip( getClass(), "2.3-store.zip", testDir.databaseDir() );
+        Unzip.unzip( getClass(), "3.4-store.zip", directory.databaseDir() );
     }
 
     @Test
-    public void storeMigrationToolShouldBeAbleToMigrateOldStore() throws Exception
+    void storeMigrationToolShouldBeAbleToMigrateOldStore() throws Exception
     {
-        StoreMigration.main( new String[]{testDir.databaseDir().getAbsolutePath()} );
+        StoreMigration.main( new String[]{directory.databaseDir().getAbsolutePath()} );
 
         // after migration we can open store and do something
         GraphDatabaseService database = new TestGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( testDir.databaseDir() )
-                .setConfig( GraphDatabaseSettings.logs_directory, testDir.directory( "logs" ).getAbsolutePath() )
+                .newEmbeddedDatabaseBuilder( directory.databaseDir() )
+                .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).getAbsolutePath() )
                 .newGraphDatabase();
         try ( Transaction transaction = database.beginTx() )
         {
