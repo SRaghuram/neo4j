@@ -45,6 +45,7 @@ import org.neo4j.logging.internal.StoreLogService;
 import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.format;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.kernel.extension.KernelExtensionFailureStrategies.ignore;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
@@ -71,13 +72,15 @@ public class StoreMigration
         FormattedLogProvider userLogProvider = FormattedLogProvider.toOutputStream( System.out );
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            new StoreMigration().run( fileSystem, storeDir, getMigrationConfig(), userLogProvider );
+            new StoreMigration().run( fileSystem, storeDir, getMigrationConfig( storeDir ), userLogProvider );
         }
     }
 
-    private static Config getMigrationConfig()
+    private static Config getMigrationConfig( File workingDirectory )
     {
-        return Config.defaults( GraphDatabaseSettings.allow_upgrade, Settings.TRUE );
+        return Config.builder().withSetting( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
+                               .withSetting( logs_directory, workingDirectory.getAbsolutePath() )
+                               .build();
     }
 
     public static void run( final FileSystemAbstraction fs, final File storeDirectory, Config config, LogProvider userLogProvider ) throws Exception
