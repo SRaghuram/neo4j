@@ -135,15 +135,15 @@ class BackupStrategyWrapper
         DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
         backupStrategy.performFullBackup( backupLayout, onlineBackupContext.getConfig(), address );
 
+        performRecovery( onlineBackupContext.getConfig(), backupLayout );
+        clearIdFiles( backupLayout );
+
         // NOTE temporaryFullBackupLocation can be equal to desired
         boolean backupWasMadeToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
-
-        performRecovery( onlineBackupContext.getConfig(), backupLayout );
         if ( backupWasMadeToATemporaryLocation )
         {
             renameTemporaryBackupToExpected( temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }
-        clearIdFiles( backupLayout );
     }
 
     @VisibleForTesting
@@ -159,7 +159,7 @@ class BackupStrategyWrapper
         }
     }
 
-    private void clearIdFiles( DatabaseLayout databaseLayout )
+    private void clearIdFiles( DatabaseLayout databaseLayout ) throws BackupExecutionException
     {
         try
         {
@@ -167,7 +167,7 @@ class BackupStrategyWrapper
         }
         catch ( IOException e )
         {
-            log.warn( "Failed to delete some or all id files.", e );
+            throw new BackupExecutionException( e );
         }
     }
 
