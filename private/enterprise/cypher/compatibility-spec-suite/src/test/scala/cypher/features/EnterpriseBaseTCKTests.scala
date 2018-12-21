@@ -12,8 +12,8 @@ import org.opencypher.tools.tck.api.{CypherTCK, Scenario}
 abstract class EnterpriseBaseTCKTests extends BaseFeatureTest {
 
   // these two should be empty on commit!
-  val featureToRun = ""
-  val scenarioToRun = ""
+  val featureToRun = "VarLengthAcceptance2"
+  val scenarioToRun = "Handling relationships that are already bound in variable length paths"
 
   val scenarios: Seq[Scenario] = filterScenarios(CypherTCK.allTckScenarios, featureToRun, scenarioToRun)
 

@@ -2649,9 +2649,23 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
                                         SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
                                                                    SemanticDirection.OUTGOING, NilPathStep)))
-
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+  }
+
+  test("single-node path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    addNodes(context, dbAccess, n1)
+
+    //when
+    //p = (n1)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"), NilPathStep))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node), Array.empty))
   }
 
   test("single incoming path") {
@@ -2699,6 +2713,26 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     p2.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
   }
 
+  test("single path with NO_VALUE") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 2)
+    val slots = SlotConfiguration(Map("r" -> LongSlot(1, nullable = true, symbols.CTRelationship)), 1, 0)
+
+    when(context.getLongAt(1)).thenReturn(-1L)
+    addNodes(context, dbAccess, n1, n2)
+
+    //when
+    //p = (n1)-[r]->(n2)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                   SemanticDirection.OUTGOING, NilPathStep)))
+    //then
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
+  }
+
   test("longer path with different direction") {
     //given
     val context = mock[ExecutionContext]
@@ -2722,6 +2756,128 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     // then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
+  }
+
+  test("multiple outgoing path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(43), 2)
+    val n4 = NodeAt(node(44), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    when(context.getRefAt(100)).thenReturn(list(r1.rel, r2.rel, r3.rel))
+
+    //when
+    //p = (n1)-[r*]->(n4)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  SemanticDirection.OUTGOING, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+      VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
+  }
+
+  test("multiple incoming path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(43), 2)
+    val n4 = NodeAt(node(44), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+
+    //when
+    //p = (n4)<-[r*]-(n1)
+    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  SemanticDirection.INCOMING, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+      VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
+  }
+
+  test("multiple undirected path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(43), 2)
+    val n4 = NodeAt(node(44), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+
+    //when
+    //p = (n4)<-[r*]-(n1)
+    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  SemanticDirection.BOTH, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+      VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
+  }
+
+  test("multiple path containing NO_VALUE") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(43), 2)
+    val n4 = NodeAt(node(44), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    when(context.getRefAt(100)).thenReturn(list(r1.rel, NO_VALUE, r3.rel))
+
+    //when
+    //p = (n1)-[r*]->(n4)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  SemanticDirection.OUTGOING, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
+  }
+
+  test("multiple NO_VALUE path") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    addNodes(context, dbAccess, n1)
+    val slots = SlotConfiguration(Map("r" -> RefSlot(100, nullable = true, symbols.CTList(symbols.CTRelationship))), 0, 1)
+    when(context.getRefAt(100)).thenReturn(NO_VALUE)
+
+    //when
+    //p = (n1)-[r*]->(n4)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  SemanticDirection.OUTGOING, NilPathStep)))
+
+    //then
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
   }
 
   case class NodeAt(node: NodeValue, slot: Int)

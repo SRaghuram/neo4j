@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
 import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, InternalException}
-import org.neo4j.cypher.operations.{CypherBoolean, CypherCoercions, CypherFunctions, CypherMath}
+import org.neo4j.cypher.operations._
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
@@ -1412,7 +1412,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
       if (isStaticallyKnown(steps)) compileStaticPath(currentContext, steps)
-      else None
+      else compileDynamicPath(currentContext, steps)
 
     //slotted operations
     case ReferenceFromSlot(offset, name) =>
@@ -2388,6 +2388,83 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       IntermediateExpression(ops,
                              nodeOps.flatMap(_.fields) ++ relOps.flatMap(_.fields),
                              nodeOps.flatMap(_.variables) ++ relOps.flatMap(_.variables) :+ local,
+                             nullChecks)
+    }
+  }
+
+  private def compileDynamicPath(currentContext: Option[IntermediateRepresentation], steps: PathStep) = {
+
+    val builderVar = namer.nextVariableName()
+    @tailrec
+    def compileSteps(step: PathStep, acc: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[Seq[IntermediateExpression]] = step match {
+      case NodePathStep(node, next) => internalCompileExpression(node, currentContext) match {
+        case Some(nodeOps) =>
+          val addNode =
+            if (nodeOps.nullCheck.isEmpty) invokeSideEffect(load(builderVar),
+                                                  method[PathValueBuilder, Unit, NodeValue]("addNode"),
+                                                  cast[NodeValue](nodeOps.ir))
+            else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue]("addNode"),
+                        nullCheck(nodeOps)(nodeOps.ir))
+          compileSteps(next, acc :+ nodeOps.copy(ir = addNode))
+        case None => None
+      }
+
+      case SingleRelationshipPathStep(rel, direction, next) =>  internalCompileExpression(rel, currentContext) match {
+        case Some(relOps) =>
+          val methodName = direction match {
+            case SemanticDirection.INCOMING => "addIncoming"
+            case SemanticDirection.OUTGOING => "addOutgoing"
+            case _ => "addUndirected"
+          }
+
+          val addRel =
+            if (relOps.nullCheck.isEmpty) invokeSideEffect(load(builderVar),
+                                                  method[PathValueBuilder, Unit, RelationshipValue](methodName),
+                                                  cast[RelationshipValue](relOps.ir))
+            else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
+                        nullCheck(relOps)(relOps.ir))
+          compileSteps(next, acc :+ relOps.copy(ir = addRel))
+        case None => None
+      }
+      case MultiRelationshipPathStep(rel, direction, next) => internalCompileExpression(rel, currentContext) match {
+        case Some(relOps) =>
+          val methodName = direction match {
+            case SemanticDirection.INCOMING => "addMultipleIncoming"
+            case SemanticDirection.OUTGOING => "addMultipleOutgoing"
+            case _ => "addMultipleUndirected"
+          }
+
+          val addRels =
+            if (relOps.nullCheck.isEmpty) invokeSideEffect(load(builderVar),
+                                                 method[PathValueBuilder, Unit, ListValue](methodName),
+                                                 cast[ListValue](relOps.ir))
+            else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
+                        nullCheck(relOps)(relOps.ir))
+          compileSteps(next, acc :+ relOps.copy(ir = addRels))
+        case None => None
+      }
+      case NilPathStep => Some(acc)
+    }
+
+    for (pathOps <- compileSteps(steps) ) yield {
+      val variableName = namer.nextVariableName()
+      val local = variable[AnyValue](variableName, noValue)
+      val lazySet = oneTime(
+        block(
+          Seq(
+            declare[PathValueBuilder](builderVar),
+            assign(builderVar, newInstance(constructor[PathValueBuilder])))
+            ++ pathOps.map(_.ir) :+ assign(variableName, invoke(load(builderVar), method[PathValueBuilder, AnyValue]("build"))): _*))
+
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks =
+        if (pathOps.forall(_.nullCheck.isEmpty)) Set.empty[IntermediateRepresentation]
+        else Set(block(lazySet, equal(load(variableName), noValue)))
+
+      IntermediateExpression(ops,
+                             pathOps.flatMap(_.fields),
+                             pathOps.flatMap(_.variables) :+ local,
                              nullChecks)
     }
   }
