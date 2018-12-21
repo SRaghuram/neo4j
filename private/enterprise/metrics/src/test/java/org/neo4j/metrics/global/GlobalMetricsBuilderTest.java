@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.metrics.source;
+package org.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
 import org.junit.jupiter.api.Test;
@@ -17,8 +17,6 @@ import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.metrics.global.GlobalMetricsExporter;
-import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory;
 import org.neo4j.metrics.source.server.ServerMetrics;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -33,7 +31,7 @@ import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
 
 @ExtendWith( TestDirectoryExtension.class )
-class GlobalNeo4JMetricsBuilderTest
+class GlobalMetricsBuilderTest
 {
     @Inject
     private TestDirectory testDir;

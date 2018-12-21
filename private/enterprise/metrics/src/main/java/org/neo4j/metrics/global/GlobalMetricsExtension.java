@@ -28,7 +28,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     private final GlobalMetricsKernelExtensionFactory.Dependencies dependencies;
     private boolean configured;
 
-    GlobalMetricsExtension( KernelContext context, Dependencies dependencies )
+    public GlobalMetricsExtension( KernelContext context, Dependencies dependencies )
     {
         LogService logService = dependencies.logService();
         this.context = context;

@@ -6,7 +6,7 @@
 package org.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.rule.EnterpriseDbmsRule;
+import com.neo4j.test.rule.CommercialDbmsRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -28,13 +29,16 @@ import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.metrics.global.MetricsManager;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.System.currentTimeMillis;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cypher_min_replan_interval;
@@ -53,7 +57,7 @@ public class DatabaseMetricsExtensionIT
     public final TestDirectory directory = TestDirectory.testDirectory();
 
     @Rule
-    public final DbmsRule dbRule = new EnterpriseDbmsRule( directory ).startLazily();
+    public final DbmsRule dbRule = new CommercialDbmsRule( directory ).startLazily();
 
     private File outputPath;
     private GraphDatabaseAPI db;
@@ -175,6 +179,33 @@ public class DatabaseMetricsExtensionIT
 
         // THEN
         assertThat( result, greaterThanOrEqualTo( 0L ) );
+    }
+
+    @Test
+    public void registerDatabaseMetricsOnDatabaseStart()
+    {
+        DatabaseManager databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
+
+        assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
+
+        databaseManager.createDatabase( "testdb" );
+
+        assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
+    }
+
+    @Test
+    public void removeDatabaseMetricsOnDatabaseStop()
+    {
+        DatabaseManager databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
+
+        String testDbName = "testdb";
+        databaseManager.createDatabase( testDbName );
+        assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
+
+        databaseManager.stopDatabase( testDbName );
+        assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
     }
 
     private void addNodes( int numberOfNodes )
