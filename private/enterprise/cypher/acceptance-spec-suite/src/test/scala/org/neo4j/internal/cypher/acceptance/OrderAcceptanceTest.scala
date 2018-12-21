@@ -65,10 +65,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name}")
       .onTopOf(aPlan("Sort")
-//        .withOrder(ProvidedOrder.asc("anon[30]"))
+        .withOrder(ProvidedOrder.asc("a.age"))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-//          .containingArgument("{ : a.age}")
+          .containingArgument("{a.age : a.age}")
         ))
 
     result.columnAs[String]("a.name").toList should equal(List("F", "B", "A", "C", "E", "D"))
@@ -81,10 +81,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name, a.age : a.age}")
       .onTopOf(aPlan("Sort")
-//        .withOrder(ProvidedOrder.asc("anon[30]"))
+        .withOrder(ProvidedOrder.asc("a.age"))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-//          .containingArgument("{ : a.age}")
+          .containingArgument("{a.age : a.age}")
         ))
 
     result.toList should equal(List(
@@ -199,7 +199,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
-//        .containingArgumentRegex("\\{ : b\\.foo,  : age \\+ \\$`  AUTOINT\\d+`\\}".r)
+        .containingArgumentRegex("\\{b\\.foo : b\\.foo, age \\+ \\{  AUTOINT\\d+\\} : age \\+ \\$`  AUTOINT\\d+`\\}".r)
         .onTopOf(aPlan("Projection")
           .containingArgument("{b : a, age : a.age}")
         )
@@ -229,7 +229,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgument("{age : a.age}")
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
-//          .containingArgumentRegex("\\{ : b\\.foo,  : b\\.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\{  AUTOINT\\d+\\} : b\\.age \\+ \\$`  AUTOINT\\d+`\\}".r)
           .onTopOf(aPlan("Projection")
             .containingArgument("{b : a}")
           )
@@ -252,10 +252,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name}")
       .onTopOf(aPlan("Sort")
-//        .withOrder(ProvidedOrder.asc("anon[37]"))
+        .withOrder(ProvidedOrder.asc("a.age"))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-//          .containingArgument("{ : a.age}")
+          .containingArgument("{a.age : a.age}")
         ))
 
     result.toList should equal(List(
@@ -334,7 +334,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
         .containingVariables("a")
-//        .containingArgument("{ : a.age}")
+        .containingArgument("{a.age : a.age}")
       )
 
     result.toList should equal(List(
@@ -412,7 +412,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-//          .containingArgumentRegex("\\{ : a.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("\\{a.age \\+ \\{  AUTOINT\\d+\\} : a.age \\+ \\$`  AUTOINT\\d+`\\}".r)
         ))
 
     result.toList should equal(List(
@@ -458,9 +458,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-//      .withOrder(ProvidedOrder.asc("anon[55]"))
+      .withOrder(ProvidedOrder.asc("a.age"))
       .onTopOf(aPlan("Projection")
-//        .containingArgument("{ : a.age}")
+        .containingArgument("{a.age : a.age}")
         .onTopOf(aPlan("Distinct")
           .containingVariables("name", "a")
           .containingArgument("name, a")
@@ -541,9 +541,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-//      .withOrder(ProvidedOrder.asc("anon[65]"))
+      .withOrder(ProvidedOrder.asc("a.foo"))
       .onTopOf(aPlan("Projection")
-//        .containingArgument("{ : a.foo}")
+        .containingArgument("{a.foo : a.foo}")
         .onTopOf(aPlan("EagerAggregation")
           .containingVariables("age", "name") // the introduced variables
           .containingArgument("name, a") // the group columns
@@ -573,7 +573,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Projection").containingArgument("{n : `a`.name}")
       .onTopOf(aPlan("Sort")
-        .onTopOf(aPlan("Projection").containingArgument("{ : `a`.foo}"))
+        .onTopOf(aPlan("Projection").containingArgument("{  a@7.foo : `a`.foo}"))
       )
 
     result.toSet should equal(Set(
@@ -601,11 +601,11 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.All, query)
 
     // n.prop is written as `n`.prop in the plan due to the reuse of the variable
-    result.executionPlanDescription() should includeSomewhere
+    result.executionPlanDescription() should (includeSomewhere
       .aPlan("Projection").containingArgument("{name : `n`.name}")
       .onTopOf(aPlan("Sort")
-        .onTopOf(aPlan("Projection").containingArgument("{ : `n`.foo}"))
-      )
+        .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
+      ) and includeSomewhere.nTimes(2, aPlan("Sort")))
 
     // First MATCH gives two rows
     result.toList should equal(List(
@@ -862,5 +862,24 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Map("zfoo" -> 2),
       Map("zfoo" -> 1)
     ))
+  }
+
+  test("Order by should be correct when updating property") {
+    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i", "foo" -> i), "Person"))
+    joes.foreach { n =>
+      val friends = Range(0, 2).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
+      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+      friends.foreach { friend =>
+        relate(n, friend, "FRIEND")
+        Range(0, 1).foreach { b =>
+          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
+          relate(friend, book, "READ")
+        }
+      }
+    }
+    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' SET u.name = 'joe' RETURN u.name, u.foo ORDER BY u.name ASC, u.foo DESC"
+    val result = executeSingle(query)
+    //println(result.executionPlanDescription())
+    result.toList should be(List(Map("u.name" -> "joe", "u.foo" -> 1), Map("u.name" -> "joe", "u.foo" -> 1), Map("u.name" -> "joe", "u.foo" -> 0), Map("u.name" -> "joe", "u.foo" -> 0)))
   }
 }
