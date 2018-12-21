@@ -9,6 +9,8 @@ import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.ConfigurationMigrator;
+import org.neo4j.kernel.configuration.Migrator;
 
 import static org.neo4j.kernel.configuration.Settings.BOOLEAN;
 import static org.neo4j.kernel.configuration.Settings.NO_DEFAULT;
@@ -33,4 +35,8 @@ public class OnlineBackupSettings implements LoadableConfig
     @Description( "Name of the SSL policy to be used by backup, as defined under the dbms.ssl.policy.* settings." +
             " If no policy is configured then the communication will not be secured." )
     public static final Setting<String> ssl_policy = prefixSetting( "dbms.backup.ssl_policy", STRING, NO_DEFAULT );
+
+    @SuppressWarnings( "unused" ) // accessed by reflection
+    @Migrator
+    private static final ConfigurationMigrator migrator = new OnlineBackupConfigurationMigrator();
 }
