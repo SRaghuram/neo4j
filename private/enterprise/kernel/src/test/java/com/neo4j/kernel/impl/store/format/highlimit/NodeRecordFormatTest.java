@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit;
 
+import com.neo4j.kernel.impl.store.format.highlimit.v340.NodeRecordFormatV3_4_0;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -134,46 +135,46 @@ public class NodeRecordFormatTest
         verifySameReferences( source, target );
     }
 
-//    @Test
-//    public void readSingleUnitRecordStoredNotInFixedReferenceFormat() throws Exception
-//    {
-//        NodeRecord oldFormatRecord = new NodeRecord( 1 );
-//        NodeRecord newFormatRecord = new NodeRecord( 1 );
-//        oldFormatRecord.initialize( true, randomFixedReference(), true, randomFixedReference(), 1L );
-//
-//        writeRecordWithOldFormat( oldFormatRecord );
-//
-//        assertFalse( "This should be single unit record.", oldFormatRecord.hasSecondaryUnitId() );
-//        assertFalse( "Old format is not aware about fixed references.", oldFormatRecord.isUseFixedReferences() );
-//
-//        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, NodeRecordFormat.RECORD_SIZE );
-//        verifySameReferences( oldFormatRecord, newFormatRecord );
-//    }
+    @Test
+    public void readSingleUnitRecordStoredNotInFixedReferenceFormat() throws Exception
+    {
+        NodeRecord oldFormatRecord = new NodeRecord( 1 );
+        NodeRecord newFormatRecord = new NodeRecord( 1 );
+        oldFormatRecord.initialize( true, randomFixedReference(), true, randomFixedReference(), 1L );
 
-//    @Test
-//    public void readDoubleUnitRecordStoredNotInFixedReferenceFormat() throws Exception
-//    {
-//        NodeRecord oldFormatRecord = new NodeRecord( 1 );
-//        NodeRecord newFormatRecord = new NodeRecord( 1 );
-//        oldFormatRecord.initialize( true, bigReference(), true, bigReference(), 1L );
-//
-//        writeRecordWithOldFormat( oldFormatRecord );
-//
-//        assertTrue( "This should be double unit record.", oldFormatRecord.hasSecondaryUnitId() );
-//        assertFalse( "Old format is not aware about fixed references.", oldFormatRecord.isUseFixedReferences() );
-//
-//        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, NodeRecordFormat.RECORD_SIZE );
-//        verifySameReferences( oldFormatRecord, newFormatRecord );
-//    }
-//
-//    private void writeRecordWithOldFormat( NodeRecord oldFormatRecord ) throws IOException
-//    {
-//        int oldRecordSize = NodeRecordFormatV3_0_0.RECORD_SIZE;
-//        NodeRecordFormatV3_0_0 recordFormatV30 = new NodeRecordFormatV3_0_0();
-//        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence );
-//        recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize );
-//        pageCursor.setOffset( 0 );
-//    }
+        writeRecordWithOldFormat( oldFormatRecord );
+
+        assertFalse( "This should be single unit record.", oldFormatRecord.hasSecondaryUnitId() );
+        assertTrue( "Old format is aware about fixed references.", oldFormatRecord.isUseFixedReferences() );
+
+        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, NodeRecordFormat.RECORD_SIZE );
+        verifySameReferences( oldFormatRecord, newFormatRecord );
+    }
+
+    @Test
+    public void readDoubleUnitRecordStoredNotInFixedReferenceFormat() throws Exception
+    {
+        NodeRecord oldFormatRecord = new NodeRecord( 1 );
+        NodeRecord newFormatRecord = new NodeRecord( 1 );
+        oldFormatRecord.initialize( true, bigReference(), true, bigReference(), 1L );
+
+        writeRecordWithOldFormat( oldFormatRecord );
+
+        assertTrue( "This should be double unit record.", oldFormatRecord.hasSecondaryUnitId() );
+        assertFalse( "Old format is not aware about fixed references.", oldFormatRecord.isUseFixedReferences() );
+
+        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, NodeRecordFormat.RECORD_SIZE );
+        verifySameReferences( oldFormatRecord, newFormatRecord );
+    }
+
+    private void writeRecordWithOldFormat( NodeRecord oldFormatRecord ) throws IOException
+    {
+        int oldRecordSize = NodeRecordFormatV3_4_0.RECORD_SIZE;
+        NodeRecordFormatV3_4_0 recordFormatV30 = new NodeRecordFormatV3_4_0();
+        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence );
+        recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize );
+        pageCursor.setOffset( 0 );
+    }
 
     private void verifySameReferences( NodeRecord recordA, NodeRecord recordB )
     {

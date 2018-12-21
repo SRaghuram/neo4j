@@ -5,19 +5,20 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit.v340;
 
+import com.neo4j.kernel.impl.store.format.highlimit.Reference;
+
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat;
 import org.neo4j.kernel.impl.store.format.BaseRecordFormat;
-import com.neo4j.kernel.impl.store.format.highlimit.Reference;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
+import static com.neo4j.kernel.impl.store.format.highlimit.Reference.toAbsolute;
+import static com.neo4j.kernel.impl.store.format.highlimit.Reference.toRelative;
 import static com.neo4j.kernel.impl.store.format.highlimit.v340.BaseHighLimitRecordFormatV3_4_0.HEADER_BIT_FIXED_REFERENCE;
 import static com.neo4j.kernel.impl.store.format.highlimit.v340.BaseHighLimitRecordFormatV3_4_0.HEADER_BYTE;
 import static com.neo4j.kernel.impl.store.format.highlimit.v340.BaseHighLimitRecordFormatV3_4_0.NULL;
-import static com.neo4j.kernel.impl.store.format.highlimit.Reference.toAbsolute;
-import static com.neo4j.kernel.impl.store.format.highlimit.Reference.toRelative;
 
 /**
  * <pre>
@@ -49,9 +50,9 @@ import static com.neo4j.kernel.impl.store.format.highlimit.Reference.toRelative;
  * Unlike other high limit records {@link BaseHighLimitRecordFormatV3_4_0} fixed reference marker in property record
  * format header is not inverted: 1 - fixed reference format used; 0 - variable length format used.
  */
-class PropertyRecordFormatV3_4_0 extends BaseOneByteHeaderRecordFormat<PropertyRecord>
+public class PropertyRecordFormatV3_4_0 extends BaseOneByteHeaderRecordFormat<PropertyRecord>
 {
-    static final int RECORD_SIZE = 48;
+    public static final int RECORD_SIZE = 48;
     private static final int PROPERTY_BLOCKS_PADDING = 3;
     static final int FIXED_FORMAT_RECORD_SIZE = HEADER_BYTE +
                                                 Short.BYTES   /* prev prop modifiers */ +
@@ -63,7 +64,7 @@ class PropertyRecordFormatV3_4_0 extends BaseOneByteHeaderRecordFormat<PropertyR
     private static final long HIGH_DWORD_LOWER_WORD_MASK = 0xFFFF_0000_0000L;
     private static final long HIGH_DWORD_LOWER_WORD_CHECK_MASK = 0xFFFF_0000_0000_0000L;
 
-    protected PropertyRecordFormatV3_4_0()
+    public PropertyRecordFormatV3_4_0()
     {
         super( fixedRecordSize( RECORD_SIZE ), 0, IN_USE_BIT, HighLimitFormatSettingsV3_4_0.PROPERTY_MAXIMUM_ID_BITS );
     }
