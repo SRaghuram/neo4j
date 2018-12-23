@@ -7,7 +7,6 @@ package org.neo4j.kernel;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.rule.CommercialDbmsRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -35,10 +34,13 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.commons.io.FileUtils.cleanDirectory;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.fs.FileUtils.deleteRecursively;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_PAGE_FAULTS;
@@ -147,7 +149,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     }
 
     @Test
-    @Ignore
     public void cacheProfilesMustBeIncludedInOfflineBackups() throws Exception
     {
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
@@ -173,18 +174,20 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         File databaseDir = db.databaseLayout().databaseDirectory();
         File data = testDirectory.cleanDirectory( "data" );
         File databases = new File( data, "databases" );
+        File logs = new File( data, "tx-logs" );
         File graphdb = testDirectory.databaseDir( databases );
         FileUtils.copyRecursively( databaseDir, graphdb );
-        FileUtils.deleteRecursively( databaseDir );
+        deleteRecursively( databaseDir );
         Path homePath = data.toPath().getParent();
         File dumpDir = testDirectory.cleanDirectory( "dump-dir" );
-        adminTool.execute( homePath, homePath, "dump", "--database=" + GraphDatabaseSettings.DEFAULT_DATABASE_NAME, "--to=" + dumpDir );
+        adminTool.execute( homePath, homePath, "dump", "--database=" + DEFAULT_DATABASE_NAME, "--to=" + dumpDir );
 
-        FileUtils.deleteRecursively( graphdb );
+        deleteRecursively( graphdb );
+        cleanDirectory( logs );
         File dumpFile = new File( dumpDir, "graph.db.dump" );
-        adminTool.execute( homePath, homePath, "load", "--database=" + GraphDatabaseSettings.DEFAULT_DATABASE_NAME, "--from=" + dumpFile );
+        adminTool.execute( homePath, homePath, "load", "--database=" + DEFAULT_DATABASE_NAME, "--from=" + dumpFile );
         FileUtils.copyRecursively( graphdb, databaseDir );
-        FileUtils.deleteRecursively( graphdb );
+        deleteRecursively( graphdb );
 
         File metricsDirectory = testDirectory.cleanDirectory( "metrics" );
         db.withSetting( MetricsSettings.neoPageCacheEnabled, Settings.TRUE )
