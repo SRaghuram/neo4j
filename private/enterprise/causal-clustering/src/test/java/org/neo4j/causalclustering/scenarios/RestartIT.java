@@ -107,7 +107,7 @@ class RestartIT
             return lastWriter;
         } );
 
-        someTransactionsCommitted.await();
+        assertTrue( someTransactionsCommitted.await( 1, MINUTES ) );
 
         int followerId = cluster.getMemberWithAnyRole( Role.FOLLOWER ).serverId();
         cluster.removeCoreMemberWithServerId( followerId );
