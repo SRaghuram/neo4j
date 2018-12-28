@@ -185,7 +185,7 @@ class OnlineBackupContextFactory
     {
         String addressString = arguments.get( ARG_NAME_BACKUP_SOURCE );
         HostnamePort hostnamePort = new HostnamePort( addressString );
-        return Converters.toSocketAddress( hostnamePort, DEFAULT_BACKUP_HOSTNAME, DEFAULT_BACKUP_PORT, AdvertisedSocketAddress::new );
+        return Converters.toAdvertisedSocketAddress( hostnamePort, DEFAULT_BACKUP_HOSTNAME, DEFAULT_BACKUP_PORT );
     }
 
     private Path getBackupDirectory( Arguments arguments ) throws CommandFailed
