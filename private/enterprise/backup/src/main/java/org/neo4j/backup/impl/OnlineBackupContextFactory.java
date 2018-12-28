@@ -34,6 +34,7 @@ import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_l
 import static org.neo4j.consistency.ConsistencyCheckSettings.consistency_check_property_owners;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.kernel.impl.util.Converters.toOptionalHostnamePortFromRawAddress;
 
 class OnlineBackupContextFactory
@@ -178,12 +179,14 @@ class OnlineBackupContextFactory
                                    .build();
             additionalConfig.map( this::loadAdditionalConfigFile ).ifPresent( config::augment );
 
-            // We only replace the page cache memory setting.
+            // We replace the page cache memory setting.
             // Any other custom page swapper, etc. settings are preserved and used.
             config.augment( pagecache_memory, pagecacheMemory );
+            // warmup is also disabled because it is not needed for temporary databases
+            config.augment( pagecache_warmup_enabled.name(), Settings.FALSE );
 
-            // Disable prometheus to avoid binding exceptions
-            config.augment( "metrics.prometheus.enabled", Settings.FALSE );
+            // Disable all metrics to avoid port binding and JMX naming exceptions
+            config.augment( "metrics.enabled", Settings.FALSE );
 
             // Build consistency-checker configuration.
             // Note: We can remove the loading from config file in 4.0.
