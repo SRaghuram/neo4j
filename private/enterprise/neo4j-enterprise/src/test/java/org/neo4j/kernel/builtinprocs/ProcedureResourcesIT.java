@@ -298,6 +298,15 @@ public class ProcedureResourcesIT
         case "db.stats.retrieveAllAnonymized":
             proc.withParam( "'myGraphToken'" );
             break;
+        case "db.stats.collect":
+            proc.withParam( "'QUERIES'" );
+            break;
+        case "db.stats.stop":
+            proc.withParam( "'QUERIES'" );
+            break;
+        case "db.stats.clear":
+            proc.withParam( "'QUERIES'" );
+            break;
         default:
         }
         return proc;
