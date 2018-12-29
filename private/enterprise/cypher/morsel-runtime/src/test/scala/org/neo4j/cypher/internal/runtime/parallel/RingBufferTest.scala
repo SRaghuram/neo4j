@@ -11,16 +11,16 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 import scala.collection.mutable.ArrayBuffer
 
-class ThreadSafeDataWriterTest extends CypherFunSuite {
+class RingBufferTest extends CypherFunSuite {
 
-  test("ringbuffer should produce correctly when empty") {
+  test("ring buffer should produce correctly when empty") {
     val ringBuffer = new RingBuffer(10)
     val points = ArrayBuffer[DataPoint]()
     ringBuffer.consume(points += _)
     points.length should equal(0)
   }
 
-  test("ringbuffer should produce correctly with partially filled") {
+  test("ring buffer should produce correctly with partially filled") {
     val ringBuffer = new RingBuffer(10)
     val points = ArrayBuffer[DataPoint]()
     ringBuffer.produce(dataPointFor(1, 1))
@@ -28,7 +28,7 @@ class ThreadSafeDataWriterTest extends CypherFunSuite {
     points.length should equal(1)
   }
 
-  test("ringbuffer should produce correctly when full") {
+  test("ring buffer should produce correctly when full") {
     val ringBufferBitSize = 10
     val ringBuffer = new RingBuffer(ringBufferBitSize)
 
@@ -42,7 +42,7 @@ class ThreadSafeDataWriterTest extends CypherFunSuite {
     points.toList should equal(expectedPoints)
   }
 
-  test("ringbuffer should be reusable after consuming full buffer") {
+  test("ring buffer should be reusable after consuming full buffer") {
     val ringBufferBitSize = 10
     val ringBuffer = new RingBuffer(ringBufferBitSize)
 
@@ -63,7 +63,7 @@ class ThreadSafeDataWriterTest extends CypherFunSuite {
     points.toList should equal(expectedPoints)
   }
 
-  test("ringbuffer should error when overfilling") {
+  test("ring buffer should error when overfilling") {
     val ringBufferBitSize = 10
     val ringBuffer = new RingBuffer(ringBufferBitSize)
 
@@ -74,65 +74,11 @@ class ThreadSafeDataWriterTest extends CypherFunSuite {
     an[Exception] should be thrownBy ringBuffer.produce(dataPointFor(1, 1))
   }
 
-  test("writer should not lose data points when concurrently written and flushed by many threads") {
-    val innerWriter = new CollectingDataPointWriter
-    val writer = new ThreadSafeDataWriter(innerWriter, ringBufferBitSize = 4)
-
-    val random = ThreadLocalRandom.current()
-    val maxPointsPerThread = 16
-    val produceThreadCount = 32
-    val latch = new CountDownLatch(produceThreadCount)
-    val threads = (0 until produceThreadCount)
-      .map(threadId => {
-        val min = threadId * maxPointsPerThread
-        val max = min + 1 + random.nextInt(maxPointsPerThread - 1)
-        ProduceConsumeThread(min, max, threadId, latch, writer)
-      })
-    threads.foreach(_.start)
-
-    val isFinished = latch.await(10, TimeUnit.SECONDS)
-
-    if (!isFinished)
-      fail("Test threads did not finish on time")
-
-    val expectedPoints = threads.flatMap(thread => dataPointsFor(thread.min, thread.max, thread.threadId))
-
-    innerWriter.points.size should equal(expectedPoints.size)
-
-    val resultSet = innerWriter.points.toSet
-    val expectSet = expectedPoints.toSet
-    val intersect = resultSet.intersect(expectSet)
-
-    resultSet -- intersect should be(empty) // Unwanted result data points
-    expectSet -- intersect should be(empty) // Missing result data points
-  }
-
   // HELPERS
 
   private def dataPointsFor(min: Int, max: Int, threadId: Int): Seq[DataPoint] = (min until max).map(i => dataPointFor(i, threadId))
 
   private def dataPointFor(i: Int, threadId: Int) = DataPoint(i, 0, 0, 0, 0, threadId, 0, 0, NOP)
-
-  class CollectingDataPointWriter extends DataPointWriter {
-    val points: ArrayBuffer[DataPoint] = ArrayBuffer[DataPoint]()
-
-    override def write(dataPoint: DataPoint): Unit = points += dataPoint
-
-    override def flush(): Unit = {}
-  }
-
-  case class ProduceConsumeThread(min: Int,
-                           max: Int,
-                           threadId: Int,
-                           latch: CountDownLatch,
-                           dataPointWriter: DataPointWriter) extends Thread {
-
-    override def run(): Unit = {
-      dataPointsFor(min, max, threadId).foreach(dataPointWriter.write)
-      dataPointWriter.flush()
-      latch.countDown()
-    }
-  }
 
   case object NOP extends Task[Resource.type] {
     override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] = Nil

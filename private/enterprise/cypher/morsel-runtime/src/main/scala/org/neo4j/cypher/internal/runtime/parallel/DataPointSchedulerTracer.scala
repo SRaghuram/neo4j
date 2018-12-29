@@ -26,8 +26,7 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
       ScheduledWorkUnit(upstreamWorkUnitId, queryId, scheduledTime, schedulingThread, task)
     }
 
-    override def stopQuery(): Unit =
-      dataPointWriter.flush()
+    override def stopQuery(): Unit = {}
   }
 
   case class ScheduledWorkUnit(upstreamWorkUnitId: Long,

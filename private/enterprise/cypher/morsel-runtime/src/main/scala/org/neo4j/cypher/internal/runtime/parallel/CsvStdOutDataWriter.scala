@@ -5,52 +5,18 @@
  */
 package org.neo4j.cypher.internal.runtime.parallel
 
-import java.util.concurrent.TimeUnit
-
 /**
   * DataPointWriter which accepts DataPoints, formats as CSV, and prints to std out.
   */
-class CsvStdOutDataWriter extends DataPointWriter {
+class CsvStdOutDataWriter extends CsvDataWriter {
 
-  import CsvStdOutDataWriter._
-
-  private val sb = new StringBuilder(HEADER)
+  private val sb = new StringBuilder(header)
 
   def flush(): Unit = {
     val result = sb.result()
     sb.clear()
-    sb ++= HEADER
-    println(result)
+    print(result)
   }
 
-  override def write(dp: DataPoint): Unit =
-    sb ++= serialize(dp)
-
-  private def serialize(dataPoint: DataPoint): String =
-    Array(
-      dataPoint.id.toString,
-      dataPoint.upstreamId.toString,
-      dataPoint.queryId.toString,
-      dataPoint.schedulingThreadId.toString,
-      TimeUnit.NANOSECONDS.toMicros(dataPoint.scheduledTime).toString,
-      dataPoint.executionThreadId.toString,
-      TimeUnit.NANOSECONDS.toMicros(dataPoint.startTime).toString,
-      TimeUnit.NANOSECONDS.toMicros(dataPoint.stopTime).toString,
-      dataPoint.task.workId,
-      dataPoint.task.workDescription
-    ).mkString(SEPARATOR) + System.lineSeparator()
-}
-
-object CsvStdOutDataWriter {
-  private val SEPARATOR = ","
-  private val HEADER = Array("id",
-                             "upstreamId",
-                             "queryId",
-                             "schedulingThreadId",
-                             "schedulingTime(us)",
-                             "executionThreadId",
-                             "startTime(us)",
-                             "stopTime(us)",
-                             "pipelineId",
-                             "pipelineDescription").mkString(SEPARATOR) + System.lineSeparator()
+  override def writeRow(row: String): Unit = sb ++= row
 }

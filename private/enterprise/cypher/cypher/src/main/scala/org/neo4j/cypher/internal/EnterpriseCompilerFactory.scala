@@ -91,7 +91,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
   }
 }
 
-case class RuntimeEnvironment(config:CypherRuntimeConfiguration,
+case class RuntimeEnvironment(config: CypherRuntimeConfiguration,
                               jobScheduler: JobScheduler,
                               cursors: CursorFactory,
                               txBridge: ThreadToStatementContextBridge) {
@@ -126,10 +126,28 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration,
   }
 
   private def createTracer(): SchedulerTracer = {
-    if (config.doSchedulerTracing)
-      new DataPointSchedulerTracer(new ThreadSafeDataWriter(new CsvStdOutDataWriter))
-    else
+    if (config.schedulerTracing == NoSchedulerTracing)
       SchedulerTracer.NoSchedulerTracer
+    else {
+      val dataWriter =
+        config.schedulerTracing match {
+          case StdOutSchedulerTracing => new CsvStdOutDataWriter
+          case FileSchedulerTracing(file) => new CsvFileDataWriter(file)
+        }
+
+      val dataTracer = new SingleConsumerDataBuffers()
+
+      val runnable = new Runnable {
+        override def run(): Unit =
+          while (!Thread.interrupted()) {
+            dataTracer.consume(dataWriter)
+            Thread.sleep(1)
+          }
+      }
+      jobScheduler.threadFactory(Group.CYPHER_WORKER).newThread(runnable).start()
+
+      new DataPointSchedulerTracer(dataTracer)
+    }
   }
 }
 
