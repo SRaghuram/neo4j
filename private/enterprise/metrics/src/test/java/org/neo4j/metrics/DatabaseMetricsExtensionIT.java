@@ -173,7 +173,7 @@ public class DatabaseMetricsExtensionIT
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
-        File metricFile = metricsCsv( outputPath, "neo4j.graph.db.check_point.check_point_duration" );
+        File metricFile = metricsCsv( outputPath, "neo4j.graph.db.check_point.duration" );
 
         long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 

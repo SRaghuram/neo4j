@@ -46,7 +46,7 @@ public class LogRotationMetrics extends LifecycleAdapter
     {
         this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_PREFIX, "events" );
         this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_PREFIX, "total_time" );
-        this.logRotationDuration = name( metricsPrefix, LOG_ROTATION_PREFIX, "log_rotation_duration" );
+        this.logRotationDuration = name( metricsPrefix, LOG_ROTATION_PREFIX, "duration" );
         this.registry = registry;
         this.monitors = monitors;
         this.logRotationMonitor = logRotationMonitor;

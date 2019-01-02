@@ -45,7 +45,7 @@ public class CheckPointingMetrics extends LifecycleAdapter
     {
         this.checkPointEvents = name( metricsPrefix, CHECK_POINT_PREFIX, "events" );
         this.checkPointTotalTime = name( metricsPrefix, CHECK_POINT_PREFIX, "total_time" );
-        this.checkPointDuration = name( metricsPrefix, CHECK_POINT_PREFIX, "check_point_duration" );
+        this.checkPointDuration = name( metricsPrefix, CHECK_POINT_PREFIX, "duration" );
         this.registry = registry;
         this.monitors = monitors;
         this.checkPointerMonitor = checkPointerMonitor;

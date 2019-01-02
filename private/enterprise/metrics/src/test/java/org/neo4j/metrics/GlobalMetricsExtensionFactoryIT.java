@@ -7,7 +7,7 @@ package org.neo4j.metrics;
 
 import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.rule.EnterpriseDbmsRule;
+import com.neo4j.test.rule.CommercialDbmsRule;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Before;
@@ -48,9 +48,11 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.check_point_interv
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.helpers.collection.Iterators.asList;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.metrics.MetricsSettings.csvEnabled;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.graphiteInterval;
+import static org.neo4j.metrics.MetricsSettings.jmxEnabled;
 import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
@@ -61,7 +63,7 @@ public class GlobalMetricsExtensionFactoryIT
     public final TestDirectory directory = TestDirectory.testDirectory();
 
     @Rule
-    public final DbmsRule dbRule = new EnterpriseDbmsRule( directory ).startLazily();
+    public final DbmsRule dbRule = new CommercialDbmsRule( directory ).startLazily();
 
     private File outputPath;
     private GraphDatabaseAPI db;
@@ -72,9 +74,10 @@ public class GlobalMetricsExtensionFactoryIT
     {
         outputPath = new File( directory.storeDir(), "metrics" );
         Map<Setting<?>, String> config = new HashMap<>();
-        config.put( MetricsSettings.neoEnabled, Settings.TRUE );
-        config.put( metricsEnabled, Settings.TRUE );
-        config.put( csvEnabled, Settings.TRUE );
+        config.put( MetricsSettings.neoEnabled, TRUE );
+        config.put( metricsEnabled, TRUE );
+        config.put( jmxEnabled, TRUE );
+        config.put( csvEnabled, TRUE );
         config.put( cypher_min_replan_interval, "0m" );
         config.put( csvPath, outputPath.getAbsolutePath() );
         config.put( check_point_interval_time, "100ms" );
@@ -110,7 +113,7 @@ public class GlobalMetricsExtensionFactoryIT
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
         GraphDatabaseBuilder builder = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledTracerDb );
         GraphDatabaseService nullTracerDatabase =
-                builder.setConfig( MetricsSettings.neoEnabled, Settings.TRUE ).setConfig( csvEnabled, Settings.TRUE )
+                builder.setConfig( MetricsSettings.neoEnabled, TRUE ).setConfig( csvEnabled, TRUE )
                         .setConfig( csvPath, outputPath.getAbsolutePath() )
                         .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
                         .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
