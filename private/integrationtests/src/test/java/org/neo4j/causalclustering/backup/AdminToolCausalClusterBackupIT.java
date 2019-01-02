@@ -6,6 +6,7 @@
 package org.neo4j.causalclustering.backup;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.apache.commons.lang3.SystemUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,7 +57,7 @@ public class AdminToolCausalClusterBackupIT
     {
         CoreClusterMember leader = cluster.awaitLeader();
 
-        String backupName = LocalDateTime.now().toString();
+        String backupName = newBackupName();
         String backupAddress = leader.config().get( OnlineBackupSettings.online_backup_listen_address ).toString();
 
         cluster.coreTx( this::createSomeData );
@@ -90,5 +91,16 @@ public class AdminToolCausalClusterBackupIT
         return Config.builder()
                 .withSetting( metricsEnabled, FALSE )
                 .build();
+    }
+
+    private static String newBackupName()
+    {
+        String name = LocalDateTime.now().toString();
+        if ( SystemUtils.IS_OS_WINDOWS )
+        {
+            // ':' is an illegal file name character on Windows, so turn it into '_'
+            name = name.replaceAll( ":", "_" );
+        }
+        return name;
     }
 }
