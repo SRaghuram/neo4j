@@ -23,6 +23,7 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.util.OptionalHostnamePort;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.util.Converters.toOptionalHostnamePortFromRawAddress;
 
@@ -142,12 +143,14 @@ class OnlineBackupContextFactory
                                    .build();
             additionalConfig.map( this::loadAdditionalConfigFile ).ifPresent( config::augment );
 
-            // We only replace the page cache memory setting.
+            // We replace the page cache memory setting.
             // Any other custom page swapper, etc. settings are preserved and used.
             config.augment( pagecache_memory, pageCacheMemory );
+            // warmup is also disabled because it is not needed for temporary databases
+            config.augment( pagecache_warmup_enabled.name(), Settings.FALSE );
 
-            // Disable prometheus to avoid binding exceptions
-            config.augment( "metrics.prometheus.enabled", Settings.FALSE );
+            // Disable all metrics to avoid port binding and JMX naming exceptions
+            config.augment( "metrics.enabled", Settings.FALSE );
 
             return OnlineBackupContext.builder()
                     .withHostnamePort( address )

@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.commandline.admin.CommandFailed;
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -244,10 +246,23 @@ class OnlineBackupContextFactoryTest
     }
 
     @Test
-    void prometheusShouldBeDisabledToAvoidPortConflicts() throws CommandFailed, IncorrectUsage
+    void metricsShouldBeDisabled() throws CommandFailed, IncorrectUsage
     {
         OnlineBackupContext context = new OnlineBackupContextFactory( homeDir, configDir ).createContext( requiredAnd() );
-        assertEquals( Settings.FALSE, context.getConfig().getRaw().get( "metrics.prometheus.enabled" ) );
+
+        Config config = context.getConfig();
+
+        assertEquals( Optional.of( Settings.FALSE ), config.getRaw( "metrics.enabled" ) );
+    }
+
+    @Test
+    void pageCacheWarmupShouldBeDisabled() throws CommandFailed, IncorrectUsage
+    {
+        OnlineBackupContext context = new OnlineBackupContextFactory( homeDir, configDir ).createContext( requiredAnd() );
+
+        Config config = context.getConfig();
+
+        assertFalse( config.get( pagecache_warmup_enabled ) );
     }
 
     @Test
