@@ -144,11 +144,6 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         try
         {
             TransactionCursor transactions = logicalTransactionStore.getTransactions( firstTxId );
-            if ( transactions == null )
-            {
-                log.info( "Unable to get transaction cursor from logical transaction store" );
-                Prepare.fail( E_STORE_UNAVAILABLE );
-            }
             return Prepare.readyToSend( new TxPullingContext( transactions, localStoreId, firstTxId, txIdPromise ) );
         }
         catch ( NoSuchTransactionException e )
