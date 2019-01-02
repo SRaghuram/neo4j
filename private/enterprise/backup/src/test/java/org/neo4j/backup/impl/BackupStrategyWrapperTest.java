@@ -122,7 +122,7 @@ class BackupStrategyWrapperTest
     }
 
     @Test
-    void fullBackupIsIgnoredIfNoOtherBackupAndNotFallback() throws Exception
+    void fullBackupIsIgnoredIfIncrementalFailAndNotFallback() throws Exception
     {
         // given there is an existing backup
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
@@ -141,6 +141,24 @@ class BackupStrategyWrapperTest
         // then full backup wasnt performed
         verify( backupStrategyImplementation, never() ).performFullBackup( any(), any() );
         assertEquals( incrementalBackupError, error );
+    }
+
+    @Test
+    void fullBackupIsPerformedIfNotIncrementalEvenThoughFallBackToFullIsFalse() throws BackupExecutionException
+    {
+        // given there is an existing backup
+        when( backupCopyService.backupExists( any() ) ).thenReturn( false );
+
+        // and we don't want to fallback to full backups
+        requiredArguments = requiredArguments( false );
+        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+
+        // when
+        backupWrapper.doBackup( onlineBackupContext );
+
+        // then full backup was performed
+        verify( backupStrategyImplementation, never() ).performIncrementalBackup( any(), any() );
+        verify( backupStrategyImplementation ).performFullBackup( any(), any() );
     }
 
     @Test

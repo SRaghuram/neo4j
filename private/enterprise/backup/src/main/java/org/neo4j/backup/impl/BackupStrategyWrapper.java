@@ -75,19 +75,19 @@ class BackupStrategyWrapper
             }
         }
 
-        if ( fallbackToFull )
+        if ( previousBackupExists && fallbackToFull )
         {
-            log.info( previousBackupExists
-                      ? "Incremental backup failed, a new full backup will be performed."
-                      : "Previous backup not found, a new full backup will be performed." );
-
+            log.info( "Incremental backup failed, a new full backup will be performed." );
+            fullBackupWithTemporaryFolderResolutions( onlineBackupContext );
+        }
+        else if ( !previousBackupExists )
+        {
+            log.info( "Previous backup not found, a new full backup will be performed." );
             fullBackupWithTemporaryFolderResolutions( onlineBackupContext );
         }
         else
         {
-            throw new BackupExecutionException( previousBackupExists
-                                                ? "Incremental backup failed but full backup is disallowed by configuration"
-                                                : "Previous backup does not exist but full backup is disallowed by configuration" );
+            throw new BackupExecutionException( "Incremental backup failed but fallback to full backup is disallowed by configuration" );
         }
     }
 

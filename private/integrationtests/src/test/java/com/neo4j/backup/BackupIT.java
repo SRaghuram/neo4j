@@ -167,14 +167,14 @@ class BackupIT
     }
 
     @TestWithRecordFormats
-    void makeSureIncrementalFailsWhenNoDb( String recordFormatName )
+    void makeSureFullWorksWhenNoDb( String recordFormatName ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        createInitialDataSet( serverStorePath, recordFormatName );
+        DbRepresentation initialDataSet = createInitialDataSet( serverStorePath, recordFormatName );
         GraphDatabaseService db = startDb( serverStorePath );
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, false ) );
+        executeBackup( db, false );
 
-        assertThat( error.getMessage(), containsString( "full backup is disallowed by configuration" ) );
+        assertEquals( initialDataSet, getBackupDbRepresentation() );
     }
 
     @TestWithRecordFormats
