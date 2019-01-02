@@ -172,8 +172,8 @@ public abstract class BaseClusterOverviewIT
             cluster.coreMembers().stream().skip( initialCoreMembers - coresToRemove ).parallel().forEach( core -> cluster.removeCoreMember( core ) );
 
             // then
-            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, initialCoreMembers - 1 - coresToRemove ) ), asSet( 0, 1 ),
-                    Collections.emptySet() );
+            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, initialCoreMembers - 1 - coresToRemove ) ),
+                    asSet( 0, 1 ), Collections.emptySet() );
         }
     }
 

@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.IOException;
@@ -18,11 +20,13 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.StatefullFieldExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.lang.String.format;
+
 /**
  * Extension for cluster ITs. Allows the user to {@link Inject} a {@link ClusterFactory} into the test class. Clusters created will have the same lifecycle
  * as the {@link TestInstance.Lifecycle} of the root class.
  */
-class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> implements AfterEachCallback, BeforeEachCallback
+class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> implements AfterEachCallback, BeforeEachCallback, ExecutionCondition
 {
     private static final String CLUSTER = "cluster";
     private static final ExtensionContext.Namespace CLUSTER_NAMESPACE = ExtensionContext.Namespace.create( CLUSTER );
@@ -66,6 +70,13 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         {
             clusterFactory.shutdownAll();
         }
+        else
+        {
+            if ( !clusterFactory.hasFailed() )
+            {
+                context.getExecutionException().ifPresent( e -> clusterFactory.setFailed( context.getRequiredTestMethod() ) );
+            }
+        }
     }
 
     @Override
@@ -105,5 +116,29 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
             throw new RuntimeException( e );
         }
         return testDirectory;
+    }
+
+    @Override
+    public ConditionEvaluationResult evaluateExecutionCondition( ExtensionContext context )
+    {
+        /*
+        If in PER_CLASS mode and there has been a failed test then we ignore the remaining tests. This because they share the same cluster(s) throughout the
+        lifecycle and could therefore cause succumbing methods to fail. It avoids having to figure out what test was the root cause of failure and possibly
+        wasting time investigating a failed test that was just failing due to a prior test method failing.
+
+        NOTE! This does not work with dynamic tests since they do not support lifecycle callbacks!
+         */
+        TrackingClusterFactory clusterFactory = (TrackingClusterFactory) getStoredValue( context );
+        if ( clusterFactory != null && context.getTestInstanceLifecycle().map( lifecycle -> lifecycle == TestInstance.Lifecycle.PER_CLASS ).orElse( false ) &&
+                clusterFactory.hasFailed() )
+        {
+            return ConditionEvaluationResult.disabled(
+                    format( "A test method failed prior to this. Since they share cluster(s) this test is ignored. The initial failing test method was: '%s'",
+                            clusterFactory.getFailedMethod() ) );
+        }
+        else
+        {
+            return ConditionEvaluationResult.enabled( "" );
+        }
     }
 }
