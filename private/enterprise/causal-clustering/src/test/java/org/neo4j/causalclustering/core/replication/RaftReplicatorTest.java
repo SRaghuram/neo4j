@@ -215,11 +215,11 @@ class RaftReplicatorTest
     }
 
     @Test
-    void stopReplicationWhenUnHealthy() throws InterruptedException, ReplicationFailureException
+    void stopReplicationWhenUnHealthy() throws InterruptedException
     {
         CapturingProgressTracker capturedProgress = new CapturingProgressTracker();
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
-        doThrow( new ReplicationFailureException( "" ) ).when( databaseService ).assertHealthy( ReplicationFailureException.class );
+        doThrow( new ReplicationFailureException( "" ) ).when( databaseService ).assertHealthy( IllegalStateException.class );
 
         RaftReplicator replicator = getReplicator( outbound, capturedProgress, new Monitors() );
         replicator.onLeaderSwitch( leaderInfo );
