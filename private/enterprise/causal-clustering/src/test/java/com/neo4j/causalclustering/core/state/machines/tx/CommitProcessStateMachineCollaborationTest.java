@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
+import com.neo4j.causalclustering.error_handling.Panicker;
 import org.junit.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -47,7 +48,7 @@ public class CommitProcessStateMachineCollaborationTest
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );
-        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseName );
+        ReplicatedTransactionCommitProcess commitProcess = new ReplicatedTransactionCommitProcess( replicator, databaseName, mock( Panicker.class ) );
 
         // when
         try

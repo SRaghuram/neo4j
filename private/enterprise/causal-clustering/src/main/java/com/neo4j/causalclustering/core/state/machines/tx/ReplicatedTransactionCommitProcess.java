@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.tx;
 
 import com.neo4j.causalclustering.core.replication.ReplicationFailureException;
 import com.neo4j.causalclustering.core.replication.Replicator;
+import com.neo4j.causalclustering.error_handling.Panicker;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -20,11 +21,13 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
 {
     private final Replicator replicator;
     private final String databaseName;
+    private final Panicker panicker;
 
-    public ReplicatedTransactionCommitProcess( Replicator replicator, String databaseName )
+    public ReplicatedTransactionCommitProcess( Replicator replicator, String databaseName, Panicker panicker )
     {
         this.replicator = replicator;
         this.databaseName = databaseName;
+        this.panicker = panicker;
     }
 
     @Override
@@ -48,8 +51,8 @@ public class ReplicatedTransactionCommitProcess implements TransactionCommitProc
         }
         catch ( Exception e )
         {
-            // TODO: Panic?
-            throw new RuntimeException( e );
+            panicker.panic( e );
+            throw new RuntimeException( "Unexpected exception caused a panic.", e );
         }
     }
 }

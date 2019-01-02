@@ -197,7 +197,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
-        CommitProcessFactory commitProcessFactory = ( appender, applier, ignored ) -> createCommitProcess( appender, applier, localDatabase );
+        CommitProcessFactory commitProcessFactory = ( appender, applier, ignored ) -> createCommitProcess( appender, applier, localDatabase, panicker );
 
         PerDatabaseCoreStateComponents dbState = new PerDatabaseCoreStateComponents( commitProcessFactory, coreStateMachines, tokenHolders,
                 idRangeAcquirer, lockManager, idContext );
@@ -206,10 +206,11 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         return dbState;
     }
 
-    private TransactionCommitProcess createCommitProcess( TransactionAppender appender, StorageEngine storageEngine, CoreLocalDatabase localDatabase )
+    private TransactionCommitProcess createCommitProcess( TransactionAppender appender, StorageEngine storageEngine, CoreLocalDatabase localDatabase,
+            Panicker panicker )
     {
         localDatabase.setCommitProcessDependencies( appender, storageEngine );
-        return new ReplicatedTransactionCommitProcess( replicator, localDatabase.databaseName() );
+        return new ReplicatedTransactionCommitProcess( replicator, localDatabase.databaseName(), panicker );
     }
 
     private Map<IdType,Integer> getIdTypeAllocationSizeFromConfig( Config config )
