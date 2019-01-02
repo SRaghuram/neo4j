@@ -22,6 +22,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
@@ -48,7 +49,6 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -105,6 +105,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_N
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_path;
+import static org.neo4j.helpers.Exceptions.rootCause;
 import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 
 @PageCacheExtension
@@ -437,7 +438,7 @@ class BackupIT
             executor.shutdown();
 
             BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( "localhost", port, true ) );
-            assertThat( Exceptions.rootCause( error ), instanceOf( ClosedChannelException.class ) );
+            assertThat( rootCause( error ), either( instanceOf( ConnectException.class ) ).or( instanceOf( ClosedChannelException.class ) ) );
 
             assertNull( serverAcceptFuture.get( 1, TimeUnit.MINUTES ) );
             executor.awaitTermination( 1, TimeUnit.MINUTES );
