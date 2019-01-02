@@ -11,10 +11,18 @@ import com.codahale.metrics.MetricRegistry;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 
+import org.neo4j.kernel.impl.annotations.Documented;
+
 import static com.codahale.metrics.MetricRegistry.name;
 
+@Documented( ".JVM threads metrics." )
 public class ThreadMetrics extends JvmMetrics
 {
+    @Documented( "Estimated number of active threads in the current thread group." )
+    private static final String THREAD_COUNT_TEMPLATE = name( VM_NAME_PREFIX, "thread.count" );
+    @Documented( "The total number of live threads including daemon and non-daemon threads." )
+    private static final String THREAD_TOTAL_TEMPLATE = name( VM_NAME_PREFIX, "thread.total" );
+
     private final String threadCount;
     private final String threadTotal;
 
@@ -24,8 +32,8 @@ public class ThreadMetrics extends JvmMetrics
     public ThreadMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
-        this.threadCount = name( metricsPrefix, VM_NAME_PREFIX, "thread.count" );
-        this.threadTotal = name( metricsPrefix, VM_NAME_PREFIX, "thread.total" );
+        this.threadCount = name( metricsPrefix, THREAD_COUNT_TEMPLATE );
+        this.threadTotal = name( metricsPrefix, THREAD_TOTAL_TEMPLATE );
     }
 
     @Override

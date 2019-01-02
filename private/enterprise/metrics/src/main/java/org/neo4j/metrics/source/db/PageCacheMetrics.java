@@ -20,23 +20,33 @@ public class PageCacheMetrics extends LifecycleAdapter
 {
     private static final String PAGE_CACHE_PREFIX = "page_cache";
 
-    @Documented( "The total number of exceptions seen during the eviction process in the page cache" )
+    @Documented( "The total number of exceptions seen during the eviction process in the page cache." )
+    private static final String PC_EVICTION_EXCEPTIONS_TEMPLATE = name( PAGE_CACHE_PREFIX, "eviction_exceptions" );
+    @Documented( "The total number of flushes executed by the page cache." )
+    private static final String PC_FLUSHES_TEMPLATE = name( PAGE_CACHE_PREFIX, "flushes" );
+    @Documented( "The total number of page unpins executed by the page cache." )
+    private static final String PC_UNPINS_TEMPLATE = name( PAGE_CACHE_PREFIX, "unpins" );
+    @Documented( "The total number of page pins executed by the page cache." )
+    private static final String PC_PINS_TEMPLATE = name( PAGE_CACHE_PREFIX, "pins" );
+    @Documented( "The total number of page evictions executed by the page cache." )
+    private static final String PC_EVICTIONS_TEMPLATE = name( PAGE_CACHE_PREFIX, "evictions" );
+    @Documented( "The total number of page faults happened in the page cache." )
+    private static final String PC_PAGE_FAULTS_TEMPLATE = name( PAGE_CACHE_PREFIX, "page_faults" );
+    @Documented( "The total number of page hits happened in the page cache." )
+    private static final String PC_HITS_TEMPLATE = name( PAGE_CACHE_PREFIX, "hits" );
+    @Documented( "The ratio of hits to the total number of lookups in the page cache." )
+    private static final String PC_HIT_RATIO_TEMPLATE = name( PAGE_CACHE_PREFIX, "hit_ratio" );
+    @Documented( "The ratio of number of used pages to total number of available pages." )
+    private static final String PC_USAGE_RATIO_TEMPLATE = name( PAGE_CACHE_PREFIX, "usage_ratio" );
+
     private final String pcEvictionExceptions;
-    @Documented( "The total number of flushes executed by the page cache" )
     private final String pcFlushes;
-    @Documented( "The total number of page unpins executed by the page cache" )
     private final String pcUnpins;
-    @Documented( "The total number of page pins executed by the page cache" )
     private final String pcPins;
-    @Documented( "The total number of page evictions executed by the page cache" )
     private final String pcEvictions;
-    @Documented( "The total number of page faults happened in the page cache" )
     private final String pcPageFaults;
-    @Documented( "The total number of page hits happened in the page cache" )
     private final String pcHits;
-    @Documented( "The ratio of hits to the total number of lookups in the page cache" )
     private final String pcHitRatio;
-    @Documented( "The ratio of number of used pages to total number of available pages" )
     private final String pcUsageRatio;
 
     private final MetricRegistry registry;
@@ -46,15 +56,15 @@ public class PageCacheMetrics extends LifecycleAdapter
     {
         this.registry = registry;
         this.pageCacheCounters = pageCacheCounters;
-        this.pcEvictionExceptions = name( metricsPrefix, PAGE_CACHE_PREFIX, "eviction_exceptions" );
-        this.pcFlushes = name( metricsPrefix, PAGE_CACHE_PREFIX, "flushes" );
-        this.pcUnpins = name( metricsPrefix, PAGE_CACHE_PREFIX, "unpins" );
-        this.pcPins = name( metricsPrefix, PAGE_CACHE_PREFIX, "pins" );
-        this.pcEvictions = name( metricsPrefix, PAGE_CACHE_PREFIX, "evictions" );
-        this.pcPageFaults = name( metricsPrefix, PAGE_CACHE_PREFIX, "page_faults" );
-        this.pcHits = name( metricsPrefix, PAGE_CACHE_PREFIX, "hits" );
-        this.pcHitRatio = name( metricsPrefix, PAGE_CACHE_PREFIX, "hit_ratio" );
-        this.pcUsageRatio = name( metricsPrefix, PAGE_CACHE_PREFIX, "usage_ratio" );
+        this.pcEvictionExceptions = name( metricsPrefix, PC_EVICTION_EXCEPTIONS_TEMPLATE );
+        this.pcFlushes = name( metricsPrefix, PC_FLUSHES_TEMPLATE );
+        this.pcUnpins = name( metricsPrefix, PC_UNPINS_TEMPLATE );
+        this.pcPins = name( metricsPrefix, PC_PINS_TEMPLATE );
+        this.pcEvictions = name( metricsPrefix, PC_EVICTIONS_TEMPLATE );
+        this.pcPageFaults = name( metricsPrefix, PC_PAGE_FAULTS_TEMPLATE );
+        this.pcHits = name( metricsPrefix, PC_HITS_TEMPLATE );
+        this.pcHitRatio = name( metricsPrefix, PC_HIT_RATIO_TEMPLATE );
+        this.pcUsageRatio = name( metricsPrefix, PC_USAGE_RATIO_TEMPLATE );
     }
 
     @Override

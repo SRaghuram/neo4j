@@ -11,17 +11,27 @@ import com.codahale.metrics.MetricRegistry;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 
-import static com.codahale.metrics.MetricRegistry.name;
+import org.neo4j.kernel.impl.annotations.Documented;
 
+import static com.codahale.metrics.MetricRegistry.name;
+import static java.lang.String.format;
+
+@Documented( ".JVM memory pools metrics." )
 public class MemoryPoolMetrics extends JvmMetrics
 {
+    private final String memoryPoolPrefix;
     private final String memoryPool;
     private final MetricRegistry registry;
+
+    private static final String MEMORY_POOL_PREFIX = name( VM_NAME_PREFIX, "memory.pool" );
+    @Documented( "Estimated number of buffers in the pool." )
+    private static final String MEMORY_POOL_USAGE_TEMPLATE = name( MEMORY_POOL_PREFIX, "%s" );
 
     public MemoryPoolMetrics( String metricsPrefix, MetricRegistry registry )
     {
         this.registry = registry;
-        this.memoryPool = name( metricsPrefix, VM_NAME_PREFIX, "memory.pool" );
+        this.memoryPoolPrefix = name( metricsPrefix, MEMORY_POOL_PREFIX );
+        this.memoryPool = name( metricsPrefix, MEMORY_POOL_USAGE_TEMPLATE );
     }
 
     @Override
@@ -29,7 +39,7 @@ public class MemoryPoolMetrics extends JvmMetrics
     {
         for ( final MemoryPoolMXBean memPool : ManagementFactory.getMemoryPoolMXBeans() )
         {
-            registry.register( name( memoryPool, prettifyName( memPool.getName() ) ),
+            registry.register( format( memoryPool, prettifyName( memPool.getName() ) ),
                     (Gauge<Long>) () -> memPool.getUsage().getUsed() );
         }
     }
@@ -37,6 +47,6 @@ public class MemoryPoolMetrics extends JvmMetrics
     @Override
     public void stop()
     {
-        registry.removeMatching( ( name, metric ) -> name.startsWith( memoryPool ) );
+        registry.removeMatching( ( name, metric ) -> name.startsWith( memoryPoolPrefix ) );
     }
 }

@@ -17,7 +17,9 @@ import static com.codahale.metrics.MetricRegistry.name;
 @Documented( ".CatchUp Metrics" )
 public class CatchUpMetrics extends LifecycleAdapter
 {
-    @Documented( "TX pull requests received from read replicas" )
+    @Documented( "TX pull requests received from read replicas." )
+    private static final String TX_PULL_REQUESTS_RECEIVED_TEMPLATE = name( "causal_clustering.catchup.tx_pull_requests_received" );
+
     private final String txPullRequestsReceived;
 
     private final Monitors monitors;
@@ -26,7 +28,7 @@ public class CatchUpMetrics extends LifecycleAdapter
 
     public CatchUpMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry )
     {
-        this.txPullRequestsReceived = name( metricsPrefix, "causal_clustering.catchup.tx_pull_requests_received" );
+        this.txPullRequestsReceived = name( metricsPrefix, TX_PULL_REQUESTS_RECEIVED_TEMPLATE );
         this.monitors = monitors;
         this.registry = registry;
     }

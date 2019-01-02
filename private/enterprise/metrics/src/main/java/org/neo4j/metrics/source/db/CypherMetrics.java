@@ -20,10 +20,12 @@ public class CypherMetrics extends LifecycleAdapter
 {
     private static final String CYPHER_PREFIX = "cypher";
 
-    @Documented( "The total number of times Cypher has decided to re-plan a query" )
-    private final String replanEvents;
+    @Documented( "The total number of times Cypher has decided to re-plan a query." )
+    private static final String REPLAN_EVENTS_TEMPLATE = name( CYPHER_PREFIX, "replan_events" );
+    @Documented( "The total number of seconds waited between query replans." )
+    private static final String REPLAN_WAIT_TIME_TEMPLATE = name( CYPHER_PREFIX, "replan_wait_time" );
 
-    @Documented( "The total number of seconds waited between query replans" )
+    private final String replanEvents;
     private final String replanWaitTime;
 
     private final MetricRegistry registry;
@@ -32,8 +34,8 @@ public class CypherMetrics extends LifecycleAdapter
 
     public CypherMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
     {
-        this.replanEvents = name( metricsPrefix, CYPHER_PREFIX, "replan_events" );
-        this.replanWaitTime = name( metricsPrefix, CYPHER_PREFIX, "replan_wait_time" );
+        this.replanEvents = name( metricsPrefix, REPLAN_EVENTS_TEMPLATE );
+        this.replanWaitTime = name( metricsPrefix, REPLAN_WAIT_TIME_TEMPLATE );
         this.registry = registry;
         this.monitors = monitors;
     }

@@ -19,13 +19,18 @@ public class EntityCountMetrics extends LifecycleAdapter
 {
     private static final String COUNTS_PREFIX = "ids_in_use";
 
-    @Documented( "The total number of different relationship types stored in the database" )
+    @Documented( "The total number of different relationship types stored in the database." )
+    private static final String COUNTS_RELATIONSHIP_TYPE_TEMPLATE = name( COUNTS_PREFIX, "relationship_type" );
+    @Documented( "The total number of different property names used in the database." )
+    private static final String COUNTS_PROPERTY_TEMPLATE = name( COUNTS_PREFIX, "property" );
+    @Documented( "The total number of relationships stored in the database." )
+    private static final String COUNTS_RELATIONSHIP_TEMPLATE = name( COUNTS_PREFIX, "relationship" );
+    @Documented( "The total number of nodes stored in the database." )
+    private static final String COUNTS_NODE_TEMPLATE = name( COUNTS_PREFIX, "node" );
+
     private final String countsRelationshipType;
-    @Documented( "The total number of different property names used in the database" )
     private final String countsProperty;
-    @Documented( "The total number of relationships stored in the database" )
     private final String countsRelationship;
-    @Documented( "The total number of nodes stored in the database" )
     private final String countsNode;
 
     private final MetricRegistry registry;
@@ -33,10 +38,10 @@ public class EntityCountMetrics extends LifecycleAdapter
 
     public EntityCountMetrics( String metricsPrefix, MetricRegistry registry, StoreEntityCounters storeEntityCounters )
     {
-        this.countsRelationshipType = name( metricsPrefix, COUNTS_PREFIX, "relationship_type" );
-        this.countsProperty = name( metricsPrefix, COUNTS_PREFIX, "property" );
-        this.countsRelationship = name( metricsPrefix, COUNTS_PREFIX, "relationship" );
-        this.countsNode = name( metricsPrefix, COUNTS_PREFIX, "node" );
+        this.countsRelationshipType = name( metricsPrefix, COUNTS_RELATIONSHIP_TYPE_TEMPLATE );
+        this.countsProperty = name( metricsPrefix, COUNTS_PROPERTY_TEMPLATE );
+        this.countsRelationship = name( metricsPrefix, COUNTS_RELATIONSHIP_TEMPLATE );
+        this.countsNode = name( metricsPrefix, COUNTS_NODE_TEMPLATE );
         this.registry = registry;
         this.storeEntityCounters = storeEntityCounters;
     }

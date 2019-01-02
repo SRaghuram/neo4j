@@ -24,42 +24,54 @@ public class BoltMetrics extends LifecycleAdapter
     private static final String BOLT_PREFIX = "bolt";
 
     @Documented( "The total number of Bolt sessions started since this instance started. This includes both " +
-                 "succeeded and failed sessions (deprecated, use connections_opened instead)." )
-    private final String sessionsStarted;
+            "succeeded and failed sessions (deprecated, use connections_opened instead)." )
+    private static final String SESSIONS_STARTED_TEMPLATE = name( BOLT_PREFIX, "sessions_started" );
 
     @Documented( "The total number of Bolt connections opened since this instance started. This includes both " +
             "succeeded and failed connections." )
-    private final String connectionsOpened;
+    private static final String CONNECTIONS_OPENED_TEMPLATE = name( BOLT_PREFIX, "connections_opened" );
 
     @Documented( "The total number of Bolt connections closed since this instance started. This includes both " +
             "properly and abnormally ended connections." )
-    private final String connectionsClosed;
+    private static final String CONNECTIONS_CLOSED_TEMPLATE = name( BOLT_PREFIX, "connections_closed" );
 
     @Documented( "The total number of Bolt connections currently being executed." )
-    private final String connectionsRunning;
+    private static final String CONNECTIONS_RUNNING_TEMPLATE = name( BOLT_PREFIX, "connections_running" );
 
     @Documented( "The total number of Bolt connections sitting idle." )
-    private final String connectionsIdle;
+    private static final String CONNECTIONS_IDLE_TEMPLATE = name( BOLT_PREFIX, "connections_idle" );
 
     @Documented( "The total number of messages received via Bolt since this instance started." )
-    private final String messagesReceived;
+    private static final String MESSAGES_RECEIVED_TEMPLATE = name( BOLT_PREFIX, "messages_received" );
 
     @Documented( "The total number of messages that began processing since this instance started. This is different " +
-                 "from messages received in that this counter tracks how many of the received messages have" +
-                 "been taken on by a worker thread." )
-    private final String messagesStarted;
+            "from messages received in that this counter tracks how many of the received messages have" +
+            "been taken on by a worker thread." )
+    private static final String MESSAGES_STARTED_TEMPLATE = name( BOLT_PREFIX, "messages_started" );
 
     @Documented( "The total number of messages that completed processing since this instance started. This includes " +
-                 "successful, failed and ignored Bolt messages." )
-    private final String messagesDone;
+            "successful, failed and ignored Bolt messages." )
+    private static final String MESSAGES_DONE_TEMPLATE = name( BOLT_PREFIX, "messages_done" );
 
     @Documented( "The total number of messages that failed processing since this instance started." )
-    private final String messagesFailed;
+    private static final String MESSAGES_FAILED_TEMPLATE = name( BOLT_PREFIX, "messages_failed" );
 
     @Documented( "The accumulated time messages have spent waiting for a worker thread." )
-    private final String totalQueueTime;
+    private static final String TOTAL_QUEUE_TIME_TEMPLATE = name( BOLT_PREFIX, "accumulated_queue_time" );
 
     @Documented( "The accumulated time worker threads have spent processing messages." )
+    private static final String TOTAL_PROCESSING_TIME_TEMPLATE = name( BOLT_PREFIX, "accumulated_processing_time" );
+
+    private final String sessionsStarted;
+    private final String connectionsOpened;
+    private final String connectionsClosed;
+    private final String connectionsRunning;
+    private final String connectionsIdle;
+    private final String messagesReceived;
+    private final String messagesStarted;
+    private final String messagesDone;
+    private final String messagesFailed;
+    private final String totalQueueTime;
     private final String totalProcessingTime;
 
     private final MetricRegistry registry;
@@ -68,17 +80,17 @@ public class BoltMetrics extends LifecycleAdapter
 
     public BoltMetrics( String metricsPrefix, MetricRegistry registry, Monitors monitors )
     {
-        this.sessionsStarted = name( metricsPrefix, BOLT_PREFIX, "sessions_started" );
-        this.connectionsOpened = name( metricsPrefix, BOLT_PREFIX, "connections_opened" );
-        this.connectionsClosed = name( metricsPrefix, BOLT_PREFIX, "connections_closed" );
-        this.connectionsRunning = name( metricsPrefix, BOLT_PREFIX, "connections_running" );
-        this.connectionsIdle = name( metricsPrefix, BOLT_PREFIX, "connections_idle" );
-        this.messagesReceived = name( metricsPrefix, BOLT_PREFIX, "messages_received" );
-        this.messagesStarted = name( metricsPrefix, BOLT_PREFIX, "messages_started" );
-        this.messagesDone = name( metricsPrefix, BOLT_PREFIX, "messages_done" );
-        this.messagesFailed = name( metricsPrefix, BOLT_PREFIX, "messages_failed" );
-        this.totalQueueTime = name( metricsPrefix, BOLT_PREFIX, "accumulated_queue_time" );
-        this.totalProcessingTime = name( metricsPrefix, BOLT_PREFIX, "accumulated_processing_time" );
+        this.sessionsStarted = name( metricsPrefix, SESSIONS_STARTED_TEMPLATE );
+        this.connectionsOpened = name( metricsPrefix, CONNECTIONS_OPENED_TEMPLATE );
+        this.connectionsClosed = name( metricsPrefix, CONNECTIONS_CLOSED_TEMPLATE );
+        this.connectionsRunning = name( metricsPrefix, CONNECTIONS_RUNNING_TEMPLATE );
+        this.connectionsIdle = name( metricsPrefix, CONNECTIONS_IDLE_TEMPLATE );
+        this.messagesReceived = name( metricsPrefix, MESSAGES_RECEIVED_TEMPLATE );
+        this.messagesStarted = name( metricsPrefix, MESSAGES_STARTED_TEMPLATE );
+        this.messagesDone = name( metricsPrefix, MESSAGES_DONE_TEMPLATE );
+        this.messagesFailed = name( metricsPrefix, MESSAGES_FAILED_TEMPLATE );
+        this.totalQueueTime = name( metricsPrefix, TOTAL_QUEUE_TIME_TEMPLATE );
+        this.totalProcessingTime = name( metricsPrefix, TOTAL_PROCESSING_TIME_TEMPLATE );
         this.registry = registry;
         this.monitors = monitors;
     }

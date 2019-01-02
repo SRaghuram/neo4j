@@ -24,39 +24,57 @@ public class CoreMetrics extends LifecycleAdapter
 {
     private static final String CAUSAL_CLUSTERING_PREFIX = "causal_clustering.core";
 
-    @Documented( "Append index of the RAFT log" )
-    private final String appendIndex;
-    @Documented( "Commit index of the RAFT log" )
-    private final String commitIndex;
-    @Documented( "RAFT Term of this server" )
-    private final String term;
-    @Documented( "Transaction retries" )
-    private final String txRetries;
+    @Documented( "Append index of the RAFT log." )
+    private static final String APPEND_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "append_index" );
+    @Documented( "Commit index of the RAFT log." )
+    private static final String COMMIT_INDEX_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "commit_index" );
+    @Documented( "RAFT Term of this server." )
+    private static final String TERM_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "term" );
+    @Documented( "Transaction retries." )
+    private static final String TX_RETRIES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "tx_retries" );
     @Documented( "Is this server the leader?" )
+    private static final String IS_LEADER_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "is_leader" );
+    @Documented( "In-flight cache total bytes." )
+    private static final String TOTAL_BYTES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "total_bytes" );
+    @Documented( "In-flight cache max bytes." )
+    private static final String MAX_BYTES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "max_bytes" );
+    @Documented( "In-flight cache element count." )
+    private static final String ELEMENT_COUNT_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "element_count" );
+    @Documented( "In-flight cache maximum elements." )
+    private static final String MAX_ELEMENTS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "max_elements" );
+    @Documented( "In-flight cache hits." )
+    private static final String HITS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "hits" );
+    @Documented( "In-flight cache misses." )
+    private static final String MISSES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "in_flight_cache", "misses" );
+    @Documented( "Delay between RAFT message receive and process." )
+    private static final String DELAY_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_delay" );
+    @Documented( "Timer for RAFT message processing." )
+    private static final String TIMER_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
+    @Documented( "Raft replication new request count." )
+    private static final String REPLICATION_NEW_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_new" );
+    @Documented( "Raft replication attempt count." )
+    private static final String REPLICATION_ATTEMPT_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_attempt" );
+    @Documented( "Raft Replication success count." )
+    private static final String REPLICATION_SUCCESS_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_success" );
+    @Documented( "Raft Replication fail count." )
+    private static final String REPLICATION_FAIL_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "replication_fail" );
+
+    private final String appendIndex;
+    private final String commitIndex;
+    private final String term;
+    private final String txRetries;
     private final String isLeader;
-    @Documented( "In-flight cache total bytes" )
     private final String totalBytes;
-    @Documented( "In-flight cache max bytes" )
     private final String maxBytes;
-    @Documented( "In-flight cache element count" )
     private final String elementCount;
-    @Documented( "In-flight cache maximum elements" )
     private final String maxElements;
-    @Documented( "In-flight cache hits" )
     private final String hits;
-    @Documented( "In-flight cache misses" )
     private final String misses;
-    @Documented( "Delay between RAFT message receive and process" )
     private final String delay;
-    @Documented( "Timer for RAFT message processing" )
     private final String timer;
-    @Documented( "Raft replication new request count" )
     private final String replicationNew;
-    @Documented( "Raft replication attempt count" )
     private final String replicationAttempt;
-    @Documented( "Raft Replication success count" )
     private final String replicationSuccess;
-    @Documented( "Raft Replication fail count" )
     private final String replicationFail;
 
     private final Monitors monitors;
@@ -74,23 +92,23 @@ public class CoreMetrics extends LifecycleAdapter
 
     public CoreMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry, Supplier<CoreMetaData> coreMetaData )
     {
-        this.appendIndex = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "append_index" );
-        this.commitIndex = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "commit_index" );
-        this.term = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "term" );
-        this.txRetries = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "tx_retries" );
-        this.isLeader = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "is_leader" );
-        this.totalBytes = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "total_bytes" );
-        this.maxBytes = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "max_bytes" );
-        this.elementCount = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "element_count" );
-        this.maxElements = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "max_elements" );
-        this.hits = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "hits" );
-        this.misses = name( metricsPrefix, "in_flight_cache", CAUSAL_CLUSTERING_PREFIX, "misses" );
-        this.delay = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "message_processing_delay" );
-        this.timer = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "message_processing_timer" );
-        this.replicationNew = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_new" );
-        this.replicationAttempt = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_attempt" );
-        this.replicationSuccess = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_success" );
-        this.replicationFail = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "replication_fail" );
+        this.appendIndex = name( metricsPrefix, APPEND_INDEX_TEMPLATE );
+        this.commitIndex = name( metricsPrefix, COMMIT_INDEX_TEMPLATE );
+        this.term = name( metricsPrefix, TERM_TEMPLATE );
+        this.txRetries = name( metricsPrefix, TX_RETRIES_TEMPLATE );
+        this.isLeader = name( metricsPrefix, IS_LEADER_TEMPLATE );
+        this.totalBytes = name( metricsPrefix, TOTAL_BYTES_TEMPLATE );
+        this.maxBytes = name( metricsPrefix, MAX_BYTES_TEMPLATE );
+        this.elementCount = name( metricsPrefix, ELEMENT_COUNT_TEMPLATE );
+        this.maxElements = name( metricsPrefix, MAX_ELEMENTS_TEMPLATE );
+        this.hits = name( metricsPrefix, HITS_TEMPLATE );
+        this.misses = name( metricsPrefix, MISSES_TEMPLATE );
+        this.delay = name( metricsPrefix, DELAY_TEMPLATE );
+        this.timer = name( metricsPrefix, TIMER_TEMPLATE );
+        this.replicationNew = name( metricsPrefix, REPLICATION_NEW_TEMPLATE );
+        this.replicationAttempt = name( metricsPrefix, REPLICATION_ATTEMPT_TEMPLATE );
+        this.replicationSuccess = name( metricsPrefix, REPLICATION_SUCCESS_TEMPLATE );
+        this.replicationFail = name( metricsPrefix, REPLICATION_FAIL_TEMPLATE );
         this.monitors = monitors;
         this.registry = registry;
         this.coreMetaData = coreMetaData;

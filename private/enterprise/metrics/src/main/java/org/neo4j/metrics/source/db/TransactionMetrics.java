@@ -23,42 +23,64 @@ public class TransactionMetrics extends LifecycleAdapter
 {
     private static final String TRANSACTION_PREFIX = "transaction";
 
-    @Documented( "The total number of started transactions" )
+    @Documented( "The total number of started transactions." )
+    private static final String TX_STARTED_TEMPLATE = name( TRANSACTION_PREFIX, "started" );
+    @Documented( "The highest peak of concurrent transactions." )
+    private static final String TX_PEAK_CONCURRENT_TEMPLATE = name( TRANSACTION_PREFIX, "peak_concurrent" );
+
+    @Documented( "The number of currently active transactions." )
+    private static final String TX_ACTIVE_TEMPLATE = name( TRANSACTION_PREFIX, "active" );
+    @Documented( "The number of currently active read transactions." )
+    private static final String READ_TX_ACTIVE_TEMPLATE = name( TRANSACTION_PREFIX, "active_read" );
+    @Documented( "The number of currently active write transactions." )
+    private static final String WRITE_TX_ACTIVE_TEMPLATE = name( TRANSACTION_PREFIX, "active_write" );
+
+    @Documented( "The total number of committed transactions." )
+    private static final String TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed" );
+    @Documented( "The total number of committed read transactions." )
+    private static final String READ_TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed_read" );
+    @Documented( "The total number of committed write transactions." )
+    private static final String WRITE_TX_COMMITTED_TEMPLATE = name( TRANSACTION_PREFIX, "committed_write" );
+
+    @Documented( "The total number of rolled back transactions." )
+    private static final String TX_ROLLBACKS_TEMPLATE = name( TRANSACTION_PREFIX, "rollbacks" );
+    @Documented( "The total number of rolled back read transactions." )
+    private static final String READ_TX_ROLLBACKS_TEMPLATE = name( TRANSACTION_PREFIX, "rollbacks_read" );
+    @Documented( "The total number of rolled back write transactions." )
+    private static final String WRITE_TX_ROLLBACKS_TEMPLATE = name( TRANSACTION_PREFIX, "rollbacks_write" );
+
+    @Documented( "The total number of terminated transactions." )
+    private static final String TX_TERMINATED_TEMPLATE = name( TRANSACTION_PREFIX, "terminated" );
+    @Documented( "The total number of terminated read transactions." )
+    private static final String READ_TX_TERMINATED_TEMPLATE = name( TRANSACTION_PREFIX, "terminated_read" );
+    @Documented( "The total number of terminated write transactions." )
+    private static final String WRITE_TX_TERMINATED_TEMPLATE = name( TRANSACTION_PREFIX, "terminated_write" );
+
+    @Documented( "The ID of the last committed transaction." )
+    private static final String LAST_COMMITTED_TX_ID_TEMPLATE = name( TRANSACTION_PREFIX, "last_committed_tx_id" );
+    @Documented( "The ID of the last closed transaction." )
+    private static final String LAST_CLOSED_TX_ID_TEMPLATE = name( TRANSACTION_PREFIX, "last_closed_tx_id" );
+
     private final String txStarted;
-    @Documented( "The highest peak of concurrent transactions" )
     private final String txPeakConcurrent;
 
-    @Documented( "The number of currently active transactions" )
     private final String txActive;
-    @Documented( "The number of currently active read transactions" )
     private final String readTxActive;
-    @Documented( "The number of currently active write transactions" )
     private final String writeTxActive;
 
-    @Documented( "The total number of committed transactions" )
     private final String txCommitted;
-    @Documented( "The total number of committed read transactions" )
     private final String readTxCommitted;
-    @Documented( "The total number of committed write transactions" )
     private final String writeTxCommitted;
 
-    @Documented( "The total number of rolled back transactions" )
     private final String txRollbacks;
-    @Documented( "The total number of rolled back read transactions" )
     private final String readTxRollbacks;
-    @Documented( "The total number of rolled back write transactions" )
     private final String writeTxRollbacks;
 
-    @Documented( "The total number of terminated transactions" )
     private final String txTerminated;
-    @Documented( "The total number of terminated read transactions" )
     private final String readTxTerminated;
-    @Documented( "The total number of terminated write transactions" )
     private final String writeTxTerminated;
 
-    @Documented( "The ID of the last committed transaction" )
     private final String lastCommittedTxId;
-    @Documented( "The ID of the last closed transaction" )
     private final String lastClosedTxId;
 
     private final MetricRegistry registry;
@@ -68,22 +90,22 @@ public class TransactionMetrics extends LifecycleAdapter
     public TransactionMetrics( String metricsPrefix, MetricRegistry registry,
             Supplier<TransactionIdStore> transactionIdStoreSupplier, TransactionCounters transactionCounters )
     {
-        this.txStarted = name( metricsPrefix, TRANSACTION_PREFIX, "started" );
-        this.txPeakConcurrent = name( metricsPrefix, TRANSACTION_PREFIX, "peak_concurrent" );
-        this.txActive = name( metricsPrefix, TRANSACTION_PREFIX, "active" );
-        this.readTxActive = name( metricsPrefix, TRANSACTION_PREFIX, "active_read" );
-        this.writeTxActive = name( metricsPrefix, TRANSACTION_PREFIX, "active_write" );
-        this.txCommitted = name( metricsPrefix, TRANSACTION_PREFIX, "committed" );
-        this.readTxCommitted = name( metricsPrefix, TRANSACTION_PREFIX, "committed_read" );
-        this.writeTxCommitted = name( metricsPrefix, TRANSACTION_PREFIX, "committed_write" );
-        this.txRollbacks = name( metricsPrefix, TRANSACTION_PREFIX, "rollbacks" );
-        this.readTxRollbacks = name( metricsPrefix, TRANSACTION_PREFIX, "rollbacks_read" );
-        this.writeTxRollbacks = name( metricsPrefix, TRANSACTION_PREFIX, "rollbacks_write" );
-        this.txTerminated = name( metricsPrefix, TRANSACTION_PREFIX, "terminated" );
-        this.readTxTerminated = name( metricsPrefix, TRANSACTION_PREFIX, "terminated_read" );
-        this.writeTxTerminated = name( metricsPrefix, TRANSACTION_PREFIX, "terminated_write" );
-        this.lastCommittedTxId = name( metricsPrefix, TRANSACTION_PREFIX, "last_committed_tx_id" );
-        this.lastClosedTxId = name( metricsPrefix, TRANSACTION_PREFIX, "last_closed_tx_id" );
+        this.txStarted = name( metricsPrefix, TX_STARTED_TEMPLATE );
+        this.txPeakConcurrent = name( metricsPrefix, TX_PEAK_CONCURRENT_TEMPLATE );
+        this.txActive = name( metricsPrefix, TX_ACTIVE_TEMPLATE );
+        this.readTxActive = name( metricsPrefix, READ_TX_ACTIVE_TEMPLATE );
+        this.writeTxActive = name( metricsPrefix, WRITE_TX_ACTIVE_TEMPLATE );
+        this.txCommitted = name( metricsPrefix, TX_COMMITTED_TEMPLATE );
+        this.readTxCommitted = name( metricsPrefix, READ_TX_COMMITTED_TEMPLATE );
+        this.writeTxCommitted = name( metricsPrefix, WRITE_TX_COMMITTED_TEMPLATE );
+        this.txRollbacks = name( metricsPrefix, TX_ROLLBACKS_TEMPLATE );
+        this.readTxRollbacks = name( metricsPrefix, READ_TX_ROLLBACKS_TEMPLATE );
+        this.writeTxRollbacks = name( metricsPrefix, WRITE_TX_ROLLBACKS_TEMPLATE );
+        this.txTerminated = name( metricsPrefix, TX_TERMINATED_TEMPLATE );
+        this.readTxTerminated = name( metricsPrefix, READ_TX_TERMINATED_TEMPLATE );
+        this.writeTxTerminated = name( metricsPrefix, WRITE_TX_TERMINATED_TEMPLATE );
+        this.lastCommittedTxId = name( metricsPrefix, LAST_COMMITTED_TX_ID_TEMPLATE );
+        this.lastClosedTxId = name( metricsPrefix, LAST_CLOSED_TX_ID_TEMPLATE );
         this.registry = registry;
         this.transactionIdStoreSupplier = transactionIdStoreSupplier;
         this.transactionCounters = transactionCounters;

@@ -29,11 +29,15 @@ public class LogRotationMetrics extends LifecycleAdapter
 {
     private static final String LOG_ROTATION_PREFIX = "log_rotation";
 
-    @Documented( "The total number of transaction log rotations executed so far" )
+    @Documented( "The total number of transaction log rotations executed so far." )
+    private static final String LOG_ROTATION_EVENTS_TEMPLATE = name( LOG_ROTATION_PREFIX, "events" );
+    @Documented( "The total time spent in rotating transaction logs so far." )
+    private static final String LOG_ROTATION_TOTAL_TIME_TEMPLATE = name( LOG_ROTATION_PREFIX, "total_time" );
+    @Documented( "The duration of the log rotation event." )
+    private static final String LOG_ROTATION_DURATION_TEMPLATE = name( LOG_ROTATION_PREFIX, "duration" );
+
     private final String logRotationEvents;
-    @Documented( "The total time spent in rotating transaction logs so far" )
     private final String logRotationTotalTime;
-    @Documented( "The duration of the log rotation event" )
     private final String logRotationDuration;
 
     private final MetricRegistry registry;
@@ -44,9 +48,9 @@ public class LogRotationMetrics extends LifecycleAdapter
     public LogRotationMetrics( String metricsPrefix, EventReporter reporter, MetricRegistry registry,
             Monitors monitors, LogRotationMonitor logRotationMonitor, JobScheduler jobScheduler )
     {
-        this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_PREFIX, "events" );
-        this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_PREFIX, "total_time" );
-        this.logRotationDuration = name( metricsPrefix, LOG_ROTATION_PREFIX, "duration" );
+        this.logRotationEvents = name( metricsPrefix, LOG_ROTATION_EVENTS_TEMPLATE );
+        this.logRotationTotalTime = name( metricsPrefix, LOG_ROTATION_TOTAL_TIME_TEMPLATE );
+        this.logRotationDuration = name( metricsPrefix, LOG_ROTATION_DURATION_TEMPLATE );
         this.registry = registry;
         this.monitors = monitors;
         this.logRotationMonitor = logRotationMonitor;

@@ -21,9 +21,12 @@ public class ServerMetrics extends LifecycleAdapter
 {
     private static final String SERVER_PREFIX = "server";
 
-    @Documented( "The total number of idle threads in the jetty pool" )
+    @Documented( "The total number of idle threads in the jetty pool." )
+    private static final String THREAD_JETTY_IDLE_TEMPLATE = name( SERVER_PREFIX, "threads.jetty.idle" );
+    @Documented( "The total number of threads (both idle and busy) in the jetty pool." )
+    private static final String THREAD_JETTY_ALL_TEMPLATE = name( SERVER_PREFIX, "threads.jetty.all" );
+
     private final String threadJettyIdle;
-    @Documented( "The total number of threads (both idle and busy) in the jetty pool" )
     private final String threadJettyAll;
 
     private final MetricRegistry registry;
@@ -33,8 +36,8 @@ public class ServerMetrics extends LifecycleAdapter
     {
         Log userLog = logService.getUserLog( getClass() );
         this.registry = registry;
-        this.threadJettyIdle = name( metricsPrefix, SERVER_PREFIX, "threads.jetty.idle" );
-        this.threadJettyAll = name( metricsPrefix, SERVER_PREFIX, "threads.jetty.all" );
+        this.threadJettyIdle = name( metricsPrefix, THREAD_JETTY_IDLE_TEMPLATE );
+        this.threadJettyAll = name( metricsPrefix, THREAD_JETTY_ALL_TEMPLATE );
         this.serverThreadView = new ServerThreadView()
         {
             private volatile boolean warnedAboutIdle;

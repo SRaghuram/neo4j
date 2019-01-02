@@ -19,11 +19,17 @@ public class ReadReplicaMetrics extends LifecycleAdapter
 {
     private static final String CAUSAL_CLUSTERING_PREFIX = "causal_clustering.read_replica";
 
-    @Documented( "The total number of pull requests made by this instance" )
+    @Documented( "The total number of pull requests made by this instance." )
+    private static final String PULL_UPDATES_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX, "pull_updates" );
+    @Documented( "The highest transaction id requested in a pull update by this instance." )
+    private static final String PULL_UPDATE_HIGHEST_TX_ID_REQUESTED_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX,
+            "pull_update_highest_tx_id_requested" );
+    @Documented( "The highest transaction id that has been pulled in the last pull updates by this instance." )
+    private static final String PULL_UPDATE_HIGHEST_TX_ID_RECEIVED_TEMPLATE = name( CAUSAL_CLUSTERING_PREFIX,
+            "pull_update_highest_tx_id_received" );
+
     private final String pullUpdates;
-    @Documented( "The highest transaction id requested in a pull update by this instance" )
     private final String pullUpdateHighestTxIdRequested;
-    @Documented( "The highest transaction id that has been pulled in the last pull updates by this instance" )
     private final String pullUpdateHighestTxIdReceived;
 
     private final Monitors monitors;
@@ -33,11 +39,9 @@ public class ReadReplicaMetrics extends LifecycleAdapter
 
     public ReadReplicaMetrics( String metricsPrefix, Monitors monitors, MetricRegistry registry )
     {
-        this.pullUpdates = name( metricsPrefix, CAUSAL_CLUSTERING_PREFIX, "pull_updates" );
-        this.pullUpdateHighestTxIdRequested = name( metricsPrefix,
-                CAUSAL_CLUSTERING_PREFIX, "pull_update_highest_tx_id_requested" );
-        this.pullUpdateHighestTxIdReceived = name( metricsPrefix,
-                CAUSAL_CLUSTERING_PREFIX, "pull_update_highest_tx_id_received" );
+        this.pullUpdates = name( metricsPrefix, PULL_UPDATES_TEMPLATE );
+        this.pullUpdateHighestTxIdRequested = name( metricsPrefix, PULL_UPDATE_HIGHEST_TX_ID_REQUESTED_TEMPLATE );
+        this.pullUpdateHighestTxIdReceived = name( metricsPrefix, PULL_UPDATE_HIGHEST_TX_ID_RECEIVED_TEMPLATE );
         this.monitors = monitors;
         this.registry = registry;
     }
