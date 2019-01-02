@@ -23,7 +23,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static org.neo4j.kernel.extension.ExtensionType.DATABASE;
 
-public class DatabaseMetricsKernelExtensionFactory extends KernelExtensionFactory<DatabaseMetricsKernelExtensionFactory.Dependencies>
+public class DatabaseMetricsExtensionFactory extends KernelExtensionFactory<DatabaseMetricsExtensionFactory.Dependencies>
 {
     public interface Dependencies
     {
@@ -48,7 +48,7 @@ public class DatabaseMetricsKernelExtensionFactory extends KernelExtensionFactor
         StoreEntityCounters storeEntityCounters();
     }
 
-    public DatabaseMetricsKernelExtensionFactory()
+    public DatabaseMetricsExtensionFactory()
     {
         super( DATABASE, "databaseMetrics" );
     }

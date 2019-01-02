@@ -99,7 +99,7 @@ class GlobalMetricsExtensionTest
         } );
     }
 
-    private class GlobalMetricsDependencies implements GlobalMetricsKernelExtensionFactory.Dependencies
+    private class GlobalMetricsDependencies implements GlobalMetricsExtensionFactory.Dependencies
     {
         private final Config config;
 

@@ -46,8 +46,6 @@ import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-//import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_PAGE_FAULTS;
-
 public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSupport
 {
     private final AssertableLogProvider logProvider = new AssertableLogProvider( true );

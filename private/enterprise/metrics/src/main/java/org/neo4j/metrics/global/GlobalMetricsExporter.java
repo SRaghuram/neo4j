@@ -13,7 +13,7 @@ import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory.Dependencies;
+import org.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
 import org.neo4j.metrics.source.causalclustering.CatchUpMetrics;
 import org.neo4j.metrics.source.causalclustering.CoreMetrics;
 import org.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
@@ -34,7 +34,7 @@ public class GlobalMetricsExporter
     private final KernelContext context;
     private final Dependencies dependencies;
 
-    public GlobalMetricsExporter( MetricRegistry registry, Config config, LogService logService,
+    GlobalMetricsExporter( MetricRegistry registry, Config config, LogService logService,
             KernelContext context, Dependencies dependencies, LifeSupport life )
     {
         this.registry = registry;

@@ -13,7 +13,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory.Dependencies;
+import org.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
 import org.neo4j.metrics.output.CompositeEventReporter;
 import org.neo4j.metrics.output.EventReporter;
 import org.neo4j.metrics.output.EventReporterBuilder;
@@ -25,7 +25,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     private final CompositeEventReporter reporter;
     private final MetricRegistry registry;
     private final KernelContext context;
-    private final GlobalMetricsKernelExtensionFactory.Dependencies dependencies;
+    private final GlobalMetricsExtensionFactory.Dependencies dependencies;
     private boolean configured;
 
     public GlobalMetricsExtension( KernelContext context, Dependencies dependencies )

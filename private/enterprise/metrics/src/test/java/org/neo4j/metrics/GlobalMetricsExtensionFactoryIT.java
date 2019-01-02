@@ -55,7 +55,7 @@ import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 
-public class GlobalMetricsKernelExtensionFactoryIT
+public class GlobalMetricsExtensionFactoryIT
 {
     @Rule
     public final TestDirectory directory = TestDirectory.testDirectory();

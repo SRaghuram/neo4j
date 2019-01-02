@@ -1,2 +1,2 @@
-org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory
-org.neo4j.metrics.database.DatabaseMetricsKernelExtensionFactory
+org.neo4j.metrics.global.GlobalMetricsExtensionFactory
+org.neo4j.metrics.database.DatabaseMetricsExtensionFactory

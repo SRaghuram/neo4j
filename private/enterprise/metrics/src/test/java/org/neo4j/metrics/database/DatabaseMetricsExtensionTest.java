@@ -38,7 +38,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.metrics.global.GlobalMetricsExtension;
-import org.neo4j.metrics.global.GlobalMetricsKernelExtensionFactory;
+import org.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import org.neo4j.metrics.global.MetricsManager;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
@@ -114,7 +114,7 @@ class DatabaseMetricsExtensionTest
         } );
     }
 
-    private class GlobalMetricsDependencies implements GlobalMetricsKernelExtensionFactory.Dependencies
+    private class GlobalMetricsDependencies implements GlobalMetricsExtensionFactory.Dependencies
     {
         private final Config config;
 
@@ -172,7 +172,7 @@ class DatabaseMetricsExtensionTest
         }
     }
 
-    private class DatabaseMetricsDependencies implements DatabaseMetricsKernelExtensionFactory.Dependencies
+    private class DatabaseMetricsDependencies implements DatabaseMetricsExtensionFactory.Dependencies
     {
         private final Config config;
         private final MetricsManager metricsManager;

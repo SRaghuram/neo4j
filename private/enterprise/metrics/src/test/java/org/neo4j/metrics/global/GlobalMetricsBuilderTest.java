@@ -55,7 +55,7 @@ class GlobalMetricsBuilderTest
         LifeSupport life = new LifeSupport();
 
         GlobalMetricsExporter exporter = new GlobalMetricsExporter( new MetricRegistry(), config, NullLogService.getInstance(),
-                kernelContext, mock( GlobalMetricsKernelExtensionFactory.Dependencies.class ), life );
+                kernelContext, mock( GlobalMetricsExtensionFactory.Dependencies.class ), life );
 
         exporter.export();
 

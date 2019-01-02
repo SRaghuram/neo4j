@@ -12,7 +12,7 @@ import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.metrics.MetricsSettings;
-import org.neo4j.metrics.database.DatabaseMetricsKernelExtensionFactory.Dependencies;
+import org.neo4j.metrics.database.DatabaseMetricsExtensionFactory.Dependencies;
 import org.neo4j.metrics.output.EventReporter;
 import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;

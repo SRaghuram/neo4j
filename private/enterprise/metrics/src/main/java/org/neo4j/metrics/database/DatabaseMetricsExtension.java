@@ -13,7 +13,7 @@ import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.metrics.database.DatabaseMetricsKernelExtensionFactory.Dependencies;
+import org.neo4j.metrics.database.DatabaseMetricsExtensionFactory.Dependencies;
 import org.neo4j.metrics.global.MetricsManager;
 import org.neo4j.metrics.output.EventReporter;
 
@@ -21,7 +21,7 @@ public class DatabaseMetricsExtension implements Lifecycle
 {
     private final LifeSupport life = new LifeSupport();
     private final KernelContext context;
-    private final DatabaseMetricsKernelExtensionFactory.Dependencies dependencies;
+    private final DatabaseMetricsExtensionFactory.Dependencies dependencies;
 
     DatabaseMetricsExtension( KernelContext context, Dependencies dependencies )
     {

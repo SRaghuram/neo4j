@@ -19,7 +19,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
-public class GlobalMetricsKernelExtensionFactory extends KernelExtensionFactory<GlobalMetricsKernelExtensionFactory.Dependencies>
+public class GlobalMetricsExtensionFactory extends KernelExtensionFactory<GlobalMetricsExtensionFactory.Dependencies>
 {
     public interface Dependencies
     {
@@ -40,7 +40,7 @@ public class GlobalMetricsKernelExtensionFactory extends KernelExtensionFactory<
         ConnectorPortRegister portRegister();
     }
 
-    public GlobalMetricsKernelExtensionFactory()
+    public GlobalMetricsExtensionFactory()
     {
         super( "globalMetrics" );
     }
