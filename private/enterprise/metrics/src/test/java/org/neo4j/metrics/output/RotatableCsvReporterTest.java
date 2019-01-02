@@ -8,8 +8,8 @@ package org.neo4j.metrics.output;
 import com.codahale.metrics.Clock;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,6 +19,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.logging.RotatingFileOutputStreamSupplier;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.mockito.Mockito.mock;
@@ -26,14 +28,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class RotatableCsvReporterTest
+@ExtendWith( TestDirectoryExtension.class )
+class RotatableCsvReporterTest
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
-    private RotatingFileOutputStreamSupplier fileOutputStreamSupplier = mock( RotatingFileOutputStreamSupplier.class );
+    @Inject
+    private TestDirectory testDirectory;
+    private final RotatingFileOutputStreamSupplier fileOutputStreamSupplier = mock( RotatingFileOutputStreamSupplier.class );
 
     @Test
-    public void stopAllWritersOnStop() throws IOException
+    void stopAllWritersOnStop() throws IOException
     {
         OutputStream outputStream = mock( OutputStream.class );
         when( fileOutputStreamSupplier.get() ).thenReturn( outputStream );

@@ -7,7 +7,7 @@ package org.neo4j.metrics.output;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -22,14 +22,14 @@ import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.Log;
 
 import static java.util.Collections.emptySortedMap;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class PrometheusOutputTest
+class PrometheusOutputTest
 {
     @Test
-    public void eventsShouldBeRedirectedToGauges() throws Throwable
+    void eventsShouldBeRedirectedToGauges() throws Throwable
     {
         MetricRegistry registry = new MetricRegistry();
         DynamicAddressPrometheusOutput dynamicOutput = new DynamicAddressPrometheusOutput( "localhost", registry, mock( Log.class ) );
@@ -56,7 +56,7 @@ public class PrometheusOutputTest
     }
 
     @Test
-    public void metricsRegisteredAfterStartShouldBeIncluded() throws Throwable
+    void metricsRegisteredAfterStartShouldBeIncluded() throws Throwable
     {
         MetricRegistry registry = new MetricRegistry();
         DynamicAddressPrometheusOutput dynamicOutput = new DynamicAddressPrometheusOutput( "localhost", registry, mock( Log.class ) );
