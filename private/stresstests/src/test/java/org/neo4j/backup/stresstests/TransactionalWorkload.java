@@ -21,11 +21,22 @@ class TransactionalWorkload extends Workload
 {
     private static final Label label = Label.label( "Label" );
     private final Supplier<GraphDatabaseService> dbRef;
+    private final boolean enableIndexes;
 
-    TransactionalWorkload( Control control, Supplier<GraphDatabaseService> dbRef )
+    TransactionalWorkload( Control control, Supplier<GraphDatabaseService> dbRef, boolean enableIndexes )
     {
         super( control );
         this.dbRef = dbRef;
+        this.enableIndexes = enableIndexes;
+    }
+
+    @Override
+    public void prepare()
+    {
+        if ( enableIndexes )
+        {
+            setupIndexes( dbRef.get() );
+        }
     }
 
     @Override
@@ -47,7 +58,7 @@ class TransactionalWorkload extends Workload
         }
     }
 
-    static void setupIndexes( GraphDatabaseService db )
+    private static void setupIndexes( GraphDatabaseService db )
     {
         try ( Transaction tx = db.beginTx() )
         {

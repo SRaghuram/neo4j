@@ -22,10 +22,15 @@ import org.neo4j.function.Predicates;
 import org.neo4j.helper.IsChannelClosedException;
 import org.neo4j.helper.IsConnectionException;
 import org.neo4j.helper.IsConnectionResetByPeer;
-import org.neo4j.helper.IsStoreClosed;
+import org.neo4j.helper.IsStoreCopyFailure;
 import org.neo4j.helper.Workload;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
+import static org.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 
 class BackupLoad extends Workload
 {
@@ -33,11 +38,14 @@ class BackupLoad extends Workload
             new IsConnectionException(),
             new IsConnectionResetByPeer(),
             new IsChannelClosedException(),
-            new IsStoreClosed() );
+            new IsStoreCopyFailure( E_TRANSACTION_PRUNED ),
+            new IsStoreCopyFailure( E_STORE_UNAVAILABLE ) );
 
     private final String backupHostname;
     private final int backupPort;
     private final Path backupDir;
+
+    private int successfulBackups;
 
     BackupLoad( Control control, String backupHostname, int backupPort, Path backupDir )
     {
@@ -54,6 +62,7 @@ class BackupLoad extends Workload
         try
         {
             executeBackup( backupHostname, backupPort, backupDir, outputStream );
+            successfulBackups++;
         }
         catch ( Exception e )
         {
@@ -71,6 +80,12 @@ class BackupLoad extends Workload
         {
             outputStream.close();
         }
+    }
+
+    @Override
+    public void validate()
+    {
+        assertThat( "Did not manage to take a successful backup", successfulBackups, greaterThan( 0 ) );
     }
 
     private static void executeBackup( String host, int port, Path targetDir, OutputStream outputStream )

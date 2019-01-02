@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,6 +23,7 @@ import org.neo4j.causalclustering.stresstests.Config;
 import org.neo4j.causalclustering.stresstests.Control;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.helper.Workload;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.diagnostics.utils.DumpUtils;
 
@@ -31,6 +33,7 @@ import static java.lang.String.format;
 import static java.lang.System.getProperty;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.fail;
 import static org.neo4j.helper.DatabaseConfiguration.configureBackup;
 import static org.neo4j.helper.DatabaseConfiguration.configureTxLogRotationAndPruning;
@@ -79,16 +82,12 @@ public class BackupServiceStressTesting
         try
         {
             dbRef.set( graphDatabaseBuilder.newGraphDatabase() );
-            if ( enableIndexes )
-            {
-                TransactionalWorkload.setupIndexes( dbRef.get() );
-            }
-            Future<?> workload = service.submit( new TransactionalWorkload( control, dbRef::get ) );
-            Future<?> backupWorker = service.submit( new BackupLoad( control, backupHostname, backupPort, workDirectory ) );
-            Future<?> startStopWorker = service.submit( new StartStop( control, graphDatabaseBuilder::newGraphDatabase, dbRef ) );
 
-            control.awaitEnd( asList( workload, backupWorker, startStopWorker ) );
-            control.assertNoFailure();
+            TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get, enableIndexes );
+            BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, workDirectory );
+            StartStop startStopWorkload = new StartStop( control, graphDatabaseBuilder::newGraphDatabase, dbRef );
+
+            executeWorkloads( control, service, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );
 
             service.shutdown();
             if ( !service.awaitTermination( 30, SECONDS ) )
@@ -112,6 +111,26 @@ public class BackupServiceStressTesting
         // let's cleanup disk space when everything went well
         FileUtils.deleteRecursively( storeDirectory );
         FileUtils.deletePathRecursively( workDirectory );
+    }
+
+    private static void executeWorkloads( Control control, ExecutorService executor, List<Workload> workloads ) throws Exception
+    {
+        for ( Workload workload : workloads )
+        {
+            workload.prepare();
+        }
+
+        List<Future<?>> futures = workloads.stream()
+                .map( executor::submit )
+                .collect( toList() );
+
+        control.awaitEnd( futures );
+        control.assertNoFailure();
+
+        for ( Workload workload : workloads )
+        {
+            workload.validate();
+        }
     }
 
     private static void printThreadDump()
