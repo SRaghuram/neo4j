@@ -7,6 +7,7 @@ package org.neo4j.causalclustering.scenarios;
 
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -69,6 +70,8 @@ public abstract class BaseClusterOverviewIT
         private ClusterFactory clusterFactory;
 
         private Cluster<?> cluster;
+        private int initialCoreMembers;
+        private int initalReadReplicas;
 
         @BeforeAll
         void startCluster() throws ExecutionException, InterruptedException
@@ -77,16 +80,20 @@ public abstract class BaseClusterOverviewIT
             cluster.start();
         }
 
+        @BeforeEach
+        void countInitialMembers()
+        {
+            initialCoreMembers = cluster.coreMembers().size();
+            initalReadReplicas = cluster.readReplicas().size();
+        }
+
         @Test
         void shouldDiscoverCoreMembersAndReadReplicas() throws Exception
         {
-            // given
-            int replicaCount = cluster.readReplicas().size();
-
             // when
-            Matcher<List<MemberInfo>> expected =
-                    allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ), containsRole( FOLLOWER, 2 ),
-                            containsRole( READ_REPLICA, replicaCount ) );
+            Matcher<List<MemberInfo>> expected = allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ),
+                    containsRole( FOLLOWER, initialCoreMembers - 1 ),
+                            containsRole( READ_REPLICA, initalReadReplicas ) );
 
             // then
             assertAllEventualOverviews( cluster, expected );
@@ -95,16 +102,12 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverReadReplicasAfterRestartingCores() throws Exception
         {
-            // given
-            int coreMembers = cluster.coreMembers().size();
-            int readReplicas = cluster.readReplicas().size();
-
             // when
             cluster.shutdownCoreMembers();
             cluster.startCoreMembers();
 
             Matcher<List<MemberInfo>> expected = allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ),
-                    containsRole( FOLLOWER, coreMembers - 1 ), containsRole( READ_REPLICA, readReplicas ) );
+                    containsRole( FOLLOWER, initialCoreMembers - 1 ), containsRole( READ_REPLICA, initalReadReplicas ) );
 
             // then
             assertAllEventualOverviews( cluster, expected );
@@ -113,10 +116,6 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverNewCoreMembers() throws Exception
         {
-            // given
-            int initialCoreMembers = cluster.coreMembers().size();
-            int readReplicas = cluster.readReplicas().size();
-
             // when
             int extraCoreMembers = 2;
             int finalCoreMembers = initialCoreMembers + extraCoreMembers;
@@ -127,7 +126,7 @@ public abstract class BaseClusterOverviewIT
                     .forEach( CoreClusterMember::start );
 
             Matcher<List<MemberInfo>> expected =
-                    allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( READ_REPLICA, readReplicas ),
+                    allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( READ_REPLICA, initalReadReplicas ),
                             containsRole( LEADER, 1 ), containsRole( FOLLOWER, finalCoreMembers - 1 ) );
 
             // then
@@ -137,15 +136,11 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverNewReadReplicas() throws Exception
         {
-            // given
-            int coreMembers = cluster.coreMembers().size();
-            int initialReadReplicas = cluster.readReplicas().size();
-
             // when
             IntStream.range( 0, 2 ).mapToObj( ignore -> cluster.newReadReplica() ).parallel().forEach( ReadReplica::start );
 
             Matcher<List<MemberInfo>> expected = allOf( containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ), containsRole( LEADER, 1 ),
-                    containsRole( FOLLOWER, coreMembers - 1 ), containsRole( READ_REPLICA, initialReadReplicas + 2 ) );
+                    containsRole( FOLLOWER, initialCoreMembers - 1 ), containsRole( READ_REPLICA, initalReadReplicas + 2 ) );
 
             // then
             assertAllEventualOverviews( cluster, expected );
@@ -154,17 +149,14 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverRemovalOfReadReplicas() throws Exception
         {
-            // given
-            int initialReadReplicas = cluster.readReplicas().size();
-
-            assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initialReadReplicas ) );
+            assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initalReadReplicas ) );
 
             // when
             cluster.removeReadReplicaWithMemberId( getRunningReadReplicaId( cluster ) );
             cluster.removeReadReplicaWithMemberId( getRunningReadReplicaId( cluster ) );
 
             // then
-            assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initialReadReplicas - 2 ) );
+            assertAllEventualOverviews( cluster, containsRole( READ_REPLICA, initalReadReplicas - 2 ) );
         }
 
         @Test
@@ -172,16 +164,15 @@ public abstract class BaseClusterOverviewIT
         {
             // given
             int coresToRemove = 2;
-            int coreMembers = cluster.coreMembers().size();
-            assertTrue(coreMembers > coresToRemove, "Expected at least " + coreMembers + " cores. Found " + coreMembers);
+            assertTrue( initialCoreMembers > coresToRemove, "Expected at least " + initialCoreMembers + " cores. Found " + initialCoreMembers );
 
-            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 ) ) );
+            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, initialCoreMembers - 1 ) ) );
 
             // when
-            cluster.coreMembers().stream().skip( coreMembers - coresToRemove ).parallel().forEach( core -> cluster.removeCoreMember( core ) );
+            cluster.coreMembers().stream().skip( initialCoreMembers - coresToRemove ).parallel().forEach( core -> cluster.removeCoreMember( core ) );
 
             // then
-            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, coreMembers - 1 - coresToRemove ) ), asSet( 0, 1 ),
+            assertAllEventualOverviews( cluster, allOf( containsRole( LEADER, 1 ), containsRole( FOLLOWER, initialCoreMembers - 1 - coresToRemove ) ), asSet( 0, 1 ),
                     Collections.emptySet() );
         }
     }
