@@ -8,7 +8,6 @@ package org.neo4j.test.causalclustering;
 import org.junit.jupiter.api.TestInstance;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -27,7 +26,7 @@ public class TrackingClusterFactory implements ClusterFactory
     private final TestInstance.Lifecycle lifecycle;
     private final Collection<Cluster> clusters = new CopyOnWriteArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger();
-    private String failedMethod;
+    private String failedDisplayName;
 
     TrackingClusterFactory( TestDirectory testDirectory, TestInstance.Lifecycle lifecycle )
     {
@@ -83,18 +82,18 @@ public class TrackingClusterFactory implements ClusterFactory
         return testDirectory;
     }
 
-    boolean hasFailed()
+    boolean disallowContinue()
     {
-        return failedMethod != null;
+        return failedDisplayName != null && lifecycle == TestInstance.Lifecycle.PER_CLASS;
     }
 
-    String getFailedMethod()
+    String getFailedName()
     {
-        return failedMethod;
+        return failedDisplayName;
     }
 
-    void setFailed( Method requiredTestMethod )
+    void setFailed( String name )
     {
-        failedMethod = requiredTestMethod.getName();
+        failedDisplayName = name;
     }
 }

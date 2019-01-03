@@ -72,10 +72,7 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         }
         else
         {
-            if ( !clusterFactory.hasFailed() )
-            {
-                context.getExecutionException().ifPresent( e -> clusterFactory.setFailed( context.getRequiredTestMethod() ) );
-            }
+            context.getExecutionException().ifPresent( e -> clusterFactory.setFailed( context.getDisplayName() ) );
         }
     }
 
@@ -129,12 +126,11 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         NOTE! This does not work with dynamic tests since they do not support lifecycle callbacks!
          */
         TrackingClusterFactory clusterFactory = (TrackingClusterFactory) getStoredValue( context );
-        if ( clusterFactory != null && context.getTestInstanceLifecycle().map( lifecycle -> lifecycle == TestInstance.Lifecycle.PER_CLASS ).orElse( false ) &&
-                clusterFactory.hasFailed() )
+        if ( clusterFactory != null && clusterFactory.disallowContinue() )
         {
             return ConditionEvaluationResult.disabled(
                     format( "A test method failed prior to this. Since they share cluster(s) this test is ignored. The initial failing test method was: '%s'",
-                            clusterFactory.getFailedMethod() ) );
+                            clusterFactory.getFailedName() ) );
         }
         else
         {
