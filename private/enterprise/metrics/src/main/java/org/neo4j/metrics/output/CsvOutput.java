@@ -21,7 +21,7 @@ import java.util.function.BiFunction;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.RotatingFileOutputStreamSupplier;
@@ -38,19 +38,19 @@ public class CsvOutput implements Lifecycle, EventReporter
     private final Config config;
     private final MetricRegistry registry;
     private final Log logger;
-    private final KernelContext kernelContext;
+    private final ExtensionContext extensionContext;
     private final FileSystemAbstraction fileSystem;
     private final JobScheduler scheduler;
     private RotatableCsvReporter csvReporter;
     private File outputPath;
 
-    CsvOutput( Config config, MetricRegistry registry, Log logger, KernelContext kernelContext,
+    CsvOutput( Config config, MetricRegistry registry, Log logger, ExtensionContext extensionContext,
             FileSystemAbstraction fileSystem, JobScheduler scheduler )
     {
         this.config = config;
         this.registry = registry;
         this.logger = logger;
-        this.kernelContext = kernelContext;
+        this.extensionContext = extensionContext;
         this.fileSystem = fileSystem;
         this.scheduler = scheduler;
     }
@@ -67,7 +67,7 @@ public class CsvOutput implements Lifecycle, EventReporter
         }
         Long rotationThreshold = config.get( MetricsSettings.csvRotationThreshold );
         Integer maxArchives = config.get( MetricsSettings.csvMaxArchives );
-        outputPath = absoluteFileOrRelativeTo( kernelContext.directory(), configuredPath );
+        outputPath = absoluteFileOrRelativeTo( extensionContext.directory(), configuredPath );
         csvReporter = RotatableCsvReporter.forRegistry( registry )
                 .convertRatesTo( TimeUnit.SECONDS )
                 .convertDurationsTo( TimeUnit.MILLISECONDS )

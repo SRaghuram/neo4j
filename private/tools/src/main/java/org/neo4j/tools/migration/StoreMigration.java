@@ -19,10 +19,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.extension.DatabaseKernelExtensions;
+import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.kernel.impl.spi.KernelContext;
-import org.neo4j.kernel.impl.spi.SimpleKernelContext;
 import org.neo4j.kernel.impl.storemigration.DatabaseMigratorImpl;
 import org.neo4j.kernel.impl.storemigration.StoreMigrator;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
@@ -99,12 +99,11 @@ public class StoreMigration
             deps.satisfyDependencies( fs, config, pageCache, logService, monitors,
                     RecoveryCleanupWorkCollector.immediate() );
 
-            KernelContext kernelContext = new SimpleKernelContext( storeDirectory, DatabaseInfo.UNKNOWN, deps );
-            DatabaseKernelExtensions kernelExtensions = life.add( new DatabaseKernelExtensions(
-                    kernelContext, GraphDatabaseDependencies.newDependencies().kernelExtensions(),
-                    deps, ignore() ) );
-
             DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory );
+            DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, deps );
+            Iterable<KernelExtensionFactory<?>> kernelExtensionFactories = GraphDatabaseDependencies.newDependencies().kernelExtensions();
+            DatabaseKernelExtensions kernelExtensions = life.add( new DatabaseKernelExtensions( extensionContext, kernelExtensionFactories, deps, ignore() ) );
+
             final LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
                     .withConfig( config ).build();
             LogTailScanner tailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader<>(), monitors );

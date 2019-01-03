@@ -16,7 +16,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
@@ -52,7 +52,7 @@ public class PageCacheWarmerKernelExtensionFactory
     }
 
     @Override
-    public Lifecycle newInstance( KernelContext context, Dependencies deps )
+    public Lifecycle newInstance( ExtensionContext context, Dependencies deps )
     {
         JobScheduler scheduler = deps.jobScheduler();
         DatabaseAvailabilityGuard databaseAvailabilityGuard = deps.availabilityGuard();

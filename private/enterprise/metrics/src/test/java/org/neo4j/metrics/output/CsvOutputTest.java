@@ -16,9 +16,9 @@ import java.nio.file.Files;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.spi.KernelContext;
-import org.neo4j.kernel.impl.spi.SimpleKernelContext;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.LifeRule;
 import org.neo4j.logging.NullLog;
@@ -43,13 +43,12 @@ public class CsvOutputTest
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( directory ).around( fileSystemRule ).around( life );
 
-    private KernelContext kernelContext;
+    private ExtensionContext extensionContext;
 
     @Before
     public void setup()
     {
-        File storeDir = directory.directory();
-        kernelContext = new SimpleKernelContext( storeDir, DatabaseInfo.UNKNOWN, new Dependencies() );
+        extensionContext = new DatabaseExtensionContext( directory.databaseLayout(), DatabaseInfo.UNKNOWN, new Dependencies() );
     }
 
     @Test
@@ -91,7 +90,7 @@ public class CsvOutputTest
 
     private CsvOutput createCsvOutput( Config config )
     {
-        return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), kernelContext, fileSystemRule, jobScheduler );
+        return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), extensionContext, fileSystemRule, jobScheduler );
     }
 
     private Config config( String... keysValues )

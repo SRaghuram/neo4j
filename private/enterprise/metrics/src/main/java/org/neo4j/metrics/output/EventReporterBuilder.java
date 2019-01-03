@@ -12,7 +12,7 @@ import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.metrics.MetricsSettings;
@@ -33,19 +33,19 @@ public class EventReporterBuilder
     private final Config config;
     private final MetricRegistry registry;
     private final Log logger;
-    private final KernelContext context;
+    private final ExtensionContext extensionContext;
     private final LifeSupport life;
     private final ConnectorPortRegister portRegister;
     private final FileSystemAbstraction fileSystem;
     private final JobScheduler scheduler;
 
-    public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, KernelContext context,
+    public EventReporterBuilder( Config config, MetricRegistry registry, Log logger, ExtensionContext extensionContext,
             LifeSupport life, FileSystemAbstraction fileSystem, JobScheduler scheduler, ConnectorPortRegister portRegister )
     {
         this.config = config;
         this.registry = registry;
         this.logger = logger;
-        this.context = context;
+        this.extensionContext = extensionContext;
         this.life = life;
         this.fileSystem = fileSystem;
         this.scheduler = scheduler;
@@ -58,7 +58,7 @@ public class EventReporterBuilder
         final String prefix = createMetricsPrefix( config );
         if ( config.get( csvEnabled ) )
         {
-            CsvOutput csvOutput = new CsvOutput( config, registry, logger, context, fileSystem, scheduler );
+            CsvOutput csvOutput = new CsvOutput( config, registry, logger, extensionContext, fileSystem, scheduler );
             reporter.add( csvOutput );
             life.add( csvOutput );
         }

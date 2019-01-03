@@ -13,7 +13,7 @@ import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.internal.LogService;
@@ -46,7 +46,7 @@ public class GlobalMetricsExtensionFactory extends KernelExtensionFactory<Global
     }
 
     @Override
-    public Lifecycle newInstance( KernelContext context, Dependencies dependencies )
+    public Lifecycle newInstance( ExtensionContext context, Dependencies dependencies )
     {
         return new GlobalMetricsExtension( context, dependencies );
     }

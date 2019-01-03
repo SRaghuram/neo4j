@@ -10,7 +10,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -40,7 +40,7 @@ public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLogg
     }
 
     @Override
-    public Lifecycle newInstance( @SuppressWarnings( "unused" ) KernelContext context, final Dependencies dependencies )
+    public Lifecycle newInstance( @SuppressWarnings( "unused" ) ExtensionContext context, final Dependencies dependencies )
     {
         FileSystemAbstraction fileSystem = dependencies.fileSystem();
         Config config = dependencies.config();
