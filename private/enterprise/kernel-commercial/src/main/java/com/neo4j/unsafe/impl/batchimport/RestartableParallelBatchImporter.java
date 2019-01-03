@@ -110,7 +110,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
             logic.initialize( input );
             runRemainingStates( store, stateStore, previousState.other(), states );
 
-            store.success();
+            logic.success();
         }
     }
 
@@ -148,7 +148,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         states.add( new State( STATE_DATA_LINK, array(), array( RELATIONSHIP_GROUP ) )
         {
             @Override
-            void run( byte[] fromCheckPoint, CheckPointer checkPointer ) throws IOException
+            void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.calculateNodeDegrees();
                 int type = 0;
@@ -161,7 +161,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         states.add( new State( STATE_DEFRAGMENT, array( RELATIONSHIP_GROUP ), array() )
         {
             @Override
-            void run( byte[] fromCheckPoint, CheckPointer checkPointer ) throws IOException
+            void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.defragmentRelationshipGroups();
             }
@@ -169,7 +169,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         states.add( new State( null, array(), array() )
         {
             @Override
-            void run( byte[] fromCheckPoint, CheckPointer checkPointer ) throws IOException
+            void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.buildCountsStore();
             }
