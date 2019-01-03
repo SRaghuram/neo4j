@@ -106,7 +106,7 @@ public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdapto
             StoreCopyFinishedResponse.Status status =
                     catchupErrorResponse.status() == CatchupResult.E_DATABASE_UNKNOWN ? StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN
                                                                                       : StoreCopyFinishedResponse.Status.E_UNKNOWN;
-            signal.complete( new StoreCopyFinishedResponse( status ) );
+            signal.complete( new StoreCopyFinishedResponse( status, -1 ) );
         }
     }
 

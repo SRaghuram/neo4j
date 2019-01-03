@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
+import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
@@ -28,7 +29,11 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.range;
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.single;
+import static java.lang.Long.max;
 import static java.lang.String.format;
+import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 
 public class StoreCopyClient
 {
@@ -48,18 +53,19 @@ public class StoreCopyClient
         this.log = logProvider.getLog( getClass() );
     }
 
-    long copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, StoreFileStreamProvider storeFileStreamProvider,
-            Supplier<TerminationCondition> requestWiseTerminationCondition, File destDir )
+    RequiredTransactionRange copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId,
+            StoreFileStreamProvider storeFileStreamProvider, Supplier<TerminationCondition> requestWiseTerminationCondition, File destDir )
             throws StoreCopyFailedException
     {
         try
         {
             PrepareStoreCopyResponse prepareStoreCopyResponse = prepareStoreCopy( catchupAddressProvider.primary(), expectedStoreId, storeFileStreamProvider );
-            copyFilesIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider,
-                    requestWiseTerminationCondition, destDir );
+            TransactionIdHandler txIdHandler = new TransactionIdHandler( prepareStoreCopyResponse );
+            copyFilesIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider, requestWiseTerminationCondition,
+                    destDir, txIdHandler );
             copyIndexSnapshotIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider,
-                    requestWiseTerminationCondition );
-            return prepareStoreCopyResponse.lastCheckPointedTransactionId();
+                    requestWiseTerminationCondition, txIdHandler );
+            return txIdHandler.requiredTransactionRange();
         }
         catch ( Exception e )
         {
@@ -68,7 +74,8 @@ public class StoreCopyClient
     }
 
     private void copyFilesIndividually( PrepareStoreCopyResponse prepareStoreCopyResponse, StoreId expectedStoreId, CatchupAddressProvider addressProvider,
-            StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions, File destDir ) throws StoreCopyFailedException
+            StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions, File destDir, TransactionIdHandler txIdHandler )
+            throws StoreCopyFailedException
     {
         StoreCopyClientMonitor
                 storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
@@ -82,8 +89,7 @@ public class StoreCopyClient
             persistentCallToSecondary( addressProvider,
                     c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId ),
                     c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ),
-                    storeFileStream,
-                    terminationConditions.get() );
+                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ), storeFileStream, terminationConditions.get(), txIdHandler );
 
             storeCopyClientMonitor.finishReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
         }
@@ -91,8 +97,8 @@ public class StoreCopyClient
     }
 
     private void copyIndexSnapshotIndividually( PrepareStoreCopyResponse prepareStoreCopyResponse, StoreId expectedStoreId,
-            CatchupAddressProvider addressProvider, StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions )
-            throws StoreCopyFailedException
+            CatchupAddressProvider addressProvider, StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions,
+            TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
     {
         StoreCopyClientMonitor
                 storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
@@ -108,8 +114,8 @@ public class StoreCopyClient
             persistentCallToSecondary( addressProvider,
                     c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId ),
                     c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId, databaseName ),
-                    storeFileStream,
-                    terminationConditions.get() );
+                    c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId, databaseName ), storeFileStream, terminationConditions.get(),
+                    txIdHandler );
 
             storeCopyClientMonitor.finishReceivingIndexSnapshot( indexId );
         }
@@ -119,8 +125,8 @@ public class StoreCopyClient
     private void persistentCallToSecondary( CatchupAddressProvider addressProvider,
             Function<CatchupClientV1,PreparedRequest<StoreCopyFinishedResponse>> v1Request,
             Function<CatchupClientV2,PreparedRequest<StoreCopyFinishedResponse>> v2Request,
-            StoreFileStreamProvider storeFileStream,
-            TerminationCondition terminationCondition ) throws StoreCopyFailedException
+            Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request, StoreFileStreamProvider storeFileStream,
+            TerminationCondition terminationCondition, TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
     {
         TimeoutStrategy.Timeout timeout = backOffStrategy.newTimeout();
         while ( true )
@@ -133,11 +139,13 @@ public class StoreCopyClient
                 StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address )
                         .v1( v1Request )
                         .v2( v2Request )
+                        .v3( v3Request )
                         .withResponseHandler( StoreCopyResponseAdaptors.filesCopyAdaptor( storeFileStream, log ) )
                         .request( log );
 
                 if ( successfulRequest( response ) )
                 {
+                    txIdHandler.handle( response );
                     break;
                 }
             }
@@ -183,6 +191,7 @@ public class StoreCopyClient
             prepareStoreCopyResponse = catchUpClientFactory.getClient( from )
                     .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
                     .v2( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
+                    .v3( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
                     .withResponseHandler( StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( storeFileStream, log ) )
                     .request( log );
         }
@@ -213,6 +222,7 @@ public class StoreCopyClient
             return catchUpClientFactory.getClient( fromAddress )
                     .v1( CatchupClientV1::getStoreId )
                     .v2( c -> c.getStoreId( databaseName ) )
+                    .v3( c -> c.getStoreId( databaseName ) )
                     .withResponseHandler( responseHandler )
                     .request( log );
         }
@@ -237,6 +247,34 @@ public class StoreCopyClient
                 return false;
             default:
                 throw new StoreCopyFailedException( format( "Request responded with an unknown response type: %s.", response.status() ) );
+        }
+    }
+
+    private class TransactionIdHandler
+    {
+        /**
+         * Represents the minimal transaction ID that can be committed by the user.
+         */
+        private static final long MIN_COMMITTED_TRANSACTION_ID = BASE_TX_ID + 1;
+        private final long fromTxId;
+        private long highestTxId = -1;
+
+        TransactionIdHandler( PrepareStoreCopyResponse prepareStoreCopyResponse )
+        {
+            this.fromTxId = prepareStoreCopyResponse.lastCheckPointedTransactionId();
+        }
+
+        void handle( StoreCopyFinishedResponse response )
+        {
+            if ( response.status() == StoreCopyFinishedResponse.Status.SUCCESS )
+            {
+                highestTxId = max( highestTxId, response.lastCheckpointedTx() );
+            }
+        }
+
+        RequiredTransactionRange requiredTransactionRange()
+        {
+            return highestTxId < MIN_COMMITTED_TRANSACTION_ID ? single( max( fromTxId, MIN_COMMITTED_TRANSACTION_ID ) ) : range( fromTxId, highestTxId );
         }
     }
 }

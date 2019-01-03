@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.catchup.storecopy;
+package com.neo4j.causalclustering.catchup.v3.storecopy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,12 +11,16 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-public class StoreCopyFinishedResponseDecoder extends ByteToMessageDecoder
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status;
+
+public class StoreCopyFinishedResponseDecoderV3 extends ByteToMessageDecoder
 {
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf msg, List<Object> out )
     {
         int statusOrdinal = msg.readInt();
-        out.add( new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.values()[statusOrdinal], -1 ) );
+        long lastCheckpointedTx = msg.readLong();
+        out.add( new StoreCopyFinishedResponse( Status.values()[statusOrdinal], lastCheckpointedTx ) );
     }
 }

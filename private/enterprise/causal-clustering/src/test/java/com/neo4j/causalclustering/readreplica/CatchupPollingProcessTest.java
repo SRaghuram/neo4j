@@ -9,8 +9,11 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.MockCatchupClient;
+import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
+import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
+import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.LocalDatabase;
@@ -37,6 +40,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
+import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
 import static org.junit.Assert.assertEquals;
@@ -70,9 +74,10 @@ public class CatchupPollingProcessTest
     private final StoreId storeId = new StoreId( 1, 2, 3, 4 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
 
-    private final MockCatchupClient.MockClientResponses clientResponses = MockCatchupClient.responses();
+    private final MockClientResponses clientResponses = responses();
     private final CatchupClientV1 v1Client = Mockito.spy( new MockCatchupClient.MockClientV1( clientResponses ) );
     private final CatchupClientV2 v2Client = Mockito.spy( new MockCatchupClient.MockClientV2( clientResponses ) );
+    private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
     private final Panicker panicker = mock( Panicker.class );
 
     private CatchupPollingProcess txPuller;
@@ -87,7 +92,7 @@ public class CatchupPollingProcessTest
         when( localDatabase.storeId() ).thenReturn( storeId );
         when( topologyService.findCatchupAddress( coreMemberId ) ).thenReturn( coreMemberAddress );
 
-        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client );
+        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
         txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory,
                 strategyPipeline, txApplier, new Monitors(), storeCopy, topologyService, NullLogProvider.getInstance(), panicker );

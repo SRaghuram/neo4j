@@ -7,15 +7,21 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchUpClientException;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.identity.StoreId;
-import org.junit.Test;
+import org.hamcrest.CoreMatchers;
+import org.junit.jupiter.api.Test;
+import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Service;
@@ -27,115 +33,224 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
+import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-public class RemoteStoreTest
+class RemoteStoreTest
 {
+    private StoreId storeId = new StoreId( 1, 2, 3, 4 );
+    private AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
+    private DatabaseLayout databaseLayout = DatabaseLayout.of( new File( "destination" ) );
+    private CatchupAddressProvider catchupAddressProvider = fromSingleAddress( localhost );
+    private TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
+
     @Test
-    public void shouldCopyStoreFilesAndPullTransactions() throws Exception
+    void shouldCopyStoreFilesAndPullTransactions() throws Exception
     {
-        // given
-        StoreId storeId = new StoreId( 1, 2, 3, 4 );
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         TxPullClient txPullClient = mock( TxPullClient.class );
+        when( storeCopyClient.copyStoreFiles( any(), any(), any(), any(), any() ) ).thenReturn( RequiredTransactionRange.single( 1 ) );
         when( txPullClient.pullTransactions( any(), any(), anyLong(), any() ) )
                 .thenReturn( new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, 13 ) );
-        TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
-        RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors(), storageEngine() );
-
-        // when
-        AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
-        CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( localhost );
-        remoteStore.copy( catchupAddressProvider, storeId, DatabaseLayout.of( new File( "destination" ) ), true );
+        doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
 
         // then
         verify( storeCopyClient ).copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(), any() );
-        verify( txPullClient ).pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() );
+        verify( txPullClient, atLeast( 1 ) ).pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() );
     }
 
     @Test
-    public void shouldSetLastPulledTransactionId() throws Exception
+    void shouldSuccessfullyPullNoTxIfRangeAllowsIt() throws Exception
     {
-        // given
-        long lastFlushedTxId = 12;
-        StoreId wantedStoreId = new StoreId( 1, 2, 3, 4 );
-        AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
-        CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( localhost );
+        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 1 );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
-        when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( wantedStoreId ), any( StoreFileStreamProvider.class ), any(), any() ) )
-                .thenReturn( lastFlushedTxId );
+        when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
+                any() ) ).thenReturn( requiredTransactionRange );
 
         TxPullClient txPullClient = mock( TxPullClient.class );
-        when( txPullClient.pullTransactions( eq( localhost ), eq( wantedStoreId ), anyLong(), any() ) )
+        AtomicLong lastTxSupplier = new AtomicLong();
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
+                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+
+        when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
+
+        doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
+
+        verify( txPullClient, times( 2 ) ).pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() );
+    }
+
+    @Test
+    void shouldPullTxUntilConstraintRangeIsMet() throws Exception
+    {
+        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 10 );
+
+        StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
+        when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
+                any() ) ).thenReturn( requiredTransactionRange );
+
+        TxPullClient txPullClient = mock( TxPullClient.class );
+        AtomicLong lastTxSupplier = new AtomicLong();
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
+                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+
+        when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
+
+        doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
+
+        verify( txPullClient, atLeast( 10 ) ).pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() );
+    }
+
+    @Test
+    void shouldEventuallyFailPullingTxIfConstraintIsNotMet() throws Exception
+    {
+        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 10 );
+
+        StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
+        when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
+                any() ) ).thenReturn( requiredTransactionRange );
+
+        TxPullClient txPullClient = mock( TxPullClient.class );
+        AtomicLong lastTxSupplier = new AtomicLong();
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
+                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 0 ) );
+
+        when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
+
+        StoreCopyFailedException copyFailedException = assertThrows( StoreCopyFailedException.class,
+                () -> doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider,
+                        Config.builder().withSetting( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ).build() ) );
+
+        assertThat( copyFailedException.getMessage(), CoreMatchers.equalTo( "Pulling tx failed consecutively without progress" ) );
+    }
+
+    @Test
+    void shouldSetLastPulledTransactionId() throws Exception
+    {
+        long lastFlushedTxId = 12;
+
+        StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
+        when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
+                any() ) ).thenReturn( RequiredTransactionRange.single( lastFlushedTxId ) );
+
+        TxPullClient txPullClient = mock( TxPullClient.class );
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) )
                 .thenReturn( new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, 13 ) );
 
-        TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
+        doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
 
-        RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors(), storageEngine() );
-
-        // when
-        remoteStore.copy( catchupAddressProvider, wantedStoreId, DatabaseLayout.of( new File( "destination" ) ), true );
-
-        // then
         long previousTxId = lastFlushedTxId - 1; // the interface is defined as asking for the one preceding
-        verify( txPullClient ).pullTransactions( eq( localhost ), eq( wantedStoreId ), eq( previousTxId ),
-                any() );
+        verify( txPullClient, atLeast( 1 ) ).pullTransactions( eq( localhost ), eq( storeId ), eq( previousTxId ), any() );
     }
 
     @Test
-    public void shouldCloseDownTxLogWriterIfTxStreamingFails() throws Exception
+    void shouldCloseDownTxLogWriterIfTxStreamingFails() throws Exception
     {
-        // given
-        StoreId storeId = new StoreId( 1, 2, 3, 4 );
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
+        when( storeCopyClient.copyStoreFiles( any(), any(), any(), any(), any() ) ).thenReturn( RequiredTransactionRange.single( 1 ) );
         TxPullClient txPullClient = mock( TxPullClient.class );
-        TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
-        CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( null );
-
-        RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors(), storageEngine() );
 
         doThrow( CatchUpClientException.class ).when( txPullClient )
                 .pullTransactions( isNull(), eq( storeId ), anyLong(), any() );
 
-        // when
-        try
-        {
-            remoteStore.copy( catchupAddressProvider, storeId, DatabaseLayout.of( new File( "." ) ), true );
-        }
-        catch ( StoreCopyFailedException e )
-        {
-            // expected
-        }
+        assertThrows( StoreCopyFailedException.class, () -> doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider,
+                Config.builder().withSetting( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ).build() ) );
 
-        // then
         verify( writer ).close();
     }
 
-    private StorageEngineFactory storageEngine()
+    @Test
+    void shouldCallCallPrimaryOnceInTheEnd() throws Exception
     {
-        return selectStorageEngine( Service.load( StorageEngineFactory.class ) );
+        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 3 );
+
+        CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
+        when( catchupAddressProvider.primary() ).thenReturn( localhost );
+        when( catchupAddressProvider.secondary() ).thenReturn( localhost );
+
+        StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
+        when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(), any() ) ).thenReturn(
+                requiredTransactionRange );
+
+        TxPullClient txPullClient = mock( TxPullClient.class );
+        AtomicLong lastTxSupplier = new AtomicLong();
+        // fail with progress still increments txId
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
+                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+
+        when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
+
+        doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
+
+        verify( catchupAddressProvider, times( 3 ) ).secondary();
+        verify( catchupAddressProvider, times( 1 ) ).primary();
+    }
+
+    @Test
+    void shouldCallPrimaryAddressIfFailingConsecutively() throws Exception
+    {
+        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 3 );
+
+        CatchupAddressProvider secondaryFailingAddressProvider = mock( CatchupAddressProvider.class );
+        when( secondaryFailingAddressProvider.secondary() ).thenThrow( CatchupAddressResolutionException.class );
+        when( secondaryFailingAddressProvider.primary() ).thenReturn( localhost );
+
+        StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
+        when( storeCopyClient.copyStoreFiles( eq( secondaryFailingAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
+                any() ) ).thenReturn( requiredTransactionRange );
+
+        TxPullClient txPullClient = mock( TxPullClient.class );
+        AtomicLong lastTxSupplier = new AtomicLong();
+        // fail with progress still increments txId
+        when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
+                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+
+        when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
+
+        doStoreCopy( storeCopyClient, txPullClient, secondaryFailingAddressProvider,
+                Config.builder().withSetting( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ).build() );
+    }
+
+    private void doStoreCopy( StoreCopyClient storeCopyClient, TxPullClient txPullClient, CatchupAddressProvider catchupAddressProvider, Config config )
+            throws IOException, StoreCopyFailedException
+    {
+        RemoteStore remoteStore =
+                new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null, storeCopyClient, txPullClient, factory( writer ),
+                        config, new Monitors(), any() );
+
+        remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
+    }
+
+    private Answer<TxStreamFinishedResponse> incrementTxIdResponse( CatchupResult status, AtomicLong lastTxSupplier, long incrementAmount )
+    {
+        return invocationOnMock ->
+        {
+            long txId = invocationOnMock.getArgument( 2 );
+            long incrementedTxId = txId + incrementAmount;
+            lastTxSupplier.set( incrementedTxId );
+            return new TxStreamFinishedResponse( status, status == SUCCESS_END_OF_STREAM ? incrementedTxId : -1 );
+        };
     }
 
     private static TransactionLogCatchUpFactory factory( TransactionLogCatchUpWriter writer ) throws IOException
     {
         TransactionLogCatchUpFactory factory = mock( TransactionLogCatchUpFactory.class );
-        when( factory.create( any(), any( FileSystemAbstraction.class ), isNull(), any( Config.class ),
-                any( LogProvider.class ), any(), anyLong(), anyBoolean(), anyBoolean(), anyBoolean() ) ).thenReturn( writer );
+        when( factory.create( any(), any( FileSystemAbstraction.class ), isNull(), any( Config.class ), any( LogProvider.class ), any(),
+                any(), anyBoolean(), anyBoolean(), anyBoolean() ) ).thenReturn( writer );
         return factory;
     }
 }

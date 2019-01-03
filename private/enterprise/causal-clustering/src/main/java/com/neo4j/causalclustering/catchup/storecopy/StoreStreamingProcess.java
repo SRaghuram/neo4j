@@ -46,7 +46,7 @@ public class StoreStreamingProcess
                 StoreResource resource = resources.get();
                 protocol.stream( ctx, resource );
             }
-            completion = protocol.end( ctx, StoreCopyFinishedResponse.Status.SUCCESS );
+            completion = protocol.end( ctx, StoreCopyFinishedResponse.Status.SUCCESS, -1 );
         }
         finally
         {
@@ -63,6 +63,6 @@ public class StoreStreamingProcess
 
     public void fail( ChannelHandlerContext ctx, StoreCopyFinishedResponse.Status failureCode )
     {
-        protocol.end( ctx, failureCode );
+        protocol.end( ctx, failureCode, -1 );
     }
 }

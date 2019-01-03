@@ -63,7 +63,8 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
         RAFT_1( ApplicationProtocolCategory.RAFT, 1 ),
         RAFT_2( ApplicationProtocolCategory.RAFT, 2 ),
         CATCHUP_1( ApplicationProtocolCategory.CATCHUP, 1 ),
-        CATCHUP_2( ApplicationProtocolCategory.CATCHUP, 2 );
+        CATCHUP_2( ApplicationProtocolCategory.CATCHUP, 2 ),
+        CATCHUP_3( ApplicationProtocolCategory.CATCHUP, 3 );
 
         private final Integer version;
         private final ApplicationProtocolCategory identifier;

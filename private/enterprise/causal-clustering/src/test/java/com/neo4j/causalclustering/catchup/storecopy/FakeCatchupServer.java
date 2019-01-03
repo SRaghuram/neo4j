@@ -41,6 +41,7 @@ class TestCatchupServerHandler implements CatchupServerHandler
     private final Log log;
     private TestDirectory testDirectory;
     private FileSystemAbstraction fileSystemAbstraction;
+    private long startTxId;
 
     TestCatchupServerHandler( LogProvider logProvider, TestDirectory testDirectory, FileSystemAbstraction fileSystemAbstraction )
     {
@@ -106,7 +107,7 @@ class TestCatchupServerHandler implements CatchupServerHandler
 
     private void failed( ChannelHandlerContext channelHandlerContext )
     {
-        new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND );
+        new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND, -1 );
     }
 
     private FakeFile findFile( Set<FakeFile> filesystem, String filename )
@@ -124,7 +125,7 @@ class TestCatchupServerHandler implements CatchupServerHandler
         channelHandlerContext.writeAndFlush( new FileHeader( file.getName() ) );
         StoreResource storeResource = storeResourceFromEntry( file );
         channelHandlerContext.writeAndFlush( new FileSender( storeResource ) );
-        new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS );
+        new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS, startTxId );
     }
 
     private void incrementRequestCount( File file )
@@ -165,9 +166,9 @@ class TestCatchupServerHandler implements CatchupServerHandler
                 List<File> list = filesystem.stream().map( FakeFile::getFile ).collect( Collectors.toList() );
                 File[] files = new File[list.size()];
                 files = list.toArray( files );
-                long transactionId = 123L;
+                startTxId = 123L;
                 LongSet indexIds = LongSets.immutable.of( 13 );
-                channelHandlerContext.writeAndFlush( PrepareStoreCopyResponse.success( files, indexIds, transactionId ) );
+                channelHandlerContext.writeAndFlush( PrepareStoreCopyResponse.success( files, indexIds, startTxId ) );
                 catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
             }
         };
@@ -192,7 +193,7 @@ class TestCatchupServerHandler implements CatchupServerHandler
                         StoreResource storeResource = storeResourceFromEntry( indexFile.getFile() );
                         channelHandlerContext.writeAndFlush( new FileSender( storeResource ) );
                     }
-                    new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS );
+                    new StoreFileStreamingProtocol().end( channelHandlerContext, StoreCopyFinishedResponse.Status.SUCCESS, startTxId );
                 }
                 finally
                 {

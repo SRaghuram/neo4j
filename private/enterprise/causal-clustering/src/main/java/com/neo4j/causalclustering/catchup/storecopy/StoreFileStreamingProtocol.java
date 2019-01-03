@@ -24,9 +24,9 @@ public class StoreFileStreamingProtocol
         ctx.write( new FileSender( resource ) );
     }
 
-    Future<Void> end( ChannelHandlerContext ctx, StoreCopyFinishedResponse.Status status )
+    Future<Void> end( ChannelHandlerContext ctx, StoreCopyFinishedResponse.Status status, long lastCheckpointedTx )
     {
         ctx.write( ResponseMessageType.STORE_COPY_FINISHED );
-        return ctx.writeAndFlush( new StoreCopyFinishedResponse( status ) );
+        return ctx.writeAndFlush( new StoreCopyFinishedResponse( status, lastCheckpointedTx ) );
     }
 }

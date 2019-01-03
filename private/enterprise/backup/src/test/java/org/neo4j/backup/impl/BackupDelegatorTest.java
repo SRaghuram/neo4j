@@ -5,6 +5,14 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
+import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
+import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
+import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -12,17 +20,10 @@ import org.mockito.ArgumentCaptor;
 import java.io.File;
 import java.io.IOException;
 
-import com.neo4j.causalclustering.catchup.CatchupClientFactory;
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
-import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 
+import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -60,7 +61,7 @@ public class BackupDelegatorTest
         subject.tryCatchingUp( fromAddress, expectedStoreId, databaseLayout );
 
         // then
-        verify( remoteStore ).tryCatchingUp( fromAddress, expectedStoreId, databaseLayout, true, true );
+        verify( remoteStore ).tryCatchingUp( fromSingleAddress( fromAddress ), expectedStoreId, databaseLayout, true, true );
     }
 
     @Test

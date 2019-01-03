@@ -19,15 +19,26 @@ public class StoreCopyFinishedResponse
     }
 
     private final Status status;
+    private final long lastCheckpointedTx;
 
-    public StoreCopyFinishedResponse( Status status )
+    public StoreCopyFinishedResponse( Status status, long lastCheckpointedTx )
     {
         this.status = status;
+        this.lastCheckpointedTx = status == Status.SUCCESS ? lastCheckpointedTx : -1;
     }
 
     public Status status()
     {
         return status;
+    }
+
+    /**
+     * Only available on V3 of catchup protocol.
+     * @return last checkpointed tx after file send is complete if available. Otherwise -1.
+     */
+    public long lastCheckpointedTx()
+    {
+        return lastCheckpointedTx;
     }
 
     @Override
@@ -42,12 +53,12 @@ public class StoreCopyFinishedResponse
             return false;
         }
         StoreCopyFinishedResponse that = (StoreCopyFinishedResponse) o;
-        return status == that.status;
+        return lastCheckpointedTx == that.lastCheckpointedTx && status == that.status;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( status );
+        return Objects.hash( status, lastCheckpointedTx );
     }
 }

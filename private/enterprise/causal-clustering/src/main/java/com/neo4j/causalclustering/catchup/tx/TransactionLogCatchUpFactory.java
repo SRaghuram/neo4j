@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
+import com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange;
+
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -17,10 +19,11 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 public class TransactionLogCatchUpFactory
 {
     public TransactionLogCatchUpWriter create( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config,
-            LogProvider logProvider, StorageEngineFactory storageEngineFactory, long fromTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
-            boolean rotateTransactionsManually ) throws IOException
+            LogProvider logProvider, StorageEngineFactory storageEngineFactory, RequiredTransactionRange validIntitalTx, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
+            boolean rotateTransactionsManually )
+            throws IOException
     {
-        return new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory, fromTxId, asPartOfStoreCopy,
-                keepTxLogsInStoreDir, rotateTransactionsManually );
+        return new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
+                validIntitalTx, asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually );
     }
 }

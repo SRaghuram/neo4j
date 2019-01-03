@@ -206,7 +206,7 @@ public class StoreCopyClientIT
                         sendFile( ctx, fileCopy );
                         StoreCopyFinishedResponse.Status status =
                                 contents.hasNext() ? StoreCopyFinishedResponse.Status.E_UNKNOWN : StoreCopyFinishedResponse.Status.SUCCESS;
-                        new StoreFileStreamingProtocol().end( ctx, status );
+                        new StoreFileStreamingProtocol().end( ctx, status, -1 );
                         catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
                     }
 

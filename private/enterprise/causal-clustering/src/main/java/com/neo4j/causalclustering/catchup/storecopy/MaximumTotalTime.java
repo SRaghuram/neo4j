@@ -19,7 +19,7 @@ public class MaximumTotalTime implements TerminationCondition
     private long time;
     private TimeUnit timeUnit;
 
-    public MaximumTotalTime( long time, TimeUnit timeUnit )
+    MaximumTotalTime( long time, TimeUnit timeUnit )
     {
         this( time, timeUnit, Clocks.systemClock() );
     }

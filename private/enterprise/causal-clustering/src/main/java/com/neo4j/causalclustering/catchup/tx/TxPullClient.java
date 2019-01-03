@@ -56,6 +56,7 @@ public class TxPullClient
         return catchUpClient.getClient( fromAddress )
                 .v1( c -> c.pullTransactions( storeId, previousTxId ) )
                 .v2( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
+                .v3( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
                 .withResponseHandler( responseHandler )
                 .request( logProvider.getLog( this.getClass() ) );
     }

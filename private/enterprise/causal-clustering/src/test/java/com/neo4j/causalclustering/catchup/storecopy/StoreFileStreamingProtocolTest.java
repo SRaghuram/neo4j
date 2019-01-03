@@ -81,12 +81,12 @@ public class StoreFileStreamingProtocolTest
         ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
 
         // when
-        protocol.end( ctx, E_STORE_ID_MISMATCH );
+        protocol.end( ctx, E_STORE_ID_MISMATCH, -1 );
 
         // then
         InOrder inOrder = Mockito.inOrder( ctx );
         inOrder.verify( ctx ).write( ResponseMessageType.STORE_COPY_FINISHED );
-        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( E_STORE_ID_MISMATCH ) );
+        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( E_STORE_ID_MISMATCH, -1 ) );
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -98,12 +98,12 @@ public class StoreFileStreamingProtocolTest
         ChannelHandlerContext ctx = mock( ChannelHandlerContext.class );
 
         // when
-        protocol.end( ctx, StoreCopyFinishedResponse.Status.SUCCESS );
+        protocol.end( ctx, StoreCopyFinishedResponse.Status.SUCCESS, -1 );
 
         // then
         InOrder inOrder = Mockito.inOrder( ctx );
         inOrder.verify( ctx ).write( ResponseMessageType.STORE_COPY_FINISHED );
-        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( SUCCESS ) );
+        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( SUCCESS, -1 ) );
         inOrder.verifyNoMoreInteractions();
     }
 

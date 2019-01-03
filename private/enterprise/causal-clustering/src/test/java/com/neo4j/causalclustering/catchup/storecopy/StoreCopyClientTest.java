@@ -10,6 +10,8 @@ import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV1;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV2;
+import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
+import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
@@ -49,8 +51,11 @@ import org.neo4j.test.rule.SuppressOutput;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_2;
+import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_3;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
@@ -71,10 +76,12 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_N
 public class StoreCopyClientTest
 {
 
+    private static final long LAST_CHECKPOINTED_TX = 11;
+
     @Parameterized.Parameters( name = "catchup-protocol:{0}" )
     public static Protocol.ApplicationProtocol[] protocols()
     {
-        return new Protocol.ApplicationProtocol[]{ CATCHUP_1, CATCHUP_2 };
+        return new Protocol.ApplicationProtocol[]{CATCHUP_1, CATCHUP_2, CATCHUP_3};
     }
 
     @Rule
@@ -103,6 +110,7 @@ public class StoreCopyClientTest
     private final MockCatchupClient.MockClientResponses clientResponses = responses();
     private final CatchupClientV1 v1Client = spy( new MockClientV1( clientResponses ) );
     private final CatchupClientV2 v2Client = spy( new MockClientV2( clientResponses ) );
+    private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
 
     public StoreCopyClientTest( Protocol.ApplicationProtocol protocol )
     {
@@ -112,7 +120,7 @@ public class StoreCopyClientTest
     @Before
     public void setup() throws Throwable
     {
-        catchupClient = new MockCatchupClient( protocol, v1Client, v2Client );
+        catchupClient = new MockCatchupClient( protocol, v1Client, v2Client, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
         backOffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
         subject = new StoreCopyClient( catchupClientFactory, DEFAULT_DATABASE_NAME, () -> monitors, logProvider, backOffStrategy );
@@ -124,7 +132,7 @@ public class StoreCopyClientTest
         // given
         // setup fake catchup client responses. Lots of files, and any request for a store or index file will succeed
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
-        StoreCopyFinishedResponse success = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.SUCCESS );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
                 .withStoreFilesResponse( success )
@@ -158,7 +166,7 @@ public class StoreCopyClientTest
         StoreId storeIdA = subjectA.fetchStoreId( expectedAdvertisedAddress );
         StoreId storeIdB = subjectB.fetchStoreId( expectedAdvertisedAddress );
 
-        if ( catchupClient.protocol().equals( ApplicationProtocols.CATCHUP_2 ) )
+        if ( catchupClient.protocol().equals( ApplicationProtocols.CATCHUP_2 ) || catchupClient.protocol().equals( CATCHUP_3 ) )
         {
             // then, if Catchup V2 is being used, store id matches
             assertEquals( storeIdA, defaultDbStoreId );
@@ -183,7 +191,7 @@ public class StoreCopyClientTest
         subject = new StoreCopyClient( catchupClientFactory, DEFAULT_DATABASE_NAME, () -> monitors, logProvider, backoffStrategy );
 
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
-        StoreCopyFinishedResponse success = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.SUCCESS );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
                 .withStoreFilesResponse( success )
@@ -198,11 +206,11 @@ public class StoreCopyClientTest
     }
 
     @Test
-    public void shouldFailIfTerminationConditionFails() throws Exception
+    public void shouldFailIfTerminationConditionFails()
     {
         // given a file will fail an expected number of times
         // and requesting the individual file will fail
-        StoreCopyFinishedResponse failed = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND );
+        StoreCopyFinishedResponse failed = expectedStoreCopyFinishedResponse( E_TOO_FAR_BEHIND, protocol );
         // and the initial list+count store files request is successful
         PrepareStoreCopyResponse initialListingOfFilesResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
 
@@ -279,7 +287,7 @@ public class StoreCopyClientTest
     {
         // given
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
-        StoreCopyFinishedResponse success = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.SUCCESS );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
 
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
@@ -308,7 +316,7 @@ public class StoreCopyClientTest
     {
         // given
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
-        StoreCopyFinishedResponse success = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.SUCCESS );
+        StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
 
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
@@ -342,13 +350,22 @@ public class StoreCopyClientTest
         {
             verify( v1Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong() );
         }
-        else
+        else if ( protocol.equals( CATCHUP_2 ) )
         {
             verify( v2Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), anyString() );
+        }
+        else
+        {
+            verify( v3Client, atLeastOnce() ).getStoreFile( any( StoreId.class ), fileArgumentCaptor.capture(), anyLong(), anyString() );
         }
         return fileArgumentCaptor.getAllValues().stream()
                 .map( File::getName )
                 .collect( Collectors.toList() );
+    }
+
+    private static StoreCopyFinishedResponse expectedStoreCopyFinishedResponse( StoreCopyFinishedResponse.Status status, Protocol.ApplicationProtocol protocol )
+    {
+        return new StoreCopyFinishedResponse( status, protocol == CATCHUP_3 ? LAST_CHECKPOINTED_TX : -1 );
     }
 
     private Supplier<TerminationCondition> continueIndefinitely()

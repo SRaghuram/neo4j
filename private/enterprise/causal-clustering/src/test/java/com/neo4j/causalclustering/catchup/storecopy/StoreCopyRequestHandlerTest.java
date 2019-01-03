@@ -52,6 +52,7 @@ class StoreCopyRequestHandlerTest
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
     private JobScheduler jobScheduler = new FakeJobScheduler();
+    private long lastCheckpointedTx = -1;
 
     @BeforeEach
     void setup()
@@ -77,7 +78,7 @@ class StoreCopyRequestHandlerTest
                 new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH );
+        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH, lastCheckpointedTx );
         assertEquals( expectedResponse, embeddedChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
@@ -90,7 +91,7 @@ class StoreCopyRequestHandlerTest
                 new File( "some-file" ), 2, DEFAULT_DATABASE_NAME ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND );
+        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND, lastCheckpointedTx );
         assertEquals( expectedResponse, embeddedChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
@@ -105,7 +106,7 @@ class StoreCopyRequestHandlerTest
                 () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN );
+        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN, lastCheckpointedTx );
         assertEquals( expectedResponse, embeddedChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
@@ -122,7 +123,7 @@ class StoreCopyRequestHandlerTest
                 () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, alternativeChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN );
+        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN, lastCheckpointedTx );
         assertEquals( expectedResponse, alternativeChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );

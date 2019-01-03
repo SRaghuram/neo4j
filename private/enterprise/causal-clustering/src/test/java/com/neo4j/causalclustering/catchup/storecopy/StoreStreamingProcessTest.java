@@ -55,7 +55,7 @@ public class StoreStreamingProcessTest
 
         when( checkPointer.tryCheckPoint( any() ) ).thenReturn( lastCheckpointedTxId );
         when( checkPointer.lastCheckPointedTransactionId() ).thenReturn( lastCheckpointedTxId );
-        when( protocol.end( ctx, SUCCESS ) ).thenReturn( completionPromise );
+        when( protocol.end( ctx, SUCCESS, -1 ) ).thenReturn( completionPromise );
         when( resourceStream.create() ).thenReturn( resources );
 
         // when
@@ -64,7 +64,7 @@ public class StoreStreamingProcessTest
         // then
         InOrder inOrder = Mockito.inOrder( protocol, checkPointer );
         inOrder.verify( checkPointer ).tryCheckPoint( any() );
-        inOrder.verify( protocol ).end( ctx, SUCCESS );
+        inOrder.verify( protocol ).end( ctx, SUCCESS, -1 );
         inOrder.verifyNoMoreInteractions();
 
         assertEquals( 1, lock.getReadLockCount() );
@@ -86,6 +86,6 @@ public class StoreStreamingProcessTest
         process.fail( ctx, E_STORE_ID_MISMATCH );
 
         // then
-        verify( protocol ).end( ctx, E_STORE_ID_MISMATCH );
+        verify( protocol ).end( ctx, E_STORE_ID_MISMATCH, -1 );
     }
 }

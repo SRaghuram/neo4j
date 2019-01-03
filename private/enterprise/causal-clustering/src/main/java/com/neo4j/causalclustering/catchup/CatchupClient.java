@@ -108,6 +108,7 @@ class CatchupClient implements VersionedCatchupClients
         private final String defaultDatabaseName;
         private Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request;
         private Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request;
+        private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
         private Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest;
         private CatchupResponseCallback<RESULT> responseHandler;
 
@@ -128,9 +129,16 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public NeedsResponseHandler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request )
+        public NeedsV3Handler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request )
         {
             this.v2Request = v2Request;
+            return this;
+        }
+
+        @Override
+        public NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
+        {
+            this.v3Request = v3Request;
             return this;
         }
 
@@ -181,6 +189,22 @@ class CatchupClient implements VersionedCatchupClients
                 else
                 {
                     return retrying( Futures.failedFuture( new Exception( "No V2 action specified" ) ) ).get( log );
+                }
+            }
+            else if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_3 ) )
+            {
+                V3 v3 = new CatchupClient.V3( channel, pool );
+                if ( v3Request != null )
+                {
+                    return retrying( v3Request.apply( v3 ).execute( responseHandler ) ).get( log );
+                }
+                else if ( allVersionsRequest != null )
+                {
+                    return retrying( allVersionsRequest.apply( v3 ).execute( responseHandler ) ).get( log );
+                }
+                else
+                {
+                    return retrying( Futures.failedFuture( new Exception( "No V3 action specified" ) ) ).get( log );
                 }
             }
 
@@ -250,6 +274,55 @@ class CatchupClient implements VersionedCatchupClients
         private final CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool;
 
         private V2( CatchupClientFactory.CatchupChannel channel, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool )
+        {
+            this.channel = channel;
+            this.pool = pool;
+        }
+
+        @Override
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot()
+        {
+            return handler -> makeBlockingRequest( new CoreSnapshotRequest(), handler, channel, pool );
+        }
+
+        @Override
+        public PreparedRequest<StoreId> getStoreId( String databaseName )
+        {
+            return handler -> makeBlockingRequest( new GetStoreIdRequest( databaseName ), handler, channel, pool );
+        }
+
+        @Override
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
+        {
+            return handler -> makeBlockingRequest( new TxPullRequest( previousTxId, storeId, databaseName ), handler, channel, pool );
+        }
+
+        @Override
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName )
+        {
+            return handler -> makeBlockingRequest( new PrepareStoreCopyRequest( storeId, databaseName ), handler, channel, pool );
+        }
+
+        @Override
+        public PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName )
+        {
+            return handler -> makeBlockingRequest( new GetIndexFilesRequest( storeId, indexId, requiredTxId, databaseName ), handler, channel, pool );
+        }
+
+        @Override
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName )
+        {
+            return handler -> makeBlockingRequest( new GetStoreFileRequest( storeId, file, requiredTxId, databaseName ), handler, channel, pool );
+        }
+
+    }
+
+    private static class V3 implements CatchupClientV3
+    {
+        private final CatchupClientFactory.CatchupChannel channel;
+        private final CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool;
+
+        private V3( CatchupClientFactory.CatchupChannel channel, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool )
         {
             this.channel = channel;
             this.pool = pool;

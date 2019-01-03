@@ -45,7 +45,7 @@ public class StoreDownloader
      *
      * @return true if successful.
      */
-    boolean bringUpToDate( LocalDatabase database, AdvertisedSocketAddress primaryAddress, CatchupAddressProvider secondaryAddressProvider )
+    boolean bringUpToDate( LocalDatabase database, AdvertisedSocketAddress primaryAddress, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
         PerDatabaseCatchupComponents components = getCatchupComponents( database.databaseName() );
@@ -58,7 +58,7 @@ public class StoreDownloader
 
         if ( !database.isEmpty() )
         {
-            CatchupResult catchupResult = tryCatchup( database, primaryAddress, components.remoteStore() );
+            CatchupResult catchupResult = tryCatchup( database, addressProvider, components.remoteStore() );
             if ( catchupResult == SUCCESS_END_OF_STREAM )
             {
                 return true;
@@ -75,7 +75,7 @@ public class StoreDownloader
             }
         }
 
-        return replaceWithStore( validStoreId.get(), secondaryAddressProvider, components.storeCopyProcess() );
+        return replaceWithStore( validStoreId.get(), addressProvider, components.storeCopyProcess() );
     }
 
     /**
@@ -107,12 +107,12 @@ public class StoreDownloader
     /**
      * @return true if catchup was successful.
      */
-    private CatchupResult tryCatchup( LocalDatabase database, AdvertisedSocketAddress primaryAddress, RemoteStore remoteStore ) throws IOException
+    private CatchupResult tryCatchup( LocalDatabase database, CatchupAddressProvider addressProvider, RemoteStore remoteStore ) throws IOException
     {
         CatchupResult catchupResult;
         try
         {
-            catchupResult = remoteStore.tryCatchingUp( primaryAddress, database.storeId(), database.databaseLayout(), false, false );
+            catchupResult = remoteStore.tryCatchingUp( addressProvider, database.storeId(), database.databaseLayout(), false, false );
         }
         catch ( StoreCopyFailedException e )
         {

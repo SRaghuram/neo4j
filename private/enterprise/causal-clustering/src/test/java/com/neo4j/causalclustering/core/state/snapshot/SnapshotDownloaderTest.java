@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.MockCatchupClient;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientResponses;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV1;
 import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV2;
+import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
@@ -28,6 +29,7 @@ import org.neo4j.logging.NullLogProvider;
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_2;
+import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_3;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,7 +42,7 @@ public class SnapshotDownloaderTest
     @Parameterized.Parameters( name = "{0}" )
     public static Iterable<Protocol.ApplicationProtocol> data()
     {
-        return Arrays.asList( CATCHUP_1, CATCHUP_2 );
+        return Arrays.asList( CATCHUP_1, CATCHUP_2, CATCHUP_3 );
     }
 
     @Parameterized.Parameter
@@ -85,8 +87,9 @@ public class SnapshotDownloaderTest
 
         CatchupClientV1 v1Client = new MockClientV1( clientResponses );
         CatchupClientV2 v2Client = new MockClientV2( clientResponses );
+        VersionedCatchupClients.CatchupClientV3 v3Client = new MockClientV3( clientResponses );
 
-        VersionedCatchupClients catchupClient = new MockCatchupClient( protocol, v1Client, v2Client );
+        VersionedCatchupClients catchupClient = new MockCatchupClient( protocol, v1Client, v2Client, v3Client );
         when( catchupClientFactory.getClient( remoteAddress ) ).thenReturn( catchupClient );
         return catchupClientFactory;
     }

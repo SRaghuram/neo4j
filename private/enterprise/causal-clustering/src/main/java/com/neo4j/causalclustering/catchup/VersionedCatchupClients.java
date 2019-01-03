@@ -48,7 +48,8 @@ public interface VersionedCatchupClients extends AutoCloseable
     Protocol.ApplicationProtocol protocol();
 
     /** Step builder interface for Catchup requests (instances of {@link CatchupProtocolMessage}) against multiple versions of the protocol */
-    interface CatchupRequestBuilder<RESULT> extends NeedsV1Handler<RESULT>, NeedsV2Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
+    interface CatchupRequestBuilder<RESULT>
+            extends NeedsV1Handler<RESULT>, NeedsV2Handler<RESULT>, NeedsV3Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>
     {
     }
 
@@ -63,12 +64,20 @@ public interface VersionedCatchupClients extends AutoCloseable
     /** {@link CatchupRequestBuilder} Step 2 */
     interface NeedsV2Handler<RESULT>
     {
-        NeedsResponseHandler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request );
+        NeedsV3Handler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request );
 
         NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest );
     }
 
     /** {@link CatchupRequestBuilder} Step 3 */
+    interface NeedsV3Handler<RESULT>
+    {
+        NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request );
+
+        NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest );
+    }
+
+    /** {@link CatchupRequestBuilder} Step 4 */
     interface NeedsResponseHandler<RESULT>
     {
         IsPrepared<RESULT> withResponseHandler( CatchupResponseCallback<RESULT> responseHandler );
@@ -114,6 +123,19 @@ public interface VersionedCatchupClients extends AutoCloseable
        PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName );
 
        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName );
+    }
+
+    interface CatchupClientV3 extends CatchupClientCommon
+    {
+        PreparedRequest<StoreId> getStoreId( String databaseName );
+
+        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
+
+        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName );
+
+        PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName );
+
+        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName );
     }
 
     @FunctionalInterface

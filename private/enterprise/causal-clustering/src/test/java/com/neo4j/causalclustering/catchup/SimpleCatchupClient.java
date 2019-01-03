@@ -74,7 +74,7 @@ class SimpleCatchupClient implements AutoCloseable
                 StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( streamToDiskProvider, logProvider.getLog( SimpleCatchupClient.class ) );
         return catchUpClientFactory.getClient( from )
                 .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
-                .v2( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
+                .v2( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) ).v3( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
                 .request( log );
     }
@@ -91,6 +91,7 @@ class SimpleCatchupClient implements AutoCloseable
         return catchUpClientFactory.getClient( from )
                 .v1( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId ) )
                 .v2( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseName ) )
+                .v3( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
                 .request( log );
     }
@@ -104,6 +105,7 @@ class SimpleCatchupClient implements AutoCloseable
         return catchUpClientFactory.getClient( from )
                 .v1( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId ) )
                 .v2( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, correctDatabaseName ) )
+                .v3( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, correctDatabaseName ) )
                 .withResponseHandler( responseHandler )
                 .request( log );
     }

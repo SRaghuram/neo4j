@@ -5,16 +5,17 @@
  */
 package org.neo4j.backup.impl;
 
-import java.io.IOException;
-
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.identity.StoreId;
+
+import java.io.IOException;
+
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -38,14 +39,14 @@ class BackupDelegator extends LifecycleAdapter
 
     void copy( AdvertisedSocketAddress fromAddress, StoreId expectedStoreId, DatabaseLayout databaseLayout ) throws StoreCopyFailedException
     {
-        remoteStore.copy( new CatchupAddressProvider.SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout, true );
+        remoteStore.copy( new SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout, true );
     }
 
     CatchupResult tryCatchingUp( AdvertisedSocketAddress fromAddress, StoreId expectedStoreId, DatabaseLayout databaseLayout ) throws StoreCopyFailedException
     {
         try
         {
-            return remoteStore.tryCatchingUp( fromAddress, expectedStoreId, databaseLayout, true, true );
+            return remoteStore.tryCatchingUp( new SingleAddressProvider( fromAddress ), expectedStoreId, databaseLayout, true, true );
         }
         catch ( IOException e )
         {

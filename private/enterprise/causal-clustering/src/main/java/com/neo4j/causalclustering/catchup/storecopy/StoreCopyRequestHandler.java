@@ -58,6 +58,7 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
     {
         log.debug( "Handling request %s", request );
         StoreCopyFinishedResponse.Status responseStatus = StoreCopyFinishedResponse.Status.E_UNKNOWN;
+        long lastCheckpointedTx = -1;
         try
         {
             CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
@@ -83,12 +84,13 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
                         storeFileStreamingProtocol.stream( ctx, storeResource );
                     }
                 }
+                lastCheckpointedTx = checkPointer.lastCheckPointedTransactionId();
                 responseStatus = StoreCopyFinishedResponse.Status.SUCCESS;
             }
         }
         finally
         {
-            storeFileStreamingProtocol.end( ctx, responseStatus );
+            storeFileStreamingProtocol.end( ctx, responseStatus, lastCheckpointedTx );
             protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
         }
     }

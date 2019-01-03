@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.v1.CatchupProtocolClientInstallerV1;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
+import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
@@ -151,7 +152,8 @@ public final class CatchupClientBuilder
             Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory = handler -> {
                 List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> installers = Arrays.asList(
                         new CatchupProtocolClientInstallerV1.Factory( pipelineBuilder, debugLogProvider, handler ),
-                        new CatchupProtocolClientInstallerV2.Factory( pipelineBuilder, debugLogProvider, handler )
+                        new CatchupProtocolClientInstallerV2.Factory( pipelineBuilder, debugLogProvider, handler ),
+                        new CatchupProtocolClientInstallerV3.Factory( pipelineBuilder, debugLogProvider, handler )
                 );
 
                 ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository = new ProtocolInstallerRepository<>( installers,

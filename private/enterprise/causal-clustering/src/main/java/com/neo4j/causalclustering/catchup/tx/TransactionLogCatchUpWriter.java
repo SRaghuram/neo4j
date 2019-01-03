@@ -5,6 +5,9 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
+import com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -44,14 +47,15 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private final LogFiles logFiles;
     private final TransactionMetaDataStore metaDataStore;
     private final boolean rotateTransactionsManually;
+    private final RequiredTransactionRange validInitialTxId;
     private final FlushablePositionAwareChannel logChannel;
     private final LogPositionMarker logPositionMarker = new LogPositionMarker();
 
     private long lastTxId = -1;
-    private long expectedTxId;
+    private long expectedTxId = -1;
 
-    TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config,
-            LogProvider logProvider, StorageEngineFactory storageEngineFactory, long fromTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
+    TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config, LogProvider logProvider,
+            StorageEngineFactory storageEngineFactory, RequiredTransactionRange validInitialTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
             boolean forceTransactionRotations ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
@@ -61,9 +65,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         dependencies.satisfyDependencies( databaseLayout, fs, pageCache, configWithoutSpecificStoreFormat( config ) );
         metaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
-                .builder( databaseLayout, fs )
-                .withDependencies( dependencies )
-                .withLastCommittedTransactionIdSupplier( () -> fromTxId - 1 )
+                .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.startTxId() - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
                 .withLogVersionRepository( metaDataStore )
                 .withTransactionIdStore( metaDataStore );
@@ -71,7 +73,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         this.lifespan.add( logFiles );
         this.logChannel = logFiles.getLogFile().getWriter();
         this.writer = new TransactionLogWriter( new LogEntryWriter( logChannel ) );
-        this.expectedTxId = fromTxId;
+        this.validInitialTxId = validInitialTxId;
     }
 
     private Config configWithoutSpecificStoreFormat( Config config )
@@ -109,10 +111,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
             rotateTransactionLogs( logFiles );
         }
 
-        if ( receivedTxId != expectedTxId )
-        {
-            throw new RuntimeException( format( "Expected txId: %d but got: %d", expectedTxId, receivedTxId ) );
-        }
+        validateReceivedTxId( receivedTxId );
 
         lastTxId = receivedTxId;
         expectedTxId++;
@@ -126,6 +125,36 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         {
             log.error( "Failed when appending to transaction log", e );
         }
+    }
+
+    private void validateReceivedTxId( long receivedTxId )
+    {
+        if ( isFirstTx() )
+        {
+            if ( validInitialTxId.withinRange( receivedTxId ) )
+            {
+                expectedTxId = receivedTxId;
+            }
+            else
+            {
+                throw new RuntimeException(
+                        format( "Expected the first received txId to be within the range: %s but got: %d", validInitialTxId, receivedTxId ) );
+            }
+        }
+        if ( receivedTxId != expectedTxId )
+        {
+            throw new RuntimeException( format( "Expected txId: %d but got: %d", expectedTxId, receivedTxId ) );
+        }
+    }
+
+    private boolean isFirstTx()
+    {
+        return expectedTxId == -1;
+    }
+
+    public long lastTx()
+    {
+        return lastTxId;
     }
 
     private static void rotateTransactionLogs( LogFiles logFiles )

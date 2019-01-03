@@ -37,12 +37,14 @@ public class MockCatchupClient implements VersionedCatchupClients
     private ApplicationProtocol protocol;
     private CatchupClientV1 v1Client;
     private CatchupClientV2 v2Client;
+    private final CatchupClientV3 v3Client;
 
-    public MockCatchupClient( ApplicationProtocol protocol, CatchupClientV1 v1Client, CatchupClientV2 v2Client )
+    public MockCatchupClient( ApplicationProtocol protocol, CatchupClientV1 v1Client, CatchupClientV2 v2Client, CatchupClientV3 v3Client )
     {
         this.protocol = protocol;
         this.v1Client = v1Client;
         this.v2Client = v2Client;
+        this.v3Client = v3Client;
     }
 
     public static MockClientResponses responses()
@@ -53,14 +55,14 @@ public class MockCatchupClient implements VersionedCatchupClients
     @Override
     public <RESULT> NeedsV2Handler<RESULT> v1( Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( v1Client, v2Client );
+        Builder<RESULT> reqBuilder = new Builder<>( v1Client, v2Client, v3Client );
         return reqBuilder.v1( v1Request );
     }
 
     @Override
     public <RESULT> NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( v1Client, v2Client );
+        Builder<RESULT> reqBuilder = new Builder<>( v1Client, v2Client, v3Client );
         return reqBuilder.any( allVersionsRequest );
     }
 
@@ -76,7 +78,7 @@ public class MockCatchupClient implements VersionedCatchupClients
     }
 
     @Override
-    public void close() throws Exception
+    public void close()
     {
     }
 
@@ -84,13 +86,16 @@ public class MockCatchupClient implements VersionedCatchupClients
     {
         private Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request;
         private Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request;
+        private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
         private CatchupClientV1 v1Client;
         private CatchupClientV2 v2Client;
+        private CatchupClientV3 v3Client;
 
-        Builder( CatchupClientV1 v1Client, CatchupClientV2 v2Client )
+        Builder( CatchupClientV1 v1Client, CatchupClientV2 v2Client, CatchupClientV3 v3Client )
         {
             this.v1Client = v1Client;
             this.v2Client = v2Client;
+            this.v3Client = v3Client;
         }
 
         @Override
@@ -101,9 +106,16 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public NeedsResponseHandler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request )
+        public NeedsV3Handler<RESULT> v2( Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request )
         {
             this.v2Request = v2Request;
+            return this;
+        }
+
+        @Override
+        public NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
+        {
+            this.v3Request = v3Request;
             return this;
         }
 
@@ -138,6 +150,10 @@ public class MockCatchupClient implements VersionedCatchupClients
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
                 return retrying( v2Request.apply( v2Client ).execute( null ) ).get( log );
+            }
+            else if ( protocol.equals( ApplicationProtocols.CATCHUP_3 ) )
+            {
+                return retrying( v3Request.apply( v3Client ).execute( null ) ).get( log );
             }
             return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
         }
@@ -254,6 +270,61 @@ public class MockCatchupClient implements VersionedCatchupClients
         {
             StoreCopyFinishedResponse storeCopyFinishedResponse = responses.storeFiles
                     .apply( new GetStoreFileRequest( storeId, file, requiredTxId, databaseName ) );
+            return handler -> CompletableFuture.completedFuture( storeCopyFinishedResponse );
+        }
+    }
+
+    public static class MockClientV3 implements CatchupClientV3
+    {
+
+        private final MockClientResponses responses;
+
+        public MockClientV3( MockClientResponses responses )
+        {
+            this.responses = responses;
+        }
+
+        @Override
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot()
+        {
+            return handler -> CompletableFuture.completedFuture( responses.coreSnapshot.get() );
+        }
+
+        @Override
+        public PreparedRequest<StoreId> getStoreId( String databaseName )
+        {
+            StoreId storeId = responses.storeId.apply( new GetStoreIdRequest( databaseName ) );
+            return handler -> CompletableFuture.completedFuture( storeId );
+        }
+
+        @Override
+        public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
+        {
+            TxStreamFinishedResponse pullResponse = responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, databaseName ) );
+            return handler -> CompletableFuture.completedFuture( pullResponse );
+        }
+
+        @Override
+        public PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName )
+        {
+            PrepareStoreCopyResponse prepareStoreCopyResponse =
+                    responses.prepareStoreCopyResponse.apply( new PrepareStoreCopyRequest( storeId, databaseName ) );
+            return handler -> CompletableFuture.completedFuture( prepareStoreCopyResponse );
+        }
+
+        @Override
+        public PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName )
+        {
+            StoreCopyFinishedResponse storeCopyFinishedResponse =
+                    responses.indexFiles.apply( new GetIndexFilesRequest( storeId, indexId, requiredTxId, databaseName ) );
+            return handler -> CompletableFuture.completedFuture( storeCopyFinishedResponse );
+        }
+
+        @Override
+        public PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName )
+        {
+            StoreCopyFinishedResponse storeCopyFinishedResponse =
+                    responses.storeFiles.apply( new GetStoreFileRequest( storeId, file, requiredTxId, databaseName ) );
             return handler -> CompletableFuture.completedFuture( storeCopyFinishedResponse );
         }
     }
