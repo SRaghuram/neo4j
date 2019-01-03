@@ -130,7 +130,7 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         {
             return ConditionEvaluationResult.disabled(
                     format( "A test method failed prior to this. Since they share cluster(s) this test is ignored. The initial failing test method was: '%s'",
-                            clusterFactory.getFailedName() ) );
+                            clusterFactory.getInitialFailure() ) );
         }
         else
         {

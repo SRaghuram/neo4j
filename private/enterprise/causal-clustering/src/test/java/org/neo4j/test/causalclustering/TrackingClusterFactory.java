@@ -26,7 +26,7 @@ public class TrackingClusterFactory implements ClusterFactory
     private final TestInstance.Lifecycle lifecycle;
     private final Collection<Cluster> clusters = new CopyOnWriteArrayList<>();
     private final AtomicInteger idCounter = new AtomicInteger();
-    private String failedDisplayName;
+    private String initialFailure;
 
     TrackingClusterFactory( TestDirectory testDirectory, TestInstance.Lifecycle lifecycle )
     {
@@ -84,16 +84,19 @@ public class TrackingClusterFactory implements ClusterFactory
 
     boolean disallowContinue()
     {
-        return failedDisplayName != null && lifecycle == TestInstance.Lifecycle.PER_CLASS;
+        return initialFailure != null && lifecycle == TestInstance.Lifecycle.PER_CLASS;
     }
 
-    String getFailedName()
+    String getInitialFailure()
     {
-        return failedDisplayName;
+        return initialFailure;
     }
 
     void setFailed( String name )
     {
-        failedDisplayName = name;
+        if ( initialFailure == null )
+        {
+            initialFailure = name;
+        }
     }
 }
