@@ -18,8 +18,7 @@ import org.neo4j.function.ThrowingSupplier;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class MetricsTestHelper
@@ -144,8 +143,8 @@ public class MetricsTestHelper
 
         try ( BufferedReader reader = new BufferedReader( new FileReader( metricFile ) ) )
         {
-            String s = reader.readLine();
-            String[] headers = s.split( "," );
+            String headerLine = reader.readLine();
+            String[] headers = headerLine.split( "," );
             assertThat( headers.length, is( timeStampField.getClass().getEnumConstants().length ) );
             assertThat( headers[timeStampField.ordinal()], is( timeStampField.header() ) );
             assertThat( headers[metricsValue.ordinal()], is( metricsValue.header() ) );
@@ -158,7 +157,9 @@ public class MetricsTestHelper
             {
                 String[] fields = line.split( "," );
                 T newValue = parser.apply( fields[metricsValue.ordinal()] );
-                assertTrue( "assertion failed on " + newValue + " " + currentValue, assumption.test( newValue, currentValue ) );
+
+                //this needs to be this tricky assertion and not assertTrue to make it junit version independent
+                assertThat( "assertion failed on " + newValue + " " + currentValue, true, is( assumption.test( newValue, currentValue ) ) );
                 currentValue = newValue;
             }
             return currentValue;
@@ -178,7 +179,7 @@ public class MetricsTestHelper
         {
             try
             {
-                return file.exists() && (Files.lines( file.toPath() ).count() > 1);
+                return file.exists() && (Files.readAllLines( file.toPath() ).size() > 1);
             }
             catch ( IOException e )
             {

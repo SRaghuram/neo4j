@@ -27,7 +27,7 @@ import static java.time.Duration.ofMinutes;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.metrics.MetricsSettings.csvMaxArchives;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
@@ -45,6 +45,8 @@ class RotatableCsvOutputIT
     private GraphDatabaseService database;
     private static final BiPredicate<Long,Long> MONOTONIC = ( newValue, currentValue ) -> newValue >= currentValue;
     private static final int MAX_ARCHIVES = 20;
+    // this threshold should be bigger then size of file file header in bytes but smaller then file 2 lines
+    private static final String FILE_SIZE_THRESHOLD = "54";
 
     @BeforeEach
     void setup()
@@ -52,7 +54,7 @@ class RotatableCsvOutputIT
         outputPath = testDirectory.directory( "metrics" );
         database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( csvPath, outputPath.getAbsolutePath() )
-                .setConfig( csvRotationThreshold, "54" )
+                .setConfig( csvRotationThreshold, FILE_SIZE_THRESHOLD )
                 .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
@@ -67,7 +69,7 @@ class RotatableCsvOutputIT
     @Test
     void rotateMetricsFile()
     {
-        assertTimeout( ofMinutes( 2 ), () ->
+        assertTimeoutPreemptively( ofMinutes( 2 ), () ->
         {
             // Commit a transaction and wait for rotation to happen
             doTransaction();
