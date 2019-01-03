@@ -23,6 +23,7 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
+import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.management.BranchedStore;
 import org.neo4j.management.BranchedStoreInfo;
 
@@ -66,41 +67,45 @@ public final class BranchedStoreBean extends ManagementBeanProvider
     private static class BranchedStoreImpl extends Neo4jMBean implements BranchedStore
     {
         private final FileSystemAbstraction fileSystem;
-        private final File storePath;
         private final PageCache pageCache;
+        private KernelData kernelData;
 
-        BranchedStoreImpl( final ManagementData management ) throws NotCompliantMBeanException
+        BranchedStoreImpl( final ManagementData management )
         {
-            super( management );
-            fileSystem = getFilesystem( management );
-            storePath = getStorePath( management );
-            pageCache = getPageCache( management );
+            this( management, false );
         }
 
         BranchedStoreImpl( final ManagementData management, boolean isMXBean )
         {
             super( management, isMXBean );
-            fileSystem = getFilesystem( management );
-            storePath = getStorePath( management );
-            pageCache = getPageCache( management );
+            kernelData = management.getKernelData();
+            fileSystem = getFilesystem( kernelData );
+            pageCache = getPageCache( kernelData );
         }
 
         @Override
         public BranchedStoreInfo[] getBranchedStores()
         {
-            if ( storePath == null )
+            DatabaseLayout databaseLayout = kernelData.getDataSourceManager().getDataSource().getDatabaseLayout();
+            File databaseDirectory = databaseLayout.databaseDirectory();
+            if ( databaseDirectory == null )
             {
                 return new BranchedStoreInfo[0];
             }
 
             List<BranchedStoreInfo> toReturn = new LinkedList<>();
-            for ( File branchDirectory : fileSystem.listFiles( getBranchedDataRootDirectory( storePath ) ) )
+
+            File[] files = fileSystem.listFiles( getBranchedDataRootDirectory( databaseDirectory ) );
+            if ( files != null )
             {
-                if ( !branchDirectory.isDirectory() )
+                for ( File branchDirectory : files )
                 {
-                    continue;
+                    if ( !branchDirectory.isDirectory() )
+                    {
+                        continue;
+                    }
+                    toReturn.add( parseBranchedStore( branchDirectory ) );
                 }
-                toReturn.add( parseBranchedStore( branchDirectory ) );
             }
             return toReturn.toArray( new BranchedStoreInfo[toReturn.size()] );
         }
@@ -109,10 +114,10 @@ public final class BranchedStoreBean extends ManagementBeanProvider
         {
             try
             {
-                final File neoStoreFile = DatabaseLayout.of( branchedDatabase ).metadataStore();
-                final long txId = MetaDataStore.getRecord( pageCache, neoStoreFile, Position.LAST_TRANSACTION_ID );
-                final long timestamp = Long.parseLong( branchedDatabase.getName() );
-                final long branchedStoreSize = FileUtils.size( fileSystem, branchedDatabase );
+                File neoStoreFile = DatabaseLayout.of( branchedDatabase ).metadataStore();
+                long txId = MetaDataStore.getRecord( pageCache, neoStoreFile, Position.LAST_TRANSACTION_ID );
+                long timestamp = Long.parseLong( branchedDatabase.getName() );
+                long branchedStoreSize = FileUtils.size( fileSystem, branchedDatabase );
 
                 return new BranchedStoreInfo( branchedDatabase.getName(), txId, timestamp, branchedStoreSize );
             }
@@ -122,19 +127,14 @@ public final class BranchedStoreBean extends ManagementBeanProvider
             }
         }
 
-        private PageCache getPageCache( ManagementData management )
+        private static PageCache getPageCache( KernelData kernelData )
         {
-            return management.getKernelData().getPageCache();
+            return kernelData.getPageCache();
         }
 
-        private FileSystemAbstraction getFilesystem( ManagementData management )
+        private static FileSystemAbstraction getFilesystem( KernelData kernelData )
         {
-            return management.getKernelData().getFilesystemAbstraction();
-        }
-
-        private File getStorePath( ManagementData management )
-        {
-            return management.getKernelData().getStoreDir();
+            return kernelData.getFilesystemAbstraction();
         }
     }
 }
