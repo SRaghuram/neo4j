@@ -76,7 +76,8 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
                                                  columns,
                                                  logicalPlan,
                                                  physicalPlan.slotConfigurations,
-                                                 context.config.lenientCreateRelationship)
+                                                 context.config.lenientCreateRelationship,
+                                                 state.hasLoadCSV)
 
       if (ENABLE_DEBUG_PRINTS) {
         if (!PRINT_PLAN_INFO_EARLY) {

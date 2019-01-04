@@ -20,8 +20,9 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                            columns: Seq[String],
                                            logicalPlan: LogicalPlan,
                                            pipelines: SlotConfigurations,
-                                           lenientCreateRelationship: Boolean)
-  extends BaseExecutionResultBuilderFactory(pipe, readOnly, columns, logicalPlan) {
+                                           lenientCreateRelationship: Boolean,
+                                           hasLoadCSV: Boolean = false)
+  extends BaseExecutionResultBuilderFactory(pipe, readOnly, columns, logicalPlan, hasLoadCSV) {
 
   override def create(queryContext: QueryContext): ExecutionResultBuilder = SlottedExecutionResultBuilder(queryContext)
 
