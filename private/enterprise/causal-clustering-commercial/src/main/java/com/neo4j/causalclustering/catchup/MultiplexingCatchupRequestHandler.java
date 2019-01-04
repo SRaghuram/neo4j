@@ -19,6 +19,8 @@ import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 /**
  * Multiplexes catchup requests against different databases.
@@ -32,15 +34,17 @@ public class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest>
     private final Map<String,SimpleChannelInboundHandler<T>> wrappedHandlers;
     private final CatchupServerProtocol protocol;
     private final UnknownDatabaseHandler UNKNOWN_DATABASE_HANDLER = new UnknownDatabaseHandler();
+    private final Log log;
 
     MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, Function<LocalDatabase,SimpleChannelInboundHandler<T>> handlerFactory,
-            Class<T> handlerTypeHint, DatabaseService databaseService )
+            Class<T> handlerTypeHint, DatabaseService databaseService, LogProvider logProvider )
     {
         super( handlerTypeHint );
         this.handlerFactory = handlerFactory;
         this.databaseService = databaseService;
         this.wrappedHandlers = new HashMap<>();
         this.protocol = protocol;
+        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -60,9 +64,11 @@ public class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest>
         @Override
         protected void channelRead0( ChannelHandlerContext ctx, T msg )
         {
+            String message = String.format( "CatchupRequest %s refused as intended database %s does not exist on this machine.", msg, msg.databaseName() );
+            log.warn( message );
             ctx.write( ResponseMessageType.ERROR );
             ctx.writeAndFlush( new CatchupErrorResponse( CatchupResult.E_DATABASE_UNKNOWN,
-                    String.format( "CatchupRequest %s refused as intended database %s does not exist on this machine.", msg, msg.databaseName() ) ) );
+                    message ) );
             protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
         }
     }

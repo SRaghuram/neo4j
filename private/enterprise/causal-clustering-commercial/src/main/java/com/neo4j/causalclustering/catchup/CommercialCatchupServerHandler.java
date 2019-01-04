@@ -12,19 +12,19 @@ import java.util.Optional;
 import org.neo4j.causalclustering.catchup.CatchupServerHandler;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.storecopy.GetStoreIdRequestHandler;
+import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyFilesProvider;
+import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyRequestHandler;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyRequestHandler.GetIndexSnapshotRequestHandler;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyRequestHandler.GetStoreFileRequestHandler;
-import org.neo4j.causalclustering.common.DatabaseService;
+import org.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
+import org.neo4j.causalclustering.catchup.tx.TxPullRequestHandler;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
-import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyFilesProvider;
-import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyRequestHandler;
-import org.neo4j.causalclustering.catchup.storecopy.StoreFileStreamingProtocol;
-import org.neo4j.causalclustering.catchup.tx.TxPullRequestHandler;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -57,7 +57,8 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler txPullRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildTxPullRequestHandler( db, protocol ), TxPullRequest.class, databaseService );
+        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildTxPullRequestHandler( db, protocol ), TxPullRequest.class, databaseService,
+                logProvider );
     }
 
     private TxPullRequestHandler buildTxPullRequestHandler( LocalDatabase localDatabase, CatchupServerProtocol protocol )
@@ -70,7 +71,8 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler getStoreIdRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildStoreIdRequestHandler( db, protocol ), GetStoreIdRequest.class, databaseService );
+        return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildStoreIdRequestHandler( db, protocol ), GetStoreIdRequest.class, databaseService,
+                logProvider );
     }
 
     private GetStoreIdRequestHandler buildStoreIdRequestHandler( LocalDatabase localDatabase, CatchupServerProtocol protocol )
@@ -82,7 +84,7 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     public ChannelHandler storeListingRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildStoreListingRequestHandler( db, protocol ),
-                PrepareStoreCopyRequest.class, databaseService );
+                PrepareStoreCopyRequest.class, databaseService, logProvider );
     }
 
     private PrepareStoreCopyRequestHandler buildStoreListingRequestHandler( LocalDatabase localDatabase,
@@ -95,7 +97,7 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildStoreFileRequestHandler( db, protocol ),
-                GetStoreFileRequest.class, databaseService );
+                GetStoreFileRequest.class, databaseService, logProvider );
     }
 
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( LocalDatabase localDatabase,
@@ -109,7 +111,7 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, db -> buildIndexSnapshotRequestHandler( db, protocol ),
-                GetIndexFilesRequest.class, databaseService );
+                GetIndexFilesRequest.class, databaseService, logProvider );
     }
 
     private GetIndexSnapshotRequestHandler buildIndexSnapshotRequestHandler( LocalDatabase localDatabase,
