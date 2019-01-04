@@ -33,4 +33,6 @@ public interface CatchupResponseCallback<T>
     void onCoreSnapshot( CompletableFuture<T> signal, CoreSnapshot coreSnapshot );
 
     void onStoreListingResponse( CompletableFuture<T> signal, PrepareStoreCopyResponse prepareStoreCopyResponse );
+
+    void onCatchupErrorResponse( CompletableFuture<T> signal, CatchupErrorResponse catchupErrorResponse );
 }

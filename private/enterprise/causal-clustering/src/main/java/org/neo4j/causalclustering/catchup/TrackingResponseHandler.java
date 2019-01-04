@@ -136,6 +136,16 @@ class TrackingResponseHandler implements CatchupResponseHandler
     }
 
     @Override
+    public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )
+    {
+        if ( !requestOutcomeSignal.isCancelled() )
+        {
+            recordLastResponse();
+            delegate.onCatchupErrorResponse( requestOutcomeSignal, catchupErrorResponse );
+        }
+    }
+
+    @Override
     public void onClose()
     {
         requestOutcomeSignal.completeExceptionally( new ClosedChannelException().fillInStackTrace() );

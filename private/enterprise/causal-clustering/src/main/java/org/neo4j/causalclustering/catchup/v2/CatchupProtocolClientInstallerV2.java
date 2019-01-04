@@ -11,8 +11,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import org.neo4j.causalclustering.catchup.CatchupClientProtocol;
+import org.neo4j.causalclustering.catchup.CatchupResponseHandler;
 import org.neo4j.causalclustering.catchup.ClientMessageTypeHandler;
 import org.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
 import org.neo4j.causalclustering.catchup.RequestMessageTypeEncoder;
@@ -22,20 +22,22 @@ import org.neo4j.causalclustering.catchup.storecopy.FileChunkDecoder;
 import org.neo4j.causalclustering.catchup.storecopy.FileChunkHandler;
 import org.neo4j.causalclustering.catchup.storecopy.FileHeaderDecoder;
 import org.neo4j.causalclustering.catchup.storecopy.FileHeaderHandler;
-import org.neo4j.causalclustering.catchup.v2.storecopy.GetIndexFilesRequestMarshalV2;
-import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
-import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestEncoderV2;
 import org.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponseDecoder;
 import org.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponseHandler;
 import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponseDecoder;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponseHandler;
-import org.neo4j.causalclustering.catchup.v2.storecopy.PrepareStoreCopyRequestEncoderV2;
-import org.neo4j.causalclustering.catchup.v2.tx.TxPullRequestEncoderV2;
 import org.neo4j.causalclustering.catchup.tx.TxPullResponseDecoder;
 import org.neo4j.causalclustering.catchup.tx.TxPullResponseHandler;
 import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseDecoder;
 import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseHandler;
+import org.neo4j.causalclustering.catchup.v2.storecopy.CatchupErrorResponseDecoder;
+import org.neo4j.causalclustering.catchup.v2.storecopy.CatchupErrorResponseHandler;
+import org.neo4j.causalclustering.catchup.v2.storecopy.GetIndexFilesRequestMarshalV2;
+import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
+import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestEncoderV2;
+import org.neo4j.causalclustering.catchup.v2.storecopy.PrepareStoreCopyRequestEncoderV2;
+import org.neo4j.causalclustering.catchup.v2.tx.TxPullRequestEncoderV2;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotDecoder;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestEncoder;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotResponseHandler;
@@ -89,6 +91,7 @@ public class CatchupProtocolClientInstallerV2 implements ProtocolInstaller<Orien
         decoderDispatcher.register( CatchupClientProtocol.State.FILE_HEADER, new FileHeaderDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.PREPARE_STORE_COPY_RESPONSE, new PrepareStoreCopyResponse.Decoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.FILE_CONTENTS, new FileChunkDecoder() );
+        decoderDispatcher.register( CatchupClientProtocol.State.ERROR_RESPONSE, new CatchupErrorResponseDecoder() );
 
         pipelineBuilder.client( channel, log )
                 .modify( modifiers )
@@ -111,6 +114,7 @@ public class CatchupProtocolClientInstallerV2 implements ProtocolInstaller<Orien
                 .add( "hnd_res_file_chunk", new FileChunkHandler( protocol, handler ) )
                 .add( "hnd_res_store_id", new GetStoreIdResponseHandler( protocol, handler ) )
                 .add( "hnd_res_store_listing", new StoreListingResponseHandler( protocol, handler ))
+                .add( "hnd_res_catchup_error", new CatchupErrorResponseHandler( protocol, handler ) )
                 .onClose( handler::onClose )
                 .install();
     }

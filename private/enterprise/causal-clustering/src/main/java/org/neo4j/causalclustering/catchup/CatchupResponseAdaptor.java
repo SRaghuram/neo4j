@@ -16,6 +16,8 @@ import org.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
+import static java.lang.String.format;
+
 public class CatchupResponseAdaptor<T> implements CatchupResponseCallback<T>
 {
     @Override
@@ -65,6 +67,13 @@ public class CatchupResponseAdaptor<T> implements CatchupResponseCallback<T>
     public void onStoreListingResponse( CompletableFuture<T> signal, PrepareStoreCopyResponse response )
     {
         unimplementedMethod( signal, response );
+    }
+
+    @Override
+    public void onCatchupErrorResponse( CompletableFuture<T> signal, CatchupErrorResponse catchupErrorResponse )
+    {
+        signal.completeExceptionally( new IllegalStateException(
+                format( "Request failed [ResponseStatus: '%s' Message: '%s']", catchupErrorResponse.status().name(), catchupErrorResponse.message() ) ) );
     }
 
     private <U> void unimplementedMethod( CompletableFuture<T> signal, U response )

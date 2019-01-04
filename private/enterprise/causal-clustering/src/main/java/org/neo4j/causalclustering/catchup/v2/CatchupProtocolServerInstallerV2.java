@@ -24,16 +24,17 @@ import org.neo4j.causalclustering.catchup.ServerMessageTypeHandler;
 import org.neo4j.causalclustering.catchup.SimpleRequestDecoder;
 import org.neo4j.causalclustering.catchup.storecopy.FileChunkEncoder;
 import org.neo4j.causalclustering.catchup.storecopy.FileHeaderEncoder;
-import org.neo4j.causalclustering.catchup.v2.storecopy.GetIndexFilesRequestMarshalV2;
-import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
 import org.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponseEncoder;
-import org.neo4j.causalclustering.catchup.v2.storecopy.PrepareStoreCopyRequestDecoderV2;
 import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponseEncoder;
-import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestDecoderV2;
-import org.neo4j.causalclustering.catchup.v2.tx.TxPullRequestDecoderV2;
 import org.neo4j.causalclustering.catchup.tx.TxPullResponseEncoder;
 import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseEncoder;
+import org.neo4j.causalclustering.catchup.v2.storecopy.CatchupErrorResponseEncoder;
+import org.neo4j.causalclustering.catchup.v2.storecopy.GetIndexFilesRequestMarshalV2;
+import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
+import org.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestDecoderV2;
+import org.neo4j.causalclustering.catchup.v2.storecopy.PrepareStoreCopyRequestDecoderV2;
+import org.neo4j.causalclustering.catchup.v2.tx.TxPullRequestDecoderV2;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotEncoder;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import org.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -94,6 +95,7 @@ public class CatchupProtocolServerInstallerV2 implements ProtocolInstaller<Orien
                 .add( "enc_snapshot", new CoreSnapshotEncoder() )
                 .add( "enc_file_chunk", new FileChunkEncoder() )
                 .add( "enc_file_header", new FileHeaderEncoder() )
+                .add( "enc_catchup_error", new CatchupErrorResponseEncoder() )
                 .add( "in_req_type", serverMessageHandler( state ) )
                 .add( "dec_req_dispatch", requestDecoders( state ) )
                 .add( "out_chunked_write", new ChunkedWriteHandler() )
