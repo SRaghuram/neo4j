@@ -5,9 +5,9 @@
  */
 package org.neo4j.metrics;
 
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
@@ -23,6 +23,8 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -40,10 +42,11 @@ import static org.neo4j.metrics.source.db.BoltMetrics.TOTAL_QUEUE_TIME;
 import static org.neo4j.test.PortUtils.getBoltPort;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class BoltMetricsIT
+@ExtendWith( TestDirectoryExtension.class )
+class BoltMetricsIT
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
 
     private GraphDatabaseAPI db;
     private TransportConnection conn;
@@ -51,7 +54,7 @@ public class BoltMetricsIT
     private final TransportTestUtil util = new TransportTestUtil( new Neo4jPackV1() );
 
     @Test
-    public void shouldMonitorBolt() throws Throwable
+    void shouldMonitorBolt() throws Throwable
     {
         // Given
         File metricsFolder = testDirectory.directory( "metrics" );
@@ -94,8 +97,8 @@ public class BoltMetricsIT
                 greaterThanOrEqualTo( 0L ), 5, SECONDS );
     }
 
-    @After
-    public void cleanup() throws Exception
+    @AfterEach
+    void cleanup() throws Exception
     {
         conn.disconnect();
         db.shutdown();

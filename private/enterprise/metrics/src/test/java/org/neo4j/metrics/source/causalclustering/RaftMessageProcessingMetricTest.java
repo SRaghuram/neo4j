@@ -6,20 +6,20 @@
 package org.neo4j.metrics.source.causalclustering;
 
 import com.codahale.metrics.SlidingWindowReservoir;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
 import org.neo4j.causalclustering.core.consensus.RaftMessages;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class RaftMessageProcessingMetricTest
+class RaftMessageProcessingMetricTest
 {
-    private RaftMessageProcessingMetric metric = RaftMessageProcessingMetric.createUsing( () -> new SlidingWindowReservoir( 1000 ) );
+    private final RaftMessageProcessingMetric metric = RaftMessageProcessingMetric.createUsing( () -> new SlidingWindowReservoir( 1000 ) );
 
     @Test
-    public void shouldDefaultAllMessageTypesToEmptyTimer()
+    void shouldDefaultAllMessageTypesToEmptyTimer()
     {
         for ( RaftMessages.Type type : RaftMessages.Type.values() )
         {
@@ -29,7 +29,7 @@ public class RaftMessageProcessingMetricTest
     }
 
     @Test
-    public void shouldBeAbleToUpdateAllMessageTypes()
+    void shouldBeAbleToUpdateAllMessageTypes()
     {
         // given
         int durationNanos = 5;
@@ -49,13 +49,13 @@ public class RaftMessageProcessingMetricTest
     }
 
     @Test
-    public void shouldDefaultDelayToZero()
+    void shouldDefaultDelayToZero()
     {
         assertEquals( 0, metric.delay() );
     }
 
     @Test
-    public void shouldUpdateDelay()
+    void shouldUpdateDelay()
     {
         metric.setDelay( Duration.ofMillis( 5 ) );
         assertEquals( 5, metric.delay() );
