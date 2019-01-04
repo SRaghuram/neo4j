@@ -9,13 +9,16 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
+import org.neo4j.function.ThrowingSupplier;
+
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class MetricsTestHelper
@@ -136,17 +139,12 @@ public class MetricsTestHelper
             Function<String,T> parser, BiPredicate<T,T> assumption ) throws IOException, InterruptedException
     {
         // let's wait until the file is in place (since the reporting is async that might take a while)
-        assertEventually( "Metrics file should exist", metricFile::exists, is( true ), 40, SECONDS );
+        assertEventually( "Metrics file should exist", fileExistAndHasDataLines( metricFile ), is( true ), 40, SECONDS );
 
         try ( BufferedReader reader = new BufferedReader( new FileReader( metricFile ) ) )
         {
-            String s;
-            do
-            {
-                s = reader.readLine();
-            }
-            while ( s == null );
-            String[] headers = s.split( "," );
+            String headerLine = reader.readLine();
+            String[] headers = headerLine.split( "," );
             assertThat( headers.length, is( timeStampField.getClass().getEnumConstants().length ) );
             assertThat( headers[timeStampField.ordinal()], is( timeStampField.header() ) );
             assertThat( headers[metricsValue.ordinal()], is( metricsValue.header() ) );
@@ -155,21 +153,15 @@ public class MetricsTestHelper
             String line;
 
             // Always read at least one line of data
-            do
-            {
-                line = reader.readLine();
-            }
-            while ( line == null );
-
-            do
+            while ( (line = reader.readLine()) != null )
             {
                 String[] fields = line.split( "," );
                 T newValue = parser.apply( fields[metricsValue.ordinal()] );
-                assertTrue( "assertion failed on " + newValue + " " + currentValue,
-                        assumption.test( newValue, currentValue ) );
+
+                //this needs to be this tricky assertion and not assertTrue to make it junit version independent
+                assertThat( "assertion failed on " + newValue + " " + currentValue, true, is( assumption.test( newValue, currentValue ) ) );
                 currentValue = newValue;
             }
-            while ( (line = reader.readLine()) != null );
             return currentValue;
         }
     }
@@ -177,7 +169,22 @@ public class MetricsTestHelper
     public static File metricsCsv( File dbDir, String metric ) throws InterruptedException
     {
         File csvFile = new File( dbDir, metric + ".csv" );
-        assertEventually( "Metrics file should exist", csvFile::exists, is( true ), 40, SECONDS );
+        assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), is( true ), 40, SECONDS );
         return csvFile;
+    }
+
+    private static <E extends RuntimeException> ThrowingSupplier<Boolean,E> fileExistAndHasDataLines( File file )
+    {
+        return () ->
+        {
+            try
+            {
+                return file.exists() && (Files.readAllLines( file.toPath() ).size() > 1);
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        };
     }
 }

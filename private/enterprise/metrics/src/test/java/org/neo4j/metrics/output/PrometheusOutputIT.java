@@ -6,10 +6,10 @@
 package org.neo4j.metrics.output;
 
 import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.net.URL;
@@ -19,24 +19,27 @@ import java.util.Scanner;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.metrics.MetricsSettings.prometheusEnabled;
 import static org.neo4j.metrics.MetricsSettings.prometheusEndpoint;
 import static org.neo4j.metrics.source.db.EntityCountMetrics.COUNTS_NODE;
 import static org.neo4j.metrics.source.db.EntityCountMetrics.COUNTS_RELATIONSHIP_TYPE;
 import static org.neo4j.test.PortUtils.getConnectorAddress;
 
-public class PrometheusOutputIT
+@ExtendWith( TestDirectoryExtension.class )
+class PrometheusOutputIT
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
 
     private GraphDatabaseService database;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( prometheusEnabled, Settings.TRUE )
@@ -44,14 +47,14 @@ public class PrometheusOutputIT
                 .newGraphDatabase();
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         database.shutdown();
     }
 
     @Test
-    public void httpEndpointShouldBeAvailableAndResponsive() throws IOException
+    void httpEndpointShouldBeAvailableAndResponsive() throws IOException
     {
         String url = "http://" + getConnectorAddress( (GraphDatabaseAPI) database, "prometheus" ) + "/metrics";
         URLConnection connection = new URL( url ).openConnection();

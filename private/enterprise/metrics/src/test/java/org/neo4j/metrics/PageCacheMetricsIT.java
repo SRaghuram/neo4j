@@ -7,10 +7,10 @@ package org.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.hamcrest.Matcher;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
@@ -21,6 +21,8 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -28,7 +30,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readDoubleGaugeValue;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
@@ -43,15 +45,16 @@ import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_UNPINS;
 import static org.neo4j.metrics.source.db.PageCacheMetrics.PC_USAGE_RATIO;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class PageCacheMetricsIT
+@ExtendWith( TestDirectoryExtension.class )
+class PageCacheMetricsIT
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDirectory;
     private File metricsDirectory;
     private GraphDatabaseService database;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         metricsDirectory = testDirectory.directory( "metrics" );
         database = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
@@ -64,14 +67,14 @@ public class PageCacheMetricsIT
                 .newGraphDatabase();
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         database.shutdown();
     }
 
     @Test
-    public void pageCacheMetrics() throws Exception
+    void pageCacheMetrics() throws Exception
     {
         Label testLabel = Label.label( "testLabel" );
         try ( Transaction transaction = database.beginTx() )
