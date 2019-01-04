@@ -5,6 +5,8 @@
  */
 package com.neo4j.harness.internal;
 
+import com.neo4j.server.database.CommercialGraphFactory;
+import com.neo4j.server.enterprise.CommercialNeoServer;
 import org.apache.commons.lang3.SystemUtils;
 
 import java.io.File;
@@ -15,9 +17,7 @@ import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.harness.internal.AbstractInProcessServerBuilder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.AbstractNeoServer;
-import org.neo4j.server.database.CommercialGraphFactory;
 import org.neo4j.server.database.GraphFactory;
-import org.neo4j.server.enterprise.CommercialNeoServer;
 
 public class CommercialInProcessServerBuilder extends AbstractInProcessServerBuilder
 {
