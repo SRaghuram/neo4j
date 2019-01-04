@@ -20,8 +20,8 @@ import static org.neo4j.kernel.configuration.Settings.DURATION;
 import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.kernel.configuration.Settings.setting;
 
-@Description( "Settings available in the Enterprise server" )
-public class EnterpriseServerSettings implements LoadableConfig
+@Description( "Settings available in the Commercial server" )
+public class CommercialServerSettings implements LoadableConfig
 {
     @SuppressWarnings( "unused" ) // accessed from the browser
     @Description( "Configure the Neo4j Browser to time out logged in users after this idle period. " +

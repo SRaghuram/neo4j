@@ -47,12 +47,17 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-metrics</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-enterprise</artifactId>
+            <artifactId>neo4j-commercial</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

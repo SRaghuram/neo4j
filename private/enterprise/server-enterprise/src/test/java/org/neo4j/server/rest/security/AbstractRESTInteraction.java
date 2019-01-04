@@ -34,7 +34,7 @@ import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.clientconnection.HttpConnectionInfo;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
@@ -69,7 +69,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
 
     AbstractRESTInteraction( Map<String,String> config ) throws IOException
     {
-        CommunityServerBuilder builder = EnterpriseServerBuilder.serverOnRandomPorts();
+        CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts();
         builder = builder
                 .withProperty( new BoltConnector( "bolt" ).type.name(), "BOLT" )
                 .withProperty( new BoltConnector( "bolt" ).enabled.name(), "true" )

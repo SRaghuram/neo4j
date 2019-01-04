@@ -3,9 +3,8 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.server.rest;
+package org.neo4j.server.rest;
 
-import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -15,6 +14,7 @@ import org.junit.rules.TemporaryFolder;
 import java.util.concurrent.Callable;
 
 import org.neo4j.server.NeoServer;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.server.helpers.FunctionalTestHelper;
 import org.neo4j.test.server.ExclusiveServerTestBase;
 
@@ -53,7 +53,7 @@ public abstract class CommercialVersionIT extends ExclusiveServerTestBase
     }
 
     @Before
-    public void setupTheDatabase() throws Exception
+    public void setupTheDatabase()
     {
         // do nothing, we don't care about the database contents here
     }

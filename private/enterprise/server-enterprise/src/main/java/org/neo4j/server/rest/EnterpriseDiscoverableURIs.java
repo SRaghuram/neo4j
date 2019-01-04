@@ -9,7 +9,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.server.enterprise.EnterpriseServerSettings;
+import org.neo4j.server.enterprise.CommercialServerSettings;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.neo4j.server.rest.discovery.CommunityDiscoverableURIs.communityDiscoverableURIs;
@@ -22,7 +22,7 @@ public class EnterpriseDiscoverableURIs
         {
             return new DiscoverableURIs.Builder( communityDiscoverableURIs( config, portRegister ) )
                     .addBoltConnectorFromConfig( "bolt_routing", "bolt+routing", config,
-                            EnterpriseServerSettings.bolt_routing_discoverable_address, portRegister )
+                            CommercialServerSettings.bolt_routing_discoverable_address, portRegister )
                     .build();
         }
 

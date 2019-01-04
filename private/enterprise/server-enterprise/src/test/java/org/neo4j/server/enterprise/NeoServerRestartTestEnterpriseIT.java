@@ -10,7 +10,7 @@ import java.io.IOException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.NeoServerRestartTestIT;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 
 public class NeoServerRestartTestEnterpriseIT extends NeoServerRestartTestIT
@@ -18,7 +18,7 @@ public class NeoServerRestartTestEnterpriseIT extends NeoServerRestartTestIT
     @Override
     protected NeoServer getNeoServer( String customPageSwapperName ) throws IOException
     {
-        CommunityServerBuilder builder = EnterpriseServerBuilder.serverOnRandomPorts()
+        CommunityServerBuilder builder = CommercialServerBuilder.serverOnRandomPorts()
                 .withProperty( GraphDatabaseSettings.pagecache_swapper.name(), customPageSwapperName );
         return builder.build();
     }

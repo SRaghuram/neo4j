@@ -23,7 +23,7 @@ import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.helpers.ServerHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
@@ -65,7 +65,7 @@ public class PropertyExistenceConstraintsIT implements GraphHolder
     {
         suppressAll().call( (Callable<Void>) () ->
         {
-            CommunityServerBuilder serverBuilder = EnterpriseServerBuilder.serverOnRandomPorts();
+            CommunityServerBuilder serverBuilder = CommercialServerBuilder.serverOnRandomPorts();
 
             PropertyExistenceConstraintsIT.server = ServerHelper.createNonPersistentServer( serverBuilder );
             return null;

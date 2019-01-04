@@ -6,7 +6,7 @@
 package org.neo4j.server.rest;
 
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -20,10 +20,10 @@ import org.neo4j.server.rest.discovery.DiscoverableURIs;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class EnterpriseDiscoverableURIsTest
+class EnterpriseDiscoverableURIsTest
 {
     @Test
-    public void shouldExposeBoltRoutingIfCore() throws Exception
+    void shouldExposeBoltRoutingIfCore()
     {
         // Given
         BoltConnector bolt = new BoltConnector( "honestJakesBoltConnector" );
@@ -42,7 +42,7 @@ public class EnterpriseDiscoverableURIsTest
     }
 
     @Test
-    public void shouldGrabPortFromRegisterIfSetTo0() throws Exception
+    void shouldGrabPortFromRegisterIfSetTo0()
     {
         // Given
         BoltConnector bolt = new BoltConnector( "honestJakesBoltConnector" );

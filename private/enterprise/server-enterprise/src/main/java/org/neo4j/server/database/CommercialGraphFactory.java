@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.server.database;
+package org.neo4j.server.database;
 
 import com.neo4j.causalclustering.core.CommercialCoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceFactorySelector;
@@ -17,11 +17,10 @@ import java.io.File;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.server.database.EnterpriseGraphFactory;
 
 import static org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 
-public class CommercialGraphFactory extends EnterpriseGraphFactory
+public class CommercialGraphFactory implements GraphFactory
 {
     @Override
     public GraphDatabaseFacade newGraphDatabase( Config config, Dependencies dependencies )
@@ -36,10 +35,8 @@ public class CommercialGraphFactory extends EnterpriseGraphFactory
             return new CommercialCoreGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
         case READ_REPLICA:
             return new CommercialReadReplicaGraphDatabase( storeDir, config, dependencies, discoveryServiceFactory );
-        case SINGLE:
-            return new CommercialGraphDatabase( storeDir, config, dependencies );
         default:
-            return super.newGraphDatabase( config, dependencies );
+            return new CommercialGraphDatabase( storeDir, config, dependencies );
         }
     }
 }

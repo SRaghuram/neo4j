@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.ServerSettings;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
+import org.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -42,7 +42,7 @@ class ServerMetricsIT
     {
         // Given
         File metrics = directory.file( "metrics" );
-        NeoServer server = EnterpriseServerBuilder.serverOnRandomPorts()
+        NeoServer server = CommercialServerBuilder.serverOnRandomPorts()
                 .usingDataDir( directory.databaseDir().getAbsolutePath() )
                 .withProperty( MetricsSettings.metricsEnabled.name(), "true" )
                 .withProperty( MetricsSettings.csvEnabled.name(), "true" )

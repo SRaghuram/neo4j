@@ -5,20 +5,21 @@
  */
 package org.neo4j.server.rest.security;
 
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
 import org.neo4j.server.security.enterprise.auth.AuthProceduresInteractionTestBase;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.SuppressOutput;
 
-import static org.neo4j.test.rule.SuppressOutput.suppressAll;
-
+@ExtendWith( SuppressOutputExtension.class )
 public class RESTUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<RESTSubject>
 {
-    @Rule
-    public SuppressOutput suppressOutput = suppressAll();
+    @Inject
+    SuppressOutput suppressOutput;
 
     public RESTUserManagementProceduresInteractionIT()
     {

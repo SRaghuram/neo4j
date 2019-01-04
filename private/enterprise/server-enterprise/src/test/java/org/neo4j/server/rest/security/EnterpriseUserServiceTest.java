@@ -22,7 +22,7 @@ public class EnterpriseUserServiceTest extends UserServiceTest
     public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule(
             userRepository,
             mock( AuthenticationStrategy.class )
-        );
+    );
 
     @Override
     protected void setupAuthManagerAndSubject()

@@ -15,48 +15,50 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.server.CommunityNeoServer;
-import org.neo4j.server.enterprise.OpenEnterpriseNeoServer;
+import org.neo4j.server.enterprise.CommercialNeoServer;
 import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.rest.web.DatabaseActions;
 
-public class EnterpriseServerBuilder extends CommunityServerBuilder
+public class CommercialServerBuilder extends CommunityServerBuilder
 {
-    protected EnterpriseServerBuilder( LogProvider logProvider )
+    protected CommercialServerBuilder( LogProvider logProvider )
     {
         super( logProvider );
     }
 
-    public static EnterpriseServerBuilder server()
+    public static CommercialServerBuilder server()
     {
         return server( NullLogProvider.getInstance() );
     }
 
-    public static EnterpriseServerBuilder serverOnRandomPorts()
+    public static CommercialServerBuilder serverOnRandomPorts()
     {
-        EnterpriseServerBuilder server = server();
+        CommercialServerBuilder server = server();
         server.onRandomPorts();
         server.withProperty( new BoltConnector( "bolt" ).listen_address.name(), "localhost:0" );
         server.withProperty( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
+        server.withProperty( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
         return server;
     }
 
-    public static EnterpriseServerBuilder server( LogProvider logProvider )
+    public static CommercialServerBuilder server( LogProvider logProvider )
     {
-        return new EnterpriseServerBuilder( logProvider );
+        return new CommercialServerBuilder( logProvider );
     }
 
     @Override
-    public OpenEnterpriseNeoServer build() throws IOException
+    public CommercialNeoServer build() throws IOException
     {
-        return (OpenEnterpriseNeoServer) super.build();
+        return (CommercialNeoServer) super.build();
     }
 
     @Override
-    public EnterpriseServerBuilder usingDataDir( String dataDir )
+    public CommercialServerBuilder usingDataDir( String dataDir )
     {
         super.usingDataDir( dataDir );
         return this;
@@ -66,15 +68,15 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
     protected CommunityNeoServer build( File configFile, Config config,
             GraphDatabaseFacadeFactory.Dependencies dependencies )
     {
-        return new TestEnterpriseNeoServer( config, configFile,
-                GraphDatabaseDependencies.newDependencies(dependencies).userLogProvider(logProvider) );
+        return new TestCommercialNeoServer( config, configFile,
+                GraphDatabaseDependencies.newDependencies(dependencies).userLogProvider( logProvider ) );
     }
 
-    private class TestEnterpriseNeoServer extends OpenEnterpriseNeoServer
+    private class TestCommercialNeoServer extends CommercialNeoServer
     {
         private final File configFile;
 
-        TestEnterpriseNeoServer( Config config, File configFile, GraphDatabaseFacadeFactory.Dependencies dependencies )
+        TestCommercialNeoServer( Config config, File configFile, GraphDatabaseFacadeFactory.Dependencies dependencies )
         {
             super( config, dependencies );
             this.configFile = configFile;
@@ -104,6 +106,7 @@ public class EnterpriseServerBuilder extends CommunityServerBuilder
 
         configuration.put( OnlineBackupSettings.online_backup_listen_address.name(), "127.0.0.1:0" );
         configuration.putIfAbsent( MetricsSettings.csvPath.name(), new File( temporaryFolder, "metrics" ).getAbsolutePath() );
+        configuration.put( OnlineBackupSettings.online_backup_enabled.name(), Settings.FALSE );
 
         return configuration;
     }

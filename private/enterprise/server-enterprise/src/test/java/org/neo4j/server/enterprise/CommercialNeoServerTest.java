@@ -26,7 +26,7 @@ import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSe
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith( TestDirectoryExtension.class )
-class OpenEnterpriseNeoServerTest
+class CommercialNeoServerTest
 {
     @Inject
     private TestDirectory testDirectory;
@@ -41,7 +41,7 @@ class OpenEnterpriseNeoServerTest
                 .withSetting( new BoltConnector( "https" ).listen_address.name(), "localhost:0" )
                 .build();
         GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
-        OpenEnterpriseNeoServer server = new OpenEnterpriseNeoServer( config, dependencies );
+        CommercialNeoServer server = new CommercialNeoServer( config, dependencies );
 
         server.start();
         try

@@ -5,23 +5,23 @@
  */
 package org.neo4j.server.enterprise;
 
+import org.eclipse.jetty.util.thread.ThreadPool;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import org.eclipse.jetty.util.thread.ThreadPool;
-
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.metrics.source.server.ServerThreadView;
 import org.neo4j.metrics.source.server.ServerThreadViewSetter;
 import org.neo4j.server.CommunityNeoServer;
-import org.neo4j.server.database.EnterpriseGraphFactory;
+import org.neo4j.server.database.CommercialGraphFactory;
 import org.neo4j.server.database.GraphFactory;
 import org.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
 import org.neo4j.server.enterprise.modules.JMXManagementModule;
@@ -37,14 +37,14 @@ import org.neo4j.server.web.WebServer;
 
 import static org.neo4j.server.configuration.ServerSettings.jmx_module_enabled;
 
-public class OpenEnterpriseNeoServer extends CommunityNeoServer
+public class CommercialNeoServer extends CommunityNeoServer
 {
-    public OpenEnterpriseNeoServer( Config config, Dependencies dependencies )
+    public CommercialNeoServer( Config config, Dependencies dependencies )
     {
-        super( config, new EnterpriseGraphFactory(), dependencies );
+        super( config, new CommercialGraphFactory(), dependencies );
     }
 
-    public OpenEnterpriseNeoServer( Config config, GraphFactory graphFactory, Dependencies dependencies )
+    public CommercialNeoServer( Config config, GraphFactory graphFactory, Dependencies dependencies )
     {
         super( config, graphFactory, dependencies );
     }

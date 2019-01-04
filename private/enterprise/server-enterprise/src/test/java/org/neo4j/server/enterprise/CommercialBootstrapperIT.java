@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.server.enterprise;
+package org.neo4j.server.enterprise;
 
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;

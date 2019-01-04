@@ -5,12 +5,12 @@
  */
 package org.neo4j.server.enterprise;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.CommunityNeoServer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * The classes that extend AbstractNeoServer are currently known to be:
@@ -21,27 +21,32 @@ import static org.junit.Assert.assertEquals;
  * problems for the server which relies on those names to yield the correct
  * Neo4j edition (community, enterprise) to the Web UI and other clients.
  * <p>
- * Although this test asserts naming against classes in other modules (neo4j),
+ * Although this est asserts naming against classes in other modules (neo4j),
  * it lives in neo4j-enterprise because otherwise the CommunityNeoServer
  * and EnterpriseNeoServer would not be visible.
  */
-public class ServerClassNameTest
+class ServerClassNameTest
 {
     @Test
-    public void shouldMaintainNamingOfCommunityNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
+    void shouldMaintainNamingOfCommunityNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
-        assertEquals( getErrorMessage( CommunityNeoServer.class ), "communityneoserver",
-                CommunityNeoServer.class.getSimpleName().toLowerCase() );
+        assertEquals( "communityneoserver", CommunityNeoServer.class.getSimpleName().toLowerCase(), getErrorMessage( CommunityNeoServer.class ) );
     }
 
     @Test
-    public void shouldMaintainNamingOfEnterpriseNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
+    void shouldMaintainNamingOfEnterpriseNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
-        assertEquals( getErrorMessage( OpenEnterpriseNeoServer.class ), "openenterpriseneoserver",
-                OpenEnterpriseNeoServer.class.getSimpleName().toLowerCase() );
+        assertEquals( "openenterpriseneoserver", CommercialNeoServer.class.getSimpleName().toLowerCase(),
+                getErrorMessage( CommercialNeoServer.class ) );
     }
 
-    private String getErrorMessage( Class<? extends AbstractNeoServer> neoServerClass )
+    @Test
+    void shouldMaintainNamingOfCommercialNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
+    {
+        assertEquals( "commercialneoserver", CommercialNeoServer.class.getSimpleName().toLowerCase(), getErrorMessage( CommercialNeoServer.class ) );
+    }
+
+    private static String getErrorMessage( Class<? extends AbstractNeoServer> neoServerClass )
     {
         return "The " + neoServerClass.getSimpleName() + " class appears to have been renamed. There is a strict " +
                 "dependency from the REST API VersionAndEditionService on the name of that class. If you want " +
