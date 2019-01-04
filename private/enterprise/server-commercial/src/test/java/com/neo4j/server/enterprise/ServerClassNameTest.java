@@ -12,32 +12,12 @@ import org.neo4j.server.CommunityNeoServer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * The classes that extend AbstractNeoServer are currently known to be:
- * CommunityNeoServer and EnterpriseNeoServer
- * <p>
- * This test asserts that those names won't change, for example during an
- * otherwise perfectly reasonable refactoring. Changing those names will cause
- * problems for the server which relies on those names to yield the correct
- * Neo4j edition (community, enterprise) to the Web UI and other clients.
- * <p>
- * Although this est asserts naming against classes in other modules (neo4j),
- * it lives in neo4j-enterprise because otherwise the CommunityNeoServer
- * and EnterpriseNeoServer would not be visible.
- */
 class ServerClassNameTest
 {
     @Test
     void shouldMaintainNamingOfCommunityNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
     {
         assertEquals( "communityneoserver", CommunityNeoServer.class.getSimpleName().toLowerCase(), getErrorMessage( CommunityNeoServer.class ) );
-    }
-
-    @Test
-    void shouldMaintainNamingOfEnterpriseNeoServerSoThatTheNeo4jEditionIsCorrectlyShownToRESTAPICallers()
-    {
-        assertEquals( "openenterpriseneoserver", CommercialNeoServer.class.getSimpleName().toLowerCase(),
-                getErrorMessage( CommercialNeoServer.class ) );
     }
 
     @Test

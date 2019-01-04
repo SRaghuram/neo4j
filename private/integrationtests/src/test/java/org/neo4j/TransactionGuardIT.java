@@ -8,6 +8,7 @@ package org.neo4j;
 import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import com.neo4j.server.enterprise.CommercialNeoServer;
+import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -60,7 +61,6 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.database.SimpleGraphFactory;
-import org.neo4j.server.enterprise.helpers.EnterpriseServerBuilder;
 import org.neo4j.server.web.HttpHeaderUtils;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
@@ -558,7 +558,7 @@ public class TransactionGuardIT
         }
     }
 
-    private class GuardingServerBuilder extends EnterpriseServerBuilder
+    private class GuardingServerBuilder extends CommercialServerBuilder
     {
         private GraphDatabaseFacade graphDatabaseFacade;
 
