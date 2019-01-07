@@ -2354,8 +2354,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
           val node = IntermediateExpression(
             block(lazyRel,
-                  invokeStatic(method[CompiledHelpers, NodeValue, DbAccess, VirtualRelationshipValue, VirtualNodeValue]("otherNode"),
-                               DB_ACCESS, load(relVar.name), nodeOps.last.ir)),
+                  invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, VirtualNodeValue]("otherNode"),
+                               load(relVar.name), DB_ACCESS,  nodeOps.last.ir)),
             compiled.fields, compiled.variables :+ relVar, compiled.nullCheck ++ nodeOps.last.nullCheck)
           val rel = IntermediateExpression(
             block(lazyRel, load(relVar.name)),
@@ -2372,8 +2372,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
           val node = IntermediateExpression(
             block(lazyRel,
-              invokeStatic(method[CompiledHelpers, NodeValue, DbAccess, VirtualRelationshipValue](methodName),
-                           DB_ACCESS, load(relVar.name))),
+              invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess](methodName),
+                           load(relVar.name), DB_ACCESS)),
             compiled.fields, compiled.variables :+ relVar, compiled.nullCheck)
           val rel = IntermediateExpression(
             block(lazyRel, load(relVar.name)),
@@ -2473,7 +2473,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         block(
           Seq(
             declare[PathValueBuilder](builderVar),
-            assign(builderVar, newInstance(constructor[PathValueBuilder])))
+            assign(builderVar, newInstance(constructor[PathValueBuilder, DbAccess], DB_ACCESS)))
             ++ pathOps.map(_.ir) :+ assign(variableName, invoke(load(builderVar), method[PathValueBuilder, AnyValue]("build"))): _*))
 
 

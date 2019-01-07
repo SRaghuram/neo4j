@@ -50,12 +50,6 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   when(cursors.nodeCursor).thenReturn(nodeCursor)
   when(cursors.propertyCursor).thenReturn(propertyCursor)
   when(cursors.relationshipScanCursor).thenReturn(relationshipScanCursor)
-  when(db.relationshipGetStartNode(any[RelationshipValue])).thenAnswer(new Answer[NodeValue] {
-    override def answer(in: InvocationOnMock): NodeValue = in.getArgument[RelationshipValue](0).startNode()
-  })
-  when(db.relationshipGetEndNode(any[RelationshipValue])).thenAnswer(new Answer[NodeValue] {
-    override def answer(in: InvocationOnMock): NodeValue = in.getArgument[RelationshipValue](0).endNode()
-  })
 
   private val random = ThreadLocalRandom.current()
 
@@ -247,6 +241,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
+    addRelationships(ctx, db, RelAt(rel, 0))
+    when(db.nodeById(rel.startNode().id())).thenReturn(rel.startNode())
     compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), cursors) should equal(rel.startNode())
     compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
   }
@@ -257,9 +253,11 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                 nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
+    addRelationships(ctx, db, RelAt(rel, 0))
+    when(db.nodeById(rel.endNode().id())).thenReturn(rel.endNode())
+
     compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), cursors) should equal(rel.endNode())
     compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-
   }
 
   test("exists on node") {
@@ -2827,8 +2825,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
     val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
     when(context.getRefAt(100)).thenReturn(list(r1.rel, r2.rel, r3.rel))
@@ -2853,8 +2851,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
     val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
     when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
@@ -2879,8 +2877,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
     val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
     when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
@@ -2905,8 +2903,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
     val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1337, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1337, n3.node, n4.node), 12)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
     when(context.getRefAt(100)).thenReturn(list(r1.rel, NO_VALUE, r3.rel))
@@ -2956,6 +2954,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       val cursor = mock[RelationshipScanCursor]
       when(context.getLongAt(rel.slot)).thenReturn(rel.rel.id())
       when(dbAccess.relationshipById(rel.rel.id())).thenReturn(rel.rel)
+      when(cursor.next()).thenReturn(true)
       when(cursor.sourceNodeReference()).thenReturn(rel.rel.startNode().id())
       when(cursor.targetNodeReference()).thenReturn(rel.rel.endNode().id())
       when(dbAccess.singleRelationship(rel.rel.id())).thenReturn(cursor)
