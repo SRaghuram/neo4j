@@ -98,6 +98,11 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
       case NodePathStep(nodeExpression, next) =>
         singleNodeProjector(toCommandExpression(id, nodeExpression, self).get, project(next))
 
+      case ast.SingleRelationshipPathStep(relExpression, _, Some(targetNodeExpression), next) =>
+        singleRelationshipWithKnownTargetProjector(toCommandExpression(id, relExpression, self).get,
+                                                   toCommandExpression(id, targetNodeExpression, self).get,
+                                                   project(next))
+
       case SingleRelationshipPathStep(relExpression, SemanticDirection.INCOMING, _, next) =>
         singleIncomingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
 
