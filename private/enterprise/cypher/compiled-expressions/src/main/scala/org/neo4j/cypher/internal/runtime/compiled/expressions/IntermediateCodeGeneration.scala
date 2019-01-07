@@ -1406,8 +1406,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       @tailrec
       def isStaticallyKnown(step: PathStep): Boolean = step match {
         case NodePathStep(_, next) => isStaticallyKnown(next)
-        case SingleRelationshipPathStep(_, _, next) => isStaticallyKnown(next)
-        case MultiRelationshipPathStep(_, _, _) => false
+        case SingleRelationshipPathStep(_, _, _,next) => isStaticallyKnown(next)
+        case _: MultiRelationshipPathStep => false
         case NilPathStep => true
       }
 
@@ -2341,7 +2341,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                      relOps: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[(Seq[IntermediateExpression], Seq[IntermediateExpression])] = step match {
       case NodePathStep(node, next) => compileSteps(next, nodeOps ++ internalCompileExpression(node, currentContext), relOps)
 
-      case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, next) => internalCompileExpression(rel,
+      case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, _, next) => internalCompileExpression(rel,
                                                                                                       currentContext) match {
         case Some(compiled) =>
           val node = IntermediateExpression(
@@ -2352,7 +2352,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         case None => None
       }
 
-      case SingleRelationshipPathStep(rel, direction, next) => internalCompileExpression(rel, currentContext) match {
+      case SingleRelationshipPathStep(rel, direction, _, next) => internalCompileExpression(rel, currentContext) match {
         case Some(compiled) =>
           val methodName = if (direction == SemanticDirection.INCOMING) "startNode" else "endNode"
           val node = IntermediateExpression(
@@ -2363,7 +2363,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         case None => None
       }
 
-      case MultiRelationshipPathStep(_, _, _) => throw new IllegalStateException("Cannot be used for static paths")
+      case MultiRelationshipPathStep(_, _, _, _) => throw new IllegalStateException("Cannot be used for static paths")
       case NilPathStep => Some((nodeOps, relOps))
     }
 
@@ -2409,7 +2409,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         case None => None
       }
 
-      case SingleRelationshipPathStep(rel, direction, next) =>  internalCompileExpression(rel, currentContext) match {
+      case SingleRelationshipPathStep(rel, direction, _, next) =>  internalCompileExpression(rel, currentContext) match {
         case Some(relOps) =>
           val methodName = direction match {
             case SemanticDirection.INCOMING => "addIncoming"
@@ -2426,7 +2426,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           compileSteps(next, acc :+ relOps.copy(ir = addRel))
         case None => None
       }
-      case MultiRelationshipPathStep(rel, direction, next) => internalCompileExpression(rel, currentContext) match {
+      case MultiRelationshipPathStep(rel, direction, _,next) => internalCompileExpression(rel, currentContext) match {
         case Some(relOps) =>
           val methodName = direction match {
             case SemanticDirection.INCOMING => "addMultipleIncoming"

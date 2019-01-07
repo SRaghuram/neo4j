@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, 
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, MapExecutionContext}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util._
@@ -2647,8 +2648,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //when
     //p = (n1)-[r]->(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                   SemanticDirection.OUTGOING, NilPathStep)))
+                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"), OUTGOING, Some(NodeFromSlot(2, "n2")),
+                                                                   NilPathStep)))
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
@@ -2682,7 +2683,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //p = (n1)<-[r]-(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
                                         SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                   SemanticDirection.INCOMING, NilPathStep)))
+                                                                   INCOMING, Some(NodeFromSlot(2, "n2")), NilPathStep)))
 
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
@@ -2701,11 +2702,11 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //when
     val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
                                                  SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                                  SemanticDirection.BOTH,
-                                                                                  NilPathStep))))
+                                                                            BOTH, Some(NodeFromSlot(2, "n2")),
+                                                                            NilPathStep))))
     val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(2, "n2"),
                                                  SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                            SemanticDirection.BOTH,
+                                                                            BOTH, Some(NodeFromSlot(0, "n1")),
                                                                             NilPathStep))))
 
     //then
@@ -2728,7 +2729,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //p = (n1)-[r]->(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
                                         SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                   SemanticDirection.OUTGOING, NilPathStep)))
+                                                                   OUTGOING,  Some(NodeFromSlot(2, "n2")), NilPathStep)))
     //then
     compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
   }
@@ -2750,9 +2751,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //when
     //p = (n1)-[r1]->(n2)<-[r2]-(n3)-[r3]-(n4)
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(10, "r1"), SemanticDirection.OUTGOING,
-                                          SingleRelationshipPathStep(RelationshipFromSlot(20, "r2"), SemanticDirection.INCOMING,
-                                            SingleRelationshipPathStep(RelationshipFromSlot(30, "r3"), SemanticDirection.BOTH, NilPathStep)))))
+                                        SingleRelationshipPathStep(RelationshipFromSlot(10, "r1"), OUTGOING, Some(NodeFromSlot(1, "n2")),
+                                                                   SingleRelationshipPathStep(RelationshipFromSlot(20, "r2"), INCOMING, Some(NodeFromSlot(2, "n3")),
+                                                                                              SingleRelationshipPathStep(RelationshipFromSlot(30, "r3"), BOTH, Some(NodeFromSlot(3, "n4")), NilPathStep)))))
 
     // then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
@@ -2777,7 +2778,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //p = (n1)-[r*]->(n4)
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
                                         MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  SemanticDirection.OUTGOING, NilPathStep)))
+                                                                  OUTGOING, Some(NodeFromSlot(3, "n4")), NilPathStep)))
 
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
@@ -2803,7 +2804,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //p = (n4)<-[r*]-(n1)
     val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
                                         MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  SemanticDirection.INCOMING, NilPathStep)))
+                                                                  INCOMING, Some(NodeFromSlot(0, "n1")), NilPathStep)))
 
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
@@ -2829,7 +2830,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //p = (n4)<-[r*]-(n1)
     val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
                                         MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  SemanticDirection.BOTH, NilPathStep)))
+                                                                  BOTH, Some(NodeFromSlot(0, "n1")), NilPathStep)))
 
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
@@ -2855,7 +2856,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     //p = (n1)-[r*]->(n4)
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
                                         MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  SemanticDirection.OUTGOING, NilPathStep)))
+                                                                  OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
 
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
@@ -2866,15 +2867,16 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    addNodes(context, dbAccess, n1)
+    val n2 = NodeAt(node(43), 1)
+    addNodes(context, dbAccess, n1, n2)
     val slots = SlotConfiguration(Map("r" -> RefSlot(100, nullable = true, symbols.CTList(symbols.CTRelationship))), 0, 1)
     when(context.getRefAt(100)).thenReturn(NO_VALUE)
 
     //when
-    //p = (n1)-[r*]->(n4)
+    //p = (n1)-[r*]->(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
                                         MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  SemanticDirection.OUTGOING, NilPathStep)))
+                                                                  OUTGOING, Some(NodeFromSlot(1, "n2")), NilPathStep)))
 
     //then
     compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
