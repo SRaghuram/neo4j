@@ -13,7 +13,7 @@ public class GetStoreIdResponse
 {
     private final StoreId storeId;
 
-    GetStoreIdResponse( StoreId storeId )
+    public GetStoreIdResponse( StoreId storeId )
     {
         this.storeId = storeId;
     }
