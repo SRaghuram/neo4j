@@ -2350,22 +2350,36 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, _, next) => internalCompileExpression(rel,
                                                                                                       currentContext) match {
         case Some(compiled) =>
+          val relVar = variable[RelationshipValue](namer.nextVariableName(), constant(null))
+          val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
           val node = IntermediateExpression(
-            invoke(cast[RelationshipValue](compiled.ir),
-                   method[RelationshipValue, NodeValue, VirtualNodeValue]("otherNode"), nodeOps.last.ir),
-            compiled.fields, compiled.variables, compiled.nullCheck ++ nodeOps.last.nullCheck)
-          compileSteps(next, nodeOps :+ node, relOps :+ compiled)
+            block(lazyRel,
+                  invokeStatic(method[CompiledHelpers, NodeValue, DbAccess, VirtualRelationshipValue, VirtualNodeValue]("otherNode"),
+                               DB_ACCESS, load(relVar.name), nodeOps.last.ir)),
+            compiled.fields, compiled.variables :+ relVar, compiled.nullCheck ++ nodeOps.last.nullCheck)
+          val rel = IntermediateExpression(
+            block(lazyRel, load(relVar.name)),
+            compiled.fields, compiled.variables :+ relVar, compiled.nullCheck)
+
+          compileSteps(next, nodeOps :+ node, relOps :+ rel)
         case None => None
       }
 
       case SingleRelationshipPathStep(rel, direction, _, next) => internalCompileExpression(rel, currentContext) match {
         case Some(compiled) =>
           val methodName = if (direction == SemanticDirection.INCOMING) "startNode" else "endNode"
+          val relVar = variable[RelationshipValue](namer.nextVariableName(), constant(null))
+          val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
           val node = IntermediateExpression(
-            invoke(cast[RelationshipValue](compiled.ir),
-                   method[RelationshipValue, NodeValue](methodName)),
-            compiled.fields, compiled.variables, compiled.nullCheck)
-          compileSteps(next, nodeOps :+ node, relOps :+ compiled)
+            block(lazyRel,
+              invokeStatic(method[CompiledHelpers, NodeValue, DbAccess, VirtualRelationshipValue](methodName),
+                           DB_ACCESS, load(relVar.name))),
+            compiled.fields, compiled.variables :+ relVar, compiled.nullCheck)
+          val rel = IntermediateExpression(
+            block(lazyRel, load(relVar.name)),
+            compiled.fields, compiled.variables :+ relVar, compiled.nullCheck)
+
+          compileSteps(next, nodeOps :+ node, relOps :+ rel)
         case None => None
       }
 

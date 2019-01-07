@@ -15,8 +15,6 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors}
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, MapExecutionContext}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
@@ -2654,6 +2652,25 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
+  test("single outgoing path where target node not known (will only happen for legacy plans)") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 2)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    addNodes(context, dbAccess, n1, n2)
+    addRelationships(context, dbAccess, r)
+
+    //when
+    //p = (n1)-[r]->(n2)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"), OUTGOING, None,
+                                                                   NilPathStep)))
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+  }
+
   test("single-node path") {
     // given
     val context = mock[ExecutionContext]
@@ -2689,6 +2706,25 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
+  test("single incoming path where target node not known (will only happen for legacy plans)") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 2)
+    val r = RelAt(relationship(1337, n2.node, n1.node), 1)
+    addNodes(context, dbAccess, n1, n2)
+    addRelationships(context, dbAccess, r)
+
+    //when
+    //p = (n1)<-[r]-(n2)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"), INCOMING, None, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+  }
+
   test("single undirected path") {
     // given
     val context = mock[ExecutionContext]
@@ -2708,7 +2744,30 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
                                                  SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
                                                                             BOTH, Some(NodeFromSlot(0, "n1")),
                                                                             NilPathStep))))
+    //then
+    p1.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    p2.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
+  }
 
+  test("single undirected path where target node not known (will only happen for legacy plans)") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 2)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    addNodes(context, dbAccess, n1, n2)
+    addRelationships(context, dbAccess, r)
+
+    //when
+    val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                            BOTH, None,
+                                                                            NilPathStep))))
+    val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(2, "n2"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                            BOTH, None,
+                                                                            NilPathStep))))
     //then
     p1.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
     p2.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
@@ -2894,8 +2953,12 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def addRelationships(context: ExecutionContext, dbAccess: DbAccess, rels: RelAt*): Unit = {
     for (rel <- rels) {
+      val cursor = mock[RelationshipScanCursor]
       when(context.getLongAt(rel.slot)).thenReturn(rel.rel.id())
       when(dbAccess.relationshipById(rel.rel.id())).thenReturn(rel.rel)
+      when(cursor.sourceNodeReference()).thenReturn(rel.rel.startNode().id())
+      when(cursor.targetNodeReference()).thenReturn(rel.rel.endNode().id())
+      when(dbAccess.singleRelationship(rel.rel.id())).thenReturn(cursor)
     }
   }
   private def pathExpression(step: PathStep) = PathExpression(step)(pos)
