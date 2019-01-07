@@ -107,7 +107,7 @@ class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfig
       db =>
         intercept[QueryExecutionException](
           db.execute(s"EXPLAIN CYPHER runtime=compiled $QUERY_NOT_COMPILED")
-        ).getStatusCode should equal("Neo.ClientError.Statement.ArgumentError")
+        ).getStatusCode should equal("Neo.ClientError.Statement.RuntimeUnsupportedError")
     }
   }
 
