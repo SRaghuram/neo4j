@@ -26,6 +26,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
+import static java.lang.String.format;
 import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
 public abstract class AbstractLocalDatabase extends SafeLifecycle implements LocalDatabase
@@ -141,7 +142,9 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public NeoStoreDataSource dataSource()
     {
-        return dataSourceManager.getDataSource( databaseName ).orElseThrow( IllegalStateException::new );
+        return dataSourceManager
+                .getDataSource( databaseName )
+                .orElseThrow( () -> new IllegalStateException( format( "No database with name '%s' registered", databaseName ) ) );
     }
 
     @Override
