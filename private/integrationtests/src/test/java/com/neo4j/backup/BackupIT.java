@@ -401,10 +401,9 @@ class BackupIT
     }
 
     @TestWithRecordFormats
-    @Disabled( "This test should use new tx log location setting" )
     void backupDatabaseWithCustomTransactionLogsLocation( String recordFormatName ) throws Exception
     {
-        String customTxLogsLocation = "customLogLocation";
+        String customTxLogsLocation = testDirectory.directory( "customLogLocation" ).getAbsolutePath();
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName, true, customTxLogsLocation );
         createInitialDataSet( db );
 
@@ -418,6 +417,10 @@ class BackupIT
         assertThat( backupLogFiles.logFiles(), arrayWithSize( 1 ) );
 
         assertEquals( representation, getBackupDbRepresentation() );
+
+        long lastCommittedTxInDb = getLastCommittedTx( db );
+        long lastCommittedTxInBackup = getLastCommittedTx( backupDatabaseLayout, pageCache );
+        assertEquals( lastCommittedTxInDb, lastCommittedTxInBackup );
     }
 
     @Test
@@ -738,7 +741,7 @@ class BackupIT
         }
         if ( txLogsLocation != null )
         {
-            builder.setConfig( GraphDatabaseSettings.logical_logs_location, txLogsLocation );
+            builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, txLogsLocation );
         }
 
         GraphDatabaseService db = builder.newGraphDatabase();
