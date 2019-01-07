@@ -174,7 +174,7 @@ object SlottedProjectedPath {
       } finally {
         cursor.close()
       }
-     builder.addRelationship(relValue).addNode(nextNode)
+     builder.addRelationship(r).addNode(nextNode)
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
@@ -188,7 +188,7 @@ object SlottedProjectedPath {
       } finally {
         cursor.close()
       }
-      builder.addRelationship(relValue).addNode(nextNode)
+      builder.addRelationship(r).addNode(nextNode)
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
@@ -205,7 +205,7 @@ object SlottedProjectedPath {
       } finally {
         cursor.close()
       }
-      builder.addRelationship(relValue).addNode(nextNode)
+      builder.addRelationship(r).addNode(nextNode)
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
