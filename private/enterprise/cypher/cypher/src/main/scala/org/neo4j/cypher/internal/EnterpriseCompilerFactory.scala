@@ -7,6 +7,11 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
+import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
+import org.neo4j.cypher.CypherPlannerOption
+import org.neo4j.cypher.CypherRuntimeOption
+import org.neo4j.cypher.CypherUpdateStrategy
+import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.compatibility._
 import org.neo4j.cypher.internal.compatibility.v3_5.Cypher3_5Planner
 import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
@@ -19,10 +24,6 @@ import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
 import org.neo4j.cypher.internal.runtime.vectorized.NO_TRANSACTION_BINDER
 import org.neo4j.cypher.internal.runtime.vectorized.QueryResources
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
-import org.neo4j.cypher.CypherPlannerOption
-import org.neo4j.cypher.CypherRuntimeOption
-import org.neo4j.cypher.CypherUpdateStrategy
-import org.neo4j.cypher.CypherVersion
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.Kernel
 import org.neo4j.internal.kernel.api.SchemaRead
@@ -106,21 +107,21 @@ case class RuntimeEnvironment(config:CypherRuntimeConfiguration,
 
   private def singleThreadedRequested(debugOptions: Set[String]) = debugOptions.contains("singlethreaded")
 
-  private def isAlreadySingleThreaded = config.workers == 1
+  private def isAlreadySingleThreaded = config.scheduler == SingleThreaded
 
   private def createDispatcher(): Dispatcher = {
-    val scheduler =
-      if (config.workers == 1) new SingleThreadScheduler(() => new QueryResources(cursors))
-      else {
+    val (scheduler, transactionBinder) = config.scheduler match {
+      case SingleThreaded =>
+        (new SingleThreadScheduler(() => new QueryResources(cursors)), NO_TRANSACTION_BINDER)
+      case Simple =>
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
-        //val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
-        //new SimpleScheduler(executorService, config.waitTimeout, () => new QueryResources(cursors), numberOfThreads)
+        val executorService = jobScheduler.workStealingExecutor(Group.CYPHER_WORKER, numberOfThreads)
+        (new SimpleScheduler(executorService, config.waitTimeout, () => new QueryResources(cursors), numberOfThreads), new TxBridgeTransactionBinder(txBridge))
+      case LockFree =>
+        val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
         val threadFactory = jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER)
-        new LockFreeScheduler(threadFactory, numberOfThreads, config.waitTimeout, () => new QueryResources(cursors))
-      }
-    val transactionBinder =
-      if (config.workers == 1) NO_TRANSACTION_BINDER
-      else new TxBridgeTransactionBinder(txBridge)
+        (new LockFreeScheduler(threadFactory, numberOfThreads, config.waitTimeout, () => new QueryResources(cursors)), new TxBridgeTransactionBinder(txBridge))
+    }
     new Dispatcher(config.morselSize, scheduler, transactionBinder)
   }
 
