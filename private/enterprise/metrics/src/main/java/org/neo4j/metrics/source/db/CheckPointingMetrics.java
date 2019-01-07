@@ -32,6 +32,8 @@ public class CheckPointingMetrics extends LifecycleAdapter
     @Documented( "The total time spent in check pointing so far" )
     public static final String CHECK_POINT_TOTAL_TIME = name( CHECK_POINT_PREFIX, "total_time" );
     @Documented( "The duration of the check point event" )
+    // This setting will be renamed to "duration" in the next major release
+    @Deprecated
     public static final String CHECK_POINT_DURATION = name( CHECK_POINT_PREFIX, "check_point_duration" );
 
     private final MetricRegistry registry;
