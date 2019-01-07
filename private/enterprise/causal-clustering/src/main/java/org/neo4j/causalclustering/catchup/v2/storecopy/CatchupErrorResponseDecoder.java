@@ -13,7 +13,7 @@ import java.util.List;
 
 import org.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import org.neo4j.causalclustering.catchup.CatchupResult;
-import org.neo4j.string.UTF8;
+import org.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 public class CatchupErrorResponseDecoder extends ByteToMessageDecoder
 {
@@ -22,9 +22,7 @@ public class CatchupErrorResponseDecoder extends ByteToMessageDecoder
     {
         int statusOrdinal = in.readInt();
         CatchupResult result = CatchupResult.values()[statusOrdinal];
-        byte[] messageBytes = new byte[in.readInt()];
-        in.readBytes( messageBytes );
-        String errorMessage = UTF8.decode( messageBytes );
-        out.add( new CatchupErrorResponse( result, errorMessage ) );
+        String message = StringMarshal.unmarshal( in );
+        out.add( new CatchupErrorResponse( result, message ) );
     }
 }

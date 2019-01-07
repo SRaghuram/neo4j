@@ -10,7 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 import org.neo4j.causalclustering.catchup.CatchupErrorResponse;
-import org.neo4j.string.UTF8;
+import org.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 public class CatchupErrorResponseEncoder extends MessageToByteEncoder<CatchupErrorResponse>
 {
@@ -18,10 +18,6 @@ public class CatchupErrorResponseEncoder extends MessageToByteEncoder<CatchupErr
     protected void encode( ChannelHandlerContext ctx, CatchupErrorResponse msg, ByteBuf out )
     {
         out.writeInt( msg.status().ordinal() );
-
-        String message = msg.message();
-        out.writeInt( message.length() );
-        byte[] encodedBytes = UTF8.encode( message );
-        out.writeBytes( encodedBytes );
+        StringMarshal.marshal( out, msg.message() );
     }
 }
