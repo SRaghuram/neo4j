@@ -51,6 +51,22 @@ object SlottedProjectedPath {
       tailProjector(ctx, state, addUndirected(rel.apply(ctx,state), state.query, builder))
   }
 
+  case class multiIncomingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
+    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
+      case list: ListValue =>
+        var aggregated = builder
+        val size = list.size()
+        var i = 0
+        while (i < size - 1) {
+          aggregated = addIncoming(list.value(i), state.query, aggregated)
+          i += 1
+        }
+        tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
+      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
+      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
+    }
+  }
+
   case class multiIncomingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
     def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
       case list: ListValue =>
@@ -64,6 +80,22 @@ object SlottedProjectedPath {
     }
   }
 
+
+  case class multiOutgoingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
+    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
+      case list: ListValue =>
+        var aggregated = builder
+        val size = list.size()
+        var i = 0
+        while (i < size - 1) {
+          aggregated = addOutgoing(list.value(i), state.query, aggregated)
+          i += 1
+        }
+        tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
+      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
+      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
+    }
+  }
   case class multiOutgoingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
     def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
       case list: ListValue =>
@@ -72,6 +104,37 @@ object SlottedProjectedPath {
         while (iterator.hasNext)
           aggregated = addOutgoing(iterator.next(), state.query, aggregated)
         tailProjector(ctx, state, aggregated)
+      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
+      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
+    }
+  }
+
+  case class multiUndirectedRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
+    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
+      case list: ListValue =>
+        val previous = builder.previousNode.id()
+        val first = list.head().asInstanceOf[RelationshipValue]
+        val correctDirection = first.startNode().id() == previous || first.endNode().id() == previous
+        var aggregated = builder
+        val size = list.size()
+        if (correctDirection) {
+          var i = 0
+          while (i < size - 1) {
+            aggregated = addUndirected(list.value(i), state.query, aggregated)
+            i += 1
+          }
+          aggregated.addRelationship(list.value(i))
+        } else {
+          val reversed = list.reverse()
+          var i = 0
+          while (i < size - 1) {
+            aggregated = addUndirected(reversed.value(i), state.query, aggregated)
+            i += 1
+          }
+          aggregated.addRelationship(reversed.value(i))
+        }
+        tailProjector(ctx, state, aggregated.addNode(node.apply(ctx, state)))
+
       case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }

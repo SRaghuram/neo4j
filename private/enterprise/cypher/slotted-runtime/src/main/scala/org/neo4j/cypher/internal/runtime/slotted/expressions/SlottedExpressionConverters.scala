@@ -112,11 +112,29 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
       case SingleRelationshipPathStep(relExpression, SemanticDirection.BOTH, _, next) =>
         singleUndirectedRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
 
+      case MultiRelationshipPathStep(relExpression, SemanticDirection.INCOMING, Some(targetNodeExpression), next) =>
+        multiIncomingRelationshipWithKnownTargetProjector(
+          toCommandExpression(id, relExpression, self).get,
+          toCommandExpression(id, targetNodeExpression, self).get,
+          project(next))
+
       case MultiRelationshipPathStep(relExpression, SemanticDirection.INCOMING, _, next) =>
         multiIncomingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
 
+      case MultiRelationshipPathStep(relExpression, SemanticDirection.OUTGOING, Some(targetNodeExpression), next) =>
+        multiOutgoingRelationshipWithKnownTargetProjector(
+          toCommandExpression(id, relExpression, self).get,
+          toCommandExpression(id, targetNodeExpression, self).get,
+          project(next))
+
       case MultiRelationshipPathStep(relExpression, SemanticDirection.OUTGOING, _, next) =>
         multiOutgoingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
+
+      case MultiRelationshipPathStep(relExpression, SemanticDirection.BOTH, Some(targetNodeExpression), next) =>
+        multiUndirectedRelationshipWithKnownTargetProjector(
+          toCommandExpression(id, relExpression, self).get,
+          toCommandExpression(id, targetNodeExpression, self).get,
+          project(next))
 
       case MultiRelationshipPathStep(relExpression, SemanticDirection.BOTH, _, next) =>
         multiUndirectedRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))
