@@ -56,4 +56,10 @@ public class TransactionRepresentationReplicatedTransaction extends ReplicatedTr
     {
         contentHandler.handle( this );
     }
+
+    @Override
+    public String toString()
+    {
+        return "TransactionRepresentationReplicatedTransaction{" + "tx=" + tx + '}';
+    }
 }

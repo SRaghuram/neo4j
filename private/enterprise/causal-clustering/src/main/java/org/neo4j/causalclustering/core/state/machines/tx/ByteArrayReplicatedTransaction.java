@@ -86,4 +86,10 @@ public class ByteArrayReplicatedTransaction extends ReplicatedTransaction
     {
         return databaseName;
     }
+
+    @Override
+    public String toString()
+    {
+        return "ByteArrayReplicatedTransaction{" + "txBytes.length=" + txBytes.length + '}';
+    }
 }
