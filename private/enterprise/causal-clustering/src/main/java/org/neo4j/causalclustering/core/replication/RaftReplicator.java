@@ -25,6 +25,8 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static java.lang.String.format;
+
 /**
  * A replicator implementation suitable in a RAFT context. Will handle resending due to timeouts and leader switches.
  */
@@ -90,7 +92,7 @@ public class RaftReplicator implements Replicator, LeaderListener
                     attempts++;
                     if ( attempts > 1 )
                     {
-                        log.info( "Retrying replication. Current attempt: %d Content: %s", attempts, command );
+                        log.info( format( "Replication attempt %d to leader %s: %s", attempts, leader, operation ) );
                     }
                     replicationMonitor.replicationAttempt();
                     assertDatabaseAvailable();
@@ -112,6 +114,11 @@ public class RaftReplicator implements Replicator, LeaderListener
             }
 
             BiConsumer<Object,Throwable> cleanup = ( ignored1, ignored2 ) -> sessionPool.releaseSession( session );
+
+            if ( attempts > 1 )
+            {
+                log.info( format( "Successfully replicated after attempt %d: %s", attempts, operation ) );
+            }
 
             if ( trackResult )
             {
