@@ -36,6 +36,7 @@ Apache Software License, Version 2.0
   opencsv
   parboiled-core
   parboiled-scala
+  scalatest
   WMI4Java
 
 BSD - Scala License
@@ -48,6 +49,9 @@ BSD License
   asm-util
   JLine
   Scala Compiler
+  scala-xml
+  scalacheck
+  test-interface
   scala-parser-combinators
   scala-xml
   Scalap

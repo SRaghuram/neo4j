@@ -108,6 +108,7 @@ Apache Software License, Version 2.0
   protobufjs
   request
   rxjs
+  scalatest
   ssl-config-core
   tslib
   tunnel-agent
@@ -386,7 +387,10 @@ BSD License
   Scala Compiler
   scala-java8-compat
   scala-parser-combinators
+  scala-xml
+  scalacheck
   sntp
+  test-interface
   tough-cookie
 ------------------------------------------------------------------------------
 

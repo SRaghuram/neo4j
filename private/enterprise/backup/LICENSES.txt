@@ -44,6 +44,7 @@ Apache Software License, Version 2.0
   Netty/All-in-One
   parboiled-core
   parboiled-scala
+  scalatest
   ssl-config-core
   WMI4Java
 ------------------------------------------------------------------------------
@@ -304,6 +305,9 @@ BSD License
   Scala Compiler
   scala-java8-compat
   scala-parser-combinators
+  scala-xml
+  scalacheck
+  test-interface
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>
