@@ -27,6 +27,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+// NOTE: This test class depends on test auth plugins being loaded as services,
+//       which is why it lives here and not in neo4j-security-commercial.
 class CommercialSecurityModuleTest
 {
     private Config config;

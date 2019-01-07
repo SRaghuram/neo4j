@@ -174,22 +174,22 @@ class SystemDatabaseIT
     }
 
     @Test
-    void systemDatabaseDisabledByDefault()
+    void systemDatabaseEnabledByDefault()
     {
-        GraphDatabaseService databaseWithoutSystemDb = null;
+        GraphDatabaseService databaseWithSystemDb = null;
 
         try
         {
-            File disabledSystemDbDirectory = testDirectory.databaseDir( "disabledSystemDb" );
-            databaseWithoutSystemDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledSystemDbDirectory ).newGraphDatabase();
-            DatabaseManager databaseManager = getDatabaseManager( databaseWithoutSystemDb );
-            assertFalse( databaseManager.getDatabaseFacade( SYSTEM_DATABASE_NAME ).isPresent() );
+            File enabledSystemDbDirectory = testDirectory.databaseDir( "enabledSystemDb" );
+            databaseWithSystemDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( enabledSystemDbDirectory ).newGraphDatabase();
+            DatabaseManager databaseManager = getDatabaseManager( databaseWithSystemDb );
+            assertTrue( databaseManager.getDatabaseFacade( SYSTEM_DATABASE_NAME ).isPresent() );
         }
         finally
         {
-            if ( databaseWithoutSystemDb != null )
+            if ( databaseWithSystemDb != null )
             {
-                databaseWithoutSystemDb.shutdown();
+                databaseWithSystemDb.shutdown();
             }
         }
     }

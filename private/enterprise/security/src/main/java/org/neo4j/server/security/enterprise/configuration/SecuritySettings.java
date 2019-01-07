@@ -52,11 +52,11 @@ public class SecuritySettings implements LoadableConfig
     //=========================================================================
 
     @Description( "The authentication and authorization provider that contains both the users and roles. " +
-                  "This can be one of the built-in `" + NATIVE_REALM_NAME + "` or `" + LDAP_REALM_NAME + "` providers, " +
+                  "This can be one of the built-in `" + NATIVE_REALM_NAME + "`, `" + SYSTEM_GRAPH_REALM_NAME + "` or `" + LDAP_REALM_NAME + "` providers, " +
                   "or it can be an externally provided plugin, with a custom name prefixed by `" +
                   PLUGIN_REALM_NAME_PREFIX + "`, i.e. `" + PLUGIN_REALM_NAME_PREFIX + "<AUTH_PROVIDER_NAME>`. " )
     public static final Setting<String> auth_provider =
-            setting( "dbms.security.auth_provider", STRING, NATIVE_REALM_NAME );
+            setting( "dbms.security.auth_provider", STRING, SYSTEM_GRAPH_REALM_NAME );
 
     @Description( "A list of security authentication and authorization providers containing the users and roles. " +
                   "They will be queried in the given order when login is attempted." )

@@ -5,6 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,7 +43,6 @@ import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.ValueUtils;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;
@@ -77,7 +78,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
 
     BoltInteraction( Map<String,String> config, Supplier<FileSystemAbstraction> fileSystemSupplier )
     {
-        TestEnterpriseGraphDatabaseFactory factory = new TestEnterpriseGraphDatabaseFactory();
+        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         fileSystem = fileSystemSupplier.get();
         server = new Neo4jWithSocket( getClass(),
                 factory,

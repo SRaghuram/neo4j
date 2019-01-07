@@ -5,6 +5,7 @@
  */
 package org.neo4j.server.security.enterprise.auth.plugin;
 
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -35,7 +36,6 @@ import org.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
 import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -61,7 +61,7 @@ public class PropertyLevelSecurityIT
     @Before
     public void setUp() throws Throwable
     {
-        TestGraphDatabaseFactory s = new TestEnterpriseGraphDatabaseFactory();
+        TestGraphDatabaseFactory s = new TestCommercialGraphDatabaseFactory();
         db = (GraphDatabaseFacade) s.newImpermanentDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( SecuritySettings.property_level_authorization_enabled, "true" )
                 .setConfig( SecuritySettings.property_level_authorization_permissions, "Agent=alias,secret" )

@@ -39,6 +39,7 @@ class OpenEnterpriseNeoServerTest
                 .withSetting( new BoltConnector( "bolt" ).listen_address.name(), "localhost:0" )
                 .withSetting( new BoltConnector( "http" ).listen_address.name(), "localhost:0" )
                 .withSetting( new BoltConnector( "https" ).listen_address.name(), "localhost:0" )
+                .withSetting( GraphDatabaseSettings.auth_enabled, "false" )
                 .build();
         GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
         OpenEnterpriseNeoServer server = new OpenEnterpriseNeoServer( config, dependencies );

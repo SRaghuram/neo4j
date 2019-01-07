@@ -108,8 +108,9 @@ public class ImportAuthCommand implements AdminCommand
 
     Config loadNeo4jConfig()
     {
-        return Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .withHome( homeDir )
+        return Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ).toFile() )
+                .withHome( homeDir.toFile() )
+                .withNoThrowOnFileLoadFailure()
                 .withConnectorsDisabled().build();
     }
 

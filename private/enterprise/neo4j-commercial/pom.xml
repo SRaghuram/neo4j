@@ -40,6 +40,8 @@
     </properties>
 
     <dependencies>
+
+        <!-- Neo4j dependencies -->
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-kernel</artifactId>
@@ -76,6 +78,7 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Neo4j test dependencies -->
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-cluster</artifactId>
@@ -118,15 +121,15 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-security-enterprise</artifactId>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-security</artifactId>
             <version>${project.version}</version>
-            <classifier>tests</classifier>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-security</artifactId>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-security-commercial</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
@@ -149,6 +152,19 @@
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-bolt</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-bolt</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.community</groupId>
+            <artifactId>bolt-it</artifactId>
+            <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -157,12 +173,15 @@
             <artifactId>neo4j-java-driver</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
-            <groupId>org.apache.directory.server</groupId>
-            <artifactId>apacheds-server-integ</artifactId>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-logging</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+
+        <!-- External test dependencies -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
@@ -188,15 +207,28 @@
             <artifactId>hamcrest-library</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-logging</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
+            <groupId>org.apache.directory.server</groupId>
+            <artifactId>apacheds-server-integ</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava-testlib</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

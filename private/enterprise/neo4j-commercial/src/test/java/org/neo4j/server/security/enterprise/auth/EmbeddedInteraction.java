@@ -5,6 +5,8 @@
  */
 package org.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -25,7 +27,6 @@ import org.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import org.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
@@ -46,7 +47,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
 
     EmbeddedInteraction( Map<String, String> config, Supplier<FileSystemAbstraction> fileSystemSupplier ) throws Throwable
     {
-        TestEnterpriseGraphDatabaseFactory factory = new TestEnterpriseGraphDatabaseFactory();
+        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         factory.setFileSystem( fileSystemSupplier.get() );
         GraphDatabaseBuilder builder = factory.newImpermanentDatabaseBuilder();
         this.fileSystem = factory.getFileSystem();

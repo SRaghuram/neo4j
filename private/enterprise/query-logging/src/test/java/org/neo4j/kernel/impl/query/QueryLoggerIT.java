@@ -5,6 +5,7 @@
  */
 package org.neo4j.kernel.impl.query;
 
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -47,7 +48,6 @@ import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
-import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.virtual.VirtualValues;
@@ -61,6 +61,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries;
@@ -97,7 +98,7 @@ public class QueryLoggerIT
         logsDirectory = new File( testDirectory.storeDir(), "logs" );
         logFilename = new File( logsDirectory, "query.log" );
         AssertableLogProvider inMemoryLog = new AssertableLogProvider();
-        databaseBuilder = new TestEnterpriseGraphDatabaseFactory()
+        databaseBuilder = new TestCommercialGraphDatabaseFactory()
                 .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem.get() ) )
                 .setInternalLogProvider( inMemoryLog )
                 .newImpermanentDatabaseBuilder( testDirectory.databaseDir() );
@@ -134,22 +135,28 @@ public class QueryLoggerIT
         EnterpriseLoginContext mats = db.login( "mats", "neo4j" );
 
         // run query
-        db.executeQuery( mats, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", Collections.emptyMap(), ResourceIterator::close );
+        String unwindQuery = "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})";
+        db.executeQuery( mats, unwindQuery, Collections.emptyMap(), ResourceIterator::close );
         db.executeQuery( mats, "CREATE (:Label)", Collections.emptyMap(), ResourceIterator::close );
 
         // switch user, run query
         EnterpriseLoginContext andres = db.login( "andres", "neo4j" );
-        db.executeQuery( andres, "MATCH (n:Label) RETURN n", Collections.emptyMap(), ResourceIterator::close );
+        String matchQuery = "MATCH (n:Label) RETURN n";
+        db.executeQuery( andres, matchQuery, Collections.emptyMap(), ResourceIterator::close );
 
         db.tearDown();
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
 
-        assertThat( logLines, hasSize( 3 ) );
-        assertThat( logLines.get( 0 ), containsString( "mats" ) );
-        assertThat( logLines.get( 1 ), containsString( "mats" ) );
-        assertThat( logLines.get( 2 ), containsString( "andres" ) );
+        int line1 = findLogLineThatContains( unwindQuery, logLines );
+        assertNotEquals( "Expected a log line containing '" + unwindQuery + "'", line1, NOT_FOUND );
+        assertThat( logLines.get( line1 ), containsString( "mats" ) );
+        assertThat( logLines.get( line1 + 1 ), containsString( "mats" ) );
+
+        int line2 = findLogLineThatContains( matchQuery, logLines );
+        assertNotEquals( "Expected a log line containing '" + matchQuery + "'", line2, NOT_FOUND );
+        assertThat( logLines.get( line2 ), containsString( "andres" ) );
     }
 
     @Test
@@ -190,17 +197,21 @@ public class QueryLoggerIT
         // THEN
         List<String> logLines = readAllLines( logFilename );
 
-        assertThat( logLines, hasSize( 7 ) );
-        assertThat( logLines.get( 0 ), not( containsString( "User: 'Johan'" ) ) );
+        String expectedMessage = "UNWIND range(0, 10) AS i";
+        int line = findLogLineThatContains( expectedMessage, logLines );
+
+        assertNotEquals( "Expected a log line containing '" + expectedMessage + "'", line, NOT_FOUND );
+        assertEquals( line + 7, logLines.size() );
+        assertThat( logLines.get( line ), not( containsString( "User: 'Johan'" ) ) );
         // we don't care if setTXMetaData contains the meta data
-        //assertThat( logLines.get( 1 ), containsString( "User: Johan" ) );
-        assertThat( logLines.get( 2 ), containsString( "User: 'Johan'" ) );
-        assertThat( logLines.get( 3 ), containsString( "User: 'Johan'" ) );
-        assertThat( logLines.get( 4 ), containsString( "User: 'Johan'" ) );
+        //assertThat( logLines.get( line + 1 ), containsString( "User: Johan" ) );
+        assertThat( logLines.get( line + 2 ), containsString( "User: 'Johan'" ) );
+        assertThat( logLines.get( line + 3 ), containsString( "User: 'Johan'" ) );
+        assertThat( logLines.get( line + 4 ), containsString( "User: 'Johan'" ) );
 
         // we want to make sure that the new transaction does not carry old meta data
-        assertThat( logLines.get( 5 ), not( containsString( "User: 'Johan'" ) ) );
-        assertThat( logLines.get( 6 ), containsString( "Location: 'Sweden'" ) );
+        assertThat( logLines.get( line + 5 ), not( containsString( "User: 'Johan'" ) ) );
+        assertThat( logLines.get( line + 6 ), containsString( "Location: 'Sweden'" ) );
     }
 
     @Test
@@ -400,11 +411,14 @@ public class QueryLoggerIT
         }
 
         List<String> logLines = readAllLines( logFilename );
-        assertEquals( 1, logLines.size() );
-        assertThat( logLines.get( 0 ),
-                containsString(  "CALL dbms.security.changePassword(******)") ) ;
-        assertThat( logLines.get( 0 ),not( containsString( "abc123" ) ) );
-        assertThat( logLines.get( 0 ), containsString( neo.subject().username() ) );
+
+        String expectedMessage = "CALL dbms.security.changePassword(******)";
+        int line = findLogLineThatContains( expectedMessage, logLines );
+
+        assertNotEquals( "Expected a log line containing '" + expectedMessage + "'", line, NOT_FOUND );
+        assertEquals( line + 1, logLines.size() );
+        assertThat( logLines.get( line ), not( containsString( "abc123" ) ) );
+        assertThat( logLines.get( line ), containsString( neo.subject().username() ) );
     }
 
     @Test
@@ -524,5 +538,21 @@ public class QueryLoggerIT
             }
         }
         return logLines;
+    }
+
+    private static final int NOT_FOUND = -1;
+
+    private static int findLogLineThatContains( String expectedMessage, List<String> logLines )
+    {
+        int i = 0;
+        for ( String line : logLines )
+        {
+            if ( line.contains( expectedMessage ) )
+            {
+                return i;
+            }
+            i++;
+        }
+        return NOT_FOUND;
     }
 }

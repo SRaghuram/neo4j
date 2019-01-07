@@ -110,7 +110,9 @@ public class EnterpriseEditionModule extends CommunityEditionModule
         {
             SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
                     platformModule.logging.getUserLog( EnterpriseEditionModule.class ),
-                    procedures, platformModule.config.get( EnterpriseEditionSettings.security_module ) );
+                    procedures,
+                    "commercial-security-module" // enterprise-security-module does not support system-graph auth provider and is useless in 3.6
+            );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
         }
