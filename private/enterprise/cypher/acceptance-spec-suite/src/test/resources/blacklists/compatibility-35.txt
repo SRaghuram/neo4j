@@ -1,1 +1,4 @@
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure should fail if implicit argument is missing"
+
+// TODO: remove when 3.5.2 is released
+Feature "OptionalMatchAcceptance": Scenario "optional match with OR where clause"
