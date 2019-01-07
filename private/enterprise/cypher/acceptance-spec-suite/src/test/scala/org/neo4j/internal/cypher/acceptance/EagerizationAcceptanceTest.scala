@@ -2798,6 +2798,24 @@ class EagerizationAcceptanceTest
     result.toList should equal(List(Map("nbrTags" -> 2)))
   }
 
+  test("should handle eager aggregation with many grouping keys") {
+
+    val a = createNode(Map("prop" -> 1))
+    val b = createNode(Map("prop" -> 2))
+    relate(a, b)
+
+    // must be  at least 6 grouping expressions to trigger slotted bug
+    val query =
+      """
+        |    MATCH (a)-->(b)
+        |    WITH b, a AS a1, a AS a2, a AS a3, a AS a4, a AS a5, count(a) AS count
+        |    RETURN b.prop
+      """.stripMargin
+
+    val result = executeWith(Configs.All, query)
+    result.toList should equal(List(Map("b.prop" -> 2)))
+  }
+
   private def testEagerPlanComparisonStrategy(expectedEagerCount: Int,
                                               expectPlansToFailPredicate: TestConfiguration = TestConfiguration.empty,
                                               optimalEagerCount: Int = -1): PlanComparisonStrategy = {

@@ -54,6 +54,8 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
   private val r2 = "r2"
   private val LABEL = LabelName("label1")(pos)
   private val X_NODE_SLOTS = SlotConfiguration.empty.newLong("x", false, CTNode)
+  private val tempNode = "r_NODES"
+  private val tempEdge = "r_EDGES"
 
   test("only single allnodes scan") {
     // given
@@ -352,8 +354,6 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     // given
     val allNodesScan = AllNodesScan(x, Set.empty)
     val varLength = VarPatternLength(1, Some(15))
-    val tempNode = "r_NODES"
-    val tempEdge = "r_EDGES"
     val expand = VarExpand(allNodesScan, x, SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
       z, r, varLength, ExpandAll, tempNode, tempEdge, True()(pos), True()(pos), Seq())
 
@@ -393,8 +393,6 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     val allNodesScan = AllNodesScan(x, Set.empty)
     val expand = Expand(allNodesScan, x, SemanticDirection.OUTGOING, Seq.empty, z, r, ExpandAll)
     val varLength = VarPatternLength(1, Some(15))
-    val tempNode = "r_NODES"
-    val tempEdge = "r_EDGES"
     val varExpand = VarExpand(expand, x, SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
       z, r2, varLength, ExpandInto, tempNode, tempEdge, True()(pos), True()(pos), Seq())
 
@@ -452,8 +450,6 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     // given
     val allNodesScan = AllNodesScan(x, Set.empty)
     val varLength = VarPatternLength(1, Some(15))
-    val tempNode = "r_NODES"
-    val tempEdge = "r_EDGES"
     val nodePredicate = Equals(prop(tempNode, "propertyKey"), literalInt(4))(pos)
     val edgePredicate = Not(LessThan(prop(tempEdge, "propertyKey"), literalInt(4))(pos))(pos)
 
@@ -742,4 +738,30 @@ class SlottedPipeBuilderTest extends CypherFunSuite with LogicalPlanningTestSupp
     )
   }
 
+  test("should have correct order for grouping columns") {
+    // given
+    val leaf = NodeByLabelScan(x, LabelName("label")(pos), Set.empty)
+    val varLength = VarPatternLength(1, Some(15))
+    val expand = VarExpand(leaf, x, SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
+      z, r, varLength, ExpandAll, tempNode, tempEdge, True()(pos), True()(pos), Seq())
+
+    // must be  at least 6 grouping expressions to trigger slotted bug
+    val groupingExpressions = Map("x1" -> varFor("x"), "z" -> varFor("z"), "x2" -> varFor("x"), "x3" -> varFor("x"), "x4" -> varFor("x"), "x5" -> varFor("x"))
+    val plan = Aggregation(expand, groupingExpressions, aggregationExpression = Map.empty)
+
+    // when
+    val pipe = build(plan).asInstanceOf[EagerAggregationSlottedPrimitivePipe]
+
+    // then
+    val offsetZ = pipe.writeGrouping(pipe.slots(z).offset)
+
+    // x has id 0 and z has id 1
+    for (i <- pipe.readGrouping.indices) {
+      if (i != offsetZ) {
+        pipe.readGrouping(i) should equal(0)
+      } else {
+        pipe.readGrouping(i) should equal(1)
+      }
+    }
+  }
 }
