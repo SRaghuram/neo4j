@@ -2341,6 +2341,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                      relOps: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[(Seq[IntermediateExpression], Seq[IntermediateExpression])] = step match {
       case NodePathStep(node, next) => compileSteps(next, nodeOps ++ internalCompileExpression(node, currentContext), relOps)
 
+      case SingleRelationshipPathStep(relExpression, _, Some(targetExpression), next) =>
+        (internalCompileExpression(relExpression, currentContext), internalCompileExpression(targetExpression, currentContext)) match {
+        case (Some(rel), Some(target)) => compileSteps(next, nodeOps :+ target, relOps :+ rel)
+        case _ => None
+      }
+
       case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, _, next) => internalCompileExpression(rel,
                                                                                                       currentContext) match {
         case Some(compiled) =>
