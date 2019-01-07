@@ -33,6 +33,8 @@ public class LogRotationMetrics extends LifecycleAdapter
     @Documented( "The total time spent in rotating transaction logs so far" )
     public static final String LOG_ROTATION_TOTAL_TIME = name( LOG_ROTATION_PREFIX, "total_time" );
     @Documented( "The duration of the log rotation event" )
+    // This setting will be renamed to "duration" in the next major release
+    @Deprecated
     public static final String LOG_ROTATION_DURATION = name( LOG_ROTATION_PREFIX, "log_rotation_duration" );
 
     private final MetricRegistry registry;
