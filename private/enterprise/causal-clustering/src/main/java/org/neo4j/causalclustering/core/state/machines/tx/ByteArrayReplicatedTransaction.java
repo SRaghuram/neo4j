@@ -80,4 +80,10 @@ public class ByteArrayReplicatedTransaction implements ReplicatedTransaction
     {
         return extractor.extract( this );
     }
+
+    @Override
+    public String toString()
+    {
+        return "ByteArrayReplicatedTransaction{" + "txBytes.length=" + txBytes.length + '}';
+    }
 }

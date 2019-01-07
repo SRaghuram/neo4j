@@ -51,4 +51,10 @@ public class TransactionRepresentationReplicatedTransaction implements Replicate
     {
         contentHandler.handle( this );
     }
+
+    @Override
+    public String toString()
+    {
+        return "TransactionRepresentationReplicatedTransaction{" + "tx=" + tx + '}';
+    }
 }
