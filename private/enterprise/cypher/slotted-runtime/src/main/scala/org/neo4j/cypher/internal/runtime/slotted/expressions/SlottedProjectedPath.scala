@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expre
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.operations.CypherFunctions
+import org.neo4j.cypher.operations.CypherFunctions.{endNode, startNode}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.NO_VALUE
 import org.neo4j.values.virtual.{ListValue, RelationshipValue}
@@ -118,7 +119,7 @@ object SlottedProjectedPath {
       case list: ListValue if list.nonEmpty() =>
         val previous = builder.previousNode.id()
         val first = list.head().asInstanceOf[RelationshipValue]
-        val correctDirection = first.startNode().id() == previous || first.endNode().id() == previous
+        val correctDirection = startNode(first, state.query).id() == previous || endNode(first, state.query).id() == previous
         var aggregated = builder
         val size = list.size()
         if (correctDirection) {
@@ -150,7 +151,7 @@ object SlottedProjectedPath {
       case list: ListValue if list.nonEmpty() =>
         val previous = builder.previousNode.id()
         val first = list.head().asInstanceOf[RelationshipValue]
-        val correctDirection = first.startNode().id() == previous || first.endNode().id() == previous
+        val correctDirection = startNode(first, state.query).id() == previous || endNode(first, state.query).id() == previous
         if (correctDirection) {
          val iterator = list.iterator
           var aggregated = builder
@@ -173,7 +174,7 @@ object SlottedProjectedPath {
 
   private def addIncoming(relValue: AnyValue, query: QueryContext, builder: PathValueBuilder) = relValue match {
     case r: RelationshipValue =>
-      builder.addRelationship(r).addNode(CypherFunctions.startNode(r, query))
+      builder.addRelationship(r).addNode(startNode(r, query))
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
@@ -181,7 +182,7 @@ object SlottedProjectedPath {
 
   private def addOutgoing(relValue: AnyValue, query: QueryContext, builder: PathValueBuilder) = relValue match {
     case r: RelationshipValue =>
-      builder.addRelationship(r).addNode(CypherFunctions.endNode(r, query))
+      builder.addRelationship(r).addNode(endNode(r, query))
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")

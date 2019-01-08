@@ -669,7 +669,6 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case ExtractExpression(scope, collectionExpression) =>
       extractExpression(internalCompileExpression(collectionExpression, currentContext),
                         scope.extractExpression.get, scope.variable.name, currentContext)
-
     case ReduceExpression(scope, initExpression, collectionExpression) =>
       /*
         reduce is tricky because it modifies the scope for future expressions. The generated code will be something
