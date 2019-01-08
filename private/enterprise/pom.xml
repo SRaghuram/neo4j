@@ -26,7 +26,6 @@
   <modules>
     <module>causal-clustering-commercial</module>
     <module>neo4j-commercial</module>
-    <module>security-commercial</module>
     <module>auth-plugin-api</module>
     <module>query-logging</module>
     <module>procedure-compiler-enterprise-tests</module>
