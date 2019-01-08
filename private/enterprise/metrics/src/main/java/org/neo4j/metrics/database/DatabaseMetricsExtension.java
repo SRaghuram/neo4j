@@ -10,7 +10,7 @@ import com.codahale.metrics.MetricRegistry;
 import java.util.Optional;
 
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.metrics.database.DatabaseMetricsExtensionFactory.Dependencies;
@@ -20,10 +20,10 @@ import org.neo4j.metrics.output.EventReporter;
 public class DatabaseMetricsExtension implements Lifecycle
 {
     private final LifeSupport life = new LifeSupport();
-    private final KernelContext context;
+    private final ExtensionContext context;
     private final DatabaseMetricsExtensionFactory.Dependencies dependencies;
 
-    DatabaseMetricsExtension( KernelContext context, Dependencies dependencies )
+    DatabaseMetricsExtension( ExtensionContext context, Dependencies dependencies )
     {
         this.context = context;
         this.dependencies = dependencies;

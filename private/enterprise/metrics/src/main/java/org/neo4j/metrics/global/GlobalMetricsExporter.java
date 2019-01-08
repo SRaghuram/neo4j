@@ -8,8 +8,8 @@ package org.neo4j.metrics.global;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.OperationalMode;
-import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.metrics.MetricsSettings;
@@ -31,11 +31,11 @@ public class GlobalMetricsExporter
     private final LifeSupport life;
     private final Config config;
     private final LogService logService;
-    private final KernelContext context;
+    private final ExtensionContext context;
     private final Dependencies dependencies;
 
     GlobalMetricsExporter( MetricRegistry registry, Config config, LogService logService,
-            KernelContext context, Dependencies dependencies, LifeSupport life )
+            ExtensionContext context, Dependencies dependencies, LifeSupport life )
     {
         this.registry = registry;
         this.config = config;

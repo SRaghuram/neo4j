@@ -8,7 +8,7 @@ package org.neo4j.metrics.global;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
@@ -24,11 +24,11 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     private final Log logger;
     private final CompositeEventReporter reporter;
     private final MetricRegistry registry;
-    private final KernelContext context;
+    private final ExtensionContext context;
     private final GlobalMetricsExtensionFactory.Dependencies dependencies;
     private boolean configured;
 
-    public GlobalMetricsExtension( KernelContext context, Dependencies dependencies )
+    public GlobalMetricsExtension( ExtensionContext context, Dependencies dependencies )
     {
         LogService logService = dependencies.logService();
         this.context = context;

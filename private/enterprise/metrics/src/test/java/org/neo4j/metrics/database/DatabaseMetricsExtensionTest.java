@@ -20,8 +20,9 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.spi.SimpleKernelContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
@@ -57,12 +58,12 @@ class DatabaseMetricsExtensionTest
 {
     @Inject
     private TestDirectory testDirectory;
-    private SimpleKernelContext context;
+    private ExtensionContext context;
 
     @BeforeEach
     void setUp()
     {
-        context = new SimpleKernelContext( testDirectory.directory(), DatabaseInfo.TOOL, new Dependencies() );
+        context = new DatabaseExtensionContext( testDirectory.databaseLayout(), DatabaseInfo.TOOL, new Dependencies() );
     }
 
     @Test

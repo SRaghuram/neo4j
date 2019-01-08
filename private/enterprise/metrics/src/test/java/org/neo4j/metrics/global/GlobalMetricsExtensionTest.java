@@ -17,8 +17,9 @@ import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.kernel.extension.context.ExtensionContext;
+import org.neo4j.kernel.extension.context.GlobalExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.impl.spi.SimpleKernelContext;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -41,12 +42,12 @@ class GlobalMetricsExtensionTest
 {
     @Inject
     private TestDirectory testDirectory;
-    private SimpleKernelContext context;
+    private ExtensionContext context;
 
     @BeforeEach
     void setUp()
     {
-        context = new SimpleKernelContext( testDirectory.directory(), DatabaseInfo.TOOL, new Dependencies() );
+        context = new GlobalExtensionContext( testDirectory.storeLayout(), DatabaseInfo.TOOL, new Dependencies() );
     }
 
     @Test

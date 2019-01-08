@@ -8,8 +8,8 @@ package org.neo4j.metrics.database;
 import com.codahale.metrics.MetricRegistry;
 
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.Edition;
-import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.metrics.database.DatabaseMetricsExtensionFactory.Dependencies;
@@ -26,10 +26,10 @@ public class DatabaseMetricsExporter
     private final LifeSupport life;
     private final EventReporter reporter;
     private final Config config;
-    private final KernelContext context;
+    private final ExtensionContext context;
     private final Dependencies dependencies;
 
-    DatabaseMetricsExporter( MetricRegistry registry, EventReporter reporter, Config config, KernelContext context, Dependencies dependencies,
+    DatabaseMetricsExporter( MetricRegistry registry, EventReporter reporter, Config config, ExtensionContext context, Dependencies dependencies,
             LifeSupport life )
     {
         this.registry = registry;

@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.impl.spi.KernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
@@ -54,7 +54,7 @@ public class DatabaseMetricsExtensionFactory extends KernelExtensionFactory<Data
     }
 
     @Override
-    public Lifecycle newInstance( KernelContext context, Dependencies dependencies )
+    public Lifecycle newInstance( ExtensionContext context, Dependencies dependencies )
     {
         return new DatabaseMetricsExtension( context, dependencies );
     }

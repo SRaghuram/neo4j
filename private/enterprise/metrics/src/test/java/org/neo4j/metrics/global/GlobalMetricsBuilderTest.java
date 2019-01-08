@@ -11,8 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.HttpConnector;
-import org.neo4j.kernel.impl.spi.KernelContext;
-import org.neo4j.kernel.impl.spi.SimpleKernelContext;
+import org.neo4j.kernel.extension.context.ExtensionContext;
+import org.neo4j.kernel.extension.context.GlobalExtensionContext;
 import org.neo4j.kernel.impl.util.DependencySatisfier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.NullLogService;
@@ -51,11 +51,11 @@ class GlobalMetricsBuilderTest
     private void testBuildingWithServerMetrics( boolean serverMetricsEnabled )
     {
         Config config = configWithServerMetrics( serverMetricsEnabled );
-        KernelContext kernelContext = new SimpleKernelContext( testDir.databaseDir(), COMMUNITY, mock( DependencySatisfier.class ) );
+        ExtensionContext extensionContext = new GlobalExtensionContext( testDir.storeLayout(), COMMUNITY, mock( DependencySatisfier.class ) );
         LifeSupport life = new LifeSupport();
 
         GlobalMetricsExporter exporter = new GlobalMetricsExporter( new MetricRegistry(), config, NullLogService.getInstance(),
-                kernelContext, mock( GlobalMetricsExtensionFactory.Dependencies.class ), life );
+                extensionContext, mock( GlobalMetricsExtensionFactory.Dependencies.class ), life );
 
         exporter.export();
 
