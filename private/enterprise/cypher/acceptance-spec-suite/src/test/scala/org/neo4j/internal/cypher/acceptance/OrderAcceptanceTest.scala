@@ -534,7 +534,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("Should be able to reuse unprojected node variable after WITH ORDER BY") {
 
-    val query = "MATCH (a) WITH a.name AS n ORDER BY a.foo MATCH (a) RETURN a.age"
+    val query = "MATCH (a) WITH a.name AS n ORDER BY a.foo MATCH (a) RETURN a.age ORDER BY a.age"
     val result = executeWith(Configs.All, query)
 
     // a.prop is written as `a`.prop in the plan due to the reuse of the variable

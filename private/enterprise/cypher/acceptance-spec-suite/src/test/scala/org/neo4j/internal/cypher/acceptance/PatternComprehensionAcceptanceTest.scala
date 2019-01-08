@@ -92,7 +92,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
         | ) > 0)
         | RETURN childD.id""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     result.toList should equal(
       List(
@@ -419,7 +419,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = """MATCH p = (n:X)-[s]->(apa) RETURN n, [x IN nodes(p) | size([(x)-[r]->(y:Y) | 1])] AS list"""
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     result.toSet should equal(Set(
       Map("n" -> a, "list" -> Seq(1, 2)),
       Map("n" -> b, "list" -> Seq(0, 1))

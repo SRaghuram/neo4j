@@ -154,6 +154,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should correctly project cached node property through ORDER BY") {
+    // TODO: morsel fails at runtime with NullPointerException
     val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds",
       executeBefore = createSomeNodes)
@@ -392,6 +393,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |MATCH (n:Awesome) WHERE n.prop1 = 42
         |RETURN n.prop1, `n.prop1` AS trap""".stripMargin
 
+    // TODO: morsel fails at runtime with NullPointerException
     val result = executeWith(Configs.All - Configs.Morsel, query)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> 42, "trap" -> "Whoops!")))

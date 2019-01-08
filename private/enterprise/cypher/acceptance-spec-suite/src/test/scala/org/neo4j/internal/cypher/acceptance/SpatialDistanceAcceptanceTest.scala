@@ -217,6 +217,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     }
   }
 
+  // TODO: morsel fails at runtime with NullPointerException
   test("indexed points with distance query and points within bbox") {
     // Given
     graph.createIndex("Place", "location")
@@ -315,6 +316,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 0)),
         Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 0, 9.99))
       )
+      // TODO: morsel fails at runtime with NullPointerException
       expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
     }
   }
@@ -390,9 +392,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, -180, -10)),
       Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 180, -10))
     )
+    // TODO: morsel fails at runtime with NullPointerException
     expectResultsAndIndexUsage(query, expected, inclusiveRange = true, Configs.InterpretedAndSlotted)
   }
 
+  // TODO: morsel fails at runtime with NullPointerException
   test("indexed 3D points with distance query and points within bbox") {
     // Given
     graph.createIndex("Place", "location")
@@ -474,6 +478,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     }
   }
 
+  // TODO: morsel fails at runtime with NullPointerException
   test("doughnut shape query uses the index") {
     // Given
     graph.createIndex("Place", "location")
@@ -544,6 +549,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
     }
   }
 
+  // TODO: morsel fails at runtime with NullPointerException
   test("doughnut shape query uses the index in 3D") {
     // Given
     graph.createIndex("Place", "location")

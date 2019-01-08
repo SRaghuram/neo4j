@@ -352,6 +352,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (x), (y) CALL user.expand(x, y) WITH * MATCH (x)-[rel]->(y) RETURN *"
 
     // Correct! No eagerization necessary
+    // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       executeBefore = () => counter.reset(),
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))

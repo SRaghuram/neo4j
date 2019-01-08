@@ -11,6 +11,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("should reduce on values") {
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted,
       query = "RETURN" +
         " reduce(acc=0, s IN ['1','22','1','333'] | acc + size(s)) AS result," +
@@ -33,6 +34,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("x" -> 3), "Label")
     relate(n1, n2)
     relate(n2, n3)
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted,
       query =
         "MATCH p=(n1:Label {x:1})-[*2]-(n3:Label {x:3}) " +
@@ -49,7 +51,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should extract on values") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN" +
         " extract(s IN ['1','22','1','333'] | size(s)) AS result," +
         " extract(s IN ['1','22','1','333'] | null) AS nullExpression," +
@@ -92,14 +94,14 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should list comprehension on values, with predicate") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN [s IN ['1','22','1','333'] WHERE s STARTS WITH '1'] AS result")
 
     result.toList.head should equal(Map("result" -> List("1", "1")))
   }
 
   test("should list comprehension on values, with predicate and extract") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN" +
         " [s IN ['1','22','1','333'] WHERE s STARTS WITH '1' | size(s)] AS result," +
         " [s IN ['1','22','1','333'] WHERE null | size(s)] AS nullPredicate," +
@@ -157,7 +159,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should filter on values") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN" +
         " filter(s IN ['1','22','1','333'] WHERE s STARTS WITH '1') AS result," +
         " filter(s IN ['1','22','1','333'] WHERE null) AS nullPredicate," +
@@ -194,7 +196,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should all predicate on values") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN " +
         " all(s IN ['1','22','1','333'] WHERE size(s) > 0) AS allTrue, " +
         " all(s IN ['1','22','1','333'] WHERE size(s) > 1) AS someFalse, " +
@@ -238,7 +240,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should any predicate on values") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN " +
         " any(s IN ['1','22','1','333'] WHERE size(s) = 1) AS someTrue, " +
         " any(s IN ['1','22','1','333'] WHERE size(s) = 0) AS allFalse, " +
@@ -282,7 +284,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should none predicate on values") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN" +
         " none(s IN ['1','22','1','333'] WHERE size(s) = 0) AS allFalse," +
         " none(s IN ['1','22','1','333'] WHERE size(s) = 1) AS someTrue," +
@@ -328,7 +330,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   }
 
   test("should single predicate on values") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN " +
         " single(s IN ['1','22','1','333'] WHERE s = '0') AS noneTrue," +
         " single(s IN ['1','22','1','333'] WHERE s = '333') AS oneTrue," +
@@ -350,7 +352,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   // NOTE: should be merged with above test, but older Cypher versions fail on ONLY this case. it would be a shame to remove asserts on all other cases.
   test("should single predicate on values -- multiple true with null case") {
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       query = "RETURN " +
         " single(s IN ['1',null,'1','333'] WHERE s = '1') AS twoTrueWithNull")
 

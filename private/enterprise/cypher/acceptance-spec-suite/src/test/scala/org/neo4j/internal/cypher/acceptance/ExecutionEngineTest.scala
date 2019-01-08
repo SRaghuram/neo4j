@@ -182,7 +182,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate("A" -> "CONTAINS" -> "B")
     relate("B" -> "FRIEND" -> "C")
 
-
+    // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
     val result = executeWith(Configs.InterpretedAndSlotted, "match (a)-[:CONTAINS*0..1]->(b)-[:FRIEND*0..1]->(c) where id(a) = 0 return a,b,c")
 
     result.toSet should equal(
@@ -209,6 +209,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |return pA, pB, pC, pD, pE
       """.stripMargin
 
+    // TODO: morsel fails at runtime with ClassCastException
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map(
       "a" -> Seq[Long](a),
       "b" -> b.toInt,
@@ -278,6 +279,7 @@ return a""")
     val r1 = relate(a, b)
     val r2 = relate(b, c)
 
+    // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
     val result = executeWith(Configs.InterpretedAndSlotted,  """
 match (a)-[r*2]->(c)
 where id(a) = 0
@@ -443,6 +445,7 @@ order by a.COL1""".format(a, b))
 
     val q = "match p = (n)-[*1..]->(m) where id(n)= 0 return p, last(nodes(p)) order by length(nodes(p)) asc"
 
+    // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
     executeWith(Configs.InterpretedAndSlotted, q).toList should have size 1
   }
 
@@ -520,7 +523,7 @@ order by a.COL1""".format(a, b))
   test("extract string from node collection") {
     createNode("name"->"a")
 
-    val result = executeWith(Configs.InterpretedAndSlotted, """match (n) where id(n) = 0 with collect(n) as nodes return head(extract(x in nodes | x.name)) + "test" as test """)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, """match (n) where id(n) = 0 with collect(n) as nodes return head(extract(x in nodes | x.name)) + "test" as test """)
 
     result.toList should equal(List(Map("test" -> "atest")))
   }

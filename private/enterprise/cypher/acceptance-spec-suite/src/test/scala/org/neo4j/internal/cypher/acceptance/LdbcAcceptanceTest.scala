@@ -24,6 +24,7 @@ class LdbcAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       ldbcQuery.constraintQueries.foreach(query => execute(query))
 
       // when
+      // TODO: morsel fails at runtime at LDBC query 14 with InternalException: Tried using a wrong context
       val result =
         executeWith(ldbcQuery.expectedToSucceedIn, ldbcQuery.query, params = ldbcQuery.params)
           .toComparableResult

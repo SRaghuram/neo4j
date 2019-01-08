@@ -43,6 +43,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
@@ -59,6 +60,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(null))
@@ -76,6 +78,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
@@ -93,6 +96,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List.empty)
@@ -245,6 +249,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val r1 = relate(nodeA, nodeX)
     val r2 = relate(nodeX, nodeD)
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (src:A), (dst:D) RETURN shortestPath((src:A)-[*]->(dst:D)) as path")
 
     graph.inTx {
@@ -677,6 +682,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Four shortest path with the same weight
@@ -696,6 +702,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     // Four shortest path with the same weight
@@ -714,6 +721,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |RETURN shortestPath((a)-[*]->(c)) AS p
                   """.stripMargin
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, query).columnAs[Path]("p").toList.head
 
     result.endNode() should equal(c)
@@ -728,6 +736,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(a, b)
     relate(b, c)
 
+    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, "match (a:Start), (c:End) return shortestPath((a)-[*]->(c))").columnAs[Path]("shortestPath((a)-[*]->(c))").toList.head
     result.endNode() should equal(c)
     result.startNode() should equal(a)

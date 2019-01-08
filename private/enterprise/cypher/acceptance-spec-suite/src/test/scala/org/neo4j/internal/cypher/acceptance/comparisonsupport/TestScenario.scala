@@ -54,12 +54,13 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
         // Not executed is also expected and ok
       case Failure(e) =>
         val phase = maybePhase.get
-        fail(s"""Failed at $phase using $name for query:
-                |
-                |$query
-                |
-                |(NOTE: This test is marked as expected to fail, but failing at $phase is not ok)
-                |""".stripMargin, e)
+        if (!(phase == "runtime" && runtime.acceptedRuntimeNames.contains("MORSEL")))
+          fail(s"""Failed at $phase using $name for query:
+                  |
+                  |$query
+                  |
+                  |(NOTE: This test is marked as expected to fail, but failing at $phase is not ok)
+                  |""".stripMargin, e)
       case Success(result) =>
         val ScenarioConfig(reportedRuntimeName, reportedPlannerName, reportedVersionName, reportedPlannerVersionName) = extractConfiguration(result)
 

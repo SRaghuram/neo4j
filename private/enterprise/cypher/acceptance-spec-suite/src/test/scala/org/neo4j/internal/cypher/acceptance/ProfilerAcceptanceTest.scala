@@ -650,7 +650,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(anotherNode, createNode(), "HAS_CATEGORY")
 
     // WHEN
-    val result = profileWithExecute(Configs.InterpretedAndSlotted,
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel,
       """MATCH (cat:Category)
         |WITH collect(cat) as categories
         |MATCH (m:Entity)
@@ -676,7 +676,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(b2, b4, "T1")
 
     val query = "profile match (b:Start)-[*3]->(d) return count(distinct d)"
-    val result = profileWithExecute(Configs.InterpretedAndSlotted, query)
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, query)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("VarLengthExpand(Pruning)").withRows(2).withDBHits(7)
 
