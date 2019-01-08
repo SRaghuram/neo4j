@@ -286,7 +286,7 @@ public class CommercialSecurityModule extends SecurityModule
 
     private SecurityConfig getValidatedSecurityConfig( Config config )
     {
-        SecurityConfig securityConfig = new SecurityConfig( config );
+        SecurityConfig securityConfig = new CommercialSecurityConfig( config );
         securityConfig.validate();
         return securityConfig;
     }

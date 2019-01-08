@@ -27,11 +27,10 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.IMPORT_SYSTEM_DATABASE_NAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
@@ -48,13 +47,14 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.server.security.auth.CommunitySecurityModule.USER_STORE_FILENAME;
 
 public class ImportAuthCommandIT
 {
     private static final String ALTERNATIVE_USER_STORE_FILENAME = "users_to_import";
     private static final String ALTERNATIVE_ROLE_STORE_FILENAME = "roles_to_import";
 
-    private final EphemeralFileSystemRule fileSystem = new EphemeralFileSystemRule();
+    private final DefaultFileSystemRule fileSystem = new DefaultFileSystemRule();
     private final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystem );
 
     @Rule
@@ -71,6 +71,9 @@ public class ImportAuthCommandIT
         File graphDir = testDirectory.directory();
         confDir = new File( graphDir, "conf" );
         homeDir = new File( graphDir, "home" );
+        fileSystem.mkdirs( confDir );
+        fileSystem.mkdirs( homeDir );
+        fileSystem.create( new File( confDir, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
         out = mock( OutsideWorld.class );
         resetOutsideWorldMock();
         resetSystemDatabaseDirectory();
@@ -81,7 +84,7 @@ public class ImportAuthCommandIT
     public void shouldImportAuthFromDefaultUserAndRoleStoreFiles() throws Throwable
     {
         // Given
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
         insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
@@ -122,7 +125,7 @@ public class ImportAuthCommandIT
     public void shouldImportAuthWithGivenRoleStoreFile() throws Throwable
     {
         // Given
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "alice", "bob" );
+        insertUsers( USER_STORE_FILENAME, "alice", "bob" );
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "duct_taper", "alice" );
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker", "bob" );
 
@@ -161,7 +164,7 @@ public class ImportAuthCommandIT
     public void shouldOverwriteImportFiles() throws Throwable
     {
         // Given
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jim", "john" );
+        insertUsers( USER_STORE_FILENAME, "jim", "john" );
         insertRole( ROLE_STORE_FILENAME,  "flunky", "jim" );
         insertRole( ROLE_STORE_FILENAME, "goon", "john" );
 
@@ -204,7 +207,7 @@ public class ImportAuthCommandIT
                 "--" + ImportAuthCommand.USER_ARG_NAME, "this_file_does_not_exist" );
 
         // Then
-        verify( out ).stdErrLine( "command failed: File " + getFile( "this_file_does_not_exist" ).getAbsolutePath() + " not found" );
+        verify( out ).stdErrLine( "command failed: " + getFile( "this_file_does_not_exist" ).getAbsolutePath() );
         verify( out ).exit( 1 );
         verify( out, never() ).stdOutLine( anyString() );
     }
@@ -213,14 +216,14 @@ public class ImportAuthCommandIT
     public void shouldErrorGivenNonExistingRoleFile() throws Throwable
     {
         // Given only a default user store file
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "alice" );
+        insertUsers( USER_STORE_FILENAME, "alice" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
                 "--" + ImportAuthCommand.ROLE_ARG_NAME, "this_file_does_not_exist" );
 
         // Then
-        verify( out ).stdErrLine( "command failed: File " + getFile( "this_file_does_not_exist" ).getAbsolutePath() + " not found" );
+        verify( out ).stdErrLine( "command failed: " + getFile( "this_file_does_not_exist" ).getAbsolutePath() );
         verify( out ).exit( 1 );
         verify( out, never() ).stdOutLine( anyString() );
     }
@@ -234,7 +237,7 @@ public class ImportAuthCommandIT
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME );
 
         // Then
-        verify( out ).stdErrLine( "command failed: File " + getFile( CommunitySecurityModule.USER_STORE_FILENAME ).getAbsolutePath() + " not found" );
+        verify( out ).stdErrLine( "command failed: " + getFile( USER_STORE_FILENAME ).getAbsolutePath() );
         verify( out ).exit( 1 );
         verify( out, never() ).stdOutLine( anyString() );
     }
@@ -243,7 +246,7 @@ public class ImportAuthCommandIT
     public void shouldOfflineImportAuthFromDefaultUserAndRoleStoreFiles() throws Throwable
     {
         // Given
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
         insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
@@ -261,7 +264,7 @@ public class ImportAuthCommandIT
     public void shouldOfflineImportAuthIncrementally() throws Throwable
     {
         // Given
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
         insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
@@ -292,7 +295,7 @@ public class ImportAuthCommandIT
     public void shouldFailOfflineImportExistingUser() throws Throwable
     {
         // Given
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
         insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
@@ -324,7 +327,7 @@ public class ImportAuthCommandIT
     public void shouldOfflineImportExistingUserAfterReset() throws Throwable
     {
         // Given
-        insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
+        insertUsers( USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
         insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );

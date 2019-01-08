@@ -22,7 +22,6 @@ import java.io.PrintStream;
 import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.admin.Usage;
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.configuration.Config;
@@ -54,20 +53,24 @@ public class ImportAuthCommandTest
     private File roleImportFile;
     private File altUserStoreFile;
     private File altRoleStoreFile;
-    private FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
     private Config config;
+    private FileSystemAbstraction fileSystem;
 
     @Rule
     public ExpectedException expect = ExpectedException.none();
     @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory( fileSystem );
+    public TestDirectory testDir = TestDirectory.testDirectory();
 
     @Before
     public void setup() throws IOException, InvalidArgumentsException
     {
+        fileSystem = testDir.getFileSystem();
         OutsideWorld mock = mock( OutsideWorld.class );
         when( mock.fileSystem() ).thenReturn( fileSystem );
-        importAuth = new ImportAuthCommand( testDir.directory( "home" ).toPath(), testDir.directory( "conf" ).toPath(), mock );
+        File configDirectory = testDir.directory( "conf" );
+        fileSystem.mkdirs( configDirectory );
+        fileSystem.create( new File( configDirectory, Config.DEFAULT_CONFIG_FILE_NAME ) ).close();
+        importAuth = new ImportAuthCommand( testDir.directory( "home" ).toPath(), configDirectory.toPath(), mock );
         config = importAuth.loadNeo4jConfig();
         UserRepository users = CommunitySecurityModule.getUserRepository( config, NullLogProvider.getInstance(), fileSystem );
         users.create(
