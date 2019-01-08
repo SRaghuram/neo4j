@@ -9,9 +9,10 @@ import org.neo4j.cypher.CypherTypeException
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, PathValueBuilder}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.NO_VALUE
-import org.neo4j.values.virtual.{ListValue, RelationshipValue, VirtualRelationshipValue}
+import org.neo4j.values.virtual.{ListValue, RelationshipValue}
 
 object SlottedProjectedPath {
 
@@ -168,13 +169,7 @@ object SlottedProjectedPath {
 
   private def addIncoming(relValue: AnyValue, query: QueryContext, builder: PathValueBuilder) = relValue match {
     case r: RelationshipValue =>
-      val cursor = query.singleRelationship(r.id())
-      val nextNode = try {
-        query.nodeById(cursor.sourceNodeReference())
-      } finally {
-        cursor.close()
-      }
-     builder.addRelationship(r).addNode(nextNode)
+      builder.addRelationship(r).addNode(CypherFunctions.startNode(r, query))
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
@@ -182,13 +177,7 @@ object SlottedProjectedPath {
 
   private def addOutgoing(relValue: AnyValue, query: QueryContext, builder: PathValueBuilder) = relValue match {
     case r: RelationshipValue =>
-      val cursor = query.singleRelationship(r.id())
-      val nextNode = try {
-        query.nodeById(cursor.targetNodeReference())
-      } finally {
-        cursor.close()
-      }
-      builder.addRelationship(r).addNode(nextNode)
+      builder.addRelationship(r).addNode(CypherFunctions.endNode(r, query))
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
@@ -196,16 +185,8 @@ object SlottedProjectedPath {
 
   private def addUndirected(relValue: AnyValue, query: QueryContext, builder: PathValueBuilder) = relValue match {
     case r: RelationshipValue =>
-      val cursor = query.singleRelationship(r.id())
       val previous = builder.previousNode
-      val nextNode = try {
-        if (cursor.targetNodeReference() == previous.id()) query.nodeById(cursor.sourceNodeReference())
-        else if (cursor.sourceNodeReference() == previous.id()) query.nodeById(cursor.targetNodeReference())
-        else throw new IllegalArgumentException(s"Invalid usage of PathValueBuilder, $previous must be a node in $relValue")
-      } finally {
-        cursor.close()
-      }
-      builder.addRelationship(r).addNode(nextNode)
+      builder.addRelationship(r).addNode(CypherFunctions.otherNode(r, query, previous))
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
