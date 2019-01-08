@@ -54,7 +54,6 @@ Apache Software License, Version 2.0
   Prometheus Java Simpleclient Common
   Prometheus Java Simpleclient Dropwizard
   Prometheus Java Simpleclient Httpserver
-  scalatest
   ssl-config-core
   WMI4Java
 ------------------------------------------------------------------------------
@@ -315,9 +314,6 @@ BSD License
   Scala Compiler
   scala-java8-compat
   scala-parser-combinators
-  scala-xml
-  scalacheck
-  test-interface
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>

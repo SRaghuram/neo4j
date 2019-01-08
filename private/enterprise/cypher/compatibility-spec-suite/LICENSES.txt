@@ -19,7 +19,6 @@ Apache Software License, Version 2.0
   openCypher TCK Features and Graphs
   parboiled-core
   parboiled-scala
-  scalatest
   WMI4Java
 ------------------------------------------------------------------------------
 
@@ -278,10 +277,9 @@ BSD License
   asm-util
   JLine
   Scala Compiler
+  scala-parser-combinators
   scala-xml
-  scalacheck
   Scalap
-  test-interface
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>
