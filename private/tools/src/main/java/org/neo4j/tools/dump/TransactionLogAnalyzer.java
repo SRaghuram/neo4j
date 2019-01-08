@@ -57,6 +57,10 @@ public class TransactionLogAnalyzer
         {   // no-op by default
         }
 
+        default void endLogFile()
+        {
+        }
+
         /**
          * A complete transaction with {@link LogEntryStart}, one or more {@link LogEntryCommand} and {@link LogEntryCommit}.
          *
@@ -116,6 +120,7 @@ public class TransactionLogAnalyzer
                     LogVersionedStoreChannel next = super.next( channel );
                     if ( next != channel )
                     {
+                        monitor.endLogFile();
                         monitor.logFile( logFiles.getLogFileForVersion( next.getVersion() ), next.getVersion() );
                     }
                     return next;
@@ -158,6 +163,7 @@ public class TransactionLogAnalyzer
                 }
             }
         }
+        monitor.endLogFile();
     }
 
     private static class CombinedMonitor implements Monitor
