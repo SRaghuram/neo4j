@@ -2842,6 +2842,32 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
   }
 
+  test("multiple outgoing path where target node not known (will only happen for legacy plans)") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(43), 2)
+    val n4 = NodeAt(node(44), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    when(context.getRefAt(100)).thenReturn(list(r1.rel, r2.rel, r3.rel))
+
+    //when
+    //p = (n1)-[r*]->(n4)
+    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  OUTGOING, None, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+      VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
+  }
+
   test("multiple incoming path") {
     // given
     val context = mock[ExecutionContext]
@@ -2868,6 +2894,32 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
+  test("multiple incoming path where target node not known (will only happen for legacy plans)") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(43), 2)
+    val n4 = NodeAt(node(44), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+
+    //when
+    //p = (n4)<-[r*]-(n1)
+    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  INCOMING, None, NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+      VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
+  }
+
   test("multiple undirected path") {
     // given
     val context = mock[ExecutionContext]
@@ -2888,6 +2940,32 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
                                         MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
                                                                   BOTH, Some(NodeFromSlot(0, "n1")), NilPathStep)))
+
+    //then
+    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+      VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
+  }
+
+  test("multiple undirected path where target node not known (will only happen for legacy plans)") {
+    // given
+    val context = mock[ExecutionContext]
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(43), 2)
+    val n4 = NodeAt(node(44), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+
+    //when
+    //p = (n4)<-[r*]-(n1)
+    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+                                                                  BOTH, None, NilPathStep)))
 
     //then
     compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(

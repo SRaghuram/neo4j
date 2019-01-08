@@ -2429,6 +2429,33 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         case None => None
       }
 
+      //For this case end node is known
+      case SingleRelationshipPathStep(rel, direction, Some(targetExpression), next) =>
+        (internalCompileExpression(rel, currentContext), internalCompileExpression(targetExpression, currentContext)) match {
+        case (Some(relOps), Some(target)) =>
+          //this will generate something like
+          //builder.addNode(n);
+          //builder.addRelationship(r);
+          val addNodeAndRelationship =
+              block(
+                if (target.nullCheck.isEmpty) {
+                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, NodeValue]("addNode"), cast[NodeValue](target.ir))
+                } else {
+                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue]("addNode"), nullCheck(target)(target.ir))
+                },
+                if (relOps.nullCheck.isEmpty) {
+                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, RelationshipValue]("addRelationship"), cast[RelationshipValue](relOps.ir))
+                } else {
+                  invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue]("addRelationship"),
+                                   nullCheck(relOps)(relOps.ir))
+                }
+              )
+
+          compileSteps(next, acc :+ relOps.copy(ir = addNodeAndRelationship))
+        case _ => None
+      }
+
+      //Here end node is not known and will require lookup
       case SingleRelationshipPathStep(rel, direction, _, next) =>  internalCompileExpression(rel, currentContext) match {
         case Some(relOps) =>
           val methodName = direction match {
@@ -2446,7 +2473,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           compileSteps(next, acc :+ relOps.copy(ir = addRel))
         case None => None
       }
-      case MultiRelationshipPathStep(rel, direction, _,next) => internalCompileExpression(rel, currentContext) match {
+      case MultiRelationshipPathStep(rel, direction, maybeTarget, next) => internalCompileExpression(rel, currentContext) match {
         case Some(relOps) =>
           val methodName = direction match {
             case SemanticDirection.INCOMING => "addMultipleIncoming"
@@ -2454,12 +2481,25 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             case _ => "addMultipleUndirected"
           }
 
-          val addRels =
-            if (relOps.nullCheck.isEmpty) invokeSideEffect(load(builderVar),
-                                                 method[PathValueBuilder, Unit, ListValue](methodName),
-                                                 cast[ListValue](relOps.ir))
-            else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
-                        nullCheck(relOps)(relOps.ir))
+          val addRels = maybeTarget.flatMap(t => internalCompileExpression(t, currentContext)) match {
+            case Some(target) =>
+              if (relOps.nullCheck.isEmpty && target.nullCheck.isEmpty) {
+                invokeSideEffect(load(builderVar),
+                                 method[PathValueBuilder, Unit, ListValue, NodeValue](methodName),
+                                 cast[ListValue](relOps.ir), cast[NodeValue](target.ir))
+              } else {
+                invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue, AnyValue](methodName),
+                                 nullCheck(relOps)(relOps.ir), nullCheck(target)(target.ir))
+              }
+            case None =>
+              if (relOps.nullCheck.isEmpty) {
+                invokeSideEffect(load(builderVar),
+                                 method[PathValueBuilder, Unit, ListValue](methodName),
+                                 cast[ListValue](relOps.ir))
+              }
+              else invokeSideEffect(load(builderVar), method[PathValueBuilder, Unit, AnyValue](methodName),
+                                    nullCheck(relOps)(relOps.ir))
+          }
           compileSteps(next, acc :+ relOps.copy(ir = addRels))
         case None => None
       }
