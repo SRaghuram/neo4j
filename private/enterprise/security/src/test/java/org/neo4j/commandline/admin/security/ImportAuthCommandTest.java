@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.commandline.admin.security;
+package org.neo4j.commandline.admin.security;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -22,11 +22,11 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
+import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import org.neo4j.server.security.enterprise.auth.FileRoleRepository;
@@ -34,8 +34,6 @@ import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.security.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
-import static com.neo4j.security.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
@@ -43,6 +41,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
+import static org.neo4j.server.security.enterprise.CommercialSecurityModule.USER_IMPORT_FILENAME;
 
 public class ImportAuthCommandTest
 {

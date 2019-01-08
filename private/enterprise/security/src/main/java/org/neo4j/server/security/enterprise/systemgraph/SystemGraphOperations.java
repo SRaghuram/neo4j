@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
@@ -28,16 +28,16 @@ import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
-import static com.neo4j.security.SystemGraphRealm.IS_SUSPENDED;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 
-class SystemGraphOperations
+public class SystemGraphOperations
 {
     private final QueryExecutor queryExecutor;
     private final SecureHasher secureHasher;
 
-    SystemGraphOperations( QueryExecutor queryExecutor, SecureHasher secureHasher )
+    public SystemGraphOperations( QueryExecutor queryExecutor, SecureHasher secureHasher )
     {
         this.queryExecutor = queryExecutor;
         this.secureHasher = secureHasher;

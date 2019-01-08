@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.commandline.admin.security;
+package org.neo4j.commandline.admin.security;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -34,9 +34,6 @@ import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-import static com.neo4j.commandline.admin.security.ImportAuthCommand.IMPORT_SYSTEM_DATABASE_NAME;
-import static com.neo4j.security.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
-import static com.neo4j.security.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertFalse;
@@ -48,6 +45,9 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.commandline.admin.security.ImportAuthCommand.IMPORT_SYSTEM_DATABASE_NAME;
+import static org.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
+import static org.neo4j.server.security.enterprise.CommercialSecurityModule.USER_IMPORT_FILENAME;
 
 public class ImportAuthCommandIT
 {

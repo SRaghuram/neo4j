@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.apache.shiro.authc.AuthenticationException;

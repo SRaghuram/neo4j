@@ -3,10 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.commandline.admin.security;
+package org.neo4j.commandline.admin.security;
 
 import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
-import com.neo4j.security.CommercialSecurityModule;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +30,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
+import org.neo4j.server.security.enterprise.CommercialSecurityModule;
 import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import org.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import org.neo4j.server.security.enterprise.auth.RealmLifecycle;
@@ -38,9 +38,9 @@ import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
 
-import static com.neo4j.security.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
-import static com.neo4j.security.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
+import static org.neo4j.server.security.enterprise.CommercialSecurityModule.USER_IMPORT_FILENAME;
 
 public class ImportAuthCommand implements AdminCommand
 {

@@ -26,6 +26,12 @@ import org.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.auth.UserManagementProceduresLoggingTest;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.neo4j.server.security.enterprise.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import org.neo4j.server.security.enterprise.systemgraph.QueryExecutor;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.neo4j.test.rule.TestDirectory;
 
 public class SystemGraphUserManagementProceduresLoggingTest extends UserManagementProceduresLoggingTest

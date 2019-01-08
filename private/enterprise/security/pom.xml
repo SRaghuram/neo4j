@@ -60,6 +60,11 @@
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-security</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -84,6 +89,10 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-nop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
         </dependency>
 
         <!-- Test dependencies -->
@@ -126,12 +135,6 @@
             <artifactId>neo4j-io</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-cypher</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -197,11 +200,6 @@
         <dependency>
             <groupId>org.apache.directory.server</groupId>
             <artifactId>apacheds-server-integ</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

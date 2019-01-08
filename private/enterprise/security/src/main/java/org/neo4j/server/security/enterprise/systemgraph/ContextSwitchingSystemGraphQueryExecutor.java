@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import java.util.Map;
 
@@ -25,14 +25,14 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NA
 /**
  * Switches the transactional context of the thread while operating on the system graph.
  */
-class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
+public class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
 {
     private final DatabaseManager databaseManager;
     private final String activeDbName;
     private GraphDatabaseFacade systemDb;
     private ThreadToStatementContextBridge threadToStatementContextBridge;
 
-    ContextSwitchingSystemGraphQueryExecutor( DatabaseManager databaseManager, String activeDbName )
+    public ContextSwitchingSystemGraphQueryExecutor( DatabaseManager databaseManager, String activeDbName )
     {
         this.databaseManager = databaseManager;
         this.activeDbName = activeDbName;

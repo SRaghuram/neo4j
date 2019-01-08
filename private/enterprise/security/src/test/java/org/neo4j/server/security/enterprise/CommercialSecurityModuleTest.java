@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -103,8 +103,8 @@ class CommercialSecurityModuleTest
         authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // Then
-        assertIllegalArgumentException( "Illegal configuration: System graph auth provider configured, " +
-                "but both authentication and authorization are disabled." );
+        assertIllegalArgumentException(
+                "Illegal configuration: System graph auth provider configured, " + "but both authentication and authorization are disabled." );
     }
 
     @Test
@@ -114,10 +114,8 @@ class CommercialSecurityModuleTest
         nativeAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
-        authProviders(
-                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthenticationPlugin",
-                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "IllConfiguredAuthorizationPlugin"
-        );
+        authProviders( SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthenticationPlugin",
+                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "IllConfiguredAuthorizationPlugin" );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: Failed to load auth plugin 'plugin-IllConfiguredAuthorizationPlugin'." );
@@ -131,9 +129,7 @@ class CommercialSecurityModuleTest
         ldapAuth( false, false );
         pluginAuth( false, false );
 
-        authProviders(
-                SecuritySettings.SYSTEM_GRAPH_REALM_NAME
-        );
+        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
 
         // Then
         assertSuccess();
@@ -147,10 +143,7 @@ class CommercialSecurityModuleTest
         ldapAuth( false, false );
         pluginAuth( false, false );
 
-        authProviders(
-                SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
-                SecuritySettings.NATIVE_REALM_NAME
-        );
+        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.NATIVE_REALM_NAME );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: Both system graph auth provider and native auth provider configured," +
@@ -164,17 +157,14 @@ class CommercialSecurityModuleTest
         nativeAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
-        authProviders(
-                SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
-                SecuritySettings.LDAP_REALM_NAME
-        );
+        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // When
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( SecuritySettings.ldap_read_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
         when( config.get( SecuritySettings.ldap_authorization_connection_pooling ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_authentication_use_samaccountname ) ).thenReturn( false );
-        when( config.get( SecuritySettings.ldap_authentication_cache_enabled  ) ).thenReturn( false );
+        when( config.get( SecuritySettings.ldap_authentication_cache_enabled ) ).thenReturn( false );
 
         // Then
         assertSuccess();
@@ -187,10 +177,7 @@ class CommercialSecurityModuleTest
         nativeAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( true, true );
-        authProviders(
-                SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
-                SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin"
-        );
+        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin" );
 
         // Then
         assertSuccess();
@@ -222,14 +209,13 @@ class CommercialSecurityModuleTest
 
     private void assertSuccess()
     {
-        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null,
-                mockAccessCapability );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null, mockAccessCapability );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class), mockFileSystem, null,
+        IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
+                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null,
                         mockAccessCapability ) );
         assertEquals( e.getMessage(), errorMsg );
     }

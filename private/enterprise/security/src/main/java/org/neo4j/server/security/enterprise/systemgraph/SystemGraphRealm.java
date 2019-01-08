@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -42,14 +42,14 @@ import org.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.util.VisibleForTesting;
 
-import static com.neo4j.security.SystemGraphCredential.createCredentialForPassword;
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.server.security.enterprise.systemgraph.SystemGraphCredential.createCredentialForPassword;
 
 /**
  * Shiro realm using a Neo4j graph to store users and roles
  */
-class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider, CredentialsMatcher
+public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, EnterpriseUserManager, ShiroAuthorizationInfoProvider, CredentialsMatcher
 {
     private final PasswordPolicy passwordPolicy;
     private final AuthenticationStrategy authenticationStrategy;
@@ -66,7 +66,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
      */
     static final String IS_SUSPENDED = "is_suspended";
 
-    SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, boolean initOnStart,
+    public SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, boolean initOnStart,
             SecureHasher secureHasher, PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
             boolean authorizationEnabled )
     {
@@ -438,7 +438,7 @@ class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, Enter
 
     @VisibleForTesting
     @SuppressWarnings( "SameParameterValue" )
-    Set<String> getDbNamesForUser( String username ) throws InvalidArgumentsException
+    public Set<String> getDbNamesForUser( String username ) throws InvalidArgumentsException
     {
         return systemGraphOperations.getDbNamesForUser( username );
     }

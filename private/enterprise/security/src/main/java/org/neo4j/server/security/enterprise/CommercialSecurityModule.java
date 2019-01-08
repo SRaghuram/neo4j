@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise;
 
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 
@@ -40,6 +40,12 @@ import org.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.server.security.enterprise.log.SecurityLog;
+import org.neo4j.server.security.enterprise.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import org.neo4j.server.security.enterprise.systemgraph.QueryExecutor;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 

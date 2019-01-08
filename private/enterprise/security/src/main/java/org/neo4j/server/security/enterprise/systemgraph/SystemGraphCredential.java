@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.SaltedAuthenticationInfo;
@@ -16,7 +16,7 @@ import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.server.security.auth.exception.FormatException;
 import org.neo4j.server.security.enterprise.auth.SecureHasher;
 
-class SystemGraphCredential implements Credential
+public class SystemGraphCredential implements Credential
 {
     private final SecureHasher secureHasher;
     private final SimpleHash hashedCredentials;

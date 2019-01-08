@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.impl.security.User;

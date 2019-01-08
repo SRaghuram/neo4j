@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.UserRepository;
+import org.neo4j.server.security.enterprise.CommercialSecurityModule;
 import org.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import org.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -32,16 +33,15 @@ import org.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.string.UTF8;
 
-import static com.neo4j.security.CommercialSecurityModule.IMPORT_AUTH_COMMAND_NAME;
-import static com.neo4j.security.SystemGraphCredential.createCredentialForPassword;
-import static com.neo4j.security.SystemGraphRealm.IS_SUSPENDED;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.UserManager.INITIAL_USER_NAME;
+import static org.neo4j.server.security.enterprise.systemgraph.SystemGraphCredential.createCredentialForPassword;
+import static org.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 
-class SystemGraphInitializer
+public class SystemGraphInitializer
 {
     private final QueryExecutor queryExecutor;
     private final SystemGraphOperations systemGraphOperations;
@@ -49,7 +49,7 @@ class SystemGraphInitializer
     private final SecureHasher secureHasher;
     private final Log log;
 
-    SystemGraphInitializer( QueryExecutor queryExecutor, SystemGraphOperations systemGraphOperations, SystemGraphImportOptions importOptions,
+    public SystemGraphInitializer( QueryExecutor queryExecutor, SystemGraphOperations systemGraphOperations, SystemGraphImportOptions importOptions,
             SecureHasher secureHasher, Log log )
     {
         this.queryExecutor = queryExecutor;
@@ -59,7 +59,7 @@ class SystemGraphInitializer
         this.log = log;
     }
 
-    void initializeSystemGraph() throws Throwable
+    public void initializeSystemGraph() throws Throwable
     {
         // If the system graph has not been initialized (typically the first time you start neo4j with the system graph auth provider)
         // we set it up with auth data in the following order:
@@ -245,7 +245,7 @@ class SystemGraphInitializer
         {
             throw new InvalidArgumentsException(
                     "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " +
-                            "Please use `neo4j-admin " + IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
+                            "Please use `neo4j-admin " + CommercialSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
         }
 
         stopUserRepository( userRepository );
@@ -262,7 +262,7 @@ class SystemGraphInitializer
         {
             throw new InvalidArgumentsException(
                     "Import of users and roles into system graph failed because the import files are inconsistent. " +
-                            "Please use `neo4j-admin " + IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
+                            "Please use `neo4j-admin " + CommercialSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
         }
 
         stopUserRepository( userRepository );

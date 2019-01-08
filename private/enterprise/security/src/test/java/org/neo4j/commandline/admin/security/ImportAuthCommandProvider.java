@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.commandline.admin.security;
+package org.neo4j.commandline.admin.security;
 
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
@@ -11,7 +11,6 @@ import javax.annotation.Nonnull;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
 import org.neo4j.commandline.admin.OutsideWorld;
-import org.neo4j.commandline.admin.security.AuthenticationCommandSection;
 import org.neo4j.commandline.arguments.Arguments;
 
 public class ImportAuthCommandProvider extends AdminCommand.Provider

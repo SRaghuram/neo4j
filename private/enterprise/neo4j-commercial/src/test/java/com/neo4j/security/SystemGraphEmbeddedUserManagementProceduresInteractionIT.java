@@ -6,7 +6,6 @@
 package com.neo4j.security;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -14,6 +13,7 @@ import java.util.Map;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.server.security.enterprise.auth.AuthProceduresInteractionTestBase;
 import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
+import org.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

@@ -3,14 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.security;
+package org.neo4j.server.security.enterprise.systemgraph;
 
 import java.util.function.Supplier;
 
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.RoleRepository;
 
-class SystemGraphImportOptions
+public class SystemGraphImportOptions
 {
     boolean shouldPerformImport;
     boolean mayPerformMigration;
@@ -23,7 +23,7 @@ class SystemGraphImportOptions
     Supplier<UserRepository> initialUserRepositorySupplier;
     Supplier<UserRepository> defaultAdminRepositorySupplier;
 
-    SystemGraphImportOptions(
+    public SystemGraphImportOptions(
             boolean shouldPerformImport,
             boolean mayPerformMigration,
             boolean shouldPurgeImportRepositoriesAfterSuccesfulImport,
