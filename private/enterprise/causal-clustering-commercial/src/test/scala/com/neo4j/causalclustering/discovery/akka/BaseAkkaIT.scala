@@ -12,9 +12,11 @@ import akka.cluster.Cluster
 import akka.cluster.ddata.{Key, ReplicatedData, Replicator}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT.TSConf
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
+import com.typesafe.config.ConfigFactory
 import org.junit.runner.RunWith
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.ports.allocation.PortAuthority
@@ -25,7 +27,10 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 object BaseAkkaIT {
-  def config: com.typesafe.config.Config = {
+
+  type TSConf = com.typesafe.config.Config
+
+  def config: TSConf = {
     val discoveryListenPort = PortAuthority.allocatePort()
     val config = Config.defaults()
     config.augment("causal_clustering.discovery_listen_address", s":$discoveryListenPort")
@@ -34,7 +39,8 @@ object BaseAkkaIT {
     new TypesafeConfigService(ArteryTransport.TCP, config).generate()
   }
 
-  def bootstrapSetup: BootstrapSetup = BootstrapSetup().withActorRefProvider(ProviderSelection.cluster()).withConfig(config)
+  def bootstrapSetup: BootstrapSetup =
+    BootstrapSetup().withActorRefProvider(ProviderSelection.cluster()).withConfig(config)
 }
 
 /**

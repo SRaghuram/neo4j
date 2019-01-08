@@ -218,7 +218,7 @@ public final class TypesafeConfigService
         }
         else if ( level <= Level.WARNING.intValue() )
         {
-            return "WARN";
+            return "WARNING";
         }
         else
         {
