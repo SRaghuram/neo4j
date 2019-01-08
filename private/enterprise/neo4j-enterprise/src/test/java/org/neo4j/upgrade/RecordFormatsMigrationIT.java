@@ -10,6 +10,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Consumer;
 
@@ -31,7 +32,9 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
@@ -40,6 +43,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class RecordFormatsMigrationIT
 {
     private static final Label LABEL = Label.label( "Centipede" );

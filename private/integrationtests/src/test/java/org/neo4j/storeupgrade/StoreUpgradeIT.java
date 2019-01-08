@@ -76,28 +76,28 @@ import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 public class StoreUpgradeIT
 {
     // NOTE: the zip files must contain the databases files and NOT the database folder itself!!!
-    private static final List<Store[]> STORES23 = Arrays.asList(
-            new Store[]{new Store( "0.A.6-empty.zip",
+    private static final List<Store[]> STORES34 = Arrays.asList(
+            new Store[]{new Store( "0.A.9-empty.zip",
                     0 /* node count */,
                     1 /* last txId */,
                     selectivities(),
                     indexCounts()
             )},
-            new Store[]{new Store( "0.A.6-data.zip",
+            new Store[]{new Store( "0.A.9-data.zip",
                     174 /* node count */,
                     30 /* last txId */,
                     selectivities( 1.0, 1.0, 1.0 ),
                     indexCounts( counts( 0, 38, 38, 38 ), counts( 0, 1, 1, 1 ), counts( 0, 133, 133, 133 ) )
             )} );
-    private static final List<Store[]> STORES300 = Arrays.asList(
-            new Store[]{new Store( "E.H.0-empty.zip",
+    private static final List<Store[]> HIGH_LIMIT_STORES34 = Arrays.asList(
+            new Store[]{new Store( "E.H.4-empty.zip",
                     0 /* node count */,
                     1 /* last txId */,
                     selectivities(),
                     indexCounts(),
                     HighLimit.NAME
                     )},
-            new Store[]{new Store( "E.H.0-data.zip",
+            new Store[]{new Store( "E.H.4-data.zip",
                     174 /* node count */,
                     30 /* last txId */,
                     selectivities( 1.0, 1.0, 1.0 ),
@@ -114,7 +114,7 @@ public class StoreUpgradeIT
         @Parameterized.Parameters( name = "{0}" )
         public static Collection<Store[]> stores()
         {
-            return Iterables.asCollection( Iterables.concat( STORES23, STORES300 ) );
+            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES34 ) );
         }
 
         @Rule
@@ -245,7 +245,7 @@ public class StoreUpgradeIT
         @Parameterized.Parameters( name = "{0}" )
         public static Collection<Store[]> stores()
         {
-            return Iterables.asCollection( Iterables.concat( STORES23, STORES300 ) );
+            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES34 ) );
         }
 
         @Rule
@@ -477,7 +477,7 @@ public class StoreUpgradeIT
         return new long[]{upgrade, size, unique, sampleSize};
     }
 
-    private static IndexReference awaitOnline( SchemaRead schemRead, IndexReference index )
+    private static void awaitOnline( SchemaRead schemRead, IndexReference index )
             throws KernelException
     {
         long start = System.currentTimeMillis();
@@ -487,7 +487,7 @@ public class StoreUpgradeIT
             switch ( schemRead.indexGetState( index ) )
             {
             case ONLINE:
-                return index;
+                return;
 
             case FAILED:
                 throw new IllegalStateException( "Index failed instead of becoming ONLINE" );
