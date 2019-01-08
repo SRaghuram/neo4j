@@ -54,7 +54,7 @@ object SlottedProjectedPath {
 
   case class multiIncomingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
     def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
-      case list: ListValue =>
+      case list: ListValue if list.nonEmpty() =>
         var aggregated = builder
         val size = list.size()
         var i = 0
@@ -63,6 +63,8 @@ object SlottedProjectedPath {
           i += 1
         }
         tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
+
+      case _: ListValue => tailProjector(ctx, state, builder)
       case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
@@ -81,10 +83,9 @@ object SlottedProjectedPath {
     }
   }
 
-
   case class multiOutgoingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
     def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
-      case list: ListValue =>
+      case list: ListValue if list.nonEmpty() =>
         var aggregated = builder
         val size = list.size()
         var i = 0
@@ -93,6 +94,8 @@ object SlottedProjectedPath {
           i += 1
         }
         tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
+
+      case _: ListValue => tailProjector(ctx, state, builder)
       case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
@@ -112,7 +115,7 @@ object SlottedProjectedPath {
 
   case class multiUndirectedRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
     def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
-      case list: ListValue =>
+      case list: ListValue if list.nonEmpty() =>
         val previous = builder.previousNode.id()
         val first = list.head().asInstanceOf[RelationshipValue]
         val correctDirection = first.startNode().id() == previous || first.endNode().id() == previous
@@ -136,6 +139,7 @@ object SlottedProjectedPath {
         }
         tailProjector(ctx, state, aggregated.addNode(node.apply(ctx, state)))
 
+      case _: ListValue => tailProjector(ctx, state, builder)
       case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
