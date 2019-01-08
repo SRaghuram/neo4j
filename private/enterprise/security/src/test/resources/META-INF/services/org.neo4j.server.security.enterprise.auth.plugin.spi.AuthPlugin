@@ -1,4 +1,4 @@
-org.neo4j.server.security.enterprise.auth.plugin.TestAuthPlugin
-org.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthPlugin
-org.neo4j.server.security.enterprise.auth.plugin.TestCacheableAdminAuthPlugin
-org.neo4j.server.security.enterprise.auth.plugin.LdapGroupHasUsersAuthPlugin
+com.neo4j.server.security.enterprise.auth.plugin.TestAuthPlugin
+com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAuthPlugin
+com.neo4j.server.security.enterprise.auth.plugin.TestCacheableAdminAuthPlugin
+com.neo4j.server.security.enterprise.auth.plugin.LdapGroupHasUsersAuthPlugin

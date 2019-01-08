@@ -5,6 +5,10 @@
  */
 package org.neo4j.auth;
 
+import com.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
+import com.neo4j.server.security.enterprise.auth.InternalFlatFileRealm;
+import com.neo4j.server.security.enterprise.auth.RoleRecord;
+import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,10 +33,6 @@ import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.auth.UserRepository;
-import org.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
-import org.neo4j.server.security.enterprise.auth.InternalFlatFileRealm;
-import org.neo4j.server.security.enterprise.auth.RoleRecord;
-import org.neo4j.server.security.enterprise.auth.RoleRepository;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;

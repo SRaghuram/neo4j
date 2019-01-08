@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.akka.CommercialAkkaDiscoveryServiceFactory;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,8 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.common.Cluster;
+import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
@@ -26,7 +27,6 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -34,10 +34,10 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class SecureClusterIT

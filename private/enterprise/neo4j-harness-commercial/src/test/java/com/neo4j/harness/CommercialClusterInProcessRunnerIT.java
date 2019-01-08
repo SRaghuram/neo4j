@@ -6,6 +6,7 @@
 package com.neo4j.harness;
 
 import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -14,7 +15,6 @@ import java.nio.file.Path;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.rule.TestDirectory;
 
 public class CommercialClusterInProcessRunnerIT

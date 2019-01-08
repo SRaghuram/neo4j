@@ -9,6 +9,9 @@ import com.neo4j.causalclustering.discovery.CommercialCluster;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,9 +34,6 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.string.UTF8;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -41,6 +41,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.function.Predicates.await;
@@ -51,7 +52,6 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class SystemGraphSecurityReplicationIT

@@ -5,14 +5,14 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.server.security.enterprise.auth.integration.bolt.NativeAndCredentialsOnlyIT;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.rule.CommercialDbmsRule;
 
 import java.util.Collections;
 import java.util.Map;
 
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.server.security.enterprise.auth.integration.bolt.NativeAndCredentialsOnlyIT;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 

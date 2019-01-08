@@ -12,6 +12,7 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
 import java.time.Clock;
 import java.util.function.Supplier;
@@ -42,7 +43,6 @@ import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.server.security.enterprise.CommercialSecurityModule;
 import org.neo4j.ssl.SslPolicy;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;

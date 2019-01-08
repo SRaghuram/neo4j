@@ -5,13 +5,12 @@
  */
 package com.neo4j.server.rest.security;
 
-
+import com.neo4j.server.security.enterprise.auth.BuiltInProceduresInteractionTestBase;
+import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
-import org.neo4j.server.security.enterprise.auth.BuiltInProceduresInteractionTestBase;
-import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.SuppressOutput;

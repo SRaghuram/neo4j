@@ -7,6 +7,9 @@ package com.neo4j.server.rest.security;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
+import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
+import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.IntNode;
@@ -39,9 +42,6 @@ import org.neo4j.server.helpers.CommunityServerBuilder;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
 import org.neo4j.server.rest.security.CommunityServerTestBase;
-import org.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
-import org.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
-import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.neo4j.test.server.HTTP;
 
 import static io.netty.channel.local.LocalAddress.ANY;

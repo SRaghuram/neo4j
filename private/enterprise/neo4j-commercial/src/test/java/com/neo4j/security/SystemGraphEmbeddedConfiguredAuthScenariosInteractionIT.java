@@ -6,12 +6,11 @@
 package com.neo4j.security;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.server.security.enterprise.auth.ConfiguredAuthScenariosInteractionTestBase;
+import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import java.util.Map;
-
-import org.neo4j.server.security.enterprise.auth.ConfiguredAuthScenariosInteractionTestBase;
-import org.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 public class SystemGraphEmbeddedConfiguredAuthScenariosInteractionIT extends ConfiguredAuthScenariosInteractionTestBase<EnterpriseLoginContext>
 {

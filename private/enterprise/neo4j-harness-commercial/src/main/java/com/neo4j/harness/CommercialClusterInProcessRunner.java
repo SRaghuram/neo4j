@@ -6,12 +6,12 @@
 package com.neo4j.harness;
 
 import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 

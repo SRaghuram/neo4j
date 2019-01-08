@@ -5,13 +5,13 @@
  */
 package com.neo4j.server.rest.security;
 
+import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManagerRule;
+import com.neo4j.server.security.enterprise.auth.ShiroSubject;
 import org.junit.Rule;
 import org.junit.Test;
 
 import org.neo4j.server.rest.dbms.UserServiceTest;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.enterprise.auth.MultiRealmAuthManagerRule;
-import org.neo4j.server.security.enterprise.auth.ShiroSubject;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

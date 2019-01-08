@@ -5,14 +5,14 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import java.util.Map;
 
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.neo4j.test.rule.TestDirectory;
 
 class SystemGraphEmbeddedInteraction extends EmbeddedInteraction

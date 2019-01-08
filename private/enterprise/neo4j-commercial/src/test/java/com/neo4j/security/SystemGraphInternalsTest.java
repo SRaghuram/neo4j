@@ -5,6 +5,15 @@
  */
 package com.neo4j.security;
 
+import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
+import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,15 +33,6 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
-import org.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
-import org.neo4j.server.security.enterprise.auth.SecureHasher;
-import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.neo4j.server.security.enterprise.log.SecurityLog;
-import org.neo4j.server.security.enterprise.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
-import org.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
-import org.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
-import org.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
-import org.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;

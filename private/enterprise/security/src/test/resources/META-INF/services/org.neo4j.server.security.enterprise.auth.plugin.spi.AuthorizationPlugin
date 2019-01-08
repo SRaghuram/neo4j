@@ -1,2 +1,2 @@
-org.neo4j.server.security.enterprise.auth.plugin.TestAuthorizationPlugin
-org.neo4j.server.security.enterprise.auth.plugin.TestCombinedAuthPlugin
+com.neo4j.server.security.enterprise.auth.plugin.TestAuthorizationPlugin
+com.neo4j.server.security.enterprise.auth.plugin.TestCombinedAuthPlugin

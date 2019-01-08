@@ -36,6 +36,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -46,8 +48,6 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.count;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
-import static org.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 
 @ExtendWith( TestDirectoryExtension.class )
 class SystemDatabaseIT
