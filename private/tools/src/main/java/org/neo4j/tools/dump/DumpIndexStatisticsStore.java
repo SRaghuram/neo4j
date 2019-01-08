@@ -16,6 +16,7 @@ import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsVisitor;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.SchemaRuleAccess;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -60,7 +61,9 @@ public class DumpIndexStatisticsStore
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs ),
                         pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
                 NeoStores neoStores = factory.openAllNeoStores();
-                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore() );
+                TokenHolders tokenHolders = TokenHolders.readOnlyTokenHolders();
+                tokenHolders.setInitialTokens( neoStores );
+                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
                 schema = new SimpleSchemaRuleCache( neoStores, schemaStorage );
             }
             else

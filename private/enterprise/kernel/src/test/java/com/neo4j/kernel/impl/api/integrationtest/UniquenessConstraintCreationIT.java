@@ -32,6 +32,7 @@ import org.neo4j.kernel.api.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.kernel.api.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.api.security.AnonymousContext;
+import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
@@ -249,7 +250,7 @@ public class UniquenessConstraintCreationIT
         commit();
 
         // then
-        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore() );
+        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
         StoreIndexDescriptor indexRule = schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
                 .uniqueForLabel( typeId, propertyKeyId ) );
         ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(
@@ -292,6 +293,11 @@ public class UniquenessConstraintCreationIT
     private NeoStores neoStores()
     {
         return db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
+    }
+
+    private TokenHolders tokenHolders()
+    {
+        return db.getDependencyResolver().resolveDependency( TokenHolders.class );
     }
 
     @Test
