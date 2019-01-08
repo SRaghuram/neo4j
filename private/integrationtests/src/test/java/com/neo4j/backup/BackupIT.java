@@ -85,8 +85,8 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.Integer.parseInt;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -124,6 +124,7 @@ class BackupIT
     private File serverStorePath;
     private File otherServerPath;
     private File backupDatabasePath;
+    private File backupsDir;
     private List<GraphDatabaseService> databases;
     private DatabaseLayout backupDatabaseLayout;
     private DatabaseLayout serverStoreLayout;
@@ -143,7 +144,8 @@ class BackupIT
         serverStoreLayout = DatabaseLayout.of( testDirectory.storeDir( "server" ), DEFAULT_DATABASE_NAME );
         serverStorePath = serverStoreLayout.databaseDirectory();
         otherServerPath = DatabaseLayout.of( testDirectory.storeDir( "otherServer" ), DEFAULT_DATABASE_NAME ).databaseDirectory();
-        backupDatabaseLayout = DatabaseLayout.of( testDirectory.storeDir( "backup" ), DEFAULT_DATABASE_NAME );
+        backupsDir = testDirectory.storeDir( "backups" );
+        backupDatabaseLayout = DatabaseLayout.of( backupsDir, DEFAULT_DATABASE_NAME );
         backupDatabasePath = backupDatabaseLayout.databaseDirectory();
     }
 
@@ -449,30 +451,54 @@ class BackupIT
     }
 
     @Test
-    @Disabled( "Right now it's okay to point backup to a non-empty directory" )
-    void shouldThrowExceptionWhenDoingFullBackupWhenDirectoryHasSomeFiles() throws Exception
+    void shouldCopyInvalidFileFromBackupDirectoryToErrorDirectoryAndDoFullBackup() throws Exception
     {
         GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( db );
 
         assertTrue( backupDatabaseLayout.databaseDirectory().mkdirs() );
-        assertTrue( backupDatabaseLayout.file( ".jibberishfile" ).createNewFile() );
+        File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" );
+        fs.create( incorrectFile ).close();
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, true ) );
-        assertThat( error.getMessage(), containsString( "is not empty" ) );
+        executeBackup( db, true );
+
+        // unexpected file was moved to an error directory
+        File incorrectExistingBackupDir = new File( backupsDir, "graph.db.err.0" );
+        assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
+        assertTrue( fs.fileExists( new File( incorrectExistingBackupDir, incorrectFile.getName() ) ) );
+
+        // no temporary directories are present, i.e. 'graph.db.temp.0'
+        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "graph.db.err.0" ) );
+
+        // backup produced a correct database
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
 
     @Test
-    @Disabled( "Right now it's okay to point backup to a non-empty directory" )
-    void shouldThrowExceptionWhenDoingFullBackupWhenDirectoryHasSomeDirectories() throws Exception
+    void shouldCopyInvalidDirectoryFromBackupDirectoryToErrorDirectoryAndDoFullBackup() throws Exception
     {
         GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( db );
 
-        assertTrue( backupDatabaseLayout.file( "jibberishfolder" ).mkdirs() );
+        File incorrectDir = backupDatabaseLayout.file( "jibberishfolder" );
+        File incorrectFile = new File( incorrectDir, "jibberishfile" );
+        fs.mkdirs( incorrectDir );
+        fs.create( incorrectFile ).close();
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, true ) );
-        assertThat( error.getMessage(), containsString( "is not empty" ) );
+        executeBackup( db, true );
+
+        // unexpected directory was moved to an error directory
+        File incorrectExistingBackupDir = new File( backupsDir, "graph.db.err.0" );
+        assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
+        File movedIncorrectDir = new File( incorrectExistingBackupDir, incorrectDir.getName() );
+        assertTrue( fs.isDirectory( movedIncorrectDir ) );
+        assertTrue( fs.fileExists( new File( movedIncorrectDir, incorrectFile.getName() ) ) );
+
+        // no temporary directories are present, i.e. 'graph.db.temp.0'
+        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "graph.db.err.0" ) );
+
+        // backup produced a correct database
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
 
     @Test

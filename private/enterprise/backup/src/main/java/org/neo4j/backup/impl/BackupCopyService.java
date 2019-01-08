@@ -5,13 +5,10 @@
  */
 package org.neo4j.backup.impl;
 
-import org.apache.commons.lang3.mutable.MutableLong;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -24,6 +21,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 
 import static java.lang.String.format;
+import static org.neo4j.io.fs.FileUtils.isEmptyDirectory;
 
 class BackupCopyService
 {
@@ -49,7 +47,7 @@ class BackupCopyService
             {
                 moves.next().move( target );
             }
-            oldLocation.toFile().delete();
+            fs.deleteRecursively( oldLocation.toFile() );
         }
         catch ( IOException e )
         {
@@ -84,7 +82,7 @@ class BackupCopyService
 
     boolean backupExists( DatabaseLayout databaseLayout )
     {
-        return databaseLayout.metadataStore().exists();
+        return fs.fileExists( databaseLayout.metadataStore() );
     }
 
     Path findNewBackupLocationForBrokenExisting( Path existingBackup )
@@ -106,26 +104,21 @@ class BackupCopyService
      */
     private Path findAnAvailableBackupLocation( Path file, String pattern )
     {
-        if ( backupExists( DatabaseLayout.of( file.toFile() ) ) )
+        if ( !isEmptyDirectory( fs, file.toFile() ) )
         {
-            // find alternative name
-            final MutableLong counter = new MutableLong();
-            Consumer<Path> countNumberOfFilesProcessedForPotentialErrorMessage = generatedBackupFile -> counter.getAndIncrement();
-
             return availableAlternativeNames( file, pattern )
-                    .peek( countNumberOfFilesProcessedForPotentialErrorMessage )
-                    .filter( f -> !backupExists( DatabaseLayout.of( f.toFile() ) ) )
+                    .filter( f -> isEmptyDirectory( fs, f.toFile() ) )
                     .findFirst()
-                    .orElseThrow( noFreeBackupLocation( file, counter ) );
+                    .orElseThrow( noFreeBackupLocation( file ) );
         }
         return file;
     }
 
-    private static Supplier<RuntimeException> noFreeBackupLocation( Path file, MutableLong counter )
+    private static Supplier<RuntimeException> noFreeBackupLocation( Path file )
     {
         return () -> new RuntimeException( format(
                 "Unable to find a free backup location for the provided %s. %d possible locations were already taken.",
-                file, counter.longValue() ) );
+                file, MAX_OLD_BACKUPS ) );
     }
 
     private static Stream<Path> availableAlternativeNames( Path originalBackupDirectory, String pattern )
@@ -136,7 +129,7 @@ class BackupCopyService
 
     private static Path alteredBackupDirectoryName( String pattern, Path directory, int iteration )
     {
-        Path directoryName = directory.getName( directory.getNameCount() - 1 );
+        Path directoryName = directory.getFileName();
         return directory.resolveSibling( format( pattern, directoryName, iteration ) );
     }
 }
