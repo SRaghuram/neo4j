@@ -23,6 +23,7 @@ import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
+import org.neo4j.logging.Log;
 import org.neo4j.metrics.source.server.ServerThreadView;
 import org.neo4j.metrics.source.server.ServerThreadViewSetter;
 import org.neo4j.server.CommunityNeoServer;
@@ -31,7 +32,6 @@ import org.neo4j.server.modules.AuthorizationModule;
 import org.neo4j.server.modules.DBMSModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
-import org.neo4j.server.rest.management.AdvertisableService;
 import org.neo4j.server.web.Jetty9WebServer;
 import org.neo4j.server.web.WebServer;
 
@@ -78,7 +78,8 @@ public class CommercialNeoServer extends CommunityNeoServer
             }
             catch ( UnsatisfiedDependencyException ex )
             {
-                // nevermind, metrics are likely not enabled
+                Log log = userLogProvider.getLog( getClass() );
+                log.warn( "Metrics dependencies not found.", ex );
             }
         } );
         return webServer;
@@ -112,12 +113,6 @@ public class CommercialNeoServer extends CommunityNeoServer
         }
         super.createServerModules().forEach( modules::add );
         return modules;
-    }
-
-    @Override
-    public Iterable<AdvertisableService> getServices()
-    {
-        return super.getServices();
     }
 
     @Override
