@@ -61,4 +61,10 @@ public class InputStreamReadableChannel implements ReadableChannel
     {
         dataInputStream.read( bytes, 0, length );
     }
+
+    @Override
+    public void close() throws IOException
+    {
+        dataInputStream.close();
+    }
 }
