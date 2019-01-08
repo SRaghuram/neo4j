@@ -5,7 +5,7 @@
  */
 package com.neo4j.graphdb.store.id;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.hamcrest.Matchers;
 import org.junit.After;
@@ -47,7 +47,7 @@ public class RelationshipIdReuseStressIT
 {
     @Rule
     public DbmsRule embeddedDatabase = new EnterpriseDbmsRule()
-            .withSetting( EnterpriseEditionSettings.idTypesToReuse, IdType.RELATIONSHIP.name() );
+            .withSetting( CommercialEditionSettings.idTypesToReuse, IdType.RELATIONSHIP.name() );
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 

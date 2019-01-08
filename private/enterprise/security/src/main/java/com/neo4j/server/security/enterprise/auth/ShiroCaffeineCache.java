@@ -20,7 +20,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
-class ShiroCaffeineCache<K, V> implements Cache<K,V>
+public class ShiroCaffeineCache<K, V> implements Cache<K,V>
 {
     private final com.github.benmanes.caffeine.cache.Cache<K,V> caffCache;
 
@@ -87,7 +87,7 @@ class ShiroCaffeineCache<K, V> implements Cache<K,V>
         return caffCache.asMap().values();
     }
 
-    static class Manager implements CacheManager
+    public static class Manager implements CacheManager
     {
         private final Map<String,Cache<?,?>> caches;
         private final Ticker ticker;
@@ -95,7 +95,7 @@ class ShiroCaffeineCache<K, V> implements Cache<K,V>
         private final int maxCapacity;
         private boolean useTTL;
 
-        Manager( Ticker ticker, long ttl, int maxCapacity, boolean useTTL )
+        public Manager( Ticker ticker, long ttl, int maxCapacity, boolean useTTL )
         {
             this.ticker = ticker;
             this.ttl = ttl;

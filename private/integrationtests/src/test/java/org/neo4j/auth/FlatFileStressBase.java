@@ -5,7 +5,7 @@
  */
 package org.neo4j.auth;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
+import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.InternalFlatFileRealm;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -61,7 +61,7 @@ abstract class FlatFileStressBase
         JobScheduler jobScheduler = new JobSchedulerAdapter();
 
         userRepository = CommunitySecurityModule.getUserRepository( config, logProvider, getFileSystem() );
-        roleRepository = EnterpriseSecurityModule.getRoleRepository( config, logProvider, getFileSystem() );
+        roleRepository = CommercialSecurityModule.getRoleRepository( config, logProvider, getFileSystem() );
 
         flatFileRealm = new InternalFlatFileRealm(
                 userRepository,
@@ -70,7 +70,7 @@ abstract class FlatFileStressBase
                 new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ),
                 jobScheduler,
                 CommunitySecurityModule.getInitialUserRepository( config, logProvider, getFileSystem() ),
-                EnterpriseSecurityModule.getDefaultAdminRepository( config, logProvider, getFileSystem() )
+                CommercialSecurityModule.getDefaultAdminRepository( config, logProvider, getFileSystem() )
             );
 
         flatFileRealm.init();

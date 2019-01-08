@@ -24,9 +24,9 @@ import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP;
 /**
  * Enterprise edition specific settings
  */
-public class EnterpriseEditionSettings implements LoadableConfig
+public class CommercialEditionSettings implements LoadableConfig
 {
-    public static final String ENTERPRISE_SECURITY_MODULE_ID = "enterprise-security-module";
+    public static final String COMMERCIAL_SECURITY_MODULE_ID = "commercial-security-module";
 
     @Description( "Specified names of id types (comma separated) that should be reused. " +
                   "Currently only 'node' and 'relationship' types are supported. " )
@@ -35,8 +35,7 @@ public class EnterpriseEditionSettings implements LoadableConfig
             String.join( ",", IdType.RELATIONSHIP.name(), IdType.NODE.name() ) );
 
     @Internal
-    public static final Setting<String> security_module = setting( "unsupported.dbms.security.module", STRING,
-            ENTERPRISE_SECURITY_MODULE_ID );
+    public static final Setting<String> security_module = setting( "unsupported.dbms.security.module", STRING, COMMERCIAL_SECURITY_MODULE_ID );
 
     @Description( "Configure the operating mode of the database -- 'SINGLE' for stand-alone operation, " +
             "'CORE' for operating as a core member of a Causal Cluster, " +

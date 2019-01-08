@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise.store.id;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.junit.Before;
@@ -40,7 +40,7 @@ public class NodeIdReuseStressIT
 
     @Rule
     public final DbmsRule db = new EnterpriseDbmsRule()
-            .withSetting( EnterpriseEditionSettings.idTypesToReuse, IdType.NODE.name() );
+            .withSetting( CommercialEditionSettings.idTypesToReuse, IdType.NODE.name() );
 
     @Before
     public void verifyParams()

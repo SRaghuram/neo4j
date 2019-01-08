@@ -5,7 +5,6 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import org.junit.Before;
@@ -36,6 +35,7 @@ import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.IMPORT_SYSTEM_DATABASE_NAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
+import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_STORE_FILENAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.USER_IMPORT_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -82,9 +82,9 @@ public class ImportAuthCommandIT
     {
         // Given
         insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+        insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME );
@@ -102,9 +102,9 @@ public class ImportAuthCommandIT
     {
         // Given
         insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "flunky", "jane" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+        insertRole( ROLE_STORE_FILENAME, "flunky", "jane" );
+        insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
@@ -162,8 +162,8 @@ public class ImportAuthCommandIT
     {
         // Given
         insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jim", "john" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "john" );
+        insertRole( ROLE_STORE_FILENAME,  "flunky", "jim" );
+        insertRole( ROLE_STORE_FILENAME, "goon", "john" );
 
         assertNoUserImportFile();
         assertNoRoleImportFile();
@@ -197,7 +197,7 @@ public class ImportAuthCommandIT
     public void shouldErrorGivenNonExistingUserFile() throws Throwable
     {
         // Given only a default role store file
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster" );
+        insertRole( ROLE_STORE_FILENAME, "taskmaster" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
@@ -244,9 +244,9 @@ public class ImportAuthCommandIT
     {
         // Given
         insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+        insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
@@ -262,9 +262,9 @@ public class ImportAuthCommandIT
     {
         // Given
         insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+        insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
@@ -293,9 +293,9 @@ public class ImportAuthCommandIT
     {
         // Given
         insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+        insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
@@ -325,9 +325,9 @@ public class ImportAuthCommandIT
     {
         // Given
         insertUsers( CommunitySecurityModule.USER_STORE_FILENAME, "jane", "alice", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME,  "flunky", "jane" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "goon", "bob", "jim" );
-        insertRole( EnterpriseSecurityModule.ROLE_STORE_FILENAME, "taskmaster", "alice" );
+        insertRole( ROLE_STORE_FILENAME,  "flunky", "jane" );
+        insertRole( ROLE_STORE_FILENAME, "goon", "bob", "jim" );
+        insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
         tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,

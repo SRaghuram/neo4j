@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.server.enterprise.CommercialServerSettings;
 
 import org.neo4j.kernel.configuration.Config;
@@ -18,7 +18,7 @@ public class EnterpriseDiscoverableURIs
 {
     public static DiscoverableURIs enterpriseDiscoverableURIs( Config config, ConnectorPortRegister portRegister )
     {
-        if ( config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE )
+        if ( config.get( CommercialEditionSettings.mode ) == CommercialEditionSettings.Mode.CORE )
         {
             return new DiscoverableURIs.Builder( communityDiscoverableURIs( config, portRegister ) )
                     .addBoltConnectorFromConfig( "bolt_routing", "bolt+routing", config,

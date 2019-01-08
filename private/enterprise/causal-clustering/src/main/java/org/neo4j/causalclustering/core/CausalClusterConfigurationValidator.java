@@ -5,8 +5,8 @@
  */
 package org.neo4j.causalclustering.core;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode;
 
 import java.util.Collections;
 import java.util.Map;
@@ -27,7 +27,7 @@ public class CausalClusterConfigurationValidator implements ConfigurationValidat
     public Map<String,String> validate( @Nonnull Config config, @Nonnull Log log ) throws InvalidSettingException
     {
         // Make sure mode is CC
-        Mode mode = config.get( EnterpriseEditionSettings.mode );
+        Mode mode = config.get( CommercialEditionSettings.mode );
         if ( mode.equals( Mode.CORE ) || mode.equals( Mode.READ_REPLICA ) )
         {
             validateInitialDiscoveryMembers( config );

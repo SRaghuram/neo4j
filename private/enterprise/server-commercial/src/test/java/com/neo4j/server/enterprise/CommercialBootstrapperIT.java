@@ -6,7 +6,7 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -61,7 +61,7 @@ public class CommercialBootstrapperIT extends BaseBootstrapperIT
         // When
         int resultCode = ServerBootstrapper.start( bootstrapper, withConnectorsOnRandomPortsConfig(
                 "--home-dir", tempDir.newFolder( "home-dir" ).getAbsolutePath(),
-                "-c", configOption( EnterpriseEditionSettings.mode, "SINGLE" ),
+                "-c", configOption( CommercialEditionSettings.mode, "SINGLE" ),
                 "-c", configOption( data_directory, getRelativePath( folder.getRoot(), data_directory ) ),
                 "-c", configOption( logs_directory, tempDir.getRoot().getAbsolutePath() ),
                 "-c", configOption( certificates_directory, getRelativePath( folder.getRoot(), certificates_directory ) ) ) );

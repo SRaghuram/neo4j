@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +64,7 @@ public class InternalFlatFileRealmIT
         final RoleRepository roleRepository = new FileRoleRepository( fs, roleStoreFile, logProvider );
         final UserRepository initialUserRepository = CommunitySecurityModule.getInitialUserRepository( Config
                 .defaults(), logProvider, fs );
-        final UserRepository defaultAdminRepository = EnterpriseSecurityModule.getDefaultAdminRepository( Config
+        final UserRepository defaultAdminRepository = CommercialSecurityModule.getDefaultAdminRepository( Config
                 .defaults(), logProvider, fs );
         final PasswordPolicy passwordPolicy = new BasicPasswordPolicy();
         AuthenticationStrategy authenticationStrategy = new RateLimitedAuthenticationStrategy( Clocks.systemClock(), Config.defaults() );

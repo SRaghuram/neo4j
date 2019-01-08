@@ -5,7 +5,7 @@
  */
 package org.neo4j.causalclustering.core;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -89,7 +89,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         raftListenAddress = listenAddress( listenAddress, raftPort );
 
         config.put( GraphDatabaseSettings.active_database.name(), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        config.put( EnterpriseEditionSettings.mode.name(), EnterpriseEditionSettings.Mode.CORE.name() );
+        config.put( CommercialEditionSettings.mode.name(), CommercialEditionSettings.Mode.CORE.name() );
         config.put( GraphDatabaseSettings.default_advertised_address.name(), advertisedAddress );
         config.put( CausalClusteringSettings.initial_discovery_members.name(), initialMembers );
         config.put( CausalClusteringSettings.discovery_listen_address.name(), listenAddress( listenAddress, discoveryPort ) );

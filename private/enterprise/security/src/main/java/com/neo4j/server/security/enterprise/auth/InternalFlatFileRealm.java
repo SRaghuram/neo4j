@@ -89,7 +89,7 @@ public class InternalFlatFileRealm extends AuthorizingRealm implements RealmLife
                 jobScheduler, initialUserRepository, defaultAdminRepository );
     }
 
-    InternalFlatFileRealm( UserRepository userRepository, RoleRepository roleRepository,
+    public InternalFlatFileRealm( UserRepository userRepository, RoleRepository roleRepository,
             PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy,
             boolean authenticationEnabled, boolean authorizationEnabled, JobScheduler jobScheduler,
             UserRepository initialUserRepository, UserRepository defaultAdminRepository )

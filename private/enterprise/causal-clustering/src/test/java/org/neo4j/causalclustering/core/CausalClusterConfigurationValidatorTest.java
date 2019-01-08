@@ -5,8 +5,8 @@
  */
 package org.neo4j.causalclustering.core;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -50,7 +50,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config config = Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, Mode.SINGLE.name() )
+                .withSetting( CommercialEditionSettings.mode, Mode.SINGLE.name() )
                 .withSetting( initial_discovery_members, "" )
                 .withValidator( new CausalClusterConfigurationValidator() )
                 .build();
@@ -66,7 +66,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config config = Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, Mode.SINGLE.name() )
+                .withSetting( CommercialEditionSettings.mode, Mode.SINGLE.name() )
                 .withSetting( initial_discovery_members, "localhost:99,remotehost:2" )
                 .withSetting( new BoltConnector( "bolt" ).enabled.name(), "true" )
                 .withValidator( new CausalClusterConfigurationValidator() )
@@ -83,7 +83,7 @@ public class CausalClusterConfigurationValidatorTest
     {
         // when
         Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, Mode.SINGLE.name() )
+                .withSetting( CommercialEditionSettings.mode, Mode.SINGLE.name() )
                 .withSetting( discovery_type, DiscoveryType.K8S.name() )
                 .withSetting( kubernetes_label_selector, "waldo=fred" )
                 .withSetting( kubernetes_service_port_name, "default" )
@@ -103,7 +103,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode.name(), mode.name() )
+                .withSetting( CommercialEditionSettings.mode.name(), mode.name() )
                 .withSetting( initial_discovery_members, "" )
                 .withSetting( initial_discovery_members.name(), "localhost:99,remotehost:2" )
                 .withValidator( new CausalClusterConfigurationValidator() ).build();
@@ -120,7 +120,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, mode.name() )
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
                 .withSetting( discovery_type, DiscoveryType.DNS.name() )
                 .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
@@ -135,7 +135,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, mode.name() )
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
                 .withSetting( discovery_type, DiscoveryType.LIST.name() )
                 .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
@@ -150,7 +150,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, mode.name() )
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
                 .withSetting( discovery_type, DiscoveryType.SRV.name() )
                 .withValidator( new CausalClusterConfigurationValidator() ).build();
     }
@@ -166,7 +166,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, mode.name() )
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
                 .withSetting( discovery_type, DiscoveryType.K8S.name() )
                 .withSetting( kubernetes_service_port_name, "default" )
                 .withSetting( new BoltConnector( "bolt" ).enabled.name(), "true" )
@@ -184,7 +184,7 @@ public class CausalClusterConfigurationValidatorTest
 
         // when
         Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, mode.name() )
+                .withSetting( CommercialEditionSettings.mode, mode.name() )
                 .withSetting( discovery_type, DiscoveryType.K8S.name() )
                 .withSetting( kubernetes_label_selector, "waldo=fred" )
                 .withSetting( new BoltConnector( "bolt" ).enabled.name(), "true" )

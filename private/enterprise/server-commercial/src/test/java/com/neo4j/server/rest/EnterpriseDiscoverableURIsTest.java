@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.rest;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -28,7 +28,7 @@ class EnterpriseDiscoverableURIsTest
         // Given
         BoltConnector bolt = new BoltConnector( "honestJakesBoltConnector" );
         Config config = Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.CORE.name() )
+                .withSetting( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
                 .withSetting( bolt.enabled, "true" )
                 .withSetting( bolt.type, BoltConnector.ConnectorType.BOLT.name() )
                 .build();
@@ -47,7 +47,7 @@ class EnterpriseDiscoverableURIsTest
         // Given
         BoltConnector bolt = new BoltConnector( "honestJakesBoltConnector" );
         Config config = Config.builder()
-                .withSetting( EnterpriseEditionSettings.mode, EnterpriseEditionSettings.Mode.CORE.name() )
+                .withSetting( CommercialEditionSettings.mode, CommercialEditionSettings.Mode.CORE.name() )
                 .withSetting( bolt.enabled, "true" )
                 .withSetting( bolt.type, BoltConnector.ConnectorType.BOLT.name() )
                 .withSetting( bolt.listen_address, ":0" )

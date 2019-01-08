@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.enterprise;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -22,7 +22,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
+import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.mode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith( TestDirectoryExtension.class )

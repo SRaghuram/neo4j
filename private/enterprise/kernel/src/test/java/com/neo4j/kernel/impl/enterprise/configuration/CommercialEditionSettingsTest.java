@@ -16,13 +16,13 @@ import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.id.IdType;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.idTypesToReuse;
+import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.idTypesToReuse;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-public class EnterpriseEditionSettingsTest
+public class CommercialEditionSettingsTest
 {
     @Test
     public void idTypesToReuseAllowedValues()

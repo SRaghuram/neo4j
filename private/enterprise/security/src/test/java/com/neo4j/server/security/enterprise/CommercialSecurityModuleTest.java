@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -20,6 +21,8 @@ import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -181,6 +184,65 @@ class CommercialSecurityModuleTest
 
         // Then
         assertSuccess();
+    }
+
+    @Test
+    void shouldNotFailNativeWithPluginAuthorizationProvider()
+    {
+        // Given
+        nativeAuth( true, true );
+        ldapAuth( false, false );
+        pluginAuth( true, true );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin" );
+
+        assertSuccess();
+    }
+
+    @Test
+    void shouldNotFailWithPropertyLevelPermissions()
+    {
+        nativeAuth( true, true );
+        ldapAuth( false, false );
+        pluginAuth( false, false );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+
+        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
+        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smith=alias" );
+
+        assertSuccess();
+    }
+
+    @Test
+    void shouldFailOnIllegalPropertyLevelPermissions()
+    {
+        nativeAuth( true, true );
+        ldapAuth( false, false );
+        pluginAuth( false, false );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+
+        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
+        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn( "smithmalias" );
+
+        assertIllegalArgumentException( "Illegal configuration: Property level authorization is enabled but there is a error in the permissions mapping." );
+    }
+
+    @Test
+    void shouldParsePropertyLevelPermissions()
+    {
+        nativeAuth( true, true );
+        ldapAuth( false, false );
+        pluginAuth( false, false );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME );
+
+        when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( true );
+        when( config.get( SecuritySettings.property_level_authorization_permissions ) ).thenReturn(
+                "smith = alias;merovingian=alias ,location;\n abel=alias,\t\thasSilver" );
+
+        CommercialSecurityModule.SecurityConfig securityConfig = new CommercialSecurityModule.SecurityConfig( config );
+        securityConfig.validate();
+        assertThat( securityConfig.propertyBlacklist.get( "smith" ), equalTo( Collections.singletonList( "alias" ) ) );
+        assertThat( securityConfig.propertyBlacklist.get( "merovingian" ), equalTo( Arrays.asList( "alias", "location" ) ) );
+        assertThat( securityConfig.propertyBlacklist.get( "abel" ), equalTo( Arrays.asList( "alias", "hasSilver" ) ) );
     }
 
     // --------- HELPERS ----------

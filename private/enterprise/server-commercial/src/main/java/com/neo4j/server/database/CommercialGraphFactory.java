@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceFactorySel
 import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.readreplica.CommercialReadReplicaGraphDatabase;
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 
 import java.io.File;
 
@@ -26,7 +26,7 @@ public class CommercialGraphFactory implements GraphFactory
     @Override
     public GraphDatabaseFacade newGraphDatabase( Config config, Dependencies dependencies )
     {
-        EnterpriseEditionSettings.Mode mode = config.get( EnterpriseEditionSettings.mode );
+        CommercialEditionSettings.Mode mode = config.get( CommercialEditionSettings.mode );
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );
         SslDiscoveryServiceFactory discoveryServiceFactory = new CommercialDiscoveryServiceFactorySelector().select( config );
 

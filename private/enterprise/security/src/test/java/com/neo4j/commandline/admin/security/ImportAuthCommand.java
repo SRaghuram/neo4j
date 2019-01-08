@@ -7,7 +7,6 @@ package com.neo4j.commandline.admin.security;
 
 import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
-import com.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -55,7 +54,7 @@ public class ImportAuthCommand implements AdminCommand
     private static final Arguments arguments = new Arguments()
             .withArgument( new OptionalNamedArg( USER_ARG_NAME, CommunitySecurityModule.USER_STORE_FILENAME, CommunitySecurityModule.USER_STORE_FILENAME,
                     "File name of user repository file to import." ))
-            .withArgument( new OptionalNamedArg( ROLE_ARG_NAME, EnterpriseSecurityModule.ROLE_STORE_FILENAME, EnterpriseSecurityModule.ROLE_STORE_FILENAME,
+            .withArgument( new OptionalNamedArg( ROLE_ARG_NAME, CommercialSecurityModule.ROLE_STORE_FILENAME, CommercialSecurityModule.ROLE_STORE_FILENAME,
                     "File name of role repository file to import." ))
             .withArgument( new OptionalBooleanArg( OFFLINE_ARG_NAME, false,
                     "If set to true the actual import will happen immediately into an offline system graph. " +

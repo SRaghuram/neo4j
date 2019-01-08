@@ -46,7 +46,7 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import static org.neo4j.helpers.Strings.escape;
 import static org.neo4j.kernel.api.security.AuthToken.invalidToken;
 
-class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
+public class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
 {
     private final EnterpriseUserManager userManager;
     private final Collection<Realm> realms;
@@ -57,7 +57,7 @@ class MultiRealmAuthManager implements EnterpriseAuthAndUserManager
     private final boolean propertyAuthorization;
     private final Map<String,List<String>> roleToPropertyBlacklist;
 
-    MultiRealmAuthManager( EnterpriseUserManager userManager, Collection<Realm> realms, CacheManager cacheManager,
+    public MultiRealmAuthManager( EnterpriseUserManager userManager, Collection<Realm> realms, CacheManager cacheManager,
             SecurityLog securityLog, boolean logSuccessfulLogin, boolean propertyAuthorization, Map<String,List<String>> roleToPropertyBlacklist )
     {
         this.userManager = userManager;

@@ -8,7 +8,7 @@ package com.neo4j.kernel.impl.enterprise;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
 import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
@@ -109,7 +109,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule
         {
             SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
                     platformModule.logService.getUserLog( EnterpriseEditionModule.class ),
-                    procedures, platformModule.config.get( EnterpriseEditionSettings.security_module ) );
+                    procedures, platformModule.config.get( CommercialEditionSettings.security_module ) );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
         }

@@ -5,7 +5,7 @@
  */
 package com.neo4j.graphdb.store.id;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,7 +34,7 @@ public class IdReuseTest
 {
     @Rule
     public DbmsRule dbRule = new EnterpriseDbmsRule()
-            .withSetting( EnterpriseEditionSettings.idTypesToReuse, IdType.NODE + "," + IdType.RELATIONSHIP )
+            .withSetting( CommercialEditionSettings.idTypesToReuse, IdType.NODE + "," + IdType.RELATIONSHIP )
             .withSetting( GraphDatabaseSettings.record_id_batch_size, "1" );
 
     @Test

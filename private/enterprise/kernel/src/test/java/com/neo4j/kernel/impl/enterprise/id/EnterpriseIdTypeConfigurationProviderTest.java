@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise.id;
 
-import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -65,7 +65,7 @@ public class EnterpriseIdTypeConfigurationProviderTest
 
     private IdTypeConfigurationProvider createIdTypeProvider()
     {
-        Map<String,String> params = MapUtil.stringMap( EnterpriseEditionSettings.idTypesToReuse.name(),
+        Map<String,String> params = MapUtil.stringMap( CommercialEditionSettings.idTypesToReuse.name(),
                 IdType.NODE + "," + IdType.RELATIONSHIP );
         Config config = Config.defaults( params );
         return new EnterpriseIdTypeConfigurationProvider( config );

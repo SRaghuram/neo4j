@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.junit.After;
@@ -98,7 +99,7 @@ public class MultiRealmAuthManagerTest extends InitialUserTest
                         mock( JobScheduler.class ),
                         CommunitySecurityModule.getInitialUserRepository(
                                 config, NullLogProvider.getInstance(), fsRule.get() ),
-                        EnterpriseSecurityModule.getDefaultAdminRepository(
+                        CommercialSecurityModule.getDefaultAdminRepository(
                                 config, NullLogProvider.getInstance(), fsRule.get() )
                     );
 
@@ -164,7 +165,7 @@ public class MultiRealmAuthManagerTest extends InitialUserTest
     {
         // Given
         UserRepository defaultAdminRepository =
-                EnterpriseSecurityModule.getDefaultAdminRepository( config, NullLogProvider.getInstance(), fsRule.get() );
+                CommercialSecurityModule.getDefaultAdminRepository( config, NullLogProvider.getInstance(), fsRule.get() );
         defaultAdminRepository.start();
         defaultAdminRepository.create(
                 new User.Builder( "foo", LegacyCredential.INACCESSIBLE ).withRequiredPasswordChange( false ).build() );

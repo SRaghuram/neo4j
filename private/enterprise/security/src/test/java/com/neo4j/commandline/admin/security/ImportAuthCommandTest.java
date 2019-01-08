@@ -5,7 +5,7 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseSecurityModule;
+import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -75,12 +75,12 @@ public class ImportAuthCommandTest
                         .withRequiredPasswordChange( false )
                         .build()
         );
-        RoleRepository roles = EnterpriseSecurityModule.getRoleRepository( config, NullLogProvider.getInstance(), fileSystem );
+        RoleRepository roles = CommercialSecurityModule.getRoleRepository( config, NullLogProvider.getInstance(), fileSystem );
         roles.create(
                 new RoleRecord.Builder().withName( "sorcerer" ).withUser( "jake" ).build()
         );
         File userStoreFile = CommunitySecurityModule.getUserRepositoryFile( config );
-        File roleStoreFile = EnterpriseSecurityModule.getRoleRepositoryFile( config );
+        File roleStoreFile = CommercialSecurityModule.getRoleRepositoryFile( config );
         File parentFolder = userStoreFile.getParentFile();
         altUserStoreFile = new File( parentFolder, ALTERNATIVE_USER_STORE_FILENAME );
         altRoleStoreFile = new File( parentFolder, ALTERNATIVE_ROLE_STORE_FILENAME );
