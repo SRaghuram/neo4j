@@ -355,7 +355,8 @@ class EagerizationAcceptanceTest
     // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       executeBefore = () => counter.reset(),
-      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0),
+      ignoreMorselRuntimeFailures = true)
 
     result.size should equal(2)
     counter.counted should equal(2)

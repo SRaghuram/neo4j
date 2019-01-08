@@ -183,7 +183,8 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     relate("B" -> "FRIEND" -> "C")
 
     // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (a)-[:CONTAINS*0..1]->(b)-[:FRIEND*0..1]->(c) where id(a) = 0 return a,b,c")
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (a)-[:CONTAINS*0..1]->(b)-[:FRIEND*0..1]->(c) where id(a) = 0 return a,b,c",
+      ignoreMorselRuntimeFailures = true)
 
     result.toSet should equal(
       Set(
@@ -215,7 +216,8 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       "b" -> b.toInt,
       "c" -> Seq(c).asJava,
       "0" -> Seq(d.toInt).asJava,
-      "1" -> List(e))
+      "1" -> List(e)),
+      ignoreMorselRuntimeFailures = true
     )
 
     result.toList should have size 1
@@ -280,10 +282,13 @@ return a""")
     val r2 = relate(b, c)
 
     // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
-    val result = executeWith(Configs.InterpretedAndSlotted,  """
-match (a)-[r*2]->(c)
-where id(a) = 0
-return r""")
+    val result = executeWith(Configs.InterpretedAndSlotted,
+      """
+        |match (a)-[r*2]->(c)
+        |where id(a) = 0
+        |return r
+      """.stripMargin,
+      ignoreMorselRuntimeFailures = true)
 
     result.toList should equal(List(Map("r" -> List(r1, r2))))
   }
@@ -446,7 +451,7 @@ order by a.COL1""".format(a, b))
     val q = "match p = (n)-[*1..]->(m) where id(n)= 0 return p, last(nodes(p)) order by length(nodes(p)) asc"
 
     // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
-    executeWith(Configs.InterpretedAndSlotted, q).toList should have size 1
+    executeWith(Configs.InterpretedAndSlotted, q, ignoreMorselRuntimeFailures = true).toList should have size 1
   }
 
   test("zero matching subgraphs yield correct count star") {

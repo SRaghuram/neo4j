@@ -102,7 +102,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     test(s"$cypherToken: Order by index backed property in a plan with an Apply") {
       // TODO: morsel fails at runtime with NullPointerException
       val result = executeWith(Configs.InterpretedAndSlotted,
-        s"MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds $cypherToken", executeBefore = createSomeNodes)
+        s"MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds $cypherToken",
+        executeBefore = createSomeNodes, ignoreMorselRuntimeFailures = true)
 
       result.executionPlanDescription() should (
         not(includeSomewhere.aPlan("Sort")) and

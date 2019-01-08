@@ -218,7 +218,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |""".stripMargin
 
     // TODO: morsel fails at runtime with InternalException: Tried to copy too much data
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true)
     result.toList should equal(List(Map("n" -> n, "rel1" -> null, "rel2" -> null, "n1" -> null, "n2" -> null)))
   }
 
@@ -1025,7 +1025,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("Reduce and concat gh #10978") {
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "RETURN REDUCE(s = 0, p in [5,8,2,9] + [1,2] | s + p) as num")
+    val result = executeWith(Configs.InterpretedAndSlotted, "RETURN REDUCE(s = 0, p in [5,8,2,9] + [1,2] | s + p) as num", ignoreMorselRuntimeFailures = true)
     result.toList should be(List(Map("num" -> 27)))
   }
 

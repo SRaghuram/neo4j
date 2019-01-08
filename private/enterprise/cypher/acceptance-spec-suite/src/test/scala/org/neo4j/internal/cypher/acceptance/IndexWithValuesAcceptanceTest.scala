@@ -157,7 +157,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     // TODO: morsel fails at runtime with NullPointerException
     val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds",
-      executeBefore = createSomeNodes)
+      executeBefore = createSomeNodes, ignoreMorselRuntimeFailures = true)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Apply")
@@ -394,7 +394,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |RETURN n.prop1, `n.prop1` AS trap""".stripMargin
 
     // TODO: morsel fails at runtime with NullPointerException
-    val result = executeWith(Configs.All - Configs.Morsel, query)
+    val result = executeWith(Configs.All - Configs.Morsel, query, ignoreMorselRuntimeFailures = true)
     assertIndexSeekWithValues(result)
     result.toList should equal(List(Map("n.prop1" -> 42, "trap" -> "Whoops!")))
   }

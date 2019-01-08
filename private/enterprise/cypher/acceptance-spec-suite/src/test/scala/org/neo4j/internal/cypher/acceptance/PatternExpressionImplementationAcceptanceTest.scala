@@ -22,8 +22,9 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
-      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
+    // TODO: this seems flaky for morsel
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")), ignoreMorsel = true)
 
     result.toList.head("p").asInstanceOf[Seq[_]] should have size 2
   }
@@ -62,7 +63,9 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val rel3 = relate(start2, d)
     val rel4 = relate(start2, d)
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p")
+    // TODO: This seems flaky for morsel
+    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) return case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p",
+      ignoreMorsel = true)
       .toList.map(_.mapValues {
         case l: Seq[Any] => l.toSet
         case x => x
@@ -81,13 +84,15 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    // TODO: this seems flaky for morsel
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """match (n)
         |with case
         |       when id(n) >= 0 then (n)-->()
         |       else 42
         |     end as p, count(n) as c
-        |return p, c order by c""".stripMargin)
+        |return p, c order by c""".stripMargin,
+      ignoreMorsel = true)
       .toList.head("p").asInstanceOf[Seq[_]]
 
     result should have size 2
@@ -114,7 +119,9 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val rel3 = relate(start2, d)
     val rel4 = relate(start2, d)
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) with case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p, count(n) as c return p, c")
+    // TODO: this seems flaky for morsel
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) with case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p, count(n) as c return p, c",
+      ignoreMorsel = true)
       .toList.map(_.mapValues {
         case l: Seq[Any] => l.toSet
         case x => x
@@ -229,8 +236,9 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
-      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
+    // TODO: this seems flaky for morsel
+    executeWith(Configs.InterpretedAndSlotted, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")), ignoreMorsel = true)
   }
 
   test("should not use full expand 2") {

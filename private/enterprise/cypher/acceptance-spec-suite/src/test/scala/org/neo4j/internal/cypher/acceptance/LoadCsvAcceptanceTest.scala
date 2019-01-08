@@ -150,14 +150,15 @@ class LoadCsvAcceptanceTest
     })
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$url' AS line WITH count(line) as linecount RETURN linecount, linenumber(), filename()")
+    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$url' AS line WITH count(line) as linecount RETURN linecount, linenumber(), filename()",
+      ignoreMorselRuntimeFailures = true)
     resourceMonitor.assertClosedAndClear(1)
     result.toList should equal(List(Map("linecount" -> 3, "linenumber()" -> null, "filename()" -> null)))
   }
 
   test("should return no linenumber or filename without load csv") {
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(interpretedAndSlotted4_0, "RETURN linenumber(), filename()")
+    val result = executeWith(interpretedAndSlotted4_0, "RETURN linenumber(), filename()", ignoreMorselRuntimeFailures = true)
     result.toList should equal(List(Map("linenumber()" -> null, "filename()" -> null)))
   }
 

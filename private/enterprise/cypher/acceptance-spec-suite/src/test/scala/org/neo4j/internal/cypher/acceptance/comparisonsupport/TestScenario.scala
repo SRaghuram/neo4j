@@ -46,7 +46,7 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
       fail(s"did not use ${version.acceptedPlannerVersionNames} planner version - instead $reportedPlannerVersion was used. Scenario $name")
   }
 
-  def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult], maybePhase: Option[String]): Unit = {
+  def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult], maybePhase: Option[String], ignoreMorselRuntimeFailures: Boolean): Unit = {
     internalExecutionResult match {
       case Failure(_) if maybePhase.contains(Phase.compile) =>
         // A compile-time failure is expected and ok
@@ -54,7 +54,8 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
         // Not executed is also expected and ok
       case Failure(e) =>
         val phase = maybePhase.get
-        if (!(phase == "runtime" && runtime.acceptedRuntimeNames.contains("MORSEL")))
+        // TODO: remove when morsel is stable enough
+        if (!(ignoreMorselRuntimeFailures && phase == "runtime" && runtime.acceptedRuntimeNames.contains("MORSEL")))
           fail(s"""Failed at $phase using $name for query:
                   |
                   |$query

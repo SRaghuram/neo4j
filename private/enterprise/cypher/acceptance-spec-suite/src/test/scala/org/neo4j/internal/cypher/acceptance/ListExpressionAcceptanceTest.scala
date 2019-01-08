@@ -18,7 +18,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         " reduce(acc=0, s IN ['1','22','1','333'] | acc + null) AS nullExpression," +
         " reduce(acc=0, s IN ['1',null,'1','333'] | acc + size(s)) AS nullElement," +
         " reduce(acc=7, s IN [] | 7 + s) AS emptyList," +
-        " reduce(acc=null, s IN [] | 7 + s) AS emptyListOnNull")
+        " reduce(acc=null, s IN [] | 7 + s) AS emptyListOnNull", ignoreMorselRuntimeFailures = true)
 
     result.toList.head should equal(Map(
       "result" -> 7,
@@ -41,7 +41,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           "RETURN" +
           " reduce(acc=0, n IN nodes(p) | acc + n.x) AS result," +
           " reduce(acc=0, n IN nodes(p) | acc + null) AS nullExpression," +
-          " reduce(acc=0, n IN nodes(p) + [null] | acc + n.x) AS nullElement")
+          " reduce(acc=0, n IN nodes(p) + [null] | acc + n.x) AS nullElement", ignoreMorselRuntimeFailures = true)
 
     result.toList.head should equal(Map(
       "result" -> 6,

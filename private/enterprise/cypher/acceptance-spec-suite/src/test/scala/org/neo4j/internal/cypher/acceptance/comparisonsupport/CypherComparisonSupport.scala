@@ -197,7 +197,9 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                             executeBefore: () => Unit = () => {},
                             executeExpectedFailures: Boolean = true,
                             params: Map[String, Any] = Map.empty,
-                            printExecutionPlan: Boolean = false): RewindableExecutionResult = {
+                            printExecutionPlan: Boolean = false,
+                            ignoreMorsel: Boolean = false,
+                            ignoreMorselRuntimeFailures: Boolean = false): RewindableExecutionResult = {
     if (printExecutionPlan) {
       val planResult = innerExecute(s"EXPLAIN $query", params)
       println(planResult.executionPlanDescription())
@@ -208,7 +210,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)
       val explicitlyRequestedExperimentalScenarios = expectSucceed.scenarios intersect Configs.Experimental.scenarios
 
-      val positiveResults = ((Configs.All.scenarios ++ explicitlyRequestedExperimentalScenarios) - baseScenario).flatMap {
+      val allConfigs = Configs.All - (if(ignoreMorsel) Configs.Morsel else Configs.Empty)
+      val positiveResults = ((allConfigs.scenarios ++ explicitlyRequestedExperimentalScenarios) - baseScenario).flatMap {
         thisScenario =>
           executeScenario(thisScenario,
                           query,
@@ -216,7 +219,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                           executeBefore,
                           params,
                           resultAssertionInTx,
-                          executeExpectedFailures)
+                          executeExpectedFailures,
+                          ignoreMorselRuntimeFailures)
       }
 
       //Must be run last and have no rollback to be able to do certain result assertions
@@ -227,6 +231,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                                        params,
                                        resultAssertionInTx = None,
                                        executeExpectedFailures = false,
+                                       ignoreMorselRuntimeFailures,
                                        shouldRollback = false)
 
       // Assumption: baseOption.get is safe because the baseScenario is expected to succeed
@@ -296,6 +301,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                               params: Map[String, Any],
                               resultAssertionInTx: Option[RewindableExecutionResult => Unit],
                               executeExpectedFailures: Boolean,
+                              ignoreMorselRuntimeFailures: Boolean,
                               shouldRollback: Boolean = true): Option[(TestScenario, RewindableExecutionResult)] = {
 
     def execute() = {
@@ -336,7 +342,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
               case Success(_) => Phase.runtime
             })
         }
-        scenario.checkResultForFailure(query, tryRes, maybePhase)
+        scenario.checkResultForFailure(query, tryRes, maybePhase, ignoreMorselRuntimeFailures)
         None
       }
     }

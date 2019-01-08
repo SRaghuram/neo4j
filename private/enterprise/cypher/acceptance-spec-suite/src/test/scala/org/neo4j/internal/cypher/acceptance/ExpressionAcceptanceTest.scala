@@ -14,7 +14,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     createNode("foo" -> 1, "bar" -> "apa")
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.foo,.bar,.baz}")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.foo,.bar,.baz}", ignoreMorselRuntimeFailures = true)
 
     result.toList.head("n") should equal(Map("foo" -> 1, "bar" -> "apa", "baz" -> null))
   }
@@ -23,7 +23,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     createNode("foo" -> 1, "bar" -> "apa")
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "WITH 42 as x MATCH (n) RETURN n{.foo,.bar,x}")
+    val result = executeWith(Configs.InterpretedAndSlotted, "WITH 42 as x MATCH (n) RETURN n{.foo,.bar,x}", ignoreMorselRuntimeFailures = true)
 
     result.toList.head("n") should equal(Map("foo" -> 1, "bar" -> "apa", "x" -> 42))
   }
@@ -32,7 +32,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     createNode("foo" -> 1, "bar" -> "apa")
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.foo,.bar}")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.foo,.bar}", ignoreMorselRuntimeFailures = true)
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa"))))
   }
@@ -41,7 +41,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     createNode("foo" -> 1, "bar" -> "apa")
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.*}")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.*}", ignoreMorselRuntimeFailures = true)
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa"))))
   }
@@ -50,7 +50,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     createNode("foo" -> 1, "bar" -> "apa")
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.*, .baz}")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.*, .baz}", ignoreMorselRuntimeFailures = true)
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa", "baz" -> null))))
   }
@@ -59,7 +59,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     createNode("foo" -> 1, "bar" -> "apa")
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.*, bar:'apatisk'}")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) RETURN n{.*, bar:'apatisk'}", ignoreMorselRuntimeFailures = true)
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apatisk"))))
   }
@@ -79,7 +79,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
     val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (actor:Actor)-->(movie:Movie)
-            |RETURN actor{ .name, movies: collect(movie{.title}) }""".stripMargin)
+            |RETURN actor{ .name, movies: collect(movie{.title}) }""".stripMargin, ignoreMorselRuntimeFailures = true)
     result.toList should equal(
       List(Map("actor" ->
         Map("name" -> "Actor 1", "movies" -> Seq(
