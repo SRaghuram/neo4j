@@ -38,6 +38,7 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapContext;
 
+import org.neo4j.configuration.Secret;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
@@ -46,7 +47,10 @@ import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.v1.exceptions.TransientException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.diagnostics.providers.ConfigDiagnostics;
 import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.logging.Logger;
 import org.neo4j.server.security.enterprise.auth.LdapRealm;
 import org.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
@@ -56,7 +60,12 @@ import org.neo4j.test.DoubleLatch;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 
 interface TimeoutTests
 { /* Category marker */
@@ -571,6 +580,20 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
                 assertWriteFails( driver );
             }
         }
+    }
+
+    @Test
+    public void shouldNotSeeSystemPassword()
+    {
+        Config config = dbRule.getGraphDatabaseAPI().getDependencyResolver().resolveDependency( Config.class );
+        String expected = "dbms.security.ldap.authorization.system_password=" + Secret.OBSFUCATED;
+        assertThat( "Should see obsfucated password in config.toString", config.toString(), containsString( expected ) );
+        String password = config.get( SecuritySettings.ldap_authorization_system_password );
+        assertThat( "Normal access should not be obsfucated", password, not( containsString( Secret.OBSFUCATED ) ) );
+
+        Logger log = mock( Logger.class );
+        new ConfigDiagnostics( config ).dump( log );
+        verify( log, atLeastOnce() ).log( "%s=%s", "dbms.security.ldap.authorization.system_password", Secret.OBSFUCATED );
     }
 
     // ===== Helpers =====
