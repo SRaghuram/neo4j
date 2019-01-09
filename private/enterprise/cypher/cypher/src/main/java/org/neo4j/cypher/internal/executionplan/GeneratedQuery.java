@@ -14,7 +14,6 @@ public interface GeneratedQuery
 {
     GeneratedQueryExecution execute(
             QueryContext queryContext,
-            ExecutionMode executionMode,
             QueryExecutionTracer tracer,
             MapValue params );
 }

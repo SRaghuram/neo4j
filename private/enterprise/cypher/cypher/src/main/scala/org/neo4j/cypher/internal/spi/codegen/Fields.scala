@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.spi.codegen
 import org.neo4j.codegen.FieldReference
 
 case class Fields(entityAccessor: FieldReference,
-                  executionMode: FieldReference,
                   tracer: FieldReference,
                   params: FieldReference,
                   queryContext: FieldReference,

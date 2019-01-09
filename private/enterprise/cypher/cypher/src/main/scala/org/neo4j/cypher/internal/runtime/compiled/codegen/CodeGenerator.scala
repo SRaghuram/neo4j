@@ -61,8 +61,8 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
                     params: MapValue,
                     prePopulateResults: Boolean): RuntimeResult = {
 
-            val execution: GeneratedQueryExecution = query.query.execute(queryContext, execMode,
-                                                                         tracer.getOrElse(QueryExecutionTracer.NONE),params)
+            val execution: GeneratedQueryExecution = query.query.execute(queryContext,
+                                                                         tracer.getOrElse(QueryExecutionTracer.NONE), params)
             new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults)
           }
 

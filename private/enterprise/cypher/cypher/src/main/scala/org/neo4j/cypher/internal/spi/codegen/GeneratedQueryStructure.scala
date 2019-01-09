@@ -100,7 +100,6 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
     val query = using(generator.generateClass(conf.packageName, className, typeRef[GeneratedQuery])) { clazz =>
       using(clazz.generateMethod(typeRef[GeneratedQueryExecution], "execute",
         param[QueryContext]("queryContext"),
-        param[ExecutionMode]("executionMode"),
         param[QueryExecutionTracer]("tracer"),
         param[MapValue]("params"))) { execute =>
         execute.returns(
@@ -108,11 +107,9 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
             newInstance(execution),
             constructorReference(execution,
               typeRef[QueryContext],
-              typeRef[ExecutionMode],
               typeRef[QueryExecutionTracer],
               typeRef[MapValue]),
             execute.load("queryContext"),
-            execute.load("executionMode"),
             execute.load("tracer"),
             execute.load("params")))
       }
@@ -162,7 +159,6 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
     Templates.relationshipScanCursor(clazz, fields)
     Templates.propertyCursor(clazz, fields)
     Templates.closeCursors(clazz, fields)
-    clazz.generate(Templates.executionMode(clazz.handle()))
     clazz.generate(Templates.FIELD_NAMES)
   }
 
@@ -178,7 +174,6 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
 
     Fields(
       entityAccessor = clazz.field(typeRef[EmbeddedProxySPI], "proxySpi"),
-      executionMode = clazz.field(typeRef[ExecutionMode], "executionMode"),
       tracer = clazz.field(typeRef[QueryExecutionTracer], "tracer"),
       params = clazz.field(typeRef[MapValue], "params"),
       queryContext = clazz.field(typeRef[QueryContext], "queryContext"),

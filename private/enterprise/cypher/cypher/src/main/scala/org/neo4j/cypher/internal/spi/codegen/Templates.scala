@@ -161,12 +161,10 @@ object Templates {
 
   def constructor(classHandle: ClassHandle) = MethodTemplate.constructor(
     param[QueryContext]("queryContext"),
-    param[ExecutionMode]("executionMode"),
     param[QueryExecutionTracer]("tracer"),
     param[MapValue]("params")).
     invokeSuper().
     put(self(classHandle), typeRef[QueryContext], "queryContext", load("queryContext", typeRef[QueryContext])).
-    put(self(classHandle), typeRef[ExecutionMode], "executionMode", load("executionMode", typeRef[ExecutionMode])).
     put(self(classHandle), typeRef[QueryExecutionTracer], "tracer", load("tracer", typeRef[QueryExecutionTracer])).
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
     put(self(classHandle), typeRef[EmbeddedProxySPI], "proxySpi",
@@ -232,10 +230,6 @@ object Templates {
       generate.returns(schemaRead)
     }
   }
-
-  def executionMode(classHandle: ClassHandle) = MethodTemplate.method(typeRef[ExecutionMode], "executionMode").
-    returns(get(self(classHandle), typeRef[ExecutionMode], "executionMode")).
-    build()
 
   def nodeCursor(clazz: ClassGenerator,  fields: Fields): Unit = {
     val methodBuilder: Builder = MethodDeclaration.method(typeRef[NodeCursor], "nodeCursor")

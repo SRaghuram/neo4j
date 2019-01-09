@@ -95,13 +95,10 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
   def newInstance(clazz: GeneratedQuery,
                   taskCloser: TaskCloser = new TaskCloser,
                   queryContext: QueryContext = mockQueryContext(),
-                  graphdb: GraphDatabaseService = null,
-                  executionMode: ExecutionMode = null,
                   tracer: Option[ProfilingTracer] = None,
                   params: MapValue = EMPTY_MAP): RewindableExecutionResult = {
 
     val generated = clazz.execute(queryContext,
-                                  executionMode,
                                   tracer.getOrElse(QueryExecutionTracer.NONE),
                                   params)
 

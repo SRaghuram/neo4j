@@ -25,8 +25,6 @@ class CompiledExecutionResult(context: QueryContext,
 
   private var resultRequested = false
 
-  def executionMode: ExecutionMode = compiledCode.executionMode()
-
   override def fieldNames(): Array[String] = compiledCode.fieldNames()
 
   override def accept[EX <: Exception](visitor: QueryResultVisitor[EX]): Unit = {
