@@ -149,4 +149,6 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
   override def getCachedProperty(key: CachedNodeProperty): Value = fail()
 
   override def getCachedPropertyAt(offset: Int): Value = fail()
+
+  override def invalidateCachedProperties(node: Long): Unit = fail()
 }

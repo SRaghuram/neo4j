@@ -134,6 +134,8 @@ class MorselExecutionContext(private val morsel: Morsel, private val longsPerRow
 
   override def getCachedPropertyAt(offset: Int): Value = getRefAt(offset).asInstanceOf[Value]
 
+  override def invalidateCachedProperties(node: Long): Unit = fail()
+
   private def longsAtCurrentRow: Int = currentRow * longsPerRow
 
   private def refsAtCurrentRow: Int = currentRow * refsPerRow
