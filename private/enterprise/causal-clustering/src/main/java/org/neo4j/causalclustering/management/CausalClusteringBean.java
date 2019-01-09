@@ -5,7 +5,6 @@
  */
 package org.neo4j.causalclustering.management;
 
-
 import java.io.File;
 import java.util.EnumSet;
 
@@ -14,7 +13,7 @@ import org.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.causalclustering.core.state.CoreStateFiles;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.fs.FileSystemUtils;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
@@ -84,7 +83,7 @@ public class CausalClusteringBean extends ManagementBeanProvider
         public long getRaftLogSize()
         {
             File raftLogDirectory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory.get() );
-            return FileUtils.size( fs, raftLogDirectory );
+            return FileSystemUtils.size( fs, raftLogDirectory );
         }
 
         @Override
@@ -106,7 +105,7 @@ public class CausalClusteringBean extends ManagementBeanProvider
                     continue;
                 }
 
-                size += FileUtils.size( fs, file );
+                size += FileSystemUtils.size( fs, file );
             }
 
             return size;

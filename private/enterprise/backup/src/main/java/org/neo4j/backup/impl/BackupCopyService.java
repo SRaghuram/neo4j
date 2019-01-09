@@ -21,7 +21,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 
 import static java.lang.String.format;
-import static org.neo4j.io.fs.FileUtils.isEmptyDirectory;
+import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
 
 class BackupCopyService
 {
@@ -104,14 +104,15 @@ class BackupCopyService
      */
     private Path findAnAvailableBackupLocation( Path file, String pattern )
     {
-        if ( !isEmptyDirectory( fs, file.toFile() ) )
+        if ( isEmptyOrNonExistingDirectory( fs, file.toFile() ) )
         {
-            return availableAlternativeNames( file, pattern )
-                    .filter( f -> isEmptyDirectory( fs, f.toFile() ) )
-                    .findFirst()
-                    .orElseThrow( noFreeBackupLocation( file ) );
+            return file;
         }
-        return file;
+
+        return availableAlternativeNames( file, pattern )
+                .filter( f -> isEmptyOrNonExistingDirectory( fs, f.toFile() ) )
+                .findFirst()
+                .orElseThrow( noFreeBackupLocation( file ) );
     }
 
     private static Supplier<RuntimeException> noFreeBackupLocation( Path file )
