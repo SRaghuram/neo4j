@@ -246,7 +246,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
     {
         try ( SchemaStore store = neoStores.getSchemaStore() )
         {
-            TokenHolders tokenHolders = TokenHolders.initializedReadOnlyTokenHolders( neoStores );
+            TokenHolders tokenHolders = TokenHolders.readOnlyTokenHolders( neoStores );
             final SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
             new DumpStore<DynamicRecord,SchemaStore>( System.out )
             {
