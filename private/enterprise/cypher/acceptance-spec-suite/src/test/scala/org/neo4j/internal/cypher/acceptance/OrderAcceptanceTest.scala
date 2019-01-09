@@ -30,7 +30,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
         .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("anon[54]").asc("bday"))
+      .withOrder(ProvidedOrder.asc("a.name").asc("bday"))
 
     result.toList should equal(List(
       Map("a.name" -> "A", "bday" -> false),
@@ -46,7 +46,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY bday, a.name RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("bday").asc("anon[60]"))
+      .withOrder(ProvidedOrder.asc("bday").asc("a.name"))
 
     result.toList should equal(List(
       Map("a.name" -> "A", "bday" -> false),
