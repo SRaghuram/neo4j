@@ -26,6 +26,13 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     nodeList += createLabeledNode(Map("age" -> 4, "name" -> "F", "foo" -> 1), "A")
   }
 
+  test("should sort aliased and unaliased columns in the right order") {
+    val r = executeWith(Configs.InterpretedAndSlotted,"MATCH (p)-[:ACTED_IN]->(m:Movie) WITH p, EXISTS(p.born) AS bday ORDER BY p.name, bday RETURN p.name, bday")
+    r.executionPlanDescription() should includeSomewhere
+        .aPlan("Sort")
+        .withOrder(ProvidedOrder.asc("anon[75]").asc("bday"))
+  }
+
   test("ORDER BY previously unprojected column in WITH") {
     val result = executeWith(Configs.All, "MATCH (a:A) WITH a ORDER BY a.age RETURN a.name")
 
