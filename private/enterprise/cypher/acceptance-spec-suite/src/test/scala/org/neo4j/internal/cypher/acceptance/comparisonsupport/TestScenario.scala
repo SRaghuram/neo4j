@@ -55,7 +55,7 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
       case Failure(e) =>
         val phase = maybePhase.get
         // TODO: remove when morsel is stable enough
-        if (!(ignoreMorselRuntimeFailures && phase == "runtime" && runtime.acceptedRuntimeNames.contains("MORSEL")))
+        if (!ignoreMorselRuntimeFailures || !runtime.acceptedRuntimeNames.contains("MORSEL"))
           fail(s"""Failed at $phase using $name for query:
                   |
                   |$query
