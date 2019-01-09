@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -901,7 +900,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         latch.start();
         assertEmpty( writeSubject, "CALL test.threadTransaction" );
         latch.finishAndWaitForAllToFinish();
-        MatcherAssert.assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 0 ) );
+        assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 0 ) );
         assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
                 r -> assertKeyIs( r, "n", "1" ) );
     }
@@ -915,8 +914,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         latch.start();
         assertEmpty( readSubject, "CALL test.threadReadDoingWriteTransaction" );
         latch.finishAndWaitForAllToFinish();
-        MatcherAssert.assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 1 ) );
-        MatcherAssert.assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage(), containsString( WRITE_OPS_NOT_ALLOWED ) );
+        assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 1 ) );
+        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage(), containsString( WRITE_OPS_NOT_ALLOWED ) );
         assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
                 r -> assertKeyIs( r, "n", "0" ) );
     }

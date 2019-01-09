@@ -133,12 +133,8 @@ public class CommercialSecurityModule extends SecurityModule
             initSystemGraphOnStart = true;
         }
 
-        Config config = dependencies.config();
         Procedures procedures = dependencies.procedures();
-        LogProvider logProvider = dependencies.logService().getUserLogProvider();
         JobScheduler jobScheduler = dependencies.scheduler();
-        FileSystemAbstraction fileSystem = dependencies.fileSystem();
-        AccessCapability accessCapability = dependencies.accessCapability();
 
         SecurityLog securityLog = SecurityLog.create(
                 config,
