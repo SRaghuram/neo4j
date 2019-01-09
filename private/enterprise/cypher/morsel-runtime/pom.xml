@@ -105,9 +105,8 @@
 
         <dependency>
             <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-kernel-api</artifactId>
+            <artifactId>kernel-api-test-utils</artifactId>
             <version>${project.version}</version>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 

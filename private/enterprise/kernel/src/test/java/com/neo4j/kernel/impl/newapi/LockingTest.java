@@ -5,9 +5,8 @@
  */
 package com.neo4j.kernel.impl.newapi;
 
-import org.neo4j.internal.kernel.api.LockingTestBase;
-import org.neo4j.storageengine.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.storageengine.api.schema.LabelSchemaDescriptor;
 
 public class LockingTest extends LockingTestBase<EnterpriseWriteTestSupport>
 {

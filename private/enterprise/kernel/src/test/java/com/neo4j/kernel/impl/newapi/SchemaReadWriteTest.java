@@ -5,8 +5,8 @@
  */
 package com.neo4j.kernel.impl.newapi;
 
-import org.neo4j.internal.kernel.api.SchemaReadWriteTestBase;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
+import org.neo4j.kernel.impl.newapi.SchemaReadWriteTestBase;
 import org.neo4j.storageengine.api.schema.LabelSchemaDescriptor;
 import org.neo4j.storageengine.api.schema.RelationTypeSchemaDescriptor;
 
