@@ -73,6 +73,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.scheduler.DaemonThreadFactory;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.test.DbRepresentation;
@@ -804,7 +805,11 @@ class BackupIT
                 .withFallbackToFullBackup( fallbackToFull )
                 .build();
 
-        OnlineBackupExecutor.buildDefault().executeBackup( context );
+        OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
+                .withLogProvider( FormattedLogProvider.toOutputStream( System.out ) )
+                .build();
+
+        executor.executeBackup( context );
     }
 
     private static DbRepresentation addLotsOfData( GraphDatabaseService db )

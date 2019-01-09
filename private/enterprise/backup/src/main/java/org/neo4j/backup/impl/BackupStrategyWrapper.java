@@ -129,6 +129,13 @@ class BackupStrategyWrapper
     {
         Path userSpecifiedBackupLocation = onlineBackupContext.getResolvedLocationFromName();
         Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
+        boolean backupToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
+
+        if ( backupToATemporaryLocation )
+        {
+            log.info( "Full backup will be first performed to a temporary directory '%s' because the specified directory '%s' already exists and is not empty",
+                    temporaryFullBackupLocation, userSpecifiedBackupLocation );
+        }
 
         AdvertisedSocketAddress address = onlineBackupContext.getRequiredArguments().getAddress();
         DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
@@ -137,9 +144,7 @@ class BackupStrategyWrapper
         performRecovery( onlineBackupContext.getConfig(), backupLayout );
         clearIdFiles( backupLayout );
 
-        // NOTE temporaryFullBackupLocation can be equal to desired
-        boolean backupWasMadeToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
-        if ( backupWasMadeToATemporaryLocation )
+        if ( backupToATemporaryLocation )
         {
             renameTemporaryBackupToExpected( temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }
@@ -175,7 +180,13 @@ class BackupStrategyWrapper
         try
         {
             Path newBackupLocationForPreExistingBackup = backupCopyService.findNewBackupLocationForBrokenExisting( userSpecifiedBackupLocation );
+
+            log.info( "Moving pre-existing directory '%s' that does not contain a valid backup to '%s'",
+                    userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
             backupCopyService.moveBackupLocation( userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
+
+            log.info( "Moving temporary backup directory '%s' to the specified directory '%s'",
+                    temporaryFullBackupLocation, userSpecifiedBackupLocation );
             backupCopyService.moveBackupLocation( temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }
         catch ( IOException e )
