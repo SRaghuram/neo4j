@@ -107,7 +107,7 @@ class CommercialSecurityModuleTest
 
         // Then
         assertIllegalArgumentException(
-                "Illegal configuration: System graph auth provider configured, " + "but both authentication and authorization are disabled." );
+                "Illegal configuration: System graph auth provider configured, but both authentication and authorization are disabled." );
     }
 
     @Test
