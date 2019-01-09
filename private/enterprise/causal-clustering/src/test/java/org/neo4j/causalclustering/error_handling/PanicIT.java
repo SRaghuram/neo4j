@@ -5,13 +5,12 @@
  */
 package org.neo4j.causalclustering.error_handling;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.TestFactory;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -19,47 +18,33 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.common.Cluster;
-import org.neo4j.causalclustering.common.EnterpriseCluster;
-import org.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
-import org.neo4j.causalclustering.discovery.IpFamily;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.causalclustering.ClusterConfig;
+import org.neo4j.test.causalclustering.ClusterExtension;
+import org.neo4j.test.causalclustering.ClusterFactory;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Collections.emptyMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+@ClusterExtension
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class PanicIT
 {
     private static final int INITIAL_CORE_MEMBERS = 3;
     private static final int INITIAL_READ_REPLICAS = 1;
 
     @Inject
-    private DefaultFileSystemAbstraction fs;
-    @Inject
-    private TestDirectory testDirectory;
+    private ClusterFactory clusterFactory;
 
-    private EnterpriseCluster cluster;
+    private Cluster<?> cluster;
 
     @BeforeEach
     void startCluster() throws ExecutionException, InterruptedException
     {
-        testDirectory.directory();
-        cluster = new EnterpriseCluster( testDirectory.directory(), INITIAL_CORE_MEMBERS, INITIAL_READ_REPLICAS, new HazelcastDiscoveryServiceFactory(),
-                emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
-        cluster.start();
-    }
-
-    @AfterEach
-    void shutdownCluster()
-    {
-        cluster.shutdown();
+        cluster = clusterFactory.createCluster(
+                ClusterConfig.clusterConfig().withNumberOfReadReplicas( INITIAL_READ_REPLICAS ).withNumberOfCoreMembers( INITIAL_CORE_MEMBERS ) );
+        this.cluster.start();
     }
 
     @Nested
