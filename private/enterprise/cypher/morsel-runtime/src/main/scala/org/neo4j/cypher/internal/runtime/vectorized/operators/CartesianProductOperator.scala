@@ -11,15 +11,14 @@ import org.neo4j.cypher.internal.runtime.vectorized._
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 
 class CartesianProductOperator(val workIdentity: WorkIdentity, override val argumentSize: SlotConfiguration.Size)
-  extends StreamingMergeOperator[RhsPipelineArgument] {
+  extends StreamingMergeOperator {
 
   override def initFromLhs(queryContext: QueryContext,
                            state: QueryState,
                            lhsInputMorsel: MorselExecutionContext,
-                           resources: QueryResources): (Option[ContinuableOperatorTask], Option[RhsPipelineArgument]) = {
+                           resources: QueryResources): (Option[ContinuableOperatorTask], Option[SinglePARG]) = {
     if (lhsInputMorsel.isValidRow) {
-      val pipelineArgument = RhsPipelineArgument(lhsInputMorsel)
-      (None, Some(pipelineArgument)) // Returning Some argument here will make the pipeline schedule a task for the right-hand side
+      (None, Some(lhsInputMorsel)) // Returning Some argument here will make the pipeline schedule a task for the right-hand side
     }
     else {
       // Do not schedule any new tasks if we received an empty input morsel
@@ -31,8 +30,8 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
                            state: QueryState,
                            rhsInputMorsel: MorselExecutionContext,
                            resources: QueryResources,
-                           pipelineArgument: RhsPipelineArgument): Option[ContinuableOperatorTask] = {
-    val lhsInputMorsel = pipelineArgument.lhsMorsel
+                           pipelineArgument: PipelineArgument): Option[ContinuableOperatorTask] = {
+    val lhsInputMorsel = pipelineArgument.head
 
     // We need to copy the ExecutionContext around the Morsel so we can have our own iteration state
     val newLhsInputMorsel = lhsInputMorsel.shallowCopy()
@@ -76,5 +75,3 @@ class CartesianProductOperator(val workIdentity: WorkIdentity, override val argu
   }
 
 }
-
-case class RhsPipelineArgument(lhsMorsel: MorselExecutionContext) extends PipelineArgument

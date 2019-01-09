@@ -13,7 +13,7 @@ import org.neo4j.values.AnyValue
 /**
   * A streaming pipeline merging two upstreams.
   */
-class StreamingMergePipeline(val start: StreamingMergeOperator[PipelineArgument],
+class StreamingMergePipeline(val start: StreamingMergeOperator,
                              override val slots: SlotConfiguration,
                              val lhsUpstream: Pipeline,
                              val rhsUpstream: Pipeline) extends Pipeline {
@@ -35,18 +35,18 @@ class StreamingMergePipeline(val start: StreamingMergeOperator[PipelineArgument]
                             from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
     if (from.ownerPipeline.eq(rhsUpstream)) {
       val maybeTask = start.initFromRhs(context, state, inputMorsel, resources, pipelineArgument)
-      maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toIndexedSeq
+      maybeTask.map(pipelineTask(_, context, state, pipelineArgument.tail)).toIndexedSeq
     } else {
       // We got a morsel from the lhs, which is the primary input to the whole join
       val (maybeTask, maybePipelineArgument) = start.initFromLhs(context, state, inputMorsel, resources)
 
       // Did we get a new task for the LHS?
-      val lhsTasks: IndexedSeq[Task[QueryResources]] = maybeTask.map(pipelineTask(_, context, state, PipelineArgument.EMPTY)).toIndexedSeq
+      val lhsTasks: IndexedSeq[Task[QueryResources]] = maybeTask.map(pipelineTask(_, context, state, pipelineArgument)).toIndexedSeq
 
       // If a PipelineArgument was returned we should start new tasks from the RHS pipeline
-      val rhsTasks: Seq[Task[QueryResources]] = maybePipelineArgument.map { pipelineArgument =>
+      val rhsTasks: Seq[Task[QueryResources]] = maybePipelineArgument.map { innerPipelineArgument =>
         val argumentRow = createSingleArgumentRow(from = inputMorsel)
-        startRhsPipelineTasks(argumentRow, context, state, resources, pipelineArgument, from)
+        startRhsPipelineTasks(argumentRow, context, state, resources, innerPipelineArgument :: pipelineArgument, from)
       }.getOrElse(Seq.empty)
 
       lhsTasks ++ rhsTasks

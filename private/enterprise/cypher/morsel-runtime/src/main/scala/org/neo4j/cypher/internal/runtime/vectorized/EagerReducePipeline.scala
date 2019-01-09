@@ -70,6 +70,7 @@ class EagerReducePipeline(start: EagerReduceOperator,
                             resources: QueryResources,
                             pipelineArgument: PipelineArgument,
                             from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
+    // TODO do we need to pass pipelineArgument?
     state.reduceCollector.get.acceptMorsel(inputMorsel, context, state, resources, from)
   }
 
@@ -108,7 +109,7 @@ class EagerReducePipeline(start: EagerReduceOperator,
         val reduceTask = start.init(context, state, inputMorsels, resources)
         // init next reduce
         val nextState = initDownstreamReduce(state)
-        Seq(pipelineTask(reduceTask, context, nextState, PipelineArgument.EMPTY))
+        Seq(pipelineTask(reduceTask, context, nextState, EmptyPipelineArgument))
       } else if (tasksLeft < 0) {
         throw new IllegalStateException("Reference counting of tasks has failed: now at task count " + tasksLeft)
       } else {

@@ -32,14 +32,15 @@ abstract class AbstractStreamingPipeline(override val slots: SlotConfiguration,
     // init next reduce
     val nextState = initDownstreamReduce(state)
 
-    streamTasks.map(pipelineTask(_, context, nextState, PipelineArgument.EMPTY))
+    streamTasks.map(pipelineTask(_, context, nextState, EmptyPipelineArgument))
   }
 
   override def acceptMorsel(inputMorsel: MorselExecutionContext,
                             context: QueryContext,
                             state: QueryState,
                             resources: QueryResources,
-                            pipelineArgument: PipelineArgument, from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
+                            pipelineArgument: PipelineArgument,
+                            from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
     val tasks = start.init(context, state, inputMorsel, resources)
     tasks.map(pipelineTask(_, context, state, pipelineArgument))
   }

@@ -113,14 +113,3 @@ abstract class Pipeline() extends HasWorkIdentity {
                  downstream)
   }
 }
-
-object PipelineArgument {
-  val EMPTY: PipelineArgument = new PipelineArgument {}
-}
-
-/**
-  * An argument that can be passed to a pipeline task that will be forwarded to downstream pipeline tasks
-  * TBD: This could be merged into QueryState if we copy the QueryState at the appropriate points
-  *      which would resemble how we do things in the interpreted/slotted runtime
-  */
-trait PipelineArgument

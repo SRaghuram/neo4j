@@ -33,10 +33,10 @@ trait StreamingOperator extends HasWorkIdentity {
   * leaf pipeline of the RHS upstream. The PipelineArgument will be passed to this RHS task, and along subsequent tasks until
   * it eventually arrives in the initFromRhs.
   */
-trait StreamingMergeOperator[ARG <: PipelineArgument] extends HasWorkIdentity {
+trait StreamingMergeOperator extends HasWorkIdentity {
   def initFromLhs(context: QueryContext, state: QueryState, inputLhsMorsel: MorselExecutionContext, resources: QueryResources):
-    (Option[ContinuableOperatorTask], Option[ARG])
-  def initFromRhs(context: QueryContext, state: QueryState, inputRhsMorsel: MorselExecutionContext, resources: QueryResources, pipelineArgument: ARG):
+    (Option[ContinuableOperatorTask], Option[SinglePARG])
+  def initFromRhs(context: QueryContext, state: QueryState, inputRhsMorsel: MorselExecutionContext, resources: QueryResources, pipelineArgument: PipelineArgument):
     Option[ContinuableOperatorTask]
   def argumentSize: SlotConfiguration.Size
 }

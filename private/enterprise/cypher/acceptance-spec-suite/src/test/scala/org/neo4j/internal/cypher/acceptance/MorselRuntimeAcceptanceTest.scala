@@ -470,18 +470,19 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   // Test with some interesting cases around the morsel size boundary
-  Seq(MORSEL_SIZE-1, MORSEL_SIZE, MORSEL_SIZE+1).foreach(scanSize =>
+  Seq(MORSEL_SIZE - 1, MORSEL_SIZE, MORSEL_SIZE + 1).foreach(scanSize =>
     test(s"cartesian product scan size $scanSize") {
       //GIVEN
       for (i <- 1 to scanSize) {
         createLabeledNode(Map("prop" -> s"a$i"), "A")
         createLabeledNode(Map("prop" -> s"b$i"), "B")
+        createLabeledNode(Map("prop" -> s"c$i"), "C")
       }
       val query =
         """
-          |MATCH (node_a:A), (node_b:B)
-          |WITH node_a.prop as a, node_b.prop as b
-          |RETURN a, b""".stripMargin
+          |MATCH (node_a:A), (node_b:B), (node_c:C)
+          |WITH node_a.prop as a, node_b.prop as b, node_c.prop as c
+          |RETURN a, b, c""".stripMargin
 
       //WHEN
       val slottedResult = graph.execute(s"CYPHER runtime=slotted $query")
@@ -493,7 +494,8 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
       //THEN
       // The output order will differ between runtimes so we need to compare the sorted result
       morselResultList shouldEqual slottedResultList
-    })
+    }
+  )
 
   test(s"cartesian product lhs scan size 0") {
     //GIVEN

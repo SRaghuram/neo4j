@@ -134,6 +134,4 @@ Feature "SkipLimitAcceptance": Scenario "Stand alone limit in the return clause"
 Feature "SkipLimitAcceptance": Scenario "Top with limit 0"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with empty db"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with hits"
-// TODO: FIXME runtime failure - ClassCastException on PipelineArgument in CartesianProductOperator.initFromRhs
-Feature "UnwindAcceptance": Scenario "Primitive node type support in list literal"
 Feature "VarLengthAcceptance": Scenario "Handles checking properties on relationships in multistep path - using ALL() function on path relationship properties"

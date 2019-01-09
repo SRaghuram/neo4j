@@ -276,7 +276,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
       case _: plans.CartesianProduct =>
         val argumentSize = physicalPlan.argumentSizes(plan.id)
         val operator = new CartesianProductOperator(WorkIdentity.fromPlan(plan), argumentSize)
-        new StreamingMergePipeline(operator.asInstanceOf[StreamingMergeOperator[PipelineArgument]], slots, lhs, rhs)
+        new StreamingMergePipeline(operator, slots, lhs, rhs)
 
       case p =>
         throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
