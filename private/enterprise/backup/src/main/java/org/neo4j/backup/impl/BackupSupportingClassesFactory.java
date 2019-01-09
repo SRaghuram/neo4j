@@ -90,7 +90,7 @@ public class BackupSupportingClassesFactory
         StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseName, () -> monitors, logProvider, backOffStrategy );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient,
-                txPullClient, transactionLogCatchUpFactory, config, () -> monitors );
+                txPullClient, transactionLogCatchUpFactory, config, monitors );
 
         return backupDelegator( remoteStore, catchUpClient, storeCopyClient );
     }

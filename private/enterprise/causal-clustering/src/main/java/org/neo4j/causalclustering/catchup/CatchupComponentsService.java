@@ -72,7 +72,7 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
         TxPullClient txPullClient = new TxPullClient( catchupClient, localDatabase.databaseName(), () -> monitors, logProvider );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
-                storeCopyClient, txPullClient, transactionLogFactory, config, () -> monitors );
+                storeCopyClient, txPullClient, transactionLogFactory, config, monitors );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, localDatabase,
                 copiedStoreRecovery, remoteStore, logProvider );

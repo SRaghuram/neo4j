@@ -7,7 +7,6 @@ package org.neo4j.causalclustering.catchup.storecopy;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
@@ -37,7 +36,7 @@ import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_I
 public class RemoteStore
 {
     private final Log log;
-    private final Supplier<Monitors> monitors;
+    private final Monitors monitors;
     private final Config config;
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
@@ -48,7 +47,7 @@ public class RemoteStore
     private final CommitStateHelper commitStateHelper;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
-            TransactionLogCatchUpFactory transactionLogFactory, Config config, Supplier<Monitors> monitors )
+            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -114,7 +113,7 @@ public class RemoteStore
         try
         {
             long lastFlushedTxId;
-            StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors.get() );
+            StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors );
             lastFlushedTxId = storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider,
                         () -> new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ).getSeconds(),
                                 TimeUnit.SECONDS ), destinationLayout.databaseDirectory() );
@@ -138,7 +137,7 @@ public class RemoteStore
             boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir, boolean rotateTransactionsManually )
             throws StoreCopyFailedException
     {
-        StoreCopyClientMonitor storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
+        StoreCopyClientMonitor storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
         storeCopyClientMonitor.startReceivingTransactions( fromTxId );
         long previousTxId = fromTxId - 1;
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config,

@@ -50,7 +50,7 @@ public class RemoteStoreTest
         TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), Monitors::new );
+                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors() );
 
         // when
         AdvertisedSocketAddress localhost = new AdvertisedSocketAddress( "127.0.0.1", 1234 );
@@ -82,7 +82,7 @@ public class RemoteStoreTest
         TransactionLogCatchUpWriter writer = mock( TransactionLogCatchUpWriter.class );
 
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), Monitors::new );
+                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors() );
 
         // when
         remoteStore.copy( catchupAddressProvider, wantedStoreId, DatabaseLayout.of( new File( "destination" ) ), true );
@@ -104,7 +104,7 @@ public class RemoteStoreTest
         CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( null );
 
         RemoteStore remoteStore = new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ),
-                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), Monitors::new );
+                null, storeCopyClient, txPullClient, factory( writer ), Config.defaults(), new Monitors() );
 
         doThrow( CatchUpClientException.class ).when( txPullClient )
                 .pullTransactions( isNull(), eq( storeId ), anyLong(), any() );
