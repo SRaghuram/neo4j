@@ -162,14 +162,11 @@ object Templates {
   def constructor(classHandle: ClassHandle) = MethodTemplate.constructor(
     param[QueryContext]("queryContext"),
     param[ExecutionMode]("executionMode"),
-    param[Provider[InternalPlanDescription]]("description"),
     param[QueryExecutionTracer]("tracer"),
-
     param[MapValue]("params")).
     invokeSuper().
     put(self(classHandle), typeRef[QueryContext], "queryContext", load("queryContext", typeRef[QueryContext])).
     put(self(classHandle), typeRef[ExecutionMode], "executionMode", load("executionMode", typeRef[ExecutionMode])).
-    put(self(classHandle), typeRef[Provider[InternalPlanDescription]], "description", load("description", typeRef[InternalPlanDescription])).
     put(self(classHandle), typeRef[QueryExecutionTracer], "tracer", load("tracer", typeRef[QueryExecutionTracer])).
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
     put(self(classHandle), typeRef[EmbeddedProxySPI], "proxySpi",
@@ -238,12 +235,6 @@ object Templates {
 
   def executionMode(classHandle: ClassHandle) = MethodTemplate.method(typeRef[ExecutionMode], "executionMode").
     returns(get(self(classHandle), typeRef[ExecutionMode], "executionMode")).
-    build()
-
-  def executionPlanDescription(classHandle: ClassHandle) = MethodTemplate.method(typeRef[InternalPlanDescription], "executionPlanDescription").
-    returns(cast( typeRef[InternalPlanDescription],
-      invoke(get(self(classHandle), typeRef[Provider[InternalPlanDescription]], "description"),
-                   method[Provider[InternalPlanDescription], Object]("get")))).
     build()
 
   def nodeCursor(clazz: ClassGenerator,  fields: Fields): Unit = {

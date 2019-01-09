@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.executionplan;
 
 import org.neo4j.cypher.internal.runtime.ExecutionMode;
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription;
 import org.neo4j.cypher.result.QueryResult;
 
 public interface GeneratedQueryExecution
@@ -14,8 +13,6 @@ public interface GeneratedQueryExecution
     <E extends Exception> void accept( QueryResult.QueryResultVisitor<E> visitor ) throws E;
 
     ExecutionMode executionMode();
-
-    InternalPlanDescription executionPlanDescription();
 
     String[] fieldNames();
 }

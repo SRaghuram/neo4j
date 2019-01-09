@@ -215,7 +215,6 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       val fields = Fields(
         entityAccessor = body.field(typeRef[EmbeddedProxySPI], "proxySpi"),
         executionMode = body.field(typeRef[ExecutionMode], "executionMode"),
-        description = body.field(typeRef[Provider[InternalPlanDescription]], "description"),
         tracer = body.field(typeRef[QueryExecutionTracer], "tracer"),
         params = body.field(typeRef[util.Map[String, Object]], "params"),
         queryContext = body.field(typeRef[QueryContext], "queryContext"),

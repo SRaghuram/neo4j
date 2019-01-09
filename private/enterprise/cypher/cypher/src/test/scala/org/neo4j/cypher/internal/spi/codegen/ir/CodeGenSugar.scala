@@ -48,7 +48,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
     val context = mock[PlanContext]
     doReturn(statistics, Nil: _*).when(context).statistics
     new CodeGenerator(GeneratedQueryStructure, Clocks.systemClock())
-      .generate(plan, context, semanticTable, CostBasedPlannerName.default, readOnly = true, new StubCardinalities, new StubProvidedOrders)
+      .generate(plan, context, semanticTable, readOnly = true, new StubCardinalities)
   }
 
   def compileAndProfile(plan: LogicalPlan, graphDb: GraphDatabaseQueryService): RuntimeResult = {
@@ -102,7 +102,6 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
 
     val generated = clazz.execute(queryContext,
                                   executionMode,
-                                  Provider.NULL(),
                                   tracer.getOrElse(QueryExecutionTracer.NONE),
                                   params)
 

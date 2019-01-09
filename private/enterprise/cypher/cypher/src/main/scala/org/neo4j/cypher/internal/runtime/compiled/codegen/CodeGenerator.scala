@@ -42,10 +42,8 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
   def generate(plan: LogicalPlan,
                tokenContext: TokenContext,
                semanticTable: SemanticTable,
-               plannerName: PlannerName,
                readOnly: Boolean,
-               cardinalities: Cardinalities,
-               providedOrders: ProvidedOrders
+               cardinalities: Cardinalities
               ): CompiledPlan = {
     plan match {
       case res: ProduceResult =>
@@ -56,28 +54,14 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
           case e: Exception => throw new CantCompileQueryException(cause = e)
         }
 
-        val description = new Provider[InternalPlanDescription] {
-          override def get(): InternalPlanDescription = {
-            val d = LogicalPlan2PlanDescription(plan, plannerName, readOnly, cardinalities, providedOrders)
-            query.code.foldLeft(d) {
-              case (descriptionRoot, code) => descriptionRoot.addArgument(code)
-            }.addArgument(Runtime(CompiledRuntimeName.toTextOutput))
-              .addArgument(RuntimeImpl(CompiledRuntimeName.name))
-          }
-        }
-
         val builder = new RunnablePlan {
           def apply(queryContext: QueryContext,
                     execMode: ExecutionMode,
                     tracer: Option[ProfilingTracer],
                     params: MapValue,
                     prePopulateResults: Boolean): RuntimeResult = {
-            val explodingProvider =
-              new Provider[InternalPlanDescription] {
-                override def get(): InternalPlanDescription = ???
-              }
 
-            val execution: GeneratedQueryExecution = query.query.execute(queryContext, execMode, explodingProvider,
+            val execution: GeneratedQueryExecution = query.query.execute(queryContext, execMode,
                                                                          tracer.getOrElse(QueryExecutionTracer.NONE),params)
             new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults)
           }
@@ -85,7 +69,7 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
           def metadata: Seq[Argument] = query.code
         }
 
-        compiled.CompiledPlan(updating = false, description, res.columns, builder)
+        compiled.CompiledPlan(updating = false, res.columns, builder)
 
       case _ => throw new CantCompileQueryException("Can only compile plans with ProduceResult on top")
     }

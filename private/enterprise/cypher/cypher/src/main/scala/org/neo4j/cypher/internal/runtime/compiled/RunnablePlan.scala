@@ -6,14 +6,12 @@
 package org.neo4j.cypher.internal.runtime.compiled
 
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.Provider
-import org.neo4j.cypher.internal.runtime.planDescription.{Argument, InternalPlanDescription}
+import org.neo4j.cypher.internal.runtime.planDescription.Argument
 import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext}
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.values.virtual.MapValue
 
 case class CompiledPlan(updating: Boolean,
-                        planDescription: Provider[InternalPlanDescription],
                         columns: Seq[String],
                         executionResultBuilder: RunnablePlan)
 

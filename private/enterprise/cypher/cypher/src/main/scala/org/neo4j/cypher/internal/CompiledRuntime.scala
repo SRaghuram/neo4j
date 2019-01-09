@@ -30,10 +30,8 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
       newPlan,
       context.tokenContext,
       newSemanticTable,
-      state.plannerName,
       context.readOnly,
-      state.planningAttributes.cardinalities,
-      state.planningAttributes.providedOrders)
+      state.planningAttributes.cardinalities)
     new CompiledExecutionPlan(compiled)
   }
 

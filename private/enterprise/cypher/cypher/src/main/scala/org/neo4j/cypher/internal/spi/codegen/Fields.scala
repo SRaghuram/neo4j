@@ -9,7 +9,6 @@ import org.neo4j.codegen.FieldReference
 
 case class Fields(entityAccessor: FieldReference,
                   executionMode: FieldReference,
-                  description: FieldReference,
                   tracer: FieldReference,
                   params: FieldReference,
                   queryContext: FieldReference,
