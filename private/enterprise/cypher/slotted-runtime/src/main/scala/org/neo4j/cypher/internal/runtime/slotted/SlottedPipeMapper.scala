@@ -223,14 +223,18 @@ class SlottedPipeMapper(fallback: PipeMapper,
               .asInstanceOf[AggregationExpression]
         }
 
-        val groupingColumnsIncoming: Array[Int] = groupingExpressions.values.collect {
-          case NodeFromSlot(offset, _) => offset
-          case RelationshipFromSlot(offset, _) => offset
-        }.toArray
+        val keys = groupingExpressions.keys.toArray
 
-        val groupingColumnsOutgoing: Array[Int] = groupingExpressions.keys.collect {
+        val groupingColumnsIncoming = keys.collect {
+          case key if slots(key).isLongSlot => groupingExpressions(key) match {
+            case NodeFromSlot(offset, _) => offset
+            case RelationshipFromSlot(offset, _) => offset
+          }
+        }
+
+        val groupingColumnsOutgoing: Array[Int] = keys.collect {
           case x if slots(x).isLongSlot => slots(x).offset
-        }.toArray
+        }
 
         if (groupingColumnsIncoming.length == groupingExpressions.size &&
           groupingColumnsIncoming.length == groupingColumnsOutgoing.length) {
