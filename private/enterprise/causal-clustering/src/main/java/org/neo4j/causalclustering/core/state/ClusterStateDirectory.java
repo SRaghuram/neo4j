@@ -19,7 +19,7 @@ public class ClusterStateDirectory
     static final String CLUSTER_STATE_DIRECTORY_NAME = "cluster-state";
 
     private final File stateDir;
-    private final File storeDir;
+    private final File databaseDir;
     private final boolean readOnly;
 
     private boolean initialized;
@@ -34,9 +34,9 @@ public class ClusterStateDirectory
         this( dataDir, dataDir, readOnly );
     }
 
-    public ClusterStateDirectory( File dataDir, File storeDir, boolean readOnly )
+    public ClusterStateDirectory( File dataDir, File databaseDir, boolean readOnly )
     {
-        this.storeDir = storeDir;
+        this.databaseDir = databaseDir;
         this.readOnly = readOnly;
         this.stateDir = new File( dataDir, CLUSTER_STATE_DIRECTORY_NAME );
     }
@@ -80,7 +80,7 @@ public class ClusterStateDirectory
      */
     private void migrateIfNeeded( FileSystemAbstraction fs ) throws ClusterStateException
     {
-        File oldStateDir = new File( storeDir, CLUSTER_STATE_DIRECTORY_NAME );
+        File oldStateDir = new File( databaseDir, CLUSTER_STATE_DIRECTORY_NAME );
         if ( !fs.fileExists( oldStateDir ) || oldStateDir.equals( stateDir ) )
         {
             return;

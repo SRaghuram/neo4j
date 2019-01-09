@@ -76,6 +76,7 @@ import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import org.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import org.neo4j.com.storecopy.StoreUtil;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
@@ -123,6 +124,7 @@ import org.neo4j.udc.UsageData;
 
 import static java.util.Arrays.asList;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_messages_log_path;
+import static org.neo4j.causalclustering.core.IdentityModule.memberIdExists;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -187,8 +189,11 @@ public class EnterpriseCoreEditionModule extends DefaultEditionModule
             final DiscoveryServiceFactory discoveryServiceFactory )
     {
         final Dependencies dependencies = platformModule.dependencies;
-        config = platformModule.config;
         final LogService logging = platformModule.logging;
+
+        this.config = platformModule.config;
+        this.logProvider = logging.getInternalLogProvider();
+
         final FileSystemAbstraction fileSystem = platformModule.fileSystem;
         final DatabaseLayout databaseLayout = platformModule.storeLayout.databaseLayout( config.get( GraphDatabaseSettings.active_database ) );
         final LifeSupport life = platformModule.life;
@@ -205,12 +210,15 @@ public class EnterpriseCoreEditionModule extends DefaultEditionModule
         {
             throw new RuntimeException( e );
         }
+
+        boolean wasUnboundOnCreation = !memberIdExists( clusterStateDirectory.get(), fileSystem, logProvider );
+        life.add( new IdFilesSanitationModule( wasUnboundOnCreation, dependencies.provideDependency( DatabaseManager.class ), fileSystem, logProvider ) );
+
         dependencies.satisfyDependency( clusterStateDirectory );
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( platformModule.clock, logging, platformModule.config );
         threadToTransactionBridge = dependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
 
-        logProvider = logging.getInternalLogProvider();
         final Supplier<DatabaseHealth> databaseHealthSupplier =
                 () -> platformModule.dataSourceManager.getDataSource().getDependencyResolver().resolveDependency( DatabaseHealth.class );
 

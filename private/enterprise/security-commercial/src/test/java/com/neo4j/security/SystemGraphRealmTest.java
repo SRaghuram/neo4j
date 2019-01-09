@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,13 +31,13 @@ import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
+import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
@@ -49,6 +50,7 @@ import org.neo4j.server.security.enterprise.log.SecurityLog;
 import org.neo4j.string.UTF8;
 import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.startsWith;
@@ -487,6 +489,12 @@ public class SystemGraphRealmTest
         @Override
         public void shutdownDatabase( String name )
         {
+        }
+
+        @Override
+        public List<String> listDatabases()
+        {
+            return singletonList( SYSTEM_DATABASE_NAME );
         }
     }
 

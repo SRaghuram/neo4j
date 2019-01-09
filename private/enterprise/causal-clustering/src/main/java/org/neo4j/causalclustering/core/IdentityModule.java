@@ -30,8 +30,7 @@ public class IdentityModule
 
         Log log = logProvider.getLog( getClass() );
 
-        SimpleStorage<MemberId> memberIdStorage = new SimpleFileStorage<>( fileSystem, clusterStateDirectory,
-                CORE_MEMBER_ID_NAME, new MemberId.Marshal(), logProvider );
+        SimpleStorage<MemberId> memberIdStorage = memberIdStorage( clusterStateDirectory, fileSystem, logProvider );
 
         try
         {
@@ -58,6 +57,16 @@ public class IdentityModule
         }
 
         platformModule.jobScheduler.setTopLevelGroupName( "Core " + myself );
+    }
+
+    private static SimpleStorage<MemberId> memberIdStorage( File clusterStateDirectory, FileSystemAbstraction fileSystem, LogProvider logProvider )
+    {
+        return new SimpleFileStorage<>( fileSystem, clusterStateDirectory, CORE_MEMBER_ID_NAME, new MemberId.Marshal(), logProvider );
+    }
+
+    static boolean memberIdExists( File clusterStateDirectory, FileSystemAbstraction fileSystem, LogProvider logProvider )
+    {
+        return memberIdStorage( clusterStateDirectory, fileSystem, logProvider ).exists();
     }
 
     public MemberId myself()
