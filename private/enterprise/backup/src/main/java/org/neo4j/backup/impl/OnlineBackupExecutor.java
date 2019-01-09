@@ -7,6 +7,7 @@ package org.neo4j.backup.impl;
 
 import java.io.OutputStream;
 
+import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import org.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.consistency.ConsistencyCheckService;
@@ -16,6 +17,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -52,13 +54,14 @@ public class OnlineBackupExecutor
     {
         try ( BackupSupportingClasses supportingClasses = createBackupSupportingClasses( context ) )
         {
+            LogProvider userLogProvider = setupUserLogProvider();
             PageCache pageCache = supportingClasses.getPageCache();
 
             StoreFiles storeFiles = new StoreFiles( fs, pageCache );
             BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ) );
 
             BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), logProvider, storeFiles );
-            BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, logProvider );
+            BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, logProvider );
 
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, logProvider, progressMonitorFactory, wrapper );
             coordinator.performBackup( context );
@@ -76,6 +79,16 @@ public class OnlineBackupExecutor
         BackupSupportingClassesFactory factory = classesFactoryProvider.getFactory( backupModule );
 
         return factory.createSupportingClasses( context );
+    }
+
+    private LogProvider setupUserLogProvider()
+    {
+        LogProvider userLogProvider = FormattedLogProvider.toOutputStream( outputStream );
+
+        StoreCopyClientMonitor backupStoreCopyMonitor = new BackupOutputMonitor( userLogProvider );
+        monitors.addMonitorListener( backupStoreCopyMonitor );
+
+        return userLogProvider;
     }
 
     public static final class Builder

@@ -24,6 +24,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -44,6 +45,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class BackupStrategyWrapperTest
@@ -66,7 +68,6 @@ class BackupStrategyWrapperTest
     private OnlineBackupRequiredArguments requiredArguments;
     private final Config config = mock( Config.class );
     private final AdvertisedSocketAddress address = new AdvertisedSocketAddress( "neo4j.com", 6362 );
-    private final String databaseName = "graph.db";
     private final PageCache pageCache = mock( PageCache.class );
     private final LogProvider logProvider = mock( LogProvider.class );
     private final Log log = mock( Log.class );
@@ -85,7 +86,8 @@ class BackupStrategyWrapperTest
         when( backupCopyService.findNewBackupLocationForBrokenExisting( any() ) ).thenReturn( availableOldBackupLocation );
         when( logProvider.getLog( (Class) any() ) ).thenReturn( log );
 
-        backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache, logProvider ) );
+        backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache,
+                NullLogProvider.getInstance(), logProvider ) );
     }
 
     @Test
@@ -507,8 +509,6 @@ class BackupStrategyWrapperTest
         verify( log ).info( "Previous backup not found, a new full backup will be performed." );
     }
 
-    // ====================================================================================================
-
     private void incrementalBackupIsSuccessful( boolean isSuccessful ) throws Exception
     {
         if ( isSuccessful )
@@ -538,7 +538,7 @@ class BackupStrategyWrapperTest
     private OnlineBackupRequiredArguments requiredArguments( boolean fallbackToFull )
     {
         File databaseDirectory = desiredBackupLayout.databaseDirectory();
-        return new OnlineBackupRequiredArguments( address, databaseName, desiredBackupLayout.getStoreLayout().storeDirectory().toPath(),
+        return new OnlineBackupRequiredArguments( address, DEFAULT_DATABASE_NAME, desiredBackupLayout.getStoreLayout().storeDirectory().toPath(),
                 databaseDirectory.getName(), fallbackToFull, true, reportDir );
     }
 

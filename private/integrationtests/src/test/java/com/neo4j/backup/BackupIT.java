@@ -806,6 +806,7 @@ class BackupIT
                 .build();
 
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
+                .withOutputStream( System.out )
                 .withLogProvider( FormattedLogProvider.toOutputStream( System.out ) )
                 .build();
 

@@ -27,19 +27,20 @@ class BackupStrategyWrapper
 {
     private final BackupStrategy backupStrategy;
     private final BackupCopyService backupCopyService;
-    private final Log log;
-
+    private final Log userLog;
+    private final Log debugLog;
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
 
     BackupStrategyWrapper( BackupStrategy backupStrategy, BackupCopyService backupCopyService, FileSystemAbstraction fs, PageCache pageCache,
-            LogProvider logProvider )
+            LogProvider userLogProvider, LogProvider logProvider )
     {
         this.backupStrategy = backupStrategy;
         this.backupCopyService = backupCopyService;
         this.fs = fs;
         this.pageCache = pageCache;
-        this.log = logProvider.getLog( BackupStrategyWrapper.class );
+        this.userLog = userLogProvider.getLog( getClass() );
+        this.debugLog = logProvider.getLog( getClass() );
     }
 
     /**
@@ -68,7 +69,7 @@ class BackupStrategyWrapper
 
         if ( previousBackupExists )
         {
-            log.info( "Previous backup found, trying incremental backup." );
+            debugLog.info( "Previous backup found, trying incremental backup." );
             if ( tryIncrementalBackup( backupLayout, config, address, fallbackToFull ) )
             {
                 return;
@@ -77,12 +78,12 @@ class BackupStrategyWrapper
 
         if ( previousBackupExists && fallbackToFull )
         {
-            log.info( "Incremental backup failed, a new full backup will be performed." );
+            debugLog.info( "Incremental backup failed, a new full backup will be performed." );
             fullBackupWithTemporaryFolderResolutions( onlineBackupContext );
         }
         else if ( !previousBackupExists )
         {
-            log.info( "Previous backup not found, a new full backup will be performed." );
+            debugLog.info( "Previous backup not found, a new full backup will be performed." );
             fullBackupWithTemporaryFolderResolutions( onlineBackupContext );
         }
         else
@@ -105,7 +106,7 @@ class BackupStrategyWrapper
         {
             if ( fallbackToFullAllowed )
             {
-                log.warn( "Incremental backup failed", e );
+                debugLog.warn( "Incremental backup failed", e );
                 return false;
             }
             else
@@ -133,7 +134,8 @@ class BackupStrategyWrapper
 
         if ( backupToATemporaryLocation )
         {
-            log.info( "Full backup will be first performed to a temporary directory '%s' because the specified directory '%s' already exists and is not empty",
+            userLog.info(
+                    "Full backup will be first performed to a temporary directory '%s' because the specified directory '%s' already exists and is not empty",
                     temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }
 
@@ -181,11 +183,11 @@ class BackupStrategyWrapper
         {
             Path newBackupLocationForPreExistingBackup = backupCopyService.findNewBackupLocationForBrokenExisting( userSpecifiedBackupLocation );
 
-            log.info( "Moving pre-existing directory '%s' that does not contain a valid backup to '%s'",
+            userLog.info( "Moving pre-existing directory '%s' that does not contain a valid backup to '%s'",
                     userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
             backupCopyService.moveBackupLocation( userSpecifiedBackupLocation, newBackupLocationForPreExistingBackup );
 
-            log.info( "Moving temporary backup directory '%s' to the specified directory '%s'",
+            userLog.info( "Moving temporary backup directory '%s' to the specified directory '%s'",
                     temporaryFullBackupLocation, userSpecifiedBackupLocation );
             backupCopyService.moveBackupLocation( temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }

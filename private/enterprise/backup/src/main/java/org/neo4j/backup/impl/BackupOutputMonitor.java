@@ -5,10 +5,7 @@
  */
 package org.neo4j.backup.impl;
 
-import java.io.OutputStream;
-
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -19,10 +16,9 @@ class BackupOutputMonitor implements StoreCopyClientMonitor
 {
     private final Log log;
 
-    BackupOutputMonitor( OutputStream outputStream )
+    BackupOutputMonitor( LogProvider logProvider )
     {
-        LogProvider stdOutLogProvider = FormattedLogProvider.toOutputStream( outputStream );
-        log = stdOutLogProvider.getLog( BackupOutputMonitor.class );
+        log = logProvider.getLog( getClass() );
     }
 
     @Override

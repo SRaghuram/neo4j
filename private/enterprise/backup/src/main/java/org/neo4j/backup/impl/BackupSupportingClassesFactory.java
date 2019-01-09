@@ -71,7 +71,6 @@ public class BackupSupportingClassesFactory
      */
     BackupSupportingClasses createSupportingClasses( OnlineBackupContext context )
     {
-        monitors.addMonitorListener( new BackupOutputMonitor( outputStream ) );
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler );
         return new BackupSupportingClasses(
                 backupDelegatorFromConfig( pageCache, context.getConfig(), context.getRequiredArguments() ),

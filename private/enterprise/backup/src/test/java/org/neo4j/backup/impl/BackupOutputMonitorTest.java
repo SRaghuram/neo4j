@@ -6,35 +6,29 @@
 package org.neo4j.backup.impl;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.logging.AssertableLogProvider;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
-@ExtendWith( SuppressOutputExtension.class )
 class BackupOutputMonitorTest
 {
-    @Inject
-    private SuppressOutput suppressOutput;
-
     @Test
     void receivingStoreFilesMessageCorrect()
     {
         // given
         Monitors monitors = new Monitors();
-        monitors.addMonitorListener( new BackupOutputMonitor( System.out ) );
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        monitors.addMonitorListener( new BackupOutputMonitor( logProvider ) );
 
         // when
         StoreCopyClientMonitor storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
         storeCopyClientMonitor.startReceivingStoreFiles();
 
         // then
-        assertThat( suppressOutput.getOutputVoice().toString(), containsString( "Start receiving store files" ) );
+        logProvider.assertAtLeastOnce( inLog( BackupOutputMonitor.class ).info( containsString( "Start receiving store files" ) ) );
     }
 }
