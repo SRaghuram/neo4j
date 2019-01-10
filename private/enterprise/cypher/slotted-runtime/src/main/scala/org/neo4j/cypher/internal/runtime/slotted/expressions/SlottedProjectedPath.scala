@@ -13,7 +13,7 @@ import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.cypher.operations.CypherFunctions.{endNode, startNode}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.NO_VALUE
-import org.neo4j.values.virtual.{ListValue, RelationshipValue}
+import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}
 
 object SlottedProjectedPath {
 
@@ -56,16 +56,8 @@ object SlottedProjectedPath {
   case class multiIncomingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
     def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
       case list: ListValue if list.nonEmpty() =>
-        var aggregated = builder
-        val size = list.size()
-        var i = 0
-        while (i < size - 1) {
-          //we know these relationships have already loaded start and end relationship
-          //so we should not use CypherFunctions::[start,end]Node to look them up
-          aggregated = builder.addIncomingRelationship(list.value(i))
-          i += 1
-        }
-        tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
+        val aggregated = addAllExceptLast(builder, list, (b, v) => b.addIncomingRelationship(v))
+        tailProjector(ctx, state, aggregated.addRelationship(list.last()).addNode(node.apply(ctx, state)))
 
       case _: ListValue => tailProjector(ctx, state, builder)
       case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
@@ -76,16 +68,26 @@ object SlottedProjectedPath {
   case class multiOutgoingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
     def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
       case list: ListValue if list.nonEmpty() =>
-        var aggregated = builder
-        val size = list.size()
-        var i = 0
-        while (i < size - 1) {
-          //we know these relationships have already loaded start and end relationship
-          //so we should not use CypherFunctions::[start,end]Node to look them up
-          aggregated = builder.addOutgoingRelationship(list.value(i))
-          i += 1
+        val aggregated = addAllExceptLast(builder, list, (b, v) => b.addOutgoingRelationship(v))
+        tailProjector(ctx, state, aggregated.addRelationship(list.last()).addNode(node.apply(ctx, state)))
+
+      case _: ListValue => tailProjector(ctx, state, builder)
+      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
+      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
+    }
+  }
+
+  case class multiUndirectedRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
+    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
+      case list: ListValue if list.nonEmpty() =>
+        if (correctDirection(builder.previousNode, list.head()))  {
+          val aggregated = addAllExceptLast(builder, list, (b, v) => b.addOutgoingRelationship(v))
+          tailProjector(ctx, state,aggregated.addRelationship(list.last()).addNode(node.apply(ctx, state)))
+        } else {
+          val reversed = list.reverse()
+          val aggregated = addAllExceptLast(builder, reversed, (b, v) => b.addOutgoingRelationship(v))
+          tailProjector(ctx, state, aggregated.addRelationship(reversed.last()).addNode(node.apply(ctx, state)))
         }
-        tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
 
       case _: ListValue => tailProjector(ctx, state, builder)
       case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
@@ -143,6 +145,25 @@ object SlottedProjectedPath {
 
     case NO_VALUE => builder.addNoValue()
     case _ => throw new CypherTypeException(s"Expected RelationshipValue but got ${relValue.getTypeName}")
+  }
+
+  private def addAllExceptLast(builder: PathValueBuilder, list: ListValue, f: (PathValueBuilder, AnyValue) => PathValueBuilder) = {
+    var aggregated = builder
+    val size = list.size()
+    var i = 0
+    while (i < size - 1) {
+      //we know these relationships have already loaded start and end relationship
+      //so we should not use CypherFunctions::[start,end]Node to look them up
+      aggregated = f(aggregated, list.value(i))
+      i += 1
+    }
+    aggregated
+  }
+
+  private def correctDirection(previous: NodeValue, first: AnyValue) = {
+    val rel = first.asInstanceOf[RelationshipValue]
+    val correctDirection = rel.startNode().id() == previous.id() || rel.endNode().id() == previous.id()
+    correctDirection
   }
 }
 
