@@ -52,6 +52,8 @@ class PreSortOperator(val workIdentity: WorkIdentity,
       }
 
       maybeLimit match {
+        case Some(0) =>
+          currentRow.finishedWriting()
         case Some(limit) if limit < currentRow.numberOfRows =>
           // a table to hold the top n entries
           val topTable = new DefaultComparatorTopTable(comparator, limit)

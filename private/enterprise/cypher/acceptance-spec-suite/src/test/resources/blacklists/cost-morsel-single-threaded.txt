@@ -127,8 +127,6 @@ Feature "SkipLimitAcceptance": Scenario "Limit before top"
 Feature "SkipLimitAcceptance": Scenario "Limit in with clause"
 Feature "SkipLimitAcceptance": Scenario "Negative parameter for LIMIT should not generate errors"
 Feature "SkipLimitAcceptance": Scenario "Stand alone limit in the return clause"
-// TODO: FIXME runtime failure - Tries to create a table with size 0
-Feature "SkipLimitAcceptance": Scenario "Top with limit 0"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with empty db"
 Feature "UnwindAcceptance": Scenario "Pattern comprehension in unwind with hits"
 Feature "VarLengthAcceptance": Scenario "Handles checking properties on relationships in multistep path - using ALL() function on path relationship properties"
