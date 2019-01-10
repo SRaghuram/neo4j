@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.parallel.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.AggregationExpressionOperator
 import org.neo4j.cypher.internal.runtime.vectorized.operators._
@@ -128,7 +129,8 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
 
       val thisOp = plan match {
         case plans.ProduceResult(_, columns) =>
-          new ProduceResultOperator(WorkIdentity.fromPlan(plan), slots, columns.toArray)
+          val runtimeColumns = createProjectionsForResult(columns, slots)
+          new ProduceResultOperator(WorkIdentity.fromPlan(plan), slots, runtimeColumns)
 
         case plans.Selection(predicate, _) =>
           new FilterOperator(WorkIdentity.fromPlan(plan), converters.toCommandPredicate(id, predicate))

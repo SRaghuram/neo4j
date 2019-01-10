@@ -14,9 +14,12 @@ import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{Predicate, True}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{KeyTokenResolver, expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, ColumnOrder => _, _}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
@@ -326,19 +329,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
       }
   }
 
-  private def createProjectionsForResult(columns: Seq[String], slots: SlotConfiguration) = {
-    val runtimeColumns: Seq[(String, commandExpressions.Expression)] =
-      columns.map(createProjectionForIdentifier(slots))
-    runtimeColumns
-  }
-
-  private def createProjectionForIdentifier(slots: SlotConfiguration)(identifier: String) = {
-    val slot = slots.get(identifier).getOrElse(
-      throw new InternalException(s"Did not find `$identifier` in the slot configuration")
-    )
-    identifier -> SlottedPipeMapper.projectSlotExpression(slot)
-  }
-
   private def buildPredicate(id: Id, expr: frontEndAst.Expression): Predicate =
     expressionConverters
       .toCommandPredicate(id, expr)
@@ -589,6 +579,19 @@ class SlottedPipeMapper(fallback: PipeMapper,
 }
 
 object SlottedPipeMapper {
+
+  def createProjectionsForResult(columns: Seq[String], slots: SlotConfiguration): Seq[(String, Expression)] = {
+    val runtimeColumns: Seq[(String, commandExpressions.Expression)] =
+      columns.map(createProjectionForIdentifier(slots))
+    runtimeColumns
+  }
+
+  private def createProjectionForIdentifier(slots: SlotConfiguration)(identifier: String): (String, Expression) = {
+    val slot = slots.get(identifier).getOrElse(
+      throw new InternalException(s"Did not find `$identifier` in the slot configuration")
+    )
+    identifier -> SlottedPipeMapper.projectSlotExpression(slot)
+  }
 
   private def projectSlotExpression(slot: Slot): commandExpressions.Expression = slot match {
     case LongSlot(offset, false, CTNode) =>
