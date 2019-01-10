@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.queryReduction
 
-import org.neo4j.cypher.internal.compatibility.CommunityRuntimeContextCreator
+import org.neo4j.cypher.internal.compatibility.{CommunityRuntimeContextCreator, LogicalQuery}
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.compiler.v4_0.phases.{LogicalPlanState, PlannerContextCreator}
@@ -187,10 +187,17 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
                                                       txContextWrapper.kernelTransaction.schemaRead(),
                                                       MasterCompiler.CLOCK,
                                                       Set(),
-                                                      readOnly,
                                                       enterprise)
 
-    val executionPlan = runtime.compileToExecutable(logicalPlanState, runtimeContext)
+    val logicalQuery = LogicalQuery(logicalPlanState.logicalPlan,
+                                    logicalPlanState.queryText,
+                                    readOnly,
+                                    logicalPlanState.statement().returnColumns.toArray,
+                                    logicalPlanState.semanticTable(),
+                                    logicalPlanState.planningAttributes.cardinalities,
+                                    logicalPlanState.periodicCommit)
+
+    val executionPlan = runtime.compileToExecutable(logicalQuery, runtimeContext)
 
     val queryContext = new TransactionBoundQueryContext(txContextWrapper)(CypherReductionSupport.searchMonitor)
 

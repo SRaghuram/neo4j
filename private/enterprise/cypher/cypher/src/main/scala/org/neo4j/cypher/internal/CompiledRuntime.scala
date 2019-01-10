@@ -28,7 +28,7 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val compiled: CompiledPlan = codeGen.generate(newPlan,
                                                   context.tokenContext,
                                                   newSemanticTable,
-                                                  context.readOnly,
+                                                  query.readOnly,
                                                   query.cardinalities)
     new CompiledExecutionPlan(compiled)
   }

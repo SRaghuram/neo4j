@@ -62,8 +62,8 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         }
 
       val queryIndexes = new QueryIndexes(context.schemaRead)
-      val fallback = InterpretedPipeMapper(context.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
-      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, context.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
+      val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
+      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
       val pipeTreeBuilder = PipeTreeBuilder(pipeBuilder)
       val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
       val pipe = pipeTreeBuilder.build(logicalPlanWithConvertedNestedPlans)
@@ -72,7 +72,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val resultBuilderFactory =
         new SlottedExecutionResultBuilderFactory(pipe,
                                                  queryIndexes,
-                                                 context.readOnly,
+                                                 query.readOnly,
                                                  columns,
                                                  logicalPlan,
                                                  physicalPlan.slotConfigurations,
@@ -91,7 +91,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         periodicCommitInfo,
         resultBuilderFactory,
         SlottedRuntimeName,
-        context.readOnly)
+        query.readOnly)
     }
     catch {
       case e: CypherException =>

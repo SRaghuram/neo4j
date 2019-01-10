@@ -55,7 +55,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val (slottedPipeMapper: SlottedPipeMapper, logicalPlanWithConvertedNestedPlans: LogicalPlan) =
       createSlottedPipeFallback(query, context, logicalPlan, physicalPlan, converters, queryIndexes)
 
-    val operatorBuilder = new PipelineBuilder(physicalPlan, converters, context.readOnly, queryIndexes, slottedPipeMapper)
+    val operatorBuilder = new PipelineBuilder(physicalPlan, converters, query.readOnly, queryIndexes, slottedPipeMapper)
 
     val operators = operatorBuilder.create(logicalPlanWithConvertedNestedPlans)
     val dispatcher = context.runtimeEnvironment.getDispatcher(context.debugOptions)
@@ -96,8 +96,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         CommunityExpressionConverter(context.tokenContext))
     }
 
-    val interpretedPipeMapper = InterpretedPipeMapper(context.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
-    val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, context.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
+    val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
+    val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
     val pipeTreeBuilder = PipeTreeBuilder(slottedPipeMapper)
     val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
     (slottedPipeMapper, logicalPlanWithConvertedNestedPlans)
