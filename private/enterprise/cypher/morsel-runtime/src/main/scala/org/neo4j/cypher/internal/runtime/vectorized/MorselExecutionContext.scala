@@ -6,13 +6,11 @@
 package org.neo4j.cypher.internal.runtime.vectorized
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{Value, Values}
-import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -141,7 +139,6 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   /**
     * Copies the whole row from input to this.
-    * @param input
     */
   def copyFrom(input: MorselExecutionContext): Unit = copyFrom(input, input.longsPerRow, input.refsPerRow)
 
@@ -153,9 +150,9 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def getRefAt(offset: Int): AnyValue = morsel.refs(currentRow * refsPerRow + offset)
 
-  override def getByName(name: String): AnyValue = fail()
+  override def getByName(name: String): AnyValue = slots.maybeGetter(name).map(g => g(this)).getOrElse(throw new NotFoundException(s"Unknown variable `$name`."))
 
-  override def containsName(name: String): Boolean = fail()
+  override def containsName(name: String): Boolean = slots.maybeGetter(name).map(g => g(this)).isDefined
 
   override def numberOfColumns: Int = longsPerRow + refsPerRow
 
