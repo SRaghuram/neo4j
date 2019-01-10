@@ -615,199 +615,79 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Map("n.age" -> 10)
     ))
   }
+
   test("should plan sort in optimal position within idp") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u.name"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
   }
 
   test("should plan sort in optimal position within idp - a") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' WITH b, u AS v WITH b, v.name as name RETURN name, b.title ORDER BY name"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withRows(200)
   }
 
   test("should plan sort in optimal position within idp - b") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY b.title"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
   }
 
   test("should plan sort in optimal position within idp - c") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
   }
 
   test("should plan sort in optimal position within idp - d") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY b"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
   }
 
   test("should plan sort in optimal position within idp - 1") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(p => createLabeledNode(Map("name" -> s"Jane_$p"), "Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name + p.name, b.title ORDER BY u.name + p.name"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(20))
   }
 
   test("should plan sort in optimal position within idp - 2") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name AS name, b.title ORDER BY name"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
   }
 
   test("should plan sort in optimal position within idp - 3") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name AS name, b.title ORDER BY u.name"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
   }
 
   test("should plan sort in optimal position within idp - 4") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u AS v, b.title ORDER BY v.name"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
   }
 
   test("should plan sort in optimal position within idp - 5") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u, b.title ORDER BY u.name + p.name"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
   }
 
   test("should plan sort in optimal position within idp - 6") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
+    makeJoesAndFriends(2, 10, 10)
     val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u, b.title ORDER BY u.name + b.title"
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withRows(200).onTopOf(aPlan("Projection"))
@@ -865,21 +745,30 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("Order by should be correct when updating property") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i", "foo" -> i), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 2).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
+    makeJoesAndFriends(2, 2, 1)
+    val query = "MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' SET u.name = 'joe' RETURN u.name, u.foo ORDER BY u.name ASC, u.foo DESC"
+    val result = executeSingle(query)
+    result.toList should be(List(
+      Map("u.name" -> "joe", "u.foo" -> 1),
+      Map("u.name" -> "joe", "u.foo" -> 1),
+      Map("u.name" -> "joe", "u.foo" -> 0),
+      Map("u.name" -> "joe", "u.foo" -> 0)))
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Sort").withOrder(ProvidedOrder.asc("u.name").desc("u.foo"))
+      .onTopOf(includeSomewhere.aPlan("SetProperty"))
+  }
+
+  private def makeJoesAndFriends(joes: Int, janes: Int, books: Int): Unit = {
+    Range(0, joes).map(i => createLabeledNode(Map("name" -> s"Joe_$i", "foo" -> i), "Person")).foreach { n =>
+      val friends = Range(0, janes).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
       friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
       friends.foreach { friend =>
         relate(n, friend, "FRIEND")
-        Range(0, 1).foreach { b =>
+        Range(0, books).foreach { b =>
           val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
           relate(friend, book, "READ")
         }
       }
     }
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' SET u.name = 'joe' RETURN u.name, u.foo ORDER BY u.name ASC, u.foo DESC"
-    val result = executeSingle(query)
-    //println(result.executionPlanDescription())
-    result.toList should be(List(Map("u.name" -> "joe", "u.foo" -> 1), Map("u.name" -> "joe", "u.foo" -> 1), Map("u.name" -> "joe", "u.foo" -> 0), Map("u.name" -> "joe", "u.foo" -> 0)))
   }
 }
