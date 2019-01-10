@@ -1,4 +1,5 @@
 Feature "AggregationAcceptance": Scenario "Distinct should work with multiple equal grouping keys and only one different"
+Feature "AggregationAcceptance": Scenario "Multiple aggregations should work"
 Feature "AggregationAcceptance": Scenario "Using a optional match after aggregation and before an aggregation"
 Feature "AggregationAcceptance": Scenario "percentileDisc on empty data should return null"
 Feature "ConstraintAcceptance": Scenario "Failing when creation would violate constraint"
