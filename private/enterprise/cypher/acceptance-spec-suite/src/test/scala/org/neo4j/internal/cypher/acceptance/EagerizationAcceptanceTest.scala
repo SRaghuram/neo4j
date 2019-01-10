@@ -302,7 +302,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH (x), (y) CALL user.expand(x, y) YIELD relId RETURN x, y, relId"
 
     // Correct! No eagerization necessary
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.size should equal(2)

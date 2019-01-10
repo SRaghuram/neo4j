@@ -14,7 +14,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should return result") {
     registerTestProcedures()
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.stream123() YIELD count, name RETURN count, name ORDER BY count")
 
     result.toList should equal(List(
@@ -29,7 +29,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.aNodeWithLabel( 'Cat' ) YIELD node RETURN node")
 
     result.size should equal(1)
@@ -40,7 +40,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.recurseN( 3 ) YIELD node RETURN node")
 
     result.size should equal(1)
@@ -52,7 +52,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     graph.execute("UNWIND [1,2,3] AS i CREATE (a:Cat)")
     graph.execute("UNWIND [1,2] AS i CREATE (a:Mouse)")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "CALL org.neo4j.findNodesWithLabel( 'Cat' ) YIELD node RETURN node")
 
     result.size should equal(3)
@@ -63,7 +63,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
 
     graph.execute("CREATE (c:Cat) WITH c UNWIND [1,2,3] AS i CREATE (c)-[:HUNTS]->(m:Mouse)")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (c:Cat) CALL org.neo4j.expandNode( id( c ) ) YIELD node AS n RETURN n")
 
     result.size should equal(3)
@@ -101,7 +101,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
         |CREATE (n2)-[:Rel {weight:2}]->(e)
         |""".stripMargin)
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (s:Start),(e:End) CALL org.neo4j.graphAlgosDijkstra( s, e, 'Rel', 'weight' ) YIELD node RETURN node")
 
     result.size should equal(5) // s -> n3 -> n4 -> n5 -> e
@@ -115,7 +115,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     graph.execute("MATCH (c:Person) WHERE c.name in ['Clint Eastwood', 'Gene Hackman'] SET c:Western")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """MATCH (k:Person {name:'Keanu Reeves'})
                  |CALL org.neo4j.movieTraversal(k) YIELD path RETURN last(nodes(path)).name AS name""".stripMargin)
 

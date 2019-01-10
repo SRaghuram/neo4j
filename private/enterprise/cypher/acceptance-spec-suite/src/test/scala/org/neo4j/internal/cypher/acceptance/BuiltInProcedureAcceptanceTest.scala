@@ -21,7 +21,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     createLabeledNode("C")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.labels() YIELD label WHERE label <> 'A' RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label WHERE label <> 'A' RETURN *")
 
     // ThenBuiltInProceduresIT.java:136
     result.toList should equal(
@@ -133,7 +133,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     createLabeledNode("C")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.labels() YIELD label RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label RETURN *")
 
     // Then
     result.toList should equal(
@@ -150,7 +150,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     createLabeledNode(Map("name" -> "Toc"), "C")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n {name: 'Toc'}) WITH n.name AS name CALL db.labels() YIELD label RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n {name: 'Toc'}) WITH n.name AS name CALL db.labels() YIELD label RETURN *")
 
     // Then
     result.toList should equal(
@@ -169,7 +169,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     createLabeledNode(Map("name" -> "Toc"), "C")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.labels() YIELD label, nodeCount RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, nodeCount RETURN *")
 
     // Then
     result.toList should equal(
@@ -190,7 +190,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     execute("MATCH (c:C) REMOVE c:C")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.labels() YIELD label, nodeCount RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label, nodeCount RETURN *")
 
     // Then
     result.toList should equal(
@@ -243,7 +243,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
   test("db.labels works on an empty database") {
     // Given an empty database
     //When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.labels() YIELD label RETURN *")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.labels() YIELD label RETURN *")
 
     // Then
     result.toList shouldBe empty
@@ -566,7 +566,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     graph.createIndex("A", "bar")
 
     //When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "CALL db.indexes() YIELD description RETURN description")
+    val result = executeWith(Configs.InterpretedAndSlotted, "CALL db.indexes() YIELD description RETURN description")
 
     // Then
     result.columnAs("description").toList should equal(
