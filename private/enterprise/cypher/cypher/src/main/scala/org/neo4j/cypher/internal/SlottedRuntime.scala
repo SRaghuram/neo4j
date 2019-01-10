@@ -5,12 +5,11 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.compatibility.CypherRuntime
 import org.neo4j.cypher.internal.compatibility.InterpretedRuntime.InterpretedExecutionPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{PeriodicCommitInfo, ExecutionPlan => ExecutionPlan_V35}
-import org.neo4j.cypher.internal.compiler.v4_0.phases.LogicalPlanState
+import org.neo4j.cypher.internal.compatibility.{CypherRuntime, LogicalQuery}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
@@ -18,8 +17,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{Community
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper}
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.CypherException
 
 object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
@@ -38,13 +37,13 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
   override val PRINT_FAILURE_STACK_TRACE = true
 
   @throws[CantCompileQueryException]
-  override def compileToExecutable(state: LogicalPlanState, context: EnterpriseRuntimeContext): ExecutionPlan_V35 = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan_V35 = {
     try {
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
-        printPlanInfo(state)
+        printPlanInfo(query)
       }
 
-      val (logicalPlan, physicalPlan) = rewritePlan(context, state.logicalPlan, state.semanticTable())
+      val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
 
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printRewrittenPlanInfo(logicalPlan)
@@ -63,13 +62,13 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         }
 
       val queryIndexes = new QueryIndexes(context.schemaRead)
-      val fallback = InterpretedPipeMapper(context.readOnly, converters, context.tokenContext, queryIndexes)(state.semanticTable)
-      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, context.readOnly, queryIndexes)(state.semanticTable, context.tokenContext)
+      val fallback = InterpretedPipeMapper(context.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
+      val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, context.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
       val pipeTreeBuilder = PipeTreeBuilder(pipeBuilder)
       val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
       val pipe = pipeTreeBuilder.build(logicalPlanWithConvertedNestedPlans)
-      val periodicCommitInfo = state.periodicCommit.map(x => PeriodicCommitInfo(x.batchSize))
-      val columns = state.statement().returnColumns
+      val periodicCommitInfo = query.periodicCommit.map(x => PeriodicCommitInfo(x.batchSize))
+      val columns = query.resultColumns
       val resultBuilderFactory =
         new SlottedExecutionResultBuilderFactory(pipe,
                                                  queryIndexes,
@@ -82,7 +81,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       if (ENABLE_DEBUG_PRINTS) {
         if (!PRINT_PLAN_INFO_EARLY) {
           // Print after execution plan building to see any occurring exceptions first
-          printPlanInfo(state)
+          printPlanInfo(query)
           printRewrittenPlanInfo(logicalPlan)
         }
         printPipe(physicalPlan.slotConfigurations, pipe)
@@ -99,7 +98,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         if (ENABLE_DEBUG_PRINTS) {
           printFailureStackTrace(e)
           if (!PRINT_PLAN_INFO_EARLY) {
-            printPlanInfo(state)
+            printPlanInfo(query)
           }
         }
         throw e

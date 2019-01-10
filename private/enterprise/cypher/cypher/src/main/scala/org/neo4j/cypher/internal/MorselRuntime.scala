@@ -5,13 +5,12 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.compatibility.CypherRuntime
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{ExecutionPlan => ExecutionPlan_V35}
+import org.neo4j.cypher.internal.compatibility.{CypherRuntime, LogicalQuery}
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
-import org.neo4j.cypher.internal.compiler.v4_0.phases.LogicalPlanState
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
@@ -22,20 +21,20 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.vectorized.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.vectorized.{Dispatcher, Pipeline, PipelineBuilder}
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
-  override def compileToExecutable(state: LogicalPlanState, context: EnterpriseRuntimeContext): ExecutionPlan_V35 = {
-    val (logicalPlan, physicalPlan) = rewritePlan(context, state.logicalPlan, state.semanticTable())
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan_V35 = {
+    val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -54,14 +53,14 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     // We can use lazy slotted pipes as a fallback for some missing operators. This also converts nested logical plans
     val (slottedPipeMapper: SlottedPipeMapper, logicalPlanWithConvertedNestedPlans: LogicalPlan) =
-      createSlottedPipeFallback(state, context, logicalPlan, physicalPlan, converters, queryIndexes)
+      createSlottedPipeFallback(query, context, logicalPlan, physicalPlan, converters, queryIndexes)
 
     val operatorBuilder = new PipelineBuilder(physicalPlan, converters, context.readOnly, queryIndexes, slottedPipeMapper)
 
     val operators = operatorBuilder.create(logicalPlanWithConvertedNestedPlans)
     val dispatcher = context.runtimeEnvironment.getDispatcher(context.debugOptions)
     val tracer = context.runtimeEnvironment.tracer
-    val fieldNames = state.statement().returnColumns.toArray
+    val fieldNames = query.resultColumns
 
     VectorizedExecutionPlan(operators,
                             physicalPlan.slotConfigurations,
@@ -80,7 +79,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     (logicalPlan, physicalPlan)
   }
 
-  private def createSlottedPipeFallback(state: LogicalPlanState,
+  private def createSlottedPipeFallback(query: LogicalQuery,
                                         context: EnterpriseRuntimeContext,
                                         logicalPlan: LogicalPlan,
                                         physicalPlan: PhysicalPlan,
@@ -97,8 +96,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         CommunityExpressionConverter(context.tokenContext))
     }
 
-    val interpretedPipeMapper = InterpretedPipeMapper(context.readOnly, converters, context.tokenContext, queryIndexes)(state.semanticTable)
-    val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, context.readOnly, queryIndexes)(state.semanticTable, context.tokenContext)
+    val interpretedPipeMapper = InterpretedPipeMapper(context.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
+    val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, context.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
     val pipeTreeBuilder = PipeTreeBuilder(slottedPipeMapper)
     val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
     (slottedPipeMapper, logicalPlanWithConvertedNestedPlans)

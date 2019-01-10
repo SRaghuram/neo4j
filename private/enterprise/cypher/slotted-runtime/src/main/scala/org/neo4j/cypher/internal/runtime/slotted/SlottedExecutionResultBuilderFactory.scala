@@ -17,7 +17,7 @@ import org.neo4j.values.virtual.MapValue
 class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                            queryIndexes: QueryIndexes,
                                            readOnly: Boolean,
-                                           columns: List[String],
+                                           columns: Seq[String],
                                            logicalPlan: LogicalPlan,
                                            pipelines: SlotConfigurations,
                                            lenientCreateRelationship: Boolean)

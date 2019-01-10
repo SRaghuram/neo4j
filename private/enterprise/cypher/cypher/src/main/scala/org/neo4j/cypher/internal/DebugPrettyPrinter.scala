@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal
 
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter._
+import org.neo4j.cypher.internal.compatibility.LogicalQuery
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.compiler.v4_0.phases.LogicalPlanState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -20,13 +20,13 @@ trait DebugPrettyPrinter {
   val PRINT_PIPELINE_INFO = true
   val PRINT_FAILURE_STACK_TRACE = true
 
-  protected def printPlanInfo(lpState: LogicalPlanState) = {
+  protected def printPlanInfo(logicalQuery: LogicalQuery) = {
     println(s"\n========================================================================")
     if (PRINT_QUERY_TEXT)
-      println(s"\u001b[32m[QUERY]\n\n${lpState.queryText}") // Green
+      println(s"\u001b[32m[QUERY]\n\n${logicalQuery.queryText}") // Green
     if (PRINT_LOGICAL_PLAN) {
       println(s"\n\u001b[35m[LOGICAL PLAN]\n") // Magenta
-      prettyPrintLogicalPlan(lpState.logicalPlan)
+      prettyPrintLogicalPlan(logicalQuery.logicalPlan)
     }
     println("\u001b[30m")
   }
