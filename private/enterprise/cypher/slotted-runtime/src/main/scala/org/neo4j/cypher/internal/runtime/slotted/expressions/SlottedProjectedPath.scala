@@ -60,25 +60,14 @@ object SlottedProjectedPath {
         val size = list.size()
         var i = 0
         while (i < size - 1) {
-          aggregated = addIncoming(list.value(i), state, aggregated)
+          //we know these relationships have already loaded start and end relationship
+          //so we should not use CypherFunctions::[start,end]Node to look them up
+          aggregated = builder.addIncomingRelationship(list.value(i))
           i += 1
         }
         tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
 
       case _: ListValue => tailProjector(ctx, state, builder)
-      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
-      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
-    }
-  }
-
-  case class multiIncomingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
-      case list: ListValue =>
-        val iterator = list.iterator
-        var aggregated = builder
-        while (iterator.hasNext)
-          aggregated = addIncoming(iterator.next(), state, aggregated)
-        tailProjector(ctx, state, aggregated)
       case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
@@ -91,7 +80,9 @@ object SlottedProjectedPath {
         val size = list.size()
         var i = 0
         while (i < size - 1) {
-          aggregated = addOutgoing(list.value(i), state, aggregated)
+          //we know these relationships have already loaded start and end relationship
+          //so we should not use CypherFunctions::[start,end]Node to look them up
+          aggregated = builder.addOutgoingRelationship(list.value(i))
           i += 1
         }
         tailProjector(ctx, state, aggregated.addRelationship(list.value(i)).addNode(node.apply(ctx, state)))
@@ -101,74 +92,31 @@ object SlottedProjectedPath {
       case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
     }
   }
-  case class multiOutgoingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
-      case list: ListValue =>
-        val iterator = list.iterator
-        var aggregated = builder
-        while (iterator.hasNext)
-          aggregated = addOutgoing(iterator.next(), state, aggregated)
-        tailProjector(ctx, state, aggregated)
-      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
-      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
+
+  case class multiIncomingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
+    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+      val relListValue = rel.apply(ctx, state)
+      //we know these relationships have already loaded start and end relationship
+      //so we should not use CypherFunctions::[start,end]Node to look them up
+      tailProjector(ctx, state, builder.addIncomingRelationships(relListValue))
     }
   }
 
-  case class multiUndirectedRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
-    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
-      case list: ListValue if list.nonEmpty() =>
-        val previous = builder.previousNode.id()
-        val first = list.head().asInstanceOf[RelationshipValue]
-        val correctDirection = startNode(first, state.query, state.cursors.relationshipScanCursor).id() == previous || endNode(first, state.query, state.cursors.relationshipScanCursor).id() == previous
-        var aggregated = builder
-        val size = list.size()
-        if (correctDirection) {
-          var i = 0
-          while (i < size - 1) {
-            aggregated = addUndirected(list.value(i), state, aggregated)
-            i += 1
-          }
-          aggregated.addRelationship(list.value(i))
-        } else {
-          val reversed = list.reverse()
-          var i = 0
-          while (i < size - 1) {
-            aggregated = addUndirected(reversed.value(i), state, aggregated)
-            i += 1
-          }
-          aggregated.addRelationship(reversed.value(i))
-        }
-        tailProjector(ctx, state, aggregated.addNode(node.apply(ctx, state)))
-
-      case _: ListValue => tailProjector(ctx, state, builder)
-      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
-      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
+  case class multiOutgoingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
+    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+      val relListValue = rel.apply(ctx, state)
+      //we know these relationships have already loaded start and end relationship
+      //so we should not use CypherFunctions::[start,end]Node to look them up
+      tailProjector(ctx, state, builder.addOutgoingRelationships(relListValue))
     }
   }
 
   case class multiUndirectedRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
-      case list: ListValue if list.nonEmpty() =>
-        val previous = builder.previousNode.id()
-        val first = list.head().asInstanceOf[RelationshipValue]
-        val correctDirection = startNode(first, state.query, state.cursors.relationshipScanCursor).id() == previous || endNode(first, state.query, state.cursors.relationshipScanCursor).id() == previous
-        if (correctDirection) {
-         val iterator = list.iterator
-          var aggregated = builder
-          while (iterator.hasNext)
-            aggregated = addUndirected(iterator.next(), state, aggregated)
-          tailProjector(ctx, state, aggregated)
-        } else {
-          val reversed = list.reverse()
-          val iterator = reversed.iterator
-          var aggregated = builder
-          while (iterator.hasNext)
-            aggregated = addUndirected(iterator.next(), state, aggregated)
-          tailProjector(ctx, state, aggregated)
-        }
-      case _: ListValue => tailProjector(ctx, state, builder)
-      case NO_VALUE =>   tailProjector(ctx, state, builder.addNoValue())
-      case value => throw new CypherTypeException(s"Expected ListValue but got ${value.getTypeName}")
+    def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+      val relListValue = rel.apply(ctx, state)
+      //we know these relationships have already loaded start and end relationship
+      //so we should not use CypherFunctions::[start,end]Node to look them up
+      tailProjector(ctx, state, builder.addUndirectedRelationships(relListValue))
     }
   }
 
