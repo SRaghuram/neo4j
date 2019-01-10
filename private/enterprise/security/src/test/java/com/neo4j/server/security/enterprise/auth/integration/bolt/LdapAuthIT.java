@@ -586,14 +586,14 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldNotSeeSystemPassword()
     {
         Config config = dbRule.getGraphDatabaseAPI().getDependencyResolver().resolveDependency( Config.class );
-        String expected = "dbms.security.ldap.authorization.system_password=" + Secret.OBSFUCATED;
-        assertThat( "Should see obsfucated password in config.toString", config.toString(), containsString( expected ) );
+        String expected = "dbms.security.ldap.authorization.system_password=" + Secret.OBFUSCATED;
+        assertThat( "Should see obfuscated password in config.toString", config.toString(), containsString( expected ) );
         String password = config.get( SecuritySettings.ldap_authorization_system_password );
-        assertThat( "Normal access should not be obsfucated", password, not( containsString( Secret.OBSFUCATED ) ) );
+        assertThat( "Normal access should not be obfuscated", password, not( containsString( Secret.OBFUSCATED ) ) );
 
         Logger log = mock( Logger.class );
         new ConfigDiagnostics( config ).dump( log );
-        verify( log, atLeastOnce() ).log( "%s=%s", "dbms.security.ldap.authorization.system_password", Secret.OBSFUCATED );
+        verify( log, atLeastOnce() ).log( "%s=%s", "dbms.security.ldap.authorization.system_password", Secret.OBFUSCATED );
     }
 
     // ===== Helpers =====
