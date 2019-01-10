@@ -92,7 +92,7 @@ class TimeoutRetrierTest
         assertThrows( FooException.class, () -> retryFuture.get( FooException::new, NullLog.getInstance() ) );
 
         // then
-        verify( future, times( 1 ) ).get( anyLong(), any() );
+        verify( future ).get( anyLong(), any() );
     }
 
     @Test

@@ -32,7 +32,7 @@ public class RobustHazelcastWrapperTest
         { /* nothing*/ } );
 
         // then
-        verify( connector, times( 1 ) ).connectToHazelcast();
+        verify( connector ).connectToHazelcast();
 
         // then
         try

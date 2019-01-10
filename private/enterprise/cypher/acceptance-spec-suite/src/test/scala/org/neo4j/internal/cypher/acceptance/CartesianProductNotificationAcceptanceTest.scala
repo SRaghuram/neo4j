@@ -17,16 +17,15 @@ import org.neo4j.cypher.internal.compiler.v4_0.phases.{PlannerContext, PlannerCo
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.idp._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
 import org.neo4j.cypher.internal.planner.v4_0.spi.{IDPPlannerName, PlanContext}
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.spi.v4_0.TransactionBoundPlanContext
-import org.neo4j.kernel.api.{KernelTransaction, Statement}
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{CartesianProductNotification, InputPosition}
+import org.neo4j.kernel.api.{KernelTransaction, Statement}
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 
 class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with GraphDatabaseTestSupport {
   var logger: InternalNotificationLogger = _
@@ -43,7 +42,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     runQuery("MATCH (a)-->(b), (c)-->(d) RETURN *")
 
     //then
-    verify(logger, times(1)).log(CartesianProductNotification(InputPosition(0, 1, 1), Set("c", "d")))
+    verify(logger).log(CartesianProductNotification(InputPosition(0, 1, 1), Set("c", "d")))
   }
 
   test("should not warn when connected patterns") {
@@ -59,7 +58,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     runQuery("MATCH (a)-->(b), (b)-->(c), (x)-->(y), (c)-->(d), (d)-->(e) RETURN *")
 
     //then
-    verify(logger, times(1)).log(CartesianProductNotification(InputPosition(0, 1, 1), Set("x", "y")))
+    verify(logger).log(CartesianProductNotification(InputPosition(0, 1, 1), Set("x", "y")))
   }
 
   test("should not warn when disconnected patterns in multiple match clauses") {

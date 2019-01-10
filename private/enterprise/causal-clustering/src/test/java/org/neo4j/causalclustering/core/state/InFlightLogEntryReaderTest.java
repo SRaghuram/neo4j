@@ -23,7 +23,6 @@ import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -160,7 +159,7 @@ public class InFlightLogEntryReaderTest
     {
         if ( clearCache )
         {
-            verify( inFlightCache, times( 1 ) ).prune( key );
+            verify( inFlightCache ).prune( key );
         }
         else
         {

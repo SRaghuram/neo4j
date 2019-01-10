@@ -25,7 +25,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
@@ -63,7 +62,7 @@ public class AppendingTest
 
         // then
         // we must produce a TruncateLogCommand at the earliest mismatching index
-        verify( outcome, times( 1 ) ).addLogCommand( argThat( new LogCommandMatcher( appendIndex - 1 ) ) );
+        verify( outcome ).addLogCommand( argThat( new LogCommandMatcher( appendIndex - 1 ) ) );
     }
 
     @Test

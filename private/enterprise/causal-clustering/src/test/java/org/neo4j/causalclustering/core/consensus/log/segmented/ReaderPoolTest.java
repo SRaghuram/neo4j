@@ -23,7 +23,6 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.logging.NullLogProvider.getInstance;
@@ -60,7 +59,7 @@ public class ReaderPoolTest
         Reader newReader = pool.acquire( 0, 0 );
 
         // then
-        verify( fsa, times( 1 ) ).open( any(), any() );
+        verify( fsa ).open( any(), any() );
         assertThat( reader, is( newReader ) );
     }
 

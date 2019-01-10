@@ -121,7 +121,7 @@ class NodeHashJoinSlottedPipeTest extends CypherFunSuite {
 
     // then
     result should be(empty)
-    verify(right, times(1)).createResults(any())
+    verify(right).createResults(any())
     verifyNoMoreInteractions(right)
   }
 

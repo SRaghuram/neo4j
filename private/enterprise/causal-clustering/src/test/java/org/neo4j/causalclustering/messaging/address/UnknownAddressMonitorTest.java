@@ -56,7 +56,7 @@ public class UnknownAddressMonitorTest
         logger.logAttemptToSendToMemberWithNoKnownAddress( to );
 
         // then
-        verify( log, times( 1 ) )
+        verify( log )
                 .info( format( "No address found for %s, probably because the member has been shut " + "down.", to ) );
     }
 

@@ -22,7 +22,6 @@ import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.kernel.api.TokenRead.NO_TOKEN;
@@ -72,7 +71,7 @@ public class IndexSamplingManagerBeanTest
         storeAccess.triggerIndexSampling( EXISTING_LABEL, EXISTING_PROPERTY, false );
 
         // Then
-        verify( indexingService, times( 1 ) ).triggerIndexSampling(
+        verify( indexingService ).triggerIndexSampling(
                 SchemaDescriptorFactory.forLabel( LABEL_ID, PROPERTY_ID ) ,
                 IndexSamplingMode.TRIGGER_REBUILD_UPDATED);
     }
@@ -87,7 +86,7 @@ public class IndexSamplingManagerBeanTest
         storeAccess.triggerIndexSampling( EXISTING_LABEL, EXISTING_PROPERTY, true );
 
         // Then
-        verify( indexingService, times( 1 ) ).triggerIndexSampling(
+        verify( indexingService ).triggerIndexSampling(
                 SchemaDescriptorFactory.forLabel( LABEL_ID, PROPERTY_ID ) ,
                 IndexSamplingMode.TRIGGER_REBUILD_ALL);
     }

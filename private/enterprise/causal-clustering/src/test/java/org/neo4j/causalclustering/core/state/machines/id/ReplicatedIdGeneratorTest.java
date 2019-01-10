@@ -40,9 +40,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -147,7 +145,7 @@ public class ReplicatedIdGeneratorTest extends IdGeneratorContractTest
 
         assertThrows( IdAllocationException.class, () -> idGenerator.nextId() );
 
-        verify( panicker, times( 1 ) ).panic( Matchers.isA( IdAllocationException.class ) );
+        verify( panicker ).panic( Matchers.isA( IdAllocationException.class ) );
     }
 
     @Test

@@ -45,7 +45,6 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -99,9 +98,9 @@ class RaftReplicatorTest
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
         assertEquals( leaderInfo.memberId(), outbound.lastTo );
 
-        verify( replicationMonitor, times( 1 ) ).startReplication();
+        verify( replicationMonitor ).startReplication();
         verify( replicationMonitor, atLeast( 1 ) ).replicationAttempt();
-        verify( replicationMonitor, times( 1 ) ).successfulReplication();
+        verify( replicationMonitor ).successfulReplication();
         verify( replicationMonitor, never() ).failedReplication( any() );
     }
 
@@ -131,9 +130,9 @@ class RaftReplicatorTest
         capturedProgress.last.registerResult( Result.of( 5 ) );
         replicatingThread.join( DEFAULT_TIMEOUT_MS );
 
-        verify( replicationMonitor, times( 1 ) ).startReplication();
+        verify( replicationMonitor ).startReplication();
         verify( replicationMonitor, atLeast( 2 ) ).replicationAttempt();
-        verify( replicationMonitor, times( 1 ) ).successfulReplication();
+        verify( replicationMonitor ).successfulReplication();
         verify( replicationMonitor, never() ).failedReplication( any() );
     }
 
@@ -188,10 +187,10 @@ class RaftReplicatorTest
         replicatingThread.join();
         assertThat( replicatingThread.getReplicationException().getCause(), Matchers.instanceOf( UnavailableException.class ) );
 
-        verify( replicationMonitor, times( 1 ) ).startReplication();
+        verify( replicationMonitor ).startReplication();
         verify( replicationMonitor, atLeast( 1 ) ).replicationAttempt();
         verify( replicationMonitor, never() ).successfulReplication();
-        verify( replicationMonitor, times( 1 ) ).failedReplication( any() );
+        verify( replicationMonitor ).failedReplication( any() );
     }
 
     @Test

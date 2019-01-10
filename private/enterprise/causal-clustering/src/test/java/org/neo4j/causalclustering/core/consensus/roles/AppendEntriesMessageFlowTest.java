@@ -29,7 +29,6 @@ import org.neo4j.causalclustering.messaging.Outbound;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesRequest;
 import static org.neo4j.causalclustering.core.consensus.TestMessageBuilders.appendEntriesResponse;
@@ -123,18 +122,18 @@ public class AppendEntriesMessageFlowTest
 
         // then
         InOrder invocationOrder = inOrder( outbound );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 0 ).appendIndex( 1 ).matchIndex( 1 ).success().build() ) );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 0 ).appendIndex( 2 ).matchIndex( 2 ).success().build() ) );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 0 ).appendIndex( 3 ).matchIndex( 3 ).success().build() ) );
 
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 1 ).appendIndex( 4 ).matchIndex( 4 ).success().build() ) );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 1 ).appendIndex( 5 ).matchIndex( 5 ).success().build() ) );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 1 ).appendIndex( 6 ).matchIndex( 6 ).success().build() ) );
     }
 
@@ -154,13 +153,13 @@ public class AppendEntriesMessageFlowTest
 
         // then
         InOrder invocationOrder = inOrder( outbound );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 0 ).matchIndex( 1 ).appendIndex( 1 ).success().build() ) );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 0 ).matchIndex( 2 ).appendIndex( 2 ).success().build() ) );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 0 ).matchIndex( 3 ).appendIndex( 3 ).success().build() ) );
-        invocationOrder.verify( outbound, times( 1 ) ).send( same( otherMember ), eq( appendEntriesResponse().from(
+        invocationOrder.verify( outbound ).send( same( otherMember ), eq( appendEntriesResponse().from(
                 myself ).term( 2 ).matchIndex( -1 ).appendIndex( 3 ).failure().build() ) );
     }
 }

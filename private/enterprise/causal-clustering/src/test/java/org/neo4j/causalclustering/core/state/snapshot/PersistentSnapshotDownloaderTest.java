@@ -14,12 +14,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
+import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
-import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.causalclustering.error_handling.Panicker;
+import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -33,8 +33,6 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.internal.verification.VerificationModeFactory.times;
-import static org.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static org.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
 
 public class PersistentSnapshotDownloaderTest
@@ -72,15 +70,15 @@ public class PersistentSnapshotDownloaderTest
         // then
         InOrder inOrder = inOrder( applicationProcess, databaseService, auxiliaryServices, coreDownloader );
 
-        inOrder.verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        inOrder.verify( auxiliaryServices, times( 1 ) ).disable();
-        inOrder.verify( databaseService, times( 1 ) ).stopForStoreCopy();
+        inOrder.verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        inOrder.verify( auxiliaryServices ).disable();
+        inOrder.verify( databaseService ).stopForStoreCopy();
 
-        inOrder.verify( coreDownloader, times( 1 ) ).downloadSnapshotAndStores( any() );
+        inOrder.verify( coreDownloader ).downloadSnapshotAndStores( any() );
 
-        inOrder.verify( databaseService, times( 1 ) ).start();
-        inOrder.verify( auxiliaryServices, times( 1 ) ).enable();
-        inOrder.verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+        inOrder.verify( databaseService ).start();
+        inOrder.verify( auxiliaryServices ).enable();
+        inOrder.verify( applicationProcess ).resumeApplier( OPERATION_NAME );
 
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
@@ -100,8 +98,8 @@ public class PersistentSnapshotDownloaderTest
         thread.join();
 
         // then
-        verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
 
@@ -120,8 +118,8 @@ public class PersistentSnapshotDownloaderTest
         thread.join();
 
         // then
-        verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
 
@@ -136,8 +134,8 @@ public class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
         assertEquals( 3, backoffStrategy.invocationCount() );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
@@ -155,9 +153,9 @@ public class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( coreDownloader, times( 1 ) ).downloadSnapshotAndStores( catchupAddressProvider );
-        verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+        verify( coreDownloader ).downloadSnapshotAndStores( catchupAddressProvider );
+        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
     }
 
     @Test
@@ -176,8 +174,8 @@ public class PersistentSnapshotDownloaderTest
         thread.join();
 
         // then
-        verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
     }
 
     @Test
@@ -192,7 +190,7 @@ public class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( panicker, times( 1 ) ).panic( runtimeException );
+        verify( panicker ).panic( runtimeException );
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException

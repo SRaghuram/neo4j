@@ -65,7 +65,7 @@ public class ReplayableCommitProcessTest
         txListener.commit( newTx, NULL, EXTERNAL );
 
         // then
-        verify( localDatabase.commitProcess, times( 1 ) ).commit( eq( newTx ),
+        verify( localDatabase.commitProcess ).commit( eq( newTx ),
                 any( CommitEvent.class ), any( TransactionApplicationMode.class ) );
         verifyNoMoreInteractions( localDatabase.commitProcess );
     }

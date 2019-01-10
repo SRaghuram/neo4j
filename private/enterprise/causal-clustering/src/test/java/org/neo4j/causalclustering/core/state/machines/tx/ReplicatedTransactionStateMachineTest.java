@@ -33,7 +33,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -65,9 +64,9 @@ public class ReplicatedTransactionStateMachineTest
         stateMachine.ensuredApplied();
 
         // then
-        verify( localCommitProcess, times( 1 ) ).commit( any( TransactionToApply.class ), any( CommitEvent.class ),
+        verify( localCommitProcess ).commit( any( TransactionToApply.class ), any( CommitEvent.class ),
                 any( TransactionApplicationMode.class ) );
-        verify( cursorTracer, times( 1 ) ).reportEvents();
+        verify( cursorTracer ).reportEvents();
     }
 
     @Test

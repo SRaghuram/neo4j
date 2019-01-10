@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, verifyZeroInteractions}
+import org.mockito.Mockito.{verify, verifyNoMoreInteractions, verifyZeroInteractions}
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
@@ -76,7 +76,7 @@ class NodeHashJoinSlottedPrimitivePipeTest extends CypherFunSuite {
 
     // then
     result should be(empty)
-    verify(right, times(1)).createResults(any())
+    verify(right).createResults(any())
     verifyNoMoreInteractions(right)
   }
 

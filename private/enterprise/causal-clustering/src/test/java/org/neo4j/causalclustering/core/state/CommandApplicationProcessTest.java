@@ -28,8 +28,8 @@ import org.neo4j.causalclustering.core.replication.session.LocalOperationId;
 import org.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.causalclustering.error_handling.Panicker;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 
@@ -46,7 +46,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -262,7 +261,7 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         //then the cache should have had it's get method called.
-        verify( inFlightCache, times( 1 ) ).get( 0L );
+        verify( inFlightCache ).get( 0L );
         verifyZeroInteractions( raftLog );
     }
 

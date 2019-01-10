@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
 import static org.neo4j.causalclustering.core.consensus.schedule.Timer.CancelMode.SYNC_WAIT;
@@ -66,7 +65,7 @@ public class TimerServiceTest
         scheduler.forward( 1000, MILLISECONDS );
 
         // then
-        verify( handlerA, times( 1 ) ).onTimeout( any() );
+        verify( handlerA ).onTimeout( any() );
     }
 
     @Test
@@ -79,7 +78,7 @@ public class TimerServiceTest
         scheduler.forward( 1001, MILLISECONDS );
 
         // then
-        verify( handlerA, times( 1 ) ).onTimeout( any() );
+        verify( handlerA ).onTimeout( any() );
     }
 
     @Test
@@ -93,7 +92,7 @@ public class TimerServiceTest
         scheduler.forward( 1, SECONDS );
 
         // then
-        verify( handlerA, times( 1 ) ).onTimeout( timerA );
+        verify( handlerA ).onTimeout( timerA );
         verify( handlerB, never() ).onTimeout( any() );
 
         // given
@@ -105,7 +104,7 @@ public class TimerServiceTest
 
         // then
         verify( handlerA, never() ).onTimeout( any() );
-        verify( handlerB, times( 1 ) ).onTimeout( timerB );
+        verify( handlerB ).onTimeout( timerB );
 
         // given
         reset( handlerA );
@@ -130,8 +129,8 @@ public class TimerServiceTest
         scheduler.forward( 1, SECONDS );
 
         // then
-        verify( handlerA, times( 1 ) ).onTimeout( timerA );
-        verify( handlerB, times( 1 ) ).onTimeout( timerB );
+        verify( handlerA ).onTimeout( timerA );
+        verify( handlerB ).onTimeout( timerB );
     }
 
     @Test
@@ -141,7 +140,7 @@ public class TimerServiceTest
         timerService.invoke( TIMER_A );
 
         // then
-        verify( handlerA, times( 1 ) ).onTimeout( timerA );
+        verify( handlerA ).onTimeout( timerA );
         verify( handlerB, never() ).onTimeout( any() );
 
         // given
@@ -153,7 +152,7 @@ public class TimerServiceTest
 
         // then
         verify( handlerA, never() ).onTimeout( any() );
-        verify( handlerB, times( 1 ) ).onTimeout( timerB );
+        verify( handlerB ).onTimeout( timerB );
     }
 
     @Test
@@ -174,7 +173,7 @@ public class TimerServiceTest
         scheduler.forward( 100, MILLISECONDS );
 
         // when
-        verify( handlerA, times( 1 ) ).onTimeout( any() );
+        verify( handlerA ).onTimeout( any() );
     }
 
     @Test
@@ -193,7 +192,7 @@ public class TimerServiceTest
         scheduler.forward( 1000, MILLISECONDS );
 
         // then
-        verify( handlerA, times( 1 ) ).onTimeout( any() );
+        verify( handlerA ).onTimeout( any() );
 
         // when
         reset( handlerA );

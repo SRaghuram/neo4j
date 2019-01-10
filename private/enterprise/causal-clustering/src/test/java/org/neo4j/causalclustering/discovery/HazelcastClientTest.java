@@ -70,7 +70,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.causalclustering.discovery.HazelcastClusterTopology.CLIENT_CONNECTOR_ADDRESSES;
@@ -229,7 +228,7 @@ public class HazelcastClientTest
         }
 
         // then
-        verify( connector, times( 1 ) ).connectToHazelcast();
+        verify( connector ).connectToHazelcast();
     }
 
     @Test

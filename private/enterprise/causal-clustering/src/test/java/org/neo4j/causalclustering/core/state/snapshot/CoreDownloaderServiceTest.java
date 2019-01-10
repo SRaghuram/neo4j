@@ -19,8 +19,8 @@ import org.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import org.neo4j.causalclustering.core.state.CoreSnapshotService;
-import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.causalclustering.error_handling.Panicker;
+import org.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.impl.util.CountingJobScheduler;
@@ -35,7 +35,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.internal.verification.VerificationModeFactory.times;
 import static org.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
@@ -81,9 +80,9 @@ public class CoreDownloaderServiceTest
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         waitForApplierToResume( applicationProcess );
 
-        verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
-        verify( coreDownloader, times( 1 ) ).downloadSnapshotAndStores( any() );
+        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        verify( coreDownloader ).downloadSnapshotAndStores( any() );
     }
 
     @Test
@@ -131,7 +130,7 @@ public class CoreDownloaderServiceTest
         {
             try
             {
-                verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+                verify( applicationProcess ).resumeApplier( OPERATION_NAME );
                 return true;
             }
             catch ( Throwable t )

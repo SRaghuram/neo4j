@@ -46,7 +46,7 @@ public class PruningSchedulerTest
 
         // then
         assertNotNull( jobScheduler.getJob() );
-        verify( jobScheduler, times( 1 ) ).schedule( eq( Group.RAFT_LOG_PRUNING ), any( Runnable.class ),
+        verify( jobScheduler ).schedule( eq( Group.RAFT_LOG_PRUNING ), any( Runnable.class ),
                 eq( 20L ), eq( TimeUnit.MILLISECONDS ) );
     }
 
@@ -69,7 +69,7 @@ public class PruningSchedulerTest
         // then
         verify( jobScheduler, times( 2 ) ).schedule( eq( Group.RAFT_LOG_PRUNING ), any( Runnable.class ),
                 eq( 20L ), eq( TimeUnit.MILLISECONDS ) );
-        verify( logPruner, times( 1 ) ).prune();
+        verify( logPruner ).prune();
         assertEquals( scheduledJob, jobScheduler.getJob() );
     }
 

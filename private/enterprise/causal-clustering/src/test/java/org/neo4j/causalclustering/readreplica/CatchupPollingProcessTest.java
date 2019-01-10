@@ -48,7 +48,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
@@ -129,8 +128,8 @@ public class CatchupPollingProcessTest
         txPuller.tick().get();
 
         // then
-        verify( v1Client, times( 1 ) ).pullTransactions( any( StoreId.class ), anyLong() );
-        verify( v2Client, times( 1 ) ).pullTransactions( any( StoreId.class ), anyLong(), anyString() );
+        verify( v1Client ).pullTransactions( any( StoreId.class ), anyLong() );
+        verify( v2Client ).pullTransactions( any( StoreId.class ), anyLong(), anyString() );
     }
 
     // TODO:  Come up with a way of avoiding V1/V2 versions of these tests.  I tried to parameterize instead but that wasn't much better re: clarity.
@@ -227,7 +226,7 @@ public class CatchupPollingProcessTest
         txPuller.start();
         txPuller.tick().get();
 
-        verify( panicker, times( 1 ) ).panic( any() );
+        verify( panicker ).panic( any() );
     }
 
     @Test
