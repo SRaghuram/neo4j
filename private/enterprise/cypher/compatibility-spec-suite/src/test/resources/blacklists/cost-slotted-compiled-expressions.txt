@@ -13,6 +13,3 @@ Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with arg
 Feature "MiscellaneousErrorAcceptance": Scenario "Failing on merging relationship with null property"
 Feature "MiscellaneousErrorAcceptance": Scenario "Failing on merging node with null property"
 Feature "MiscellaneousErrorAcceptance": Scenario "Failing when setting a list of maps as a property"
-
-// To classify
-Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure should fail if implicit argument is missing"

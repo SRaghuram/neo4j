@@ -687,7 +687,6 @@ Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with arg
 Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure with argument of type INTEGER accepts value of type FLOAT"
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with argument of type INTEGER accepts value of type FLOAT"
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with null argument"
-Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure should fail if implicit argument is missing"
 Feature "TemporalParseAcceptance": Scenario "Should parse date from string"
 Feature "TemporalParseAcceptance": Scenario "Should parse local time from string"
 Feature "TemporalParseAcceptance": Scenario "Should parse time from string"
