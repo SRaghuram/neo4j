@@ -112,7 +112,6 @@ Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with arg
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with argument of type NUMBER accepts value of type INTEGER"
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with explicit arguments"
 Feature "ProcedureCallAcceptance": Scenario "In-query call to procedure with null argument"
-Feature "ProcedureCallAcceptance": Scenario "Standalone call to procedure should fail if implicit argument is missing"
 Feature "ReturnAcceptance": Scenario "LIMIT 0 should stop side effects"
 Feature "ShortestPathAcceptance": Scenario "Find a combination of a shortest path and a pattern expression"
 // TODO: FIXME Flaky planner... - If we get an `Optional` in the plan this query is not supported
