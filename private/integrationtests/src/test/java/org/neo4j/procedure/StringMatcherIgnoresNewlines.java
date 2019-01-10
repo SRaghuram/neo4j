@@ -18,7 +18,7 @@ public class StringMatcherIgnoresNewlines
 
     public static Matcher<String> containsStringIgnoreNewlines( String substring )
     {
-        return new StringContains( substring )
+        return new StringContains( false, substring )
         {
             Pattern newLines = Pattern.compile( "\\s*[\\r\\n]+\\s*" );
 

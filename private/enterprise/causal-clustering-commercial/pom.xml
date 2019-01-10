@@ -225,8 +225,6 @@
         <dependency>
             <groupId>co.unruly</groupId>
             <artifactId>java-8-matchers</artifactId>
-            <version>1.6</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -235,11 +233,7 @@
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-library</artifactId>
+            <artifactId>hamcrest</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
