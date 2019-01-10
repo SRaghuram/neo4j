@@ -9,7 +9,8 @@ import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
-import org.mockito.ArgumentMatchers.{any, anyInt}
+import org.mockito.ArgumentMatchers.{any, anyInt, anyLong}
+import org.mockito.Mockito
 import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -2848,8 +2849,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
-    val n3 = NodeAt(node(43), 2)
-    val n4 = NodeAt(node(44), 3)
+    val n3 = NodeAt(node(44), 2)
+    val n4 = NodeAt(node(45), 3)
     val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
     val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
     val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
@@ -3029,15 +3030,22 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def addRelationships(context: ExecutionContext, dbAccess: DbAccess, rels: RelAt*): Unit = {
     for (rel <- rels) {
-      val cursor = mock[RelationshipScanCursor]
       when(context.getLongAt(rel.slot)).thenReturn(rel.rel.id())
       when(dbAccess.relationshipById(rel.rel.id())).thenReturn(rel.rel)
-      when(cursor.next()).thenReturn(true)
-      when(cursor.sourceNodeReference()).thenReturn(rel.rel.startNode().id())
-      when(cursor.targetNodeReference()).thenReturn(rel.rel.endNode().id())
-      when(dbAccess.singleRelationship(rel.rel.id())).thenReturn(cursor)
     }
+    val relMap = rels.map(r => (r.rel.id(), r.rel)).toMap
+    Mockito.doAnswer(new Answer[Unit] {
+      override def answer(invocationOnMock: InvocationOnMock): Unit = {
+        val id = invocationOnMock.getArgument[Long](0)
+        val cursor = invocationOnMock.getArgument[RelationshipScanCursor](1)
+        val rel = relMap(id)
+        when(cursor.next()).thenReturn(true)
+        when(cursor.sourceNodeReference()).thenReturn(rel.startNode().id())
+        when(cursor.targetNodeReference()).thenReturn(rel.endNode().id())
+      }
+    }).when(dbAccess).singleRelationship(anyLong, any[RelationshipScanCursor])
   }
+
   private def pathExpression(step: PathStep) = PathExpression(step)(pos)
 
   private def mapProjection(name: String, includeAllProps: Boolean, items: (String,Expression)*) =

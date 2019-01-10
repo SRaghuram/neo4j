@@ -412,6 +412,9 @@ object IntermediateRepresentation {
   def constructor[OWNER, IN](implicit owner: Manifest[OWNER],  in: Manifest[IN]) =
     Constructor(typeRef(owner), Seq(typeRef(in)))
 
+  def constructor[OWNER, IN1, IN2](implicit owner: Manifest[OWNER],  in1: Manifest[IN1], in2: Manifest[IN2]) =
+    Constructor(typeRef(owner), Seq(typeRef(in1), typeRef(in2)))
+
   def invokeStatic(method: Method, params: IntermediateRepresentation*): IntermediateRepresentation = InvokeStatic(
     method, params)
 

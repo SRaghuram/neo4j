@@ -1598,12 +1598,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case functions.StartNode =>
       internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
-        invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess]("startNode"), in.ir, DB_ACCESS), in.fields, in.variables, in.nullCheck))
+        invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess, RelationshipScanCursor]("startNode"),
+                     in.ir, DB_ACCESS, RELATIONSHIP_CURSOR), in.fields, in.variables :+ vRELATIONSHIP_CURSOR, in.nullCheck))
 
     case functions.EndNode =>
       internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
-        invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess]("endNode"), in.ir,
-                                      DB_ACCESS), in.fields, in.variables, in.nullCheck))
+        invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess, RelationshipScanCursor]("endNode"), in.ir,
+                                      DB_ACCESS, RELATIONSHIP_CURSOR), in.fields, in.variables :+ vRELATIONSHIP_CURSOR, in.nullCheck))
 
     case functions.Nodes =>
       internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
@@ -2353,9 +2354,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
           val node = IntermediateExpression(
             block(lazyRel,
-                  invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, VirtualNodeValue]("otherNode"),
-                               load(relVar.name), DB_ACCESS,  nodeOps.last.ir)),
-            compiled.fields, compiled.variables :+ relVar, compiled.nullCheck ++ nodeOps.last.nullCheck)
+                  invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, VirtualNodeValue, RelationshipScanCursor]("otherNode"),
+                               load(relVar.name), DB_ACCESS,  nodeOps.last.ir, RELATIONSHIP_CURSOR)),
+            compiled.fields, compiled.variables :+ relVar :+ vRELATIONSHIP_CURSOR, compiled.nullCheck ++ nodeOps.last.nullCheck)
           val rel = IntermediateExpression(
             block(lazyRel, load(relVar.name)),
             compiled.fields, compiled.variables :+ relVar, compiled.nullCheck)
@@ -2371,9 +2372,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
           val node = IntermediateExpression(
             block(lazyRel,
-              invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess](methodName),
-                           load(relVar.name), DB_ACCESS)),
-            compiled.fields, compiled.variables :+ relVar, compiled.nullCheck)
+              invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, RelationshipScanCursor](methodName),
+                           load(relVar.name), DB_ACCESS, RELATIONSHIP_CURSOR)),
+            compiled.fields, compiled.variables :+ relVar :+ vRELATIONSHIP_CURSOR, compiled.nullCheck)
           val rel = IntermediateExpression(
             block(lazyRel, load(relVar.name)),
             compiled.fields, compiled.variables :+ relVar, compiled.nullCheck)
@@ -2512,7 +2513,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         block(
           Seq(
             declare[PathValueBuilder](builderVar),
-            assign(builderVar, newInstance(constructor[PathValueBuilder, DbAccess], DB_ACCESS)))
+            assign(builderVar, newInstance(constructor[PathValueBuilder, DbAccess, RelationshipScanCursor], DB_ACCESS, RELATIONSHIP_CURSOR)))
             ++ pathOps.map(_.ir) :+ assign(variableName, invoke(load(builderVar), method[PathValueBuilder, AnyValue]("build"))): _*))
 
 
@@ -2523,7 +2524,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
       IntermediateExpression(ops,
                              pathOps.flatMap(_.fields),
-                             pathOps.flatMap(_.variables) :+ local,
+                             pathOps.flatMap(_.variables) :+ local :+ vRELATIONSHIP_CURSOR,
                              nullChecks)
     }
   }
