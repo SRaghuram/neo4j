@@ -43,8 +43,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
   }
@@ -60,8 +59,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(null))
   }
@@ -78,8 +76,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List(List(nodeA, nodeB)))
   }
@@ -96,8 +93,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | RETURN nodes(x)
       """.stripMargin
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true).columnAs[List[Node]]("nodes(x)").toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).columnAs[List[Node]]("nodes(x)").toList
 
     result should equal(List.empty)
   }
@@ -249,9 +245,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val r1 = relate(nodeA, nodeX)
     val r2 = relate(nodeX, nodeD)
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (src:A), (dst:D) RETURN shortestPath((src:A)-[*]->(dst:D)) as path",
-      ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (src:A), (dst:D) RETURN shortestPath((src:A)-[*]->(dst:D)) as path")
 
     graph.inTx {
       result.columnAs("path").toList should equal(List(PathImpl(nodeA, r1, nodeX, r2, nodeD)))
@@ -658,7 +652,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(a2, a3, "T")
     relate(a3, a4, "T")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlotted,
       """
         |MATCH p = (:A)-[:T*]-(:A)
         |WITH p WHERE length(p) > 1
@@ -722,8 +716,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
                   |RETURN shortestPath((a)-[*]->(c)) AS p
                   """.stripMargin
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true).columnAs[Path]("p").toList.head
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).columnAs[Path]("p").toList.head
 
     result.endNode() should equal(c)
     result.startNode() should equal(a)
@@ -737,9 +730,8 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(a, b)
     relate(b, c)
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted,
-      "match (a:Start), (c:End) return shortestPath((a)-[*]->(c))", ignoreMorselRuntimeFailures = true).columnAs[Path]("shortestPath((a)-[*]->(c))").toList.head
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+      "match (a:Start), (c:End) return shortestPath((a)-[*]->(c))").columnAs[Path]("shortestPath((a)-[*]->(c))").toList.head
     result.endNode() should equal(c)
     result.startNode() should equal(a)
     result.length() should equal(2)

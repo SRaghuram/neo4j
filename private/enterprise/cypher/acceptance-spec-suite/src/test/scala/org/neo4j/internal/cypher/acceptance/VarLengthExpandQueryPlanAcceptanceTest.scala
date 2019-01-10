@@ -15,7 +15,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     setUp("From")
     val query = "MATCH (a:From {name:'Keanu Reeves'})-[*..4]->(e:To {name:'Andres'}) RETURN *"
 
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)").containingArgument("(e)<-[:*..4]-(a)")
         plan should includeSomewhere.aPlan("NodeByLabelScan").containingArgument(":To")
@@ -25,7 +25,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
   test("Plan should have right relationship direction, other direction") {
     setUp("To")
     val query = "PROFILE MATCH (a:From {name:'Keanu Reeves'})-[*..4]->(e:To {name:'Andres'}) RETURN *"
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)").containingArgument("(a)-[:*..4]->(e)")
         plan should includeSomewhere.aPlan("NodeByLabelScan").containingArgument(":From")
@@ -50,7 +50,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
   test("query with distinct aggregation") {
     val query = "MATCH (from)-[*1..3]->(to) RETURN count(DISTINCT to)"
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(Pruning)")
       }))
@@ -98,7 +98,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
   test("should not rewrite when doing non-distinct aggregation") {
     val query = "MATCH (a)-[*1..3]->(b) RETURN b, count(*)"
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -125,7 +125,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE all(i IN nodes(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -137,7 +137,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query = """MATCH p = (pA)-[:REL*3..3  {foo:'bar'}]->(pB)
                   |WHERE all(i IN rels(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -149,7 +149,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE all(i IN rels(p) WHERE i.foo = 'bar')
                   |RETURN pB.name """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -161,7 +161,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE none(i IN nodes(p) WHERE i.foo = 'barz')
                   |RETURN pB.name """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -173,7 +173,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
     val query = """MATCH p = (pA)-[:REL*3..3]->(pB)
                   |WHERE none(i IN rels(p) WHERE i.foo = 'barz')
                   |RETURN pB.name """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy =
+    val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
       ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(All)")
       }))
@@ -191,7 +191,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -208,7 +208,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -226,7 +226,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -245,7 +245,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -262,7 +262,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -279,7 +279,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -297,7 +297,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -315,7 +315,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -333,7 +333,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)
@@ -351,7 +351,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
         | RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
     val path = result.toList.head("p").asInstanceOf[Path]
     path.startNode() should equal(node1)
     path.endNode() should equal(node2)

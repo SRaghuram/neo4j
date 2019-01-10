@@ -290,7 +290,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |MATCH paths = (n)-[*..1]-(m)
         |RETURN paths""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
       params = Map("0" -> node1.getId, "1" -> node2.getId))
     graph.inTx(
       result.toSet should equal(
@@ -846,7 +846,6 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     res.toSet should equal(Set(Map("n" -> node1)))
   }
 
-  // TODO: FIXME
   test("should handle distinct collect where the path is needed") {
     // Given
     val n1 = createNode()

@@ -210,14 +210,12 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |return pA, pB, pC, pD, pE
       """.stripMargin
 
-    // TODO: morsel fails at runtime with ClassCastException
-    val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map(
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, params = Map(
       "a" -> Seq[Long](a),
       "b" -> b.toInt,
       "c" -> Seq(c).asJava,
       "0" -> Seq(d.toInt).asJava,
-      "1" -> List(e)),
-      ignoreMorselRuntimeFailures = true
+      "1" -> List(e))
     )
 
     result.toList should have size 1

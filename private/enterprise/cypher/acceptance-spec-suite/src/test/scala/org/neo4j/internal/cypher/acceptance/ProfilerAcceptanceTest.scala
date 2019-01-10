@@ -243,8 +243,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createNode()
 
     // WHEN
-    // TODO: morsel runtime returns wrong result
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) optional match (n)-->(x) return x", Configs.Morsel)
+    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) optional match (n)-->(x) return x")
 
     // THEN
     result.executionPlanDescription() should (
@@ -676,7 +675,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(b2, b4, "T1")
 
     val query = "profile match (b:Start)-[*3]->(d) return count(distinct d)"
-    val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = profileWithExecute(Configs.InterpretedAndSlotted, query)
 
     result.executionPlanDescription() should includeSomewhere.aPlan("VarLengthExpand(Pruning)").withRows(2).withDBHits(7)
 
