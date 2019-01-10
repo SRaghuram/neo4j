@@ -16,24 +16,6 @@ import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  test("should plan sort in optimal position within idp") {
-    val joes = Range(0, 2).map(i => createLabeledNode(Map("name" -> s"Joe_$i"), "Person"))
-    joes.foreach { n =>
-      val friends = Range(0, 10).map(_ => createLabeledNode("Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, 10).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
-    }
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u.name"
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
-  }
-
   test("should handle negative node id gracefully") {
     createNode("id" -> 0)
     for (i <- 1 to 1000) createNode("id" -> i)
