@@ -104,6 +104,7 @@ class SchedulerTracerAcceptanceTest extends ExecutionEngineFunSuite {
     queryIds.size should be(1)
     schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
     executionThreadIds.size should be(WORKER_COUNT)
+    dataLookup.size should be(dataRows.size)
 
     for (dataRow <- dataRows) {
       val upstreamId = dataRow.upstreamId
