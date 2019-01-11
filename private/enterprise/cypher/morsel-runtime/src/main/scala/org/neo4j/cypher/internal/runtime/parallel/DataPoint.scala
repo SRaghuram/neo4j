@@ -36,6 +36,12 @@ trait DataPointWriter {
     * Write (e.g., log) this tracing data point
     */
   def write(dataPoint: DataPoint): Unit
+}
+
+/**
+  * Write data points to somewhere.
+  */
+trait DataPointFlusher extends DataPointWriter {
 
   /**
     * Flush buffered data points

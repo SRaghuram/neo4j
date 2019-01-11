@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 /**
   * DataPointWriter which accepts DataPoints and formats as CSV.
   */
-abstract class CsvDataWriter extends DataPointWriter {
+abstract class CsvDataWriter extends DataPointFlusher {
 
   import CsvDataWriter._
 

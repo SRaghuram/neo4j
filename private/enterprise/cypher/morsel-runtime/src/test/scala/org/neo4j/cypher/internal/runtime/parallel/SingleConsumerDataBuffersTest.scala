@@ -57,7 +57,7 @@ class SingleConsumerDataBuffersTest extends CypherFunSuite {
 
   private def dataPointFor(i: Int, threadId: Int) = DataPoint(i, 0, 0, 0, 0, threadId, 0, 0, NOP)
 
-  class CollectingDataPointWriter extends DataPointWriter {
+  class CollectingDataPointWriter extends DataPointFlusher {
     val points: ArrayBuffer[DataPoint] = ArrayBuffer[DataPoint]()
 
     override def write(dataPoint: DataPoint): Unit = points += dataPoint
@@ -79,7 +79,7 @@ class SingleConsumerDataBuffersTest extends CypherFunSuite {
 
   class ConsumeThread(latch: CountDownLatch,
                            dataBuffers: SingleConsumerDataBuffers,
-                           inner: DataPointWriter) extends Thread {
+                           inner: DataPointFlusher) extends Thread {
 
     override def run(): Unit = {
       while (latch.getCount > 0) {

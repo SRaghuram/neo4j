@@ -28,10 +28,7 @@ class SingleConsumerDataBuffers(ringBufferBitSize: Int = RingBuffer.defaultBitSi
     }
   }
 
-  // flush is called by many threads, and thus cannot be the single consumer
-  override def flush(): Unit = {}
-
-  def consume(dataPointWriter: DataPointWriter): Unit = {
+  def consume(dataPointWriter: DataPointFlusher): Unit = {
 
     if (theConsumer == null)
       theConsumer = Thread.currentThread()
