@@ -5,6 +5,9 @@ if [ "$1" = "install" ]; then
     db_input high neo4j/question || true
     db_go
     db_get neo4j/question
+    if [ "$RET" = "I REJECT" ]; then
+        echo "Neo4j License Rejected."
+    fi
     test "$RET" = "I ACCEPT"
 fi
 
