@@ -187,4 +187,28 @@ class PreSortOperatorTest extends MorselUnitTest {
 
     given.whenOperate().shouldBeDone()
   }
+
+  test("top with limit 0") {
+    val columnOrdering = Seq(Ascending(RefSlot(0, nullable = false, CTNumber)))
+    val given = new Given()
+      .withOperator(new PreSortOperator(workId, columnOrdering, Some(Literal(0))))
+      .withQueryState(EmptyQueryState())
+      .addInputRow(Longs(6), Refs(intValue(6)))
+      .addInputRow(Longs(5), Refs(intValue(5)))
+
+    given.whenOperate()
+      .shouldBeDone()
+  }
+
+  test("top with limit -1") {
+    val columnOrdering = Seq(Ascending(RefSlot(0, nullable = false, CTNumber)))
+    val given = new Given()
+      .withOperator(new PreSortOperator(workId, columnOrdering, Some(Literal(-1))))
+      .withQueryState(EmptyQueryState())
+      .addInputRow(Longs(6), Refs(intValue(6)))
+      .addInputRow(Longs(5), Refs(intValue(5)))
+
+    given.whenOperate()
+      .shouldBeDone()
+  }
 }

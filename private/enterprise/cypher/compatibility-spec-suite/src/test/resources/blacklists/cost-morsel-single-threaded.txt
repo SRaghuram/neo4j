@@ -233,7 +233,6 @@ Feature "OptionalMatchAcceptance": Scenario "Variable length optional relationsh
 Feature "OptionalMatchAcceptance": Scenario "Variable length optional relationships with length predicates"
 Feature "OptionalMatchAcceptance": Scenario "Variable length optional relationships"
 Feature "OptionalMatchAcceptance": Scenario "WITH after OPTIONAL MATCH"
-Feature "OrderByAcceptance": Scenario "ORDER BY with negative parameter for LIMIT should not generate errors"
 Feature "PatternComprehension": Scenario "Aggregating on pattern comprehension"
 Feature "PatternComprehension": Scenario "Get node degree via size of pattern comprehension that specifies a relationship type"
 Feature "PatternComprehension": Scenario "Get node degree via size of pattern comprehension that specifies multiple relationship types"
