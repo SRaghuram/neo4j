@@ -19,11 +19,43 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   override def beforeEach(): Unit = {
     super.beforeEach()
     nodeList += createLabeledNode(Map("age" -> 10, "name" -> "A", "foo" -> 6), "A")
-    nodeList += createLabeledNode(Map("age" -> 9, "name" -> "B", "foo" -> 5), "A")
+    nodeList += createLabeledNode(Map("age" -> 9, "name" -> "B", "foo" -> 5, "born" -> 1990), "A")
     nodeList += createLabeledNode(Map("age" -> 12, "name" -> "C", "foo" -> 4), "A")
     nodeList += createLabeledNode(Map("age" -> 16, "name" -> "D", "foo" -> 3), "A")
-    nodeList += createLabeledNode(Map("age" -> 14, "name" -> "E", "foo" -> 2), "A")
+    nodeList += createLabeledNode(Map("age" -> 14, "name" -> "E", "foo" -> 2, "born" -> 1960), "A")
     nodeList += createLabeledNode(Map("age" -> 4, "name" -> "F", "foo" -> 1), "A")
+  }
+
+  test("should sort first unaliased and then aliased columns in the right order") {
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
+    result.executionPlanDescription() should includeSomewhere
+        .aPlan("Sort")
+      .withOrder(ProvidedOrder.asc("anon[54]").asc("bday"))
+
+    result.toList should equal(List(
+      Map("a.name" -> "A", "bday" -> false),
+      Map("a.name" -> "B", "bday" -> true),
+      Map("a.name" -> "C", "bday" -> false),
+      Map("a.name" -> "D", "bday" -> false),
+      Map("a.name" -> "E", "bday" -> true),
+      Map("a.name" -> "F", "bday" -> false)
+    ))
+  }
+
+  test("should sort first aliased and then unaliased columns in the right order") {
+    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY bday, a.name RETURN a.name, bday")
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Sort")
+      .withOrder(ProvidedOrder.asc("bday").asc("anon[60]"))
+
+    result.toList should equal(List(
+      Map("a.name" -> "A", "bday" -> false),
+      Map("a.name" -> "C", "bday" -> false),
+      Map("a.name" -> "D", "bday" -> false),
+      Map("a.name" -> "F", "bday" -> false),
+      Map("a.name" -> "B", "bday" -> true),
+      Map("a.name" -> "E", "bday" -> true)
+    ))
   }
 
   test("ORDER BY previously unprojected column in WITH") {
@@ -96,13 +128,13 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("ORDER BY renamed column old name in WITH and project and return that column") {
-    // 3.1 and older is buggy here
-    val result = executeWith(Configs.All - Configs.Version2_3 - Configs.Version3_1,
+    val result = executeWith(Configs.All,
       """
       MATCH (a:A)
-      WITH a AS b, a.age AS age
-      ORDER BY a
-      RETURN b.name, age
+      WITH a, a.name AS name
+      WITH name AS b, a.age AS age
+      ORDER BY name
+      RETURN b, age
       """)
 
     result.executionPlanDescription() should includeSomewhere
@@ -112,27 +144,27 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         .withOrder(ProvidedOrder.asc("b"))
         .containingArgument("b")
         .onTopOf(aPlan("Projection")
-          .containingArgument("{b : a}")
+          .containingArgument("{b : name}")
         ))
 
     result.toList should equal(List(
-      Map("b.name" -> "A", "age" -> 10),
-      Map("b.name" -> "B", "age" -> 9),
-      Map("b.name" -> "C", "age" -> 12),
-      Map("b.name" -> "D", "age" -> 16),
-      Map("b.name" -> "E", "age" -> 14),
-      Map("b.name" -> "F", "age" -> 4)
+      Map("b" -> "A", "age" -> 10),
+      Map("b" -> "B", "age" -> 9),
+      Map("b" -> "C", "age" -> 12),
+      Map("b" -> "D", "age" -> 16),
+      Map("b" -> "E", "age" -> 14),
+      Map("b" -> "F", "age" -> 4)
     ))
   }
 
   test("ORDER BY renamed column new name in WITH and project and return that column") {
-    // 3.1 and older is buggy here
-    val result = executeWith(Configs.All - Configs.Version2_3 - Configs.Version3_1,
+    val result = executeWith(Configs.All,
       """
       MATCH (a:A)
-      WITH a AS b, a.age AS age
+      WITH a, a.name AS name
+      WITH name AS b, a.age AS age
       ORDER BY b
-      RETURN b.name, age
+      RETURN b, age
       """)
 
     result.executionPlanDescription() should includeSomewhere
@@ -142,16 +174,16 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         .withOrder(ProvidedOrder.asc("b"))
         .containingArgument("b")
         .onTopOf(aPlan("Projection")
-          .containingArgument("{b : a}")
+          .containingArgument("{b : name}")
         ))
 
     result.toList should equal(List(
-      Map("b.name" -> "A", "age" -> 10),
-      Map("b.name" -> "B", "age" -> 9),
-      Map("b.name" -> "C", "age" -> 12),
-      Map("b.name" -> "D", "age" -> 16),
-      Map("b.name" -> "E", "age" -> 14),
-      Map("b.name" -> "F", "age" -> 4)
+      Map("b" -> "A", "age" -> 10),
+      Map("b" -> "B", "age" -> 9),
+      Map("b" -> "C", "age" -> 12),
+      Map("b" -> "D", "age" -> 16),
+      Map("b" -> "E", "age" -> 14),
+      Map("b" -> "F", "age" -> 4)
     ))
   }
 
