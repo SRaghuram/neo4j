@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{ExecutionPlan => ExecutionPlanv4_0}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.ExecutionPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{CompiledRuntimeName, RuntimeName}
 import org.neo4j.cypher.internal.compatibility.{CypherRuntime, LogicalQuery}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
@@ -21,7 +21,7 @@ import org.neo4j.values.virtual.MapValue
 object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   @throws[CantCompileQueryException]
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlanv4_0 = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     val (newPlan, newSemanticTable) = projectIndexProperties(query.logicalPlan, query.semanticTable)
 
     val codeGen = new CodeGenerator(context.codeStructure, context.clock, CodeGenConfiguration(context.debugOptions))
@@ -36,7 +36,7 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   /**
     * Execution plan for compiled runtime. Beware: will be cached.
     */
-  class CompiledExecutionPlan(val compiled: CompiledPlan) extends ExecutionPlanv4_0 {
+  class CompiledExecutionPlan(val compiled: CompiledPlan) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,

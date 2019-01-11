@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{ExecutionPlan => ExecutionPlan_V35}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.ExecutionPlan
 import org.neo4j.cypher.internal.compatibility.{CypherRuntime, LogicalQuery}
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.runtime._
@@ -33,7 +33,7 @@ import org.neo4j.values.virtual.MapValue
 
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan_V35 = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
@@ -62,13 +62,13 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val tracer = context.runtimeEnvironment.tracer
     val fieldNames = query.resultColumns
 
-    VectorizedExecutionPlan(operators,
-                            physicalPlan.slotConfigurations,
-                            queryIndexes,
-                            logicalPlan,
-                            fieldNames,
-                            dispatcher,
-                            tracer)
+    MorselExecutionPlan(operators,
+                        physicalPlan.slotConfigurations,
+                        queryIndexes,
+                        logicalPlan,
+                        fieldNames,
+                        dispatcher,
+                        tracer)
   }
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan,
@@ -103,13 +103,13 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     (slottedPipeMapper, logicalPlanWithConvertedNestedPlans)
   }
 
-  case class VectorizedExecutionPlan(operators: Pipeline,
-                                     slots: SlotConfigurations,
-                                     queryIndexes: QueryIndexes,
-                                     logicalPlan: LogicalPlan,
-                                     fieldNames: Array[String],
-                                     dispatcher: Dispatcher,
-                                     schedulerTracer: SchedulerTracer) extends ExecutionPlan_V35 {
+  case class MorselExecutionPlan(operators: Pipeline,
+                                 slots: SlotConfigurations,
+                                 queryIndexes: QueryIndexes,
+                                 logicalPlan: LogicalPlan,
+                                 fieldNames: Array[String],
+                                 dispatcher: Dispatcher,
+                                 schedulerTracer: SchedulerTracer) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
@@ -119,14 +119,14 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
       if (queryIndexes.hasLabelScan)
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
-      new VectorizedRuntimeResult(operators,
-                                  queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
-                                  logicalPlan,
-                                  queryContext,
-                                  params,
-                                  fieldNames,
-                                  dispatcher,
-                                  schedulerTracer)
+      new MorselRuntimeResult(operators,
+                              queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
+                              logicalPlan,
+                              queryContext,
+                              params,
+                              fieldNames,
+                              dispatcher,
+                              schedulerTracer)
     }
 
     override def runtimeName: RuntimeName = MorselRuntimeName
@@ -137,14 +137,14 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                                                                    "not recommended to be run on production systems"))
   }
 
-  class VectorizedRuntimeResult(operators: Pipeline,
-                                queryIndexes: Array[IndexReadSession],
-                                logicalPlan: LogicalPlan,
-                                queryContext: QueryContext,
-                                params: MapValue,
-                                override val fieldNames: Array[String],
-                                dispatcher: Dispatcher,
-                                schedulerTracer: SchedulerTracer) extends RuntimeResult {
+  class MorselRuntimeResult(operators: Pipeline,
+                            queryIndexes: Array[IndexReadSession],
+                            logicalPlan: LogicalPlan,
+                            queryContext: QueryContext,
+                            params: MapValue,
+                            override val fieldNames: Array[String],
+                            dispatcher: Dispatcher,
+                            schedulerTracer: SchedulerTracer) extends RuntimeResult {
 
     private var resultRequested = false
 
