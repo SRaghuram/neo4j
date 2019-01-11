@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContex
 import org.neo4j.cypher.internal.runtime.interpreted._
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.spi.v4_0.TransactionBoundPlanContext
-import org.neo4j.cypher.internal.{CommunityRuntimeFactory, EnterpriseRuntimeContextCreator, MasterCompiler, RewindableExecutionResult}
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
@@ -37,6 +37,7 @@ import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer}
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
+import org.neo4j.kernel.configuration.Config
 
 import scala.util.Try
 
@@ -54,8 +55,7 @@ object CypherReductionSupport {
     legacyCsvQuoteEscaping = false,
     csvBufferSize = CSVResources.DEFAULT_BUFFER_SIZE,
     nonIndexedLabelWarningThreshold = 0,
-    planWithMinimumCardinalityEstimates = true,
-    lenientCreateRelationship = true)
+    planWithMinimumCardinalityEstimates = true)
   private val kernelMonitors = new Monitors
   private val compiler = CypherPlanner(WrappedMonitors(kernelMonitors), stepSequencer, metricsFactory, config, defaultUpdateStrategy,
     MasterCompiler.CLOCK, PlannerContextCreator)
@@ -174,14 +174,15 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
 
     val runtime = CommunityRuntimeFactory.getRuntime(CypherRuntimeOption.default, planningContext.config.useErrorsOverWarnings)
 
+    val runtimeConfig = CypherConfiguration.fromConfig(Config.defaults()).toCypherRuntimeConfiguration
     val runtimeContextCreator = if (enterprise)
       EnterpriseRuntimeContextCreator(
         GeneratedQueryStructure,
         NullLog.getInstance(),
-        CypherReductionSupport.config,
+        runtimeConfig,
         morselRuntimeState = null)
      else
-      CommunityRuntimeContextCreator(CypherReductionSupport.config)
+      CommunityRuntimeContextCreator(runtimeConfig)
 
     val runtimeContext = runtimeContextCreator.create(planContext,
                                                       txContextWrapper.kernelTransaction.schemaRead(),

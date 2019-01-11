@@ -86,7 +86,7 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
     CypherCurrentCompiler(
       planner,
       EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings),
-      EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, plannerConfig, runtimeEnvironment),
+      EnterpriseRuntimeContextCreator(GeneratedQueryStructure, log, runtimeConfig, runtimeEnvironment),
       kernelMonitors)
   }
 }
@@ -161,7 +161,7 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     log: Log,
                                     clock: Clock,
                                     debugOptions: Set[String],
-                                    config: CypherPlannerConfiguration,
+                                    config: CypherRuntimeConfiguration,
                                     runtimeEnvironment: RuntimeEnvironment,
                                     compileExpressions: Boolean) extends RuntimeContext
 
@@ -170,7 +170,7 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
   */
 case class EnterpriseRuntimeContextCreator(codeStructure: CodeStructure[GeneratedQuery],
                                            log: Log,
-                                           config: CypherPlannerConfiguration,
+                                           config: CypherRuntimeConfiguration,
                                            morselRuntimeState: RuntimeEnvironment)
   extends RuntimeContextCreator[EnterpriseRuntimeContext] {
 
