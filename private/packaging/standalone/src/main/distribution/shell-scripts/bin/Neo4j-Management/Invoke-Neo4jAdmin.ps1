@@ -43,7 +43,7 @@ function Invoke-Neo4jAdmin
 
   process
   {
-    # The powershell command line interpeter converts comma delimited strings into a System.Object[] array
+    # The powershell command line interpreter converts comma delimited strings into a System.Object[] array
     # Search the CommandArgs array and convert anything that's System.Object[] back to a string type
     for ($index = 0; $index -lt $CommandArgs.Length; $index++) {
       if ($CommandArgs[$index] -is [array]) {

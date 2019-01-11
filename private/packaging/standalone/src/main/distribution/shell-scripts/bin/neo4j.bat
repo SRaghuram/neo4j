@@ -5,5 +5,5 @@ rem This file is a commercial add-on to Neo4j Enterprise Edition.
 
 SETLOCAL
 
-Powershell -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -Command "try { Unblock-File -Path '%~dp0Neo4j-Management\*.*' -ErrorAction 'SilentlyContinue' } catch {};Import-Module '%~dp0Neo4j-Management.psd1'; Exit (Invoke-Neo4j %*)"
+Powershell -NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -File %~dp0neo4j.ps1 %*
 EXIT /B %ERRORLEVEL%
