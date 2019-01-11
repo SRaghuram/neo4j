@@ -550,26 +550,26 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     graph.execute(query).asScala.map(_.get("id(n)").asInstanceOf[Long]).toSet should equal(ids)
   }
 
-  // TODO this test breaks
-//  test("don't stall for nested plan expressions") {
-//    // Given
-//    graph.execute( """CREATE (a:A)
-//                     |CREATE (a)-[:T]->(:B),
-//                     |       (a)-[:T]->(:C)""".stripMargin)
-//
-//
-//    // When
-//    val result =
-//      graph.execute( """ CYPHER runtime=morsel
-//                       | MATCH (n)
-//                       | RETURN CASE
-//                       |          WHEN id(n) >= 0 THEN (n)-->()
-//                       |          ELSE 42
-//                       |        END AS p""".stripMargin)
-//
-//    // Then
-//    asScalaResult(result).toList should not be empty
-//  }
+  // TODO: flaky test due to fallback to nested plan
+  ignore("don't stall for nested plan expressions") {
+    // Given
+    graph.execute( """CREATE (a:A)
+                     |CREATE (a)-[:T]->(:B),
+                     |       (a)-[:T]->(:C)""".stripMargin)
+
+
+    // When
+    val result =
+      graph.execute( """ CYPHER runtime=morsel
+                       | MATCH (n)
+                       | RETURN CASE
+                       |          WHEN id(n) >= 0 THEN (n)-->()
+                       |          ELSE 42
+                       |        END AS p""".stripMargin)
+
+    // Then
+    asScalaResult(result).toList should not be empty
+  }
 
   private def sortedScalaListOfABTuples(result: Result): Seq[(String, String)] = {
     result.map {
