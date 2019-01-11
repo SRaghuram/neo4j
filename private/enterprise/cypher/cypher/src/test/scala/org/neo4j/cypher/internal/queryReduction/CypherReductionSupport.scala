@@ -32,7 +32,7 @@ import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticState
+import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticFeature, SemanticState}
 import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer.NO_TRACING
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer}
@@ -94,7 +94,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
   }
 
   private val rewriting = PreparatoryRewriting(Deprecations.V1) andThen
-    SemanticAnalysis(warn = true).adds(BaseContains[SemanticState])
+    SemanticAnalysis(warn = true, SemanticFeature.Cypher9Comparability).adds(BaseContains[SemanticState])
 
   def evaluate(query: String, executeBefore: Option[String] = None, enterprise: Boolean = false): RewindableExecutionResult = {
     val parsingBaseState = queryToParsingBaseState(query, enterprise)

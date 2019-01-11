@@ -23,6 +23,13 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     result.toList should equal(List(Map("j" -> 1, "i" -> 0), Map("j" -> 0, "i" -> 1)))
   }
 
+  test("should be able to compare booleans") {
+    val query = "WITH true AS t, false AS f RETURN t<f, t>f"
+
+    val result = executeWith(Configs.Version4_0 - Configs.Compiled, query)
+    result.toList should equal(List(Map("t<f" -> false, "t>f" -> true)))
+  }
+
   test("order by after projection") {
     val query =
       """

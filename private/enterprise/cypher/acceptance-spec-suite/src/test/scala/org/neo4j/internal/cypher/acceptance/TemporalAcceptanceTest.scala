@@ -793,24 +793,11 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
   // Comparison of durations
 
-  test("should not allow comparing durations") {
+  test("should return null when comparing durations") {
     for (op <- Seq("<", "<=", ">", ">=")) {
-      val query = s"RETURN duration('P1Y1M') $op duration('P1Y30D')"
+      val query = s"RETURN duration('P1Y1M') $op duration('P1Y30D') AS x"
       withClue(s"Executing $query") {
-        /**
-          *  Version 3.5 returns null instead due to running with 4.0 runtime
-          *  SyntaxException come from the 4.0 planner and IncomparableValuesException from earlier runtimes
-          */
-        failWithError(Configs.Version4_0, query, Seq("Type mismatch"))
-      }
-    }
-  }
-
-  test("should return null when comparing durations and not able to fail at compile time") {
-    for (op <- Seq("<", "<=", ">", ">=")) {
-      val query = "RETURN $d1 " + op + " $d2 as x"
-      withClue(s"Executing $query") {
-        val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, params = Map("d1" -> DurationValue.duration(1, 0, 0 ,0), "d2" -> DurationValue.duration(0, 30, 0 ,0))).toList
+        val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList
         res should be(List(Map("x" -> null)))
       }
     }

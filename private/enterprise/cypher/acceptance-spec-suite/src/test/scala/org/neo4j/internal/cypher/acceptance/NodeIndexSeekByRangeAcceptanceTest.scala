@@ -6,8 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeekByRange, UniqueIndexSeekByRange}
-import org.neo4j.cypher.{ExecutionEngineFunSuite, SyntaxException}
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.values.storable.DurationValue
 
 /**
   * These tests are testing the actual index implementation, thus they should all check the actual result.
@@ -1019,28 +1020,20 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     }
   }
 
-  test("should refuse to execute index seeks using inequalities over incomparable types (detected at compile time)") {
-    // Given
-    val query = "MATCH (n:Label) WHERE n.prop >= [1, 2, 3] RETURN n.prop AS prop"
-    a[SyntaxException] should be thrownBy {
-      executeWith(Configs.Empty, query).toList
-    }
-  }
-
-  test("should yield empty results for index seeks using inequalities over incomparable types detected at runtime") {
+  test("should return no rows when executing index seeks using inequalities over incomparable types") {
     // Given
     (1 to 405).foreach { _ =>
       createLabeledNode("Label")
     }
     graph.createIndex("Label", "prop")
 
-    val query = "MATCH (n:Label) WHERE n.prop >= {param} RETURN n.prop AS prop"
+    val query = "MATCH (n:Label) WHERE n.prop >= duration('P1Y1M') RETURN n.prop AS prop"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
-                               //THEN
-                               plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }), params = Map("param" -> Array[Int](1, 2, 3)))
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan(IndexSeekByRange.name)
+      }))
     result.toList should be(empty)
   }
 
@@ -1057,7 +1050,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
-                             }), params = Map("param" -> Array[Int](1, 2, 3)))
+                             }), params = Map("param" -> DurationValue.duration(1, 0, 0 ,0)))
 
     result should be(empty)
   }
