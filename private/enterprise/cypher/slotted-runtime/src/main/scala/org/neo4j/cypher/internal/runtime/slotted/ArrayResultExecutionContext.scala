@@ -152,6 +152,8 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
 
   override def getCachedPropertyAt(offset: Int): Value = fail()
 
+  override def invalidateCachedProperties(node: Long): Unit = fail()
+
   override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = fail()
 
   override def setLinenumber(line: Option[ResourceLinenumber]): Unit = fail()

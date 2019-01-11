@@ -220,6 +220,8 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def getCachedPropertyAt(offset: Int): Value = getRefAt(offset).asInstanceOf[Value]
 
+  override def invalidateCachedProperties(node: Long): Unit = fail()
+
   override def setLinenumber(file: String, line: Long, last: Boolean = false): Unit = fail()
 
   override def setLinenumber(line: Option[ResourceLinenumber]): Unit = fail()
