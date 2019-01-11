@@ -663,7 +663,7 @@ object LdbcQueries {
                   |""".stripMargin
 
     def params: Map[String, Long] = {
-      val startTime = ZonedDateTime.of(2000, 1, 3, 0, 0, 0, 0, TimeZone.getTimeZone("Europe/Stockholm").toZoneId)
+      val startTime = ZonedDateTime.of(2000, 1, 2, 0, 0, 0, 0, TimeZone.getTimeZone("Europe/Stockholm").toZoneId)
       Map("1" -> 1, "2" -> startTime.toEpochSecond * 1000, "3" -> 4)
     }
 
