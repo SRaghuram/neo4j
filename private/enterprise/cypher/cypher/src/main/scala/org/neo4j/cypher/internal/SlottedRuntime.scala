@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.compatibility.InterpretedRuntime.InterpretedExecutionPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{PeriodicCommitInfo, ExecutionPlan => ExecutionPlan_V35}
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{ExecutionPlan => ExecutionPlan_V35}
 import org.neo4j.cypher.internal.compatibility.{CypherRuntime, LogicalQuery}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
@@ -67,7 +67,6 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val pipeTreeBuilder = PipeTreeBuilder(pipeBuilder)
       val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
       val pipe = pipeTreeBuilder.build(logicalPlanWithConvertedNestedPlans)
-      val periodicCommitInfo = query.periodicCommit.map(x => PeriodicCommitInfo(x.batchSize))
       val columns = query.resultColumns
       val resultBuilderFactory =
         new SlottedExecutionResultBuilderFactory(pipe,
@@ -88,7 +87,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       }
 
       new InterpretedExecutionPlan(
-        periodicCommitInfo,
+        query.periodicCommitInfo,
         resultBuilderFactory,
         SlottedRuntimeName,
         query.readOnly)

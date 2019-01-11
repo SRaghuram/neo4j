@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.interpreted._
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.spi.v4_0.TransactionBoundPlanContext
 import org.neo4j.cypher.internal._
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.PeriodicCommitInfo
 import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
@@ -196,7 +197,7 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
                                     logicalPlanState.statement().returnColumns.toArray,
                                     logicalPlanState.semanticTable(),
                                     logicalPlanState.planningAttributes.cardinalities,
-                                    logicalPlanState.periodicCommit)
+                                    logicalPlanState.maybePeriodicCommit.flatMap(_.map(x => PeriodicCommitInfo(x.batchSize))))
 
     val executionPlan = runtime.compileToExecutable(logicalQuery, runtimeContext)
 
