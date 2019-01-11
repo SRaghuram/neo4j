@@ -269,6 +269,16 @@ class RecordFormatSelectorTest
     }
 
     @Test
+    void selectNewestFormatForExistingHighLimitWithLegacyFormat() throws IOException
+    {
+        prepareNeoStoreFile( HighLimitV3_4_0.STORE_VERSION, pageCache );
+
+        Config config = Config.defaults();
+
+        assertSame( HighLimit.RECORD_FORMATS, selectNewestFormat( config, testDirectory.databaseLayout(), fs, this.pageCache, LOG ) );
+    }
+
+    @Test
     void findSuccessorLatestVersion()
     {
         assertFalse( findSuccessor( defaultFormat() ).isPresent() );

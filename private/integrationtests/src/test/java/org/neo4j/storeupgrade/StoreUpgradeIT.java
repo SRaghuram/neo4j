@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -37,6 +38,7 @@ import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.SchemaRead;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.InwardKernel;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -51,6 +53,8 @@ import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngin
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.register.Register.DoubleLongRegister;
@@ -63,12 +67,20 @@ import org.neo4j.test.Unzip;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.io.FileUtils.moveToDirectory;
+import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 
@@ -129,8 +141,7 @@ public class StoreUpgradeIT
 
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
-            builder.setConfig( GraphDatabaseSettings.allow_upgrade, "true" );
-            builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
+            builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
             GraphDatabaseService db = builder.newGraphDatabase();
             try
@@ -160,7 +171,7 @@ public class StoreUpgradeIT
             props.putAll( ServerTestUtils.getDefaultRelativeProperties() );
             props.setProperty( GraphDatabaseSettings.data_directory.name(), rootDir.getAbsolutePath() );
             props.setProperty( GraphDatabaseSettings.logs_directory.name(), rootDir.getAbsolutePath() );
-            props.setProperty( GraphDatabaseSettings.allow_upgrade.name(), "true" );
+            props.setProperty( allow_upgrade.name(), "true" );
             props.setProperty( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
             props.setProperty( new HttpConnector( "http" ).type.name(), "HTTP" );
             props.setProperty( new HttpConnector( "http" ).enabled.name(), "true" );
@@ -185,6 +196,81 @@ public class StoreUpgradeIT
             }
 
             assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
+        }
+
+        @Test
+        public void transactionLogsMovedToConfiguredLocationAfterUpgrade() throws IOException
+        {
+            FileSystemAbstraction fileSystem = testDir.getFileSystem();
+            File databaseDir = testDir.databaseDir();
+            File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
+            File databaseDirectory = store.prepareDirectory( databaseDir );
+
+            // migrated databases have their transaction logs located in
+            Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( databaseDirectory, fileSystem );
+            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
+            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
+            builder.setConfig( allow_upgrade, "true" );
+            builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
+            GraphDatabaseService database = builder.newGraphDatabase();
+            String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
+            database.shutdown();
+
+            File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );
+            assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
+            Set<String> transactionLogFilesAfterMigration = getTransactionLogFileNames( newTransactionLogsLocation, fileSystem );
+            assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
+        }
+
+        @Test
+        public void transactionLogsMovedToConfiguredLocationAfterUpgradeFromCustomLocation() throws IOException
+        {
+            FileSystemAbstraction fileSystem = testDir.getFileSystem();
+            File databaseDir = testDir.databaseDir();
+            File transactionLogsRoot = testDir.directory( "transactionLogsRoot" );
+            File customTransactionLogsLocation = testDir.directory( "transactionLogsCustom" );
+            File databaseDirectory = store.prepareDirectory( databaseDir );
+            moveAvailableLogsToCustomLocation( fileSystem, customTransactionLogsLocation, databaseDirectory );
+
+            // migrated databases have their transaction logs located in
+            Set<String> transactionLogFilesBeforeMigration = getTransactionLogFileNames( customTransactionLogsLocation, fileSystem );
+            GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
+            GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
+            builder.setConfig( allow_upgrade, "true" );
+            builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
+            builder.setConfig( logical_logs_location, customTransactionLogsLocation.getAbsolutePath() );
+            GraphDatabaseService database = builder.newGraphDatabase();
+            String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
+            database.shutdown();
+
+            File newTransactionLogsLocation = new File( transactionLogsRoot, startedDatabaseName );
+            assertTrue( fileSystem.fileExists( newTransactionLogsLocation ) );
+            Set<String> transactionLogFilesAfterMigration = getTransactionLogFileNames( newTransactionLogsLocation, fileSystem );
+            assertEquals( transactionLogFilesBeforeMigration, transactionLogFilesAfterMigration );
+        }
+
+        private void moveAvailableLogsToCustomLocation( FileSystemAbstraction fileSystem, File customTransactionLogsLocation, File databaseDirectory )
+                throws IOException
+        {
+            File[] availableTransactionLogFiles = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
+            for ( File transactionLogFile : availableTransactionLogFiles )
+            {
+                moveToDirectory( transactionLogFile, customTransactionLogsLocation, true );
+            }
+        }
+
+        private Set<String> getTransactionLogFileNames( File databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
+        {
+            File[] availableLogFilesBeforeMigration = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
+            assertThat( availableLogFilesBeforeMigration, not( emptyArray() ) );
+
+            return stream( availableLogFilesBeforeMigration ).map( File::getName ).collect( toSet() );
+        }
+
+        private static File[] getAvailableTransactionLogFiles( File databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
+        {
+            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDirectory, fileSystem ).build();
+            return logFiles.logFiles();
         }
     }
 
@@ -219,7 +305,7 @@ public class StoreUpgradeIT
             new File( databaseDirectory, "debug.log" ).delete(); // clear the log
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
-            builder.setConfig( GraphDatabaseSettings.allow_upgrade, "true" );
+            builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
             try
             {
@@ -237,7 +323,7 @@ public class StoreUpgradeIT
     }
 
     @RunWith( Parameterized.class )
-    public static class StoreUpgrade22Test
+    public static class StoreWithoutIdFilesUpgradeTest
     {
         @Parameterized.Parameter( 0 )
         public Store store;
@@ -267,7 +353,7 @@ public class StoreUpgradeIT
 
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
-            builder.setConfig( GraphDatabaseSettings.allow_upgrade, "true" );
+            builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             GraphDatabaseService db = builder.newGraphDatabase();
             try

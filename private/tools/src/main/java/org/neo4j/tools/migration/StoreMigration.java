@@ -24,6 +24,7 @@ import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.storemigration.DatabaseMigratorImpl;
+import org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator;
 import org.neo4j.kernel.impl.storemigration.StoreMigrator;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
@@ -103,6 +104,7 @@ public class StoreMigration
                     RecoveryCleanupWorkCollector.immediate() );
 
             DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory );
+            LegacyTransactionLogsLocator legacyLogsLocator = new LegacyTransactionLogsLocator( config, databaseLayout.databaseDirectory() );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
@@ -118,8 +120,7 @@ public class StoreMigration
 
             long startTime = System.currentTimeMillis();
             DatabaseMigratorImpl migrator = new DatabaseMigratorImpl( fs, config, logService,
-                    indexProviderMap,
-                    pageCache, tailScanner, jobScheduler, databaseLayout );
+                    indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator );
             migrator.migrate();
 
             // Append checkpoint so the last log entry will have the latest version
