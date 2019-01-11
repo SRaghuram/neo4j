@@ -5,10 +5,11 @@
  */
 package org.neo4j.backup.impl;
 
-import java.io.OutputStream;
-
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+
+import java.io.OutputStream;
+
 import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -28,6 +29,7 @@ public class OnlineBackupExecutor
     private final LogProvider logProvider;
     private final ProgressMonitorFactory progressMonitorFactory;
     private final Monitors monitors;
+    private final BackupSupportingClassesFactory backupSupportingClassesFactory;
 
     private final ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
 
@@ -38,6 +40,7 @@ public class OnlineBackupExecutor
         this.logProvider = builder.logProvider;
         this.progressMonitorFactory = builder.progressMonitorFactory;
         this.monitors = builder.monitors;
+        this.backupSupportingClassesFactory = builder.supportingClassesFactory;
     }
 
     public static OnlineBackupExecutor buildDefault()
@@ -52,7 +55,7 @@ public class OnlineBackupExecutor
 
     public void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        try ( BackupSupportingClasses supportingClasses = createBackupSupportingClasses( context ) )
+        try ( BackupSupportingClasses supportingClasses = backupSupportingClassesFactory.createSupportingClasses( context ) )
         {
             LogProvider userLogProvider = setupUserLogProvider();
             PageCache pageCache = supportingClasses.getPageCache();
@@ -68,7 +71,8 @@ public class OnlineBackupExecutor
         }
     }
 
-    private BackupSupportingClasses createBackupSupportingClasses( OnlineBackupContext context )
+    private static BackupSupportingClassesFactory createBackupSupportingClassesFactory( OutputStream outputStream, FileSystemAbstraction fs,
+            LogProvider logProvider, Monitors monitors )
     {
         BackupModule backupModule = new BackupModule( outputStream, fs, logProvider, monitors );
 
@@ -76,9 +80,7 @@ public class OnlineBackupExecutor
                 .findFirst()
                 .orElseThrow( () -> new IllegalStateException( "Unable to find a suitable backup supporting classes provider in the classpath" ) );
 
-        BackupSupportingClassesFactory factory = classesFactoryProvider.getFactory( backupModule );
-
-        return factory.createSupportingClasses( context );
+        return classesFactoryProvider.getFactory( backupModule );
     }
 
     private LogProvider setupUserLogProvider()
@@ -98,6 +100,7 @@ public class OnlineBackupExecutor
         private LogProvider logProvider = NullLogProvider.getInstance();
         private ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.NONE;
         private Monitors monitors = new Monitors();
+        private BackupSupportingClassesFactory supportingClassesFactory;
 
         private Builder()
         {
@@ -133,8 +136,19 @@ public class OnlineBackupExecutor
             return this;
         }
 
+        public Builder withSupportingClassesFactory( BackupSupportingClassesFactory supportingClassesFactory )
+        {
+            this.supportingClassesFactory = supportingClassesFactory;
+            return this;
+        }
+
         public OnlineBackupExecutor build()
         {
+            if ( supportingClassesFactory == null )
+            {
+                supportingClassesFactory = createBackupSupportingClassesFactory( outputStream, fs, logProvider, monitors );
+            }
+
             return new OnlineBackupExecutor( this );
         }
     }

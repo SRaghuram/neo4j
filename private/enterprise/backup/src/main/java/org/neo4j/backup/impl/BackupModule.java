@@ -5,10 +5,11 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
+
 import java.io.OutputStream;
 import java.time.Clock;
 
-import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
@@ -34,7 +35,7 @@ public class BackupModule
      * @param logProvider made available to subsequent dependency resolution classes
      * @param monitors will become shared across all resolved dependencies
      */
-    BackupModule( OutputStream outputStream, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors )
+    public BackupModule( OutputStream outputStream, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors )
     {
         this.outputStream = outputStream;
         this.logProvider = logProvider;
