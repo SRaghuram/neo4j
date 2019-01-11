@@ -124,6 +124,15 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def setCachedPropertyAt(offset: Int, value: Value): Unit = refs(offset) = value
 
+  override def invalidateCachedProperties(node: Long): Unit = {
+    slots.foreachCachedSlot {
+      case (cnp, refSlot) =>
+        if (getLongAt(slots.getLongOffsetFor(cnp.nodeVariableName)) == node) {
+          setCachedPropertyAt(refSlot.offset, null)
+        }
+    }
+  }
+
   override def setCachedProperty(key: CachedNodeProperty, value: Value): Unit =
     setCachedPropertyAt(slots.getCachedNodePropertyOffsetFor(key), value)
 
