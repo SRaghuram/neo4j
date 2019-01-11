@@ -5,6 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.parallel
 
+import java.util.concurrent.atomic.AtomicLong
+import java.util.function.Supplier
+
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -12,6 +15,11 @@ import scala.collection.mutable.ArrayBuffer
   */
 class SingleConsumerDataBuffers(ringBufferBitSize: Int = RingBuffer.defaultBitSize,
                                 ringBufferMaxRetries: Int = RingBuffer.defaultMaxRetries) extends DataPointWriter {
+
+  private val localIds = new AtomicLong
+  private val localThreadId = ThreadLocal.withInitial[Long](new Supplier[Long] {
+    override def get(): Long = localIds.getAndIncrement()
+  })
 
   private val MAX_CLIENT_THREADS: Int = 1024
   private val buffersByThread: Array[RingBuffer] =
@@ -21,10 +29,11 @@ class SingleConsumerDataBuffers(ringBufferBitSize: Int = RingBuffer.defaultBitSi
   private var theConsumer: Thread = _
 
   override def write(dataPoint: DataPoint): Unit = {
-    if (dataPoint.executionThreadId < MAX_CLIENT_THREADS) {
-      buffersByThread(dataPoint.executionThreadId.toInt).produce(dataPoint)
+    val threadLocalId = localThreadId.get()
+    if (threadLocalId < MAX_CLIENT_THREADS) {
+      buffersByThread(threadLocalId.toInt).produce(dataPoint)
     } else {
-      throw new IllegalArgumentException(s"Thread ID exceeded maximum: ${dataPoint.executionThreadId} > ${MAX_CLIENT_THREADS - 1}")
+      throw new IllegalArgumentException(s"Thread local ID exceeded maximum: $threadLocalId > ${MAX_CLIENT_THREADS - 1}")
     }
   }
 
