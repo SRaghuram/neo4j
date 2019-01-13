@@ -2240,13 +2240,12 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(EMPTY_LIST)
   }
 
-
   test("reduce function local access only") {
     //Given
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN ["a", "aa", "aaa"] | count + size(bar))
-    val compiled = compile(reduce("count", literalInt(0), "bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), listOf(literalString("a"), literalString("aa"), literalString("aaa")),
                                    add(function("size", varFor("bar")), varFor("count"))))
 
     //Then
@@ -2258,7 +2257,8 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN [1, 2, 3] | count + bar + foo)
-    val compiled = compile(reduce("count", literalInt(0),  "bar", listOf(literalInt(1), literalInt(2), literalInt(3)),
+    val compiled = compile(reduce(varFor("count"), literalInt(0),  varFor("bar"),
+                                  listOf(literalInt(1), literalInt(2), literalInt(3)),
                                    add(add(varFor("foo"), varFor("bar")), varFor("count"))))
 
     //Then
@@ -2270,7 +2270,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN null | count + size(bar))
-    val compiled = compile(reduce("count", literalInt(0), "bar", nullLiteral,
+    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), nullLiteral,
                                   add(function("size", varFor("bar")), varFor("count"))))
 
     //Then
@@ -2282,7 +2282,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN foo | count + size(foo)
-    val compiled = compile(reduce("count", literalInt(0), "bar", varFor("foo"),
+    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), varFor("foo"),
                                   add(function("size", varFor("foo")), varFor("count"))))
 
     //Then
@@ -2295,7 +2295,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
 
     //When, reduce(count = 0, bar IN $a | count + size($a))
-    val compiled = compile(reduce("count", literalInt(0), "bar", parameter("a"),
+    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), parameter("a"),
                                   add(function("size", parameter("a")), varFor("count"))))
 
     //Then
@@ -2307,7 +2307,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, reduce(count = 42, bar IN [] | count + 3)
-    val compiled = compile(reduce("count", literalInt(42), "bar", literalList(),
+    val compiled = compile(reduce(varFor("count"), literalInt(42), varFor("bar"), literalList(),
                                   add(literalInt(3), varFor("count"))))
 
     //Then
@@ -3197,8 +3197,9 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private def extract(variable: String, collection: Expression, extract: Expression) =
     ExtractExpression(varFor(variable), collection, None, Some(extract) )(pos)
 
-  private def reduce(accumulator: String, init: Expression, variable: String, collection: Expression, expression: Expression) =
-    ReduceExpression(varFor(accumulator), init, varFor(variable), collection,  expression)(pos)
+  private def reduce(accumulator: LogicalVariable, init: Expression, variable: LogicalVariable, collection: Expression, expression: Expression) =
+    ReduceExpression(ReduceScope(accumulator, variable, expression)(pos), init,
+                                                                                                                                                                   collection)(pos)
 
   private def listComprehension(variable: String,
                                 collection: Expression,
