@@ -2160,30 +2160,46 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     )), load(returnVariable))
   }
 
-  private def accessVariable(name: String, currentContext: Option[IntermediateRepresentation]): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) =
-    slots.get(name) match {
-    case Some(LongSlot(offset, true, CTNode)) =>
-      (invokeStatic(method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("nodeOrNoValue"),
-                    loadContext(currentContext), DB_ACCESS, constant(offset)), Option(equal(getLongAt(offset, currentContext), constant(-1L))), None)
-    case Some(LongSlot(offset, false, CTNode)) =>
-      (invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset, currentContext)), None, None)
+  private def accessVariable(name: String, currentContext: Option[IntermediateRepresentation]): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) = {
 
-    case Some(LongSlot(offset, true, CTRelationship)) =>
-      (invokeStatic(method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("relationshipOrNoValue"),
-                    loadContext(currentContext), DB_ACCESS, constant(offset)),
-        Option(equal(getLongAt(offset, currentContext), constant(-1L))), None)
-    case Some(LongSlot(offset, false, CTRelationship)) =>
-      (invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset, currentContext)), None, None)
-    case Some(RefSlot(offset, nullable, _)) =>
-      (getRefAt(offset, currentContext),
-        if (nullable) Option(equal(getRefAt(offset, currentContext), noValue)) else None, None)
-    case _ =>
-      val local = namer.nextVariableName()
-      (block(oneTime(
-       assign(local,
-                 invoke(loadContext(currentContext),
-                   method[ExecutionContext, AnyValue, String]("getByName"), constant(name)))), load(local)),
-        Some(equal(load(local), noValue)), Some(variable[AnyValue](local, constant(null))))
+    def computeRepresentation(ir: IntermediateRepresentation, nullCheck: Option[IntermediateRepresentation], nullable: Boolean): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) = {
+      //when the context has been updated we cannot use it in nullchecks because these might be checked before
+      //declaring the inner context
+      currentContext match {
+        case None => (ir, if (nullable) nullCheck else None, None)
+        case Some(_) =>
+          val local = variable[AnyValue](namer.nextVariableName(), constant(null))
+          val assignExpression = nullCheck.map(n => ternary(n, noValue, ir)).getOrElse(ir)
+          val newNullCheck = if (nullable) Some(equal(load(local.name), noValue)) else None
+          (block(oneTime(
+            assign(local.name, assignExpression)), load(local.name)), newNullCheck, Some(local))
+      }
+    }
+
+    slots.get(name) match {
+      case Some(LongSlot(offset, nullable, CTNode)) =>
+        computeRepresentation(ir =
+                                invokeStatic(
+                                  method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("nodeOrNoValue"),
+                                  loadContext(currentContext), DB_ACCESS, constant(offset)),
+                              nullCheck = Some(equal(getLongAt(offset, currentContext), constant(-1L))),
+                              nullable = nullable)
+      case Some(LongSlot(offset, nullable, CTRelationship)) =>
+        computeRepresentation(ir = invokeStatic(
+                                  method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("relationshipOrNoValue"),
+                                  loadContext(currentContext), DB_ACCESS, constant(offset)),
+                              nullCheck = Some(equal(getLongAt(offset, currentContext), constant(-1L))),
+                              nullable = nullable)
+
+      case Some(RefSlot(offset, nullable, _)) =>
+        computeRepresentation(ir = getRefAt(offset, currentContext), nullCheck = None, nullable = nullable)
+
+      case _ =>
+        computeRepresentation(ir =
+                                invoke(loadContext(currentContext),
+                                          method[ExecutionContext, AnyValue, String]("getByName"), constant(name)),
+                              nullCheck = None, nullable = true)
+    }
   }
 
   private def filterExpression(collectionExpression: Option[IntermediateExpression],

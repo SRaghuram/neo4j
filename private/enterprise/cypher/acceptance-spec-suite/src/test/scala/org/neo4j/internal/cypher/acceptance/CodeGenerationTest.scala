@@ -14,8 +14,8 @@ import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledGroupingExpression, IntermediateCodeGeneration}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, MapExecutionContext}
@@ -2272,6 +2272,27 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
     //Then
     compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(intValue(6))
+  }
+
+  test("reduce function local access only slotted") {
+    //Given
+    val slots = SlotConfiguration(Map("count" -> RefSlot(0, nullable = true, symbols.CTAny),
+                                      "bar" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
+    val context = SlottedExecutionContext(slots)
+    //TODO this is needed because we still use copyWith, we should fix that
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+    val count = ReferenceFromSlot(slots("count").offset, "count")
+    val bar = ReferenceFromSlot(slots("bar").offset, "bar")
+
+    val reduceExpression = reduce(count, literalInt(0), bar, parameter("list"),  add(function("size", bar), count))
+
+    //When, reduce(count = 0, bar IN ["a", "aa", "aaa"] | count + size(bar))
+    val compiled = compile(reduceExpression, slots)
+
+    //Then
+    compiled.evaluate(context, db, map(Array("list"), Array(list(stringValue("a"), stringValue("aa"),
+                                                                 stringValue("aaa")))), cursors) should equal(intValue(6))
+    compiled.evaluate(context, db, map(Array("list"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
   }
 
   test("reduce function accessing outer scope") {
