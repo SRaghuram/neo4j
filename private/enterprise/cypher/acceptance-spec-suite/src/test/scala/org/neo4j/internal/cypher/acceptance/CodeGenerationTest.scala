@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.compiled.expressions
+package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Math.{PI, sin}
 import java.time.{Clock, Duration}
@@ -16,6 +16,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledGroupingExpression, IntermediateCodeGeneration}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, MapExecutionContext}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
@@ -32,7 +33,7 @@ import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
 import org.neo4j.values.storable.LocalTimeValue.localTime
 import org.neo4j.values.storable.Values._
 import org.neo4j.values.storable._
-import org.neo4j.values.virtual.VirtualValues._
+import org.neo4j.values.virtual.VirtualValues.{list, map, nodeValue, relationshipValue, _}
 import org.neo4j.values.virtual.{MapValue, NodeValue, RelationshipValue, VirtualValues}
 import org.neo4j.values.{AnyValue, AnyValues}
 import org.scalatest.matchers.{MatchResult, Matcher}
