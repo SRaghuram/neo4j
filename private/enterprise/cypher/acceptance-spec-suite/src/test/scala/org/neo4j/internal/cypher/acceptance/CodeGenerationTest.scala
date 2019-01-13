@@ -11,12 +11,13 @@ import java.util.concurrent.ThreadLocalRandom
 
 import org.mockito.ArgumentMatchers.{any, anyInt, anyLong}
 import org.mockito.Mockito
-import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
+import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledGroupingExpression, IntermediateCodeGeneration}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, MapExecutionContext}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
@@ -42,7 +43,7 @@ import scala.collection.mutable
 
 class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport {
 
-  private val ctx = mock[ExecutionContext]
+  private val ctx = SlottedExecutionContext(SlotConfiguration.empty)
   private val db = mock[DbAccess]
 
   private val nodeCursor = mock[NodeCursor]
@@ -238,28 +239,32 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("startNode") {
-    val compiled = compile(function("startNode", parameter("a")))
     val rel = relationshipValue(43,
                                 nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
-    addRelationships(ctx, db, RelAt(rel, 0))
+    val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    val compiled = compile(function("startNode", parameter("a")), slots)
+    addRelationships(context, db, RelAt(rel, 0))
     when(db.nodeById(rel.startNode().id())).thenReturn(rel.startNode())
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), cursors) should equal(rel.startNode())
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    compiled.evaluate(context, db, map(Array("a"), Array(rel)), cursors) should equal(rel.startNode())
+    compiled.evaluate(context, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
   }
 
   test("endNode") {
-    val compiled = compile(function("endNode", parameter("a")))
     val rel = relationshipValue(43,
                                 nodeValue(1, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 nodeValue(2, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                 stringValue("R"), EMPTY_MAP)
-    addRelationships(ctx, db, RelAt(rel, 0))
+    val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    val compiled = compile(function("endNode", parameter("a")), slots)
+    addRelationships(context, db, RelAt(rel, 0))
     when(db.nodeById(rel.endNode().id())).thenReturn(rel.endNode())
 
-    compiled.evaluate(ctx, db, map(Array("a"), Array(rel)), cursors) should equal(rel.endNode())
-    compiled.evaluate(ctx, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    compiled.evaluate(context, db, map(Array("a"), Array(rel)), cursors) should equal(rel.endNode())
+    compiled.evaluate(context, db, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
   }
 
   test("exists on node") {
@@ -1223,28 +1228,32 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("ReferenceFromSlot") {
     // Given
-    val offset = 1337
+    val offset = 0
+    val slots = SlotConfiguration(Map("foo" -> RefSlot(offset, nullable = true, symbols.CTAny)), 0, 1)
+    val context = SlottedExecutionContext(slots)
+    context.setRefAt(offset, stringValue("hello"))
     val expression = ReferenceFromSlot(offset, "foo")
-    when(ctx.getRefAt(offset)).thenReturn(stringValue("hello"))
 
     // When
-    val compiled = compile(expression)
+    val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
   }
 
   test("IdFromSlot") {
     // Given
-    val offset = 1337
+    val offset = 0
     val expression = IdFromSlot(offset)
-    when(ctx.getLongAt(offset)).thenReturn(42L)
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(offset, 42L)
 
     // When
-    val compiled = compile(expression, SlotConfiguration(Map("a" -> LongSlot(offset, nullable = false, symbols.CTNode)), 1, 0))
+    val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(ctx, db, EMPTY_MAP, cursors) should equal(longValue(42))
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(longValue(42))
   }
 
   test("PrimitiveEquals") {
@@ -1257,37 +1266,48 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   }
 
   test("NullCheck") {
-    val nullOffset = 1337
-    val offset = 42
-    when(ctx.getLongAt(nullOffset)).thenReturn(-1L)
-    when(ctx.getLongAt(offset)).thenReturn(42L)
+    val nullOffset = 0
+    val offset = 1
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(0, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(1, nullable = true, symbols.CTNode)), 2, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(nullOffset, -1L)
+    context.setLongAt(offset, 42L)
 
-    compile(NullCheck(nullOffset, literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(NullCheck(offset, literalFloat(PI))).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.PI)
+    compile(NullCheck(nullOffset, literalFloat(PI)), slots).evaluate(context, db, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(NullCheck(offset, literalFloat(PI)), slots).evaluate(context, db, EMPTY_MAP, cursors) should equal(Values.PI)
   }
 
   test("NullCheckVariable") {
-    val nullOffset = 1337
-    val offset = 42
-    when(ctx.getLongAt(nullOffset)).thenReturn(-1L)
-    when(ctx.getLongAt(offset)).thenReturn(42L)
-    when(ctx.getRefAt(nullOffset)).thenReturn(NO_VALUE)
-    when(ctx.getRefAt(offset)).thenReturn(stringValue("hello"))
+    val notNullOffset = 0
+    val nullOffset = 1
+    val slots = SlotConfiguration(Map(
+      "aRef" -> RefSlot(0, nullable = true, symbols.CTNode),
+      "notNull" -> LongSlot(notNullOffset, nullable = true, symbols.CTNode),
+      "null" -> LongSlot(nullOffset, nullable = true, symbols.CTNode)), 2, 1)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(nullOffset, -1)
+    context.setLongAt(notNullOffset, 42L)
+    context.setRefAt(0, stringValue("hello"))
 
-    compile(NullCheckVariable(nullOffset, ReferenceFromSlot(offset, "a"))).evaluate(ctx, db, EMPTY_MAP, cursors) should
+    compile(NullCheckVariable(1, ReferenceFromSlot(0, "aRef")), slots).evaluate(context, db, EMPTY_MAP, cursors) should
       equal(Values.NO_VALUE)
-    compile(NullCheckVariable(offset, ReferenceFromSlot(offset, "a"))).evaluate(ctx, db, EMPTY_MAP, cursors) should
+    compile(NullCheckVariable(0, ReferenceFromSlot(0, "aRef")), slots).evaluate(context, db, EMPTY_MAP, cursors) should
       equal(stringValue("hello"))
   }
 
   test("IsPrimitiveNull") {
-    val nullOffset = 1337
-    val offset = 42
-    when(ctx.getLongAt(nullOffset)).thenReturn(-1L)
-    when(ctx.getLongAt(offset)).thenReturn(77L)
+    val notNullOffset = 0
+    val nullOffset = 1
+    val slots = SlotConfiguration(Map(
+      "notNull" -> LongSlot(notNullOffset, nullable = true, symbols.CTNode),
+      "null" -> LongSlot(nullOffset, nullable = true, symbols.CTNode)), 2, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(nullOffset, -1)
+    context.setLongAt(notNullOffset, 42L)
 
-    compile(IsPrimitiveNull(nullOffset)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(IsPrimitiveNull(offset)).evaluate(ctx, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(IsPrimitiveNull(nullOffset), slots).evaluate(context, db, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(IsPrimitiveNull(notNullOffset)).evaluate(context, db, EMPTY_MAP, cursors) should equal(Values.FALSE)
   }
 
   test("containerIndex on node") {
@@ -1405,16 +1425,16 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("handle variables") {
     val variable = varFor("key")
     val compiled = compile(variable)
-    when(ctx.getByName("key")).thenReturn(stringValue("hello"))
-    compiled.evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    val context = new MapExecutionContext(mutable.Map("key" -> stringValue("hello")))
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
   }
 
   test("handle variables with whitespace ") {
     val varName = "   k\te\ty   "
     val variable = varFor(varName)
     val compiled = compile(variable)
-    when(ctx.getByName(varName)).thenReturn(stringValue("hello"))
-    compiled.evaluate(ctx, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    val context = new MapExecutionContext(mutable.Map(varName -> stringValue("hello")))
+    compiled.evaluate(context, db, EMPTY_MAP, cursors) should equal(stringValue("hello"))
   }
 
   test("coerceTo tests") {
@@ -1564,17 +1584,18 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("should project") {
     //given
-    val context = mock[ExecutionContext]
+    val slots = SlotConfiguration(Map("a" -> RefSlot(0, nullable = true, symbols.CTAny),
+                                      "b" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
+    val context = new SlottedExecutionContext(slots)
     val projections = Map(0 -> literal("hello"), 1 -> function("sin", parameter("param")))
-    val compiled = compileProjection(projections)
+    val compiled = compileProjection(projections, slots)
 
     //when
     compiled.project(context, db, map(Array("param"), Array(NO_VALUE)), cursors)
 
     //then
-    verify(context).setRefAt(0, stringValue("hello"))
-    verify(context).setRefAt(1, NO_VALUE)
-    verifyNoMoreInteractions(context)
+    context.getRefAt(0) should equal(stringValue("hello"))
+    context.getRefAt(1) should equal(NO_VALUE)
   }
 
   test("single in list function local access only") {
@@ -2394,45 +2415,47 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   test("map projection node with map context") {
       val propertyMap = map(Array("prop"), Array(stringValue("hello")))
       val node = nodeValue(1, EMPTY_TEXT_ARRAY, propertyMap)
-      when(ctx.getByName("n")).thenReturn(node)
+      val context = new MapExecutionContext(mutable.Map("n" -> node))
       when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
 
       compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")))
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")))
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection node from long slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    val offset = 32
+    val offset = 0
     val nodeId = 11
     val node = nodeValue(nodeId, EMPTY_TEXT_ARRAY, propertyMap)
-    when(ctx.getLongAt(offset)).thenReturn(nodeId)
     when(db.nodeById(nodeId)).thenReturn(node)
     when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("n" -> LongSlot(offset, nullable, symbols.CTNode)), 1, 0)
+      val context = SlottedExecutionContext(slots)
+      context.setLongAt(offset, nodeId)
       compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
   test("map projection node from ref slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    val offset = 32
+    val offset = 0
     val nodeId = 11
     val node = nodeValue(nodeId, EMPTY_TEXT_ARRAY, propertyMap)
-    when(ctx.getRefAt(offset)).thenReturn(node)
     when(db.nodeAsMap(any[Long], any[NodeCursor], any[PropertyCursor])).thenReturn(propertyMap)
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTNode)), 0, 1)
+      val context = SlottedExecutionContext(slots)
+      context.setRefAt(offset, node)
       compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2440,70 +2463,73 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
     val relationship = relationshipValue(1, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                          nodeValue(12, EMPTY_TEXT_ARRAY, EMPTY_MAP), stringValue("R"), propertyMap)
-    when(ctx.getByName("r")).thenReturn(relationship)
+    val context = new MapExecutionContext(mutable.Map("r" -> relationship))
     when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
 
     compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
     compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection relationship from long slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    val offset = 32
+    val offset = 0
     val relationshipId = 1337
     val relationship = relationshipValue(relationshipId, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                          nodeValue(12, EMPTY_TEXT_ARRAY, EMPTY_MAP), stringValue("R"), propertyMap)
-    when(ctx.getLongAt(offset)).thenReturn(relationshipId)
     when(db.relationshipById(relationshipId)).thenReturn(relationship)
     when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("r" -> LongSlot(offset, nullable, symbols.CTRelationship)), 1, 0)
+      val context = SlottedExecutionContext(slots)
+      context.setLongAt(offset, relationshipId)
       compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
   test("map projection relationship from ref slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    val offset = 32
+    val offset = 0
     val relationshipId = 1337
     val relationship = relationshipValue(relationshipId, nodeValue(11, EMPTY_TEXT_ARRAY, EMPTY_MAP),
                                          nodeValue(12, EMPTY_TEXT_ARRAY, EMPTY_MAP), stringValue("R"), propertyMap)
-    when(ctx.getRefAt(offset)).thenReturn(relationship)
     when(db.relationshipAsMap(any[Long], any[RelationshipScanCursor], any[PropertyCursor])).thenReturn(propertyMap)
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("r" -> RefSlot(offset, nullable, symbols.CTRelationship)), 0, 1)
+      val context = SlottedExecutionContext(slots)
+      context.setRefAt(offset, relationship)
       compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
   test("map projection mapValue with map context") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    when(ctx.getByName("map")).thenReturn(propertyMap)
+    val context = new MapExecutionContext(mutable.Map("map" -> propertyMap))
 
     compile(mapProjection("map", includeAllProps = true, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
     compile(mapProjection("map", includeAllProps = false, "foo" -> literalString("projected")))
-      .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection mapValue from ref slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
-    val offset = 32
-    when(ctx.getRefAt(offset)).thenReturn(propertyMap)
+    val offset = 0
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTMap)), 0, 1)
+      val context = SlottedExecutionContext(slots)
+      context.setRefAt(offset, propertyMap)
       compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(ctx, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+        .evaluate(context, db, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2574,176 +2600,208 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("should compile grouping key with single expression") {
     //given
-    val context = mock[ExecutionContext]
-    val projections: Map[Slot, Expression] = Map(RefSlot(0, nullable = false, symbols.CTAny) -> literal("hello"))
-    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections)
+    val slot = RefSlot(0, nullable = true, symbols.CTAny)
+    val slots = SlotConfiguration(Map("a" -> slot), 0, 1)
+    val incoming = SlottedExecutionContext(slots)
+    val outgoing = SlottedExecutionContext(slots)
+    val projections: Map[Slot, Expression] = Map(slot -> literal("hello"))
+    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(context, db, EMPTY_MAP, cursors)
-    compiled.projectGroupingKey(context, key)
+    val key = compiled.computeGroupingKey(incoming, db, EMPTY_MAP, cursors)
+    compiled.projectGroupingKey(outgoing, key)
 
     //then
     key should equal(stringValue("hello"))
-    verify(context).setRefAt(0, stringValue("hello"))
+    outgoing.getRefAt(0) should equal(stringValue("hello"))
   }
 
   test("should compile grouping key with multiple expressions") {
     //given
-    val context = mock[ExecutionContext]
-    val nodeId = 1337
+    val nodeId = 1337L
     val nodeValue = node(nodeId)
-    when(context.getLongAt(0)).thenReturn(nodeId)
+    val refSlot = RefSlot(0, nullable = true, symbols.CTAny)
+    val longSlot = LongSlot(0, nullable = true, symbols.CTNode)
+    val slots = SlotConfiguration(Map("a" -> refSlot, "b" -> longSlot), 1, 1)
+    val incoming = SlottedExecutionContext(slots)
+    val outgoing = SlottedExecutionContext(slots)
+    incoming.setLongAt(0, nodeId)
     when(db.nodeById(nodeId)).thenReturn(nodeValue)
-    val projections: Map[Slot, Expression] = Map(RefSlot(0, nullable = false, symbols.CTAny) -> literal("hello"),
-                                                 LongSlot(1, nullable = false, symbols.CTNode) -> NodeFromSlot(0, "node"))
-    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections)
+    val projections: Map[Slot, Expression] = Map(refSlot -> literal("hello"),
+                                                 longSlot -> NodeFromSlot(0, "node"))
+    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(context, db, EMPTY_MAP, cursors)
-    compiled.projectGroupingKey(context, key)
+    val key = compiled.computeGroupingKey(incoming, db, EMPTY_MAP, cursors)
+    compiled.projectGroupingKey(outgoing, key)
 
     //then
     key should equal(VirtualValues.list(stringValue("hello"), nodeValue))
-    verify(context).setRefAt(0, stringValue("hello"))
-    verify(context).setLongAt(1, nodeId)
+    outgoing.getRefAt(0) should equal(stringValue("hello"))
+    outgoing.getLongAt(0) should equal(nodeId)
   }
 
   test("should compile grouping key with multiple expressions all primitive") {
     //given
-    val context = mock[ExecutionContext]
     val nodeId = 1337
     val relId = 42
     val relationshipValue = relationship(relId)
     val nodeValue = node(nodeId)
-    when(context.getLongAt(0)).thenReturn(relId)
-    when(context.getLongAt(1)).thenReturn(nodeId)
+    val relSlot = LongSlot(0, nullable = true, symbols.CTRelationship)
+    val nodeSlot = LongSlot(1, nullable = true, symbols.CTNode)
+    val slots = SlotConfiguration(Map("node" -> nodeSlot, "rel" -> relSlot), 2, 0)
+    val incoming = SlottedExecutionContext(slots)
+    incoming.setLongAt(0, relId)
+    incoming.setLongAt(1, nodeId)
+    val outgoing = SlottedExecutionContext(slots)
     when(db.nodeById(nodeId)).thenReturn(nodeValue)
     when(db.relationshipById(relId)).thenReturn(relationshipValue)
-    val projections: Map[Slot, Expression] = Map(LongSlot(42, nullable = false, symbols.CTRelationship) -> RelationshipFromSlot(0, "relationship"),
-                                                 LongSlot(47, nullable = false, symbols.CTNode) -> NodeFromSlot(1, "node"))
-    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections)
+    val projections: Map[Slot, Expression] = Map(relSlot -> RelationshipFromSlot(0, "relationship"),
+                                                 nodeSlot -> NodeFromSlot(1, "node"))
+    val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(context, db, EMPTY_MAP, cursors)
-    compiled.projectGroupingKey(context, key)
+    val key = compiled.computeGroupingKey(incoming, db, EMPTY_MAP, cursors)
+    compiled.projectGroupingKey(outgoing, key)
 
     //then
     key should equal(VirtualValues.list( relationshipValue, nodeValue))
-    verify(context).setLongAt(42, relId)
-    verify(context).setLongAt(47, nodeId)
+    incoming.getLongAt(0) should equal(relId)
+    incoming.getLongAt(1) should equal(nodeId)
   }
 
   test("single outgoing path") {
     // given
-    val context = mock[ExecutionContext]
-    val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 2)
-    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+                                      ), 3, 0)
+    val dbAccess = mock[DbAccess]
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2)
     addRelationships(context, dbAccess, r)
 
     //when
     //p = (n1)-[r]->(n2)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"), OUTGOING, Some(NodeFromSlot(2, "n2")),
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, Some(NodeFromSlot(n2.slot, "n2")),
                                                                    NilPathStep)))
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single outgoing path where target node not known (will only happen for legacy plans)") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 2)
-    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+    ), 3, 0)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2)
     addRelationships(context, dbAccess, r)
 
     //when
     //p = (n1)-[r]->(n2)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"), OUTGOING, None,
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, None,
                                                                    NilPathStep)))
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single-node path") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1)
 
     //when
     //p = (n1)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"), NilPathStep))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"), NilPathStep))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node), Array.empty))
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node), Array.empty))
   }
 
   test("single incoming path") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 2)
-    val r = RelAt(relationship(1337, n2.node, n1.node), 1)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+    ), 3, 0)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2)
     addRelationships(context, dbAccess, r)
 
     //when
     //p = (n1)<-[r]-(n2)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                   INCOMING, Some(NodeFromSlot(2, "n2")), NilPathStep)))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+                                                                   INCOMING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single incoming path where target node not known (will only happen for legacy plans)") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 2)
-    val r = RelAt(relationship(1337, n2.node, n1.node), 1)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n2.node, n1.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+    ), 3, 0)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2)
     addRelationships(context, dbAccess, r)
 
     //when
     //p = (n1)<-[r]-(n2)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"), INCOMING, None, NilPathStep)))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), INCOMING, None, NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single undirected path") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 2)
-    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+    ), 3, 0)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2)
     addRelationships(context, dbAccess, r)
 
     //when
-    val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                            BOTH, Some(NodeFromSlot(2, "n2")),
-                                                                            NilPathStep))))
-    val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(2, "n2"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                            BOTH, Some(NodeFromSlot(0, "n1")),
-                                                                            NilPathStep))))
+    val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+                                                                            BOTH, Some(NodeFromSlot(n2.slot, "n2")),
+                                                                            NilPathStep))), slots)
+    val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(n2.slot, "n2"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+                                                                            BOTH, Some(NodeFromSlot(n1.slot, "n1")),
+                                                                            NilPathStep))), slots)
     //then
     p1.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
     p2.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
@@ -2751,23 +2809,27 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("single undirected path where target node not known (will only happen for legacy plans)") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 2)
-    val r = RelAt(relationship(1337, n1.node, n2.node), 1)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+    ), 3, 0)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2)
     addRelationships(context, dbAccess, r)
 
     //when
-    val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+    val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
                                                                             BOTH, None,
-                                                                            NilPathStep))))
-    val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(2, "n2"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
+                                                                            NilPathStep))), slots)
+    val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(n2.slot, "n2"),
+                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
                                                                             BOTH, None,
-                                                                            NilPathStep))))
+                                                                            NilPathStep))), slots)
     //then
     p1.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
     p2.evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
@@ -2775,245 +2837,315 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   test("single path with NO_VALUE") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 2)
-    val slots = SlotConfiguration(Map("r" -> LongSlot(1, nullable = true, symbols.CTRelationship)), 1, 0)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+    ), 3, 0)
+    val context = SlottedExecutionContext(slots)
 
-    when(context.getLongAt(1)).thenReturn(-1L)
+    context.setLongAt(r.slot, -1L)
     addNodes(context, dbAccess, n1, n2)
 
     //when
     //p = (n1)-[r]->(n2)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(1, "r"),
-                                                                   OUTGOING,  Some(NodeFromSlot(2, "n2")), NilPathStep)))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+                                                                   OUTGOING,  Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
     //then
     compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
   }
 
   test("longer path with different direction") {
     //given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
     val n3 = NodeAt(node(44), 2)
     val n4 = NodeAt(node(45), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 =  RelAt(relationship(1338, n3.node, n2.node), 20)
-    val r3 =  RelAt(relationship(1339, n3.node, n4.node), 30)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 =  RelAt(relationship(1338, n3.node, n2.node), 5)
+    val r3 =  RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship)), 7, 0)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
 
     //when
     //p = (n1)-[r1]->(n2)<-[r2]-(n3)-[r3]-(n4)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(10, "r1"), OUTGOING, Some(NodeFromSlot(1, "n2")),
-                                                                   SingleRelationshipPathStep(RelationshipFromSlot(20, "r2"), INCOMING, Some(NodeFromSlot(2, "n3")),
-                                                                                              SingleRelationshipPathStep(RelationshipFromSlot(30, "r3"), BOTH, Some(NodeFromSlot(3, "n4")), NilPathStep)))))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        SingleRelationshipPathStep(RelationshipFromSlot(r1.slot, "r1"), OUTGOING, Some(NodeFromSlot(n2.slot, "n2")),
+                                                                   SingleRelationshipPathStep(RelationshipFromSlot(r2.slot, "r2"), INCOMING, Some(NodeFromSlot(n3.slot, "n3")),
+                                                                                              SingleRelationshipPathStep(RelationshipFromSlot(r3.slot, "r3"), BOTH, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))))
 
     // then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
   }
 
   test("multiple outgoing path") {
     // given
-    val context = mock[ExecutionContext]
-    val dbAccess = mock[DbAccess]
-    val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 1)
-    val n3 = NodeAt(node(43), 2)
-    val n4 = NodeAt(node(44), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
-    addNodes(context, dbAccess, n1, n2, n3, n4)
-    addRelationships(context, dbAccess, r1, r2, r3)
-    when(context.getRefAt(100)).thenReturn(list(r1.rel, r2.rel, r3.rel))
-
-    //when
-    //p = (n1)-[r*]->(n4)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  OUTGOING, Some(NodeFromSlot(3, "n4")), NilPathStep)))
-
-    //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
-      VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
-  }
-
-  test("multiple outgoing path where target node not known (will only happen for legacy plans)") {
-    // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
     val n3 = NodeAt(node(44), 2)
     val n4 = NodeAt(node(45), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 =  RelAt(relationship(1338, n2.node, n3.node), 5)
+    val r3 =  RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
-    when(context.getRefAt(100)).thenReturn(list(r1.rel, r2.rel, r3.rel))
+    context.setRefAt(0, list(r1.rel, r2.rel, r3.rel))
 
     //when
     //p = (n1)-[r*]->(n4)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+                                                                  OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
+
+    //then
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+      VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
+  }
+
+  test("multiple outgoing path where target node not known (will only happen for legacy plans)") {
+    // given
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val n3 = NodeAt(node(44), 2)
+    val n4 = NodeAt(node(45), 3)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 =  RelAt(relationship(1338, n2.node, n3.node), 5)
+    val r3 =  RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+    val context = SlottedExecutionContext(slots)
+    addNodes(context, dbAccess, n1, n2, n3, n4)
+    addRelationships(context, dbAccess, r1, r2, r3)
+    context.setRefAt(0, list(r1.rel, r2.rel, r3.rel))
+
+    //when
+    //p = (n1)-[r*]->(n4)
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
                                                                   OUTGOING, None, NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
       VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
   }
 
   test("multiple incoming path") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 5)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
-    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+    context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
 
     //when
     //p = (n4)<-[r*]-(n1)
-    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  INCOMING, Some(NodeFromSlot(0, "n1")), NilPathStep)))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+                                                                  INCOMING, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
   test("multiple incoming path where target node not known (will only happen for legacy plans)") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 5)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
-    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+    context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
 
     //when
     //p = (n4)<-[r*]-(n1)
-    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+    val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
                                                                   INCOMING, None, NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
   test("multiple undirected path") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 5)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
-    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+    context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
 
     //when
     //p = (n4)<-[r*]-(n1)
-    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  BOTH, Some(NodeFromSlot(0, "n1")), NilPathStep)))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+                                                                  BOTH, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
   test("multiple undirected path where target node not known (will only happen for legacy plans)") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 5)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
-    when(context.getRefAt(100)).thenReturn(list(r3.rel, r2.rel, r1.rel))
+    context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
 
     //when
     //p = (n4)<-[r*]-(n1)
-    val p = pathExpression(NodePathStep(NodeFromSlot(3, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+    val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
                                                                   BOTH, None, NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
   test("multiple path containing NO_VALUE") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
     val n3 = NodeAt(node(43), 2)
     val n4 = NodeAt(node(44), 3)
-    val r1 = RelAt(relationship(1337, n1.node, n2.node), 10)
-    val r2 = RelAt(relationship(1338, n2.node, n3.node), 11)
-    val r3 = RelAt(relationship(1339, n3.node, n4.node), 12)
+    val r1 = RelAt(relationship(1337, n1.node, n2.node), 4)
+    val r2 = RelAt(relationship(1338, n2.node, n3.node), 5)
+    val r3 = RelAt(relationship(1339, n3.node, n4.node), 6)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+    val context = SlottedExecutionContext(slots)
     addNodes(context, dbAccess, n1, n2, n3, n4)
     addRelationships(context, dbAccess, r1, r2, r3)
-    when(context.getRefAt(100)).thenReturn(list(r1.rel, NO_VALUE, r3.rel))
+    context.setRefAt(0, list(r1.rel, NO_VALUE, r3.rel))
 
     //when
     //p = (n1)-[r*]->(n4)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
                                                                   OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
 
     //then
-    compile(p).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
   }
 
   test("multiple NO_VALUE path") {
     // given
-    val context = mock[ExecutionContext]
     val dbAccess = mock[DbAccess]
     val n1 = NodeAt(node(42), 0)
     val n2 = NodeAt(node(43), 1)
+    val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
+                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 2, 1)
+    val context = SlottedExecutionContext(slots)
+    context.setRefAt(0, NO_VALUE)
+
     addNodes(context, dbAccess, n1, n2)
-    val slots = SlotConfiguration(Map("r" -> RefSlot(100, nullable = true, symbols.CTList(symbols.CTRelationship))), 0, 1)
-    when(context.getRefAt(100)).thenReturn(NO_VALUE)
 
     //when
     //p = (n1)-[r*]->(n2)
-    val p = pathExpression(NodePathStep(NodeFromSlot(0, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(100, "r"),
-                                                                  OUTGOING, Some(NodeFromSlot(1, "n2")), NilPathStep)))
+    val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
+                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+                                                                  OUTGOING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
 
     //then
     compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
@@ -3024,14 +3156,14 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
 
   private def addNodes(context: ExecutionContext, dbAccess: DbAccess, nodes: NodeAt*): Unit = {
     for (node <- nodes) {
-      when(context.getLongAt(node.slot)).thenReturn(node.node.id())
+      context.setLongAt(node.slot, node.node.id())
       when(dbAccess.nodeById(node.node.id())).thenReturn(node.node)
     }
   }
 
   private def addRelationships(context: ExecutionContext, dbAccess: DbAccess, rels: RelAt*): Unit = {
     for (rel <- rels) {
-      when(context.getLongAt(rel.slot)).thenReturn(rel.rel.id())
+      context.setLongAt(rel.slot, rel.rel.id())
       when(dbAccess.relationshipById(rel.rel.id())).thenReturn(rel.rel)
     }
     val relMap = rels.map(r => (r.rel.id(), r.rel)).toMap
@@ -3061,7 +3193,7 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private def path(size: Int) =
     VirtualValues.path((0 to size).map(i => node(i)).toArray, (0 until size).map(i => relationship(i)).toArray)
 
-  private def node(id: Int, props: MapValue = EMPTY_MAP) = nodeValue(id, EMPTY_TEXT_ARRAY, EMPTY_MAP)
+  private def node(id: Long, props: MapValue = EMPTY_MAP) = nodeValue(id, EMPTY_TEXT_ARRAY, EMPTY_MAP)
 
   private def relationship(id: Int, props: MapValue = EMPTY_MAP) =
     relationshipValue(id, node(id-1), node(id + 1), stringValue("R"), props)
@@ -3069,20 +3201,17 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
   private def relationship(id: Int, from: NodeValue, to: NodeValue) =
     relationshipValue(id, from, to, stringValue("R"), EMPTY_MAP)
 
-  private def compile(e: Expression, slots: SlotConfiguration) =
+  private def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty) =
     CodeGeneration.compileExpression(new IntermediateCodeGeneration(slots).compileExpression(e).getOrElse(fail()))
 
-  private def compile(e: Expression) =
-    CodeGeneration.compileExpression(new IntermediateCodeGeneration(SlotConfiguration.empty).compileExpression(e).getOrElse(fail()))
-
-  private def compileProjection(projections: Map[Int, Expression]) = {
-    val compiler = new IntermediateCodeGeneration(SlotConfiguration.empty)
+  private def compileProjection(projections: Map[Int, Expression], slots: SlotConfiguration = SlotConfiguration.empty) = {
+    val compiler = new IntermediateCodeGeneration(slots)
     val compiled = for ((s,e) <- projections) yield s -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
     CodeGeneration.compileProjection(compiler.compileProjection(compiled))
   }
 
-  private def compileGroupingExpression(projections: Map[Slot, Expression]): CompiledGroupingExpression = {
-    val compiler = new IntermediateCodeGeneration(SlotConfiguration.empty)
+  private def compileGroupingExpression(projections: Map[Slot, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression = {
+    val compiler = new IntermediateCodeGeneration(slots)
     val compiled = for ((s,e) <- projections) yield s -> compiler.compileExpression(e).getOrElse(fail(s"failed to compile $e"))
     CodeGeneration.compileGroupingExpression(compiler.compileGroupingExpression(compiled))
   }
