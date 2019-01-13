@@ -75,7 +75,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     def id[T](value: IntermediateRepresentation, nullable: Boolean)(implicit m: Manifest[T]) =  {
       val getId = invoke(cast[T](value), method[T, Long]("id"))
       if (!nullable) getId
-      else ternary(equal(value, noValue), constant(-1), getId)
+      else ternary(equal(value, noValue), constant(-1L), getId)
     }
 
     def accessValue(i: Int) =  {
@@ -101,11 +101,11 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     val getKeyOps = groupingsOrdered.map(_._1).map {
       case LongSlot(offset, nullable, CTNode) =>
         val getter = invokeStatic(method[VirtualValues, NodeValue, Long]("node"), getLongAt(offset, None))
-        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1)), noValue, getter)
+        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1L)), noValue, getter)
         else getter
       case LongSlot(offset, nullable, CTRelationship) =>
         val getter = invokeStatic(method[VirtualValues, RelationshipValue, Long]("relationship"), getLongAt(offset, None))
-        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1)), noValue, getter)
+        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1L)), noValue, getter)
         else getter
       case RefSlot(offset, _, _) => getRefAt(offset, None)
       case slot =>
@@ -669,6 +669,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case ExtractExpression(scope, collectionExpression) =>
       extractExpression(internalCompileExpression(collectionExpression, currentContext),
                         scope.extractExpression.get, scope.variable.name, currentContext)
+
     case ReduceExpression(scope, initExpression, collectionExpression) =>
       /*
         reduce is tricky because it modifies the scope for future expressions. The generated code will be something
