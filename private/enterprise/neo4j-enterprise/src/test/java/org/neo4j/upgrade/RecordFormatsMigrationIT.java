@@ -8,9 +8,14 @@ package org.neo4j.upgrade;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
+import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.function.Consumer;
 
@@ -18,6 +23,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -62,17 +68,18 @@ class RecordFormatsMigrationIT
         executeAndStopDb( startStandardFormatDb(), RecordFormatsMigrationIT::createNode );
         assertLatestStandardStore();
 
-        executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::assertNodeExists );
+        executeAndStopDb( startDb( HighLimit.NAME ), RecordFormatsMigrationIT::assertNodeExists );
         assertLatestHighLimitStore();
     }
 
-    @Test
-    void migrateHighLimitV3_0ToLatestHighLimit() throws Exception
+    @ParameterizedTest
+    @ValueSource( strings = {HighLimitV3_0_0.NAME, HighLimitV3_0_6.NAME, HighLimitV3_1_0.NAME, HighLimitV3_2_0.NAME, HighLimitV3_4_0.NAME} )
+    void migrateOldHighLimitToLatestHighLimit( String recordFormatName ) throws Exception
     {
-        executeAndStopDb( startDb( HighLimitV3_0_0.NAME ), RecordFormatsMigrationIT::createNode );
-        assertStoreFormat( HighLimitV3_0_0.RECORD_FORMATS );
+        executeAndStopDb( startDb( recordFormatName ), RecordFormatsMigrationIT::createNode );
+        assertStoreFormat( recordFormatName );
 
-        executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::assertNodeExists );
+        executeAndStopDb( startDb(), RecordFormatsMigrationIT::assertNodeExists );
         assertLatestHighLimitStore();
     }
 
@@ -80,16 +87,16 @@ class RecordFormatsMigrationIT
     void migrateHighLimitV3_4ToLatestHighLimit() throws Exception
     {
         executeAndStopDb( startDb( HighLimitV3_4_0.NAME ), RecordFormatsMigrationIT::createNode );
-        assertStoreFormat( HighLimitV3_4_0.RECORD_FORMATS );
+        assertStoreFormat( HighLimitV3_4_0.RECORD_FORMATS.name() );
 
-        executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::assertNodeExists );
+        executeAndStopDb( startDb(), RecordFormatsMigrationIT::assertNodeExists );
         assertLatestHighLimitStore();
     }
 
     @Test
     void migrateHighLimitToStandard() throws Exception
     {
-        executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::createNode );
+        executeAndStopDb( startDb( HighLimit.NAME ), RecordFormatsMigrationIT::createNode );
         assertLatestHighLimitStore();
 
         Exception exception = assertThrows( Exception.class, this::startStandardFormatDb );
@@ -121,31 +128,36 @@ class RecordFormatsMigrationIT
         return startDb( Standard.LATEST_NAME );
     }
 
-    private GraphDatabaseService startHighLimitFormatDb()
+    private GraphDatabaseService startDb( String recordFormatName )
     {
-        return startDb( HighLimit.NAME );
+        return getGraphDatabaseBuilder()
+                .setConfig( GraphDatabaseSettings.record_format, recordFormatName )
+                .newGraphDatabase();
     }
 
-    private GraphDatabaseService startDb( String recordFormatName )
+    private GraphDatabaseService startDb()
+    {
+        return getGraphDatabaseBuilder().newGraphDatabase();
+    }
+
+    private GraphDatabaseBuilder getGraphDatabaseBuilder()
     {
         return new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
-                .setConfig( GraphDatabaseSettings.record_format, recordFormatName )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .newGraphDatabase();
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 
     private void assertLatestStandardStore() throws Exception
     {
-        assertStoreFormat( Standard.LATEST_RECORD_FORMATS );
+        assertStoreFormat( Standard.LATEST_RECORD_FORMATS.name() );
     }
 
     private void assertLatestHighLimitStore() throws Exception
     {
-        assertStoreFormat( HighLimit.RECORD_FORMATS );
+        assertStoreFormat( HighLimit.RECORD_FORMATS.name() );
     }
 
-    private void assertStoreFormat( RecordFormats expected ) throws Exception
+    private void assertStoreFormat( String formatName ) throws Exception
     {
         Config config = Config.defaults( GraphDatabaseSettings.pagecache_memory, "8m" );
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
@@ -154,7 +166,7 @@ class RecordFormatsMigrationIT
             RecordFormats actual = RecordFormatSelector.selectForStoreOrConfig( config, testDirectory.databaseLayout(),
                     fileSystem, pageCache, NullLogProvider.getInstance() );
             assertNotNull( actual );
-            assertEquals( expected.storeVersion(), actual.storeVersion() );
+            assertEquals( formatName, actual.name() );
         }
     }
 
