@@ -6,20 +6,19 @@
 package com.neo4j.kernel.impl.storemigration;
 
 import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import org.apache.commons.io.IOUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -63,22 +62,6 @@ public class StoreMigrationIT
     public static final RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( pageCacheRule ).around( testDir );
 
     public static final String CREATE_QUERY = readQuery();
-
-    private static String readQuery()
-    {
-        InputStream in = StoreMigrationIT.class.getClassLoader().getResourceAsStream( "store-migration-data.txt" );
-        String result = new BufferedReader( new InputStreamReader( in ) ).lines().collect( Collectors.joining( "\n" ) );
-        try
-        {
-            in.close();
-        }
-        catch ( IOException e )
-        {
-            e.printStackTrace();
-        }
-        return result;
-    }
-
     protected final RecordFormats from;
     protected final RecordFormats to;
 
@@ -238,5 +221,17 @@ public class StoreMigrationIT
         return new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( db )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.record_format, formatName ).newGraphDatabase();
+    }
+
+    private static String readQuery()
+    {
+        try
+        {
+            return IOUtils.resourceToString( "store-migration-data.txt", StandardCharsets.UTF_8, StoreMigrationIT.class.getClassLoader() );
+        }
+        catch ( IOException io )
+        {
+            throw new UncheckedIOException( io );
+        }
     }
 }
