@@ -8,8 +8,8 @@ package org.neo4j.tools.dump;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.internal.recordstorage.ServiceLoadingCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;

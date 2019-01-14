@@ -5,16 +5,16 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
+import com.neo4j.causalclustering.identity.StoreId;
+import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
+import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-import com.neo4j.causalclustering.identity.StoreId;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
-import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.ServiceLoadingCommandReaderFactory;
+import org.neo4j.internal.recordstorage.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;

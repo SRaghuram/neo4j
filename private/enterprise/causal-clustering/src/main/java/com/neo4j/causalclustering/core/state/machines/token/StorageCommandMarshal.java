@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
+import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -14,9 +16,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
-import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.ServiceLoadingCommandReaderFactory;
+import org.neo4j.internal.recordstorage.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;

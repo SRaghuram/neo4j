@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine
+import org.neo4j.internal.recordstorage.RecordStorageEngine
 
 class StoreIntegrationAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
