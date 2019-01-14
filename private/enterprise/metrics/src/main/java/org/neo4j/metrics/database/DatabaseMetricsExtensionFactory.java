@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
@@ -23,7 +23,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static org.neo4j.kernel.extension.ExtensionType.DATABASE;
 
-public class DatabaseMetricsExtensionFactory extends KernelExtensionFactory<DatabaseMetricsExtensionFactory.Dependencies>
+public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMetricsExtensionFactory.Dependencies>
 {
     public interface Dependencies
     {

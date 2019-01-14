@@ -14,7 +14,7 @@ import java.util.Map;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProviderFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -33,7 +33,7 @@ class BatchInsertersIT
     @Test
     void shouldStartBatchInserterWithRealIndexProvider() throws Exception
     {
-        BatchInserter inserter = inserter( testDirectory.databaseDir(), getConfig(), getKernelExtensions() );
+        BatchInserter inserter = inserter( testDirectory.databaseDir(), getConfig(), getExtensions() );
         inserter.shutdown();
     }
 
@@ -42,7 +42,7 @@ class BatchInsertersIT
         return MapUtil.stringMap( default_schema_provider.name(), GraphDatabaseSettings.SchemaIndex.NATIVE_BTREE10.providerName() );
     }
 
-    private static Iterable<KernelExtensionFactory<?>> getKernelExtensions()
+    private static Iterable<ExtensionFactory<?>> getExtensions()
     {
         return Iterables.asIterable( new GenericNativeIndexProviderFactory() );
     }

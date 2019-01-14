@@ -25,7 +25,6 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.internal.LogService;
@@ -143,12 +142,6 @@ public class ExternallyManagedPageCache implements PageCache
                     };
                 }
             }.newFacade( databasesRoot, config, dependencies );
-        }
-
-        public GraphDatabaseFactoryWithPageCacheFactory setKernelExtensions( Iterable<KernelExtensionFactory<?>> newKernelExtensions )
-        {
-            getCurrentState().setKernelExtensions( newKernelExtensions );
-            return this;
         }
     }
 }

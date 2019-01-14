@@ -12,7 +12,7 @@ import org.junit.Test;
 import java.util.Map;
 
 import org.neo4j.jmx.Kernel;
-import org.neo4j.jmx.impl.JmxKernelExtension;
+import org.neo4j.jmx.impl.JmxExtension;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.EmbeddedDbmsRule;
 
@@ -34,7 +34,7 @@ public class ManagementBeansTest
     @Test
     public void canAccessKernelBean()
     {
-        Kernel kernel = graphDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
+        Kernel kernel = graphDb.getDependencyResolver().resolveDependency( JmxExtension.class )
                 .getSingleManagementBean( Kernel.class );
         assertNotNull( "kernel bean is null", kernel );
         assertNotNull( "MBeanQuery of kernel bean is null", kernel.getMBeanQuery() );
@@ -57,7 +57,7 @@ public class ManagementBeansTest
 
     private Neo4jManager getManager()
     {
-        return new Neo4jManager( graphDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
+        return new Neo4jManager( graphDb.getDependencyResolver().resolveDependency( JmxExtension.class )
                 .getSingleManagementBean( Kernel.class ) );
     }
 

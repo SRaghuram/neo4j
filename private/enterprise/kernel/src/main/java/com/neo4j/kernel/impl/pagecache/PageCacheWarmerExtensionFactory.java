@@ -14,8 +14,8 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -23,9 +23,9 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
-@Service.Implementation( KernelExtensionFactory.class )
-public class PageCacheWarmerKernelExtensionFactory
-        extends KernelExtensionFactory<PageCacheWarmerKernelExtensionFactory.Dependencies>
+@Service.Implementation( ExtensionFactory.class )
+public class PageCacheWarmerExtensionFactory
+        extends ExtensionFactory<PageCacheWarmerExtensionFactory.Dependencies>
 {
     public interface Dependencies
     {
@@ -46,7 +46,7 @@ public class PageCacheWarmerKernelExtensionFactory
         Config config();
     }
 
-    public PageCacheWarmerKernelExtensionFactory()
+    public PageCacheWarmerExtensionFactory()
     {
         super( ExtensionType.DATABASE, "pagecachewarmer" );
     }
@@ -65,7 +65,7 @@ public class PageCacheWarmerKernelExtensionFactory
         PageCacheWarmerMonitor monitor = monitors.newMonitor( PageCacheWarmerMonitor.class );
         monitors.addMonitorListener( new PageCacheWarmerLoggingMonitor( log ) );
         Config config = deps.config();
-        return new PageCacheWarmerKernelExtension(
+        return new PageCacheWarmerExtension(
                 scheduler, databaseAvailabilityGuard, pageCache, fs, database, log, monitor, config );
     }
 }

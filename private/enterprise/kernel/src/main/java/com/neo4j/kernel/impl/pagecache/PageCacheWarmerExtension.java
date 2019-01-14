@@ -18,7 +18,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 
-class PageCacheWarmerKernelExtension extends LifecycleAdapter
+class PageCacheWarmerExtension extends LifecycleAdapter
 {
     private final DatabaseAvailabilityGuard databaseAvailabilityGuard;
     private final Database dataSource;
@@ -27,7 +27,7 @@ class PageCacheWarmerKernelExtension extends LifecycleAdapter
     private final WarmupAvailabilityListener availabilityListener;
     private volatile boolean started;
 
-    PageCacheWarmerKernelExtension(
+    PageCacheWarmerExtension(
             JobScheduler scheduler, DatabaseAvailabilityGuard databaseAvailabilityGuard, PageCache pageCache, FileSystemAbstraction fs,
             Database dataSource, Log log, PageCacheWarmerMonitor monitor, Config config )
     {

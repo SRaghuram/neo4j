@@ -12,14 +12,14 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
-public class GlobalMetricsExtensionFactory extends KernelExtensionFactory<GlobalMetricsExtensionFactory.Dependencies>
+public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetricsExtensionFactory.Dependencies>
 {
     public interface Dependencies
     {

@@ -8,8 +8,8 @@ package org.neo4j.kernel.impl.query;
 import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -18,8 +18,8 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
-@Service.Implementation( KernelExtensionFactory.class )
-public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLoggerKernelExtension.Dependencies>
+@Service.Implementation( ExtensionFactory.class )
+public class QueryLoggerExtension extends ExtensionFactory<QueryLoggerExtension.Dependencies>
 {
     public interface Dependencies
     {
@@ -34,7 +34,7 @@ public class QueryLoggerKernelExtension extends KernelExtensionFactory<QueryLogg
         JobScheduler jobScheduler();
     }
 
-    public QueryLoggerKernelExtension()
+    public QueryLoggerExtension()
     {
         super( ExtensionType.DATABASE, "query-logging" );
     }

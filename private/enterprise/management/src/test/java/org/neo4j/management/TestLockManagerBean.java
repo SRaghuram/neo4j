@@ -13,7 +13,7 @@ import java.util.List;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.jmx.impl.JmxKernelExtension;
+import org.neo4j.jmx.impl.JmxExtension;
 import org.neo4j.kernel.info.LockInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.ImpermanentDbmsRule;
@@ -33,7 +33,7 @@ public class TestLockManagerBean
     public void setup()
     {
         graphDb = dbRule.getGraphDatabaseAPI();
-        lockManager = graphDb.getDependencyResolver().resolveDependency( JmxKernelExtension.class )
+        lockManager = graphDb.getDependencyResolver().resolveDependency( JmxExtension.class )
                 .getSingleManagementBean( LockManager.class );
     }
 

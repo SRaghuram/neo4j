@@ -18,8 +18,8 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.extension.DatabaseKernelExtensions;
-import org.neo4j.kernel.extension.KernelExtensionFactory;
+import org.neo4j.kernel.extension.DatabaseExtensions;
+import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -47,7 +47,7 @@ import org.neo4j.scheduler.JobScheduler;
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_path;
-import static org.neo4j.kernel.extension.KernelExtensionFailureStrategies.ignore;
+import static org.neo4j.kernel.extension.ExtensionFailureStrategies.ignore;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 
 /**
@@ -104,14 +104,14 @@ public class StoreMigration
 
             DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, deps );
-            Iterable<KernelExtensionFactory<?>> kernelExtensionFactories = GraphDatabaseDependencies.newDependencies().kernelExtensions();
-            DatabaseKernelExtensions kernelExtensions = life.add( new DatabaseKernelExtensions( extensionContext, kernelExtensionFactories, deps, ignore() ) );
+            Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
+            DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
 
             final LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
                     .withConfig( config ).build();
             LogTailScanner tailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader<>(), monitors );
 
-            DefaultIndexProviderMap indexProviderMap = life.add( new DefaultIndexProviderMap( kernelExtensions, config ) );
+            DefaultIndexProviderMap indexProviderMap = life.add( new DefaultIndexProviderMap( databaseExtensions, config ) );
 
             // Add the kernel store migrator
             life.start();
