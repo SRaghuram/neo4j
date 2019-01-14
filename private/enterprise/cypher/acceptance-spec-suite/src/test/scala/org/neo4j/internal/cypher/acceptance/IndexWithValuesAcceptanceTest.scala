@@ -9,7 +9,9 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.MorselSingleThreaded
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V3_5, V4_0}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.kernel.impl.proc.Procedures
 
 class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
@@ -154,10 +156,10 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should correctly project cached node property through ORDER BY") {
-    // TODO: morsel fails at runtime with NullPointerException
+    // TODO: morsel runtime breaks order
     val result = executeWith(Configs.InterpretedAndSlotted,
       "MATCH (a:DateString), (b:DateDate) WHERE a.ds STARTS WITH '2018' AND b.d > date(a.ds) RETURN a.ds ORDER BY a.ds",
-      executeBefore = createSomeNodes, ignoreMorselRuntimeFailures = true)
+      executeBefore = createSomeNodes, ignoreMorselRuntimeFailures = true, expectedDifferentResults = Configs.Morsel)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("Apply")
