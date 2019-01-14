@@ -11,16 +11,14 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 import org.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
-import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -78,17 +76,6 @@ class MultiplexingCatchupRequestHandlerTest
         assertEquals( SUCCESS_RESPONSE, channel.readOutbound() );
     }
 
-    private DatabaseManager newDbManager()
-    {
-        DatabaseManager dbManager = mock( DatabaseManager.class );
-        DatabaseContext dbContext = mock( DatabaseContext.class );
-        Database db = mock( Database.class );
-        when( db.getDatabaseName() ).thenReturn( EXISTING_DB_NAME );
-        when( dbContext.getDatabase() ).thenReturn( db );
-        when( dbManager.getDatabaseContext( EXISTING_DB_NAME ) ).thenReturn( Optional.of( dbContext ) );
-        return dbManager;
-    }
-
     private MultiplexingCatchupRequestHandler<DatabaseCatchupRequest> newMultiplexingHandler()
     {
         return newMultiplexingHandler( this::newHandlerFactory );
@@ -97,8 +84,8 @@ class MultiplexingCatchupRequestHandlerTest
     private MultiplexingCatchupRequestHandler<DatabaseCatchupRequest> newMultiplexingHandler(
             Function<Database,SimpleChannelInboundHandler<DatabaseCatchupRequest>> handlerFactory )
     {
-        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(),
-                this::newDbManager, handlerFactory, DatabaseCatchupRequest.class );
+        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), () -> TestDatabaseManager.newDbManager( EXISTING_DB_NAME ), handlerFactory,
+                DatabaseCatchupRequest.class, NullLogProvider.getInstance() );
     }
 
     private SimpleChannelInboundHandler<DatabaseCatchupRequest> newHandlerFactory( Database db )

@@ -8,7 +8,9 @@ package org.neo4j.causalclustering.catchup.storecopy;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
+import org.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
+import org.neo4j.causalclustering.catchup.CatchupResult;
 import org.neo4j.logging.Log;
 
 import static java.lang.String.format;
@@ -96,6 +98,15 @@ public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdapto
         public void onFileStreamingComplete( CompletableFuture<StoreCopyFinishedResponse> signal, StoreCopyFinishedResponse response )
         {
             signal.complete( response );
+        }
+
+        @Override
+        public void onCatchupErrorResponse( CompletableFuture<StoreCopyFinishedResponse> signal, CatchupErrorResponse catchupErrorResponse )
+        {
+            StoreCopyFinishedResponse.Status status =
+                    catchupErrorResponse.status() == CatchupResult.E_DATABASE_UNKNOWN ? StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN
+                                                                                      : StoreCopyFinishedResponse.Status.E_UNKNOWN;
+            signal.complete( new StoreCopyFinishedResponse( status ) );
         }
     }
 

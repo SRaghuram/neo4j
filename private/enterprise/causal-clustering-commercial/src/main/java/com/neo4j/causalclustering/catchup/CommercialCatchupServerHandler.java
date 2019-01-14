@@ -61,35 +61,35 @@ public class CommercialCatchupServerHandler implements CatchupServerHandler
     public ChannelHandler txPullRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildTxPullRequestHandler( db, protocol ),
-                TxPullRequest.class );
+                TxPullRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getStoreIdRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreIdRequestHandler( db, protocol ),
-                GetStoreIdRequest.class );
+                GetStoreIdRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler storeListingRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreListingRequestHandler( db, protocol ),
-                PrepareStoreCopyRequest.class );
+                PrepareStoreCopyRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreFileRequestHandler( db, protocol ),
-                GetStoreFileRequest.class );
+                GetStoreFileRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol protocol )
     {
         return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildIndexSnapshotRequestHandler( db, protocol ),
-                GetIndexFilesRequest.class );
+                GetIndexFilesRequest.class, logProvider );
     }
 
     @Override

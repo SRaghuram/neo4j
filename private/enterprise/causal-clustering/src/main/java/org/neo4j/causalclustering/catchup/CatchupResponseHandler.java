@@ -38,5 +38,7 @@ public interface CatchupResponseHandler
 
     void onStoreListingResponse( PrepareStoreCopyResponse storeListingRequest );
 
+    void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse );
+
     void onClose();
 }

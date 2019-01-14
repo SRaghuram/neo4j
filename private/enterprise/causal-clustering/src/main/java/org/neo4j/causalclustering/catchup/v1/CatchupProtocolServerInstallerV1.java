@@ -69,7 +69,7 @@ public class CatchupProtocolServerInstallerV1 implements ProtocolInstaller<Orien
     private final CatchupServerHandler catchupServerHandler;
     private String activeDatabaseName;
 
-    private CatchupProtocolServerInstallerV1( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
+    public CatchupProtocolServerInstallerV1( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
             LogProvider logProvider, CatchupServerHandler catchupServerHandler, String activeDatabaseName )
     {
         this.pipelineBuilderFactory = pipelineBuilderFactory;

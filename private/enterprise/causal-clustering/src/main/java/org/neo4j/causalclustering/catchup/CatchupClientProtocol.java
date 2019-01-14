@@ -23,6 +23,7 @@ public class CatchupClientProtocol extends Protocol<CatchupClientProtocol.State>
         FILE_HEADER,
         FILE_CONTENTS,
         PREPARE_STORE_COPY_RESPONSE,
-        INDEX_SNAPSHOT_RESPONSE
+        INDEX_SNAPSHOT_RESPONSE,
+        ERROR_RESPONSE
     }
 }

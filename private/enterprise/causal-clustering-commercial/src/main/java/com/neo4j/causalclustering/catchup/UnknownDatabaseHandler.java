@@ -13,22 +13,28 @@ import org.neo4j.causalclustering.catchup.CatchupResult;
 import org.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import org.neo4j.causalclustering.catchup.ResponseMessageType;
 import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 class UnknownDatabaseHandler<T extends DatabaseCatchupRequest> extends SimpleChannelInboundHandler<T>
 {
     private final CatchupServerProtocol protocol;
+    private final Log log;
 
-    UnknownDatabaseHandler( Class<T> messageType, CatchupServerProtocol protocol )
+    UnknownDatabaseHandler( Class<T> messageType, CatchupServerProtocol protocol, LogProvider logProvider )
     {
         super( messageType );
         this.protocol = protocol;
+        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
     protected void channelRead0( ChannelHandlerContext ctx, T request )
     {
+        CatchupErrorResponse errorResponse = newErrorResponse( request );
+        log.warn( errorResponse.message() );
         ctx.write( ResponseMessageType.ERROR );
-        ctx.writeAndFlush( newErrorResponse( request ) );
+        ctx.writeAndFlush( errorResponse );
         protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
     }
 

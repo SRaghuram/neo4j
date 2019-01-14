@@ -23,6 +23,8 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static java.lang.String.format;
+
 public abstract class AbstractLocalDatabase extends SafeLifecycle implements LocalDatabase
 {
     private final DatabaseLayout databaseLayout;
@@ -127,7 +129,10 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public Database database()
     {
-        return databaseManagerSupplier.get().getDatabaseContext( databaseName ).orElseThrow( IllegalStateException::new )
+        return databaseManagerSupplier
+                .get()
+                .getDatabaseContext( databaseName )
+                .orElseThrow( () -> new IllegalStateException( format( "No database with name '%s' registered", databaseName ) ) )
                 .getDatabase();
     }
 

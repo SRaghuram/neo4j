@@ -16,6 +16,7 @@ import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.logging.LogProvider;
 
 /**
  * Multiplexes catchup requests against different databases.
@@ -28,15 +29,17 @@ class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest> extend
     private final Supplier<DatabaseManager> databaseManagerSupplier;
     private final Function<Database,SimpleChannelInboundHandler<T>> handlerFactory;
     private final CatchupServerProtocol protocol;
+    private final LogProvider logProvider;
 
     MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, Supplier<DatabaseManager> databaseManagerSupplier,
-            Function<Database,SimpleChannelInboundHandler<T>> handlerFactory, Class<T> messageType )
+            Function<Database,SimpleChannelInboundHandler<T>> handlerFactory, Class<T> messageType, LogProvider logProvider )
     {
         super( messageType );
         this.messageType = messageType;
         this.databaseManagerSupplier = databaseManagerSupplier;
         this.handlerFactory = handlerFactory;
         this.protocol = protocol;
+        this.logProvider = logProvider;
     }
 
     @Override
@@ -48,7 +51,7 @@ class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest> extend
                 .getDatabaseContext( databaseName )
                 .map( DatabaseContext::getDatabase )
                 .map( handlerFactory )
-                .orElseGet( () -> new UnknownDatabaseHandler<>( messageType, protocol ) );
+                .orElseGet( () -> new UnknownDatabaseHandler<>( messageType, protocol, logProvider ) );
 
         handler.channelRead( ctx, request );
     }
