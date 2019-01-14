@@ -616,79 +616,112 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     ))
   }
 
-  test("should plan sort in optimal position within idp") {
+  test("Should plan sort before first expand when sorting on property") {
     makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u.name"
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name, b.title
+        |ORDER BY u.name""".stripMargin
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
   }
 
-  test("should plan sort in optimal position within idp - a") {
+  test("Should plan sort before first expand when sorting on node") {
     makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' WITH b, u AS v WITH b, v.name as name RETURN name, b.title ORDER BY name"
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name, b.title
+        |ORDER BY u""".stripMargin
     val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withRows(200)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
   }
 
-  test("should plan sort in optimal position within idp - b") {
+  test("Should plan sort before first expand when sorting on renamed property") {
     makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY b.title"
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name AS name, b.title
+        |ORDER BY name""".stripMargin
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
+  }
+
+  test("Should plan sort before first expand when sorting on the old name of a renamed property") {
+    makeJoesAndFriends(2, 10, 10)
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name AS name, b.title
+        |ORDER BY u.name""".stripMargin
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
+  }
+
+  test("Should plan sort before first expand when sorting on a property of a renamed node") {
+    makeJoesAndFriends(2, 10, 10)
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u AS v, b.title
+        |ORDER BY v.name""".stripMargin
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
+  }
+
+  test("Should plan sort last when sorting on a property in last node in the expand") {
+    makeJoesAndFriends(2, 10, 10)
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name, b.title
+        |ORDER BY b.title""".stripMargin
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
   }
 
-  test("should plan sort in optimal position within idp - c") {
+  test("Should plan sort last when sorting on the last node in the expand") {
     makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY u"
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
-  }
-
-  test("should plan sort in optimal position within idp - d") {
-    makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name, b.title ORDER BY b"
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name, b.title
+        |ORDER BY b""".stripMargin
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
   }
 
-  test("should plan sort in optimal position within idp - 1") {
+  test("Should plan sort between the expands when ordering by functions of both nodes in first expand and included in return") {
     makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name + p.name, b.title ORDER BY u.name + p.name"
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name + p.name AS add, b.title
+        |ORDER BY add""".stripMargin
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(20))
   }
 
-  test("should plan sort in optimal position within idp - 2") {
+  test("Should plan sort between the expands when ordering by functions of both nodes in first expand and not included in the return") {
     makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name AS name, b.title ORDER BY name"
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u.name AS uname, p.name AS pname, b.title
+        |ORDER BY uname + pname""".stripMargin
     val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
+    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(20))
   }
 
-  test("should plan sort in optimal position within idp - 3") {
+  test("Should plan sort last when ordering by functions of node in last expand") {
     makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u.name AS name, b.title ORDER BY u.name"
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
-  }
-
-  test("should plan sort in optimal position within idp - 4") {
-    makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u AS v, b.title ORDER BY v.name"
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
-  }
-
-  test("should plan sort in optimal position within idp - 5") {
-    makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u, b.title ORDER BY u.name + p.name"
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRowsBetween(2, 20))
-  }
-
-  test("should plan sort in optimal position within idp - 6") {
-    makeJoesAndFriends(2, 10, 10)
-    val query = "PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' RETURN u, b.title ORDER BY u.name + b.title"
+    val query =
+      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |RETURN u, b.title
+        |ORDER BY u.name + b.title""".stripMargin
     val result = executeSingle(query)
     result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withRows(200).onTopOf(aPlan("Projection"))
   }
@@ -746,7 +779,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("Order by should be correct when updating property") {
     makeJoesAndFriends(2, 2, 1)
-    val query = "MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book) WHERE u.name STARTS WITH 'Joe' SET u.name = 'joe' RETURN u.name, u.foo ORDER BY u.name ASC, u.foo DESC"
+    val query =
+      """MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Joe'
+        |SET u.name = 'joe'
+        |RETURN u.name, u.foo
+        |ORDER BY u.name ASC, u.foo DESC""".stripMargin
     val result = executeSingle(query)
     result.toList should be(List(
       Map("u.name" -> "joe", "u.foo" -> 1),
