@@ -10,10 +10,10 @@ import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, IntermediateCodeGeneration, _}
-import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter.COMPILE_LIMIT
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
@@ -23,7 +23,7 @@ import org.neo4j.helpers.Assertion.assertionsEnabled
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
 
-class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenContext: TokenContext) extends ExpressionConverter {
+class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenContext: TokenContext, neverFail: Boolean = false) extends ExpressionConverter {
 
   //uses an inner converter to simplify compliance with Expression trait
   private val inner = new ExpressionConverters(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
@@ -47,7 +47,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
-        if (assertionsEnabled()) throw t
+        if (shouldThrow) throw t
         else log.debug(s"Failed to compile expression: $e", t)
         None
     }
@@ -82,7 +82,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
-        if (assertionsEnabled()) throw t
+        if (shouldThrow) throw t
         else log.debug(s"Failed to compile projection: $projections", t)
         None
     }
@@ -111,11 +111,13 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         //Something horrible happened, maybe we exceeded the bytecode size or introduced a bug so that we tried
         //to load invalid bytecode, whatever is the case we should silently fallback to the next expression
         //converter
-        if (assertionsEnabled()) throw t
+        if (shouldThrow) throw t
         else log.debug(s"Failed to compile projection: $projections", t)
         None
     }
   }
+
+  private def shouldThrow = !neverFail && assertionsEnabled()
 }
 
 object CompiledExpressionConverter {

@@ -1182,10 +1182,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       for (map <- internalCompileExpression(targetExpression, currentContext)) yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
-        val lazySet = oneTime(assign(variableName, ternary(map.nullCheck.reduceLeft((acc,current) => or(acc, current)), noValue,
-                                       invokeStatic(method[CypherFunctions, AnyValue, String, AnyValue, DbAccess,
-                                                           NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
-                                         constant(key), map.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
+        val propertyGet = invokeStatic(method[CypherFunctions, AnyValue, String, AnyValue, DbAccess,
+          NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
+                                       constant(key), map.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
+        val call =
+          if (map.nullCheck.isEmpty) propertyGet
+          else ternary(map.nullCheck.reduceLeft((acc, current) => or(acc, current)), noValue, propertyGet)
+        val lazySet = oneTime(assign(variableName, call))
 
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
