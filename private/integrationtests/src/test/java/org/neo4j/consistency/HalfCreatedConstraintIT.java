@@ -21,6 +21,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
@@ -40,7 +41,7 @@ public class HalfCreatedConstraintIT
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
 
     @Test
-    public void uniqueIndexWithoutOwningConstraintIsIgnoredDuringCheck() throws ConsistencyCheckTool.ToolFailureException, IOException
+    public void uniqueIndexWithoutOwningConstraintIsIgnoredDuringCheck() throws Exception
     {
         File databaseDir = testDirectory.databaseDir();
         Label marker = Label.label( "MARKER" );
@@ -76,7 +77,7 @@ public class HalfCreatedConstraintIT
         }
     }
 
-    private static void addIndex( GraphDatabaseService database )
+    private static void addIndex( GraphDatabaseService database ) throws SchemaKernelException
     {
         try ( Transaction transaction = database.beginTx() )
         {
