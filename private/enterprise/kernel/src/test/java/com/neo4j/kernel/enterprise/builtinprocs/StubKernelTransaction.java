@@ -253,6 +253,13 @@ class StubKernelTransaction implements KernelTransaction
     @Override
     public void setMetaData( Map<String,Object> metaData )
     {
+        throw new UnsupportedOperationException( "not implemented" );
+    }
+
+    @Override
+    public Map<String,Object> getMetaData()
+    {
+        throw new UnsupportedOperationException( "not implemented" );
     }
 
     @Override

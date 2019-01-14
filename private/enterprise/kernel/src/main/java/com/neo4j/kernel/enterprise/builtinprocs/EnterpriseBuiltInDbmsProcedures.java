@@ -102,10 +102,7 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<MetadataResult> getTXMetaData()
     {
         securityContext.assertCredentialsNotExpired();
-        try ( Statement statement = getCurrentTx().acquireStatement() )
-        {
-            return Stream.of( statement.queryRegistration().getMetaData() ).map( MetadataResult::new );
-        }
+        return Stream.of( getCurrentTx().getMetaData() ).map( MetadataResult::new );
     }
 
     private KernelTransaction getCurrentTx()
