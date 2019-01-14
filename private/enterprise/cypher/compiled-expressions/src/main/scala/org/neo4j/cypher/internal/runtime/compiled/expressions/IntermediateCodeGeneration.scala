@@ -2375,7 +2375,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           val node = IntermediateExpression(
             block(lazyRel,
                   invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, VirtualNodeValue, RelationshipScanCursor]("otherNode"),
-                               load(relVar.name), DB_ACCESS,  nodeOps.last.ir, RELATIONSHIP_CURSOR)),
+                               cast[RelationshipValue](load(relVar.name)), DB_ACCESS,  cast[NodeValue](nodeOps.last.ir), RELATIONSHIP_CURSOR)),
             compiled.fields, compiled.variables :+ relVar :+ vRELATIONSHIP_CURSOR, compiled.nullCheck ++ nodeOps.last.nullCheck)
           val rel = IntermediateExpression(
             block(lazyRel, load(relVar.name)),
@@ -2393,7 +2393,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           val node = IntermediateExpression(
             block(lazyRel,
               invokeStatic(method[CypherFunctions, NodeValue, VirtualRelationshipValue, DbAccess, RelationshipScanCursor](methodName),
-                           load(relVar.name), DB_ACCESS, RELATIONSHIP_CURSOR)),
+                           cast[RelationshipValue](load(relVar.name)), DB_ACCESS, RELATIONSHIP_CURSOR)),
             compiled.fields, compiled.variables :+ relVar :+ vRELATIONSHIP_CURSOR, compiled.nullCheck)
           val rel = IntermediateExpression(
             block(lazyRel, load(relVar.name)),
@@ -2415,8 +2415,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                                      invokeStatic(
                                        method[VirtualValues, PathValue, Array[NodeValue], Array[RelationshipValue]](
                                          "path"),
-                                       arrayOf[NodeValue](nodeOps.map(_.ir): _*),
-                                       arrayOf[RelationshipValue](relOps.map(_.ir): _*))
+                                       arrayOf[NodeValue](nodeOps.map(n => cast[NodeValue](n.ir)): _*),
+                                       arrayOf[RelationshipValue](relOps.map(r => cast[RelationshipValue](r.ir)): _*))
                                    )))
 
       val ops = block(lazySet, load(variableName))
