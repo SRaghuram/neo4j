@@ -38,8 +38,8 @@ import org.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
 import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.causalclustering.protocol.Protocol;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
@@ -65,7 +65,7 @@ abstract class CommercialCatchupTest
     private final EmbeddedChannel client = new EmbeddedChannel();
     private final EmbeddedChannel server = new EmbeddedChannel();
 
-    private static final LogProvider LOG_PROVIDER = FormattedLogProvider.toOutputStream( System.out );
+    private static final LogProvider LOG_PROVIDER = NullLogProvider.getInstance();
     private NettyPipelineBuilderFactory pipelineBuilderFactory;
     private CommercialCatchupServerHandler serverResponseHandler;
 
@@ -95,7 +95,7 @@ abstract class CommercialCatchupTest
             client.writeInbound( bytebuf );
         }
 
-        requestResponse.responseHandler.verifyHanlded();
+        requestResponse.responseHandler.verifyHandled();
     }
 
     static Function<DatabaseService,RequestResponse> storeId()
@@ -232,7 +232,7 @@ abstract class CommercialCatchupTest
             fail( "Not an expected responseHandler" );
         }
 
-        void verifyHanlded()
+        void verifyHandled()
         {
             assertTrue( responseHandled );
         }

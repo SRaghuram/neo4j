@@ -5,13 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 
-import java.util.function.Function;
-import java.util.stream.Stream;
-
-import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.protocol.Protocol;
 
 class CommercialCatchupV1Test extends CommercialCatchupTest
@@ -21,15 +16,9 @@ class CommercialCatchupV1Test extends CommercialCatchupTest
         super( Protocol.ApplicationProtocols.CATCHUP_1 );
     }
 
-    @ParameterizedTest
-    @MethodSource( "v1Tests" )
-    void runTests( Function<DatabaseService,RequestResponse> scenario ) throws Exception
+    @Test
+    void shouldHandleStoreIdRequest() throws Exception
     {
-        executeTestScenario( scenario );
-    }
-
-    static Stream<Function<DatabaseService,RequestResponse>> v1Tests()
-    {
-        return Stream.of( storeId() );
+        executeTestScenario( storeId() );
     }
 }

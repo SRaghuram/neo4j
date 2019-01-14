@@ -24,8 +24,8 @@ class CatchupErrorResponseEncoderDecoderTest
 
         // when
         channel.writeOutbound( sent );
-        Object message = channel.readOutbound();
-        channel.writeInbound( message );
+        Object byteBuf = channel.readOutbound();
+        channel.writeInbound( byteBuf );
         CatchupErrorResponse received = channel.readInbound();
 
         // then
