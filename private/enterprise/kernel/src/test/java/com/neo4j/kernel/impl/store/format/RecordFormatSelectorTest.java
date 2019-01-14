@@ -12,6 +12,8 @@ import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,6 +24,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.StoreVersion;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
 import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
@@ -36,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.EnumSource.Mode.MATCH_ANY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -259,13 +263,12 @@ class RecordFormatSelectorTest
         assertSame( Standard.LATEST_RECORD_FORMATS, selectNewestFormat( config, testDirectory.databaseLayout(), fs, this.pageCache, LOG ) );
     }
 
-    @Test
-    void selectNewestFormatForExistingHighLimitStore() throws IOException
+    @ParameterizedTest
+    @EnumSource( value = StoreVersion.class, mode = MATCH_ANY, names = "HIGH_LIMIT.+" )
+    void selectNewestFormatForExistingHighLimitStore( StoreVersion storeVersion ) throws IOException
     {
-        prepareNeoStoreFile( HighLimit.STORE_VERSION, pageCache );
-
+        prepareNeoStoreFile( storeVersion.versionString(), pageCache );
         Config config = Config.defaults();
-
         assertSame( HighLimit.RECORD_FORMATS, selectNewestFormat( config, testDirectory.databaseLayout(), fs, this.pageCache, LOG ) );
     }
 
