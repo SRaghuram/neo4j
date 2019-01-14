@@ -116,6 +116,21 @@ public class StoreUpgradeIT
                     indexCounts( counts( 0, 38, 38, 38 ), counts( 0, 1, 1, 1 ), counts( 0, 133, 133, 133 ) ),
                     HighLimit.NAME
                     )} );
+    private static final List<Store[]> HIGH_LIMIT_STORES300 = Arrays.asList(
+            new Store[]{new Store( "E.H.0-empty.zip",
+                    0 /* node count */,
+                    1 /* last txId */,
+                    selectivities(),
+                    indexCounts(),
+                    HighLimit.NAME
+            )},
+            new Store[]{new Store( "E.H.0-data.zip",
+                    174 /* node count */,
+                    30 /* last txId */,
+                    selectivities( 1.0, 1.0, 1.0 ),
+                    indexCounts( counts( 0, 38, 38, 38 ), counts( 0, 1, 1, 1 ), counts( 0, 133, 133, 133 ) ),
+                    HighLimit.NAME
+            )} );
 
     @RunWith( Parameterized.class )
     public static class StoreUpgradeTest
@@ -126,7 +141,7 @@ public class StoreUpgradeIT
         @Parameterized.Parameters( name = "{0}" )
         public static Collection<Store[]> stores()
         {
-            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES34 ) );
+            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES300, HIGH_LIMIT_STORES34 ) );
         }
 
         @Rule
@@ -331,7 +346,7 @@ public class StoreUpgradeIT
         @Parameterized.Parameters( name = "{0}" )
         public static Collection<Store[]> stores()
         {
-            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES34 ) );
+            return Iterables.asCollection( Iterables.concat( STORES34, HIGH_LIMIT_STORES300, HIGH_LIMIT_STORES34 ) );
         }
 
         @Rule

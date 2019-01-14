@@ -6,6 +6,10 @@
 package com.neo4j.kernel.impl.store.format;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
+import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Test;
 
@@ -69,6 +73,9 @@ class RecordFormatSelectorTest
     {
         assertSame( StandardV3_4.RECORD_FORMATS, selectForVersion( StandardV3_4.STORE_VERSION ) );
         assertSame( StandardV4_0.RECORD_FORMATS, selectForVersion( StandardV4_0.STORE_VERSION ) );
+        assertSame( HighLimitV3_0_0.RECORD_FORMATS, selectForVersion( HighLimitV3_0_0.STORE_VERSION ) );
+        assertSame( HighLimitV3_1_0.RECORD_FORMATS, selectForVersion( HighLimitV3_1_0.STORE_VERSION ) );
+        assertSame( HighLimitV3_2_0.RECORD_FORMATS, selectForVersion( HighLimitV3_2_0.STORE_VERSION ) );
         assertSame( HighLimitV3_4_0.RECORD_FORMATS, selectForVersion( HighLimitV3_4_0.STORE_VERSION ) );
         assertSame( HighLimit.RECORD_FORMATS, selectForVersion( HighLimit.STORE_VERSION ) );
     }
@@ -103,6 +110,10 @@ class RecordFormatSelectorTest
     {
         verifySelectForStore( pageCache, StandardV3_4.RECORD_FORMATS );
         verifySelectForStore( pageCache, StandardV4_0.RECORD_FORMATS );
+        verifySelectForStore( pageCache, HighLimitV3_0_0.RECORD_FORMATS );
+        verifySelectForStore( pageCache, HighLimitV3_0_6.RECORD_FORMATS );
+        verifySelectForStore( pageCache, HighLimitV3_1_0.RECORD_FORMATS );
+        verifySelectForStore( pageCache, HighLimitV3_2_0.RECORD_FORMATS );
         verifySelectForStore( pageCache, HighLimitV3_4_0.RECORD_FORMATS );
         verifySelectForStore( pageCache, HighLimit.RECORD_FORMATS );
     }
@@ -289,6 +300,10 @@ class RecordFormatSelectorTest
     {
         assertEquals( StandardV4_0.RECORD_FORMATS, findSuccessor( StandardV3_4.RECORD_FORMATS ).get() );
 
+        assertEquals( HighLimitV3_0_6.RECORD_FORMATS, findSuccessor( HighLimitV3_0_0.RECORD_FORMATS ).get() );
+        assertEquals( HighLimitV3_1_0.RECORD_FORMATS, findSuccessor( HighLimitV3_0_6.RECORD_FORMATS ).get() );
+        assertEquals( HighLimitV3_2_0.RECORD_FORMATS, findSuccessor( HighLimitV3_1_0.RECORD_FORMATS ).get() );
+        assertEquals( HighLimitV3_4_0.RECORD_FORMATS, findSuccessor( HighLimitV3_2_0.RECORD_FORMATS ).get() );
         assertEquals( HighLimit.RECORD_FORMATS, findSuccessor( HighLimitV3_4_0.RECORD_FORMATS ).get() );
     }
 

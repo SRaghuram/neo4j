@@ -6,6 +6,10 @@
 package org.neo4j;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v306.HighLimitV3_0_6;
+import com.neo4j.kernel.impl.store.format.highlimit.v310.HighLimitV3_1_0;
+import com.neo4j.kernel.impl.store.format.highlimit.v320.HighLimitV3_2_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +37,10 @@ class RecordFormatsGenerationTest
         List<RecordFormats> recordFormats = Arrays.asList(
                 StandardV3_4.RECORD_FORMATS,
                 StandardV4_0.RECORD_FORMATS,
+                HighLimitV3_0_0.RECORD_FORMATS,
+                HighLimitV3_0_6.RECORD_FORMATS,
+                HighLimitV3_1_0.RECORD_FORMATS,
+                HighLimitV3_2_0.RECORD_FORMATS,
                 HighLimitV3_4_0.RECORD_FORMATS,
                 HighLimit.RECORD_FORMATS
         );

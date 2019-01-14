@@ -7,8 +7,8 @@ package org.neo4j.upgrade;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -40,6 +40,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -60,6 +61,16 @@ class RecordFormatsMigrationIT
     {
         executeAndStopDb( startStandardFormatDb(), RecordFormatsMigrationIT::createNode );
         assertLatestStandardStore();
+
+        executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::assertNodeExists );
+        assertLatestHighLimitStore();
+    }
+
+    @Test
+    void migrateHighLimitV3_0ToLatestHighLimit() throws Exception
+    {
+        executeAndStopDb( startDb( HighLimitV3_0_0.NAME ), RecordFormatsMigrationIT::createNode );
+        assertStoreFormat( HighLimitV3_0_0.RECORD_FORMATS );
 
         executeAndStopDb( startHighLimitFormatDb(), RecordFormatsMigrationIT::assertNodeExists );
         assertLatestHighLimitStore();
@@ -143,7 +154,7 @@ class RecordFormatsMigrationIT
             RecordFormats actual = RecordFormatSelector.selectForStoreOrConfig( config, testDirectory.databaseLayout(),
                     fileSystem, pageCache, NullLogProvider.getInstance() );
             assertNotNull( actual );
-            Assertions.assertEquals( expected.storeVersion(), actual.storeVersion() );
+            assertEquals( expected.storeVersion(), actual.storeVersion() );
         }
     }
 
