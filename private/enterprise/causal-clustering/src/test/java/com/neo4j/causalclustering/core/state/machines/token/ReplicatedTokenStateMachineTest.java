@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
@@ -18,7 +19,6 @@ import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.logging.NullLogProvider;

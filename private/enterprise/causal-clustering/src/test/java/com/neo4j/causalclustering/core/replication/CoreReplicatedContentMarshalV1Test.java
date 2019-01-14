@@ -28,10 +28,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.UUID;
 
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.storageengine.api.StorageCommand;
 

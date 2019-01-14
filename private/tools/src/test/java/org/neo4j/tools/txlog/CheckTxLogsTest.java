@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.function.LongFunction;
 
 import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
@@ -29,7 +30,6 @@ import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogVersionedStoreChannel;

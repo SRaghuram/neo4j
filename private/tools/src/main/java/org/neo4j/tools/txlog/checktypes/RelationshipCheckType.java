@@ -5,8 +5,8 @@
  */
 package org.neo4j.tools.txlog.checktypes;
 
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
 
 public class RelationshipCheckType extends CheckType<Command.RelationshipCommand,RelationshipRecord>
 {

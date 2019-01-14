@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
 
 class PropertyCheckType extends CheckType<Command.PropertyCommand,PropertyRecord>
 {

@@ -18,8 +18,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

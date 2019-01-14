@@ -9,9 +9,9 @@ import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
@@ -57,5 +57,4 @@ public class TxPullResponseEncodeDecodeTest
 
         return new CommittedTransactionRepresentation( startEntry, physicalTransactionRepresentation, commitEntry );
     }
-
 }

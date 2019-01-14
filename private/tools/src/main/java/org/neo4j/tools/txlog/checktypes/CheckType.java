@@ -7,10 +7,10 @@ package org.neo4j.tools.txlog.checktypes;
 
 import java.util.Objects;
 
+import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.internal.recordstorage.Command.NodeCommand;
+import org.neo4j.internal.recordstorage.Command.PropertyCommand;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
-import org.neo4j.kernel.impl.transaction.command.Command.NodeCommand;
-import org.neo4j.kernel.impl.transaction.command.Command.PropertyCommand;
 
 /**
  * Type of command ({@link NodeCommand}, {@link PropertyCommand}, ...) to check during transaction log verification.

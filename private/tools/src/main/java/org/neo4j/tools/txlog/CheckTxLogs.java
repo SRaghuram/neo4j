@@ -18,10 +18,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.Args;
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
 import org.neo4j.kernel.impl.transaction.log.LogEntryCursor;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;

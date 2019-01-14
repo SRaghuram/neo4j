@@ -5,8 +5,8 @@
  */
 package org.neo4j.tools.txlog.checktypes;
 
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.record.NeoStoreRecord;
-import org.neo4j.kernel.impl.transaction.command.Command;
 
 public class NeoStoreCheckType extends CheckType<Command.NeoStoreCommand,NeoStoreRecord>
 {
