@@ -26,7 +26,6 @@ import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
-import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
@@ -38,6 +37,8 @@ import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.proc.GlobalProcedures;
+import org.neo4j.kernel.impl.query.FunctionInformation;
+import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Admin;
@@ -169,9 +170,24 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<FunctionResult> listFunctions()
     {
         securityContext.assertCredentialsNotExpired();
-        return graph.getDependencyResolver().resolveDependency( GlobalProcedures.class ).getAllFunctions().stream()
-                .sorted( Comparator.comparing( a -> a.name().toString() ) )
-                .map( FunctionResult::new );
+        DependencyResolver resolver = graph.getDependencyResolver();
+        QueryExecutionEngine queryExecutionEngine = resolver.resolveDependency( QueryExecutionEngine.class );
+        List<FunctionInformation> providedCypherFunctions = queryExecutionEngine.getProvidedCypherFunctions();
+
+        // gets you all functions provided by cypher
+        Stream<FunctionResult> cypherFunctions =
+                providedCypherFunctions.stream().map( FunctionResult::new );
+
+        // gets you all non-aggregating functions that are registered in the db (incl. those from libs like apoc)
+        Stream<FunctionResult> loadedFunctions = resolver.resolveDependency( GlobalProcedures.class ).getAllFunctions()
+                .map( f -> new FunctionResult( f, false ) );
+
+        // gets you all aggregation functions that are registered in the db (incl. those from libs like apoc)
+        Stream<FunctionResult> loadedAggregationFunctions = resolver.resolveDependency( GlobalProcedures.class ).getAllAggregatingFunctions()
+                .map( f -> new FunctionResult( f, true ) );
+
+        return Stream.concat( Stream.concat( cypherFunctions, loadedFunctions ), loadedAggregationFunctions )
+                .sorted( Comparator.comparing( a -> a.name ) );
     }
 
     public static class FunctionResult
@@ -179,15 +195,26 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String name;
         public final String signature;
         public final String description;
+        public final boolean isAggregationFunction;
         public final List<String> roles;
 
-        private FunctionResult( UserFunctionSignature signature )
+        private FunctionResult( UserFunctionSignature signature, boolean isAggregation )
         {
             this.name = signature.name().toString();
             this.signature = signature.toString();
             this.description = signature.description().orElse( "" );
             roles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
             roles.addAll( Arrays.asList( signature.allowed() ) );
+            this.isAggregationFunction = isAggregation;
+        }
+
+        private FunctionResult( FunctionInformation info )
+        {
+            this.name = info.getFunctionName();
+            this.signature = info.getSignature();
+            this.description = info.getDescription();
+            this.isAggregationFunction = info.isAggregationFunction();
+            roles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
         }
     }
 
