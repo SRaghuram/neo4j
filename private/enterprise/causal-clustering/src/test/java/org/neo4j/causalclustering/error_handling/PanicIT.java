@@ -68,7 +68,7 @@ class PanicIT
             panicService.panic( null );
 
             // then
-            assertEventually( context::membersInTopology, equalTo( context.expectedMembersBeforePanic() - 1 ), 30, TimeUnit.SECONDS );
+            assertEventually( context::membersInTopology, equalTo( context.expectedMembersBeforePanic() - 1 ), 60, TimeUnit.SECONDS );
         }
     }
 
