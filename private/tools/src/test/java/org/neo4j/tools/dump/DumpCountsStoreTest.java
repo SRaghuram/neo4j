@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.internal.kernel.api.NamedToken;
+import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
@@ -22,7 +23,6 @@ import org.neo4j.kernel.impl.store.LabelTokenStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
 import org.neo4j.kernel.impl.store.RelationshipTypeTokenStore;
-import org.neo4j.kernel.impl.store.SchemaRuleAccess;
 import org.neo4j.kernel.impl.store.kvstore.BigEndianByteArrayBuffer;
 import org.neo4j.kernel.impl.store.kvstore.HeaderField;
 import org.neo4j.kernel.impl.store.kvstore.Headers;

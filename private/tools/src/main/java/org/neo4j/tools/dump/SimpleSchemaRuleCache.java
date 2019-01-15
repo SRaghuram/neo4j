@@ -14,10 +14,10 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.internal.kernel.api.NamedToken;
+import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.SchemaRuleAccess;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
 
 class SimpleSchemaRuleCache
