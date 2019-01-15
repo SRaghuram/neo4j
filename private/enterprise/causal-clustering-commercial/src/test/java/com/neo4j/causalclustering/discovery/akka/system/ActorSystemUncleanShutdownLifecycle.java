@@ -21,7 +21,7 @@ public class ActorSystemUncleanShutdownLifecycle extends ActorSystemLifecycle
 {
     public ActorSystemUncleanShutdownLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
     {
-        super( actorSystemFactory, resolver, config, logProvider );
+        super( actorSystemFactory, resolver, new JoinMessageFactory( resolver ), config, logProvider );
     }
 
     @Override

@@ -51,8 +51,8 @@ public class ActorSystemLifecycle
     static final int ACTOR_SHUTDOWN_TIMEOUT_S = 15;
 
     private final ActorSystemFactory actorSystemFactory;
-    private final Set<Address> allSeenAddresses = new HashSet<>();
     private final RemoteMembersResolver resolver;
+    private final JoinMessageFactory joinMessageFactory;
     private final Config config;
     private final Log log;
     private final LogProvider logProvider;
@@ -60,10 +60,12 @@ public class ActorSystemLifecycle
     @VisibleForTesting
     protected ActorSystemComponents actorSystemComponents;
 
-    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, Config config, LogProvider logProvider )
+    public ActorSystemLifecycle( ActorSystemFactory actorSystemFactory, RemoteMembersResolver resolver, JoinMessageFactory joinMessageFactory, Config config,
+            LogProvider logProvider )
     {
         this.actorSystemFactory = actorSystemFactory;
         this.resolver = resolver;
+        this.joinMessageFactory = joinMessageFactory;
         this.config = config;
         this.log = logProvider.getLog( getClass() );
         this.logProvider = logProvider;
@@ -73,9 +75,7 @@ public class ActorSystemLifecycle
     {
         this.actorSystemComponents = new ActorSystemComponents( actorSystemFactory,  ProviderSelection.cluster() );
         Props props = ClusterJoiningActor.props( cluster(), resolver, config, logProvider );
-        applicationActorOf( props, ClusterJoiningActor.NAME )
-                .tell( ClusterJoiningActor.JoinMessage.initial( allSeenAddresses ), ActorRef.noSender() );
-        allSeenAddresses.clear();
+        applicationActorOf( props, ClusterJoiningActor.NAME ).tell( joinMessageFactory.message(), ActorRef.noSender() );
     }
 
     public void createClientActorSystem()
@@ -85,10 +85,7 @@ public class ActorSystemLifecycle
 
     public void addSeenAddresses( Collection<Address> addresses )
     {
-        if ( resolver.useOverrides() )
-        {
-            allSeenAddresses.addAll( addresses );
-        }
+        joinMessageFactory.addSeenAddresses( addresses );
     }
 
     public void shutdown() throws Throwable

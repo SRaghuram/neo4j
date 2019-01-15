@@ -15,7 +15,7 @@ import akka.cluster.{Cluster, ClusterEvent, Member, MemberStatus}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.ArgumentMatchers
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.causalclustering.core.CausalClusteringSettings.{akka_failure_detector_acceptable_heartbeat_pause, akka_failure_detector_heartbeat_interval}
 import org.neo4j.helpers.collection.Iterators
 import org.neo4j.kernel.configuration.Config
@@ -54,7 +54,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
         system.stop(clusterStateRef)
 
         Then("do not leave cluster")
-        awaitNotAssert(verify(cluster).leave(ArgumentMatchers.any()), message = "Should not have left cluster")
+        awaitNotAssert(verify(cluster, atLeastOnce()).leave(ArgumentMatchers.any()), message = "Should not have left cluster")
       }
     }
     "receiving cluster messages" should {

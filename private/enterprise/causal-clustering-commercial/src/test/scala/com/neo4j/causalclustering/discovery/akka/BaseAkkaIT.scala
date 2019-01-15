@@ -62,10 +62,18 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     TestKit.shutdownActorSystem(system)
   }
 
+  /**
+    * Be as broad as possible in describing state that shouldn't happen.
+    */
   def awaitNotCond(p: => Boolean, max: FiniteDuration = defaultWaitTime, message: String) = {
     awaitNot(awaitCond(p,max), message)
   }
 
+  /**
+    * Be as broad as possible in describing what shouldn't happen.
+    * If using Mockito.verify() ensure that atLeast or atMost is used to avoid erroneously passing tests
+    * Without either then there is an implicit exactlyOnce
+    */
   def awaitNotAssert[A](a: => A, max: FiniteDuration = defaultWaitTime, message: String) = {
     awaitNot(awaitAssert(a,max), message)
   }
