@@ -616,116 +616,6 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     ))
   }
 
-  test("Should plan sort before first expand when sorting on property") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name, b.title
-        |ORDER BY u.name""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
-  }
-
-  test("Should plan sort before first expand when sorting on node") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name, b.title
-        |ORDER BY u""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
-  }
-
-  test("Should plan sort before first expand when sorting on renamed property") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name AS name, b.title
-        |ORDER BY name""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
-  }
-
-  test("Should plan sort before first expand when sorting on the old name of a renamed property") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name AS name, b.title
-        |ORDER BY u.name""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
-  }
-
-  test("Should plan sort before first expand when sorting on a property of a renamed node") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u AS v, b.title
-        |ORDER BY v.name""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(2))
-  }
-
-  test("Should plan sort last when sorting on a property in last node in the expand") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name, b.title
-        |ORDER BY b.title""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
-  }
-
-  test("Should plan sort last when sorting on the last node in the expand") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name, b.title
-        |ORDER BY b""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Projection").onTopOf(aPlan("Sort").withRows(200))
-  }
-
-  test("Should plan sort between the expands when ordering by functions of both nodes in first expand and included in return") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name + p.name AS add, b.title
-        |ORDER BY add""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(20))
-  }
-
-  test("Should plan sort between the expands when ordering by functions of both nodes in first expand and not included in the return") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u.name AS uname, p.name AS pname, b.title
-        |ORDER BY uname + pname""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Expand(All)").onTopOf(includeSomewhere.aPlan("Sort").withRows(20))
-  }
-
-  test("Should plan sort last when ordering by functions of node in last expand") {
-    makeJoesAndFriends(2, 10, 10)
-    val query =
-      """PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
-        |RETURN u, b.title
-        |ORDER BY u.name + b.title""".stripMargin
-    val result = executeSingle(query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withRows(200).onTopOf(aPlan("Projection"))
-  }
-
   test("Order by property that has been renamed several times") {
     val query =
       """
@@ -778,10 +668,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("Order by should be correct when updating property") {
-    makeJoesAndFriends(2, 2, 1)
+    makeJoeAndFriends()
     val query =
       """MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Joe'
+        |WHERE u.name STARTS WITH 'Jo'
         |SET u.name = 'joe'
         |RETURN u.name, u.foo
         |ORDER BY u.name ASC, u.foo DESC""".stripMargin
@@ -789,6 +679,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.toList should be(List(
       Map("u.name" -> "joe", "u.foo" -> 1),
       Map("u.name" -> "joe", "u.foo" -> 1),
+      Map("u.name" -> "joe", "u.foo" -> 1),
+      Map("u.name" -> "joe", "u.foo" -> 1),
+      Map("u.name" -> "joe", "u.foo" -> 0),
+      Map("u.name" -> "joe", "u.foo" -> 0),
       Map("u.name" -> "joe", "u.foo" -> 0),
       Map("u.name" -> "joe", "u.foo" -> 0)))
     result.executionPlanDescription() should includeSomewhere
@@ -796,17 +690,47 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .onTopOf(includeSomewhere.aPlan("SetProperty"))
   }
 
-  private def makeJoesAndFriends(joes: Int, janes: Int, books: Int): Unit = {
-    Range(0, joes).map(i => createLabeledNode(Map("name" -> s"Joe_$i", "foo" -> i), "Person")).foreach { n =>
-      val friends = Range(0, janes).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
-      friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
-      friends.foreach { friend =>
-        relate(n, friend, "FRIEND")
-        Range(0, books).foreach { b =>
-          val book = createLabeledNode(Map("title" -> s"Book_${friend.getId}_$b"), "Book")
-          relate(friend, book, "READ")
-        }
-      }
+  test("Should plan sort before first expand") {
+    makeJoeAndFriends()
+    val query =
+      """
+        |PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |WHERE u.name STARTS WITH 'Jo'
+        |WITH u, b
+        |ORDER BY u.name
+        |RETURN u.name, b.title
+        |ORDER BY u.name, b.title
+      """.stripMargin
+    val result = executeSingle(query)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Sort").withOrder(ProvidedOrder.asc("u.name")).withRows(2)
+    result.toList should be(List(
+      Map("u.name" -> "Joe", "b.title" -> "Book_0"),
+      Map("u.name" -> "Joe", "b.title" -> "Book_1"),
+      Map("u.name" -> "Joe", "b.title" -> "Book_2"),
+      Map("u.name" -> "Joe", "b.title" -> "Book_3"),
+      Map("u.name" -> "Joseph", "b.title" -> "Book_2"),
+      Map("u.name" -> "Joseph", "b.title" -> "Book_3"),
+      Map("u.name" -> "Joseph", "b.title" -> "Book_4"),
+      Map("u.name" -> "Joseph", "b.title" -> "Book_5")
+    ))
+  }
+
+  private def makeJoeAndFriends(friendCount:Int = 10): Unit = {
+    val joe = createLabeledNode(Map("name" -> s"Joe", "foo" -> 0), "Person")
+    val joseph = createLabeledNode(Map("name" -> s"Joseph", "foo" -> 1), "Person")
+
+    val friends = Range(0, friendCount).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
+    friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
+    for (i <- 0 until friendCount) {
+      val book = createLabeledNode(Map("title" -> s"Book_$i"), "Book")
+      relate(friends(i), book, "READ")
+    }
+
+    val relCount = if (friendCount < 6) friendCount else 4
+    for (i <- 0 until relCount) {
+      relate(joe, friends(i), "FRIEND")
+      relate(joseph, friends(i+2), "FRIEND")
     }
   }
 }
