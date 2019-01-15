@@ -35,12 +35,9 @@ import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadLogChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
-import org.neo4j.kernel.impl.transaction.log.ServiceLoadingCommandReaderFactory;
-import org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
-import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.Lifespan;
@@ -62,6 +59,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.configuration.Config.defaults;
+import static org.neo4j.kernel.impl.api.TestCommandReaderFactory.logEntryReader;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 
@@ -203,8 +201,7 @@ public class TransactionLogCatchUpWriterTest
 
     private void verifyCheckpointInLog( LogFiles logFiles, boolean shouldExist )
     {
-        LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = new VersionAwareLogEntryReader<>(
-                new ServiceLoadingCommandReaderFactory(), InvalidLogEntryHandler.STRICT );
+        LogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = logEntryReader();
         final LogTailScanner logTailScanner = new LogTailScanner( logFiles, logEntryReader, new Monitors() );
 
         LogTailInformation tailInformation = logTailScanner.getTailInformation();
@@ -229,8 +226,7 @@ public class TransactionLogCatchUpWriterTest
         try ( ReadableLogChannel channel =
                       new ReadAheadLogChannel( versionedStoreChannel, LogVersionBridge.NO_MORE_CHANNELS, 1024 ) )
         {
-            try ( PhysicalTransactionCursor<ReadableLogChannel> txCursor =
-                          new PhysicalTransactionCursor<>( channel, new VersionAwareLogEntryReader<>() ) )
+            try ( PhysicalTransactionCursor<ReadableLogChannel> txCursor = new PhysicalTransactionCursor<>( channel, logEntryReader() ) )
             {
                 while ( txCursor.next() )
                 {
