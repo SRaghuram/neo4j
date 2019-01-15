@@ -5,6 +5,11 @@
  */
 package org.neo4j.kernel.api.impl.fulltext;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.test.causalclustering.ClusterRule;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
@@ -20,11 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
-import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -37,7 +38,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import com.neo4j.test.causalclustering.ClusterRule;
 
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;

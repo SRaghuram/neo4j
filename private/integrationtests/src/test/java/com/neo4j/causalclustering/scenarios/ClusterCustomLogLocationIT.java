@@ -16,7 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 
-import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 

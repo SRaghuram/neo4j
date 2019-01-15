@@ -9,8 +9,8 @@ import java.io.File;
 import java.io.PrintStream;
 import java.util.function.Supplier;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.cursor.IOCursor;
-import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.ArrayUtil;
 import org.neo4j.helpers.progress.ProgressListener;

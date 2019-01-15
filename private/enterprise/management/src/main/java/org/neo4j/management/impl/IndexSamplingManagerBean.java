@@ -7,7 +7,7 @@ package org.neo4j.management.impl;
 
 import javax.management.NotCompliantMBeanException;
 
-import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.jmx.impl.ManagementBeanProvider;

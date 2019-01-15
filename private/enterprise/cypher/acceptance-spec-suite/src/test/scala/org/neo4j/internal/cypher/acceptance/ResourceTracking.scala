@@ -7,12 +7,13 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.net.URL
 
+import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.runtime.ResourceMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResource
-import org.neo4j.graphdb.{DependencyResolver, GraphDatabaseService}
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.kernel.{GraphDatabaseQueryService, monitoring}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 trait ResourceTracking extends CypherFunSuite {
 

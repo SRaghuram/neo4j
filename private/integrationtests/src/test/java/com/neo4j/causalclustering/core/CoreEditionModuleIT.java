@@ -14,7 +14,7 @@ import org.junit.Test;
 
 import java.util.function.Predicate;
 
-import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.id.BufferedIdController;
 import org.neo4j.kernel.impl.store.id.IdController;

@@ -30,7 +30,7 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.stream.LongStream;
 
-import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;

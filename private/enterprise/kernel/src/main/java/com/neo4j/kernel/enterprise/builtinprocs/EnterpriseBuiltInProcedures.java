@@ -7,7 +7,7 @@ package com.neo4j.kernel.enterprise.builtinprocs;
 
 import java.util.stream.Stream;
 
-import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.builtinprocs.BuiltInProcedures;

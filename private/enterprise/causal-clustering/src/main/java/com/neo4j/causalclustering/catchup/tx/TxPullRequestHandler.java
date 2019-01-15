@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import org.neo4j.graphdb.DependencyResolver;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;

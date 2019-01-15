@@ -5,13 +5,6 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import javax.ws.rs.core.Response;
-
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
@@ -21,7 +14,15 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.graphdb.DependencyResolver;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import javax.ws.rs.core.Response;
+
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.server.rest.repr.OutputFormat;
 
