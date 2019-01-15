@@ -9,6 +9,8 @@ import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
 import org.neo4j.cypher.internal.v4_0.util.ParameterNotFoundException;
+import org.neo4j.internal.kernel.api.NodeCursor;
+import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
@@ -39,7 +41,7 @@ public final class CompiledHelpers
     }
 
     public static Value cachedProperty( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey,
-            int propertyOffset )
+            int propertyOffset, NodeCursor nodeCursor, PropertyCursor propertyCursor )
     {
         long nodeId = ctx.getLongAt( nodeOffset );
         if ( nodeId == StatementConstants.NO_SUCH_NODE || propertyKey == StatementConstants.NO_SUCH_PROPERTY_KEY )
@@ -51,7 +53,11 @@ public final class CompiledHelpers
             Value propertyOrNull = dbAccess.getTxStateNodePropertyOrNull( nodeId, propertyKey );
             if ( propertyOrNull == null )
             {
-                return ctx.getCachedPropertyAt( propertyOffset );
+                propertyOrNull = ctx.getCachedPropertyAt( propertyOffset );
+                if ( propertyOrNull == null )
+                {
+                    propertyOrNull = dbAccess.nodeProperty( nodeId, propertyKey, nodeCursor, propertyCursor );
+                }
             }
             return propertyOrNull;
         }

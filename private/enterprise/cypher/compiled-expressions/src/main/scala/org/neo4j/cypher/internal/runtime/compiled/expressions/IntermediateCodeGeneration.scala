@@ -1205,12 +1205,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val variableName = namer.nextVariableName()
       val local = variable[Value](variableName, noValue)
       val lazySet = oneTime(assign(variableName, invokeStatic(
-        method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int]("cachedProperty"),
-        loadContext(currentContext), DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset))))
+        method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedProperty"),
+        loadContext(currentContext), DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset),
+        NODE_CURSOR, PROPERTY_CURSOR)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq.empty, Seq(local), Set(nullChecks)))
+      Some(IntermediateExpression(ops, Seq.empty, Seq(local, vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
 
     case NodePropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
@@ -1230,12 +1231,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val lazySet = oneTime(assign(variableName, block(
         condition(equal(loadField(f), constant(-1)))(
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propKey)))),
-                                   invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int]("cachedProperty"),
-        loadContext(currentContext), DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset)))))
+                                   invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedProperty"),
+        loadContext(currentContext), DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq(f), Seq(local), Set(nullChecks)))
+      Some(IntermediateExpression(ops, Seq(f), Seq(local, vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
 
     case NodePropertyExists(offset, token, _) =>
       Some(

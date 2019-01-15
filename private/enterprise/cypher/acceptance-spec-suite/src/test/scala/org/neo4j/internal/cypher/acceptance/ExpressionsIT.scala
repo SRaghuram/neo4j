@@ -12,8 +12,8 @@ import java.util.concurrent.ThreadLocalRandom
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.{ArgumentSizes, SlotConfigurations}
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{ast, _}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledGroupingExpression, CompiledProjection, IntermediateCodeGeneration}
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -3167,6 +3167,59 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   //TODO add tests for non-late and bug with invalidated caches
 
+  test("cached node property access from tx state") {
+    //NOTE: we are in an open transaction so everthing we add here will populate the tx state
+    val node = createNode("txStateProp" -> "hello from tx state")
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    val property = plans.CachedNodeProperty("n", PropertyKeyName("prop")(pos))(pos)
+    context.setLongAt(0, node.getId)
+    val cachedPropertyOffset = slots.newCachedProperty(property).getCachedNodePropertyOffsetFor(property)
+    val expression = ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset)
+    val compiled = compile(expression, slots)
+
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from tx state"))
+  }
+
+  test("cached node property access") {
+    //create a node and force it to be properly stored
+    val node = createNode("txStateProp" -> "hello from disk")
+    startNewTransaction()
+
+    //now we have a stored node that's not in the tx state
+    val property = plans.CachedNodeProperty("n", PropertyKeyName("prop")(pos))(pos)
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val cachedPropertyOffset = slots.newCachedProperty(property).getCachedNodePropertyOffsetFor(property)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, node.getId)
+    context.setCachedProperty(property, stringValue("hello from cache"))
+    val expression = ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset)
+    val compiled = compile(expression, slots)
+
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from cache"))
+  }
+
+  test("cached node property access, when invalidated") {
+    //create a node and force it to be properly stored
+    val node = createNode("txStateProp" -> "hello from disk")
+    startNewTransaction()
+
+    //now we have a stored node that's not in the tx state
+    val property = plans.CachedNodeProperty("n", PropertyKeyName("prop")(pos))(pos)
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val cachedPropertyOffset = slots.newCachedProperty(property).getCachedNodePropertyOffsetFor(property)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, node.getId)
+    context.setCachedProperty(property, stringValue("hello from cache"))
+    //invalidate
+    context.invalidateCachedProperties(node.getId)
+
+    val expression = ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset)
+    val compiled = compile(expression, slots)
+
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from disk"))
+  }
+
   test("late cached node property access from tx state") {
     //NOTE: we are in an open transaction so everthing we add here will populate the tx state
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
@@ -3198,7 +3251,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from cache"))
   }
-
 
   test("getDegree without type") {
     //given node with three outgoing and two incoming relationships
