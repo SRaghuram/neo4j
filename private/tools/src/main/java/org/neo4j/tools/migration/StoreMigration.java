@@ -104,7 +104,7 @@ public class StoreMigration
                     RecoveryCleanupWorkCollector.immediate() );
 
             DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory );
-            LegacyTransactionLogsLocator legacyLogsLocator = new LegacyTransactionLogsLocator( config, databaseLayout.databaseDirectory() );
+            LegacyTransactionLogsLocator legacyLogsLocator = new LegacyTransactionLogsLocator( config, databaseLayout );
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
