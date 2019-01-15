@@ -433,11 +433,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("substring function with length") {
-    val compiled = compile(function("substring", parameter("a"), parameter("b"), parameter("c")))
-
-    compiled.evaluate(ctx, query, map(Array("a", "b", "c"), Array(stringValue("HELLO"), intValue(1), intValue(2))), cursors) should
-      equal(stringValue("EL"))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), cursors) should equal(NO_VALUE)
+    compile(function("substring", parameter("a"), parameter("b"), parameter("c")))
+      .evaluate(ctx, query, map(Array("a", "b", "c"), Array(stringValue("HELLO"), intValue(1), intValue(2))), cursors) should equal(stringValue("EL"))
+    compile(function("substring", parameter("a"), parameter("b")))
+      .evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), cursors) should equal(NO_VALUE)
   }
 
   test("toLower function") {

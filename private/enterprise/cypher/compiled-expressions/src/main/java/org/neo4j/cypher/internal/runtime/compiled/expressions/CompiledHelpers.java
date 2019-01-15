@@ -8,10 +8,12 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions;
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.v4_0.util.CypherTypeException;
+import org.neo4j.cypher.internal.v4_0.util.ParameterNotFoundException;
 import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.virtual.MapValue;
 
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
@@ -65,5 +67,15 @@ public final class CompiledHelpers
     {
         long relationshipId = context.getLongAt( offset );
         return relationshipId == -1 ? NO_VALUE : dbAccess.relationshipById( relationshipId );
+    }
+
+    public static AnyValue loadParameter( String key, MapValue params )
+    {
+        AnyValue value = params.get( key );
+        if ( value == NO_VALUE && !params.containsKey( key ) )
+        {
+            throw new ParameterNotFoundException( "Expected a parameter named " + key );
+        }
+        return value;
     }
 }

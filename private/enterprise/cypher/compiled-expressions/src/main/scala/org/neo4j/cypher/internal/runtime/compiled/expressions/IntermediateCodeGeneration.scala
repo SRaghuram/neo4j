@@ -1096,8 +1096,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val parameterVariable = namer.parameterName(name)
 
       val local = variable[AnyValue](parameterVariable,
-                                     invoke(load("params"), method[MapValue, AnyValue, String]("get"),
-                                            constant(name)))
+                                     invokeStatic(method[CompiledHelpers, AnyValue, String, MapValue]("loadParameter"),
+                                                  constant(name), load("params")))
       Some(IntermediateExpression(load(parameterVariable), Seq.empty, Seq(local),
                                   Set(equal(load(parameterVariable), noValue))))
 
