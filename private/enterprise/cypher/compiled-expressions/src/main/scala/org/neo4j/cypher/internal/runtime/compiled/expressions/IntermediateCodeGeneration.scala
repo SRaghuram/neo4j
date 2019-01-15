@@ -1196,15 +1196,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case NodeProperty(offset, token, _) =>
-      val variableName = namer.nextVariableName()
-      val local = variable[Value](variableName, noValue)
-      val lazySet = oneTime(assign(variableName,
+      Some(IntermediateExpression(
         invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-               getLongAt(offset, currentContext), constant(token), NODE_CURSOR, PROPERTY_CURSOR)))
-
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq.empty, Seq(local, vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
+               getLongAt(offset, currentContext), constant(token), NODE_CURSOR, PROPERTY_CURSOR), Seq.empty,
+        Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case CachedNodeProperty(offset, token, cachedPropertyOffset) =>
       val variableName = namer.nextVariableName()
@@ -1219,17 +1214,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case NodePropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
-      val variableName = namer.nextVariableName()
-      val local = variable[Value](variableName, noValue)
-      val lazySet = oneTime(assign(variableName,  block(
-          condition(equal(loadField(f), constant(-1)))(
-            setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-                 getLongAt(offset, currentContext), loadField(f), NODE_CURSOR, PROPERTY_CURSOR))))
-
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq(f), Seq(local, vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
+      val ops = block(
+        //set field if necessary
+        condition(equal(loadField(f), constant(-1)))(
+        setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
+        //get property
+        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
+                             getLongAt(offset, currentContext), loadField(f), NODE_CURSOR, PROPERTY_CURSOR))
+      Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case CachedNodePropertyLate(offset, propKey, cachedPropertyOffset) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
@@ -1265,30 +1257,21 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           truthValue, falseValue)), Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipProperty(offset, token, _) =>
-      val variableName = namer.nextVariableName()
-      val local = variable[Value](variableName, noValue)
-      val lazySet = oneTime(assign(variableName,
+      Some(IntermediateExpression(
         invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-          getLongAt(offset, currentContext), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))
-
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
-      Some(IntermediateExpression(ops, Seq.empty, Seq(local, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
+               getLongAt(offset, currentContext), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR), Seq.empty,
+        Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipPropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
-      val variableName = namer.nextVariableName()
-      val local = variable[Value](variableName, noValue)
-      val lazySet = oneTime(assign(variableName, block(
-          condition(equal(loadField(f), constant(-1)))(
-            setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-                 getLongAt(offset, currentContext), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
-
-      val ops = block(lazySet, load(variableName))
-      val nullChecks = block(lazySet, equal(load(variableName), noValue))
-
-      Some(IntermediateExpression(ops, Seq(f), Seq(local, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
+      val ops = block(
+        //set field if necessary
+        condition(equal(loadField(f), constant(-1)))(
+          setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
+        //get property
+        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
+               getLongAt(offset, currentContext), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR))
+      Some(IntermediateExpression(ops, Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipPropertyExists(offset, token, _) =>
       Some(IntermediateExpression(
@@ -1333,14 +1316,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case NodeFromSlot(offset, name) =>
       Some(IntermediateExpression(
         invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset, currentContext)),
-        Seq.empty, Seq.empty,
-        slots.get(name).filter(_.nullable).map(slot => equal(getLongAt(slot.offset, currentContext), constant(-1L))).toSet))
+        Seq.empty, Seq.empty, Set.empty))
 
     case RelationshipFromSlot(offset, name) =>
       Some(IntermediateExpression(
         invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"),
-               getLongAt(offset, currentContext)), Seq.empty, Seq.empty,
-        slots.get(name).filter(_.nullable).map(slot => equal(getLongAt(slot.offset, currentContext), constant(-1L))).toSet))
+               getLongAt(offset, currentContext)), Seq.empty, Seq.empty, Set.empty))
 
     case GetDegreePrimitive(offset, typ, dir) =>
       val methodName = dir match {
@@ -1439,25 +1420,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           l.fields ++ r.fields, l.variables ++ r.variables, Set.empty)
 
     case NullCheck(offset, inner) =>
-      internalCompileExpression(inner, currentContext).map(i =>
-        IntermediateExpression(
-          ternary(equal(getLongAt(offset, currentContext), constant(-1L)), noValue, i.ir),
-          i.fields, i.variables, Set(equal(getLongAt(offset, currentContext), constant(-1L))))
-      )
+      internalCompileExpression(inner, currentContext).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset, currentContext), constant(-1L))))
 
     case NullCheckVariable(offset, inner) =>
-      internalCompileExpression(inner, currentContext).map(i => IntermediateExpression(ternary(equal(getLongAt(offset, currentContext), constant(-1L)), noValue, i.ir),
-                                                                                       i.fields, i.variables, Set(equal(getLongAt(offset, currentContext), constant(-1L)))))
+      internalCompileExpression(inner, currentContext).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset, currentContext), constant(-1L))))
 
     case NullCheckProperty(offset, inner) =>
-      internalCompileExpression(inner, currentContext).map(i => {
-        val variableName = namer.nextVariableName()
-        val local = variable[Value](variableName, noValue)
-        val lazySet = oneTime(condition(notEqual(getLongAt(offset, currentContext), constant(-1L)))(assign(variableName, i.ir)))
-        val ops = block(lazySet, load(variableName))
-        val nullChecks = block(lazySet, equal(load(variableName), noValue))
-        IntermediateExpression(ops, i.fields, i.variables :+ local, Set(nullChecks))
-      })
+      internalCompileExpression(inner, currentContext).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset, currentContext), constant(-1L))))
 
     case IsPrimitiveNull(offset) =>
       Some(IntermediateExpression(ternary(equal(getLongAt(offset, currentContext), constant(-1L)), truthValue, falseValue),
