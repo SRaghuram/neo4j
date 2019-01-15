@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -59,11 +60,20 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   override protected def initTest() {
     super.initTest()
-    tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
-    val tcWrapper = TransactionalContextWrapper(
-      Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP))
-    query = new TransactionBoundQueryContext(tcWrapper)(mock[IndexSearchMonitor])
-    cursors = new ExpressionCursors(tcWrapper.cursors)
+    startNewTransaction()
+  }
+
+  private def startNewTransaction(): Unit = {
+    if (tx != null) {
+      tx.success()
+      tx.close()
+    }
+      tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
+      val tcWrapper = TransactionalContextWrapper(
+        Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP))
+      query = new TransactionBoundQueryContext(tcWrapper)(mock[IndexSearchMonitor])
+      cursors = new ExpressionCursors(tcWrapper.cursors)
+
   }
 
   override protected def stopTest(): Unit = {
@@ -3088,7 +3098,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 2, 1)
     val context = SlottedExecutionContext(slots)
     context.setRefAt(0, NO_VALUE)
-
     addNodes(context, n1, n2)
 
     //when
@@ -3099,6 +3108,223 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //then
     compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should be(NO_VALUE)
+  }
+
+  test("node property access") {
+    // Given
+    val n = createNode("prop" -> "hello")
+    val token = tokenReader(_.propertyKey("prop"))
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 2, 1)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.getId)
+    val expression = NodeProperty(0, token, "prop")(null)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+  }
+
+  test("late node property access") {
+    val n = createNode("prop" -> "hello")
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.getId)
+
+    compile(NodePropertyLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+      equal(stringValue("hello"))
+    compile(NodePropertyLate(0, "notThere", "notThere")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+      equal(NO_VALUE)
+  }
+
+  test("relationship property access") {
+    // Given
+    val r = relate(createNode(), createNode(), "prop" -> "hello")
+    val token = tokenReader(_.propertyKey("prop"))
+    val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, r.getId)
+    val expression = RelationshipProperty(0, token, "prop")(null)
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+  }
+
+  test("late relationship property access") {
+    val r = relate(createNode(), createNode(), "prop" -> "hello")
+    val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, r.getId)
+
+    compile(RelationshipPropertyLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+      equal(stringValue("hello"))
+    compile(RelationshipPropertyLate(0, "notThere", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+      equal(NO_VALUE)
+  }
+
+  //TODO add tests for non-late and bug with invalidated caches
+
+  test("late cached node property access from tx state") {
+    //NOTE: we are in an open transaction so everthing we add here will populate the tx state
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    val property = plans.CachedNodeProperty("n", PropertyKeyName("prop")(pos))(pos)
+    val node = createNode("txStateProp" -> "hello from tx state")
+    context.setLongAt(0, node.getId)
+    val cachedPropertyOffset = slots.newCachedProperty(property).getCachedNodePropertyOffsetFor(property)
+    val expression = CachedNodePropertyLate(0, "txStateProp", cachedPropertyOffset)
+    val compiled = compile(expression, slots)
+
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from tx state"))
+  }
+
+  test("late cached node property access") {
+    //create a node and force it to be properly stored
+    val node = createNode("txStateProp" -> "hello from tx state")
+    startNewTransaction()
+
+    //now we have a stored node that's not in the tx state
+    val property = plans.CachedNodeProperty("n", PropertyKeyName("prop")(pos))(pos)
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val cachedPropertyOffset = slots.newCachedProperty(property).getCachedNodePropertyOffsetFor(property)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, node.getId)
+    context.setCachedProperty(property, stringValue("hello from cache"))
+    val expression = CachedNodePropertyLate(0, "txStateProp", cachedPropertyOffset)
+    val compiled = compile(expression, slots)
+
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from cache"))
+  }
+
+
+  test("getDegree without type") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    relate(createNode(), n)
+    relate(createNode(), n)
+    relate(n, createNode())
+    relate(n, createNode())
+    relate(n, createNode())
+
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.getId)
+
+    compile(GetDegreePrimitive(0, None, OUTGOING), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+      equal(Values.longValue(3))
+    compile(GetDegreePrimitive(0, None, INCOMING), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+      equal(Values.longValue(2))
+    compile(GetDegreePrimitive(0, None, BOTH), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+      equal(Values.longValue(5))
+  }
+
+  test("getDegree with type") {
+    //given node with three outgoing and two incoming relationships
+    val n = createNode("prop" -> "hello")
+    val relType = "R"
+    relate(createNode(), n, relType)
+    relate(createNode(), n, "OTHER")
+    relate(n, createNode(), relType)
+    relate(n, createNode(), relType)
+    relate(n, createNode(), "OTHER")
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.getId)
+
+    compile(GetDegreePrimitive(0, Some(relType), OUTGOING), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.longValue(2))
+    compile(GetDegreePrimitive(0, Some(relType), INCOMING), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.longValue(1))
+    compile(GetDegreePrimitive(0, Some(relType), BOTH), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.longValue(3))
+  }
+
+  test("NodePropertyExists") {
+    val n = createNode("prop" -> "hello")
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.getId)
+    val property = tokenReader(_.propertyKey("prop"))
+    val nonExistingProperty = 1337
+
+    compile(NodePropertyExists(0, property, "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(NodePropertyExists(0, nonExistingProperty, "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+  }
+
+  test("NodePropertyExistsLate") {
+    val n = createNode("prop" -> "hello")
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.getId)
+
+    compile(NodePropertyExistsLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(NodePropertyExistsLate(0, "otherProp", "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+  }
+
+  test("RelationshipPropertyExists") {
+    val r = relate(createNode(), createNode(), "prop" -> "hello")
+    val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, r.getId)
+    val property = tokenReader(_.propertyKey("prop"))
+    val nonExistingProperty = 1337
+
+    compile(RelationshipPropertyExists(0, property, "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(RelationshipPropertyExists(0, nonExistingProperty, "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+  }
+
+  test("RelationshipPropertyExistsLate") {
+    val r = relate(createNode(), createNode(), "prop" -> "hello")
+    val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, r.getId)
+
+    compile(RelationshipPropertyExistsLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(RelationshipPropertyExistsLate(0, "otherProp", "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+  }
+
+  test("NodeFromSlot") {
+    // Given
+    val n = nodeValue()
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.id())
+    val expression = NodeFromSlot(0, "foo")
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(n)
+  }
+
+  test("RelationshipFromSlot") {
+    // Given
+    val r = relationshipValue()
+    val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, r.id())
+    val expression = RelationshipFromSlot(0, "foo")
+
+    // When
+    val compiled = compile(expression, slots)
+
+    // Then
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(r)
+  }
+
+  test("HasLabels") {
+    val n = createLabeledNode("L1", "L2")
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, n.getId())
+
+    compile(hasLabels(NodeFromSlot(0, "n"), "L1"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L3"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(hasLabels(NodeFromSlot(0, "n"), "L2", "L3"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2", "L3"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
   }
 
   case class NodeAt(node: NodeValue, slot: Int)
