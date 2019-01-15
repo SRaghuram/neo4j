@@ -3508,69 +3508,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     case l: Long => SignedDecimalIntegerLiteral(l.toString)(pos)
   }
 
-  private def literalMap(keyValues: (String,Expression)*) =
-    MapExpression(keyValues.map(kv => (PropertyKeyName(kv._1)(pos), kv._2)))(pos)
-
-  private def lessThan(lhs: Expression, rhs: Expression) = LessThan(lhs, rhs)(pos)
-
-  private def lessThanOrEqual(lhs: Expression, rhs: Expression) = LessThanOrEqual(lhs, rhs)(pos)
-
-  private def greaterThan(lhs: Expression, rhs: Expression) = GreaterThan(lhs, rhs)(pos)
-
-  private def greaterThanOrEqual(lhs: Expression, rhs: Expression) = GreaterThanOrEqual(lhs, rhs)(pos)
-
-  private def regex(lhs: Expression, rhs: Expression) = RegexMatch(lhs, rhs)(pos)
-
-  private def startsWith(lhs: Expression, rhs: Expression) = StartsWith(lhs, rhs)(pos)
-
-  private def endsWith(lhs: Expression, rhs: Expression) = EndsWith(lhs, rhs)(pos)
-
-  private def contains(lhs: Expression, rhs: Expression) = Contains(lhs, rhs)(pos)
-
-  private def in(lhs: Expression, rhs: Expression) = In(lhs, rhs)(pos)
-
-  private def coerceTo(expression: Expression, typ: CypherType) = CoerceTo(expression, typ)
-
   private def coerce(value: AnyValue, ct: CypherType) =
     compile(coerceTo(parameter("a"), ct)).evaluate(ctx, query, map(Array("a"), Array(value)), cursors)
-
-  private def isNull(expression: Expression) = expressions.IsNull(expression)(pos)
-
-  private def isNotNull(expression: Expression) = expressions.IsNotNull(expression)(pos)
-
-  private def sliceFrom(list: Expression, from: Expression) = ListSlice(list, Some(from), None)(pos)
-
-  private def sliceTo(list: Expression, to: Expression) = ListSlice(list, None, Some(to))(pos)
-
-  private def sliceFull(list: Expression, from: Expression, to: Expression) = ListSlice(list, Some(from), Some(to))(pos)
-
-  private def singleInList(variable: String, collection: Expression, predicate: Expression) =
-    SingleIterablePredicate(varFor(variable), collection, Some(predicate) )(pos)
-
-  private def noneInList(variable: String, collection: Expression, predicate: Expression) =
-    NoneIterablePredicate(varFor(variable), collection, Some(predicate) )(pos)
-
-  private def anyInList(variable: String, collection: Expression, predicate: Expression) =
-    AnyIterablePredicate(varFor(variable), collection, Some(predicate) )(pos)
-
-  private def allInList(variable: String, collection: Expression, predicate: Expression) =
-    AllIterablePredicate(varFor(variable), collection, Some(predicate) )(pos)
-
-  private def filter(variable: String, collection: Expression, predicate: Expression) =
-    FilterExpression(varFor(variable), collection, Some(predicate) )(pos)
-
-  private def extract(variable: String, collection: Expression, extract: Expression) =
-    ExtractExpression(varFor(variable), collection, None, Some(extract) )(pos)
-
-  private def reduce(accumulator: LogicalVariable, init: Expression, variable: LogicalVariable, collection: Expression, expression: Expression) =
-    ReduceExpression(ReduceScope(accumulator, variable, expression)(pos), init,
-                                                                                                                                                                   collection)(pos)
-
-  private def listComprehension(variable: String,
-                                collection: Expression,
-                                predicate: Option[Expression],
-                                extractExpression: Option[Expression]) =
-    ListComprehension(varFor(variable), collection, predicate, extractExpression)(pos)
 
   private def callByName(ufs: UserFunctionSignature, args: Expression*) =
     ResolvedFunctionInvocation(ufs.name, Some(ufs), args.toIndexedSeq)(pos)
