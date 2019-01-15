@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
 @ExtendWith( TestDirectoryExtension.class )
-public class UserAggregationFunctionIT
+class AggregationFunctionIT
 {
     @Inject
     private TestDirectory plugins;

@@ -75,7 +75,7 @@ import static org.neo4j.procedure.Mode.WRITE;
 import static org.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
 
 @ExtendWith( TestDirectoryExtension.class )
-class UserFunctionIT
+class FunctionIT
 {
     @Inject
     private TestDirectory plugins;
@@ -805,18 +805,22 @@ class UserFunctionIT
      * built-in functions in any shape or form.
      */
     @Test
-    void shouldListAllUserDefinedFunctions() throws IOException
+    public void shouldListAllFunctions()
     {
         //Given/When
         Result res = db.execute( "CALL dbms.functions()" );
 
         try ( BufferedReader reader = new BufferedReader(
-                new InputStreamReader( UserFunctionIT.class.getResourceAsStream( "/misc/userDefinedFunctions" ) ) ) )
+                new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
         {
             String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
             String actual = res.resultAsString();
-            // Be aware that the text file "userDefinedFunctions" must end with two newlines
+            // Be aware that the text file "functions" must end with two newlines
             assertThat( actual, equalTo(expected) );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Failed to read functions file." );
         }
     }
 

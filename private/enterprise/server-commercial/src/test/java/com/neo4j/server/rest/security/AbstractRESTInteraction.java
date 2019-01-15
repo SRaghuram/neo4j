@@ -12,6 +12,7 @@ import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.BooleanNode;
 import org.codehaus.jackson.node.IntNode;
 import org.codehaus.jackson.node.LongNode;
 import org.codehaus.jackson.node.ObjectNode;
@@ -316,6 +317,10 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         {
             value = valueNode.getLongValue();
         }
+        else if ( valueNode instanceof BooleanNode )
+        {
+            value = valueNode.getLongValue();
+        }
         else if ( valueNode.isNull() )
         {
             return null;
@@ -324,7 +329,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         {
             throw new RuntimeException( String.format(
                 "Unhandled REST value type '%s'. Need String (TextNode), List (ArrayNode), Object (ObjectNode), " +
-                        "long (LongNode), or int (IntNode).", valueNode.getClass()
+                        "long (LongNode), int (IntNode), or bool (BooleanNode).", valueNode.getClass()
             ) );
         }
         return value;
