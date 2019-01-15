@@ -79,10 +79,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
+import static org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator.LEGACY_TX_LOGS_LOCATION_SETTING;
 
 @RunWith( Enclosed.class )
 public class StoreUpgradeIT
@@ -253,7 +253,7 @@ public class StoreUpgradeIT
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( databaseDirectory );
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( transaction_logs_root_path, transactionLogsRoot.getAbsolutePath() );
-            builder.setConfig( logical_logs_location, customTransactionLogsLocation.getAbsolutePath() );
+            builder.setConfig( LEGACY_TX_LOGS_LOCATION_SETTING, customTransactionLogsLocation.getAbsolutePath() );
             GraphDatabaseService database = builder.newGraphDatabase();
             String startedDatabaseName = ((GraphDatabaseAPI) database).databaseLayout().getDatabaseName();
             database.shutdown();
