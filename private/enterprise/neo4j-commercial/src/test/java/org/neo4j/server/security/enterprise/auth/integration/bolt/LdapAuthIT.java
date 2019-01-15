@@ -364,7 +364,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldGetCombinedAuthorization() throws Throwable
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.auth_providers.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
                 SecuritySettings.native_authentication_enabled.name(), "true",
                 SecuritySettings.native_authorization_enabled.name(), "true",
                 SecuritySettings.ldap_authentication_enabled.name(), "true",
@@ -394,10 +394,10 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     // ===== Logging tests =====
 
     @Test
-    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmNativeFirst() throws IOException, InvalidArgumentsException
+    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInSystemGraphRealmSystemGraphFirst() throws IOException, InvalidArgumentsException
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.auth_providers.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME + "," + SecuritySettings.LDAP_REALM_NAME,
                 SecuritySettings.native_authentication_enabled.name(), "true",
                 SecuritySettings.native_authorization_enabled.name(), "true",
                 SecuritySettings.ldap_authentication_enabled.name(), "true",
@@ -418,10 +418,10 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     }
 
     @Test
-    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInNativeRealmLdapFirst() throws IOException, InvalidArgumentsException
+    public void shouldNotLogErrorsFromLdapRealmWhenLoginSuccessfulInSystemGraphRealmLdapFirst() throws IOException, InvalidArgumentsException
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.NATIVE_REALM_NAME,
+                SecuritySettings.auth_providers.name(), SecuritySettings.LDAP_REALM_NAME + "," + SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                 SecuritySettings.native_authentication_enabled.name(), "true",
                 SecuritySettings.native_authorization_enabled.name(), "true",
                 SecuritySettings.ldap_authentication_enabled.name(), "true",
@@ -455,7 +455,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldLogInvalidCredentialErrorFromLdapRealmWhenAllProvidersFail() throws Throwable
     {
         restartServerWithOverriddenSettings(
-                SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+                SecuritySettings.auth_providers.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
                 SecuritySettings.native_authentication_enabled.name(), "true",
                 SecuritySettings.native_authorization_enabled.name(), "true",
                 SecuritySettings.ldap_authentication_enabled.name(), "true",
@@ -499,7 +499,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldLogConnectionRefusedFromLdapRealmWithMultipleRealms() throws Throwable
     {
         restartServerWithOverriddenSettings(
-            SecuritySettings.auth_providers.name(), SecuritySettings.NATIVE_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
+            SecuritySettings.auth_providers.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME + ", " + SecuritySettings.LDAP_REALM_NAME,
             SecuritySettings.native_authentication_enabled.name(), "true",
             SecuritySettings.native_authorization_enabled.name(), "true",
             SecuritySettings.ldap_authentication_enabled.name(), "true",

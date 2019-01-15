@@ -199,9 +199,9 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authentication_user_dn_template, "{0}"
                         )
                 },
-                {"Ldap authn Native authz", "abc123", false,
+                {"Ldap authn AuthDB authz", "abc123", false,
                         Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                                 SecuritySettings.ldap_server, "ldap://0.0.0.0:10389",
                                 SecuritySettings.ldap_use_starttls, "false",
                                 SecuritySettings.native_authentication_enabled, "false",
@@ -211,9 +211,9 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldap authz Native authn", "abc123", false,
+                {"Ldap authz AuthDB authn", "abc123", false,
                         Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                                 SecuritySettings.ldap_server, "ldap://0.0.0.0:10389",
                                 SecuritySettings.ldap_use_starttls, "false",
                                 SecuritySettings.native_authentication_enabled, "true",
@@ -225,9 +225,9 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
                         )
                 },
-                {"Ldap with Native authn", "abc123", false,
+                {"Ldap with AuthDB authn", "abc123", false,
                         Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                                 SecuritySettings.ldap_server, "ldap://0.0.0.0:10389",
                                 SecuritySettings.ldap_use_starttls, "false",
                                 SecuritySettings.native_authentication_enabled, "true",
@@ -237,9 +237,9 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldap with Native authz", "abc123", false,
+                {"Ldap with AuthDB authz", "abc123", false,
                         Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                                 SecuritySettings.ldap_server, "ldap://0.0.0.0:10389",
                                 SecuritySettings.ldap_use_starttls, "false",
                                 SecuritySettings.native_authentication_enabled, "false",
@@ -249,9 +249,9 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldap and Native", "abc123", false,
+                {"Ldap and AuthDB", "abc123", false,
                         Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                                 SecuritySettings.ldap_server, "ldap://0.0.0.0:10389",
                                 SecuritySettings.ldap_use_starttls, "false",
                                 SecuritySettings.native_authentication_enabled, "true",
@@ -261,9 +261,9 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Native with unresponsive ldap", "abc123", false,
+                {"AuthDB with unresponsive ldap", "abc123", false,
                         Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
                                 SecuritySettings.ldap_server, "ldap://127.0.0.1:10389",
                                 SecuritySettings.ldap_use_starttls, "false",
                                 SecuritySettings.native_authentication_enabled, "true",
@@ -271,6 +271,13 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authentication_enabled, "true",
                                 SecuritySettings.ldap_authorization_enabled, "true",
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
+                        )
+                },
+                {"AuthDB", "abc123", false,
+                        Arrays.asList(
+                                SecuritySettings.auth_provider, SecuritySettings.SYSTEM_GRAPH_REALM_NAME,
+                                SecuritySettings.native_authentication_enabled, "true",
+                                SecuritySettings.native_authorization_enabled, "true"
                         )
                 },
                 {"Native", "abc123", false,
