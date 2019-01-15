@@ -121,7 +121,8 @@ Feature "MatchAcceptance2": Scenario "Matching relationships into a list and mat
 Feature "MatchAcceptance2": Scenario "Matching relationships into a list and matching variable length using the list, with bound nodes, wrong direction"
 Feature "MatchAcceptance2": Scenario "Matching twice with conflicting relationship types on same relationship"
 Feature "MatchAcceptance2": Scenario "Matching twice with duplicate relationship types on same relationship"
-Feature "MatchAcceptance2": Scenario "Matching using a relationship that is already bound"
+// TODO: sometimes fails at runtime... flaky plan?
+?Feature "MatchAcceptance2": Scenario "Matching using a relationship that is already bound"
 Feature "MatchAcceptance2": Scenario "Matching using a relationship that is already bound, in conjunction with aggregation and ORDER BY"
 Feature "MatchAcceptance2": Scenario "Matching using a relationship that is already bound, in conjunction with aggregation"
 Feature "MatchAcceptance2": Scenario "Matching variable length pattern with property predicate"
