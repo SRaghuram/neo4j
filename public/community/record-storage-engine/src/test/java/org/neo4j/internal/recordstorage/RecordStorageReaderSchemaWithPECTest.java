@@ -1,24 +1,38 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.kernel.impl.api.store;
+package org.neo4j.internal.recordstorage;
 
-import com.neo4j.SchemaHelper;
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.junit.Test;
 
 import java.util.Set;
 
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.api.schema.constraints.ConstraintDescriptorFactory;
-import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageReaderTestBase;
+import org.neo4j.kernel.api.schema.constraints.NodeKeyConstraintDescriptor;
+import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
+import org.neo4j.kernel.impl.store.record.ConstraintRule;
 import org.neo4j.storageengine.api.schema.ConstraintDescriptor;
+import org.neo4j.test.rule.RecordStorageEngineRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -28,24 +42,42 @@ import static org.neo4j.helpers.collection.Iterators.asSet;
 public class RecordStorageReaderSchemaWithPECTest extends RecordStorageReaderTestBase
 {
     @Override
-    protected GraphDatabaseService createGraphDatabase()
+    RecordStorageEngineRule.Builder modify( RecordStorageEngineRule.Builder builder )
     {
-        return new TestEnterpriseGraphDatabaseFactory().newImpermanentDatabase();
+        // Basically temporarily allow PEC and node key constraints here, which is usually is only allowed in enterprise edition
+        return builder.constraintSemantics( new StandardConstraintSemantics()
+        {
+            @Override
+            public ConstraintRule createExistenceConstraint( long ruleId, ConstraintDescriptor descriptor )
+            {
+                return ConstraintRule.constraintRule( ruleId, descriptor );
+            }
+
+            @Override
+            public ConstraintRule createNodeKeyConstraintRule( long ruleId, NodeKeyConstraintDescriptor descriptor, long indexId )
+            {
+                return ConstraintRule.constraintRule( ruleId, descriptor, indexId );
+            }
+
+            @Override
+            protected ConstraintDescriptor readNonStandardConstraint( ConstraintRule rule, String errorMessage )
+            {
+                return rule.getConstraintDescriptor();
+            }
+        } );
     }
 
     @Test
-    public void shouldListAllConstraints()
+    public void shouldListAllConstraints() throws Exception
     {
         // Given
-        SchemaHelper.createUniquenessConstraint( db, label1, propertyKey );
-        SchemaHelper.createUniquenessConstraint( db, label2, propertyKey );
-        SchemaHelper.createNodeKeyConstraint( db, label1, otherPropertyKey );
-        SchemaHelper.createNodeKeyConstraint( db, label2, otherPropertyKey );
+        createUniquenessConstraint( label1, propertyKey );
+        createUniquenessConstraint( label2, propertyKey );
+        createNodeKeyConstraint( label1, otherPropertyKey );
+        createNodeKeyConstraint( label2, otherPropertyKey );
 
-        SchemaHelper.createNodePropertyExistenceConstraint( db, label2, propertyKey );
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType1, propertyKey );
-
-        SchemaHelper.awaitIndexes( db );
+        createNodePropertyExistenceConstraint( label2, propertyKey );
+        createRelPropertyExistenceConstraint( relType1, propertyKey );
 
         // When
         Set<ConstraintDescriptor> constraints = asSet( storageReader.constraintsGetAll() );
@@ -68,17 +100,15 @@ public class RecordStorageReaderSchemaWithPECTest extends RecordStorageReaderTes
     }
 
     @Test
-    public void shouldListAllConstraintsForLabel()
+    public void shouldListAllConstraintsForLabel() throws Exception
     {
         // Given
-        SchemaHelper.createNodePropertyExistenceConstraint( db, label1, propertyKey );
-        SchemaHelper.createNodePropertyExistenceConstraint( db, label2, propertyKey );
+        createNodePropertyExistenceConstraint( label1, propertyKey );
+        createNodePropertyExistenceConstraint( label2, propertyKey );
 
-        SchemaHelper.createUniquenessConstraint( db, label1, propertyKey );
-        SchemaHelper.createNodeKeyConstraint( db, label1, otherPropertyKey );
-        SchemaHelper.createNodeKeyConstraint( db, label2, otherPropertyKey );
-
-        SchemaHelper.awaitIndexes( db );
+        createUniquenessConstraint( label1, propertyKey );
+        createNodeKeyConstraint( label1, otherPropertyKey );
+        createNodeKeyConstraint( label2, otherPropertyKey );
 
         // When
         Set<ConstraintDescriptor> constraints = asSet( storageReader.constraintsGetForLabel( labelId( label1 ) ) );
@@ -93,18 +123,16 @@ public class RecordStorageReaderSchemaWithPECTest extends RecordStorageReaderTes
     }
 
     @Test
-    public void shouldListAllConstraintsForLabelAndProperty()
+    public void shouldListAllConstraintsForLabelAndProperty() throws Exception
     {
         // Given
-        SchemaHelper.createUniquenessConstraint( db, label2, propertyKey );
-        SchemaHelper.createUniquenessConstraint( db, label1, otherPropertyKey );
-        SchemaHelper.createNodeKeyConstraint( db, label1, propertyKey );
-        SchemaHelper.createNodeKeyConstraint( db, label2, otherPropertyKey );
+        createUniquenessConstraint( label2, propertyKey );
+        createUniquenessConstraint( label1, otherPropertyKey );
+        createNodeKeyConstraint( label1, propertyKey );
+        createNodeKeyConstraint( label2, otherPropertyKey );
 
-        SchemaHelper.createNodePropertyExistenceConstraint( db, label1, propertyKey );
-        SchemaHelper.createNodePropertyExistenceConstraint( db, label2, propertyKey );
-
-        SchemaHelper.awaitIndexes( db );
+        createNodePropertyExistenceConstraint( label1, propertyKey );
+        createNodePropertyExistenceConstraint( label2, propertyKey );
 
         // When
         Set<ConstraintDescriptor> constraints = asSet( storageReader.constraintsGetForSchema(
@@ -119,12 +147,12 @@ public class RecordStorageReaderSchemaWithPECTest extends RecordStorageReaderTes
     }
 
     @Test
-    public void shouldListAllConstraintsForRelationshipType()
+    public void shouldListAllConstraintsForRelationshipType() throws Exception
     {
         // Given
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType1, propertyKey );
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType2, propertyKey );
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType2, otherPropertyKey );
+        createRelPropertyExistenceConstraint( relType1, propertyKey );
+        createRelPropertyExistenceConstraint( relType2, propertyKey );
+        createRelPropertyExistenceConstraint( relType2, otherPropertyKey );
 
         // When
         Set<ConstraintDescriptor> constraints = asSet(
@@ -139,14 +167,14 @@ public class RecordStorageReaderSchemaWithPECTest extends RecordStorageReaderTes
     }
 
     @Test
-    public void shouldListAllConstraintsForRelationshipTypeAndProperty()
+    public void shouldListAllConstraintsForRelationshipTypeAndProperty() throws Exception
     {
         // Given
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType1, propertyKey );
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType1, otherPropertyKey );
+        createRelPropertyExistenceConstraint( relType1, propertyKey );
+        createRelPropertyExistenceConstraint( relType1, otherPropertyKey );
 
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType2, propertyKey );
-        SchemaHelper.createRelPropertyExistenceConstraint( db, relType2, otherPropertyKey );
+        createRelPropertyExistenceConstraint( relType2, propertyKey );
+        createRelPropertyExistenceConstraint( relType2, otherPropertyKey );
 
         // When
         int relTypeId = relationshipTypeId( relType1 );

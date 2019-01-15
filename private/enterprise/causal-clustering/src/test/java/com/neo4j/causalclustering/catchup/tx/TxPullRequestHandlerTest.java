@@ -19,17 +19,18 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Collections;
 import java.util.stream.LongStream;
 
 import org.neo4j.cursor.Cursor;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.command.Commands;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
+import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
@@ -43,6 +44,7 @@ import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMAT
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
+import static java.lang.Math.toIntExact;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -52,7 +54,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
-import static org.neo4j.kernel.impl.transaction.command.Commands.createNode;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
@@ -246,9 +247,11 @@ class TxPullRequestHandlerTest
 
     private static CommittedTransactionRepresentation tx( long id )
     {
-        LogEntryStart startEntry = new LogEntryStart( Math.toIntExact( id ), Math.toIntExact( id ), id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED );
-        TransactionRepresentation txRepresentation = Commands.transactionRepresentation( createNode( 0 ) );
-        return new CommittedTransactionRepresentation( startEntry, txRepresentation, new LogEntryCommit( id, id ) );
+        PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.singletonList( new TestCommand() ) );
+        tx.setHeader( new byte[0], 0, 0, 0, 0, 0, 0 );
+        return new CommittedTransactionRepresentation(
+                new LogEntryStart( toIntExact( id ), toIntExact( id ), id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED ),
+                tx, new LogEntryCommit( id, id ) );
     }
 
     private static TransactionCursor txCursor( CommittedTransactionRepresentation... transactions )
