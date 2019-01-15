@@ -126,6 +126,7 @@ import org.neo4j.udc.UsageData;
 
 import static java.util.Arrays.asList;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.raft_messages_log_path;
+import static org.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
 import static org.neo4j.causalclustering.core.state.CoreStateFiles.LAST_FLUSHED;
 import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.dbHealthEventHandler;
 import static org.neo4j.causalclustering.error_handling.PanicEventHandlers.disableServerEventHandler;
@@ -220,6 +221,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         dependencies.satisfyDependency( clusterStateDirectory );
         CoreStateStorageService storage = new CoreStateStorageService( fileSystem, clusterStateDirectory, platformModule.life, logProvider, config );
         storage.migrateIfNecessary( activeDatabaseName );
+
+        boolean wasUnboundOnCreation = !storage.simpleStorage( CORE_MEMBER_ID ).exists();
+        life.add( new IdFilesSanitationModule( wasUnboundOnCreation, dependencies.provideDependency( DatabaseManager.class ), fileSystem, logProvider ) );
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( platformModule.clock, logging, platformModule.config );
         threadToTransactionBridge = dependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
