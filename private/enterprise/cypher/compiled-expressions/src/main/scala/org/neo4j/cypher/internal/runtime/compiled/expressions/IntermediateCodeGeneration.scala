@@ -1196,10 +1196,15 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case NodeProperty(offset, token, _) =>
-      Some(IntermediateExpression(
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName,
         invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-               getLongAt(offset, currentContext), constant(token), NODE_CURSOR, PROPERTY_CURSOR), Seq.empty,
-        Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
+               getLongAt(offset, currentContext), constant(token), NODE_CURSOR, PROPERTY_CURSOR)))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      Some(IntermediateExpression(ops, Seq.empty, Seq(local, vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
 
     case CachedNodeProperty(offset, token, cachedPropertyOffset) =>
       val variableName = namer.nextVariableName()
@@ -1215,14 +1220,17 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case NodePropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
-      val ops = block(
-        //set field if necessary
-        condition(equal(loadField(f), constant(-1)))(
-        setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-        //get property
-        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-                             getLongAt(offset, currentContext), loadField(f), NODE_CURSOR, PROPERTY_CURSOR))
-      Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName,  block(
+          condition(equal(loadField(f), constant(-1)))(
+            setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
+          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
+                 getLongAt(offset, currentContext), loadField(f), NODE_CURSOR, PROPERTY_CURSOR))))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      Some(IntermediateExpression(ops, Seq(f), Seq(local, vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
 
     case CachedNodePropertyLate(offset, propKey, cachedPropertyOffset) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
@@ -1258,21 +1266,30 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           truthValue, falseValue)), Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipProperty(offset, token, _) =>
-      Some(IntermediateExpression(
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName,
         invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-               getLongAt(offset, currentContext), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR), Seq.empty,
-        Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
+          getLongAt(offset, currentContext), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      Some(IntermediateExpression(ops, Seq.empty, Seq(local, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
 
     case RelationshipPropertyLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
-      val ops = block(
-        //set field if necessary
-        condition(equal(loadField(f), constant(-1)))(
-          setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-        //get property
-        invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-               getLongAt(offset, currentContext), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR))
-      Some(IntermediateExpression(ops, Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName, block(
+          condition(equal(loadField(f), constant(-1)))(
+            setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
+          invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
+                 getLongAt(offset, currentContext), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+
+      Some(IntermediateExpression(ops, Seq(f), Seq(local, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set(nullChecks)))
 
     case RelationshipPropertyExists(offset, token, _) =>
       Some(IntermediateExpression(
