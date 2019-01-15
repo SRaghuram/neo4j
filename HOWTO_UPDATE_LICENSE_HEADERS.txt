@@ -1,0 +1,22 @@
+HOW TO UPDATE PROJECT SOURCE CODE LICENSE HEADERS AFTER NEW YEAR.
+
+ 1. Grab merge lock & announce license header update on Slack.
+ 2. Go to oldest supported branch.
+ 3. Update the <currentYear> property in public/pom.xml.
+ 4. Update other places in pom files.
+    - You can find these with rg aka. ripgrep: rg -g pom.xml $PREVIOUS_YEAR
+ 5. If necessary (branch is older than 3.5), run `mvn install` in private/build-resources.
+ 6. Commit pom and license header configuration changes.
+ 7. Run `mvn license:format` in project root.
+ 8. Verify no files got missed or updated wrong. Again, ripgrep is helpful:
+    - rg -g *.java $PREVIOUS_YEAR
+    - rg -g *.scala $PREVIOUS_YEAR
+    - rg -g *.feature $PREVIOUS_YEAR
+    - rg -g *.m4 $PREVIOUS_YEAR
+    - rg -g *.sh $PREVIOUS_YEAR
+    - rg -g *.ps1 $PREVIOUS_YEAR
+ 9. Commit license header updates.
+10. Push your changes.
+11. If any, go to next branch and do a null-forward merge: git merge -s ours $PREV_BRANCH
+12. Repeat from #3.
+
