@@ -266,6 +266,12 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         return connectDriver( token, username, password );
     }
 
+    Driver connectDriverWithParameters( String username, String password, Map<String,Object> parameterMap )
+    {
+        AuthToken token = AuthTokens.custom( username, password, null, "basic", parameterMap );
+        return connectDriver( token, username, password );
+    }
+
     private Driver connectDriver( AuthToken token )
     {
         return connectDriver( token, null, null );
