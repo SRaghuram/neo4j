@@ -245,6 +245,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
              _: plans.Optional | // Optional pipe relies on a pull-based dataflow and needs a different solution for push
              _: plans.Skip | // Skip pipe eagerly drops n rows upfront which does not work with feed pipe
              _: plans.Eager | // We do not support eager plans since the resulting iterators cannot be recreated and fed a single input row at a time
+             _: plans.PartialSort | // same as above
              _: plans.EmptyResult | // Eagerly exhausts the source iterator
              _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
              _: plans.LoadCSV | // Not verified to be thread safe

@@ -215,6 +215,33 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         Map("n.prop3" -> "whinecathog"), Map("n.prop3" -> "whinecathog")
       )))
     }
+
+    test(s"$cypherToken: should plan partial sort after index provided order") {
+      val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken"
+      val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+      val order = cypherToken match {
+        case "ASC" => ProvidedOrder.asc("n.prop2").asc("n.prop1")
+        case "DESC" => ProvidedOrder.desc("n.prop2").desc("n.prop1")
+      }
+
+      result.executionPlanDescription() should includeSomewhere
+        .aPlan("PartialSort")
+        .withOrder(order)
+        .containingArgument("n.prop2", "n.prop1")
+
+      result.toList should equal(expectedOrder(List(
+        Map("n.prop2" -> 1, "n.prop1" -> 43),
+        Map("n.prop2" -> 2, "n.prop1" -> 41),
+        Map("n.prop2" -> 3, "n.prop1" -> 42),
+        Map("n.prop2" -> 3, "n.prop1" -> 44),
+        Map("n.prop2" -> 5, "n.prop1" -> 40),
+        Map("n.prop2" -> 7, "n.prop1" -> null),
+        Map("n.prop2" -> 7, "n.prop1" -> null),
+        Map("n.prop2" -> 8, "n.prop1" -> null),
+        Map("n.prop2" -> 9, "n.prop1" -> null)
+      )))
+    }
   }
 
   // Min and Max

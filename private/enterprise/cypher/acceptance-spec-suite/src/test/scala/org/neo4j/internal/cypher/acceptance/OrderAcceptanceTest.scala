@@ -19,12 +19,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    nodeList += createLabeledNode(Map("age" -> 10, "name" -> "A", "foo" -> 6), "A")
-    nodeList += createLabeledNode(Map("age" -> 9, "name" -> "B", "foo" -> 5, "born" -> 1990), "A")
-    nodeList += createLabeledNode(Map("age" -> 12, "name" -> "C", "foo" -> 4), "A")
-    nodeList += createLabeledNode(Map("age" -> 16, "name" -> "D", "foo" -> 3), "A")
-    nodeList += createLabeledNode(Map("age" -> 14, "name" -> "E", "foo" -> 2, "born" -> 1960), "A")
-    nodeList += createLabeledNode(Map("age" -> 4, "name" -> "F", "foo" -> 1), "A")
+    nodeList += createLabeledNode(Map("age" -> 10, "name" -> "A", "foo" -> 6, "gender" -> "female"), "A")
+    nodeList += createLabeledNode(Map("age" -> 9, "name" -> "B", "foo" -> 5, "gender" -> "male", "born" -> 1990), "A")
+    nodeList += createLabeledNode(Map("age" -> 12, "name" -> "C", "foo" -> 4, "gender" -> "male"), "A")
+    nodeList += createLabeledNode(Map("age" -> 16, "name" -> "D", "foo" -> 3, "gender" -> "female"), "A")
+    nodeList += createLabeledNode(Map("age" -> 14, "name" -> "E", "foo" -> 2, "gender" -> "female", "born" -> 1960), "A")
+    nodeList += createLabeledNode(Map("age" -> 4, "name" -> "F", "foo" -> 1, "gender" -> "male"), "A")
   }
 
   test("should sort first unaliased and then aliased columns in the right order") {
@@ -56,6 +56,24 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Map("a.name" -> "F", "bday" -> false),
       Map("a.name" -> "B", "bday" -> true),
       Map("a.name" -> "E", "bday" -> true)
+    ))
+  }
+
+  test("should use partial sort after full sort") {
+    val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC"
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("PartialSort")
+      .withOrder(ProvidedOrder.asc("gender").asc("a.name"))
+      .containingArgument("gender", "a.name")
+
+    result.toList should equal(List(
+      Map("a.name" -> "A", "gender" -> "female"),
+      Map("a.name" -> "D", "gender" -> "female"),
+      Map("a.name" -> "E", "gender" -> "female"),
+      Map("a.name" -> "B", "gender" -> "male"),
+      Map("a.name" -> "C", "gender" -> "male"),
+      Map("a.name" -> "F", "gender" -> "male")
     ))
   }
 
@@ -695,7 +713,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .onTopOf(includeSomewhere.aPlan("SetProperty"))
   }
 
-  test("Should plan sort before first expand") {
+  test("Should plan sort before first expand and partial sort in the end") {
     makeJoeAndFriends()
     val query =
       """
@@ -706,11 +724,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN u.name, b.title
         |ORDER BY u.name, b.title
       """.stripMargin
-    val result = executeWith(Configs.All, query)
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
 
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Expand(All)").onTopOf(                                                               // 8 rows
-        includeSomewhere.aPlan("Expand(All)").onTopOf(                                             // 8 rows
+      .aPlan("PartialSort").onTopOf(
+      includeSomewhere.aPlan("Expand(All)").onTopOf(                                          // 8 rows
+        includeSomewhere.aPlan("Expand(All)").onTopOf(                                        // 8 rows
           includeSomewhere.aPlan("Sort").withOrder(ProvidedOrder.asc(prop("u", "name"))).onTopOf(
             includeSomewhere.aPlan("Filter").onTopOf(                                              // 2 rows
               aPlan("NodeByLabelScan")                                                             // 12 rows
@@ -718,6 +737,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
           )
         )
       )
+    )
 
     result.toList should be(List(
       Map("u.name" -> "Joe", "b.title" -> "Book_0"),

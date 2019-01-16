@@ -13,16 +13,14 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation.Distinc
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ExpressionConverter.createExpression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.SortItem
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression, FunctionInvocation, functions => ast_functions}
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans.ColumnOrder
-import org.neo4j.cypher.internal.v4_0.logical
-import org.neo4j.cypher.internal.v4_0.logical
-import org.neo4j.cypher.internal.v4_0.logical
-import org.neo4j.cypher.internal.v4_0.expressions.{Expression, FunctionInvocation, functions => ast_functions}
 import org.neo4j.cypher.internal.v4_0.util.Eagerly.immutableMapValues
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
+import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, One, ZeroOneOrMany, symbols}
-import org.neo4j.cypher.internal.v4_0.{expressions => ast}
+import org.neo4j.cypher.internal.v4_0.{logical, expressions => ast}
 
 object LogicalPlanConverter {
 
@@ -57,6 +55,8 @@ object LogicalPlanConverter {
     case p: logical.plans.UnwindCollection => unwindAsCodeGenPlan(p)
     case p: plans.Sort if hasStandaloneLimit(p) => throw new CantCompileQueryException(s"Not able to combine LIMIT and $p")
     case p: plans.Sort => sortAsCodeGenPlan(p)
+    case p: plans.PartialSort if hasStandaloneLimit(p) => throw new CantCompileQueryException(s"Not able to combine LIMIT and $p")
+    case p: plans.PartialSort => sortAsCodeGenPlan(plans.Sort(p.source, p.alreadySortedPrefix ++ p.stillToSortSuffix)(SameId(p.id)))
     case p: plans.Apply => applyAsCodeGenPlan(p)
 
     case _ =>
