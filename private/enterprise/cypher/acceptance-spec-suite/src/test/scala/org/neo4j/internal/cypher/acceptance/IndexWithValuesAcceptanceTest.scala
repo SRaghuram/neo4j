@@ -147,7 +147,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
       .containingArgument("{n.prop2 : n.prop2}")
       // just for n.prop2, not for n.prop1
       .withDBHits(6)
-      .onTopOf(aPlan("NodeIndexSeekByRange"))
+      .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n", "cached[n.prop1]"))
       and not(includeSomewhere.aPlan("Sort")))
     result.toList should equal(List(
       Map("n.prop2" -> 3), Map("n.prop2" -> 3),

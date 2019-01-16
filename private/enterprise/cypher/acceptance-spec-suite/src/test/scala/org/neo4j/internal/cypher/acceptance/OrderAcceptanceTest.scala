@@ -601,11 +601,13 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.All, query)
 
     // n.prop is written as `n`.prop in the plan due to the reuse of the variable
-    result.executionPlanDescription() should (includeSomewhere
-      .aPlan("Projection").containingArgument("{name : `n`.name}")
-      .onTopOf(aPlan("Sort")
-        .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
-      ) and includeSomewhere.nTimes(2, aPlan("Sort")))
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Sort").withOrder(ProvidedOrder.asc("n.age")).onTopOf(includeSomewhere
+        .aPlan("Projection").containingArgument("{name : `n`.name}")
+          .onTopOf(aPlan("Sort").withOrder(ProvidedOrder.asc("n.foo"))
+            .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
+          )
+      )
 
     // First MATCH gives two rows
     result.toList should equal(List(
@@ -675,7 +677,8 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |SET u.name = 'joe'
         |RETURN u.name, u.foo
         |ORDER BY u.name ASC, u.foo DESC""".stripMargin
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
     result.toList should be(List(
       Map("u.name" -> "joe", "u.foo" -> 1),
       Map("u.name" -> "joe", "u.foo" -> 1),
@@ -685,6 +688,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Map("u.name" -> "joe", "u.foo" -> 0),
       Map("u.name" -> "joe", "u.foo" -> 0),
       Map("u.name" -> "joe", "u.foo" -> 0)))
+
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort").withOrder(ProvidedOrder.asc("u.name").desc("u.foo"))
       .onTopOf(includeSomewhere.aPlan("SetProperty"))
@@ -701,9 +705,19 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |RETURN u.name, b.title
         |ORDER BY u.name, b.title
       """.stripMargin
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Sort").withOrder(ProvidedOrder.asc("u.name")).withRows(2)
+      .aPlan("Expand(All)").onTopOf(                                                          // 8 rows
+        includeSomewhere.aPlan("Expand(All)").onTopOf(                                        // 8 rows
+          includeSomewhere.aPlan("Sort").withOrder(ProvidedOrder.asc("u.name")).onTopOf(
+            includeSomewhere.aPlan("Filter").onTopOf(                                         // 2 rows
+              aPlan("NodeByLabelScan")                                                               // 12 rows
+            )
+          )
+        )
+      )
+
     result.toList should be(List(
       Map("u.name" -> "Joe", "b.title" -> "Book_0"),
       Map("u.name" -> "Joe", "b.title" -> "Book_1"),
@@ -727,7 +741,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(friends(i), book, "READ")
     }
 
-    val relCount = if (friendCount < 6) friendCount else 4
+    val relCount = if (friendCount < 6) friendCount else 4 // friends(relCount+2) has to exist
     for (i <- 0 until relCount) {
       relate(joe, friends(i), "FRIEND")
       relate(joseph, friends(i+2), "FRIEND")
