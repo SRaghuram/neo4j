@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j</groupId>
         <artifactId>commercial-parent</artifactId>
@@ -10,19 +11,19 @@
     <artifactId>neo4j-stresstests</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
-  <name>Neo4j - Stress Tests</name>
-  <packaging>jar</packaging>
-  <description>A package for stress tests.</description>
+    <name>Neo4j - Stress Tests</name>
+    <packaging>jar</packaging>
+    <description>A package for stress tests.</description>
 
-  <properties>
-    <moduleName>org.neo4j.stresstests</moduleName>
-  </properties>
+    <properties>
+        <moduleName>org.neo4j.stresstests</moduleName>
+    </properties>
 
-  <scm>
-    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
-    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
-    <url>https://github.com/neo4j/neo4j</url>
-  </scm>
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
 
     <licenses>
         <license>

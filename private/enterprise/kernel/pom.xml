@@ -35,27 +35,27 @@
         </license>
     </licenses>
 
-  <build>
-    <plugins>
-      <!-- This module contains public API, run revapi -->
-      <plugin>
-        <groupId>org.revapi</groupId>
-        <artifactId>revapi-maven-plugin</artifactId>
-          <configuration>
-              <checkDependencies>false</checkDependencies>
-              <oldArtifacts>
-                  <oldArtifact>
-                      org.neo4j:neo4j-enterprise-kernel:jar:LATEST
-                  </oldArtifact>
-              </oldArtifacts>
-          </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
+    <build>
+        <plugins>
+            <!-- This module contains public API, run revapi -->
+            <plugin>
+                <groupId>org.revapi</groupId>
+                <artifactId>revapi-maven-plugin</artifactId>
+                <configuration>
+                    <checkDependencies>false</checkDependencies>
+                    <oldArtifacts>
+                        <oldArtifact>
+                            org.neo4j:neo4j-enterprise-kernel:jar:LATEST
+                        </oldArtifact>
+                    </oldArtifacts>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
         <!-- Neo4j dependencies -->

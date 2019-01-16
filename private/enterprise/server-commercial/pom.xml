@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <parent>
         <groupId>com.neo4j</groupId>
         <artifactId>commercial-parent</artifactId>
@@ -7,26 +8,26 @@
         <relativePath>../..</relativePath>
     </parent>
 
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.neo4j.app</groupId>
-  <artifactId>neo4j-server-commercial</artifactId>
-  <version>4.0.0-SNAPSHOT</version>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.neo4j.app</groupId>
+    <artifactId>neo4j-server-commercial</artifactId>
+    <version>4.0.0-SNAPSHOT</version>
 
-  <name>Neo4j - Commercial Server</name>
-  <description>Standalone Commercial Neo4j server application.</description>
-  <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
+    <name>Neo4j - Commercial Server</name>
+    <description>Standalone Commercial Neo4j server application.</description>
+    <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
-  <properties>
-    <moduleName>com.neo4j.server.commercial</moduleName>
-  </properties>
+    <properties>
+        <moduleName>com.neo4j.server.commercial</moduleName>
+    </properties>
 
-  <packaging>jar</packaging>
+    <packaging>jar</packaging>
 
-  <scm>
-    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
-    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
-    <url>https://github.com/neo4j/neo4j</url>
-  </scm>
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
 
     <licenses>
         <license>
@@ -186,6 +187,6 @@
         </dependency>
 
     </dependencies>
-  
+
 </project>
 

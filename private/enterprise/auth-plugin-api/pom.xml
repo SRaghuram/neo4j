@@ -1,38 +1,39 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>com.neo4j</groupId>
-    <artifactId>commercial-parent</artifactId>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.neo4j</groupId>
+        <artifactId>commercial-parent</artifactId>
+        <version>4.0.0-SNAPSHOT</version>
+        <relativePath>../..</relativePath>
+    </parent>
+
+    <artifactId>neo4j-auth-plugin-api</artifactId>
     <version>4.0.0-SNAPSHOT</version>
-    <relativePath>../..</relativePath>
-  </parent>
 
-  <artifactId>neo4j-auth-plugin-api</artifactId>
-  <version>4.0.0-SNAPSHOT</version>
+    <name>Neo4j - Enterprise Graph Database Auth Plugin API</name>
+    <description>Enterprise auth plugin API for adding custom auth providers to the Neo4j database</description>
+    <packaging>jar</packaging>
 
-  <name>Neo4j - Enterprise Graph Database Auth Plugin API</name>
-  <description>Enterprise auth plugin API for adding custom auth providers to the Neo4j database</description>
-  <packaging>jar</packaging>
+    <properties>
+        <moduleName>org.neo4j.server.security.enterprise.auth.plugin</moduleName>
+    </properties>
 
-  <properties>
-    <moduleName>org.neo4j.server.security.enterprise.auth.plugin</moduleName>
-  </properties>
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
 
-  <scm>
-    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
-    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
-    <url>https://github.com/neo4j/neo4j</url>
-  </scm>
-
-  <licenses>
-    <license>
-      <name>Neo4j Commercial license</name>
-      <comments>
-        Copyright (c) 2002-2019 "Neo Technology,"
-        Network Engine for Objects in Lund AB [http://neotechnology.com]
-        This file is a commercial add-on to Neo4j Enterprise Edition.
-      </comments>
-    </license>
-  </licenses>
+    <licenses>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2019 "Neo Technology,"
+                Network Engine for Objects in Lund AB [http://neotechnology.com]
+                This file is a commercial add-on to Neo4j Enterprise Edition.
+            </comments>
+        </license>
+    </licenses>
 
 </project>

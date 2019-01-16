@@ -75,7 +75,7 @@
               <id>list-all-licenses</id>
               <configuration>
                 <prependText>commercial-notice.txt</prependText>
-                <checkExistingNoticeFile combine.self="override" />
+                <checkExistingNoticeFile combine.self="override"/>
               </configuration>
             </execution>
           </executions>

@@ -245,5 +245,5 @@
             <artifactId>junit-jupiter-params</artifactId>
         </dependency>
     </dependencies>
-    
+
 </project>

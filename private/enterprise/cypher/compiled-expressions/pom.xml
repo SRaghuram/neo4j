@@ -1,104 +1,105 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <parent>
-    <groupId>com.neo4j</groupId>
-    <artifactId>cypher-enterprise-parent</artifactId>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <parent>
+        <groupId>com.neo4j</groupId>
+        <artifactId>cypher-enterprise-parent</artifactId>
+        <version>4.0.0-SNAPSHOT</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>neo4j-cypher-compiled-expressions</artifactId>
+    <packaging>jar</packaging>
     <version>4.0.0-SNAPSHOT</version>
-  </parent>
+    <name>Neo4j - Compiled Expressions</name>
+    <description>Module for compiling expressions</description>
+    <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
-  <modelVersion>4.0.0</modelVersion>
-  <artifactId>neo4j-cypher-compiled-expressions</artifactId>
-  <packaging>jar</packaging>
-  <version>4.0.0-SNAPSHOT</version>
-  <name>Neo4j - Compiled Expressions</name>
-  <description>Module for compiling expressions</description>
-  <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
+    <properties>
+        <moduleName>org.neo4j.cypher.internal.runtime.compiled.expressions</moduleName>
+    </properties>
 
-  <properties>
-    <moduleName>org.neo4j.cypher.internal.runtime.compiled.expressions</moduleName>
-  </properties>
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
 
-  <scm>
-    <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
-    <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
-    <url>https://github.com/neo4j/neo4j</url>
-  </scm>
+    <licenses>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+                Copyright (c) 2002-2019 "Neo Technology,"
+                Network Engine for Objects in Lund AB [http://neotechnology.com]
+                This file is a commercial add-on to Neo4j Enterprise Edition.
+            </comments>
+        </license>
+    </licenses>
 
-  <licenses>
-    <license>
-      <name>Neo4j Commercial license</name>
-      <comments>
-        Copyright (c) 2002-2019 "Neo Technology,"
-        Network Engine for Objects in Lund AB [http://neotechnology.com]
-        This file is a commercial add-on to Neo4j Enterprise Edition.
-      </comments>
-    </license>
-  </licenses>
+    <dependencies>
 
-  <dependencies>
+        <!-- shared versions are defined in the parent pom -->
 
-    <!-- shared versions are defined in the parent pom -->
+        <!-- scala -->
 
-    <!-- scala -->
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+        </dependency>
 
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-    </dependency>
+        <dependency>
+            <artifactId>scala-reflect</artifactId>
+            <groupId>org.scala-lang</groupId>
+        </dependency>
 
-    <dependency>
-      <artifactId>scala-reflect</artifactId>
-      <groupId>org.scala-lang</groupId>
-    </dependency>
+        <!-- scala test dependencies -->
 
-    <!-- scala test dependencies -->
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.scalautils</groupId>
+            <artifactId>scalautils_${scala.binary.version}</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.scalacheck</groupId>
+            <artifactId>scalacheck_${scala.binary.version}</artifactId>
+        </dependency>
 
-    <dependency>
-      <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_${scala.binary.version}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.scalautils</groupId>
-      <artifactId>scalautils_${scala.binary.version}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.scalacheck</groupId>
-      <artifactId>scalacheck_${scala.binary.version}</artifactId>
-    </dependency>
+        <!-- neo4j -->
 
-    <!-- neo4j -->
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-codegen</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher-logical-plans-4.0</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-cypher-physical-planning</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
-    <dependency>
-      <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-codegen</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-cypher-logical-plans-4.0</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.neo4j</groupId>
-      <artifactId>neo4j-cypher-physical-planning</artifactId>
-      <version>${project.version}</version>
-    </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-ast-4.0</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-util-4.0</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
 
-    <dependency>
-      <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-ast-4.0</artifactId>
-      <version>${project.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-util-4.0</artifactId>
-      <version>${project.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-
-  </dependencies>
+    </dependencies>
 
 </project>
