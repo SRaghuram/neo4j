@@ -9,15 +9,23 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import com.neo4j.causalclustering.identity.StoreId;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+
+import java.util.stream.LongStream;
 
 import org.neo4j.cursor.Cursor;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.command.Commands;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
@@ -30,10 +38,12 @@ import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 
+import static com.neo4j.causalclustering.catchup.CatchupResult.E_INVALID_REQUEST;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMATCH;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
@@ -43,6 +53,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.kernel.impl.transaction.command.Commands.createNode;
+import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class TxPullRequestHandlerTest
@@ -90,7 +101,7 @@ class TxPullRequestHandlerTest
     {
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
-        when( logicalTransactionStore.getTransactions( 14L ) ).thenReturn( txCursor( cursor( tx( 14 ), tx( 15 ) ) ) );
+        when( logicalTransactionStore.getTransactions( 14L ) ).thenReturn( txCursor( tx( 14 ), tx( 15 ) ) );
         ChannelFuture channelFuture = mock( ChannelFuture.class );
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
@@ -177,17 +188,75 @@ class TxPullRequestHandlerTest
                 .info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", 2L ) );
     }
 
-    private static CommittedTransactionRepresentation tx( int id )
+    @ParameterizedTest
+    @ValueSource( longs = {Long.MIN_VALUE, BASE_TX_ID - 42, BASE_TX_ID - 2, BASE_TX_ID - 1} )
+    void shouldRespondWithIllegalRequestWhenTransactionIdIsIncorrect( long incorrectTxId ) throws Exception
     {
-        return new CommittedTransactionRepresentation(
-                new LogEntryStart( id, id, id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED ),
-                Commands.transactionRepresentation( createNode( 0 ) ), new LogEntryCommit( id, id ) );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> true,
+                () -> datasource, new Monitors(), logProvider );
+
+        TxPullRequest request = mock( TxPullRequest.class );
+        when( request.previousTxId() ).thenReturn( incorrectTxId );
+
+        txPullRequestHandler.channelRead0( context, request );
+
+        verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
+        verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_INVALID_REQUEST, -1L ) );
     }
 
-    private static TransactionCursor txCursor( Cursor<CommittedTransactionRepresentation> cursor )
+    @Test
+    void shouldReturnStreamOfTransactionsForBaseTransactionId() throws Exception
+    {
+        long previousTxId = BASE_TX_ID;
+        long firstTxIdInTxStream = previousTxId + 1;
+        long lastCommittedTxId = 42;
+
+        CommittedTransactionRepresentation[] transactions = LongStream.rangeClosed( firstTxIdInTxStream, lastCommittedTxId )
+                .mapToObj( TxPullRequestHandlerTest::tx )
+                .toArray( CommittedTransactionRepresentation[]::new );
+
+        when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( lastCommittedTxId );
+        when( logicalTransactionStore.getTransactions( BASE_TX_ID + 1 ) ).thenReturn( txCursor( transactions ) );
+        ChannelFuture channelFuture = mock( ChannelFuture.class );
+        when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
+
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> true,
+                () -> datasource, new Monitors(), logProvider );
+
+        txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DEFAULT_DATABASE_NAME ) );
+
+        ArgumentCaptor<ChunkedTransactionStream> txStreamCaptor = ArgumentCaptor.forClass( ChunkedTransactionStream.class );
+        verify( context ).writeAndFlush( txStreamCaptor.capture() );
+        verifyTransactionStream( txStreamCaptor.getValue(), transactions );
+        verify( logicalTransactionStore ).getTransactions( firstTxIdInTxStream );
+    }
+
+    private void verifyTransactionStream( ChunkedTransactionStream txStream, CommittedTransactionRepresentation[] expectedTransactions ) throws Exception
+    {
+        ByteBufAllocator allocator = new UnpooledByteBufAllocator( false );
+        for ( CommittedTransactionRepresentation tx : expectedTransactions )
+        {
+            Object chunk1 = txStream.readChunk( allocator );
+            assertEquals( ResponseMessageType.TX, chunk1 );
+
+            Object chunk2 = txStream.readChunk( allocator );
+            assertEquals( new TxPullResponse( storeId, tx ), chunk2 );
+        }
+    }
+
+    private static CommittedTransactionRepresentation tx( long id )
+    {
+        LogEntryStart startEntry = new LogEntryStart( Math.toIntExact( id ), Math.toIntExact( id ), id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED );
+        TransactionRepresentation txRepresentation = Commands.transactionRepresentation( createNode( 0 ) );
+        return new CommittedTransactionRepresentation( startEntry, txRepresentation, new LogEntryCommit( id, id ) );
+    }
+
+    private static TransactionCursor txCursor( CommittedTransactionRepresentation... transactions )
     {
         return new TransactionCursor()
         {
+            final Cursor<CommittedTransactionRepresentation> cursor = cursor( transactions );
+
             @Override
             public LogPosition position()
             {

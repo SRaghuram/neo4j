@@ -17,4 +17,10 @@ public class NoStore implements BackupStore
     {
         return Optional.empty();
     }
+
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName();
+    }
 }

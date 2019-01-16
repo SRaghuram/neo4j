@@ -38,12 +38,9 @@ public class TxPullClient
     {
         CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<TxStreamFinishedResponse>()
         {
-            private long lastTxIdReceived = previousTxId;
-
             @Override
             public void onTxPullResponse( CompletableFuture<TxStreamFinishedResponse> signal, TxPullResponse response )
             {
-                this.lastTxIdReceived = response.tx().getCommitEntry().getTxId();
                 txPullResponseListener.onTxReceived( response );
             }
 

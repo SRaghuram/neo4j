@@ -35,6 +35,7 @@ import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILAB
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static java.lang.String.format;
+import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 
 public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequest>
 {
@@ -99,12 +100,13 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
 
     private Prepare prepareRequest( TxPullRequest msg ) throws IOException
     {
-        long firstTxId = msg.previousTxId() + 1;
-        if ( msg.previousTxId() <= 0 )
+        if ( !isValid( msg ) )
         {
-            log.error( "Illegal tx pull request. Tx id must be greater than 0" );
             return Prepare.fail( E_INVALID_REQUEST );
         }
+
+        long firstTxId = msg.previousTxId() + 1;
+
         if ( !databaseAvailable.getAsBoolean() )
         {
             log.info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", firstTxId );
@@ -151,6 +153,17 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
             log.info( "Failed to serve TxPullRequest for tx %d because the transaction does not exist.", firstTxId );
             return Prepare.fail( E_TRANSACTION_PRUNED );
         }
+    }
+
+    private boolean isValid( TxPullRequest msg )
+    {
+        long previousTxId = msg.previousTxId();
+        if ( previousTxId < BASE_TX_ID )
+        {
+            log.error( "Illegal tx pull request. Tx id must be greater or equal to %s but was %s", BASE_TX_ID, previousTxId );
+            return false;
+        }
+        return true;
     }
 
     private static class TxPullingContext

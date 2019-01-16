@@ -5,12 +5,11 @@
  */
 package org.neo4j.backup.clusteringsupport.backup_stores;
 
-import java.io.File;
-
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 
-import static org.junit.Assert.assertTrue;
+import java.io.File;
+
 import static com.neo4j.causalclustering.helpers.DataCreator.createEmptyNodes;
 
 public class BackupStoreWithSomeDataButNoTransactionLogs extends AbstractStoreGenerator
@@ -22,11 +21,8 @@ public class BackupStoreWithSomeDataButNoTransactionLogs extends AbstractStoreGe
     }
 
     @Override
-    void modify( File backup )
+    void modify( File backup ) throws Exception
     {
-        for ( File transaction : backup.listFiles( ( dir, name ) -> name.contains( "transaction" ) ) )
-        {
-            assertTrue( transaction.delete() );
-        }
+        deleteTransactionLogs( backup );
     }
 }

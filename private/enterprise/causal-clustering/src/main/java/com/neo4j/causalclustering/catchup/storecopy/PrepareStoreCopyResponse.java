@@ -40,7 +40,7 @@ public class PrepareStoreCopyResponse
 
     private final File[] files;
     private final LongSet indexIds;
-    private final Long transactionId;
+    private final long lastCheckPointedTransactionId;
     private final Status status;
 
     public static PrepareStoreCopyResponse error( Status errorStatus )
@@ -49,12 +49,12 @@ public class PrepareStoreCopyResponse
         {
             throw new IllegalStateException( "Cannot create error result from state: " + errorStatus );
         }
-        return new PrepareStoreCopyResponse( new File[0], LongSets.immutable.empty(), 0L, errorStatus );
+        return new PrepareStoreCopyResponse( new File[0], LongSets.immutable.empty(), 0, errorStatus );
     }
 
-    public static PrepareStoreCopyResponse success( File[] storeFiles, LongSet indexIds, long lastTransactionId )
+    public static PrepareStoreCopyResponse success( File[] storeFiles, LongSet indexIds, long lastCheckPointedTransactionId )
     {
-        return new PrepareStoreCopyResponse( storeFiles, indexIds, lastTransactionId, Status.SUCCESS );
+        return new PrepareStoreCopyResponse( storeFiles, indexIds, lastCheckPointedTransactionId, Status.SUCCESS );
     }
 
     public LongSet getIndexIds()
@@ -62,11 +62,11 @@ public class PrepareStoreCopyResponse
         return indexIds;
     }
 
-    private PrepareStoreCopyResponse( File[] files, LongSet indexIds, Long transactionId, Status status )
+    private PrepareStoreCopyResponse( File[] files, LongSet indexIds, long lastCheckPointedTransactionId, Status status )
     {
         this.files = files;
         this.indexIds = indexIds;
-        this.transactionId = transactionId;
+        this.lastCheckPointedTransactionId = lastCheckPointedTransactionId;
         this.status = status;
     }
 
@@ -75,9 +75,9 @@ public class PrepareStoreCopyResponse
         return files;
     }
 
-    public long lastTransactionId()
+    public long lastCheckPointedTransactionId()
     {
-        return transactionId;
+        return lastCheckPointedTransactionId;
     }
 
     public Status status()
@@ -97,14 +97,18 @@ public class PrepareStoreCopyResponse
             return false;
         }
         PrepareStoreCopyResponse that = (PrepareStoreCopyResponse) o;
-        return Arrays.equals( files, that.files ) && indexIds.equals( that.indexIds ) &&
-               Objects.equals( transactionId, that.transactionId ) && status == that.status;
+        return lastCheckPointedTransactionId == that.lastCheckPointedTransactionId &&
+               Arrays.equals( files, that.files ) &&
+               Objects.equals( indexIds, that.indexIds ) &&
+               status == that.status;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( Arrays.hashCode( files ), indexIds, transactionId, status );
+        int result = Objects.hash( indexIds, lastCheckPointedTransactionId, status );
+        result = 31 * result + Arrays.hashCode( files );
+        return result;
     }
 
     public static class StoreListingMarshal extends SafeChannelMarshal<PrepareStoreCopyResponse>
@@ -113,7 +117,7 @@ public class PrepareStoreCopyResponse
         public void marshal( PrepareStoreCopyResponse prepareStoreCopyResponse, WritableChannel buffer ) throws IOException
         {
             buffer.putInt( prepareStoreCopyResponse.status.ordinal() );
-            buffer.putLong( prepareStoreCopyResponse.transactionId );
+            buffer.putLong( prepareStoreCopyResponse.lastCheckPointedTransactionId );
             marshalFiles( buffer, prepareStoreCopyResponse.files );
             marshalIndexIds( buffer, prepareStoreCopyResponse.indexIds );
         }
@@ -123,7 +127,7 @@ public class PrepareStoreCopyResponse
         {
             int ordinal = channel.getInt();
             Status status = Status.values()[ordinal];
-            Long transactionId = channel.getLong();
+            long transactionId = channel.getLong();
             File[] files = unmarshalFiles( channel );
             LongSet indexIds = unmarshalIndexIds( channel );
             return new PrepareStoreCopyResponse( files, indexIds, transactionId, status );

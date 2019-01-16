@@ -19,7 +19,7 @@ public class EmptyBackupStore extends AbstractStoreGenerator
     }
 
     @Override
-    void modify( File backup )
+    void modify( File backup ) throws Exception
     {
         // do nothing
     }

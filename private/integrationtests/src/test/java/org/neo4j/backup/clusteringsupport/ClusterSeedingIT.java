@@ -5,7 +5,11 @@
  */
 package org.neo4j.backup.clusteringsupport;
 
+import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DefaultCluster;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.discovery.IpFamily;
+import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -21,11 +25,8 @@ import org.neo4j.backup.clusteringsupport.backup_stores.BackupStore;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeData;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeDataButNoTransactionLogs;
 import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStore;
+import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStoreWithoutTransactionLogs;
 import org.neo4j.backup.clusteringsupport.backup_stores.NoStore;
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -34,10 +35,10 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.backup.clusteringsupport.BackupUtil.restoreFromBackup;
-import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 
 @RunWith( Parameterized.class )
 public class ClusterSeedingIT
@@ -63,8 +64,13 @@ public class ClusterSeedingIT
     @Parameterized.Parameters( name = "{0}" )
     public static Object[][] data()
     {
-        return new Object[][]{{new NoStore(), true}, {new EmptyBackupStore(), false}, {new BackupStoreWithSomeData(), false},
-                {new BackupStoreWithSomeDataButNoTransactionLogs(), false}};
+        return new Object[][]{
+                {new NoStore(), true},
+                {new EmptyBackupStore(), false},
+                {new EmptyBackupStoreWithoutTransactionLogs(), false},
+                {new BackupStoreWithSomeData(), false},
+                {new BackupStoreWithSomeDataButNoTransactionLogs(), false}
+        };
     }
 
     @Before

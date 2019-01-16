@@ -5,12 +5,13 @@
  */
 package org.neo4j.backup;
 
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
+import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,8 +35,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 
 import org.neo4j.backup.impl.BackupExecutionException;
 import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
@@ -74,9 +73,11 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.scheduler.DaemonThreadFactory;
 import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.test.Barrier;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -85,6 +86,7 @@ import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static java.lang.Integer.parseInt;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
@@ -102,7 +104,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static com.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
@@ -207,11 +208,8 @@ class BackupIT
     }
 
     @TestWithRecordFormats
-    @Disabled( "Backup of an empty store in single instance does not work" )
     void shouldFindTransactionLogContainingLastNeoStoreTransactionInAnEmptyStore( String recordFormatName ) throws Exception
     {
-        // This test highlights a special case where an empty store can return transaction metadata for transaction 0.
-
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
 
         executeBackup( db, true );
@@ -328,14 +326,14 @@ class BackupIT
     void backupMultipleSchemaIndexes( String recordFormatName ) throws Exception
     {
         // given
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        ExecutorService executor = newSingleThreadedExecutor();
         AtomicBoolean end = new AtomicBoolean();
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
         int numberOfIndexedLabels = 10;
         List<Label> indexedLabels = createIndexes( db, numberOfIndexedLabels );
 
         // start thread that continuously writes to indexes
-        executorService.submit( () ->
+        executor.submit( () ->
         {
             while ( !end.get() )
             {
@@ -346,32 +344,34 @@ class BackupIT
                 }
             }
         } );
-        executorService.shutdown();
+        executor.shutdown();
 
         // create backup
         executeBackup( db, true );
 
         end.set( true );
-        executorService.awaitTermination( 1, TimeUnit.MINUTES );
+        executor.awaitTermination( 1, TimeUnit.MINUTES );
     }
 
     @TestWithRecordFormats
-    @Disabled( "Backup of an empty store in single instance does not work" )
     void shouldBackupEmptyStore( String recordFormatName ) throws Exception
     {
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
 
         executeBackup( db, true );
+
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
 
     @TestWithRecordFormats
-    @Disabled( "Backup of an empty store in single instance does not work" )
     void shouldRetainFileLocksAfterFullBackupOnLiveDatabase( String recordFormatName ) throws Exception
     {
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
         assertStoreIsLocked( serverStorePath );
 
         executeBackup( db, true );
+
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
         assertStoreIsLocked( serverStorePath );
     }
 
@@ -434,7 +434,7 @@ class BackupIT
         {
             int port = serverSocket.getLocalPort();
 
-            ExecutorService executor = Executors.newSingleThreadExecutor( new DaemonThreadFactory() );
+            ExecutorService executor = newSingleThreadedExecutor();
             Future<Object> serverAcceptFuture = executor.submit( () ->
             {
                 // accept a connection and immediately close it
@@ -692,6 +692,64 @@ class BackupIT
         checkPreviousCommittedTxIdFromBackupTxLog( 0, expectedPreviousCommittedTx );
     }
 
+    @Test
+    void shouldContainTransactionsThatHappenDuringBackupProcessWhenBackupEmptyStore() throws Exception
+    {
+        testTransactionsDuringFullBackup( 0 );
+    }
+
+    @Test
+    void shouldContainTransactionsThatHappenDuringBackupProcessWhenBackupNonEmptyStore() throws Exception
+    {
+        testTransactionsDuringFullBackup( random.nextInt( 50, 2000 ) );
+    }
+
+    private void testTransactionsDuringFullBackup( int nodesInDbBeforeBackup ) throws Exception
+    {
+        String label = "Cat";
+        String property = "name";
+        int transactionsDuringBackup = 10;//random.nextInt( 10, 1000 );
+
+        GraphDatabaseService db = startDb( serverStorePath );
+        createIndexAndNodes( db, label, property, nodesInDbBeforeBackup );
+        long lastCommittedTxIdBeforeBackup = getLastCommittedTx( db );
+
+        Barrier.Control barrier = new Barrier.Control();
+        Monitors monitors = dependencyResolver( db ).resolveDependency( Monitors.class );
+        monitors.addMonitorListener( new BackupClientPausingMonitor( barrier, serverStoreLayout ) );
+
+        ExecutorService executor = newSingleThreadedExecutor();
+        Future<Void> midBackupTransactionsFuture = executor.submit( () ->
+        {
+            barrier.awaitUninterruptibly();
+
+            for ( int i = 0; i < transactionsDuringBackup; i++ )
+            {
+                createNode( db, label, property );
+            }
+
+            flushAndForce( db );
+            barrier.release();
+            return null;
+        } );
+
+        executeBackup( db, monitors, true );
+
+        executor.shutdown();
+        assertTrue( executor.awaitTermination( 1, TimeUnit.MINUTES ) );
+        assertNull( midBackupTransactionsFuture.get() );
+
+        long lastCommittedTxIdAfterBackup = getLastCommittedTx( db );
+        long lastCommittedTxIdFromBackup = getLastCommittedTx( backupDatabaseLayout, pageCache );
+        long labelAndPropertyTokenTransactions = nodesInDbBeforeBackup == 0 ? 2 : 0;
+        long expectedLastCommittedTxIdAfterBackup = lastCommittedTxIdBeforeBackup + transactionsDuringBackup + labelAndPropertyTokenTransactions;
+
+        assertEquals( expectedLastCommittedTxIdAfterBackup, lastCommittedTxIdAfterBackup );
+        assertEquals( lastCommittedTxIdAfterBackup, lastCommittedTxIdFromBackup );
+
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
+    }
+
     private void ensureStoresHaveIdFiles( DatabaseLayout databaseLayout ) throws IOException
     {
         for ( File idFile : databaseLayout.idFiles() )
@@ -787,15 +845,27 @@ class BackupIT
 
     private void executeBackup( GraphDatabaseService db, boolean fallbackToFull ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
+        executeBackup( db, new Monitors(), fallbackToFull );
+    }
+
+    private void executeBackup( GraphDatabaseService db, Monitors monitors, boolean fallbackToFull )
+            throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
         DependencyResolver resolver = dependencyResolver( db );
         ConnectorPortRegister portRegister = resolver.resolveDependency( ConnectorPortRegister.class );
         HostnamePort backupServerAddress = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
         assertNotNull( backupServerAddress, "Backup server address not registered" );
 
-        executeBackup( backupServerAddress.getHost(), backupServerAddress.getPort(), fallbackToFull );
+        executeBackup( backupServerAddress.getHost(), backupServerAddress.getPort(), monitors, fallbackToFull );
     }
 
     private void executeBackup( String hostname, int port, boolean fallbackToFull ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
+        executeBackup( hostname, port, new Monitors(), fallbackToFull );
+    }
+
+    private void executeBackup( String hostname, int port, Monitors monitors, boolean fallbackToFull )
+            throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         Path dir = backupDatabasePath.getParentFile().toPath();
 
@@ -809,6 +879,7 @@ class BackupIT
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
                 .withOutputStream( System.out )
                 .withLogProvider( FormattedLogProvider.toOutputStream( System.out ) )
+                .withMonitors( monitors )
                 .build();
 
         executor.executeBackup( context );
@@ -837,6 +908,18 @@ class BackupIT
             node.setProperty( "myKey", "myValue" );
             db.createNode( Label.label( "NotMe" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
             tx.success();
+        }
+    }
+
+    private void createIndexAndNodes( GraphDatabaseService db, String label, String property, int count )
+    {
+        if ( count > 0 )
+        {
+            createIndex( db, label, property );
+            for ( int i = 0; i < count; i++ )
+            {
+                createNode( db, label, property );
+            }
         }
     }
 
@@ -920,8 +1003,41 @@ class BackupIT
         resolver.resolveDependency( CheckPointer.class ).forceCheckPoint( new SimpleTriggerInfo( "test" ) );
     }
 
+    private void flushAndForce( GraphDatabaseService db ) throws IOException
+    {
+        DependencyResolver resolver = dependencyResolver( db );
+        StorageEngine storageEngine = resolver.resolveDependency( StorageEngine.class );
+        storageEngine.flushAndForce( IOLimiter.UNLIMITED );
+    }
+
     private static DependencyResolver dependencyResolver( GraphDatabaseService db )
     {
         return ((GraphDatabaseAPI) db).getDependencyResolver();
+    }
+
+    private static ExecutorService newSingleThreadedExecutor()
+    {
+        return Executors.newSingleThreadExecutor( new DaemonThreadFactory() );
+    }
+
+    private static class BackupClientPausingMonitor extends StoreCopyClientMonitor.Adapter
+    {
+        final Barrier barrier;
+        final DatabaseLayout databaseLayout;
+
+        BackupClientPausingMonitor( Barrier barrier, DatabaseLayout databaseLayout )
+        {
+            this.barrier = barrier;
+            this.databaseLayout = databaseLayout;
+        }
+
+        @Override
+        public void finishReceivingStoreFile( String file )
+        {
+            if ( file.endsWith( databaseLayout.nodeStore().getName() ) || file.endsWith( databaseLayout.relationshipStore().getName() ) )
+            {
+                barrier.reached(); // multiple calls to this barrier will not block
+            }
+        }
     }
 }

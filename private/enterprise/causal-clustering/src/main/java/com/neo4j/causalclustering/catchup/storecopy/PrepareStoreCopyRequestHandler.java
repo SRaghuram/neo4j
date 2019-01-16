@@ -76,8 +76,8 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
     {
         LongSet indexIds = prepareStoreCopyFiles.getNonAtomicIndexIds();
         File[] files = prepareStoreCopyFiles.listReplayableFiles();
-        long lastCommittedTxId = checkPointer.lastCheckPointedTransactionId();
-        return PrepareStoreCopyResponse.success( files, indexIds, lastCommittedTxId );
+        long lastCheckPointedTransactionId = checkPointer.lastCheckPointedTransactionId();
+        return PrepareStoreCopyResponse.success( files, indexIds, lastCheckPointedTransactionId );
     }
 
     private Resource tryCheckpointAndAcquireMutex( CheckPointer checkPointer ) throws IOException

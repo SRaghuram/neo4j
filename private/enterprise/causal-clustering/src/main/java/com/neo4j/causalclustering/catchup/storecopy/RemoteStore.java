@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -36,6 +37,11 @@ import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_I
  */
 public class RemoteStore
 {
+    /**
+     * Represents the minimal transaction ID that can be committed by the user.
+     */
+    private static final long MIN_COMMITTED_TRANSACTION_ID = BASE_TX_ID + 1;
+
     private final Log log;
     private final Monitors monitors;
     private final Config config;
@@ -46,6 +52,7 @@ public class RemoteStore
     private final TxPullClient txPullClient;
     private final TransactionLogCatchUpFactory transactionLogFactory;
     private final CommitStateHelper commitStateHelper;
+    private final StoreCopyClientMonitor storeCopyClientMonitor;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
             TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors )
@@ -59,6 +66,7 @@ public class RemoteStore
         this.config = config;
         this.log = logProvider.getLog( getClass() );
         this.monitors = monitors;
+        this.storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config );
     }
 
@@ -113,16 +121,12 @@ public class RemoteStore
     {
         try
         {
-            long lastFlushedTxId;
             StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors );
-            lastFlushedTxId = storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider,
-                        () -> new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ).getSeconds(),
-                                TimeUnit.SECONDS ), destinationLayout.databaseDirectory() );
-
-            log.info( "Store files need to be recovered starting from: %d", lastFlushedTxId );
+            long lastCheckPointedTxId = storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider,
+                    this::perRequestTerminationCondition, destinationLayout.databaseDirectory() );
 
             CatchupResult catchupResult = pullTransactions( addressProvider.primary(), expectedStoreId, destinationLayout,
-                    lastFlushedTxId, true, true, rotateTransactionsManually );
+                    lastCheckPointedTxId, true, true, rotateTransactionsManually );
             if ( catchupResult != SUCCESS_END_OF_STREAM )
             {
                 throw new StoreCopyFailedException( "Failed to pull transactions: " + catchupResult );
@@ -138,33 +142,35 @@ public class RemoteStore
             boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir, boolean rotateTransactionsManually )
             throws StoreCopyFailedException
     {
-        StoreCopyClientMonitor storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
-        storeCopyClientMonitor.startReceivingTransactions( fromTxId );
-        long previousTxId = fromTxId - 1;
+        // adjust the given transaction ID so that it represents a valid ID which can be received in the stream of transactions
+        fromTxId = Math.max( fromTxId, MIN_COMMITTED_TRANSACTION_ID );
+
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config,
                 logProvider, fromTxId, asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
             log.info( "Pulling transactions from %s starting with txId: %d", from, fromTxId );
-            CatchupResult lastStatus;
 
+            storeCopyClientMonitor.startReceivingTransactions( fromTxId );
+            long previousTxId = fromTxId - 1; // pull transactions request needs to contain the previous ID
             TxStreamFinishedResponse result = txPullClient.pullTransactions( from, expectedStoreId, previousTxId, writer );
-            lastStatus = result.status();
-            previousTxId = result.lastTxId();
+            storeCopyClientMonitor.finishReceivingTransactions( result.lastTxId() );
 
-            return lastStatus;
+            return result.status();
         }
         catch ( Exception e )
         {
             throw new StoreCopyFailedException( e );
-        }
-        finally
-        {
-            storeCopyClientMonitor.finishReceivingTransactions( previousTxId );
         }
     }
 
     public StoreId getStoreId( AdvertisedSocketAddress from ) throws StoreIdDownloadFailedException
     {
         return storeCopyClient.fetchStoreId( from );
+    }
+
+    private TerminationCondition perRequestTerminationCondition()
+    {
+        Duration maxRetryTime = config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request );
+        return new MaximumTotalTime( maxRetryTime.getSeconds(), TimeUnit.SECONDS );
     }
 }

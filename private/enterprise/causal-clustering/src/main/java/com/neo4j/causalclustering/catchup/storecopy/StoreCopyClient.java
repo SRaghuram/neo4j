@@ -59,7 +59,7 @@ public class StoreCopyClient
                     requestWiseTerminationCondition, destDir );
             copyIndexSnapshotIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider,
                     requestWiseTerminationCondition );
-            return prepareStoreCopyResponse.lastTransactionId();
+            return prepareStoreCopyResponse.lastCheckPointedTransactionId();
         }
         catch ( Exception e )
         {
@@ -73,15 +73,15 @@ public class StoreCopyClient
         StoreCopyClientMonitor
                 storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
         storeCopyClientMonitor.startReceivingStoreFiles();
-        long lastTransactionId = prepareStoreCopyResponse.lastTransactionId();
+        long lastCheckPointedTxId = prepareStoreCopyResponse.lastCheckPointedTransactionId();
 
         for ( File file : prepareStoreCopyResponse.getFiles() )
         {
             storeCopyClientMonitor.startReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
 
             persistentCallToSecondary( addressProvider,
-                    c -> c.getStoreFile( expectedStoreId, file, lastTransactionId ),
-                    c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, databaseName ),
+                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId ),
+                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ),
                     storeFileStream,
                     terminationConditions.get() );
 
@@ -96,7 +96,7 @@ public class StoreCopyClient
     {
         StoreCopyClientMonitor
                 storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
-        long lastTransactionId = prepareStoreCopyResponse.lastTransactionId();
+        long lastCheckPointedTxId = prepareStoreCopyResponse.lastCheckPointedTransactionId();
         LongIterator indexIds = prepareStoreCopyResponse.getIndexIds().longIterator();
         storeCopyClientMonitor.startReceivingIndexSnapshots();
 
@@ -106,8 +106,8 @@ public class StoreCopyClient
             storeCopyClientMonitor.startReceivingIndexSnapshot( indexId );
 
             persistentCallToSecondary( addressProvider,
-                    c -> c.getIndexFiles( expectedStoreId, indexId, lastTransactionId ),
-                    c -> c.getIndexFiles( expectedStoreId, indexId, lastTransactionId, databaseName ),
+                    c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId ),
+                    c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId, databaseName ),
                     storeFileStream,
                     terminationConditions.get() );
 

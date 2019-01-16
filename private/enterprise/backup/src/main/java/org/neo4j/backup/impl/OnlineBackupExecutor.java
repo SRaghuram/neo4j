@@ -37,7 +37,7 @@ public class OnlineBackupExecutor
         this.fs = builder.fs;
         this.logProvider = builder.logProvider;
         this.progressMonitorFactory = builder.progressMonitorFactory;
-        this.monitors = new Monitors();
+        this.monitors = builder.monitors;
     }
 
     public static OnlineBackupExecutor buildDefault()
@@ -97,6 +97,7 @@ public class OnlineBackupExecutor
         private FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
         private LogProvider logProvider = NullLogProvider.getInstance();
         private ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.NONE;
+        private Monitors monitors = new Monitors();
 
         private Builder()
         {
@@ -123,6 +124,12 @@ public class OnlineBackupExecutor
         public Builder withProgressMonitorFactory( ProgressMonitorFactory progressMonitorFactory )
         {
             this.progressMonitorFactory = progressMonitorFactory;
+            return this;
+        }
+
+        public Builder withMonitors( Monitors monitors )
+        {
+            this.monitors = monitors;
             return this;
         }
 

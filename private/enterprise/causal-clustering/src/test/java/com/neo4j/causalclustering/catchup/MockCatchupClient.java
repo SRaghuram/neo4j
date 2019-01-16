@@ -229,7 +229,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         @Override
         public PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName )
         {
-             TxStreamFinishedResponse pullResponse = responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, databaseName ) );
+            TxStreamFinishedResponse pullResponse = responses.txPullResponse.apply( new TxPullRequest( previousTxId, storeId, databaseName ) );
             return handler -> CompletableFuture.completedFuture( pullResponse );
         }
 

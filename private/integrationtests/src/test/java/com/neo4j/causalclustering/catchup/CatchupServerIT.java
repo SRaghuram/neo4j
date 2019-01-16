@@ -139,7 +139,7 @@ public class CatchupServerIT
         }
 
         // and
-        assertTransactionIdMatches( prepareStoreCopyResponse.lastTransactionId() );
+        assertTransactionIdMatches( prepareStoreCopyResponse.lastCheckPointedTransactionId() );
 
         //and
         assertTrue( "Expected an empty set of ids. Found size " + prepareStoreCopyResponse.getIndexIds().size(),

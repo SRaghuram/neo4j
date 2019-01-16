@@ -39,7 +39,7 @@ public class PrepareStoreCopyResponseMarshalTest
 
         // then it can be deserialised
         PrepareStoreCopyResponse readPrepareStoreCopyResponse = embeddedChannel.readInbound();
-        assertEquals( prepareStoreCopyResponse.lastTransactionId(), readPrepareStoreCopyResponse.lastTransactionId() );
+        assertEquals( prepareStoreCopyResponse.lastCheckPointedTransactionId(), readPrepareStoreCopyResponse.lastCheckPointedTransactionId() );
     }
 
     @Test
