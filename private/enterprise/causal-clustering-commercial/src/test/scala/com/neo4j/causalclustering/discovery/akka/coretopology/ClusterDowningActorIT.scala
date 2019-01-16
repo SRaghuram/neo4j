@@ -98,7 +98,7 @@ class ClusterDowningActorIT extends BaseAkkaIT("ClusterDowningActor") {
       .withUnreachable(unreachable1)
     
     def doNothing() = {
-      awaitNotAssert(Mockito.verify(cluster).down(ArgumentMatchers.any()), defaultWaitTime, "Should not down")
+      awaitNotAssert(Mockito.verify(cluster, Mockito.atLeastOnce()).down(ArgumentMatchers.any()), defaultWaitTime, "Should not down")
       metadataActor.expectNoMessage(defaultWaitTime)
     }
   }

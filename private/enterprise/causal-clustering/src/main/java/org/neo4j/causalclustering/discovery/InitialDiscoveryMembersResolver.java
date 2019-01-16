@@ -39,7 +39,7 @@ public class InitialDiscoveryMembersResolver implements RemoteMembersResolver
                 .collect( Collectors.toCollection( collectionFactory ) );
     }
 
-    private static final Comparator<AdvertisedSocketAddress> advertisedSockedAddressComparator =
+    public static final Comparator<AdvertisedSocketAddress> advertisedSockedAddressComparator =
             Comparator.comparing( AdvertisedSocketAddress::getHostname ).thenComparingInt( AdvertisedSocketAddress::getPort );
 
     public static Comparator<AdvertisedSocketAddress> advertisedSocketAddressComparator()

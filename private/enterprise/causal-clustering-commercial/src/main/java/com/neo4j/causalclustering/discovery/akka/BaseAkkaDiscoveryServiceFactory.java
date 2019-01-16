@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.discovery.akka;
 
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
+import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
 
 import java.time.Clock;
 import java.util.concurrent.ExecutorService;
@@ -66,7 +67,12 @@ public abstract class BaseAkkaDiscoveryServiceFactory implements DiscoveryServic
 
     protected ActorSystemLifecycle actorSystemLifecycle( Config config, ExecutorService executor, LogProvider logProvider, RemoteMembersResolver resolver )
     {
-        return new ActorSystemLifecycle( actorSystemFactory( executor, config, logProvider ), resolver, config, logProvider );
+        return new ActorSystemLifecycle(
+                actorSystemFactory( executor, config, logProvider ),
+                resolver,
+                new JoinMessageFactory( resolver ),
+                config,
+                logProvider );
     }
 
 }
