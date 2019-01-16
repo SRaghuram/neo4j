@@ -72,14 +72,29 @@ objectclass: organizationalUnit
 objectclass: top
 ou: users
 
+# Entry 9: ou=users,dc=example,dc=com
+dn: ou=local,ou=users,dc=example,dc=com
+objectclass: organizationalUnit
+objectclass: top
+ou: local
+
+# Entry 9: ou=users,dc=example,dc=com
+dn: ou=remote,ou=users,dc=example,dc=com
+objectclass: organizationalUnit
+objectclass: top
+ou: remote
+
 # Entry 10: cn=neo4j,ou=users,dc=example,dc=com
 dn: cn=neo4j,ou=users,dc=example,dc=com
+memberOf: cn=admin,ou=groups,dc=example,dc=com
 cn:  neo4j
 gidnumber: 503
 homedirectory: /home/users/neo4j
 objectclass: inetOrgPerson
 objectclass: posixAccount
 objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: neo4j
 sn: neo4j
 uid: neo4j
 uidnumber: 1003
@@ -87,12 +102,15 @@ userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
 # Entry 11: cn=neo,ou=users,dc=example,dc=com
 dn: cn=neo,ou=users,dc=example,dc=com
+memberOf: cn=reader,ou=groups,dc=example,dc=com
 cn:  neo
 gidnumber: 500
 homedirectory: /home/users/neo
 objectclass: inetOrgPerson
 objectclass: posixAccount
 objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: neo
 sn: neo
 uid: neo
 uidnumber: 1000
@@ -100,12 +118,15 @@ userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
 # Entry 12: cn=smith,ou=users,dc=example,dc=com
 dn: cn=smith,ou=users,dc=example,dc=com
+memberOf: cn=agent,ou=groups,dc=example,dc=com
 cn:  smith
 gidnumber: 504
 homedirectory: /home/users/smith
 objectclass: inetOrgPerson
 objectclass: posixAccount
 objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: smith
 sn: smith
 uid: smith
 uidnumber: 1004
@@ -113,12 +134,15 @@ userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
 # Entry 13: cn=tank,ou=users,dc=example,dc=com
 dn: cn=tank,ou=users,dc=example,dc=com
+memberOf: cn=publisher,ou=groups,dc=example,dc=com
 cn:  tank
 gidnumber: 501
 homedirectory: /home/users/tank
 objectclass: inetOrgPerson
 objectclass: posixAccount
 objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: tank
 sn: tank
 uid: tank
 uidnumber: 1001
@@ -126,12 +150,15 @@ userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
 
 # Entry 14: cn=trinity,ou=users,dc=example,dc=com
 dn: cn=trinity,ou=users,dc=example,dc=com
+memberof: cn=architect,ou=groups,dc=example,dc=com
 cn:  trinity
 gidnumber: 502
 homedirectory: /home/users/trinity
 objectclass: inetOrgPerson
 objectclass: posixAccount
 objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: trinity
 sn: trinity
 uid: trinity
 uidnumber: 1002

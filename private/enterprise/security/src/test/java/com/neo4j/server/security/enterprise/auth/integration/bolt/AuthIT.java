@@ -68,7 +68,7 @@ import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
         keyStore = "target/test-classes/neo4j_ldap_test_keystore.jks",
         certificatePassword = "secret"
 )
-@ApplyLdifFiles( "ldap_test_data.ldif" )
+@ApplyLdifFiles( {"ad_schema.ldif", "ldap_test_data.ldif"} )
 public class AuthIT extends AuthTestBase
 {
     private static EmbeddedTestCertificates embeddedTestCertificates;
