@@ -2166,8 +2166,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
   private def accessVariable(name: String, currentContext: Option[IntermediateRepresentation]): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) = {
 
     def computeRepresentation(ir: IntermediateRepresentation, nullCheck: Option[IntermediateRepresentation], nullable: Boolean): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) = {
-      //when the context has been updated we cannot use it in nullchecks because these might be checked before
-      //declaring the inner context
+      /*
+       * In the general case currentContext is None which means that we use context provided as parameter to the evaluate
+       * method. However in some cases, like for example `all`, `extract`, `reduce` we are using a local copy of the
+       * execution context, in that case we must make sure to not have the null check depend on the local ExecutionContext
+       * since the null check can be checked before it has been declared.
+       *
+       * This inconvenience should go away once we rewrite `reduce` et. al not to use a local copy of the ExecutionContext.
+       */
       currentContext match {
         case None => (ir, if (nullable) nullCheck else None, None)
         case Some(_) =>
