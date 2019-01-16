@@ -7,6 +7,7 @@ package org.neo4j.server.security.enterprise.auth.plugin;
 
 import java.util.Hashtable;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
@@ -43,8 +44,9 @@ public class LdapGroupHasUsersAuthPlugin extends AuthPlugin.Adapter
         {
             String username = authToken.principal();
             char[] password = authToken.credentials();
+            Map<String,Object> parameters = authToken.parameters();
 
-            LdapContext ctx = authenticate( username, password );
+            LdapContext ctx = authenticate( username, password, parameters );
             Set<String> roles = authorize( ctx, username );
 
             return AuthInfo.of( username, roles );
@@ -55,11 +57,13 @@ public class LdapGroupHasUsersAuthPlugin extends AuthPlugin.Adapter
         }
     }
 
-    private LdapContext authenticate( String username, char[] password ) throws NamingException
+    private LdapContext authenticate( String username, char[] password, Map<String,Object> parameters ) throws NamingException
     {
+        long port = (long) parameters.get( "port" );
+
         Hashtable<String,Object> env = new Hashtable<>();
         env.put( Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory" );
-        env.put( Context.PROVIDER_URL, "ldap://0.0.0.0:10389" );
+        env.put( Context.PROVIDER_URL, "ldap://0.0.0.0:" + port );
 
         env.put( Context.SECURITY_PRINCIPAL, String.format( "cn=%s,ou=users,dc=example,dc=com", username ) );
         env.put( Context.SECURITY_CREDENTIALS, password );

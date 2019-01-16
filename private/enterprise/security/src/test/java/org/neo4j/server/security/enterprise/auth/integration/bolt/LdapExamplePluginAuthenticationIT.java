@@ -13,12 +13,12 @@ import org.apache.directory.server.core.annotations.ContextEntry;
 import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.annotations.LoadSchema;
-import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.core.integ.CreateLdapServerRule;
 import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.Collections;
 import java.util.Map;
@@ -29,9 +29,10 @@ import org.neo4j.server.security.enterprise.auth.plugin.LdapGroupHasUsersAuthPlu
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
-@RunWith( FrameworkRunner.class )
+import static org.neo4j.helpers.collection.MapUtil.map;
+
 @CreateDS(
-        name = "Test",
+        name = "TestLdapExamplePluginAuthenticationIT",
         partitions = { @CreatePartition(
                 name = "example",
                 suffix = "dc=example,dc=com",
@@ -46,8 +47,8 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
                 @LoadSchema( name = "nis", enabled = true ),
         } )
 @CreateLdapServer(
-        transports = { @CreateTransport( protocol = "LDAP", port = 10389, address = "0.0.0.0" ),
-                @CreateTransport( protocol = "LDAPS", port = 10636, address = "0.0.0.0", ssl = true )
+        transports = { @CreateTransport( protocol = "LDAP", address = "0.0.0.0" ),
+                @CreateTransport( protocol = "LDAPS", address = "0.0.0.0", ssl = true )
         },
 
         saslMechanisms = {
@@ -64,12 +65,15 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
 @ApplyLdifFiles( "ldap_group_has_users_test_data.ldif" )
 public class LdapExamplePluginAuthenticationIT extends EnterpriseAuthenticationTestBase
 {
+    @ClassRule
+    public static CreateLdapServerRule ldapServerRule = new CreateLdapServerRule();
+
     @Before
     @Override
     public void setup() throws Exception
     {
         super.setup();
-        LdapServer ldapServer = getLdapServer();
+        LdapServer ldapServer = ldapServerRule.getLdapServer();
         ldapServer.setConfidentialityRequired( false );
         checkIfLdapServerIsReachable(ldapServer.getSaslHost(), ldapServer.getPort());
     }
@@ -83,17 +87,19 @@ public class LdapExamplePluginAuthenticationIT extends EnterpriseAuthenticationT
     @Test
     public void shouldBeAbleToLoginAndAuthorizeWithLdapGroupHasUsersAuthPlugin()
     {
-        try ( Driver driver = connectDriver( "neo", "abc123" ) )
+        Map<String,Object> parameters = map( "port", ldapServerRule.getLdapServer().getPort() );
+
+        try ( Driver driver = connectDriverWithParameters( "neo", "abc123", parameters ) )
         {
             assertRoles( driver, PredefinedRoles.READER );
         }
 
-        try ( Driver driver = connectDriver( "tank", "abc123" ) )
+        try ( Driver driver = connectDriverWithParameters( "tank", "abc123", parameters ) )
         {
             assertRoles( driver, PredefinedRoles.PUBLISHER );
         }
 
-        try ( Driver driver = connectDriver( "smith", "abc123" ) )
+        try ( Driver driver = connectDriverWithParameters( "smith", "abc123", parameters ) )
         {
             assertRoles( driver );
         }

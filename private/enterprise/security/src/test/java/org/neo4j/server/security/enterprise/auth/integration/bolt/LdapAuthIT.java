@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.DirContext;
@@ -75,7 +77,7 @@ interface TimeoutTests
 @SuppressWarnings( "deprecation" )
 @RunWith( FrameworkRunner.class )
 @CreateDS(
-        name = "Test",
+        name = "TestLdapAuthIT",
         partitions = {@CreatePartition(
                 name = "example",
                 suffix = "dc=example,dc=com",
@@ -666,14 +668,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
                 @Override
                 public EntryFilteringCursor search( SearchOperationContext searchContext ) throws LdapException
                 {
-                    try
-                    {
-                        Thread.sleep( waitingTimeMillis );
-                    }
-                    catch ( InterruptedException e )
-                    {
-                        Thread.currentThread().interrupt();
-                    }
+                    LockSupport.parkNanos( TimeUnit.MILLISECONDS.toNanos( waitingTimeMillis ) );
                     return super.search( searchContext );
                 }
             };
