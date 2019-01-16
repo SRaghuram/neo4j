@@ -42,7 +42,7 @@ import static org.junit.Assume.assumeTrue;
 @SuppressWarnings( "deprecation" )
 @RunWith( Parameterized.class )
 @CreateDS(
-        name = "Test",
+        name = "TestAuthIT",
         partitions = {@CreatePartition(
                 name = "example",
                 suffix = "dc=example,dc=com",

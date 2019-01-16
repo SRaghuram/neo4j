@@ -181,7 +181,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.directory.server</groupId>
-            <artifactId>apacheds-server-integ</artifactId>
+            <artifactId>apacheds-test-framework</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
