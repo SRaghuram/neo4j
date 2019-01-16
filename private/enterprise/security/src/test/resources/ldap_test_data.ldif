@@ -173,12 +173,15 @@ objectclass: top
 
 # Entry 16: cn=jane,ou=users,dc=example,dc=com
 dn: cn=jane,ou=users,dc=example,dc=com
+memberof: cn=role1,ou=groups,dc=example,dc=com
 cn:  jane
 gidnumber: 505
 homedirectory: /home/users/jane
 objectclass: inetOrgPerson
 objectclass: posixAccount
 objectclass: top
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: jane
 sn: jane
 uid: jane
 uidnumber: 1005
