@@ -36,11 +36,10 @@ import org.neo4j.graphdb.Relationship
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
 import org.neo4j.internal.kernel.api.security.LoginContext
-import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.kernel.api.proc.CallableUserFunction.BasicUserFunction
 import org.neo4j.kernel.api.proc.Context
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContext}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
 import org.neo4j.values.storable.LocalTimeValue.localTime
@@ -64,30 +63,28 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   private def startNewTransaction(): Unit = {
-    if (tx != null) {
-      tx.success()
-      tx.close()
+    if (context != null) {
+      context.close(true)
     }
-      tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
-      val tcWrapper = TransactionalContextWrapper(
-        Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP))
-      query = new TransactionBoundQueryContext(tcWrapper)(mock[IndexSearchMonitor])
-      cursors = new ExpressionCursors(tcWrapper.cursors)
 
+    tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
+    context = Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP)
+    query = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
+    cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors)
   }
 
   override protected def stopTest(): Unit = {
-    tx.close()
-    tx = null
+    if (context != null) {
+      context.close(true)
+      context = null
+    }
     super.stopTest()
   }
 
   protected var query: QueryContext = _
   private var cursors :ExpressionCursors = _
   private var tx: InternalTransaction = _
-  private def nodeCursor: NodeCursor = cursors.nodeCursor
-  private def relationshipScanCursor :RelationshipScanCursor = cursors.relationshipScanCursor
-  private def propertyCursor :PropertyCursor = cursors.propertyCursor
+  private var context: TransactionalContext = _
   private val random = ThreadLocalRandom.current()
 
   test("round function") {
@@ -2805,7 +2802,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("single path with statically undetermined entities") {
     // given
-    val dbAccess = mock[DbAccess]
     val n1 = NodeAt(nodeValue(), 0)
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
@@ -2824,7 +2820,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                         SingleRelationshipPathStep(ReferenceFromSlot(r.slot, "r"),
                                                                    OUTGOING, Some(ReferenceFromSlot(n2.slot, "n2")), NilPathStep)))
     //then
-    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("longer path with different direction") {
