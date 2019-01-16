@@ -40,15 +40,29 @@ object Configs {
     * Even if not explicitly requested, they are executed to check if they unexpectedly succeed to make sure that
     * test coverage is kept up-to-date with new features.
     */
-  def All: TestConfiguration = TestConfiguration(Versions.all, Planners.all, Runtimes.all) -
-    TestConfiguration(V3_5, Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
+  def All: TestConfiguration = {
+    val all =
+      TestConfiguration(Versions.all, Planners.all, Runtimes.all) -
+      TestConfiguration(V3_5, Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
+    if (runOnlySafeScenarios) {
+      all - TestConfiguration(V4_0, Planners.all, Runtimes(Runtimes.Morsel))
+    } else {
+      all
+    }
+  }
 
   /**
     * These experimental configurations will only be executed if you explicitly specify them in the test expectation.
     * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
     */
-  def Experimental: TestConfiguration = TestConfiguration.empty
+  def Experimental: TestConfiguration = TestConfiguration.empty + Compiled
 
   def Empty: TestConfiguration = TestConfiguration.empty
 
+  def runOnlySafeScenarios: Boolean ={
+    val runExperimental = System.getenv().containsKey("RUN_EXPERIMENTAL")
+    !runExperimental
+  }
+
+  assert((All /\ Experimental) == Empty, s"No experimental scenario should exist in any other test configuration, but these are: ${All /\ Experimental}")
 }

@@ -5,11 +5,13 @@
  */
 package cypher.features
 import java.util
+import java.util.Collections
 
 import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, Test, TestFactory}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 
 class CostMorselAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
@@ -17,7 +19,11 @@ class CostMorselAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
   @TestFactory
   def runCostMorsel(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostMorselTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    if (Configs.runOnlySafeScenarios) {
+      Collections.emptyList()
+    } else {
+      createTests(scenarios, CostMorselTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    }
   }
 
   @Disabled

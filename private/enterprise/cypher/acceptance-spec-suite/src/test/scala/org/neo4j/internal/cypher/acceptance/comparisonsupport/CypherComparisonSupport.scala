@@ -215,7 +215,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
         thisScenario =>
           executeScenario(thisScenario,
                           query,
-            expectSucceed.containsScenario(thisScenario),
+                          expectSucceed.containsScenario(thisScenario),
                           executeBefore,
                           params,
                           resultAssertionInTx,

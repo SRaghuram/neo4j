@@ -6,11 +6,12 @@
 package cypher.features
 
 import java.util
+import java.util.Collections
 
 import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
-import org.junit.jupiter.api.{Disabled, DynamicTest, Test, TestFactory}
+import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
 class CostMorselTCKTests extends EnterpriseBaseTCKTests {
 
@@ -18,7 +19,17 @@ class CostMorselTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runCostMorsel(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostMorselTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    if (runOnlySafeScenarios) {
+      Collections.emptyList()
+    } else {
+      createTests(scenarios, CostMorselTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    }
+  }
+
+  // REV: is there a common place we could put this, so it's accessible from TCK, Acceptance, & CCS tests?
+  private def runOnlySafeScenarios: Boolean = {
+    val runExperimental = System.getenv().containsKey("RUN_EXPERIMENTAL")
+    !runExperimental
   }
 
   @Disabled
