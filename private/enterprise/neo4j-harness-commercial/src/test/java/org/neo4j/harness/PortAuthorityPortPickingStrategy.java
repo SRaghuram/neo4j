@@ -5,7 +5,7 @@
  */
 package org.neo4j.harness;
 
-import com.neo4j.harness.CausalClusterInProcessBuilder;
+import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -3,20 +3,17 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.harness;
-
-import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
-import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+package com.neo4j.harness.internal;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import java.util.Arrays;
 
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
-public class CommercialClusterInProcessRunner
+public class ClusterOfClustersInProcessRunner
 {
+
     public static void main( String[] args )
     {
         try
@@ -26,19 +23,18 @@ public class CommercialClusterInProcessRunner
 
             CausalClusterInProcessBuilder.CausalCluster cluster =
                     CausalClusterInProcessBuilder.init()
-                            .withBuilder( CommercialInProcessServerBuilder::new )
-                            .withCores( 3 )
-                            .withReplicas( 3 )
+                            .withBuilder( CommercialInProcessNeo4jBuilder::new )
+                            .withCores( 9 )
+                            .withReplicas( 6 )
                             .withLogger( toOutputStream( System.out ) )
                             .atPath( clusterPath )
-                            .withConfig( GraphDatabaseSettings.auth_enabled.name(), "true" )
-                            .withConfig( SecuritySettings.auth_provider.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME )
+                            .withOptionalDatabases( Arrays.asList("foo", "bar", "baz") )
                             .build();
 
             System.out.println( "Waiting for cluster to boot up..." );
             cluster.boot();
 
-            System.out.println( "Press ENTER to exit..." );
+            System.out.println( "Press ENTER to exit ..." );
             //noinspection ResultOfMethodCallIgnored
             System.in.read();
 
@@ -52,4 +48,5 @@ public class CommercialClusterInProcessRunner
         }
         System.exit( 0 );
     }
+
 }

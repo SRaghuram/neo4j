@@ -30,7 +30,7 @@ import org.neo4j.driver.v1.exceptions.TransientException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;

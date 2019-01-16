@@ -23,7 +23,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.exceptions.ClientException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
 import static org.hamcrest.MatcherAssert.assertThat;

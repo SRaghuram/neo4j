@@ -5,8 +5,8 @@
  */
 package org.neo4j.harness;
 
-import com.neo4j.harness.CausalClusterInProcessBuilder;
-import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
+import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
+import com.neo4j.harness.internal.CommercialInProcessNeo4jBuilder;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -28,7 +28,7 @@ public class CausalClusterInProcessRunnerIT
 
         CausalClusterInProcessBuilder.CausalCluster cluster =
                 CausalClusterInProcessBuilder.init()
-                        .withBuilder( CommercialInProcessServerBuilder::new )
+                        .withBuilder( CommercialInProcessNeo4jBuilder::new )
                         .withCores( 3 )
                         .withReplicas( 3 )
                         .withLogger( NullLogProvider.getInstance() )

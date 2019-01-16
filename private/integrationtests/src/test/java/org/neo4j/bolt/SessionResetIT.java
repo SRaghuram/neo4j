@@ -5,7 +5,7 @@
  */
 package org.neo4j.bolt;
 
-import com.neo4j.harness.junit.CommercialNeo4jRule;
+import com.neo4j.harness.junit.rule.CommercialNeo4JRule;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.After;
 import org.junit.Before;
@@ -38,7 +38,7 @@ import org.neo4j.driver.v1.exceptions.TransientException;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.api.KernelTransactions;
@@ -74,7 +74,7 @@ public class SessionResetIT
     private static final String[] STRESS_IT_QUERIES = {SHORT_QUERY_1, SHORT_QUERY_2, LONG_QUERY};
 
     private final VerboseTimeout timeout = VerboseTimeout.builder().withTimeout( 6, MINUTES ).build();
-    private final Neo4jRule db = new CommercialNeo4jRule()
+    private final Neo4jRule db = new CommercialNeo4JRule()
             .withConfig( GraphDatabaseSettings.load_csv_file_url_root, "import" )
             .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
             .dumpLogsOnFailure( System.out );

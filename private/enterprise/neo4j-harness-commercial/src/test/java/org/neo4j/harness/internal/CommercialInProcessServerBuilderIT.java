@@ -5,43 +5,40 @@
  */
 package org.neo4j.harness.internal;
 
-import com.neo4j.harness.CommercialTestServerBuilders;
+import com.neo4j.harness.internal.CommercialTestNeo4jBuilders;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.Arrays;
 
-import org.neo4j.harness.ServerControls;
-import org.neo4j.harness.TestServerBuilder;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.server.ServerTestUtils;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-public class CommercialInProcessServerBuilderIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class CommercialInProcessServerBuilderIT
 {
-    @Rule
-    public final TestDirectory testDir = TestDirectory.testDirectory();
-
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Inject
+    private TestDirectory testDir;
 
     @Test
-    public void shouldLaunchAServerInSpecifiedDirectory()
+    void shouldLaunchAServerInSpecifiedDirectory()
     {
         // Given
-        File workDir = new File( testDir.directory(), "specific" );
-        workDir.mkdir();
+        File workDir = testDir.directory("specific" );
 
         // When
-        try ( ServerControls server = getTestServerBuilder( workDir ).newServer() )
+        try ( Neo4jControls server = getTestServerBuilder( workDir ).build() )
         {
             // Then
             assertThat( HTTP.GET( server.httpURI().toString() ).status(), equalTo( 200 ) );
@@ -52,7 +49,7 @@ public class CommercialInProcessServerBuilderIT
         assertThat( Arrays.toString( workDir.list() ), workDir.list().length, equalTo( 0 ) );
     }
 
-    private TestServerBuilder getTestServerBuilder( File workDir )
+    private Neo4jBuilder getTestServerBuilder( File workDir )
     {
         String certificatesDirectoryKey = LegacySslPolicyConfig.certificates_directory.name();
         String certificatesDirectoryValue = ServerTestUtils.getRelativePath(
@@ -60,7 +57,7 @@ public class CommercialInProcessServerBuilderIT
                 LegacySslPolicyConfig.certificates_directory
         );
 
-        return CommercialTestServerBuilders.newInProcessBuilder( workDir )
+        return CommercialTestNeo4jBuilders.newInProcessBuilder( workDir )
                 .withConfig( certificatesDirectoryKey, certificatesDirectoryValue )
                 .withConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }

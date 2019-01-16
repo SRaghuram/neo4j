@@ -3,10 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.harness;
+package com.neo4j.harness.internal;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
-import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
@@ -23,11 +24,9 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.ServerControls;
-import org.neo4j.harness.TestServerBuilder;
+import org.neo4j.harness.internal.Neo4jBuilder;
+import org.neo4j.harness.internal.Neo4jControls;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;
@@ -52,7 +51,7 @@ public class CausalClusterInProcessBuilder
     public static class Builder implements WithServerBuilder, WithCores, WithReplicas, WithLogger, WithPath, WithOptionalDatabasesAndPorts
     {
 
-        private BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder;
+        private BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
         private int numCoreHosts;
         private int numReadReplicas;
         private Log log;
@@ -63,12 +62,13 @@ public class CausalClusterInProcessBuilder
         private DiscoveryImplementation discoveryServiceFactory = DiscoveryServiceFactorySelector.DEFAULT;
 
         @Override
-        public WithCores withBuilder( BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder )
+        public WithCores withBuilder( BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder )
         {
             this.serverBuilder = serverBuilder;
             return this;
         }
 
+        @Override
         public WithReplicas withCores( int n )
         {
             numCoreHosts = n;
@@ -144,7 +144,7 @@ public class CausalClusterInProcessBuilder
      */
     public interface WithServerBuilder
     {
-        WithCores withBuilder( BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder );
+        WithCores withBuilder( BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder );
     }
 
     public interface WithCores
@@ -262,10 +262,10 @@ public class CausalClusterInProcessBuilder
         private final PortPickingFactory portFactory;
         private final Map<String,String> config;
         private final DiscoveryImplementation discoveryServiceFactory;
-        private final BiFunction<File,String,CommercialInProcessServerBuilder> serverBuilder;
+        private final BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
 
-        private List<ServerControls> coreControls = synchronizedList( new ArrayList<>() );
-        private List<ServerControls> replicaControls = synchronizedList( new ArrayList<>() );
+        private List<Neo4jControls> coreControls = synchronizedList( new ArrayList<>() );
+        private List<Neo4jControls> replicaControls = synchronizedList( new ArrayList<>() );
 
         private CausalCluster( CausalClusterInProcessBuilder.Builder builder )
         {
@@ -324,7 +324,7 @@ public class CausalClusterInProcessBuilder
 
                 String homeDir = "core-" + coreId;
 
-                CommercialInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
+                CommercialInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
                 String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );
@@ -356,7 +356,7 @@ public class CausalClusterInProcessBuilder
                 int finalCoreId = coreId;
                 Thread coreThread = new Thread( () ->
                 {
-                    coreControls.add( builder.newServer() );
+                    coreControls.add( builder.build() );
                     log.info( "Core " + finalCoreId + " started." );
                 } );
                 coreThreads.add( coreThread );
@@ -378,7 +378,7 @@ public class CausalClusterInProcessBuilder
                 int httpsPort = portFactory.httpsReadReplicaPort( replicaId );
 
                 String homeDir = "replica-" + replicaId;
-                CommercialInProcessServerBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
+                CommercialInProcessNeo4jBuilder builder = serverBuilder.apply( clusterPath.toFile(), homeDir );
 
                 String homePath = Paths.get( clusterPath.toString(), homeDir ).toAbsolutePath().toString();
                 builder.withConfig( GraphDatabaseSettings.neo4j_home.name(), homePath );
@@ -404,7 +404,7 @@ public class CausalClusterInProcessBuilder
                 int finalReplicaId = replicaId;
                 Thread replicaThread = new Thread( () ->
                 {
-                    replicaControls.add( builder.newServer() );
+                    replicaControls.add( builder.build() );
                     log.info( "Read replica " + finalReplicaId + " started." );
                 } );
                 replicaThreads.add( replicaThread );
@@ -422,7 +422,7 @@ public class CausalClusterInProcessBuilder
             return ":" + port;
         }
 
-        private static void configureConnectors( int boltPort, int httpPort, int httpsPort, TestServerBuilder builder )
+        private static void configureConnectors( int boltPort, int httpPort, int httpsPort, Neo4jBuilder builder )
         {
             builder.withConfig( new BoltConnector( "bolt" ).type.name(), "BOLT" );
             builder.withConfig( new BoltConnector( "bolt" ).enabled.name(), "true" );
@@ -440,12 +440,12 @@ public class CausalClusterInProcessBuilder
             builder.withConfig( new HttpConnector( "https", HttpConnector.Encryption.TLS ).advertised_address.name(), specifyPortOnly( httpsPort ) );
         }
 
-        public List<ServerControls> getCoreControls()
+        public List<Neo4jControls> getCoreControls()
         {
             return coreControls;
         }
 
-        public List<ServerControls> getReplicaControls()
+        public List<Neo4jControls> getReplicaControls()
         {
             return replicaControls;
         }
@@ -456,10 +456,10 @@ public class CausalClusterInProcessBuilder
             shutdownControls( coreControls );
         }
 
-        private void shutdownControls( Iterable<? extends ServerControls> controls ) throws InterruptedException
+        private void shutdownControls( Iterable<? extends Neo4jControls> controls ) throws InterruptedException
         {
             Collection<Thread> threads = new ArrayList<>();
-            for ( ServerControls control : controls )
+            for ( Neo4jControls control : controls )
             {
                 Thread thread = new Thread( control::close );
                 threads.add( thread );

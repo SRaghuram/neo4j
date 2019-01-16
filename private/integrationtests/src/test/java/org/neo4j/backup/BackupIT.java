@@ -762,7 +762,7 @@ class BackupIT
     private void assertStoreIsLocked( File path )
     {
         RuntimeException error = assertThrows( RuntimeException.class, () -> startDb( path ),
-                "Could start up database in same process, store not locked" );
+                "Could build up database in same process, store not locked" );
 
         assertThat( error.getCause().getCause(), instanceOf( StoreLockException.class ) );
     }

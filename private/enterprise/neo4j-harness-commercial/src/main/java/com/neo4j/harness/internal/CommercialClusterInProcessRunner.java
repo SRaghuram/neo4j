@@ -3,19 +3,19 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.harness;
+package com.neo4j.harness.internal;
 
-import com.neo4j.harness.internal.CommercialInProcessServerBuilder;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
+
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
 import static org.neo4j.logging.FormattedLogProvider.toOutputStream;
 
-public class ClusterOfClustersInProcessRunner
+public class CommercialClusterInProcessRunner
 {
-
     public static void main( String[] args )
     {
         try
@@ -25,18 +25,19 @@ public class ClusterOfClustersInProcessRunner
 
             CausalClusterInProcessBuilder.CausalCluster cluster =
                     CausalClusterInProcessBuilder.init()
-                            .withBuilder( CommercialInProcessServerBuilder::new )
-                            .withCores( 9 )
-                            .withReplicas( 6 )
+                            .withBuilder( CommercialInProcessNeo4jBuilder::new )
+                            .withCores( 3 )
+                            .withReplicas( 3 )
                             .withLogger( toOutputStream( System.out ) )
                             .atPath( clusterPath )
-                            .withOptionalDatabases( Arrays.asList("foo", "bar", "baz") )
+                            .withConfig( GraphDatabaseSettings.auth_enabled.name(), "true" )
+                            .withConfig( SecuritySettings.auth_provider.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME )
                             .build();
 
             System.out.println( "Waiting for cluster to boot up..." );
             cluster.boot();
 
-            System.out.println( "Press ENTER to exit ..." );
+            System.out.println( "Press ENTER to exit..." );
             //noinspection ResultOfMethodCallIgnored
             System.in.read();
 
@@ -50,5 +51,4 @@ public class ClusterOfClustersInProcessRunner
         }
         System.exit( 0 );
     }
-
 }
