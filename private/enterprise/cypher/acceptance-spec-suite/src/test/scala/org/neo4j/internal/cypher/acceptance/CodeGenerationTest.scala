@@ -2880,6 +2880,30 @@ class CodeGenerationTest extends CypherFunSuite with AstConstructionTestSupport 
     compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should be(NO_VALUE)
   }
 
+  test("single path with statically undetermined entities") {
+    // given
+    val dbAccess = mock[DbAccess]
+    val n1 = NodeAt(node(42), 0)
+    val n2 = NodeAt(node(43), 1)
+    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val slots = SlotConfiguration(Map("n1" -> RefSlot(n1.slot, nullable = true, symbols.CTAny),
+                                      "n2" -> RefSlot(n2.slot, nullable = true, symbols.CTAny),
+                                      "r" -> RefSlot(r.slot, nullable = true, symbols.CTAny)
+    ), 0, 3)
+    val context = SlottedExecutionContext(slots)
+    context.setRefAt(n1.slot, n1.node)
+    context.setRefAt(n2.slot, n2.node)
+    context.setRefAt(r.slot, r.rel)
+
+    //when
+    //p = (n1)-[r]->(n2)
+    val p = pathExpression(NodePathStep(ReferenceFromSlot(n1.slot, "n1"),
+                                        SingleRelationshipPathStep(ReferenceFromSlot(r.slot, "r"),
+                                                                   OUTGOING, Some(ReferenceFromSlot(n2.slot, "n2")), NilPathStep)))
+    //then
+    compile(p, slots).evaluate(context, dbAccess, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+  }
+
   test("longer path with different direction") {
     //given
     val dbAccess = mock[DbAccess]
