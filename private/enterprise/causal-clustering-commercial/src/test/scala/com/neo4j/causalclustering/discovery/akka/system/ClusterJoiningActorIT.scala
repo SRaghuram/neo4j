@@ -12,10 +12,9 @@ import java.util.concurrent.TimeUnit
 import akka.actor.Address
 import akka.cluster.Cluster
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.akka.system.ClusterJoiningActor.JoinMessage
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.causalclustering.core.CausalClusteringSettings
 import org.neo4j.causalclustering.discovery.{InitialDiscoveryMembersResolver, NoOpHostnameResolver}
 import org.neo4j.helpers.AdvertisedSocketAddress
@@ -28,49 +27,70 @@ import scala.concurrent.duration.Duration
 class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
 
   "ClusterJoiningActor" when {
-    "initial message has no addresses" should {
+    "initial message is not rejoin and has no addresses" should {
       "join seed nodes from resolver" in new Fixture {
-        actorRef ! JoinMessage.initial(Collections.emptyList())
+        actorRef ! JoinMessage.initial(false, Collections.emptyList())
 
-        awaitAssert(verify(cluster).joinSeedNodes(initialDiscoveryMembersAsAddresses), max = defaultWaitTime)
-        awaitNotAssert(verify(cluster).join(any()), max = defaultWaitTime, "Should not have attempted to join an existing node")
+        awaitAssert(verify(cluster).joinSeedNodes(initialDiscoveryMembersAsAddresses.asJava), max = defaultWaitTime)
+        awaitNotAssert(verify(cluster, atLeastOnce()).join(any()), max = defaultWaitTime, "Should not have attempted to join an existing node")
       }
       "retry joining seed nodes" in new Fixture {
-        actorRef ! JoinMessage.initial(Collections.emptyList())
+        actorRef ! JoinMessage.initial(false, Collections.emptyList())
 
-        val assert = () => verify(cluster, Mockito.atLeast(2)).joinSeedNodes(initialDiscoveryMembersAsAddresses)
-
-        awaitAssert(assert, max = defaultWaitTime + refresh)
+        awaitAssert(verify(cluster, Mockito.atLeast(2)).joinSeedNodes(initialDiscoveryMembersAsAddresses.asJava), max = defaultWaitTime + refresh)
       }
     }
-    "has own address" should {
-      "not connect to self" in new Fixture {
-        actorRef ! JoinMessage.initial(util.Arrays.asList(self))
+    "initial message is rejoin" when {
+      "has own address" should {
+        "not connect to self" in new Fixture {
+          actorRef ! JoinMessage.initial(true, util.Arrays.asList(self))
 
-        awaitAssert(verify(cluster).joinSeedNodes(initialDiscoveryMembersAsAddresses), max = defaultWaitTime)
-        awaitNotAssert(verify(cluster).join(self), max = defaultWaitTime, "Should not join self")
-      }
-    }
-    "has addresses" should {
-      "attempt to connect in order, and then connect to seed nodes" in new Fixture {
-        val List(address1, address2, address3) = Seq.tabulate(3)(port => Address("akka", system.name, "joinHost", port))
-
-        actorRef ! JoinMessage.initial(util.Arrays.asList(address1, address2, address3))
-
-        val assert = () => {
-          val inOrder = Mockito.inOrder(cluster)
-          inOrder.verify(cluster).join(address1)
-          inOrder.verify(cluster).join(address2)
-          inOrder.verify(cluster).join(address3)
-          inOrder.verify(cluster).joinSeedNodes(initialDiscoveryMembersAsAddresses)
+          awaitNotAssert(verify(cluster, atLeastOnce()).join(self), max = defaultWaitTime, "Should not join self")
+          assertNoJoinToSeedNodes()
         }
+      }
+      "has addresses" should {
+        "attempt to connect in order" in new Fixture {
+          val List(address1, address2, address3) = Seq.tabulate(3)(port => Address("akka", system.name, "joinHost", port))
 
-        awaitAssert(assert, max = defaultWaitTime + refresh * 3)
+          actorRef ! JoinMessage.initial(true, util.Arrays.asList(address1, address2, address3))
+
+          def assert = {
+            val inOrder = Mockito.inOrder(cluster)
+            inOrder.verify(cluster).join(address1)
+            inOrder.verify(cluster).join(address2)
+            inOrder.verify(cluster).join(address3)
+          }
+
+          awaitAssert(assert, max = defaultWaitTime + refresh * 3)
+
+          assertNoJoinToSeedNodes()
+        }
+      }
+      "has no addresses" should {
+        "attempt to join each node from resolver individually" in new Fixture {
+          actorRef ! JoinMessage.initial(true, Collections.emptyList())
+
+          def assert = {
+            val inOrder = Mockito.inOrder(cluster)
+            initialDiscoveryMembersAsAddresses.foreach(address => inOrder.verify(cluster).join(address))
+          }
+
+          awaitAssert(assert, max = defaultWaitTime + refresh * 3)
+          assertNoJoinToSeedNodes()
+        }
       }
     }
   }
 
   trait Fixture {
+    def assertNoJoinToSeedNodes() = {
+      def assertNot = {
+        verify(cluster, Mockito.atLeastOnce()).joinSeedNodes(any[util.List[Address]])
+      }
+      awaitNotAssert(assertNot, max = defaultWaitTime, "Should not join seed nodes")
+    }
+
     val refresh = Duration(1, TimeUnit.SECONDS)
     val cluster = mock[Cluster]
 
@@ -80,7 +100,6 @@ class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {
     val initialDiscoveryMembersAsAddresses = Seq(seed1, seed2, seed3)
       .sorted(Ordering.comparatorToOrdering(InitialDiscoveryMembersResolver.advertisedSocketAddressComparator()))
       .map(resolvedAddress => Address("akka", system.name, resolvedAddress.getHostname, resolvedAddress.getPort))
-      .asJava
 
     val config = Config.builder()
       .withSetting(CausalClusteringSettings.initial_discovery_members, initialDiscoveryMembers)

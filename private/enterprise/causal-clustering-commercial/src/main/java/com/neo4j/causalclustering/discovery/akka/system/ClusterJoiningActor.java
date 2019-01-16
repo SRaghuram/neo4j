@@ -13,10 +13,6 @@ import akka.japi.pf.ReceiveBuilder;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.discovery.RemoteMembersResolver;
@@ -74,13 +70,17 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
     private void join( JoinMessage message )
     {
         log.debug( "Processing: %s", message );
-        if ( message.hasNoAddresses() || !remoteMembersResolver.useOverrides() )
+        if ( !message.isReJoin() )
         {
-            // The following call potentially blocks, but as it only happens at startup it shouldn't cause a problem
-            ArrayList<Address> seedNodes = remoteMembersResolver.resolve( this::toAkkaAddress, ArrayList::new );
+            ArrayList<Address> seedNodes = resolve();
             log.info( "Joining seed nodes: %s", seedNodes );
             cluster.joinSeedNodes( seedNodes );
             startTimer( message );
+        }
+        else if ( !message.hasAddress() )
+        {
+            ArrayList<Address> seedNodes = resolve();
+            getSelf().tell( JoinMessage.initial( message.isReJoin(), seedNodes ), getSelf() );
         }
         else if ( message.head().equals( cluster.selfAddress() ) )
         {
@@ -96,6 +96,12 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
         }
     }
 
+    // The following call potentially blocks, but as it only happens when not connected it shouldn't cause a problem
+    private ArrayList<Address> resolve()
+    {
+        return remoteMembersResolver.resolve( this::toAkkaAddress, ArrayList::new );
+    }
+
     private void startTimer( JoinMessage message )
     {
         getTimers().startSingleTimer( TIMER, message, retry );
@@ -104,63 +110,5 @@ public class ClusterJoiningActor extends AbstractActorWithTimers
     private Address toAkkaAddress( AdvertisedSocketAddress resolvedAddress )
     {
         return new Address( AKKA_SCHEME, getContext().getSystem().name(), hostname( resolvedAddress ), resolvedAddress.getPort() );
-    }
-
-    public static class JoinMessage
-    {
-        private JoinMessage( List<Address> addresses )
-        {
-            this.addresses = Collections.unmodifiableList( addresses );
-        }
-
-        static JoinMessage initial( Collection<Address> addresses )
-        {
-            return new JoinMessage( new ArrayList<>( addresses ) );
-        }
-
-        private final List<Address> addresses;
-
-        private JoinMessage tailMsg()
-        {
-            return new JoinMessage( addresses.subList( 1, addresses.size() ) );
-        }
-
-        private Address head()
-        {
-            return addresses.get( 0 );
-        }
-
-        private boolean hasNoAddresses()
-        {
-            return addresses.isEmpty();
-        }
-
-        @Override
-        public String toString()
-        {
-            return "JoinMessage{" + "addresses=" + addresses + '}';
-        }
-
-        @Override
-        public boolean equals( Object o )
-        {
-            if ( this == o )
-            {
-                return true;
-            }
-            if ( o == null || getClass() != o.getClass() )
-            {
-                return false;
-            }
-            JoinMessage that = (JoinMessage) o;
-            return Objects.equals( addresses, that.addresses );
-        }
-
-        @Override
-        public int hashCode()
-        {
-
-            return Objects.hash( addresses );
-        }
     }
 }
