@@ -2806,9 +2806,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("single path with statically undetermined entities") {
     // given
     val dbAccess = mock[DbAccess]
-    val n1 = NodeAt(node(42), 0)
-    val n2 = NodeAt(node(43), 1)
-    val r = RelAt(relationship(1337, n1.node, n2.node), 2)
+    val n1 = NodeAt(nodeValue(), 0)
+    val n2 = NodeAt(nodeValue(), 1)
+    val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> RefSlot(n1.slot, nullable = true, symbols.CTAny),
                                       "n2" -> RefSlot(n2.slot, nullable = true, symbols.CTAny),
                                       "r" -> RefSlot(r.slot, nullable = true, symbols.CTAny)
