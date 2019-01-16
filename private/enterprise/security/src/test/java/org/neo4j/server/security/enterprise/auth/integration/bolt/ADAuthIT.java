@@ -66,7 +66,7 @@ import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
         keyStore = "target/test-classes/neo4j_ldap_test_keystore.jks",
         certificatePassword = "secret"
 )
-@ApplyLdifFiles( {"ad_schema.ldif", "ad_test_data.ldif"} )
+@ApplyLdifFiles( {"ad_schema.ldif", "ldap_test_data.ldif"} )
 public class ADAuthIT extends EnterpriseAuthenticationTestBase
 {
 
