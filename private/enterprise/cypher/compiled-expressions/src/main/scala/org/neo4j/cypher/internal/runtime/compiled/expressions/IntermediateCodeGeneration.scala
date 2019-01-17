@@ -898,13 +898,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case expressions.IsNull(test) =>
       for (e <- internalCompileExpression(test, currentContext)) yield {
         IntermediateExpression(
-          ternary(equal(e.ir, noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
+          ternary(equal(nullCheck(e)(e.ir), noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
       }
 
     case expressions.IsNotNull(test) =>
       for (e <- internalCompileExpression(test, currentContext)) yield {
         IntermediateExpression(
-          ternary(notEqual(e.ir, noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
+          ternary(notEqual(nullCheck(e)(e.ir), noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
       }
 
     case LessThan(lhs, rhs) =>

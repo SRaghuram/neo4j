@@ -1157,11 +1157,41 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(Values.TRUE)
   }
 
+  test("isNull on top of NullCheck") {
+    val nullOffset = 0
+    val nodeOffset = 1
+    val slots = SlotConfiguration(Map(
+      "nullNode" -> LongSlot(nullOffset, nullable = true, symbols.CTNode),
+      "node" -> LongSlot(nodeOffset, nullable = true, symbols.CTNode)
+    ), 2, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(nullOffset, -1)
+    context.setLongAt(nodeOffset, nodeValue().id())
+
+    compile(isNull(NullCheckVariable(nullOffset, NodeFromSlot(nullOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    compile(isNull(NullCheckVariable(nodeOffset, NodeFromSlot(nodeOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+  }
+
   test("isNotNull") {
     val compiled= compile(isNotNull(parameter("a")))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("hello"))), cursors) should equal(Values.TRUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(Values.FALSE)
+  }
+
+  test("isNotNull on top of NullCheck") {
+    val nullOffset = 0
+    val nodeOffset = 1
+    val slots = SlotConfiguration(Map(
+      "nullNode" -> LongSlot(nullOffset, nullable = true, symbols.CTNode),
+      "node" -> LongSlot(nodeOffset, nullable = true, symbols.CTNode)
+    ), 2, 0)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(nullOffset, -1)
+    context.setLongAt(nodeOffset, nodeValue().id())
+
+    compile(isNotNull(NullCheckVariable(nullOffset, NodeFromSlot(nullOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    compile(isNotNull(NullCheckVariable(nodeOffset, NodeFromSlot(nodeOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
   }
 
   test("CoerceToPredicate") {
