@@ -55,7 +55,7 @@ object Configs {
     * These experimental configurations will only be executed if you explicitly specify them in the test expectation.
     * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
     */
-  def Experimental: TestConfiguration = TestConfiguration.empty + Compiled
+  def Experimental: TestConfiguration = TestConfiguration.empty
 
   def Empty: TestConfiguration = TestConfiguration.empty
 
