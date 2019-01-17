@@ -5,23 +5,21 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.core.state.Result;
+import com.neo4j.causalclustering.core.state.machines.StateMachine;
+import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 
 import java.util.Collection;
 import java.util.function.Consumer;
 
-import com.neo4j.causalclustering.core.state.Result;
-import com.neo4j.causalclustering.core.state.machines.StateMachine;
-import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding;
 import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContext;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.locking.LockGroup;
-import org.neo4j.kernel.impl.store.record.TokenRecord;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.logging.Log;
@@ -29,8 +27,9 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 
-import static java.lang.String.format;
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.bytesToCommands;
+import static java.lang.String.format;
+import static org.neo4j.helpers.collection.Iterables.single;
 
 public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedTokenRequest>
 {
@@ -105,14 +104,12 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
 
     private int extractTokenId( Collection<StorageCommand> commands )
     {
-        for ( StorageCommand command : commands )
+        StorageCommand command = single( commands );
+        if ( !( command instanceof StorageCommand.TokenCommand ) )
         {
-            if ( command instanceof Command.TokenCommand )
-            {
-                return ((Command.TokenCommand<? extends TokenRecord>) command).getAfter().getIntId();
-            }
+            throw new IllegalArgumentException( "Was expecting a single token command, got " + command );
         }
-        throw new IllegalStateException( "Commands did not contain token command" );
+        return ((StorageCommand.TokenCommand) command).tokenId();
     }
 
     @Override

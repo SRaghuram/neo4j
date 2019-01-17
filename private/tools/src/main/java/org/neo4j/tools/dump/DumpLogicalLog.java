@@ -176,7 +176,7 @@ public class DumpLogicalLog
         {
             Type type = mapCommandToType( command );
             // For the time being we can assume BaseCommand here
-            return type != null && inconsistencies.containsId( type, ((Command.BaseCommand) command).getKey() );
+            return type != null && inconsistencies.containsId( type, ((Command) command).getKey() );
         }
 
         private Type mapCommandToType( StorageCommand command )

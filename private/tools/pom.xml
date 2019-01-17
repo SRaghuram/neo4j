@@ -55,6 +55,12 @@
             <artifactId>neo4j-consistency-check</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- For tooling it's fine to rely on a specific storage engine -->
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-record-storage-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- External dependencies -->
         <dependency>

@@ -21,7 +21,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.format.CapabilityType;
-import org.neo4j.kernel.impl.storemigration.StoreMigrator;
+import org.neo4j.kernel.impl.storemigration.RecordStorageMigrator;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
@@ -62,7 +62,7 @@ class HighLimitStoreMigrationTest
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            StoreMigrator migrator = new StoreMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler );
+            RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler );
 
             DatabaseLayout databaseLayout = testDirectory.databaseLayout();
             DatabaseLayout migrationLayout = testDirectory.databaseLayout( "migration" );

@@ -23,9 +23,8 @@ import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.kernel.impl.storemigration.DatabaseMigratorImpl;
+import org.neo4j.kernel.impl.storemigration.DatabaseMigrator;
 import org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator;
-import org.neo4j.kernel.impl.storemigration.StoreMigrator;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
@@ -53,8 +52,6 @@ import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFac
 
 /**
  * Stand alone tool for migrating/upgrading a neo4j database from one version to the next.
- *
- * @see StoreMigrator
  */
 //: TODO introduce abstract tool class as soon as we will have several tools in tools module
 public class StoreMigration
@@ -119,7 +116,7 @@ public class StoreMigration
             life.start();
 
             long startTime = System.currentTimeMillis();
-            DatabaseMigratorImpl migrator = new DatabaseMigratorImpl( fs, config, logService,
+            DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService,
                     indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator );
             migrator.migrate();
 

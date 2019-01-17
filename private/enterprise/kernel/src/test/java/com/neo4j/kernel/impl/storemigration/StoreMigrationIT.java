@@ -37,7 +37,6 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck;
-import org.neo4j.kernel.impl.storemigration.UpgradableDatabase;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -50,6 +49,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @RunWith( Parameterized.class )
@@ -73,7 +73,8 @@ public class StoreMigrationIT
         TestDirectory testDirectory = TestDirectory.testDirectory();
         testDirectory.prepareDirectory( StoreMigrationIT.class, "migration" );
         DatabaseLayout databaseLayout = testDirectory.databaseLayout();
-        RecordStoreVersionCheck storeVersionCheck = new RecordStoreVersionCheck( pageCache );
+        RecordStoreVersionCheck storeVersionCheck =
+                new RecordStoreVersionCheck( fs, pageCache, databaseLayout, NullLogProvider.getInstance(), Config.defaults() );
         VersionAwareLogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = new VersionAwareLogEntryReader<>();
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs ).withLogEntryReader( logEntryReader ).build();
         LogTailScanner tailScanner = new LogTailScanner( logFiles, logEntryReader, new Monitors() );
@@ -82,16 +83,14 @@ public class StoreMigrationIT
         RecordFormatSelector.allFormats().forEach( f -> addIfNotThere( f, recordFormats ) );
         for ( RecordFormats toFormat : recordFormats )
         {
-            UpgradableDatabase upgradableDatabase =
-                    new UpgradableDatabase( storeVersionCheck, toFormat, tailScanner );
             for ( RecordFormats fromFormat : recordFormats )
             {
                 try
                 {
                     createDb( fromFormat, databaseLayout.databaseDirectory() );
-                    if ( !upgradableDatabase.hasCurrentVersion( databaseLayout ) )
+                    if ( !storeVersionCheck.storeVersion().equals( storeVersionCheck.configuredVersion() ) )
                     {
-                        upgradableDatabase.checkUpgradable( databaseLayout );
+                        assertTrue( storeVersionCheck.checkUpgrade( storeVersionCheck.configuredVersion() ).outcome.isSuccessful() );
                         data.add( new Object[]{fromFormat, toFormat} );
                     }
                 }
