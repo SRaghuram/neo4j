@@ -2025,7 +2025,7 @@ class EagerizationAcceptanceTest
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, propertiesWritten = 2)
   }
-us
+
   //TODO this was working by mistake, would not have worked for r.prop = X
   ignore("matching on relationship property existence, writing same property should not be eager") {
     relate(createNode(), createNode(), "prop" -> 42)
