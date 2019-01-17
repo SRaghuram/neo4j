@@ -5,11 +5,13 @@
  */
 package org.neo4j.backup;
 
+import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import org.eclipse.collections.impl.factory.Maps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -41,16 +44,20 @@ import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -59,11 +66,14 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.StoreLockException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.kernel.impl.api.TransactionCommitProcess;
+import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
+import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
@@ -72,10 +82,13 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
+import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
@@ -87,10 +100,14 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.DaemonThreadFactory;
 
 import static com.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.lang.Integer.parseInt;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.arrayWithSize;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -106,10 +123,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.read_only;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_path;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.helpers.Exceptions.rootCause;
+import static org.neo4j.kernel.configuration.Settings.FALSE;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.kernel.impl.MyRelTypes.TEST;
+import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
+import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
+import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
 
 @PageCacheExtension
 @ExtendWith( {RandomExtension.class, SuppressOutputExtension.class} )
@@ -216,6 +242,23 @@ class BackupIT
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
         assertEquals( 0, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
+    }
+
+    @TestWithRecordFormats
+    void shouldFindTransactionLogContainingLastNeoStoreTransaction( String recordFormatName ) throws Exception
+    {
+        String label = "Person";
+        String property = "name";
+
+        GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
+        createInitialDataSet( db );
+        createIndex( db, label, property );
+        createNode( db, label, property );
+
+        executeBackup( db, true );
+
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
+        assertNotEquals( 0, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
     }
 
     @TestWithRecordFormats
@@ -350,7 +393,7 @@ class BackupIT
         executeBackup( db, true );
 
         end.set( true );
-        executor.awaitTermination( 1, TimeUnit.MINUTES );
+        assertTrue( executor.awaitTermination( 1, TimeUnit.MINUTES ) );
     }
 
     @TestWithRecordFormats
@@ -408,7 +451,8 @@ class BackupIT
     void backupDatabaseWithCustomTransactionLogsLocation( String recordFormatName ) throws Exception
     {
         String customTxLogsLocation = testDirectory.directory( "customLogLocation" ).getAbsolutePath();
-        GraphDatabaseService db = startDb( serverStorePath, recordFormatName, true, customTxLogsLocation );
+        Map<Setting<?>,String> settings = Maps.fixedSize.of( record_format, recordFormatName, transaction_logs_root_path, customTxLogsLocation );
+        GraphDatabaseService db = startDb( serverStorePath, settings );
         createInitialDataSet( db );
 
         LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs ).build();
@@ -448,7 +492,7 @@ class BackupIT
             assertThat( rootCause( error ), either( instanceOf( ConnectException.class ) ).or( instanceOf( ClosedChannelException.class ) ) );
 
             assertNull( serverAcceptFuture.get( 1, TimeUnit.MINUTES ) );
-            executor.awaitTermination( 1, TimeUnit.MINUTES );
+            assertTrue( executor.awaitTermination( 1, TimeUnit.MINUTES ) );
         }
     }
 
@@ -598,7 +642,7 @@ class BackupIT
 
         // it should be possible to at this point to start db based on our backup and create couple of properties
         // their ids should not clash with already existing
-        GraphDatabaseService backupDb = startDb( backupDatabasePath, null, false );
+        GraphDatabaseService backupDb = startDbWithoutOnlineBackup( backupDatabasePath );
         try
         {
             try ( Transaction transaction = backupDb.beginTx() )
@@ -678,7 +722,7 @@ class BackupIT
         // given
         GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( db );
-        dependencyResolver( db ).resolveDependency( StorageEngine.class ).flushAndForce( IOLimiter.UNLIMITED );
+        flushAndForce( db );
 
         // when
         long lastCommittedTx = getLastCommittedTx( db );
@@ -702,6 +746,180 @@ class BackupIT
     void shouldContainTransactionsThatHappenDuringBackupProcessWhenBackupNonEmptyStore() throws Exception
     {
         testTransactionsDuringFullBackup( random.nextInt( 50, 2000 ) );
+    }
+
+    @Test
+    void shouldPerformConsistencyCheckAfterBackup() throws Exception
+    {
+        GraphDatabaseService db = startDb( serverStorePath );
+        createInitialDataSet( db );
+        corruptStore( db );
+
+        ConsistencyCheckExecutionException error = assertThrows( ConsistencyCheckExecutionException.class, () -> executeBackup( db, true ) );
+
+        assertThat( error.getMessage(), containsString( "Inconsistencies found" ) );
+        String[] reportFiles = backupsDir.list( ( dir, name ) -> name.contains( "inconsistencies" ) && name.contains( "report" ) );
+        assertNotNull( reportFiles );
+        assertThat( reportFiles, arrayWithSize( 1 ) );
+    }
+
+    @Test
+    void shouldFailIncrementalBackupWhenLogsPrunedPastThePointOfNoReturn() throws Exception
+    {
+        GraphDatabaseService db = prepareDatabaseWithTooOldBackup();
+
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, false ) );
+        Throwable cause = error.getCause();
+        assertThat( cause, instanceOf( StoreCopyFailedException.class ) );
+        assertThat( cause.getMessage(), containsString( CatchupResult.E_TRANSACTION_PRUNED.toString() ) );
+    }
+
+    @Test
+    void shouldFallbackToFullBackupWhenLogsPrunedPastThePointOfNoReturn() throws Exception
+    {
+        GraphDatabaseService db = prepareDatabaseWithTooOldBackup();
+
+        executeBackup( db, true );
+
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
+    }
+
+    @Test
+    void shouldWorkWithReadOnlyDatabases() throws Exception
+    {
+        GraphDatabaseService db = startDb( serverStorePath );
+        createInitialDataSet( db );
+        addLotsOfData( db );
+        db.shutdown();
+
+        db = startDb( serverStorePath, singletonMap( read_only, TRUE ) );
+
+        executeBackup( db, true );
+
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
+    }
+
+    @Test
+    void shouldThrowWhenExistingBackupIsFromSeparatelyUpgradedStore() throws Exception
+    {
+        GraphDatabaseService db = startDb( serverStorePath );
+        addLotsOfData( db );
+
+        executeBackup( db, true );
+        setUpgradeTimeInMetaDataStore( backupDatabaseLayout, pageCache, 424242 );
+
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, false ) );
+        assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
+    }
+
+    @Test
+    void shouldNotServeTransactionsWithInvalidHighIds() throws Exception
+    {
+        /*
+         * This is in effect a high level test for an edge case that happens when a relationship group is
+         * created and deleted in the same tx.
+         *
+         * The way we try to trigger this is:
+         * 0. In one tx, create a node with 49 relationships, belonging to two types.
+         * 1. In another tx, create another relationship on that node (making it dense) and then delete all
+         *    relationships of one type. This results in the tx state having a relationship group record that was
+         *    created in this tx and also set to not in use.
+         * 2. Receipt of this tx will have the offending rel group command apply its id before the groups that are
+         *    altered. This will try to update the high id with a value larger than what has been seen previously and
+         *    fail the update.
+         * The situation is resolved by a check added in TransactionRecordState which skips the creation of such
+         * commands.
+         */
+        GraphDatabaseService db = startDb( serverStorePath );
+        createInitialDataSet( db );
+
+        executeBackup( db, true );
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
+
+        createTransactionWithWeirdRelationshipGroupRecord( db );
+
+        executeBackup( db, false );
+        assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
+    }
+
+    private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
+    {
+        Node node;
+        RelationshipType typeToDelete = RelationshipType.withName( "A" );
+        RelationshipType theOtherType = RelationshipType.withName( "B" );
+        int defaultDenseNodeThreshold = Integer.parseInt( dense_node_threshold.getDefaultValue() );
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            node = db.createNode();
+            for ( int i = 0; i < defaultDenseNodeThreshold - 1; i++ )
+            {
+                node.createRelationshipTo( db.createNode(), theOtherType );
+            }
+            node.createRelationshipTo( db.createNode(), typeToDelete );
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            node.createRelationshipTo( db.createNode(), theOtherType );
+            for ( Relationship relationship : node.getRelationships( Direction.BOTH, typeToDelete ) )
+            {
+                relationship.delete();
+            }
+            tx.success();
+        }
+    }
+
+    private GraphDatabaseService prepareDatabaseWithTooOldBackup() throws Exception
+    {
+        String label = "Node";
+        String property = "name";
+
+        GraphDatabaseService db = startDb( serverStorePath, singletonMap( keep_logical_logs, "false" ) );
+
+        createInitialDataSet( db );
+        createIndex( db, label, property );
+        createNode( db, label, property );
+        rotateAndCheckPoint( db );
+
+        executeBackup( db, true ); // full backup should be successful
+
+        // commit multiple transactions and rotate transaction logs to make incremental backup not possible
+        for ( int i = 0; i < 42; i++ )
+        {
+            createNode( db, label, property );
+            rotateAndCheckPoint( db );
+        }
+
+        return db;
+    }
+
+    private static void corruptStore( GraphDatabaseService db ) throws Exception
+    {
+        List<StorageCommand> commands = new ArrayList<>();
+
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( Node node : db.getAllNodes() )
+            {
+                long id = node.getId();
+
+                NodeRecord before = new NodeRecord( id );
+                before.initialize( true, NO_NEXT_PROPERTY.intValue(), false, NO_NEXT_RELATIONSHIP.intValue(), NO_LABELS_FIELD.intValue() );
+
+                NodeRecord after = new NodeRecord( id );
+                after.initialize( true, 42, true, 42, 42 );
+
+                commands.add( new Command.NodeCommand( before, after ) );
+            }
+        }
+
+        PhysicalTransactionRepresentation txRepresentation = new PhysicalTransactionRepresentation( commands );
+        txRepresentation.setHeader( new byte[0], 42, 42, 42, 42, 42, 42 );
+        TransactionToApply txToApply = new TransactionToApply( txRepresentation );
+
+        TransactionCommitProcess commitProcess = dependencyResolver( db ).resolveDependency( TransactionCommitProcess.class );
+        commitProcess.commit( txToApply, CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );
     }
 
     private void testTransactionsDuringFullBackup( int nodesInDbBeforeBackup ) throws Exception
@@ -769,7 +987,7 @@ class BackupIT
 
     private DbRepresentation addMoreData( File path, String recordFormatName )
     {
-        GraphDatabaseService db = startDb( path, recordFormatName, false );
+        GraphDatabaseService db = startDbWithoutOnlineBackup( path, recordFormatName );
         DbRepresentation representation;
         try ( Transaction tx = db.beginTx() )
         {
@@ -788,7 +1006,7 @@ class BackupIT
 
     private DbRepresentation createInitialDataSet( File path, String recordFormatName )
     {
-        GraphDatabaseService db = startDb( path, recordFormatName, false );
+        GraphDatabaseService db = startDbWithoutOnlineBackup( path, recordFormatName );
         try
         {
             createInitialDataSet( db );
@@ -802,32 +1020,32 @@ class BackupIT
 
     private GraphDatabaseService startDb( File path )
     {
-        return startDb( path, null );
+        return startDb( path, emptyMap() );
     }
 
     private GraphDatabaseService startDb( File path, String recordFormatName )
     {
-        return startDb( path, recordFormatName, true );
+        return startDb( path, singletonMap( record_format, recordFormatName ) );
     }
 
-    private GraphDatabaseService startDb( File path, String recordFormatName, boolean onlineBackupEnabled )
+    private GraphDatabaseService startDbWithoutOnlineBackup( File path )
     {
-        return startDb( path, recordFormatName, onlineBackupEnabled, null );
+        return startDbWithoutOnlineBackup( path, record_format.getDefaultValue() );
     }
 
-    private GraphDatabaseService startDb( File path, String recordFormatName, boolean onlineBackupEnabled, String txLogsLocation )
+    private GraphDatabaseService startDbWithoutOnlineBackup( File path, String recordFormatName )
     {
-        GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( path )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( onlineBackupEnabled ) );
+        Map<Setting<?>,String> settings = Maps.fixedSize.of( online_backup_enabled, FALSE, record_format, recordFormatName );
+        return startDb( path, settings );
+    }
 
-        if ( recordFormatName != null )
+    private GraphDatabaseService startDb( File path, Map<Setting<?>,String> settings )
+    {
+        GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( path );
+
+        for ( Map.Entry<Setting<?>,String> entry : settings.entrySet() )
         {
-            builder.setConfig( GraphDatabaseSettings.record_format, recordFormatName );
-        }
-        if ( txLogsLocation != null )
-        {
-            builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, txLogsLocation );
+            builder.setConfig( entry.getKey(), entry.getValue() );
         }
 
         GraphDatabaseService db = builder.newGraphDatabase();
@@ -838,7 +1056,7 @@ class BackupIT
     private DbRepresentation getBackupDbRepresentation()
     {
         Config config = Config.builder()
-                .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                .withSetting( online_backup_enabled, FALSE )
                 .withSetting( GraphDatabaseSettings.active_database, backupDatabasePath.getName() ).build();
         return DbRepresentation.of( backupDatabasePath, config );
     }
@@ -951,6 +1169,11 @@ class BackupIT
     private static long getLastCommittedTx( GraphDatabaseService db )
     {
         return dependencyResolver( db ).resolveDependency( TransactionIdStore.class ).getLastCommittedTransactionId();
+    }
+
+    private static void setUpgradeTimeInMetaDataStore( DatabaseLayout databaseLayout, PageCache pageCache, long value ) throws IOException
+    {
+        MetaDataStore.setRecord( pageCache, databaseLayout.metadataStore(), Position.UPGRADE_TIME, value );
     }
 
     private static List<Label> createIndexes( GraphDatabaseService db, int indexCount )
