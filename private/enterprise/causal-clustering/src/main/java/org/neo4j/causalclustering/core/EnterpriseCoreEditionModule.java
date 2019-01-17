@@ -220,8 +220,9 @@ public class EnterpriseCoreEditionModule extends AbstractEditionModule
         CoreStateStorageService storage = new CoreStateStorageService( fileSystem, clusterStateDirectory, platformModule.life, logProvider, config );
         storage.migrateIfNecessary( activeDatabaseName );
 
-        boolean wasUnboundOnCreation = !storage.simpleStorage( CORE_MEMBER_ID ).exists();
-        life.add( new IdFilesSanitationModule( wasUnboundOnCreation, dependencies.provideDependency( DatabaseManager.class ), fileSystem, logProvider ) );
+        // TODO: Temporarily commented out because it is causing issues.
+        // boolean wasUnboundOnCreation = !storage.simpleStorage( CORE_MEMBER_ID ).exists();
+        // life.add( new IdFilesSanitationModule( wasUnboundOnCreation, dependencies.provideDependency( DatabaseManager.class ), fileSystem, logProvider ) );
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( platformModule.clock, logging, platformModule.config );
         threadToTransactionBridge = dependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
