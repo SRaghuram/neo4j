@@ -25,8 +25,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
-import org.neo4j.harness.internal.Neo4jControls;
+import org.neo4j.harness.junit.Neo4j;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
 import org.neo4j.kernel.configuration.Settings;
@@ -264,8 +265,8 @@ public class CausalClusterInProcessBuilder
         private final DiscoveryImplementation discoveryServiceFactory;
         private final BiFunction<File,String,CommercialInProcessNeo4jBuilder> serverBuilder;
 
-        private List<Neo4jControls> coreControls = synchronizedList( new ArrayList<>() );
-        private List<Neo4jControls> replicaControls = synchronizedList( new ArrayList<>() );
+        private List<InProcessNeo4j> coreNeo4j = synchronizedList( new ArrayList<>() );
+        private List<InProcessNeo4j> replicaControls = synchronizedList( new ArrayList<>() );
 
         private CausalCluster( CausalClusterInProcessBuilder.Builder builder )
         {
@@ -356,7 +357,7 @@ public class CausalClusterInProcessBuilder
                 int finalCoreId = coreId;
                 Thread coreThread = new Thread( () ->
                 {
-                    coreControls.add( builder.build() );
+                    coreNeo4j.add( builder.build() );
                     log.info( "Core " + finalCoreId + " started." );
                 } );
                 coreThreads.add( coreThread );
@@ -440,12 +441,12 @@ public class CausalClusterInProcessBuilder
             builder.withConfig( new HttpConnector( "https", HttpConnector.Encryption.TLS ).advertised_address.name(), specifyPortOnly( httpsPort ) );
         }
 
-        public List<Neo4jControls> getCoreControls()
+        public List<? extends Neo4j> getCoreNeo4j()
         {
-            return coreControls;
+            return coreNeo4j;
         }
 
-        public List<Neo4jControls> getReplicaControls()
+        public List<? extends Neo4j> getReplicaControls()
         {
             return replicaControls;
         }
@@ -453,13 +454,13 @@ public class CausalClusterInProcessBuilder
         public void shutdown() throws InterruptedException
         {
             shutdownControls( replicaControls );
-            shutdownControls( coreControls );
+            shutdownControls( coreNeo4j );
         }
 
-        private void shutdownControls( Iterable<? extends Neo4jControls> controls ) throws InterruptedException
+        private void shutdownControls( Iterable<? extends InProcessNeo4j> controls ) throws InterruptedException
         {
             Collection<Thread> threads = new ArrayList<>();
-            for ( Neo4jControls control : controls )
+            for ( InProcessNeo4j control : controls )
             {
                 Thread thread = new Thread( control::close );
                 threads.add( thread );

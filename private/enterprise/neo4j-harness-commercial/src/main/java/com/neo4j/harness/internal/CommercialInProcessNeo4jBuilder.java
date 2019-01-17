@@ -31,7 +31,7 @@ public class CommercialInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuild
 
     public CommercialInProcessNeo4jBuilder( File workingDir )
     {
-        super( workingDir );
+        withWorkingDir( workingDir );
     }
 
     public CommercialInProcessNeo4jBuilder( File workingDir, String dataSubDir )

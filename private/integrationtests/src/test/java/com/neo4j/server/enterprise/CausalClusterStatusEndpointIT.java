@@ -39,7 +39,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
-import org.neo4j.harness.internal.Neo4jControls;
+import org.neo4j.harness.junit.Neo4j;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
@@ -85,7 +85,7 @@ class CausalClusterStatusEndpointIT
     @Test
     void leaderIsWritable() throws InterruptedException
     {
-        Neo4jControls leader = getLeader( CLUSTER );
+        Neo4j leader = getLeader( CLUSTER );
         assertEventually( canVote( leader ), equalTo( true ), 1, TimeUnit.MINUTES );
 
         String raw = getStatusRaw( getWritableEndpoint( leader.httpURI() ) );
@@ -95,7 +95,7 @@ class CausalClusterStatusEndpointIT
     @Test
     void booleanEndpointsAreReachable() throws InterruptedException
     {
-        for ( Neo4jControls core : CLUSTER.getCoreControls() )
+        for ( Neo4j core : CLUSTER.getCoreNeo4j() )
         {
             assertEventually( canVote( core ), equalTo( true ), 1, TimeUnit.MINUTES );
 
@@ -115,7 +115,7 @@ class CausalClusterStatusEndpointIT
         assertEventually( allReplicaFieldValues( CLUSTER, CausalClusterStatusEndpointIT::getNodeCount ), everyItem( greaterThan( 1L ) ), 1, TimeUnit.MINUTES );
 
         // then cores are valid
-        CLUSTER.getCoreControls().forEach( member -> assertStatusDescriptionIsValid( member, true ) );
+        CLUSTER.getCoreNeo4j().forEach( member -> assertStatusDescriptionIsValid( member, true ) );
 
         // and replicas are valid
         CLUSTER.getReplicaControls().forEach( member -> assertStatusDescriptionIsValid( member, false ) );
@@ -144,7 +144,7 @@ class CausalClusterStatusEndpointIT
         assertThat( currentLastAppliedRaftIndex, greaterThan( initialLastAppliedRaftIndex ) );
     }
 
-    private static ThrowingSupplier<Boolean,RuntimeException> canVote( Neo4jControls core )
+    private static ThrowingSupplier<Boolean,RuntimeException> canVote( Neo4j core )
     {
         return () -> (Boolean) getStatus( getCcEndpoint( core.httpURI() ) ).get( "participatingInRaftGroup" );
     }
@@ -167,9 +167,9 @@ class CausalClusterStatusEndpointIT
         };
     }
 
-    private static Long getNodeCount( Neo4jControls neo4jControls )
+    private static Long getNodeCount( Neo4j neo4J )
     {
-        GraphDatabaseService db = neo4jControls.graph();
+        GraphDatabaseService db = neo4J.graph();
         long count;
         try ( Transaction tx = db.beginTx() )
         {
@@ -178,27 +178,27 @@ class CausalClusterStatusEndpointIT
         return count;
     }
 
-    private static Long lastAppliedRaftIndex( Neo4jControls neo4jControls )
+    private static Long lastAppliedRaftIndex( Neo4j neo4J )
     {
-        return Long.parseLong( getStatus( getCcEndpoint( neo4jControls.httpURI() ) ).get( "lastAppliedRaftIndex" ).toString() );
+        return Long.parseLong( getStatus( getCcEndpoint( neo4J.httpURI() ) ).get( "lastAppliedRaftIndex" ).toString() );
     }
 
     private static <T> ThrowingSupplier<Collection<T>,RuntimeException> allEndpointsFieldValues( CausalClusterInProcessBuilder.CausalCluster cluster,
-            Function<Neo4jControls,T> mapper )
+            Function<Neo4j,T> mapper )
     {
-        return () -> Stream.of( cluster.getCoreControls(), cluster.getReplicaControls() )
+        return () -> Stream.of( cluster.getCoreNeo4j(), cluster.getReplicaControls() )
                 .flatMap( Collection::stream )
                 .map( mapper )
                 .collect( Collectors.toList() );
     }
 
     private static <T> ThrowingSupplier<Collection<T>,RuntimeException> allReplicaFieldValues( CausalClusterInProcessBuilder.CausalCluster cluster,
-            Function<Neo4jControls,T> mapper )
+            Function<Neo4j,T> mapper )
     {
         return () -> cluster.getReplicaControls().stream().map( mapper ).collect( Collectors.toList() );
     }
 
-    private static void assertStatusDescriptionIsValid( Neo4jControls member, boolean isCore )
+    private static void assertStatusDescriptionIsValid( Neo4j member, boolean isCore )
     {
         Map<String,Object> statusDescription = getStatus( getCcEndpoint( member.httpURI() ) );
         String msg = statusDescription.toString();
@@ -276,9 +276,9 @@ class CausalClusterStatusEndpointIT
         return cluster;
     }
 
-    private static Neo4jControls getLeader( CausalClusterInProcessBuilder.CausalCluster cluster )
+    private static Neo4j getLeader( CausalClusterInProcessBuilder.CausalCluster cluster )
     {
-        return cluster.getCoreControls()
+        return cluster.getCoreNeo4j()
                 .stream()
                 .filter( core -> Role.LEADER.equals( ((CoreGraphDatabase) core.graph()).getRole() ) )
                 .findAny()

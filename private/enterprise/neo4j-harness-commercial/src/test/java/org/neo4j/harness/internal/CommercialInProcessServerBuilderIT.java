@@ -38,7 +38,7 @@ class CommercialInProcessServerBuilderIT
         File workDir = testDir.directory("specific" );
 
         // When
-        try ( Neo4jControls server = getTestServerBuilder( workDir ).build() )
+        try ( InProcessNeo4j server = getTestServerBuilder( workDir ).build() )
         {
             // Then
             assertThat( HTTP.GET( server.httpURI().toString() ).status(), equalTo( 200 ) );
