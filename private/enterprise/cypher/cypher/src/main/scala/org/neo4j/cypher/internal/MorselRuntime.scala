@@ -34,7 +34,7 @@ import org.neo4j.values.virtual.MapValue
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   override def name: String = "morsel"
 
-  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, hasLoadCSV: Boolean): ExecutionPlan = {
     val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
