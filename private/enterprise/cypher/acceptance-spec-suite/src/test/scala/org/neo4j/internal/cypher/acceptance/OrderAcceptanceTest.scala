@@ -730,6 +730,19 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     ))
   }
 
+  test("should plan sort with property on non-variable") {
+    makeJoeAndFriends()
+    val query =
+      """
+        |WITH [{name: 'a'},{name: 'b'},{name: 'c'}] AS ns
+        |RETURN ns[0] AS n
+        |ORDER BY n.name
+      """.stripMargin
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withOrder(ProvidedOrder.asc("n.name"))
+    result.toList should be(List(Map("n" -> Map("name" -> "a"))))
+  }
+
   private def makeJoeAndFriends(friendCount:Int = 10): Unit = {
     val joe = createLabeledNode(Map("name" -> s"Joe", "foo" -> 0), "Person")
     val joseph = createLabeledNode(Map("name" -> s"Joseph", "foo" -> 1), "Person")
