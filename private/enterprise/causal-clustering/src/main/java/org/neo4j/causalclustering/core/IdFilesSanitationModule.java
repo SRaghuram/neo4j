@@ -5,14 +5,12 @@
  */
 package org.neo4j.causalclustering.core;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.neo4j.causalclustering.common.IdFilesDeleter;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -55,42 +53,13 @@ public class IdFilesSanitationModule extends LifecycleAdapter
         for ( String databaseName : databaseManager.listDatabases() )
         {
             Optional<GraphDatabaseFacade> database = databaseManager.getDatabaseFacade( databaseName );
-            database.ifPresent( db -> deleteIdFiles( databaseName, db ) );
-        }
-    }
-
-    private void deleteIdFiles( String databaseName, GraphDatabaseFacade db )
-    {
-        if ( deleteIdFiles( db.databaseLayout() ) )
-        {
-            log.info( String.format( "ID-files deleted for %s", databaseName ) );
-        }
-    }
-
-    private boolean deleteIdFiles( DatabaseLayout databaseLayout )
-    {
-        if ( !fileSystem.fileExists( databaseLayout.databaseDirectory() ) )
-        {
-            return false;
-        }
-
-        boolean anyIdFilesDeleted = false;
-        for ( File idFile : databaseLayout.idFiles() )
-        {
-            try
+            database.ifPresent( db ->
             {
-                if ( fileSystem.fileExists( idFile ) )
+                if ( IdFilesDeleter.deleteIdFiles( db.databaseLayout(), fileSystem ) )
                 {
-                    fileSystem.deleteFileOrThrow( idFile );
+                    log.info( String.format( "ID-files deleted for %s", databaseName ) );
                 }
-                anyIdFilesDeleted = true;
-            }
-            catch ( IOException e )
-            {
-                throw new RuntimeException( "Could not delete ID-file", e );
-            }
+            } );
         }
-
-        return anyIdFilesDeleted;
     }
 }
