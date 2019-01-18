@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.recovery.RecoveryRequiredException;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -199,6 +200,7 @@ public class CoreBootstrapper
 
         if ( NeoStores.isStorePresent( pageCache, databaseLayout ) )
         {
+            recoverMissingFiles( databaseLayout, databaseConfig );
             return;
         }
 
@@ -226,6 +228,19 @@ public class CoreBootstrapper
             log.error( e.getMessage() );
             throw e;
         }
+    }
+
+    /**
+     * This step recreates missing store files, like ID-files. It is not considered a part of regular recovery.
+     * ID-files could have been deleted by the {@link IdFilesSanitationModule}, tooling or even manually by an operator.
+     */
+    private void recoverMissingFiles( DatabaseLayout databaseLayout, Config config )
+    {
+        StoreFactory factory = new StoreFactory( databaseLayout, config,
+                new DefaultIdGeneratorFactory( fs ), pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
+
+        NeoStores neoStores = factory.openAllNeoStores( true );
+        neoStores.close();
     }
 
     /**
