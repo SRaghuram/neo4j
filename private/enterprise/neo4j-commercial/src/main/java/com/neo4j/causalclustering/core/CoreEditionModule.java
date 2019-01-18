@@ -126,6 +126,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
 import static java.util.Arrays.asList;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
@@ -175,10 +176,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         CoreStateStorageService storage = new CoreStateStorageService( fileSystem, clusterStateDirectory, globalLife, logProvider, globalConfig );
         storage.migrateIfNecessary( activeDatabaseName );
 
-        // TODO: Temporarily commented out because it is causing issues.
-        // boolean wasUnboundOnCreation = !storage.simpleStorage( CORE_MEMBER_ID ).exists();
-        // life.add( new IdFilesSanitationModule( wasUnboundOnCreation, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem,
-        // logProvider ) );
+        boolean wasUnboundOnCreation = !storage.simpleStorage( CORE_MEMBER_ID ).exists();
+        globalLife.add( new IdFilesSanitationModule( wasUnboundOnCreation, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem, logProvider ) );
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( globalModule.getGlobalClock(), logService, globalConfig );
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );

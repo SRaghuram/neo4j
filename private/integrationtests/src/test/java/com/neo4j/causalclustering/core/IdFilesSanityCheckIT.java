@@ -41,8 +41,6 @@ public class IdFilesSanityCheckIT
         cluster = clusterRule.startCluster();
     }
 
-    // TODO: Temporarily commented out because it is causing issues.
-    @Ignore
     @Test
     public void shouldRemoveIdFilesFromUnboundInstance() throws Exception
     {
