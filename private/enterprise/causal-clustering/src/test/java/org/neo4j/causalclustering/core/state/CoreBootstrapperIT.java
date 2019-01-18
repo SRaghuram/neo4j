@@ -23,7 +23,7 @@ import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenS
 import org.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.helper.TemporaryDatabase;
-import org.neo4j.causalclustering.helpers.ClassicNeo4jStore;
+import org.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import org.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
@@ -127,15 +127,15 @@ public class CoreBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase classicNeo4jDatabase = ClassicNeo4jDatabase
+                .builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
-                .build()
-                .getStoreDir();
+                .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( classicNeo4jStore ) )
+                .withDatabaseLayout( classicNeo4jDatabase.layout() )
                 .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
@@ -154,16 +154,16 @@ public class CoreBootstrapperIT
         // given
         int nodeCount = 100;
         String customTransactionLogsLocation = "transaction-logs";
-        File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase classicNeo4jDatabase = ClassicNeo4jDatabase
+                .builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
                 .logicalLogsLocation( customTransactionLogsLocation )
-                .build()
-                .getStoreDir();
+                .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( classicNeo4jStore ) )
+                .withDatabaseLayout( classicNeo4jDatabase.layout() )
                 .register();
 
         Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
@@ -182,17 +182,16 @@ public class CoreBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        File storeInNeedOfRecovery =
-                ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
-                        .dbName( DEFAULT_DATABASE_NAME )
-                        .amountOfNodes( nodeCount )
-                        .needToRecover()
-                        .build()
-                        .getStoreDir();
+        ClassicNeo4jDatabase databaseInNeedOfRecovery = ClassicNeo4jDatabase
+                .builder( testDirectory.directory(), fileSystem )
+                .dbName( DEFAULT_DATABASE_NAME )
+                .amountOfNodes( nodeCount )
+                .needToRecover()
+                .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery ) )
+                .withDatabaseLayout( databaseInNeedOfRecovery.layout() )
                 .register();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
@@ -218,18 +217,17 @@ public class CoreBootstrapperIT
         // given
         int nodeCount = 100;
         String customTransactionLogsLocation = "transaction-logs";
-        File storeInNeedOfRecovery = ClassicNeo4jStore
+        ClassicNeo4jDatabase databaseInNeedOfRecovery = ClassicNeo4jDatabase
                 .builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
                 .logicalLogsLocation( customTransactionLogsLocation )
                 .needToRecover()
-                .build()
-                .getStoreDir();
+                .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery ) )
+                .withDatabaseLayout( databaseInNeedOfRecovery.layout() )
                 .register();
 
         Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );

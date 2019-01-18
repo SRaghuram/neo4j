@@ -15,30 +15,24 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
-public class ClassicNeo4jStore
+public class ClassicNeo4jDatabase
 {
-    private final File storeDir;
-    private final File logicalLogsDir;
+    private final DatabaseLayout databaseLayout;
 
-    private ClassicNeo4jStore( File storeDir, File logicalLogsDir )
+    private ClassicNeo4jDatabase( File databaseDirectory )
     {
-        this.storeDir = storeDir;
-        this.logicalLogsDir = logicalLogsDir;
+        this.databaseLayout = DatabaseLayout.of( databaseDirectory );
     }
 
-    public File getStoreDir()
+    public DatabaseLayout layout()
     {
-        return storeDir;
-    }
-
-    public File getLogicalLogsDir()
-    {
-        return logicalLogsDir;
+        return databaseLayout;
     }
 
     public static Neo4jStoreBuilder builder( File baseDir, FileSystemAbstraction fsa )
@@ -51,14 +45,13 @@ public class ClassicNeo4jStore
         private String dbName = "graph.db";
         private boolean needRecover;
         private int nrOfNodes = 10;
-        private String recordsFormat = Standard.LATEST_NAME;
+        private String recordFormat = Standard.LATEST_NAME;
         private final File baseDir;
         private final FileSystemAbstraction fsa;
         private String logicalLogsLocation = "";
 
         Neo4jStoreBuilder( File baseDir, FileSystemAbstraction fsa )
         {
-
             this.baseDir = baseDir;
             this.fsa = fsa;
         }
@@ -83,7 +76,7 @@ public class ClassicNeo4jStore
 
         public Neo4jStoreBuilder recordFormats( String format )
         {
-            recordsFormat = format;
+            recordFormat = format;
             return this;
         }
 
@@ -93,26 +86,24 @@ public class ClassicNeo4jStore
             return this;
         }
 
-        public ClassicNeo4jStore build() throws IOException
+        public ClassicNeo4jDatabase build() throws IOException
         {
-            createStore( baseDir, fsa, dbName, nrOfNodes, recordsFormat, needRecover, logicalLogsLocation );
-            File storeDir = new File( baseDir, dbName );
-            return new ClassicNeo4jStore( storeDir, new File( storeDir, logicalLogsLocation ) );
+            createStore();
+            return new ClassicNeo4jDatabase( new File( baseDir, dbName ) );
         }
 
-        private static void createStore( File base, FileSystemAbstraction fileSystem, String dbName, int nodesToCreate, String recordFormat,
-                boolean recoveryNeeded, String logicalLogsLocation ) throws IOException
+        private void createStore() throws IOException
         {
-            File storeDir = new File( base, dbName );
+            File storeDir = new File( baseDir, dbName );
             GraphDatabaseService db = new TestGraphDatabaseFactory()
-                    .setFileSystem( fileSystem )
+                    .setFileSystem( fsa )
                     .newEmbeddedDatabaseBuilder( storeDir )
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() )
                     .setConfig( GraphDatabaseSettings.logical_logs_location, logicalLogsLocation )
                     .newGraphDatabase();
 
-            for ( int i = 0; i < (nodesToCreate / 2); i++ )
+            for ( int i = 0; i < (nrOfNodes / 2); i++ )
             {
                 try ( Transaction tx = db.beginTx() )
                 {
@@ -123,26 +114,26 @@ public class ClassicNeo4jStore
                 }
             }
 
-            if ( recoveryNeeded )
+            if ( needRecover )
             {
-                File tmpLogs = new File( base, "unrecovered" );
-                fileSystem.mkdir( tmpLogs );
+                File tmpLogs = new File( baseDir, "unrecovered" );
+                fsa.mkdir( tmpLogs );
                 File txLogsDir = new File( storeDir, logicalLogsLocation );
-                for ( File file : fileSystem.listFiles( txLogsDir, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
+                for ( File file : fsa.listFiles( txLogsDir, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
                 {
-                    fileSystem.copyFile( file, new File( tmpLogs, file.getName() ) );
+                    fsa.copyFile( file, new File( tmpLogs, file.getName() ) );
                 }
 
                 db.shutdown();
 
-                for ( File file : fileSystem.listFiles( txLogsDir, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
+                for ( File file : fsa.listFiles( txLogsDir, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
                 {
-                    fileSystem.deleteFile( file );
+                    fsa.deleteFile( file );
                 }
 
-                for ( File file : fileSystem.listFiles( tmpLogs, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
+                for ( File file : fsa.listFiles( tmpLogs, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )
                 {
-                    fileSystem.copyFile( file, new File( txLogsDir, file.getName() ) );
+                    fsa.copyFile( file, new File( txLogsDir, file.getName() ) );
                 }
             }
             else

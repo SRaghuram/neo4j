@@ -16,7 +16,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
-import org.neo4j.causalclustering.helpers.ClassicNeo4jStore;
+import org.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.function.ThrowingSupplier;
@@ -61,17 +61,17 @@ public class ConvertNonCausalClusteringStoreIT
     {
         // given
         TestDirectory testDirectory = clusterRule.testDirectory();
-        File dbDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
+        File baseDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
         int classicNodeCount = 1024;
-        File classicNeo4jStore = createNeoStore( dbDir, classicNodeCount );
+        File classicNeo4jDatabase = createDatabase( baseDir, classicNodeCount ).layout().databaseDirectory();
 
-        Cluster<?> cluster = this.clusterRule.withRecordFormat( recordFormat ).createCluster();
+        Cluster<?> cluster = clusterRule.withRecordFormat( recordFormat ).createCluster();
 
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
             for ( CoreClusterMember core : cluster.coreMembers() )
             {
-                new RestoreDatabaseCommand( fileSystem, classicNeo4jStore, core.config(),
+                new RestoreDatabaseCommand( fileSystem, classicNeo4jDatabase, core.config(),
                         core.settingValue( GraphDatabaseSettings.active_database.name() ), true ).execute();
             }
         }
@@ -109,11 +109,11 @@ public class ConvertNonCausalClusteringStoreIT
         }
     }
 
-    private File createNeoStore( File dbDir, int classicNodeCount ) throws IOException
+    private ClassicNeo4jDatabase createDatabase( File baseDir, int classicNodeCount ) throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            return ClassicNeo4jStore.builder( dbDir, fileSystem ).amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build().getStoreDir();
+            return ClassicNeo4jDatabase.builder( baseDir, fileSystem ).amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
         }
     }
 }
