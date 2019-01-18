@@ -44,6 +44,9 @@ import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.consistency.ConsistencyCheckService;
+import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -58,6 +61,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
@@ -110,6 +114,7 @@ import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItemInArray;
@@ -126,6 +131,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_N
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.read_only;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.store_internal_log_path;
@@ -759,9 +765,31 @@ class BackupIT
         ConsistencyCheckExecutionException error = assertThrows( ConsistencyCheckExecutionException.class, () -> executeBackup( db ) );
 
         assertThat( error.getMessage(), containsString( "Inconsistencies found" ) );
-        String[] reportFiles = backupsDir.list( ( dir, name ) -> name.contains( "inconsistencies" ) && name.contains( "report" ) );
-        assertNotNull( reportFiles );
+        String[] reportFiles = findBackupInconsistenciesReports();
         assertThat( reportFiles, arrayWithSize( 1 ) );
+    }
+
+    @Test
+    void shouldNotPerformConsistencyCheckAfterBackupWhenDisabled() throws Exception
+    {
+        GraphDatabaseService db = startDb( serverStorePath );
+        createInitialDataSet( db );
+        corruptStore( db );
+
+        OnlineBackupContext context = defaultBackupContextBuilder( backupAddress( db ) )
+                .withConsistencyCheck( false ) // no consistency check after backup
+                .build();
+
+        // backup does not fail
+        assertDoesNotThrow( () -> executeBackup( context ) );
+
+        // no consistency check report files
+        String[] reportFiles = findBackupInconsistenciesReports();
+        assertThat( reportFiles, emptyArray() );
+
+        // store is inconsistent after backup
+        ConsistencyCheckService.Result backupConsistencyCheckResult = checkConsistency( backupDatabaseLayout );
+        assertFalse( backupConsistencyCheckResult.isSuccessful() );
     }
 
     @Test
@@ -921,6 +949,21 @@ class BackupIT
 
         TransactionCommitProcess commitProcess = dependencyResolver( db ).resolveDependency( TransactionCommitProcess.class );
         commitProcess.commit( txToApply, CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );
+    }
+
+    private static ConsistencyCheckService.Result checkConsistency( DatabaseLayout layout ) throws ConsistencyCheckIncompleteException
+    {
+        Config config = Config.builder()
+                .withSetting( pagecache_memory, "8m" )
+                .build();
+
+        ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
+
+        ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
+        FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
+        ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
+
+        return consistencyCheckService.runFullConsistencyCheck( layout, config, progressMonitorFactory, logProvider, true, consistencyFlags );
     }
 
     private void testTransactionsDuringFullBackup( int nodesInDbBeforeBackup ) throws Exception
@@ -1085,15 +1128,20 @@ class BackupIT
     private void executeBackup( AdvertisedSocketAddress address, Monitors monitors, boolean fallbackToFull )
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        Path dir = backupDatabasePath.getParentFile().toPath();
-
-        OnlineBackupContext context = OnlineBackupContext.builder()
-                .withAddress( address )
-                .withBackupDirectory( dir )
-                .withReportsDirectory( dir )
+        OnlineBackupContext context = defaultBackupContextBuilder( address )
                 .withFallbackToFullBackup( fallbackToFull )
                 .build();
 
+        executeBackup( context, monitors );
+    }
+
+    private void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
+        executeBackup( context, new Monitors() );
+    }
+
+    private void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
                 .withOutputStream( System.out )
                 .withLogProvider( FormattedLogProvider.toOutputStream( System.out ) )
@@ -1101,6 +1149,16 @@ class BackupIT
                 .build();
 
         executor.executeBackup( context );
+    }
+
+    private OnlineBackupContext.Builder defaultBackupContextBuilder( AdvertisedSocketAddress address )
+    {
+        Path dir = backupDatabasePath.getParentFile().toPath();
+
+        return OnlineBackupContext.builder()
+                .withAddress( address )
+                .withBackupDirectory( dir )
+                .withReportsDirectory( dir );
     }
 
     private static DbRepresentation addLotsOfData( GraphDatabaseService db )
@@ -1217,6 +1275,11 @@ class BackupIT
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs ).build();
         LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ) );
         assertEquals( txId, logHeader.lastCommittedTxId );
+    }
+
+    private String[] findBackupInconsistenciesReports()
+    {
+        return backupsDir.list( ( dir, name ) -> name.contains( "inconsistencies" ) && name.contains( "report" ) );
     }
 
     private static void rotateAndCheckPoint( GraphDatabaseService db ) throws IOException
