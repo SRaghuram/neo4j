@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.DatabaseService;
 import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.core.IdFilesSanitationModule;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
@@ -31,9 +32,11 @@ import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -104,6 +107,7 @@ public class CoreBootstrapper
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
     private final Config activeDatabaseConfig;
+    private final LogProvider logProvider;
     private final Log log;
 
     CoreBootstrapper( DatabaseService databaseService, TemporaryDatabase.Factory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
@@ -114,6 +118,7 @@ public class CoreBootstrapper
         this.databaseInitializers = databaseInitializers;
         this.fs = fs;
         this.activeDatabaseConfig = activeDatabaseConfig;
+        this.logProvider = logProvider;
         this.pageCache = pageCache;
         this.log = logProvider.getLog( getClass() );
     }
@@ -193,6 +198,7 @@ public class CoreBootstrapper
 
         if ( NeoStores.isStorePresent( pageCache, databaseLayout ) )
         {
+            recoverMissingFiles( databaseLayout, databaseConfig );
             return;
         }
 
@@ -218,6 +224,19 @@ public class CoreBootstrapper
             log.error( message );
             throw new IllegalStateException( message );
         }
+    }
+
+    /**
+     * This step recreates missing store files, like ID-files. It is not considered a part of regular recovery.
+     * ID-files could have been deleted by the {@link IdFilesSanitationModule}, tooling or even manually by an operator.
+     */
+    private void recoverMissingFiles( DatabaseLayout databaseLayout, Config config )
+    {
+        StoreFactory factory = new StoreFactory( databaseLayout, config,
+                new DefaultIdGeneratorFactory( fs ), pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
+
+        NeoStores neoStores = factory.openAllNeoStores( true );
+        neoStores.close();
     }
 
     /**
