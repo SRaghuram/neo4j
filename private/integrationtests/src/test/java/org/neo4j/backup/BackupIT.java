@@ -55,6 +55,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.recordstorage.Command;
@@ -192,7 +193,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( backupDatabasePath, recordFormatName );
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, false ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
 
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
     }
@@ -203,7 +204,7 @@ class BackupIT
         DbRepresentation initialDataSet = createInitialDataSet( serverStorePath, recordFormatName );
         GraphDatabaseService db = startDb( serverStorePath );
 
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
 
         assertEquals( initialDataSet, getBackupDbRepresentation() );
     }
@@ -214,7 +215,7 @@ class BackupIT
         createInitialDataSet( serverStorePath, recordFormatName );
         GraphDatabaseService db = startDb( serverStorePath );
 
-        executeBackup( db, true );
+        executeBackup( db );
         db.shutdown();
 
         long firstChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
@@ -224,7 +225,7 @@ class BackupIT
         addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
 
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         db.shutdown();
 
         long secondChecksum = lastTxChecksumOf( serverStoreLayout, pageCache );
@@ -238,7 +239,7 @@ class BackupIT
     {
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
         assertEquals( 0, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
@@ -255,7 +256,7 @@ class BackupIT
         createIndex( db, label, property );
         createNode( db, label, property );
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
         assertNotEquals( 0, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
@@ -267,7 +268,7 @@ class BackupIT
         DbRepresentation initialDataSetRepresentation = createInitialDataSet( serverStorePath, recordFormatName );
         GraphDatabaseService db = startDb( serverStorePath );
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
         db.shutdown();
@@ -275,7 +276,7 @@ class BackupIT
         DbRepresentation furtherRepresentation = addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
 
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
 
         assertEquals( furtherRepresentation, getBackupDbRepresentation() );
     }
@@ -287,11 +288,11 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
 
         // First check full
-        executeBackup( db, true );
+        executeBackup( db );
         assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
 
         // Then check empty incremental
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
 
         // Then check real incremental
@@ -299,7 +300,7 @@ class BackupIT
         addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
 
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         assertFalse( checkLogFileExistence( backupDatabasePath.getPath() ) );
     }
 
@@ -311,7 +312,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
 
         // Grab initial backup from server A
-        executeBackup( db, true );
+        executeBackup( db );
         assertEquals( initialDataSetRepresentation, getBackupDbRepresentation() );
         db.shutdown();
 
@@ -323,7 +324,7 @@ class BackupIT
         // Try to grab incremental backup from server B.
         // Data should be OK, but store id check should prevent that.
         final GraphDatabaseService finalDb = db;
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( finalDb, false ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( finalDb ) );
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
         db.shutdown();
 
@@ -331,7 +332,7 @@ class BackupIT
         // server A, even after a failed attempt from server B
         DbRepresentation furtherRepresentation = addMoreData( serverStorePath, recordFormatName );
         db = startDb( serverStorePath );
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         assertEquals( furtherRepresentation, getBackupDbRepresentation() );
     }
 
@@ -348,7 +349,7 @@ class BackupIT
             tx.success();
         }
 
-        executeBackup( db, true );
+        executeBackup( db );
         long lastCommittedTx = getLastCommittedTx( backupDatabaseLayout, pageCache );
 
         for ( int i = 0; i < 5; i++ )
@@ -360,7 +361,7 @@ class BackupIT
                 db.createNode().createRelationshipTo( node, RelationshipType.withName( "TYPE" ) );
                 tx.success();
             }
-            executeBackup( db, false );
+            executeBackupWithoutFallbackToFull( db );
             assertEquals( lastCommittedTx + i + 1, getLastCommittedTx( backupDatabaseLayout, pageCache ) );
         }
     }
@@ -390,7 +391,7 @@ class BackupIT
         executor.shutdown();
 
         // create backup
-        executeBackup( db, true );
+        executeBackup( db );
 
         end.set( true );
         assertTrue( executor.awaitTermination( 1, TimeUnit.MINUTES ) );
@@ -401,7 +402,7 @@ class BackupIT
     {
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
@@ -412,7 +413,7 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
         assertStoreIsLocked( serverStorePath );
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
         assertStoreIsLocked( serverStorePath );
@@ -424,10 +425,10 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
         createInitialDataSet( db );
 
-        executeBackup( db, true );
+        executeBackup( db );
         DbRepresentation representation = addLotsOfData( db );
 
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         assertEquals( representation, getBackupDbRepresentation() );
     }
 
@@ -437,12 +438,12 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
         createInitialDataSet( db );
 
-        executeBackup( db, true );
+        executeBackup( db );
         ensureStoresHaveIdFiles( backupDatabaseLayout );
 
         DbRepresentation representation = addLotsOfData( db );
 
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         assertEquals( representation, getBackupDbRepresentation() );
         ensureStoresHaveIdFiles( backupDatabaseLayout );
     }
@@ -457,11 +458,11 @@ class BackupIT
 
         LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs ).build();
 
-        executeBackup( db, true );
+        executeBackup( db );
         assertThat( backupLogFiles.logFiles(), arrayWithSize( 1 ) );
 
         DbRepresentation representation = addLotsOfData( db );
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         assertThat( backupLogFiles.logFiles(), arrayWithSize( 1 ) );
 
         assertEquals( representation, getBackupDbRepresentation() );
@@ -488,7 +489,7 @@ class BackupIT
             } );
             executor.shutdown();
 
-            BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( "localhost", port, true ) );
+            BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( "localhost", port ) );
             assertThat( rootCause( error ), either( instanceOf( ConnectException.class ) ).or( instanceOf( ClosedChannelException.class ) ) );
 
             assertNull( serverAcceptFuture.get( 1, TimeUnit.MINUTES ) );
@@ -506,7 +507,7 @@ class BackupIT
         File incorrectFile = backupDatabaseLayout.file( ".jibberishfile" );
         fs.create( incorrectFile ).close();
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         // unexpected file was moved to an error directory
         File incorrectExistingBackupDir = new File( backupsDir, "graph.db.err.0" );
@@ -531,7 +532,7 @@ class BackupIT
         fs.mkdirs( incorrectDir );
         fs.create( incorrectFile ).close();
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         // unexpected directory was moved to an error directory
         File incorrectExistingBackupDir = new File( backupsDir, "graph.db.err.0" );
@@ -555,7 +556,7 @@ class BackupIT
         addLotsOfData( db );
         createIndexes( db, 42 );
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         File[] backupStoreFiles = backupDatabaseLayout.databaseDirectory().listFiles();
         assertNotNull( backupStoreFiles );
@@ -609,7 +610,7 @@ class BackupIT
             transaction.success();
         }
         // propagate to backup node and properties
-        executeBackup( db, true );
+        executeBackup( db );
 
         // removing properties will free couple of ids that will be reused during next properties creation
         try ( Transaction transaction = db.beginTx() )
@@ -624,7 +625,7 @@ class BackupIT
         }
 
         // propagate removed properties
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
 
         try ( Transaction transaction = db.beginTx() )
         {
@@ -638,7 +639,7 @@ class BackupIT
         }
 
         // propagate to backup new properties with reclaimed ids
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
 
         // it should be possible to at this point to start db based on our backup and create couple of properties
         // their ids should not clash with already existing
@@ -709,7 +710,7 @@ class BackupIT
         long lastCommittedTxAfter = getLastCommittedTx( dbAfterRestart );
 
         // when
-        assertDoesNotThrow( () -> executeBackup( dbAfterRestart, true ) );
+        assertDoesNotThrow( () -> executeBackup( dbAfterRestart ) );
 
         // then
         assertEquals( lastCommittedTxBefore, lastCommittedTxAfter );
@@ -726,7 +727,7 @@ class BackupIT
 
         // when
         long lastCommittedTx = getLastCommittedTx( db );
-        executeBackup( db, true );
+        executeBackup( db );
         db.shutdown();
 
         // then
@@ -755,7 +756,7 @@ class BackupIT
         createInitialDataSet( db );
         corruptStore( db );
 
-        ConsistencyCheckExecutionException error = assertThrows( ConsistencyCheckExecutionException.class, () -> executeBackup( db, true ) );
+        ConsistencyCheckExecutionException error = assertThrows( ConsistencyCheckExecutionException.class, () -> executeBackup( db ) );
 
         assertThat( error.getMessage(), containsString( "Inconsistencies found" ) );
         String[] reportFiles = backupsDir.list( ( dir, name ) -> name.contains( "inconsistencies" ) && name.contains( "report" ) );
@@ -768,7 +769,7 @@ class BackupIT
     {
         GraphDatabaseService db = prepareDatabaseWithTooOldBackup();
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, false ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
         Throwable cause = error.getCause();
         assertThat( cause, instanceOf( StoreCopyFailedException.class ) );
         assertThat( cause.getMessage(), containsString( CatchupResult.E_TRANSACTION_PRUNED.toString() ) );
@@ -779,7 +780,7 @@ class BackupIT
     {
         GraphDatabaseService db = prepareDatabaseWithTooOldBackup();
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
@@ -794,7 +795,7 @@ class BackupIT
 
         db = startDb( serverStorePath, singletonMap( read_only, TRUE ) );
 
-        executeBackup( db, true );
+        executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
@@ -805,10 +806,10 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
         addLotsOfData( db );
 
-        executeBackup( db, true );
+        executeBackup( db );
         setUpgradeTimeInMetaDataStore( backupDatabaseLayout, pageCache, 424242 );
 
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( db, false ) );
+        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
         assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
     }
 
@@ -833,12 +834,12 @@ class BackupIT
         GraphDatabaseService db = startDb( serverStorePath );
         createInitialDataSet( db );
 
-        executeBackup( db, true );
+        executeBackup( db );
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
 
         createTransactionWithWeirdRelationshipGroupRecord( db );
 
-        executeBackup( db, false );
+        executeBackupWithoutFallbackToFull( db );
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
 
@@ -882,7 +883,7 @@ class BackupIT
         createNode( db, label, property );
         rotateAndCheckPoint( db );
 
-        executeBackup( db, true ); // full backup should be successful
+        executeBackup( db ); // full backup should be successful
 
         // commit multiple transactions and rotate transaction logs to make incremental backup not possible
         for ( int i = 0; i < 42; i++ )
@@ -951,7 +952,7 @@ class BackupIT
             return null;
         } );
 
-        executeBackup( db, monitors, true );
+        executeBackup( db, monitors );
 
         executor.shutdown();
         assertTrue( executor.awaitTermination( 1, TimeUnit.MINUTES ) );
@@ -1061,34 +1062,33 @@ class BackupIT
         return DbRepresentation.of( backupDatabasePath, config );
     }
 
-    private void executeBackup( GraphDatabaseService db, boolean fallbackToFull ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackup( GraphDatabaseService db ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        executeBackup( db, new Monitors(), fallbackToFull );
+        executeBackup( backupAddress( db ), new Monitors(), true );
     }
 
-    private void executeBackup( GraphDatabaseService db, Monitors monitors, boolean fallbackToFull )
-            throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackupWithoutFallbackToFull( GraphDatabaseService db ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        DependencyResolver resolver = dependencyResolver( db );
-        ConnectorPortRegister portRegister = resolver.resolveDependency( ConnectorPortRegister.class );
-        HostnamePort backupServerAddress = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
-        assertNotNull( backupServerAddress, "Backup server address not registered" );
-
-        executeBackup( backupServerAddress.getHost(), backupServerAddress.getPort(), monitors, fallbackToFull );
+        executeBackup( backupAddress( db ), new Monitors(), false );
     }
 
-    private void executeBackup( String hostname, int port, boolean fallbackToFull ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    private void executeBackup( GraphDatabaseService db, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        executeBackup( hostname, port, new Monitors(), fallbackToFull );
+        executeBackup( backupAddress( db ), monitors, true );
     }
 
-    private void executeBackup( String hostname, int port, Monitors monitors, boolean fallbackToFull )
+    private void executeBackup( String hostname, int port ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    {
+        executeBackup( new AdvertisedSocketAddress( hostname, port ), new Monitors(), true );
+    }
+
+    private void executeBackup( AdvertisedSocketAddress address, Monitors monitors, boolean fallbackToFull )
             throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         Path dir = backupDatabasePath.getParentFile().toPath();
 
         OnlineBackupContext context = OnlineBackupContext.builder()
-                .withAddress( hostname, port )
+                .withAddress( address )
                 .withBackupDirectory( dir )
                 .withReportsDirectory( dir )
                 .withFallbackToFullBackup( fallbackToFull )
@@ -1231,6 +1231,15 @@ class BackupIT
         DependencyResolver resolver = dependencyResolver( db );
         StorageEngine storageEngine = resolver.resolveDependency( StorageEngine.class );
         storageEngine.flushAndForce( IOLimiter.UNLIMITED );
+    }
+
+    private static AdvertisedSocketAddress backupAddress( GraphDatabaseService db )
+    {
+        DependencyResolver resolver = dependencyResolver( db );
+        ConnectorPortRegister portRegister = resolver.resolveDependency( ConnectorPortRegister.class );
+        HostnamePort address = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
+        assertNotNull( address, "Backup server address not registered" );
+        return new AdvertisedSocketAddress( address.getHost(), address.getPort() );
     }
 
     private static DependencyResolver dependencyResolver( GraphDatabaseService db )
