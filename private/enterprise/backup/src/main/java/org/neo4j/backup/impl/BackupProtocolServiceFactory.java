@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -28,17 +29,13 @@ public final class BackupProtocolServiceFactory
     {
     }
 
-    public static BackupProtocolService backupProtocolService()
-    {
-        return backupProtocolService( System.out );
-    }
-
-    public static BackupProtocolService backupProtocolService( OutputStream logDestination )
+    public static BackupProtocolService backupProtocolService( OutputStream logDestination, Config config )
     {
         JobScheduler scheduler = createInitialisedScheduler();
-        PageCache pageCache = createPageCache( new DefaultFileSystemAbstraction(), scheduler );
+        DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+        PageCache pageCache = createPageCache( fs, config, scheduler );
         BackupPageCacheContainer pageCacheContainer = of( pageCache, scheduler );
-        return backupProtocolService( DefaultFileSystemAbstraction::new, toOutputStream( logDestination ), logDestination, new Monitors(), pageCacheContainer );
+        return backupProtocolService( () -> fs, toOutputStream( logDestination ), logDestination, new Monitors(), pageCacheContainer );
     }
 
     public static BackupProtocolService backupProtocolService( Supplier<FileSystemAbstraction> fileSystemSupplier, LogProvider logProvider,

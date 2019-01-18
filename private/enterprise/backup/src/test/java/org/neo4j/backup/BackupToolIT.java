@@ -30,6 +30,8 @@ import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.format.standard.StandardV2_3;
 import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
+import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.scheduler.ThreadPoolJobScheduler;
@@ -66,8 +68,9 @@ public class BackupToolIT
         fs = new DefaultFileSystemAbstraction();
         jobScheduler = new ThreadPoolJobScheduler();
         pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler );
-        backupProtocolService = backupProtocolService();
-        backupTool = new BackupTool( backupProtocolService, mock( PrintStream.class ) );
+        PrintStream out = mock( PrintStream.class );
+        backupProtocolService = backupProtocolService( () -> fs, NullLogProvider.getInstance(), out, new Monitors(), pageCache );
+        backupTool = new BackupTool( backupProtocolService, out );
     }
 
     @After

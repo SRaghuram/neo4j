@@ -33,7 +33,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 
 import static org.neo4j.backup.impl.BackupProtocolServiceFactory.backupProtocolService;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
 /**
  * @deprecated Use the {@code neo4j-admin backup} instead.
@@ -73,7 +72,7 @@ public class BackupTool
     {
         System.err.println("WARNING: neo4j-backup is deprecated and support for it will be removed in a future\n" +
                 "version of Neo4j; please use neo4j-admin backup instead.\n");
-        try ( BackupProtocolService backupProtocolService = backupProtocolService() )
+        try ( BackupProtocolService backupProtocolService = backupProtocolService( System.out, Config.defaults() ) )
         {
             BackupTool tool = new BackupTool( backupProtocolService, System.out );
             BackupOutcome backupOutcome = tool.run( args );
