@@ -5,112 +5,100 @@
  */
 package org.neo4j.backup.stresstests;
 
+import com.neo4j.causalclustering.stresstests.Config;
+import com.neo4j.causalclustering.stresstests.Control;
 import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.neo4j.causalclustering.stresstests.Config;
-import com.neo4j.causalclustering.stresstests.Control;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.helper.Workload;
-import org.neo4j.io.fs.FileUtils;
+import org.neo4j.helpers.SocketAddress;
 import org.neo4j.kernel.diagnostics.utils.DumpUtils;
+import org.neo4j.scheduler.DaemonThreadFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
-import static java.lang.Boolean.parseBoolean;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
 import static java.lang.Integer.parseInt;
-import static java.lang.String.format;
-import static java.lang.System.getProperty;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.fail;
-import static org.neo4j.helper.DatabaseConfiguration.configureBackup;
-import static org.neo4j.helper.DatabaseConfiguration.configureTxLogRotationAndPruning;
-import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.keep_logical_logs;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.helper.StressTestingHelper.fromEnv;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 
 /**
  * Notice the class name: this is _not_ going to be run as part of the main build.
  */
-public class BackupServiceStressTesting
+@ExtendWith( TestDirectoryExtension.class )
+class BackupServiceStressTesting
 {
-    private static final String DEFAULT_WORKING_DIR = new File( getProperty( "java.io.tmpdir" ) ).getPath();
     private static final String DEFAULT_HOSTNAME = "localhost";
     private static final String DEFAULT_PORT = "8200";
-    private static final String DEFAULT_ENABLE_INDEXES = "false";
     private static final String DEFAULT_TX_PRUNE = "50 files";
 
+    @Inject
+    private TestDirectory testDirectory;
+
     @Test
-    public void shouldBehaveCorrectlyUnderStress() throws Exception
+    void shouldBehaveCorrectlyUnderStress() throws Exception
     {
-        String directory = fromEnv( "BACKUP_SERVICE_STRESS_WORKING_DIRECTORY", DEFAULT_WORKING_DIR );
         String backupHostname = fromEnv( "BACKUP_SERVICE_STRESS_BACKUP_HOSTNAME", DEFAULT_HOSTNAME );
         int backupPort = parseInt( fromEnv( "BACKUP_SERVICE_STRESS_BACKUP_PORT", DEFAULT_PORT ) );
         String txPrune = fromEnv( "BACKUP_SERVICE_STRESS_TX_PRUNE", DEFAULT_TX_PRUNE );
-        boolean enableIndexes =
-                parseBoolean( fromEnv( "BACKUP_SERVICE_STRESS_ENABLE_INDEXES", DEFAULT_ENABLE_INDEXES ) );
 
-        File store = new File( directory, "databases/graph.db" );
-        File work = new File( directory, "backups/graph.db-backup" );
-        FileUtils.deleteRecursively( store );
-        FileUtils.deleteRecursively( work );
-        File storeDirectory = ensureExistsAndEmpty( store );
-        Path workDirectory = ensureExistsAndEmpty( work ).toPath();
+        File storeDir = testDirectory.storeDir( DEFAULT_DATABASE_NAME );
+        File backupsDir = testDirectory.directory( "backups" );
 
-        final Map<String,String> config =
-                configureBackup( configureTxLogRotationAndPruning( new HashMap<>(), txPrune ), backupHostname,
-                        backupPort );
         GraphDatabaseBuilder graphDatabaseBuilder = new CommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( storeDirectory.getAbsoluteFile() )
-                .setConfig( config );
+                .newEmbeddedDatabaseBuilder( storeDir )
+                .setConfig( online_backup_enabled, TRUE )
+                .setConfig( online_backup_listen_address, SocketAddress.format( backupHostname, backupPort ) )
+                .setConfig( keep_logical_logs, txPrune )
+                .setConfig( logical_log_rotation_threshold, "1M" );
 
         Control control = new Control( new Config() );
 
         AtomicReference<GraphDatabaseService> dbRef = new AtomicReference<>();
-        ExecutorService service = Executors.newFixedThreadPool( 3 );
+        ExecutorService executor = Executors.newCachedThreadPool( new DaemonThreadFactory() );
         try
         {
             dbRef.set( graphDatabaseBuilder.newGraphDatabase() );
 
-            TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get, enableIndexes );
-            BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, workDirectory );
+            TransactionalWorkload transactionalWorkload = new TransactionalWorkload( control, dbRef::get );
+            BackupLoad backupWorkload = new BackupLoad( control, backupHostname, backupPort, backupsDir.toPath() );
             StartStop startStopWorkload = new StartStop( control, graphDatabaseBuilder::newGraphDatabase, dbRef );
 
-            executeWorkloads( control, service, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );
+            executeWorkloads( control, executor, asList( transactionalWorkload, backupWorkload, startStopWorkload ) );
 
-            service.shutdown();
-            if ( !service.awaitTermination( 30, SECONDS ) )
-            {
-                printThreadDump();
-                fail( "Didn't manage to shut down the workers correctly, dumped threads for forensic purposes" );
-            }
+            shutdown( executor );
         }
         catch ( TimeoutException t )
         {
-            System.err.println( format( "Timeout waiting task completion. Dumping all threads." ) );
+            System.err.println( "Timeout waiting task completion. Dumping all threads." );
             printThreadDump();
             throw t;
         }
         finally
         {
             dbRef.get().shutdown();
-            service.shutdown();
+            executor.shutdown();
         }
-
-        // let's cleanup disk space when everything went well
-        FileUtils.deleteRecursively( storeDirectory );
-        FileUtils.deletePathRecursively( workDirectory );
     }
 
     private static void executeWorkloads( Control control, ExecutorService executor, List<Workload> workloads ) throws Exception
@@ -130,6 +118,16 @@ public class BackupServiceStressTesting
         for ( Workload workload : workloads )
         {
             workload.validate();
+        }
+    }
+
+    private static void shutdown( ExecutorService service ) throws InterruptedException
+    {
+        service.shutdown();
+        if ( !service.awaitTermination( 30, SECONDS ) )
+        {
+            printThreadDump();
+            fail( "Didn't manage to shut down the workers correctly, dumped threads for forensic purposes" );
         }
     }
 

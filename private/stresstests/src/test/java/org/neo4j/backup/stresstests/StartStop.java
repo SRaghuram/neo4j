@@ -5,15 +5,16 @@
  */
 package org.neo4j.backup.stresstests;
 
+import com.neo4j.causalclustering.stresstests.Control;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.neo4j.causalclustering.stresstests.Control;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helper.Workload;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StartStop extends Workload
 {

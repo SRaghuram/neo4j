@@ -5,6 +5,8 @@
  */
 package org.neo4j.backup.stresstests;
 
+import com.neo4j.causalclustering.stresstests.Control;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -17,7 +19,6 @@ import org.neo4j.backup.impl.BackupExecutionException;
 import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
-import com.neo4j.causalclustering.stresstests.Control;
 import org.neo4j.function.Predicates;
 import org.neo4j.helper.IsChannelClosedException;
 import org.neo4j.helper.IsConnectionException;
@@ -27,10 +28,10 @@ import org.neo4j.helper.Workload;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 
 class BackupLoad extends Workload
 {
