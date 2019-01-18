@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import org.neo4j.causalclustering.common.IdFilesDeleter;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
@@ -167,6 +168,34 @@ public class CoreBootstrapperIT
                 .register();
 
         Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
+        CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
+                fileSystem, activeDatabaseConfig, logProvider, pageCache );
+
+        // when
+        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+
+        // then
+        verifySnapshot( snapshot, membership, activeDatabaseConfig, nodeCount );
+    }
+
+    @Test
+    public void shouldBootstrapWithDeletedIdFiles() throws Exception
+    {
+        // given
+        int nodeCount = 100;
+        ClassicNeo4jDatabase database = ClassicNeo4jDatabase
+                .builder( testDirectory.directory(), fileSystem )
+                .dbName( DEFAULT_DATABASE_NAME )
+                .amountOfNodes( nodeCount )
+                .build();
+
+        IdFilesDeleter.deleteIdFiles( database.layout(), fileSystem );
+
+        databaseService.givenDatabaseWithConfig()
+                       .withDatabaseName( DEFAULT_DATABASE_NAME )
+                       .withDatabaseLayout( database.layout() )
+                       .register();
+
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
 
