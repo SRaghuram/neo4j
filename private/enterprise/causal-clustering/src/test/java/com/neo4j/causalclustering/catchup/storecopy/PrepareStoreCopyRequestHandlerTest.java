@@ -20,7 +20,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Supplier;
 
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
@@ -133,14 +132,12 @@ public class PrepareStoreCopyRequestHandlerTest
     {
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.PREPARE_STORE_COPY );
-        Supplier<Database> dataSourceSupplier = () -> DATABASE;
         when( DATABASE.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
 
         PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider = mock( PrepareStoreCopyFilesProvider.class );
         when( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( any() ) ).thenReturn( prepareStoreCopyFiles );
 
-        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, dataSourceSupplier,
-                prepareStoreCopyFilesProvider );
+        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, DATABASE, prepareStoreCopyFilesProvider );
     }
 
     private void configureProvidedStoreCopyFiles( StoreResource[] atomicFiles, File[] files, LongSet indexIds, long lastCommitedTx )

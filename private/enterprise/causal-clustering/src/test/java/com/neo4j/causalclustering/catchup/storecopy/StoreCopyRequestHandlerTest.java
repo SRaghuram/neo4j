@@ -59,7 +59,7 @@ class StoreCopyRequestHandlerTest
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.GET_STORE_FILE );
         StoreCopyRequestHandler storeCopyRequestHandler =
-                new NiceStoreCopyRequestHandler( catchupServerProtocol, () -> database, new StoreFileStreamingProtocol(),
+                new NiceStoreCopyRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol(),
                         fileSystemAbstraction, NullLogProvider.getInstance() );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
@@ -115,7 +115,7 @@ class StoreCopyRequestHandlerTest
     void shoulResetProtocolAndGiveErrorIfFilesThrowException()
     {
         EmbeddedChannel alternativeChannel = new EmbeddedChannel(
-                new EvilStoreCopyRequestHandler( catchupServerProtocol, () -> database, new StoreFileStreamingProtocol(),
+                new EvilStoreCopyRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol(),
                         fileSystemAbstraction, NullLogProvider.getInstance() ) );
 
         assertThrows( IllegalStateException.class,
@@ -150,11 +150,11 @@ class StoreCopyRequestHandlerTest
 
     private class NiceStoreCopyRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        private NiceStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
+        private NiceStoreCopyRequestHandler( CatchupServerProtocol protocol, Database db,
                 StoreFileStreamingProtocol storeFileStreamingProtocol,
                 FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
+            super( protocol, db, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
@@ -166,10 +166,10 @@ class StoreCopyRequestHandlerTest
 
     private class EvilStoreCopyRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        private EvilStoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> dataSource,
+        private EvilStoreCopyRequestHandler( CatchupServerProtocol protocol, Database db,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, dataSource, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
+            super( protocol, db, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override

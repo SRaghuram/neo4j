@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.ResourceIterator;
@@ -37,18 +36,18 @@ import static org.neo4j.io.fs.FileUtils.relativePath;
 public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extends SimpleChannelInboundHandler<T>
 {
     private final CatchupServerProtocol protocol;
-    private final Supplier<Database> databaseSupplier;
+    private final Database db;
     private final StoreFileStreamingProtocol storeFileStreamingProtocol;
 
     private final FileSystemAbstraction fs;
     private final Log log;
 
-    StoreCopyRequestHandler( CatchupServerProtocol protocol, Supplier<Database> databaseSupplier, StoreFileStreamingProtocol storeFileStreamingProtocol,
+    StoreCopyRequestHandler( CatchupServerProtocol protocol, Database db, StoreFileStreamingProtocol storeFileStreamingProtocol,
             FileSystemAbstraction fs, LogProvider logProvider, Class<T> clazz )
     {
         super( clazz );
         this.protocol = protocol;
-        this.databaseSupplier = databaseSupplier;
+        this.db = db;
         this.storeFileStreamingProtocol = storeFileStreamingProtocol;
         this.fs = fs;
         this.log = logProvider.getLog( StoreCopyRequestHandler.class );
@@ -61,21 +60,20 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
         StoreCopyFinishedResponse.Status responseStatus = StoreCopyFinishedResponse.Status.E_UNKNOWN;
         try
         {
-            Database database = databaseSupplier.get();
-            CheckPointer checkPointer = database.getDependencyResolver().resolveDependency( CheckPointer.class );
-            if ( !DataSourceChecks.hasSameStoreId( request.expectedStoreId(), database ) )
+            CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
+            if ( !DataSourceChecks.hasSameStoreId( request.expectedStoreId(), db ) )
             {
                 responseStatus = StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
             }
             else if ( !DataSourceChecks.isTransactionWithinReach( request.requiredTransactionId(), checkPointer ) )
             {
                 responseStatus = StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND;
-                tryAsyncCheckpoint( database, checkPointer );
+                tryAsyncCheckpoint( db, checkPointer );
             }
             else
             {
-                File databaseDirectory = database.getDatabaseLayout().databaseDirectory();
-                try ( ResourceIterator<StoreFileMetadata> resourceIterator = files( request, database ) )
+                File databaseDirectory = db.getDatabaseLayout().databaseDirectory();
+                try ( ResourceIterator<StoreFileMetadata> resourceIterator = files( request, db ) )
                 {
                     while ( resourceIterator.hasNext() )
                     {
@@ -128,10 +126,10 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
 
     public static class GetStoreFileRequestHandler extends StoreCopyRequestHandler<GetStoreFileRequest>
     {
-        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Supplier<Database> databaseSupplier,
+        public GetStoreFileRequestHandler( CatchupServerProtocol protocol, Database db,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, databaseSupplier, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
+            super( protocol, db, storeFileStreamingProtocol, fs, logProvider, GetStoreFileRequest.class );
         }
 
         @Override
@@ -148,10 +146,10 @@ public abstract class StoreCopyRequestHandler<T extends StoreCopyRequest> extend
 
     public static class GetIndexSnapshotRequestHandler extends StoreCopyRequestHandler<GetIndexFilesRequest>
     {
-        public GetIndexSnapshotRequestHandler( CatchupServerProtocol protocol, Supplier<Database> databaseSupplier,
+        public GetIndexSnapshotRequestHandler( CatchupServerProtocol protocol, Database db,
                 StoreFileStreamingProtocol storeFileStreamingProtocol, FileSystemAbstraction fs, LogProvider logProvider )
         {
-            super( protocol, databaseSupplier, storeFileStreamingProtocol, fs, logProvider, GetIndexFilesRequest.class );
+            super( protocol, db, storeFileStreamingProtocol, fs, logProvider, GetIndexFilesRequest.class );
         }
 
         @Override

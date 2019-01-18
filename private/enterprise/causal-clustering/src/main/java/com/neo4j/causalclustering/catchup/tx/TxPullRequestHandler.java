@@ -15,17 +15,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.io.IOException;
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -40,23 +36,19 @@ import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_I
 public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequest>
 {
     private final CatchupServerProtocol protocol;
-    private final Supplier<StoreId> storeIdSupplier;
-    private final BooleanSupplier databaseAvailable;
+    private final Database db;
     private final TransactionIdStore transactionIdStore;
     private final LogicalTransactionStore logicalTransactionStore;
     private final TxPullRequestsMonitor monitor;
     private final Log log;
 
-    public TxPullRequestHandler( CatchupServerProtocol protocol, Supplier<StoreId> storeIdSupplier,
-            BooleanSupplier databaseAvailable, Supplier<Database> dataSourceSupplier, Monitors monitors, LogProvider logProvider )
+    public TxPullRequestHandler( CatchupServerProtocol protocol, Database db, LogProvider logProvider )
     {
         this.protocol = protocol;
-        this.storeIdSupplier = storeIdSupplier;
-        this.databaseAvailable = databaseAvailable;
-        DependencyResolver dependencies = dataSourceSupplier.get().getDependencyResolver();
-        this.transactionIdStore = dependencies.resolveDependency( TransactionIdStore.class );
-        this.logicalTransactionStore = dependencies.resolveDependency( LogicalTransactionStore.class );
-        this.monitor = monitors.newMonitor( TxPullRequestsMonitor.class );
+        this.db = db;
+        this.transactionIdStore = transactionIdStore( db );
+        this.logicalTransactionStore = logicalTransactionStore( db );
+        this.monitor = db.getMonitors().newMonitor( TxPullRequestsMonitor.class );
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -107,14 +99,14 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
 
         long firstTxId = msg.previousTxId() + 1;
 
-        if ( !databaseAvailable.getAsBoolean() )
+        if ( !databaseIsAvailable() )
         {
             log.info( "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", firstTxId );
             return Prepare.fail( E_STORE_UNAVAILABLE );
         }
         StoreId expectedStoreId = msg.expectedStoreId();
-        StoreId localStoreId = storeIdSupplier.get();
-        if ( localStoreId == null || !localStoreId.equals( expectedStoreId ) )
+        StoreId localStoreId = new StoreId( db.getStoreId() );
+        if ( !localStoreId.equals( expectedStoreId ) )
         {
             log.info( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different from this machine with %s", firstTxId,
                     expectedStoreId, localStoreId );
@@ -164,6 +156,21 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
             return false;
         }
         return true;
+    }
+
+    private boolean databaseIsAvailable()
+    {
+        return db.getDatabaseAvailabilityGuard().isAvailable();
+    }
+
+    private static TransactionIdStore transactionIdStore( Database db )
+    {
+        return db.getDependencyResolver().resolveDependency( TransactionIdStore.class );
+    }
+
+    private static LogicalTransactionStore logicalTransactionStore( Database db )
+    {
+        return db.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
     }
 
     private static class TxPullingContext

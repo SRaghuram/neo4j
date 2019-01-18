@@ -30,6 +30,11 @@ public final class StoreId
     private long upgradeTime;
     private long upgradeId;
 
+    public StoreId( org.neo4j.storageengine.api.StoreId kernelStoreId )
+    {
+        this( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(), kernelStoreId.getUpgradeTime(), kernelStoreId.getUpgradeId() );
+    }
+
     public StoreId( long creationTime, long randomId, long upgradeTime, long upgradeId )
     {
         this.creationTime = creationTime;

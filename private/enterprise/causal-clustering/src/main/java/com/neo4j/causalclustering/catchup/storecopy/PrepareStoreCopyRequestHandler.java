@@ -14,7 +14,6 @@ import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import org.neo4j.graphdb.Resource;
 import org.neo4j.kernel.database.Database;
@@ -25,15 +24,15 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 {
     private final CatchupServerProtocol protocol;
     private final PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider;
-    private final Supplier<Database> databaseSupplier;
+    private final Database db;
     private final StoreFileStreamingProtocol streamingProtocol = new StoreFileStreamingProtocol();
 
-    public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Supplier<Database> databaseSupplier,
+    public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Database db,
             PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider )
     {
         this.protocol = catchupServerProtocol;
         this.prepareStoreCopyFilesProvider = prepareStoreCopyFilesProvider;
-        this.databaseSupplier = databaseSupplier;
+        this.db = db;
     }
 
     @Override
@@ -43,18 +42,16 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
         PrepareStoreCopyResponse response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_LISTING_STORE );
         try
         {
-            Database database = databaseSupplier.get();
-            if ( !DataSourceChecks.hasSameStoreId( prepareStoreCopyRequest.getStoreId(), database ) )
+            if ( !DataSourceChecks.hasSameStoreId( prepareStoreCopyRequest.getStoreId(), db ) )
             {
                 channelHandlerContext.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
                 response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
             }
             else
             {
-                CheckPointer checkPointer = database.getDependencyResolver().resolveDependency( CheckPointer.class );
+                CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
                 closeablesListener.add( tryCheckpointAndAcquireMutex( checkPointer ) );
-                PrepareStoreCopyFiles prepareStoreCopyFiles =
-                        closeablesListener.add( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( database ) );
+                PrepareStoreCopyFiles prepareStoreCopyFiles = closeablesListener.add( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( db ) );
 
                 StoreResource[] nonReplayable = prepareStoreCopyFiles.getAtomicFilesSnapshot();
                 for ( StoreResource storeResource : nonReplayable )
@@ -82,6 +79,6 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 
     private Resource tryCheckpointAndAcquireMutex( CheckPointer checkPointer ) throws IOException
     {
-        return databaseSupplier.get().getStoreCopyCheckPointMutex().storeCopy( () -> checkPointer.tryCheckPoint( new SimpleTriggerInfo( "Store copy" ) ) );
+        return db.getStoreCopyCheckPointMutex().storeCopy( () -> checkPointer.tryCheckPoint( new SimpleTriggerInfo( "Store copy" ) ) );
     }
 }

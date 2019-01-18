@@ -19,11 +19,9 @@ import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestHandler;
-import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.channel.ChannelHandler;
 
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseManager;
@@ -98,40 +96,26 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 
     private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new TxPullRequestHandler( protocol, storeIdSupplier( db ), databaseAvailable( db ), () -> db, db.getMonitors(), logProvider );
+        return new TxPullRequestHandler( protocol, db, logProvider );
     }
 
     private GetStoreIdRequestHandler buildStoreIdRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new GetStoreIdRequestHandler( protocol, storeIdSupplier( db ) );
+        return new GetStoreIdRequestHandler( protocol, db );
     }
 
     private PrepareStoreCopyRequestHandler buildStoreListingRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new PrepareStoreCopyRequestHandler( protocol, () -> db, new PrepareStoreCopyFilesProvider( fs ) );
+        return new PrepareStoreCopyRequestHandler( protocol, db, new PrepareStoreCopyFilesProvider( fs ) );
     }
 
     private GetStoreFileRequestHandler buildStoreFileRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new GetStoreFileRequestHandler( protocol, () -> db, new StoreFileStreamingProtocol(), fs, logProvider );
+        return new GetStoreFileRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs, logProvider );
     }
 
     private GetIndexSnapshotRequestHandler buildIndexSnapshotRequestHandler( Database db, CatchupServerProtocol protocol )
     {
-        return new GetIndexSnapshotRequestHandler( protocol, () -> db, new StoreFileStreamingProtocol(), fs, logProvider );
-    }
-
-    private static Supplier<StoreId> storeIdSupplier( Database db )
-    {
-        return () -> new StoreId(
-                db.getStoreId().getCreationTime(),
-                db.getStoreId().getRandomId(),
-                db.getStoreId().getUpgradeTime(),
-                db.getStoreId().getUpgradeId() );
-    }
-
-    private static BooleanSupplier databaseAvailable( Database db )
-    {
-        return db.getDatabaseAvailabilityGuard()::isAvailable;
+        return new GetIndexSnapshotRequestHandler( protocol, db, new StoreFileStreamingProtocol(), fs, logProvider );
     }
 }

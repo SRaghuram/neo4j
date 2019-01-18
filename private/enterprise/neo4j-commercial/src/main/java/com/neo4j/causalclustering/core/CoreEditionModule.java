@@ -443,8 +443,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         return new UpstreamDatabaseStrategySelector( defaultStrategy, loader, logProvider );
     }
 
-    protected CatchupServerHandler getHandlerFactory( GlobalModule globalModule,
-            FileSystemAbstraction fileSystem, CoreSnapshotService snapshotService )
+    protected CatchupServerHandler getHandlerFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem, CoreSnapshotService snapshotService )
     {
         Supplier<DatabaseManager> databaseManagerSupplier = globalModule.getGlobalDependencies().provideDependency( DatabaseManager.class );
         return new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem, snapshotService );
@@ -491,16 +490,9 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     protected void createDatabase( DatabaseManager databaseManager, String databaseName )
     {
-        try
-        {
-            CoreLocalDatabase db = databaseService.registerDatabase( databaseName );
-            coreStateService.create( db );
-            databaseManager.createDatabase( databaseName );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
-        }
+        CoreLocalDatabase db = databaseService.registerDatabase( databaseName );
+        coreStateService.create( db );
+        databaseManager.createDatabase( databaseName );
     }
 
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()

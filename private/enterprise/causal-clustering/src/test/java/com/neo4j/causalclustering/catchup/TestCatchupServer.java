@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChildInitializer;
 import com.neo4j.causalclustering.net.Server;
@@ -27,16 +26,13 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.CATCHUP;
@@ -61,16 +57,8 @@ class TestCatchupServer extends Server
         ApplicationProtocolRepository catchupRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
         ModifierProtocolRepository modifierRepository = new ModifierProtocolRepository( ModifierProtocols.values(), singletonList( modifierProtocols ) );
 
-        BooleanSupplier availability = () -> graphDb.getDependencyResolver().resolveDependency( DatabaseAvailabilityGuard.class ).isAvailable();
-        Supplier<Database> dataSource = () -> graphDb.getDependencyResolver().resolveDependency( Database.class );
-
-        org.neo4j.storageengine.api.StoreId kernelStoreId = dataSource.get().getStoreId();
-        StoreId storeId = new StoreId( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(), kernelStoreId.getUpgradeTime(),
-                kernelStoreId.getUpgradeId() );
-
-        //TODO: This doesn't seem right - switch to multi db handler
-        SingleDatabaseCatchupServerHandler catchupServerHandler = new SingleDatabaseCatchupServerHandler( new Monitors(), logProvider,
-                () -> storeId, dataSource, availability, fileSystem, null );
+        Supplier<DatabaseManager> databaseManagerSupplier = graphDb.getDependencyResolver().provideDependency( DatabaseManager.class );
+        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem );
 
         NettyPipelineBuilderFactory pipelineBuilder = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
 

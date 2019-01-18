@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.stream.LongStream;
 
 import org.neo4j.cursor.Cursor;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.store.StoreFileClosedException;
@@ -38,6 +40,8 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.NullLog;
+import org.neo4j.time.FakeClock;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_INVALID_REQUEST;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMATCH;
@@ -63,7 +67,8 @@ class TxPullRequestHandlerTest
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4 );
-    private Database datasource = mock( Database.class );
+    private Database database = mock( Database.class );
+    private DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, new FakeClock(), NullLog.getInstance() );
     private LogicalTransactionStore logicalTransactionStore = mock( LogicalTransactionStore.class );
     private TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );
 
@@ -73,12 +78,14 @@ class TxPullRequestHandlerTest
     void setUp()
     {
         Dependencies dependencies = mock( Dependencies.class );
-        when( datasource.getDependencyResolver() ).thenReturn( dependencies );
+        when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( dependencies.resolveDependency( LogicalTransactionStore.class ) ).thenReturn( logicalTransactionStore );
         when( dependencies.resolveDependency( TransactionIdStore.class ) ).thenReturn( transactionIdStore );
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
-        txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> true,
-                () -> datasource, new Monitors(), logProvider );
+        when( database.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
+        when( database.getMonitors() ).thenReturn( new Monitors() );
+        when( database.getStoreId() ).thenReturn( toKernelStoreId( storeId ) );
+        txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
     }
 
     @Test
@@ -154,9 +161,9 @@ class TxPullRequestHandlerTest
         StoreId serverStoreId = new StoreId( 1, 2, 3, 4 );
         StoreId clientStoreId = new StoreId( 5, 6, 7, 8 );
 
-        TxPullRequestHandler txPullRequestHandler =
-                new TxPullRequestHandler( new CatchupServerProtocol(), () -> serverStoreId, () -> true,
-                        () -> datasource, new Monitors(), logProvider );
+        when( database.getStoreId() ).thenReturn( toKernelStoreId( serverStoreId ) );
+
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DEFAULT_DATABASE_NAME ) );
@@ -173,11 +180,10 @@ class TxPullRequestHandlerTest
     void shouldNotStreamTxsAndReportErrorIfTheLocalDatabaseIsNotAvailable() throws Exception
     {
         // given
+        availabilityGuard.require( new DescriptiveAvailabilityRequirement( "Test" ) );
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
 
-        TxPullRequestHandler txPullRequestHandler =
-                new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> false,
-                        () -> datasource, new Monitors(), logProvider );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DEFAULT_DATABASE_NAME ) );
@@ -193,8 +199,7 @@ class TxPullRequestHandlerTest
     @ValueSource( longs = {Long.MIN_VALUE, BASE_TX_ID - 42, BASE_TX_ID - 2, BASE_TX_ID - 1} )
     void shouldRespondWithIllegalRequestWhenTransactionIdIsIncorrect( long incorrectTxId ) throws Exception
     {
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> true,
-                () -> datasource, new Monitors(), logProvider );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
         TxPullRequest request = mock( TxPullRequest.class );
         when( request.previousTxId() ).thenReturn( incorrectTxId );
@@ -221,8 +226,7 @@ class TxPullRequestHandlerTest
         ChannelFuture channelFuture = mock( ChannelFuture.class );
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), () -> storeId, () -> true,
-                () -> datasource, new Monitors(), logProvider );
+        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database, logProvider );
 
         txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DEFAULT_DATABASE_NAME ) );
 
@@ -252,6 +256,12 @@ class TxPullRequestHandlerTest
         return new CommittedTransactionRepresentation(
                 new LogEntryStart( toIntExact( id ), toIntExact( id ), id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED ),
                 tx, new LogEntryCommit( id, id ) );
+    }
+
+    private static org.neo4j.storageengine.api.StoreId toKernelStoreId( StoreId storeId )
+    {
+        return new org.neo4j.storageengine.api.StoreId( storeId.getCreationTime(), storeId.getRandomId(), -1, storeId.getUpgradeTime(),
+                storeId.getUpgradeId() );
     }
 
     private static TransactionCursor txCursor( CommittedTransactionRepresentation... transactions )
