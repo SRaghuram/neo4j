@@ -50,6 +50,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.active_database;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.ignore_store_lock;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.kernel.configuration.Settings.FALSE;
@@ -145,70 +146,57 @@ public class CoreBootstrapper
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
 
-        bootstrapActiveDatabase( activeDatabase );
+        bootstrapDatabase( activeDatabase, activeDatabaseConfig, null );
         appendNullTransactionLogEntryToSetRaftIndexToMinusOne( activeDatabase.databaseLayout(), activeDatabaseConfig );
 
-        coreSnapshot.add( activeDatabaseName, CoreStateFiles.ID_ALLOCATION, deriveIdAllocationState( activeDatabase.databaseLayout() ) );
+        IdAllocationState activeDatabaseIdAllocationState = deriveIdAllocationState( activeDatabase.databaseLayout() );
+        coreSnapshot.add( activeDatabaseName, CoreStateFiles.ID_ALLOCATION, activeDatabaseIdAllocationState );
         coreSnapshot.add( activeDatabaseName, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
 
         if ( databaseCount == 2 )
         {
-            bootstrapSystemDatabase( systemDatabase );
+            DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
+            bootstrapDatabase( systemDatabase, Config.defaults(), systemDatabaseInitializer );
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( systemDatabase.databaseLayout(), Config.defaults() );
 
-            coreSnapshot.add( SYSTEM_DATABASE_NAME, CoreStateFiles.ID_ALLOCATION, deriveIdAllocationState( systemDatabase.databaseLayout() ) );
+            IdAllocationState systemDatabaseIdAllocationState = deriveIdAllocationState( systemDatabase.databaseLayout() );
+            coreSnapshot.add( SYSTEM_DATABASE_NAME, CoreStateFiles.ID_ALLOCATION, systemDatabaseIdAllocationState );
             coreSnapshot.add( SYSTEM_DATABASE_NAME, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
         }
 
         return coreSnapshot;
     }
 
-    private void bootstrapActiveDatabase( LocalDatabase activeDatabase ) throws Exception
+    private Map<String,String> initializerParams( Config databaseConfig, DatabaseLayout databaseLayout )
     {
-        DatabaseLayout databaseLayout = activeDatabase.databaseLayout();
-        ensureRecoveredOrThrow( databaseLayout, activeDatabaseConfig );
-
-        if ( NeoStores.isStorePresent( pageCache, databaseLayout ) )
-        {
-            return;
-        }
-
         Map<String,String> params = new HashMap<>();
 
         /* This adhoc inheritance of configuration options is unfortunate and fragile, but there really aren't any better options currently. */
-        params.put( GraphDatabaseSettings.record_format.name(), activeDatabaseConfig.get( record_format ) );
+        params.put( GraphDatabaseSettings.record_format.name(), databaseConfig.get( record_format ) );
         params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
-        params.put( GraphDatabaseSettings.active_database.name(), activeDatabase.databaseName() );
+        params.put( GraphDatabaseSettings.active_database.name(), databaseConfig.get( active_database ) );
 
-        augmentWithCommonParams( params );
-        initializeDatabase( databaseLayout.databaseDirectory(), params, null );
-    }
-
-    private void augmentWithCommonParams( Map<String,String> params )
-    {
         /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
         params.put( GraphDatabaseSettings.pagecache_warmup_enabled.name(), FALSE );
         params.put( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
 
         /* Touching the store is allowed during bootstrapping. */
         params.put( ignore_store_lock.name(), TRUE );
+
+        return params;
     }
 
-    private void bootstrapSystemDatabase( LocalDatabase systemDatabase ) throws Exception
+    private void bootstrapDatabase( LocalDatabase database, Config databaseConfig, DatabaseInitializer databaseInitializer ) throws Exception
     {
-        DatabaseLayout databaseLayout = systemDatabase.databaseLayout();
-        ensureRecoveredOrThrow( databaseLayout, Config.defaults() );
+        DatabaseLayout databaseLayout = database.databaseLayout();
+        ensureRecoveredOrThrow( databaseLayout, databaseConfig );
 
         if ( NeoStores.isStorePresent( pageCache, databaseLayout ) )
         {
             return;
         }
 
-        Map<String,String> params = new HashMap<>();
-        augmentWithCommonParams( params );
-
-        DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
-        initializeDatabase( databaseLayout.databaseDirectory(), params, systemDatabaseInitializer );
+        initializeDatabase( databaseLayout, databaseConfig, databaseInitializer );
     }
 
     private LocalDatabase getDatabaseOrThrow( String databaseName )
@@ -235,10 +223,12 @@ public class CoreBootstrapper
     /**
      * This method has the purpose of both creating a database and optionally initializing its contents.
      */
-    private void initializeDatabase( File databaseDirectory, Map<String,String> params, DatabaseInitializer databaseInitializer )
+    private void initializeDatabase( DatabaseLayout databaseLayout, Config databaseConfig, DatabaseInitializer databaseInitializer )
             throws IOException
     {
-        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( databaseDirectory, params ) )
+        Map<String,String> params = initializerParams( databaseConfig, databaseLayout );
+
+        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( databaseLayout.databaseDirectory(), params ) )
         {
             if ( databaseInitializer != null )
             {
