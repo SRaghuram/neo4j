@@ -242,6 +242,60 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
         Map("n.prop2" -> 9, "n.prop1" -> null)
       )))
     }
+
+    test(s"$cypherToken: should plan partial top after index provided order") {
+      val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 4"
+      val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+      val order = cypherToken match {
+        case "ASC" => ProvidedOrder.asc("n.prop2").asc("n.prop1")
+        case "DESC" => ProvidedOrder.desc("n.prop2").desc("n.prop1")
+      }
+
+      result.executionPlanDescription() should includeSomewhere
+        .aPlan("PartialTop")
+        .withOrder(order)
+        .containingArgument("n.prop2", "n.prop1")
+
+      result.toList should equal(expectedOrder(List(
+        Map("n.prop2" -> 1, "n.prop1" -> 43),
+        Map("n.prop2" -> 2, "n.prop1" -> 41),
+        Map("n.prop2" -> 3, "n.prop1" -> 42),
+        Map("n.prop2" -> 3, "n.prop1" -> 44),
+        Map("n.prop2" -> 5, "n.prop1" -> 40),
+        Map("n.prop2" -> 7, "n.prop1" -> null),
+        Map("n.prop2" -> 7, "n.prop1" -> null),
+        Map("n.prop2" -> 8, "n.prop1" -> null),
+        Map("n.prop2" -> 9, "n.prop1" -> null)
+      )).take(4))
+    }
+
+    test(s"$cypherToken: should plan partial top1 after index provided order") {
+      val query = s"MATCH (n:Awesome) WHERE n.prop2 > 0 RETURN n.prop2, n.prop1 ORDER BY n.prop2 $cypherToken, n.prop1 $cypherToken LIMIT 1"
+      val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+      val order = cypherToken match {
+        case "ASC" => ProvidedOrder.asc("n.prop2").asc("n.prop1")
+        case "DESC" => ProvidedOrder.desc("n.prop2").desc("n.prop1")
+      }
+
+      result.executionPlanDescription() should includeSomewhere
+        .aPlan("PartialTop")
+        .withOrder(order)
+        .containingArgument("n.prop2", "n.prop1")
+
+      result.toList should equal(expectedOrder(List(
+        Map("n.prop2" -> 1, "n.prop1" -> 43),
+        Map("n.prop2" -> 2, "n.prop1" -> 41),
+        Map("n.prop2" -> 3, "n.prop1" -> 42),
+        Map("n.prop2" -> 3, "n.prop1" -> 44),
+        Map("n.prop2" -> 5, "n.prop1" -> 40),
+        Map("n.prop2" -> 7, "n.prop1" -> null),
+        Map("n.prop2" -> 7, "n.prop1" -> null),
+        Map("n.prop2" -> 8, "n.prop1" -> null),
+        Map("n.prop2" -> 9, "n.prop1" -> null)
+      )).take(1))
+    }
   }
 
   // Min and Max

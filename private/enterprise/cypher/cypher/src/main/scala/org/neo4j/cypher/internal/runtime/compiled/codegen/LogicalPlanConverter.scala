@@ -41,6 +41,8 @@ object LogicalPlanConverter {
     case p: plans.Selection => selectionAsCodeGenPlan(p)
     case p: plans.Top if hasStandaloneLimit(p) => throw new CantCompileQueryException(s"Not able to combine LIMIT and $p")
     case p: plans.Top => topAsCodeGenPlan(p)
+    case p: plans.PartialTop if hasStandaloneLimit(p) => throw new CantCompileQueryException(s"Not able to combine LIMIT and $p")
+    case p: plans.PartialTop => topAsCodeGenPlan(plans.Top(p.source, p.alreadySortedPrefix ++p.stillToSortSuffix, p.limit)(SameId(p.id)))
     case p: plans.Limit => limitAsCodeGenPlan(p)
     case p: plans.Skip => skipAsCodeGenPlan(p)
     case p: plans.ProduceResult => produceResultsAsCodeGenPlan(p)

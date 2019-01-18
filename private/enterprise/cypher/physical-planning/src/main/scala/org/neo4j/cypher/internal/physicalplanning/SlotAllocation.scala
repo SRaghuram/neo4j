@@ -348,7 +348,8 @@ object SlotAllocation {
            _: Skip |
            _: Sort |
            _: PartialSort |
-           _: Top
+           _: Top |
+           _: PartialTop
       =>
         source
 

@@ -77,6 +77,34 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     ))
   }
 
+  test("should use partial top after full sort") {
+    val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC LIMIT 3"
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("PartialTop")
+      .withOrder(ProvidedOrder.asc("gender").asc("a.name"))
+      .containingArgument("gender", "a.name")
+
+    result.toList should equal(List(
+      Map("a.name" -> "A", "gender" -> "female"),
+      Map("a.name" -> "D", "gender" -> "female"),
+      Map("a.name" -> "E", "gender" -> "female")
+    ))
+  }
+
+  test("should use partial top1 after full sort") {
+    val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC LIMIT 1"
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("PartialTop")
+      .withOrder(ProvidedOrder.asc("gender").asc("a.name"))
+      .containingArgument("gender", "a.name")
+
+    result.toList should equal(List(
+      Map("a.name" -> "A", "gender" -> "female")
+    ))
+  }
+
   test("ORDER BY previously unprojected column in WITH") {
     val result = executeWith(Configs.All, "MATCH (a:A) WITH a ORDER BY a.age RETURN a.name")
 
