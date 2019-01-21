@@ -77,6 +77,24 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     ))
   }
 
+  test("should use Top for SKIP and LIMIT") {
+    val query = "MATCH (a:A) RETURN a.name ORDER BY a.name ASC SKIP 3 LIMIT 3"
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    result.executionPlanDescription() should includeSomewhere
+      .aPlan("Skip")
+      .containingArgument("$`  AUTOINT0`")
+      .onTopOf(aPlan("Top")
+        .withOrder(ProvidedOrder.asc("a.name"))
+        .containingArgument("a.name", "3 + $`  AUTOINT0`")
+      )
+
+    result.toList should equal(List(
+      Map("a.name" -> "D"),
+      Map("a.name" -> "E"),
+      Map("a.name" -> "F")
+    ))
+  }
+
   test("should use partial top after full sort") {
     val query = "MATCH (a:A) WITH a, a.gender AS gender ORDER BY gender ASC RETURN gender, a.name ORDER BY gender ASC, a.name ASC LIMIT 3"
     val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
