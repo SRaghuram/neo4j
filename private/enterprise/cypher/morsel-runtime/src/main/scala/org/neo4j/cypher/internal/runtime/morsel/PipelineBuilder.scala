@@ -13,8 +13,7 @@ import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.AggregationExpressionOperator
 import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
@@ -225,8 +224,6 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
              _: plans.Eager | // We do not support eager plans since the resulting iterators cannot be recreated and fed a single input row at a time
              _: plans.EmptyResult | // Eagerly exhausts the source iterator
              _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
-             _: plans.VarExpand | // Not thread-safe
-             _: plans.PruningVarExpand | // Not thread-safe
              _: plans.ProcedureCall => // Even READ_ONLY Procedures are not allowed because they will/might access the
                                        // transaction via Core API reads, which is not thread safe because of the transaction
                                        // bound CursorFactory.
@@ -250,7 +247,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
 
     thisOp match {
       case co: ComposableOperator[_] =>
-        source.asInstanceOf[StreamingComposablePipeline[_]].addComposableOperator(co)
+        source.asInstanceOf[StreamingComposablePipeline[_]].addComposableOperator(co, slots)
         source
       case co: StreamingOperator with InitialComposableOperator[_] =>
         new StreamingComposablePipeline(co, slots, Some(source))

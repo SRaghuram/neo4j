@@ -16,11 +16,11 @@ import scala.collection.mutable.ArrayBuffer
   * A streaming pipeline.
   */
 class StreamingPipeline(override val start: StreamingOperator,
-                        slots: SlotConfiguration,
+                        override val slots: SlotConfiguration,
                         upstream: Option[Pipeline])
   extends AbstractStreamingPipeline(slots, upstream)
 
-abstract class AbstractStreamingPipeline(override val slots: SlotConfiguration,
+abstract class AbstractStreamingPipeline(slots: SlotConfiguration,
                                          override val upstream: Option[Pipeline]) extends Pipeline {
   def start: StreamingOperator
 
@@ -60,14 +60,16 @@ abstract class AbstractStreamingPipeline(override val slots: SlotConfiguration,
   * generating code for the combination of multiple operators (loop fusion).
   */
 class StreamingComposablePipeline[T](override val start: StreamingOperator with InitialComposableOperator[T],
-                                     slots: SlotConfiguration,
+                                     var slots: SlotConfiguration,
                                      upstream: Option[Pipeline]) extends AbstractStreamingPipeline(slots, upstream) {
 
   // Composable operators
   private val composableOperators: ArrayBuffer[ComposableOperator[_]] = new ArrayBuffer[ComposableOperator[_]]
 
-  def addComposableOperator(operator: ComposableOperator[_]): Unit =
+  def addComposableOperator(operator: ComposableOperator[_], slots: SlotConfiguration): Unit = {
     composableOperators += operator
+    this.slots = slots
+  }
 
   override def connectPipeline(downstream: Option[Pipeline], downstreamReduce: Option[ReducePipeline]): Unit = {
     composeOperators()

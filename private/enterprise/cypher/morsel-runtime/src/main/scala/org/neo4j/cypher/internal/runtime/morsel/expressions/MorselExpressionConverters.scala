@@ -7,13 +7,10 @@ package org.neo4j.cypher.internal.runtime.morsel.expressions
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandexpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{NestedPipeExpression, Pipe, QueryState}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.expressions.{functions, _}
@@ -36,8 +33,10 @@ object MorselExpressionConverters extends ExpressionConverter {
         case functions.Count =>
           Some(CountOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
 
-        case functions.Avg =>
-          Some(AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+// Disable Avg since we currently do not support Duration avg
+// and implement average different from interpreted (no cumulative moving avg)
+//        case functions.Avg =>
+//          Some(AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
 
         case functions.Max =>
           Some(MaxOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
