@@ -54,7 +54,7 @@ import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.diagnostics.providers.ConfigDiagnostics;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.logging.Logger;
 import org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.neo4j.test.DoubleLatch;
@@ -228,7 +228,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldKeepAuthorizationForLifetimeOfTransactionWithProcedureAllowed() throws Throwable
     {
         restartServerWithOverriddenSettings( SecuritySettings.ldap_authorization_group_to_role_mapping.name(), "503=admin;504=role1" );
-        dbRule.resolveDependency( Procedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
+        dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         assertKeepAuthorizationForLifetimeOfTransaction( "smith",
                 tx -> assertThat( tx.run( "CALL test.staticReadProcedure()" ).single().get( 0 ).asString(), equalTo( "static" ) ) );
     }

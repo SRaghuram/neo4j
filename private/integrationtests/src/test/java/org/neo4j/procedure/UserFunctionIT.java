@@ -6,12 +6,10 @@
 package org.neo4j.procedure;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -48,22 +46,27 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.proc.JarBuilder;
-import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.MapUtil.map;
@@ -71,69 +74,72 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.procedure.Mode.WRITE;
 import static org.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
 
-public class UserFunctionIT
+@ExtendWith( TestDirectoryExtension.class )
+class UserFunctionIT
 {
-    @Rule
-    public TemporaryFolder plugins = new TemporaryFolder();
-
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
+    @Inject
+    private TestDirectory plugins;
 
     private static List<Exception> exceptionsInFunction = Collections.synchronizedList( new ArrayList<>() );
+    private static final ScheduledExecutorService jobs = Executors.newScheduledThreadPool( 5 );
+
     private GraphDatabaseService db;
 
     @Test
-    public void shouldGiveNiceErrorMessageOnWrongStaticType()
+    void shouldGiveNiceErrorMessageOnWrongStaticType()
     {
-        //Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Type mismatch: expected Integer but was String (line 1, column 43 (offset: 42))" );
-
-        // When
-        try ( Transaction ignore = db.beginTx() )
-        {
-            //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
-            db.execute( "RETURN org.neo4j.procedure.simpleArgument('42')" );
-        }
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction ignore = db.beginTx() )
+                    {
+                        //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
+                        db.execute( "RETURN org.neo4j.procedure.simpleArgument('42')" );
+                    }
+                } );
+        assertThat( exception.getMessage(), startsWith( "Type mismatch: expected Integer but was String (line 1, column 43 (offset: 42))" ) );
     }
 
     @Test
-    public void shouldGiveNiceErrorMessageWhenNoArguments()
+    void shouldGiveNiceErrorMessageWhenNoArguments()
     {
-        //Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( containsStringIgnoreNewlines(String.format("Function call does not provide the " +
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction ignore = db.beginTx() )
+                    {
+                        db.execute( "RETURN org.neo4j.procedure.simpleArgument()" );
+                    }
+                } );
+        assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format( "Function call does not provide the " +
                 "required number of arguments: expected 1 got 0.%n%n" +
                 "Function org.neo4j.procedure.simpleArgument has signature: " +
                 "org.neo4j.procedure.simpleArgument(someValue :: INTEGER?) :: INTEGER?%n" +
-                "meaning that it expects 1 argument of type INTEGER? (line 1, column 8 (offset: 7))" )));
-        // When
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( "RETURN org.neo4j.procedure.simpleArgument()" );
-        }
+                "meaning that it expects 1 argument of type INTEGER? (line 1, column 8 (offset: 7))" ) ) );
     }
 
     @Test
-    public void shouldShowDescriptionWhenMissingArguments()
+    void shouldShowDescriptionWhenMissingArguments()
     {
-        //Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( containsStringIgnoreNewlines(String.format("Function call does not provide the " +
+        // When
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction ignore = db.beginTx() )
+                    {
+                        db.execute( "RETURN org.neo4j.procedure.nodeWithDescription()" );
+                    }
+                } );
+        assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format( "Function call does not provide the " +
                 "required number of arguments: expected 1 got 0.%n%n" +
                 "Function org.neo4j.procedure.nodeWithDescription has signature: " +
                 "org.neo4j.procedure.nodeWithDescription(someValue :: NODE?) :: NODE?%n" +
                 "meaning that it expects 1 argument of type NODE?%n" +
-                "Description: This is a description (line 1, column 8 (offset: 7))" )));
-        // When
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( "RETURN org.neo4j.procedure.nodeWithDescription()" );
-        }
+                "Description: This is a description (line 1, column 8 (offset: 7))" ) ) );
     }
 
     @Test
-    public void shouldCallDelegatingFunction()
+    void shouldCallDelegatingFunction()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -149,14 +155,13 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallRecursiveFunction()
+    void shouldCallRecursiveFunction()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res =
-                    db.execute( "RETURN org.neo4j.procedure.recursiveSum({order}) AS someVal", map( "order", 10L ) );
+            Result res = db.execute( "RETURN org.neo4j.procedure.recursiveSum({order}) AS someVal", map( "order", 10L ) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 55L ) ) );
@@ -165,7 +170,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithGenericArgument()
+    void shouldCallFunctionWithGenericArgument()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -182,14 +187,13 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithMapArgument()
+    void shouldCallFunctionWithMapArgument()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute(
-                    "RETURN org.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal" );
+            Result res = db.execute( "RETURN org.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal" );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 2L ) ) );
@@ -198,14 +202,13 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithMapArgumentContainingNullFromParameter()
+    void shouldCallFunctionWithMapArgumentContainingNullFromParameter()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute(
-                    "RETURN org.neo4j.procedure.mapArgument({foo: $p}) AS someVal", map("p", null) );
+            Result res = db.execute( "RETURN org.neo4j.procedure.mapArgument({foo: $p}) AS someVal", map("p", null) );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 1L ) ) );
@@ -214,14 +217,13 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithNull()
+    void shouldCallFunctionWithNull()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
         {
             // When
-            Result res = db.execute(
-                    "RETURN org.neo4j.procedure.mapArgument(null) AS someVal" );
+            Result res = db.execute( "RETURN org.neo4j.procedure.mapArgument(null) AS someVal" );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 0L ) ) );
@@ -230,7 +232,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithNullFromParameter()
+    void shouldCallFunctionWithNullFromParameter()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -246,7 +248,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithNodeReturn()
+    void shouldCallFunctionWithNodeReturn()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -264,21 +266,18 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldGiveHelpfulErrorOnMissingFunction()
+    void shouldGiveHelpfulErrorOnMissingFunction()
     {
-        // Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage(
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () -> db.execute( "RETURN org.someFunctionThatDoesNotExist()" ) );
+        assertThat( exception.getMessage(), startsWith(
                 String.format( "Unknown function 'org.someFunctionThatDoesNotExist' (line 1, column 8 (offset: 7))" +
-                               "%n" +
-                               "\"RETURN org.someFunctionThatDoesNotExist()" ) );
-
-        // When
-        db.execute( "RETURN org.someFunctionThatDoesNotExist()" );
+                        "%n" +
+                        "\"RETURN org.someFunctionThatDoesNotExist()" ) ) );
     }
 
     @Test
-    public void shouldGiveHelpfulErrorOnExceptionMidStream()
+    void shouldGiveHelpfulErrorOnExceptionMidStream()
     {
         // Given
         // run in tx to avoid having to wait for tx rollback on shutdown
@@ -286,36 +285,32 @@ public class UserFunctionIT
         {
             Result result = db.execute( "RETURN org.neo4j.procedure.throwsExceptionInStream()" );
 
-            // Expect
-            exception.expect( QueryExecutionException.class );
-            exception.expectMessage(
-                    "Failed to invoke function `org.neo4j.procedure.throwsExceptionInStream`: Caused by: java.lang" +
-                    ".RuntimeException: Kaboom" );
-
             // When
-            result.next();
+            QueryExecutionException exception = assertThrows( QueryExecutionException.class, result::next );
+            assertThat( exception.getMessage(), equalTo(
+                    "Failed to invoke function `org.neo4j.procedure.throwsExceptionInStream`: Caused by: java.lang" +
+                            ".RuntimeException: Kaboom" ) );
         }
     }
 
     @Test
-    public void shouldShowCauseOfError()
+    void shouldShowCauseOfError()
     {
         // Given
         // run in tx to avoid having to wait for tx rollback on shutdown
         try ( Transaction ignore = db.beginTx() )
         {
-            // Expect
-            exception.expect( QueryExecutionException.class );
-            exception.expectMessage(
-                    "Failed to invoke function `org.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang" +
-                    ".ArrayIndexOutOfBoundsException" );
             // When
-            db.execute( "RETURN org.neo4j.procedure.indexOutOfBounds()" ).next();
+            QueryExecutionException exception =
+                    assertThrows( QueryExecutionException.class, () -> db.execute( "RETURN org.neo4j.procedure.indexOutOfBounds()" ).next() );
+            assertThat( exception.getMessage(), startsWith(
+                    "Failed to invoke function `org.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang" +
+                            ".ArrayIndexOutOfBoundsException" ) );
         }
     }
 
     @Test
-    public void shouldCallFunctionWithAccessToDB()
+    void shouldCallFunctionWithAccessToDB()
     {
         // When
         try ( Transaction tx = db.beginTx() )
@@ -335,7 +330,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldLogLikeThereIsNoTomorrow()
+    void shouldLogLikeThereIsNoTomorrow()
     {
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -345,7 +340,7 @@ public class UserFunctionIT
                 .setInternalLogProvider( logProvider )
                 .setUserLogProvider( logProvider )
                 .newImpermanentDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
 
@@ -358,7 +353,7 @@ public class UserFunctionIT
         }
 
         // Then
-        AssertableLogProvider.LogMatcherBuilder match = inLog( Procedures.class );
+        AssertableLogProvider.LogMatcherBuilder match = inLog( GlobalProcedures.class );
         logProvider.assertAtLeastOnce(
                 match.debug( "1" ),
                 match.info( "2" ),
@@ -368,50 +363,50 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldDenyReadOnlyFunctionToPerformWrites()
+    void shouldDenyReadOnlyFunctionToPerformWrites()
     {
-        // Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Write operations are not allowed" );
-
-        // When
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( "RETURN org.neo4j.procedure.readOnlyTryingToWrite()" ).next();
-        }
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction ignore = db.beginTx() )
+                    {
+                        db.execute( "RETURN org.neo4j.procedure.readOnlyTryingToWrite()" ).next();
+                    }
+                } );
+        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
     }
 
     @Test
-    public void shouldNotBeAbleToCallWriteProcedureThroughReadFunction()
+    void shouldNotBeAbleToCallWriteProcedureThroughReadFunction()
     {
-        // Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Write operations are not allowed" );
-
-        // When
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( "RETURN org.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
-        }
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction ignore = db.beginTx() )
+                    {
+                        db.execute( "RETURN org.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
+                    }
+                } ) ;
+        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
     }
 
     @Test
-    public void shouldDenyReadOnlyFunctionToPerformSchema()
+    void shouldDenyReadOnlyFunctionToPerformSchema()
     {
-        // Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Schema operations are not allowed" );
-
-        // Give
-        try ( Transaction ignore = db.beginTx() )
-        {
-            // When
-            db.execute( "RETURN org.neo4j.procedure.readOnlyTryingToWriteSchema()" ).next();
-        }
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction ignore = db.beginTx() )
+                    {
+                        // When
+                        db.execute( "RETURN org.neo4j.procedure.readOnlyTryingToWriteSchema()" ).next();
+                    }
+                } );
+        assertThat( exception.getMessage(), containsString( "Schema operations are not allowed" ) );
     }
 
     @Test
-    public void shouldCoerceLongToDoubleAtRuntimeWhenCallingFunction()
+    void shouldCoerceLongToDoubleAtRuntimeWhenCallingFunction()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -426,7 +421,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCoerceListOfNumbersToDoublesAtRuntimeWhenCallingFunction()
+    void shouldCoerceListOfNumbersToDoublesAtRuntimeWhenCallingFunction()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -442,7 +437,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCoerceListOfMixedNumbers()
+    void shouldCoerceListOfMixedNumbers()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -458,7 +453,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCoerceDoubleToLongAtRuntimeWhenCallingFunction()
+    void shouldCoerceDoubleToLongAtRuntimeWhenCallingFunction()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -473,7 +468,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldBeAbleToPerformWritesOnNodesReturnedFromReadOnlyFunction()
+    void shouldBeAbleToPerformWritesOnNodesReturnedFromReadOnlyFunction()
     {
         // When
         try ( Transaction tx = db.beginTx() )
@@ -488,22 +483,23 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldFailToShutdown()
+    void shouldFailToShutdown()
     {
-        // Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage(
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                {
+                    try ( Transaction ignore = db.beginTx() )
+                    {
+                        db.execute( "RETURN org.neo4j.procedure.shutdown()" ).next();
+                    }
+                } );
+        assertThat( exception.getMessage(), equalTo(
                 "Failed to invoke function `org.neo4j.procedure.shutdown`: Caused by: java.lang" +
-                ".UnsupportedOperationException" );
-
-        try ( Transaction ignore = db.beginTx() )
-        {
-            db.execute( "RETURN org.neo4j.procedure.shutdown()" ).next();
-        }
+                        ".UnsupportedOperationException" ) );
     }
 
     @Test
-    public void shouldBeAbleToWriteAfterCallingReadOnlyFunction()
+    void shouldBeAbleToWriteAfterCallingReadOnlyFunction()
     {
         try ( Transaction ignore = db.beginTx() )
         {
@@ -513,7 +509,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldPreserveSecurityContextWhenSpawningThreadsCreatingTransactionInFunctions() throws Throwable
+    void shouldPreserveSecurityContextWhenSpawningThreadsCreatingTransactionInFunctions() throws Throwable
     {
         // given
         Runnable doIt = () ->
@@ -562,7 +558,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldBeAbleToUseFunctionCallWithPeriodicCommit() throws IOException
+    void shouldBeAbleToUseFunctionCallWithPeriodicCommit() throws IOException
     {
         // GIVEN
         String[] lines = IntStream.rangeClosed( 1, 100 )
@@ -590,24 +586,21 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldFailIfUsingPeriodicCommitWithReadOnlyQuery() throws IOException
+    void shouldFailIfUsingPeriodicCommitWithReadOnlyQuery() throws IOException
     {
-        // GIVEN
         String url = createCsvFile( "13" );
 
-        // EXPECT
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" );
-
-        //WHEN
-        db.execute( "USING PERIODIC COMMIT 1 " +
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
+                        db.execute( "USING PERIODIC COMMIT 1 " +
                     "LOAD CSV FROM '" + url + "' AS line " +
                     "WITH org.neo4j.procedure.simpleArgument(toInt(line[0])) AS val " +
-                    "RETURN val" );
+                    "RETURN val" ) );
+        assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
     }
 
     @Test
-    public void shouldCallFunctionReturningPaths()
+    void shouldCallFunctionReturningPaths()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -632,7 +625,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldBeAbleToUseUDFForLimit()
+    void shouldBeAbleToUseUDFForLimit()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -649,7 +642,7 @@ public class UserFunctionIT
 
     private String createCsvFile( String... lines ) throws IOException
     {
-        File file = plugins.newFile();
+        File file = plugins.createFile( "test" );
 
         try ( PrintWriter writer = FileUtils.newFilePrintWriter( file, StandardCharsets.UTF_8 ) )
         {
@@ -663,7 +656,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldHandleAggregationFunctionInFunctionCall()
+    void shouldHandleAggregationFunctionInFunctionCall()
     {
         try ( Transaction ignore = db.beginTx() )
         {
@@ -678,7 +671,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldHandleNullInList()
+    void shouldHandleNullInList()
     {
         try ( Transaction ignore = db.beginTx() )
         {
@@ -692,7 +685,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldWorkWhenUsingWithToProjectList()
+    void shouldWorkWhenUsingWithToProjectList()
     {
         try ( Transaction ignore = db.beginTx() )
         {
@@ -710,24 +703,25 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldNotAllowReadFunctionInNoneTransaction()
+    void shouldNotAllowReadFunctionInNoneTransaction()
     {
-        // Expect
-        exception.expect( AuthorizationViolationException.class );
-        exception.expectMessage( "Read operations are not allowed" );
-
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
 
         // When
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
-        {
-            db.execute( "RETURN org.neo4j.procedure.integrationTestMe()" ).next();
-            tx.success();
-        }
+        AuthorizationViolationException exception =
+                assertThrows( AuthorizationViolationException.class, () ->
+                {
+                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.none() ) )
+                    {
+                        db.execute( "RETURN org.neo4j.procedure.integrationTestMe()" ).next();
+                        tx.success();
+                    }
+                } );
+        assertThat( exception.getMessage(), startsWith( "Read operations are not allowed" ) );
     }
 
     @Test
-    public void shouldCallProcedureWithAllDefaultArgument()
+    void shouldCallProcedureWithAllDefaultArgument()
     {
         //Given/When
         Result res = db.execute( "RETURN org.neo4j.procedure.defaultValues() AS result" );
@@ -738,7 +732,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldHandleNullAsParameter()
+    void shouldHandleNullAsParameter()
     {
         //Given/When
         Result res = db.execute( "RETURN org.neo4j.procedure.defaultValues($p) AS result", map( "p", null ) );
@@ -749,7 +743,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithOneProvidedRestDefaultArgument()
+    void shouldCallFunctionWithOneProvidedRestDefaultArgument()
     {
         //Given/When
         Result res = db.execute( "RETURN org.neo4j.procedure.defaultValues('another string') AS result" );
@@ -760,7 +754,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithTwoProvidedRestDefaultArgument()
+    void shouldCallFunctionWithTwoProvidedRestDefaultArgument()
     {
         //Given/When
         Result res = db.execute( "RETURN org.neo4j.procedure.defaultValues('another string', 1337) AS result" );
@@ -771,7 +765,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithThreeProvidedRestDefaultArgument()
+    void shouldCallFunctionWithThreeProvidedRestDefaultArgument()
     {
         //Given/When
         Result res =
@@ -783,7 +777,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionWithFourProvidedRestDefaultArgument()
+    void shouldCallFunctionWithFourProvidedRestDefaultArgument()
     {
         //Given/When
         Result res = db.execute(
@@ -795,7 +789,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldCallFunctionReturningNull()
+    void shouldCallFunctionReturningNull()
     {
         //Given/When
         Result res = db.execute(
@@ -811,7 +805,7 @@ public class UserFunctionIT
      * built-in functions in any shape or form.
      */
     @Test
-    public void shouldListAllUserDefinedFunctions()
+    void shouldListAllUserDefinedFunctions() throws IOException
     {
         //Given/When
         Result res = db.execute( "CALL dbms.functions()" );
@@ -824,14 +818,10 @@ public class UserFunctionIT
             // Be aware that the text file "userDefinedFunctions" must end with two newlines
             assertThat( actual, equalTo(expected) );
         }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Failed to read userDefinedFunctions file." );
-        }
     }
 
     @Test
-    public void shouldCallFunctionWithSameNameAsBuiltIn()
+    void shouldCallFunctionWithSameNameAsBuiltIn()
     {
         //Given/When
         Result res = db.execute( "RETURN this.is.test.only.sum([1337, 2.718281828, 3.1415]) AS result" );
@@ -842,7 +832,7 @@ public class UserFunctionIT
     }
 
     @Test
-    public void shouldNotSupportMorselRuntime()
+    void shouldNotSupportMorselRuntime()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -853,26 +843,26 @@ public class UserFunctionIT
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 4L ) ) );
             assertFalse( res.hasNext() );
-            assertThat(res.getExecutionPlanDescription().getArguments().get("runtime"), not(equalTo( "MORSEL" )));
+            assertThat( res.getExecutionPlanDescription().getArguments().get( "runtime" ), not( equalTo( "MORSEL" ) ) );
         }
     }
 
-    @Before
-    public void setUp() throws IOException
+    @BeforeEach
+    void setUp() throws IOException
     {
         exceptionsInFunction.clear();
-        new JarBuilder().createJarFor( plugins.newFile( "myFunctions.jar" ), ClassWithFunctions.class );
+        new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         db = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.record_id_batch_size, "1" )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
 
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         if ( this.db != null )
         {
@@ -1114,6 +1104,4 @@ public class UserFunctionIT
             return "done";
         }
     }
-
-    private static final ScheduledExecutorService jobs = Executors.newScheduledThreadPool( 5 );
 }

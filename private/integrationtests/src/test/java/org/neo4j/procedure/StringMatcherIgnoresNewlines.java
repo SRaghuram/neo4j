@@ -10,18 +10,18 @@ import org.hamcrest.core.StringContains;
 
 import java.util.regex.Pattern;
 
-public class StringMatcherIgnoresNewlines
+class StringMatcherIgnoresNewlines
 {
+    private static final Pattern newLines = Pattern.compile( "\\s*[\\r\\n]+\\s*" );
+
     private StringMatcherIgnoresNewlines()
     {
     }
 
-    public static Matcher<String> containsStringIgnoreNewlines( String substring )
+    static Matcher<String> containsStringIgnoreNewlines( String substring )
     {
         return new StringContains( false, substring )
         {
-            Pattern newLines = Pattern.compile( "\\s*[\\r\\n]+\\s*" );
-
             private String clean( String string )
             {
                 return newLines.matcher( string ).replaceAll( "" );

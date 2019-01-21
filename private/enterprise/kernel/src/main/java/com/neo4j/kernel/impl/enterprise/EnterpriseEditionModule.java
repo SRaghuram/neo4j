@@ -33,7 +33,7 @@ import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.logging.internal.LogService;
 
@@ -44,10 +44,10 @@ import org.neo4j.logging.internal.LogService;
 public class EnterpriseEditionModule extends CommunityEditionModule
 {
     @Override
-    public void registerEditionSpecificProcedures( Procedures procedures ) throws KernelException
+    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
     {
-        procedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
-        procedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
+        globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
+        globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
     }
 
     public EnterpriseEditionModule( PlatformModule platformModule )
@@ -97,19 +97,19 @@ public class EnterpriseEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
+    public void createSecurityModule( PlatformModule platformModule, GlobalProcedures globalProcedures )
     {
-        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, procedures );
+        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, globalProcedures );
     }
 
-    public static void createEnterpriseSecurityModule( AbstractEditionModule editionModule, PlatformModule platformModule, Procedures procedures )
+    public static void createEnterpriseSecurityModule( AbstractEditionModule editionModule, PlatformModule platformModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
-                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ),
-                    procedures, platformModule.config.get( CommercialEditionSettings.security_module ) );
+                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ), globalProcedures,
+                    platformModule.config.get( CommercialEditionSettings.security_module ) );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
         }

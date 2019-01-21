@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.kernel.impl.proc.Procedures
+import org.neo4j.kernel.impl.proc.GlobalProcedures
 
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -144,6 +144,6 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   }
 
   private def registerTestProcedures(): Unit = {
-    graph.getDependencyResolver.resolveDependency(classOf[Procedures]).registerProcedure(classOf[TestProcedure])
+    graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerProcedure(classOf[TestProcedure])
   }
 }

@@ -5,63 +5,42 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.core.state.CoreLife;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
-import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
-import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
-import com.neo4j.causalclustering.net.BootstrapConfiguration;
-import com.neo4j.dbms.database.MultiDatabaseManager;
-import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
-import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
-import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
-import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
-import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
-import com.neo4j.server.security.enterprise.CommercialSecurityModule;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.time.Clock;
-import java.time.Duration;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
 import com.neo4j.causalclustering.ReplicationModule;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
+import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.common.DatabaseService;
 import com.neo4j.causalclustering.common.DefaultDatabaseService;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.consensus.ConsensusModule;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolClientInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.core.server.CoreServerModule;
 import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import com.neo4j.causalclustering.core.state.ClusteringModule;
+import com.neo4j.causalclustering.core.state.CoreLife;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
+import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.CoreStateService;
 import com.neo4j.causalclustering.core.state.CoreStateStorageService;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.diagnostics.CoreMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
 import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedure;
+import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
+import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
+import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.BetterMessageLogger;
 import com.neo4j.causalclustering.logging.MessageLogger;
@@ -70,6 +49,7 @@ import com.neo4j.causalclustering.messaging.LoggingOutbound;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.RaftOutbound;
 import com.neo4j.causalclustering.messaging.SenderService;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -93,6 +73,25 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
+import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+import com.neo4j.server.security.enterprise.CommercialSecurityModule;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -115,7 +114,7 @@ import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -286,30 +285,30 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     @Override
-    public void registerEditionSpecificProcedures( Procedures procedures ) throws KernelException
+    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
     {
-        procedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
-        procedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
+        globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
+        globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         //noinspection deprecation
-        procedures.register( new LegacyGetServersProcedure( topologyService, consensusModule.raftMachine(), config, logProvider ) );
+        globalProcedures.register( new LegacyGetServersProcedure( topologyService, consensusModule.raftMachine(), config, logProvider ) );
 
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
         {
-            procedures.register( new GetServersProcedureForMultiDC( getLoadBalancingProcessor() ) );
+            globalProcedures.register( new GetServersProcedureForMultiDC( getLoadBalancingProcessor() ) );
         }
         else
         {
-            procedures.register( new GetServersProcedureForSingleDC( topologyService, consensusModule.raftMachine(),
+            globalProcedures.register( new GetServersProcedureForSingleDC( topologyService, consensusModule.raftMachine(),
                     config, logProvider ) );
         }
 
-        procedures.register( new GetRoutersForAllDatabasesProcedure( topologyService, config ) );
-        procedures.register( new GetRoutersForDatabaseProcedure( topologyService, config ) );
-        procedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
-        procedures.register( new CoreRoleProcedure( consensusModule.raftMachine() ) );
-        procedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
-        procedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
-        procedures.registerProcedure( ReplicationBenchmarkProcedure.class );
+        globalProcedures.register( new GetRoutersForAllDatabasesProcedure( topologyService, config ) );
+        globalProcedures.register( new GetRoutersForDatabaseProcedure( topologyService, config ) );
+        globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
+        globalProcedures.register( new CoreRoleProcedure( consensusModule.raftMachine() ) );
+        globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
+        globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
+        globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
     }
 
     private void addPanicEventHandlers( LifeSupport life, PanicService panicService, Supplier<DatabaseHealth> databaseHealthSupplier )
@@ -467,9 +466,9 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     @Override
     public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, AbstractEditionModule edition,
-            Procedures procedures, Logger msgLog )
+            GlobalProcedures globalProcedures, Logger msgLog )
     {
-        return new MultiDatabaseManager( platform, edition, procedures, msgLog, graphDatabaseFacade );
+        return new MultiDatabaseManager( platform, edition, globalProcedures, msgLog, graphDatabaseFacade );
     }
 
     @Override
@@ -528,13 +527,13 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     @Override
-    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
+    public void createSecurityModule( PlatformModule platformModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( platformModule, this,
-                    platformModule.logService.getUserLog( CoreEditionModule.class ), procedures, "commercial-security-module" );
+                    platformModule.logService.getUserLog( CoreEditionModule.class ), globalProcedures, "commercial-security-module" );
             securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( SYSTEM_DATABASE_NAME, dbInit ) );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;

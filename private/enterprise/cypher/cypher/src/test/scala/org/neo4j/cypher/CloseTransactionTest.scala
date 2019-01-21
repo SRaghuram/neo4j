@@ -11,6 +11,7 @@ import org.neo4j.collection.RawIterator
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.graphdb.{GraphDatabaseService, Result}
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
@@ -20,11 +21,10 @@ import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.proc.Context.KERNEL_TRANSACTION
 import org.neo4j.kernel.api.proc._
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.kernel.impl.proc.Procedures
+import org.neo4j.kernel.impl.proc.GlobalProcedures
 import org.neo4j.procedure.Mode
 import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.virtual.VirtualValues
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
@@ -458,7 +458,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
   }
 
   private def procedures(db: GraphDatabaseQueryService) = {
-    db.getDependencyResolver.resolveDependency(classOf[Procedures])
+    db.getDependencyResolver.resolveDependency(classOf[GlobalProcedures])
   }
 
   implicit class RichExecutionEngine(engine: ExecutionEngine) {

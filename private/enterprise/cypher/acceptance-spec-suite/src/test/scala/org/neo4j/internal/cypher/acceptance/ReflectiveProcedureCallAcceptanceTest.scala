@@ -14,7 +14,7 @@ import org.neo4j.graphdb.{QueryExecutionException, TransactionFailureException}
 import org.neo4j.internal.cypher.acceptance.TestResourceProcedure._
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
-import org.neo4j.kernel.impl.proc.Procedures
+import org.neo4j.kernel.impl.proc.GlobalProcedures
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -37,7 +37,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
   val defaultQuery = query(resultCount = 4, failCount = 3)
 
   private def setUpProcedures(): TestResourceProcedure.Counters = {
-    val procedures = graph.getDependencyResolver.resolveDependency(classOf[Procedures])
+    val procedures = graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures])
     val counters = new TestResourceProcedure.Counters
     procedures.registerComponent(classOf[TestResourceProcedure.Counters], TestResourceProcedure.countersProvider(counters), true)
 

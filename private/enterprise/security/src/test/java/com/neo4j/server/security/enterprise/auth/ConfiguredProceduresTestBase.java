@@ -21,7 +21,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -67,9 +67,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     void shouldSetAllowedToConfigSetting() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "nonEmpty" ) );
-        Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
+        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
 
-        ProcedureSignature numNodes = procedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
+        ProcedureSignature numNodes = globalProcedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
         assertThat( Arrays.asList( numNodes.allowed() ), containsInAnyOrder( "nonEmpty" ) );
     }
 
@@ -97,9 +97,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         configuredSetup( stringMap( SecuritySettings.procedure_roles.name(), "tes.*:role1" ) );
 
         userManager.newRole( "role1", "noneSubject" );
-        Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
+        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
 
-        ProcedureSignature numNodes = procedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
+        ProcedureSignature numNodes = globalProcedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
         assertThat( Arrays.asList( numNodes.allowed() ), empty() );
         assertFail( noneSubject, "CALL test.numNodes", "Read operations are not allowed" );
     }
@@ -108,9 +108,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     void shouldNotSetProcedureAllowedIfSettingNotSet() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
-        Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
+        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
 
-        ProcedureSignature numNodes = procedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
+        ProcedureSignature numNodes = globalProcedures.procedure( new QualifiedName( new String[]{"test"}, "numNodes" ) ).signature();
         assertThat( Arrays.asList( numNodes.allowed() ), empty() );
     }
 
@@ -119,9 +119,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     void shouldSetAllowedToConfigSettingForUDF() throws Throwable
     {
         configuredSetup( stringMap( SecuritySettings.default_allowed.name(), "nonEmpty" ) );
-        Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
+        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
 
-        UserFunctionSignature funcSig = procedures.function(
+        UserFunctionSignature funcSig = globalProcedures.function(
                 new QualifiedName( new String[]{"test"}, "nonAllowedFunc" ) ).signature();
         assertThat( Arrays.asList( funcSig.allowed() ), containsInAnyOrder( "nonEmpty" ) );
     }
@@ -141,9 +141,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     void shouldNotSetProcedureAllowedIfSettingNotSetForUDF() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
-        Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
+        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
 
-        UserFunctionSignature funcSig = procedures.function(
+        UserFunctionSignature funcSig = globalProcedures.function(
                 new QualifiedName( new String[]{"test"}, "nonAllowedFunc" ) ).signature();
         assertThat( Arrays.asList( funcSig.allowed() ), empty() );
     }
@@ -192,7 +192,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     {
         neo = setUpNeoServer( stringMap( GraphDatabaseSettings.auth_enabled.name(), "false" ) );
 
-        neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class )
+        neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class )
                 .registerProcedure( ClassWithProcedures.class );
 
         S subject = neo.login( "no_auth", "" );

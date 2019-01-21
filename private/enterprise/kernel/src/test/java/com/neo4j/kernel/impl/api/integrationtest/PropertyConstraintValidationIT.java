@@ -306,7 +306,7 @@ public class PropertyConstraintValidationIT
         @Override
         protected GraphDatabaseService createGraphDatabase()
         {
-            return new TestEnterpriseGraphDatabaseFactory().setFileSystem( fileSystemRule.get() )
+            return new TestEnterpriseGraphDatabaseFactory().setFileSystem( testDir.getFileSystem() )
                     .newEmbeddedDatabaseBuilder( testDir.storeDir() )
                     .newGraphDatabase();
         }

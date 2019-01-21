@@ -37,7 +37,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Admin;
@@ -169,7 +169,7 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<FunctionResult> listFunctions()
     {
         securityContext.assertCredentialsNotExpired();
-        return graph.getDependencyResolver().resolveDependency( Procedures.class ).getAllFunctions().stream()
+        return graph.getDependencyResolver().resolveDependency( GlobalProcedures.class ).getAllFunctions().stream()
                 .sorted( Comparator.comparing( a -> a.name().toString() ) )
                 .map( FunctionResult::new );
     }
@@ -196,8 +196,8 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<ProcedureResult> listProcedures()
     {
         securityContext.assertCredentialsNotExpired();
-        Procedures procedures = graph.getDependencyResolver().resolveDependency( Procedures.class );
-        return procedures.getAllProcedures().stream()
+        GlobalProcedures globalProcedures = graph.getDependencyResolver().resolveDependency( GlobalProcedures.class );
+        return globalProcedures.getAllProcedures().stream()
                 .sorted( Comparator.comparing( a -> a.name().toString() ) )
                 .map( ProcedureResult::new );
     }

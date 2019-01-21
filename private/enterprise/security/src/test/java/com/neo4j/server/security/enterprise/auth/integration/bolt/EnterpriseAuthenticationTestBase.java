@@ -45,7 +45,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -80,7 +80,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
               .withSetting( new BoltConnector( "bolt" ).listen_address, host );
         dbRule.withSettings( getSettings() );
         dbRule.ensureStarted();
-        dbRule.resolveDependency( Procedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
+        dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
     }
 
     protected abstract Map<Setting<?>,String> getSettings();

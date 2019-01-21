@@ -42,11 +42,12 @@ import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.impl.factory.CanWrite;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.query.clientconnection.HttpConnectionInfo;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
+import org.neo4j.kernel.impl.util.DefaultValueMapper;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
@@ -238,9 +239,11 @@ class TransactionStatusResultTest
         @Override
         public TransactionExecutionStatistic transactionStatistic()
         {
+            Dependencies dependencies = new Dependencies();
+            dependencies.satisfyDependency( mock( DefaultValueMapper.class ) );
             KernelTransactionImplementation transaction = new KernelTransactionImplementation( Config.defaults(),
                         mock( StatementOperationParts.class ), mock( SchemaWriteGuard.class ), new TransactionHooks(),
-                        mock( ConstraintIndexCreator.class ), new Procedures(), TransactionHeaderInformationFactory.DEFAULT,
+                        mock( ConstraintIndexCreator.class ), new GlobalProcedures(), TransactionHeaderInformationFactory.DEFAULT,
                         mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
                         mock( Pool.class ), Clocks.fakeClock(),
                         new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),
@@ -249,7 +252,7 @@ class TransactionStatusResultTest
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
-                        mock( IndexStatisticsStore.class ), new Dependencies() )
+                        mock( IndexStatisticsStore.class ), dependencies )
             {
                 @Override
                 public Statistics getStatistics()

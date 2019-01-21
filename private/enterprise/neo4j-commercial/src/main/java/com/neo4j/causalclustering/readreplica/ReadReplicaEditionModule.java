@@ -5,31 +5,9 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteringEditionModule;
-import com.neo4j.causalclustering.discovery.ResolutionResolverFactory;
-import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
-import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
-import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
-import com.neo4j.causalclustering.net.Server;
-import com.neo4j.dbms.database.MultiDatabaseManager;
-import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
-import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
-import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
-import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
-import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
-import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
-import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
-import com.neo4j.server.security.enterprise.CommercialSecurityModule;
-
-import java.io.File;
-import java.time.Clock;
-import java.util.Optional;
-import java.util.concurrent.Executor;
-import java.util.function.Supplier;
-
-import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.common.DefaultDatabaseService;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -38,18 +16,37 @@ import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
+import com.neo4j.causalclustering.discovery.ResolutionResolverFactory;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
+import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
+import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
+import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
+import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.helper.CompositeSuspendable;
 import com.neo4j.causalclustering.identity.MemberId;
-
+import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
+import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
+import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
+import com.neo4j.server.security.enterprise.CommercialSecurityModule;
+
+import java.time.Clock;
+import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
+
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
@@ -58,7 +55,6 @@ import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
@@ -69,20 +65,18 @@ import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
-import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.SslPolicy;
-import org.neo4j.udc.UsageData;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -191,12 +185,12 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public void registerEditionSpecificProcedures( Procedures procedures ) throws KernelException
+    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
     {
-        procedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
-        procedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        procedures.register( new ReadReplicaRoleProcedure() );
-        procedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
+        globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
+        globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
+        globalProcedures.register( new ReadReplicaRoleProcedure() );
+        globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
     }
 
     private void addPanicEventHandlers( PanicService panicService, LifeSupport life, Supplier<DatabaseHealth> databaseHealthSupplier, Server catchupServer,
@@ -252,9 +246,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
     @Override
     public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, AbstractEditionModule edition,
-            Procedures procedures, Logger msgLog )
+            GlobalProcedures globalProcedures, Logger msgLog )
     {
-        return new MultiDatabaseManager( platform, edition, procedures, msgLog, graphDatabaseFacade );
+        return new MultiDatabaseManager( platform, edition, globalProcedures, msgLog, graphDatabaseFacade );
     }
 
     @Override
@@ -317,13 +311,13 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
+    public void createSecurityModule( PlatformModule platformModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( platformModule, this,
-                    platformModule.logService.getUserLog( ReadReplicaEditionModule.class ), procedures, "commercial-security-module" );
+                    platformModule.logService.getUserLog( ReadReplicaEditionModule.class ), globalProcedures, "commercial-security-module" );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
         }

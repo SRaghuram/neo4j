@@ -6,12 +6,10 @@
 package org.neo4j.procedure;
 
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.util.stream.Stream;
@@ -30,24 +28,27 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.proc.JarBuilder;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class EagerProcedureIT
 {
-    @Rule
-    public TemporaryFolder plugins = new TemporaryFolder();
-
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
+    @Inject
+    private TestDirectory testDirectory;
 
     private GraphDatabaseService db;
 
     @Test
-    public void shouldNotGetPropertyAccessFailureWhenStreamingToAnEagerDestructiveProcedure()
+    void shouldNotGetPropertyAccessFailureWhenStreamingToAnEagerDestructiveProcedure()
     {
         // When we have a simple graph (a)
         setUpTestData();
@@ -60,24 +61,21 @@ public class EagerProcedureIT
     }
 
     @Test
-    public void shouldGetPropertyAccessFailureWhenStreamingToANonEagerDestructiveProcedure()
+    void shouldGetPropertyAccessFailureWhenStreamingToANonEagerDestructiveProcedure()
     {
         // When we have a simple graph (a)
         setUpTestData();
 
-        // Expect a specific error
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Node with id 1 has been deleted in this transaction" );
-
         // When we try to run an eagerized destructive procedure
-        Result res = db.execute( "MATCH (n) WHERE n.key = 'value' " +
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () -> db.execute( "MATCH (n) WHERE n.key = 'value' " +
                 "WITH n CALL org.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
-                "YIELD value RETURN value" );
-        res.resultAsString();   // pull all results. The second row will cause the exception
+                "YIELD value RETURN value" ) );
+        assertThat( exception.getMessage(), equalTo( "Node with id 1 has been deleted in this transaction" ) );
     }
 
     @Test
-    public void shouldNotGetErrorBecauseOfNormalEagerizationWhenStreamingFromANormalReadProcedureToDestructiveCypher()
+    void shouldNotGetErrorBecauseOfNormalEagerizationWhenStreamingFromANormalReadProcedureToDestructiveCypher()
     {
         // When we have a simple graph (a)
         int count = 10;
@@ -93,7 +91,7 @@ public class EagerProcedureIT
     }
 
     @Test
-    public void shouldGetEagerPlanForAnEagerProcedure()
+    void shouldGetEagerPlanForAnEagerProcedure()
     {
         // When explaining a call to an eagerized procedure
         Result res = db.execute( "EXPLAIN MATCH (n) WHERE n.key = 'value' " +
@@ -103,7 +101,7 @@ public class EagerProcedureIT
     }
 
     @Test
-    public void shouldNotGetEagerPlanForANonEagerProcedure()
+    void shouldNotGetEagerPlanForANonEagerProcedure()
     {
         // When explaining a call to an non-eagerized procedure
         Result res = db.execute( "EXPLAIN MATCH (n) WHERE n.key = 'value' " +
@@ -148,18 +146,18 @@ public class EagerProcedureIT
         }
     }
 
-    @Before
-    public void setUp() throws IOException
+    @BeforeEach
+    void setUp() throws IOException
     {
-        new JarBuilder().createJarFor( plugins.newFile( "myProcedures.jar" ), ClassWithProcedures.class );
+        new JarBuilder().createJarFor( testDirectory.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         db = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.plugin_dir, testDirectory.directory().getAbsolutePath() )
                 .newGraphDatabase();
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         if ( this.db != null )
         {

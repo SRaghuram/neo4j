@@ -6,13 +6,11 @@
 package org.neo4j.procedure;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,25 +31,27 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.proc.JarBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class UserAggregationFunctionIT
 {
-    @Rule
-    public TemporaryFolder plugins = new TemporaryFolder();
-
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
+    @Inject
+    private TestDirectory plugins;
 
     private GraphDatabaseService db;
 
     @Test
-    public void shouldHandleSingleStringArgumentAggregationFunction()
+    void shouldHandleSingleStringArgumentAggregationFunction()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -73,7 +73,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandleSingleStringArgumentAggregationFunctionAndGroupingKey()
+    void shouldHandleSingleStringArgumentAggregationFunctionAndGroupingKey()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -96,7 +96,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldFailNicelyWhenInvalidRuntimeType()
+    void shouldFailNicelyWhenInvalidRuntimeType()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -109,16 +109,13 @@ public class UserAggregationFunctionIT
             tx.success();
         }
 
-        // Expect
-        exception.expect( QueryExecutionException.class );
-        exception.expectMessage( "Can't coerce `Long(42)` to String" );
-
-        // When
-        db.execute( "MATCH (n) RETURN org.neo4j.procedure.count(n.prop) AS count" );
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () -> db.execute( "MATCH (n) RETURN org.neo4j.procedure.count(n.prop) AS count" ) );
+        assertThat( exception.getMessage(), equalTo( "Can't coerce `Long(42)` to String" ) );
     }
 
     @Test
-    public void shouldHandleNodeArgumentAggregationFunction()
+    void shouldHandleNodeArgumentAggregationFunction()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -140,7 +137,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandleRelationshipArgumentAggregationFunction()
+    void shouldHandleRelationshipArgumentAggregationFunction()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -162,7 +159,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandlePathArgumentAggregationFunction()
+    void shouldHandlePathArgumentAggregationFunction()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
@@ -175,8 +172,7 @@ public class UserAggregationFunctionIT
 
         // When
         Result result = db.execute(
-                "MATCH p=()-[:T*]->() WITH org.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS " +
-                "len" );
+                "MATCH p=()-[:T*]->() WITH org.neo4j.procedure.longestPath(p) AS longest RETURN length(longest) AS len" );
 
         // Then
         assertThat( result.next(), equalTo( map( "len", 3L ) ) );
@@ -184,7 +180,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandleNullPath()
+    void shouldHandleNullPath()
     {
         // When
         Result result = db.execute(
@@ -196,7 +192,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandleNumberArgumentAggregationFunction()
+    void shouldHandleNumberArgumentAggregationFunction()
     {
         // Given, When
         Result result = db.execute(
@@ -208,7 +204,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandleDoubleArgumentAggregationFunction()
+    void shouldHandleDoubleArgumentAggregationFunction()
     {
         // Given, When
         Result result = db.execute(
@@ -220,7 +216,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandleLongArgumentAggregationFunction()
+    void shouldHandleLongArgumentAggregationFunction()
     {
         // Given, When
         Result result = db.execute(
@@ -232,7 +228,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldHandleNoArgumentBooleanAggregationFunction()
+    void shouldHandleNoArgumentBooleanAggregationFunction()
     {
         assertThat( db.execute(
                 "UNWIND [1,2] AS num RETURN org.neo4j.procedure.boolAggregator() AS wasCalled" ).next(),
@@ -244,7 +240,7 @@ public class UserAggregationFunctionIT
     }
 
     @Test
-    public void shouldBeAbleToUseAdbInFunction()
+    void shouldBeAbleToUseAdbInFunction()
     {
         List<Node> nodes = new ArrayList<>();
         // Given
@@ -268,7 +264,7 @@ public class UserAggregationFunctionIT
     }
 
     //TODO unignore when we have updated front end dependency
-    @Ignore
+    @Disabled
     public void shouldBeAbleToAccessPropertiesFromAggregatedValues()
     {
         // Given
@@ -296,20 +292,20 @@ public class UserAggregationFunctionIT
         assertThat( result, hasSize( 4 ) );
     }
 
-    @Before
-    public void setUp() throws IOException
+    @BeforeEach
+    void setUp() throws IOException
     {
-        new JarBuilder().createJarFor( plugins.newFile( "myFunctions.jar" ), ClassWithFunctions.class );
+        new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
         db = new TestGraphDatabaseFactory()
                 .newImpermanentDatabaseBuilder()
-                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.getRoot().getAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.plugin_dir, plugins.directory().getAbsolutePath() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
 
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void tearDown()
     {
         if ( this.db != null )
         {

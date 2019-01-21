@@ -30,7 +30,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
@@ -69,8 +69,8 @@ public class PropertyLevelSecurityIT
                 .setConfig( GraphDatabaseSettings.auth_enabled, "true" )
                 .newGraphDatabase();
         EnterpriseAuthAndUserManager authManager = (EnterpriseAuthAndUserManager) db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        Procedures procedures = db.getDependencyResolver().resolveDependency( Procedures.class );
-        procedures.registerProcedure( TestProcedure.class );
+        GlobalProcedures globalProcedures = db.getDependencyResolver().resolveDependency( GlobalProcedures.class );
+        globalProcedures.registerProcedure( TestProcedure.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
         userManager.newUser( "Neo", password( "eon" ), false );
         userManager.newUser( "Smith", password( "mr" ), false );

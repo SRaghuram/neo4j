@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.proc;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.proc.ProcedureConfig;
@@ -20,7 +20,7 @@ import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.proc.ProcedureConfig.PROC_ALLOWED_SETTING_DEFAULT_NAME;
 import static org.neo4j.kernel.impl.proc.ProcedureConfig.PROC_ALLOWED_SETTING_ROLES;
 
-public class ProcedureConfigTest
+class ProcedureConfigTest
 {
     private static final String[] EMPTY = new String[]{};
 
@@ -30,7 +30,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldHaveEmptyDefaultConfigs()
+    void shouldHaveEmptyDefaultConfigs()
     {
         Config config = Config.defaults();
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -38,7 +38,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldHaveConfigsWithDefaultProcedureAllowed()
+    void shouldHaveConfigsWithDefaultProcedureAllowed()
     {
         Config config = Config.defaults( default_allowed, "role1" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -46,7 +46,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldHaveConfigsWithExactMatchProcedureAllowed()
+    void shouldHaveConfigsWithExactMatchProcedureAllowed()
     {
         Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "role1",
                 PROC_ALLOWED_SETTING_ROLES, "xyz:anotherRole" ) );
@@ -56,28 +56,28 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldNotFailOnEmptyStringDefaultName()
+    void shouldNotFailOnEmptyStringDefaultName()
     {
         Config config = Config.defaults( default_allowed, "" );
         new ProcedureConfig( config );
     }
 
     @Test
-    public void shouldNotFailOnEmptyStringRoles()
+    void shouldNotFailOnEmptyStringRoles()
     {
         Config config = Config.defaults( procedure_roles, "" );
         new ProcedureConfig( config );
     }
 
     @Test
-    public void shouldNotFailOnBadStringRoles()
+    void shouldNotFailOnBadStringRoles()
     {
         Config config = Config.defaults( procedure_roles, "matrix" );
         new ProcedureConfig( config );
     }
 
     @Test
-    public void shouldNotFailOnEmptyStringBoth()
+    void shouldNotFailOnEmptyStringBoth()
     {
         Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "",
                         PROC_ALLOWED_SETTING_ROLES, "" ) );
@@ -85,7 +85,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldHaveConfigsWithWildcardProcedureAllowed()
+    void shouldHaveConfigsWithWildcardProcedureAllowed()
     {
         Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "role1", PROC_ALLOWED_SETTING_ROLES,
                         "xyz*:anotherRole" ) );
@@ -95,7 +95,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldHaveConfigsWithWildcardProcedureAllowedAndNoDefault()
+    void shouldHaveConfigsWithWildcardProcedureAllowedAndNoDefault()
     {
         Config config = Config.defaults( procedure_roles, "xyz*:anotherRole" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -104,7 +104,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldHaveConfigsWithMultipleWildcardProcedureAllowedAndNoDefault()
+    void shouldHaveConfigsWithMultipleWildcardProcedureAllowedAndNoDefault()
     {
         Config config = Config.defaults( procedure_roles,
                 "apoc.convert.*:apoc_reader;apoc.load.json:apoc_writer;apoc.trigger.add:TriggerHappy" );
@@ -122,7 +122,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldHaveConfigsWithOverlappingMatchingWildcards()
+    void shouldHaveConfigsWithOverlappingMatchingWildcards()
     {
         Config config = Config.defaults( stringMap( PROC_ALLOWED_SETTING_DEFAULT_NAME, "default", PROC_ALLOWED_SETTING_ROLES,
                         "apoc.*:apoc;apoc.load.*:loader;apoc.trigger.*:trigger;apoc.trigger.add:TriggerHappy" ) );
@@ -136,7 +136,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldSupportSeveralRolesPerPattern()
+    void shouldSupportSeveralRolesPerPattern()
     {
         Config config = Config.defaults( procedure_roles,
                 "xyz*:role1,role2,  role3  ,    role4   ;    abc:  role3   ,role1" );
@@ -147,7 +147,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldNotAllowFullAccessDefault()
+    void shouldNotAllowFullAccessDefault()
     {
         Config config = Config.defaults();
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -155,7 +155,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldAllowFullAccessForProcedures()
+    void shouldAllowFullAccessForProcedures()
     {
         Config config = Config.defaults(procedure_unrestricted, "test.procedure.name" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -165,7 +165,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldAllowFullAccessForSeveralProcedures()
+    void shouldAllowFullAccessForSeveralProcedures()
     {
         Config config = Config.defaults( procedure_unrestricted, "test.procedure.name, test.procedure.otherName" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -176,7 +176,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldAllowFullAccessForSeveralProceduresOddNames()
+    void shouldAllowFullAccessForSeveralProceduresOddNames()
     {
         Config config = Config.defaults( procedure_unrestricted, "test\\.procedure.name, test*rocedure.otherName" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -187,7 +187,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldAllowFullAccessWildcardProceduresNames()
+    void shouldAllowFullAccessWildcardProceduresNames()
     {
         Config config = Config.defaults( procedure_unrestricted, " test.procedure.*  ,     test.*.otherName" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -201,7 +201,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldBlockWithWhiteListingForProcedures()
+    void shouldBlockWithWhiteListingForProcedures()
     {
         Config config = Config.defaults( stringMap( procedure_unrestricted.name(),
                 "test.procedure.name, test.procedure.name2",  procedure_whitelist.name(),
@@ -214,7 +214,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldAllowWhiteListsWildcardProceduresNames()
+    void shouldAllowWhiteListsWildcardProceduresNames()
     {
         Config config = Config.defaults( procedure_whitelist, " test.procedure.* ,  test.*.otherName" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
@@ -228,7 +228,7 @@ public class ProcedureConfigTest
     }
 
     @Test
-    public void shouldIgnoreOddRegex()
+    void shouldIgnoreOddRegex()
     {
         Config config = Config.defaults( procedure_whitelist, "[\\db^a]*" );
         ProcedureConfig procConfig = new ProcedureConfig( config );

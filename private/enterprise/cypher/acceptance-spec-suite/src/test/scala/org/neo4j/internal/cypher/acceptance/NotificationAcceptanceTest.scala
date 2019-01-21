@@ -15,7 +15,7 @@ import org.neo4j.graphdb.impl.notification.NotificationCode._
 import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory._
 import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.kernel.impl.proc.Procedures
+import org.neo4j.kernel.impl.proc.GlobalProcedures
 import org.neo4j.procedure.Procedure
 
 import scala.collection.JavaConverters._
@@ -30,7 +30,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
   override def initTest(): Unit = {
     super.initTest()
-    val procedures = this.graph.getDependencyResolver.resolveDependency(classOf[Procedures])
+    val procedures = this.graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures])
     procedures.registerProcedure(classOf[NotificationAcceptanceTest.TestProcedures])
   }
 

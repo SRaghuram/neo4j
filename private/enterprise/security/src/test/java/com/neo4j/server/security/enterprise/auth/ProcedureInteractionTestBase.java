@@ -49,7 +49,7 @@ import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -169,9 +169,9 @@ public abstract class ProcedureInteractionTestBase<S>
     void configuredSetup( Map<String,String> config ) throws Throwable
     {
         neo = setUpNeoServer( config );
-        Procedures procedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( Procedures.class );
-        procedures.registerProcedure( ClassWithProcedures.class );
-        procedures.registerFunction( ClassWithFunctions.class );
+        GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
+        globalProcedures.registerProcedure( ClassWithProcedures.class );
+        globalProcedures.registerFunction( ClassWithFunctions.class );
         userManager = neo.getLocalUserManager();
         userManager.newUser( "noneSubject", password( "abc" ), false );
         userManager.newUser( "pwdSubject", password( "abc" ), true );

@@ -63,7 +63,7 @@ import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -133,7 +133,7 @@ public class CommercialSecurityModule extends SecurityModule
             initSystemGraphOnStart = true;
         }
 
-        Procedures procedures = dependencies.procedures();
+        GlobalProcedures globalProcedures = dependencies.procedures();
         JobScheduler jobScheduler = dependencies.scheduler();
 
         SecurityLog securityLog = SecurityLog.create(
@@ -148,30 +148,30 @@ public class CommercialSecurityModule extends SecurityModule
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
         // Register procedures
-        procedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
-        procedures.registerComponent( EnterpriseAuthManager.class, ctx -> authManager, false );
-        procedures.registerComponent( EnterpriseSecurityContext.class,
+        globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
+        globalProcedures.registerComponent( EnterpriseAuthManager.class, ctx -> authManager, false );
+        globalProcedures.registerComponent( EnterpriseSecurityContext.class,
                 ctx -> asEnterprise( ctx.get( SECURITY_CONTEXT ) ), true );
 
         if ( securityConfig.nativeAuthEnabled )
         {
-            procedures.registerComponent( EnterpriseUserManager.class,
+            globalProcedures.registerComponent( EnterpriseUserManager.class,
                     ctx -> authManager.getUserManager( ctx.get( SECURITY_CONTEXT ).subject(), ctx.get( SECURITY_CONTEXT ).isAdmin() ), true );
             if ( config.get( SecuritySettings.auth_providers ).size() > 1 )
             {
-                procedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users."  );
+                globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users."  );
             }
             else
             {
-                procedures.registerProcedure( UserManagementProcedures.class, true );
+                globalProcedures.registerProcedure( UserManagementProcedures.class, true );
             }
         }
         else
         {
-            procedures.registerComponent( EnterpriseUserManager.class, ctx -> EnterpriseUserManager.NOOP, true );
+            globalProcedures.registerComponent( EnterpriseUserManager.class, ctx -> EnterpriseUserManager.NOOP, true );
         }
 
-        procedures.registerProcedure( SecurityProcedures.class, true );
+        globalProcedures.registerProcedure( SecurityProcedures.class, true );
     }
 
     @Override

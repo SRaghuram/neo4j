@@ -9,10 +9,8 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.MorselSingleThreaded
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V3_5, V4_0}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
-import org.neo4j.kernel.impl.proc.Procedures
+import org.neo4j.kernel.impl.proc.GlobalProcedures
 
 class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -495,6 +493,6 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   private def registerTestProcedures(): Unit = {
-    graph.getDependencyResolver.resolveDependency(classOf[Procedures]).registerProcedure(classOf[TestProcedure])
+    graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerProcedure(classOf[TestProcedure])
   }
 }

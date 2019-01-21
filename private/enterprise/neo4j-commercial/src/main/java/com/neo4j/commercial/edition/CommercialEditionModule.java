@@ -6,7 +6,12 @@
 package com.neo4j.commercial.edition;
 
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
+import com.neo4j.causalclustering.common.PipelineBuilders;
+import com.neo4j.causalclustering.core.SupportedProtocolCreator;
+import com.neo4j.causalclustering.core.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
+import com.neo4j.causalclustering.net.InstalledProtocolHandler;
+import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
@@ -18,11 +23,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.neo4j.causalclustering.common.PipelineBuilders;
-import com.neo4j.causalclustering.core.SupportedProtocolCreator;
-import com.neo4j.causalclustering.core.TransactionBackupServiceProvider;
-import com.neo4j.causalclustering.net.InstalledProtocolHandler;
-import com.neo4j.causalclustering.net.Server;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -40,7 +40,7 @@ import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -83,9 +83,9 @@ public class CommercialEditionModule extends EnterpriseEditionModule
 
     @Override
     public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, AbstractEditionModule edition,
-            Procedures procedures, Logger msgLog )
+            GlobalProcedures globalProcedures, Logger msgLog )
     {
-        return new MultiDatabaseManager( platform, edition, procedures, msgLog, graphDatabaseFacade );
+        return new MultiDatabaseManager( platform, edition, globalProcedures, msgLog, graphDatabaseFacade );
     }
 
     @Override
@@ -131,19 +131,18 @@ public class CommercialEditionModule extends EnterpriseEditionModule
     }
 
     @Override
-    public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
+    public void createSecurityModule( PlatformModule platformModule, GlobalProcedures globalProcedures )
     {
-        createCommercialSecurityModule( this, platformModule, procedures );
+        createCommercialSecurityModule( this, platformModule, globalProcedures );
     }
 
-    private static void createCommercialSecurityModule( AbstractEditionModule editionModule, PlatformModule platformModule, Procedures procedures )
+    private static void createCommercialSecurityModule( AbstractEditionModule editionModule, PlatformModule platformModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
         if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
         {
             SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
-                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ),
-                    procedures, "commercial-security-module" );
+                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ), globalProcedures, "commercial-security-module" );
             platformModule.life.add( securityModule );
             securityProvider = securityModule;
         }

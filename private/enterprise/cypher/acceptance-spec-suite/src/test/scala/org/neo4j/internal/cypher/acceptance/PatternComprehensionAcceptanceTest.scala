@@ -7,8 +7,8 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.PathImpl
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
-import org.neo4j.kernel.impl.proc.Procedures
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.kernel.impl.proc.GlobalProcedures
 
 class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
   test("pattern comprehension involving index seek on RHS") {
@@ -34,7 +34,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("pattern comprehension nested in pattern comprehension") {
-    graph.getDependencyResolver.resolveDependency(classOf[Procedures]).registerFunction(classOf[TestFunction])
+    graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerFunction(classOf[TestFunction])
     val tag     = createLabeledNode("Tag")
     val content = createLabeledNode("Content")
     val user    = createLabeledNode(Map("name" -> "Michael Hunger"), "User")
@@ -101,7 +101,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("pattern comprehension nested in function call") {
-    graph.getDependencyResolver.resolveDependency(classOf[Procedures]).registerFunction(classOf[TestFunction])
+    graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerFunction(classOf[TestFunction])
 
     val n1 = createLabeledNode("Tweet")
     val n2 = createLabeledNode("User")
@@ -116,7 +116,7 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
   }
 
   test("pattern comprehension outside function call") {
-    graph.getDependencyResolver.resolveDependency(classOf[Procedures]).registerFunction(classOf[TestFunction])
+    graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerFunction(classOf[TestFunction])
 
     val n1 = createLabeledNode("Tweet")
     val n2 = createLabeledNode("User")

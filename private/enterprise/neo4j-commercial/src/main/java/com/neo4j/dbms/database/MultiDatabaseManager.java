@@ -22,7 +22,7 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Logger;
 
@@ -35,17 +35,17 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     private final ConcurrentHashMap<String, DatabaseContext> databaseMap = new ConcurrentHashMap<>();
     private final PlatformModule platform;
     private final AbstractEditionModule edition;
-    private final Procedures procedures;
+    private final GlobalProcedures globalProcedures;
     private final Logger log;
     private final GraphDatabaseFacade graphDatabaseFacade;
     private volatile boolean started;
 
-    public MultiDatabaseManager( PlatformModule platform, AbstractEditionModule edition, Procedures procedures,
+    public MultiDatabaseManager( PlatformModule platform, AbstractEditionModule edition, GlobalProcedures globalProcedures,
             Logger log, GraphDatabaseFacade graphDatabaseFacade )
     {
         this.platform = platform;
         this.edition = edition;
-        this.procedures = procedures;
+        this.globalProcedures = globalProcedures;
         this.log = log;
         this.graphDatabaseFacade = graphDatabaseFacade;
     }
@@ -154,7 +154,7 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         log.log( "Creating '%s' database.", databaseName );
         GraphDatabaseFacade facade =
                 platform.config.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
-        DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, procedures, facade );
+        DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, globalProcedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
         Database database = dataSource.database;
         facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, database.getTokenHolders() );

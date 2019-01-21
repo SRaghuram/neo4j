@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
-import org.neo4j.kernel.impl.proc.Procedures
+import org.neo4j.kernel.impl.proc.GlobalProcedures
 import org.neo4j.kernel.impl.util.ValueUtils
 
 import scala.collection.JavaConverters._
@@ -29,7 +29,7 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
   }
 
   test("should not fail to type check this") { // Waiting for the next release of openCypher
-    graph.getDependencyResolver.resolveDependency(classOf[Procedures]).registerFunction(classOf[TestFunction])
+    graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerFunction(classOf[TestFunction])
 
     // We just want to make sure that running the query does not throw exceptions
     graph.execute("return round(0.4 * test.sum(collect(toInteger('12'))) / 12)").stream().toArray.length should equal(1)
