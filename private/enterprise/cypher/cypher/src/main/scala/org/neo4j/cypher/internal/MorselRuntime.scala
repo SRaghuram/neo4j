@@ -28,7 +28,7 @@ import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
-import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
 import org.neo4j.values.virtual.MapValue
 
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
@@ -63,13 +63,17 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val tracer = context.runtimeEnvironment.tracer
     val fieldNames = query.resultColumns
 
+    val threadSafeCursors = context.runtimeEnvironment.cursors
+
     MorselExecutionPlan(operators,
                         physicalPlan.slotConfigurations,
                         queryIndexes,
                         logicalPlan,
                         fieldNames,
                         dispatcher,
-                        tracer)
+                        tracer,
+                        threadSafeCursors)
+
   }
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan,
@@ -110,7 +114,10 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                  logicalPlan: LogicalPlan,
                                  fieldNames: Array[String],
                                  dispatcher: Dispatcher,
-                                 schedulerTracer: SchedulerTracer) extends ExecutionPlan {
+                                 schedulerTracer: SchedulerTracer,
+                                 threadSafeCursors: CursorFactory) extends ExecutionPlan {
+
+    override def threadSafeCursorFactory: Option[CursorFactory] = Some(threadSafeCursors)
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
