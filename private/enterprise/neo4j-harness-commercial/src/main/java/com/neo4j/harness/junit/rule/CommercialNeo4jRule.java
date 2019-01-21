@@ -20,14 +20,14 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
  * <p>
  * In case if starting embedded web server is not desirable it can be fully disabled by using {@link #withDisabledServer()} configuration option.
  */
-public class CommercialNeo4JRule extends Neo4jRule
+public class CommercialNeo4jRule extends Neo4jRule
 {
-    public CommercialNeo4JRule()
+    public CommercialNeo4jRule()
     {
         super( CommercialTestNeo4jBuilders.newInProcessBuilder() );
     }
 
-    public CommercialNeo4JRule( File workingDirectory )
+    public CommercialNeo4jRule( File workingDirectory )
     {
         super( CommercialTestNeo4jBuilders.newInProcessBuilder( workingDirectory ) );
     }

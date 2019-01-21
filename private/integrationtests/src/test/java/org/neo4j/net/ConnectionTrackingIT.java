@@ -5,7 +5,7 @@
  */
 package org.neo4j.net;
 
-import com.neo4j.harness.junit.rule.CommercialNeo4JRule;
+import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -94,7 +94,7 @@ public class ConnectionTrackingIT
             "connectionId", "connectTime", "connector", "username", "userAgent", "serverAddress", "clientAddress" );
 
     @ClassRule
-    public static final Neo4jRule neo4j = new CommercialNeo4JRule()
+    public static final Neo4jRule neo4j = new CommercialNeo4jRule()
             .withConfig( auth_enabled, "true" )
             .withConfig( "dbms.connector.https.enabled", "true" )
             .withConfig( webserver_max_threads, "50" ) // higher than the amount of concurrent requests tests execute
