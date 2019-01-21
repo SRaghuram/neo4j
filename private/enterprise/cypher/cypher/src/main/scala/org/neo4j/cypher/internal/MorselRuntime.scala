@@ -32,6 +32,7 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
 
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
+  override def name: String = "morsel"
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
     val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
