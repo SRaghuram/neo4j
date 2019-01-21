@@ -5,10 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.scheduling
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import org.mockito.Mockito
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
@@ -294,6 +292,7 @@ abstract class SchedulerTest extends CypherFunSuite {
       for ( slice <- (0 until 1000).grouped(9) ) yield {
         val tasks: IndexedSeq[NoopTask] = slice.map(i => NoopTask(() => {
           map.put(i, Thread.currentThread().getId)
+          Thread.sleep(10)
         }))
 
         s.execute(tracer, tasks)
