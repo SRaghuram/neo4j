@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.scheduling
 
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Supplier
 
 /**
   * Scheduler tracer that collect times and thread ids of events and report them as DataPoints.
@@ -13,6 +14,13 @@ import java.util.concurrent.atomic.AtomicInteger
 class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends SchedulerTracer {
 
   private val queryCounter = new AtomicInteger()
+  private val localWorkUnitId = ThreadLocal.withInitial(new Supplier[Long] {override def get(): Long = 0})
+
+  private def newWorkUnitId(schedulingThreadId: Long): Long = {
+    val localId = localWorkUnitId.get()
+    localWorkUnitId.set(localId + 1)
+    localId | (schedulingThreadId << 40)
+  }
 
   override def traceQuery(): QueryExecutionTracer =
     QueryTracer(queryCounter.incrementAndGet())
@@ -22,14 +30,16 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
     override def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnit: Option[WorkUnitEvent]): ScheduledWorkUnitEvent = {
       val scheduledTime = currentTime()
       val schedulingThread = Thread.currentThread().getId
+      val workUnitId = newWorkUnitId(schedulingThread)
       val upstreamWorkUnitId = upstreamWorkUnit.map(_.id).getOrElse(NO_UPSTREAM)
-      ScheduledWorkUnit(upstreamWorkUnitId, queryId, scheduledTime, schedulingThread, task)
+      ScheduledWorkUnit(workUnitId, upstreamWorkUnitId, queryId, scheduledTime, schedulingThread, task)
     }
 
     override def stopQuery(): Unit = {}
   }
 
-  case class ScheduledWorkUnit(upstreamWorkUnitId: Long,
+  case class ScheduledWorkUnit(workUnitId: Long,
+                               upstreamWorkUnitId: Long,
                                queryId: Int,
                                scheduledTime: Long,
                                schedulingThreadId: Long,
@@ -46,8 +56,6 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
                startTime,
                task)
     }
-
-    private def workUnitId = scheduledTime
   }
 
   case class WorkUnit(override val id: Long,

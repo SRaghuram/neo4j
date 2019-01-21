@@ -91,8 +91,8 @@ class SchedulerTracerAcceptanceTest extends ExecutionEngineFunSuite {
     val schedulingThreadIds = mutable.Set[Long]()
 
     for (dataRow <- dataRows) {
-      dataRow.schedulingTime should be < dataRow.startTime
-      dataRow.startTime should be < dataRow.stopTime
+      dataRow.schedulingTime should be <= dataRow.startTime
+      dataRow.startTime should be <= dataRow.stopTime
       dataRow.pipelineDescription should not be ""
 
       queryIds += dataRow.queryId
@@ -103,7 +103,8 @@ class SchedulerTracerAcceptanceTest extends ExecutionEngineFunSuite {
 
     queryIds.size should be(1)
     schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
-    executionThreadIds.size should be(WORKER_COUNT)
+    executionThreadIds.size should be <= WORKER_COUNT
+    executionThreadIds.size should be > 1
     dataLookup.size should be(dataRows.size)
 
     for (dataRow <- dataRows) {
