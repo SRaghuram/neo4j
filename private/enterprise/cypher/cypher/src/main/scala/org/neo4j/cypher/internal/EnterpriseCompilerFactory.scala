@@ -19,10 +19,10 @@ import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
-import org.neo4j.cypher.internal.runtime.parallel._
-import org.neo4j.cypher.internal.runtime.vectorized.Dispatcher
-import org.neo4j.cypher.internal.runtime.vectorized.NO_TRANSACTION_BINDER
-import org.neo4j.cypher.internal.runtime.vectorized.QueryResources
+import org.neo4j.cypher.internal.runtime.morsel.Dispatcher
+import org.neo4j.cypher.internal.runtime.morsel.NO_TRANSACTION_BINDER
+import org.neo4j.cypher.internal.runtime.morsel.QueryResources
+import org.neo4j.cypher.internal.runtime.scheduling._
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.Kernel

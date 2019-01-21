@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.runtime.vectorized.TransactionBinder
+import org.neo4j.cypher.internal.runtime.morsel.TransactionBinder
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge

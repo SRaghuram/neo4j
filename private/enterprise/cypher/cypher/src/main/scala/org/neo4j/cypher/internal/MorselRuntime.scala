@@ -15,12 +15,12 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{NestedPipeExpressions, PipeTreeBuilder}
-import org.neo4j.cypher.internal.runtime.parallel.SchedulerTracer
+import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
+import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, Pipeline, PipelineBuilder}
 import org.neo4j.cypher.internal.runtime.planDescription.Argument
+import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.vectorized.expressions.MorselExpressionConverters
-import org.neo4j.cypher.internal.runtime.vectorized.{Dispatcher, Pipeline, PipelineBuilder}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
