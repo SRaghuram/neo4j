@@ -4,11 +4,11 @@
     <parent>
         <groupId>com.neo4j</groupId>
         <artifactId>commercial-parent</artifactId>
-        <version>3.5.2-SNAPSHOT</version>
+        <version>3.5.3-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
     <artifactId>neo4j-stresstests</artifactId>
-    <version>3.5.2-SNAPSHOT</version>
+    <version>3.5.3-SNAPSHOT</version>
 
   <name>Neo4j - Stress Tests</name>
   <packaging>jar</packaging>
