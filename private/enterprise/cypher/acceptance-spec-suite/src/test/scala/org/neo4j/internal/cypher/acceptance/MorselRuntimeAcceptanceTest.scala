@@ -9,10 +9,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.graphdb.{Node, Result}
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
+import org.neo4j.graphdb.{Node, Result}
 import org.neo4j.internal.cypher.acceptance.MorselRuntimeAcceptanceTest.MORSEL_SIZE
 
 import scala.collection.JavaConverters._
@@ -102,7 +102,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     createNode()
 
     //When
-    val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN n.prop,count(n.count)")
+    val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN n.prop, count(n.count)")
 
     //Then
     asScalaResult(result).toSet should equal(Set(

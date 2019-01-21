@@ -10,6 +10,7 @@ import java.util.function.Supplier
 
 import org.neo4j.cypher.internal.runtime.scheduling.LockFreeScheduler.TaskResult
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
 
 /**
@@ -36,13 +37,12 @@ class LockFreeScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](threadFactory: T
     }
 
     override def taskDone(taskResult: TaskResult[THREAD_LOCAL_RESOURCE]): Unit = {
-      // Schedule all resulting new tasks
-      for (newTask <- taskResult.newDownstreamTasks) {
-        scheduleTask(newTask, taskResult.query, Some(taskResult.workUnitEvent))
-      }
+      val newTasks = new ArrayBuffer[Callable[TaskResult[THREAD_LOCAL_RESOURCE]]]()
+      newTasks ++= taskResult.newDownstreamTasks.flatMap(taskResult.query.makeCallableTask(_, Some(taskResult.workUnitEvent)))
       if (taskResult.task.canContinue) {
-        scheduleTask(taskResult.task, taskResult.query, Some(taskResult.workUnitEvent))
+        newTasks ++= taskResult.query.makeCallableTask(taskResult.task, Some(taskResult.workUnitEvent))
       }
+      scheduleTasks(newTasks, taskResult.query)
       taskResult.query.taskDone(taskResult)
     }
   }
@@ -59,24 +59,32 @@ class LockFreeScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](threadFactory: T
     val queryExecution = new LockFreeQueryExecution(tracer.traceQuery(), threadLocalResource)
 
     // schedule the first tasks
-    tasks.foreach(scheduleTask(_, queryExecution, None))
+    val initialTasks = tasks.flatMap(queryExecution.makeCallableTask(_, None))
+    scheduleTasks(initialTasks, queryExecution)
 
     queryExecution
   }
 
-  private def scheduleTask(task: Task[THREAD_LOCAL_RESOURCE],
-                           query: QuerySchedulerClient[THREAD_LOCAL_RESOURCE, TaskResult[THREAD_LOCAL_RESOURCE]],
-                           upstreamWorkUnit: Option[WorkUnitEvent]): Unit = {
+  /**
+    * Simultaneously schedules a set of tasks. Makes sure that all tasks are first marked as scheduled before
+    * actually putting them in the queue. This makes sure that the global count of scheduled tasks
+    * does not reach 0 too early.
+    * @param callables the callables of the tasks to schedule
+    */
+  private def scheduleTasks(callables: IndexedSeq[Callable[TaskResult[THREAD_LOCAL_RESOURCE]]],
+                           query: QuerySchedulerClient[THREAD_LOCAL_RESOURCE, TaskResult[THREAD_LOCAL_RESOURCE]]): Unit = {
     // Schedule in the query
-    query.makeCallableTask(task, upstreamWorkUnit)
-      .foreach { t =>
-        // Mark as scheduled.
-        // This has to happen before putting it into the actual queue.
-        // Otherwise another worker can complete the task before it has been marked as scheduled
-        query.taskScheduled(t)
-        // Schedule in the global queue
-        tasks.add(t)
-      }
+
+    callables.foreach { callable =>
+      // Mark as scheduled.
+      // This has to happen before putting any of the callables into the actual queue.
+      // Otherwise another worker can complete a task before all of them have been marked as scheduled
+      query.taskScheduled(callable)
+    }
+    callables.foreach { callable =>
+      // Schedule in the global queue
+      tasks.add(callable)
+    }
   }
 }
 
