@@ -76,9 +76,6 @@
               <configuration>
                 <prependText>commercial-notice.txt</prependText>
                 <checkExistingNoticeFile combine.self="override" />
-                <properties>
-                  <currentYear>${currentYear}</currentYear>
-                </properties>
               </configuration>
             </execution>
           </executions>
