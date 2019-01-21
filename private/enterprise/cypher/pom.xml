@@ -54,6 +54,7 @@
                 <module>morsel-runtime</module>
                 <module>compiled-expressions</module>
                 <module>cypher</module>
+                <module>runtime-spec-suite</module>
             </modules>
         </profile>
     </profiles>
