@@ -698,7 +698,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     makeJoeAndFriends()
     val query =
       """
-        |PROFILE MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
+        |MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
         |WHERE u.name STARTS WITH 'Jo'
         |WITH u, b
         |ORDER BY u.name
