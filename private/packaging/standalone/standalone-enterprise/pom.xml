@@ -32,17 +32,6 @@
     <neo4j.mainClass>com.neo4j.server.enterprise.CommercialEntryPoint</neo4j.mainClass>
   </properties>
 
-  <licenses>
-    <license>
-      <name>Neo4j Commercial license</name>
-      <comments>
-        Copyright (c) 2002-2019 "Neo Technology,"
-        Network Engine for Objects in Lund AB [http://neotechnology.com]
-        This file is a commercial add-on to Neo4j Enterprise Edition.
-      </comments>
-    </license>
-  </licenses>
-
   <build>
     <plugins>
       <plugin>
