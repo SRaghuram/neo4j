@@ -652,7 +652,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(a2, a3, "T")
     relate(a3, a4, "T")
 
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       """
         |MATCH p = (:A)-[:T*]-(:A)
         |WITH p WHERE length(p) > 1
@@ -677,8 +677,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     // Four shortest path with the same weight
     result.toList should equal(List(Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0)))
@@ -697,8 +696,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         | ) AS weight
         |ORDER BY weight DESC""".stripMargin
 
-    // TODO: morsel fails at runtime with InternalException: Tried using a wrong context
-    val result = executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     // Four shortest path with the same weight
     result.toList should equal(List(Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0), Map("weight" -> 2.0)))

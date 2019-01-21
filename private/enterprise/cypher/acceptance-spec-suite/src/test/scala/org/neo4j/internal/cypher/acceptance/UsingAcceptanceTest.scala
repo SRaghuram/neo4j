@@ -703,7 +703,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         |RETURN count(p)
         |""".stripMargin
 
-    executeWith(Configs.InterpretedAndSlotted, query,
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("k"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("t"))

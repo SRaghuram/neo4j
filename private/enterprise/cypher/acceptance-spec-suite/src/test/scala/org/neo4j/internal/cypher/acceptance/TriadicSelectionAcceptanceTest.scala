@@ -193,9 +193,8 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
       )
 
     // THEN
-    // TODO: seems flaky for morsel
     for ( Query(name, configs, operator, count, query) <- queries ) {
-      val result = executeWith(configs, query, planComparisonStrategy = operator, ignoreMorsel = true)
+      val result = executeWith(configs, query, planComparisonStrategy = operator)
       result should haveCount(count)
     }
   }

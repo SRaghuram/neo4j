@@ -20,8 +20,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     // one non-loop
     relate(n, createNode())
 
-    // TODO morsel returns different results
-    val resultStar = executeWith(Configs.InterpretedAndSlotted, "MATCH (a)-->(a) RETURN count(*)", ignoreMorsel = true)
+    val resultStar = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a)-->(a) RETURN count(*)")
     val resultVar = executeWith(Configs.All, "MATCH (a)-[r]->(a) RETURN count(r)")
 
     resultStar.toList should equal(List(Map("count(*)" -> 2)))

@@ -13,7 +13,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should handle map projection with property selectors") {
     createNode("foo" -> 1, "bar" -> "apa")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.foo,.bar,.baz}", ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.foo,.bar,.baz}")
 
     result.toList.head("n") should equal(Map("foo" -> 1, "bar" -> "apa", "baz" -> null))
   }
@@ -21,7 +21,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should handle map projection with property selectors and identifier selector") {
     createNode("foo" -> 1, "bar" -> "apa")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "WITH 42 as x MATCH (n) RETURN n{.foo,.bar,x}", ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "WITH 42 as x MATCH (n) RETURN n{.foo,.bar,x}")
 
     result.toList.head("n") should equal(Map("foo" -> 1, "bar" -> "apa", "x" -> 42))
   }
@@ -29,7 +29,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("should use the map identifier as the alias for return items") {
     createNode("foo" -> 1, "bar" -> "apa")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.foo,.bar}", ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.foo,.bar}")
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa"))))
   }
@@ -37,7 +37,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("map projection with all-properties selector") {
     createNode("foo" -> 1, "bar" -> "apa")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.*}", ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.*}")
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa"))))
   }
@@ -45,7 +45,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("returning all properties of a node and adds other selectors") {
     createNode("foo" -> 1, "bar" -> "apa")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.*, .baz}", ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.*, .baz}")
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa", "baz" -> null))))
   }
@@ -53,7 +53,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
   test("returning all properties of a node and overwrites some with other selectors") {
     createNode("foo" -> 1, "bar" -> "apa")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.*, bar:'apatisk'}", ignoreMorselRuntimeFailures = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) RETURN n{.*, bar:'apatisk'}")
 
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apatisk"))))
   }
@@ -72,7 +72,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     relate(actor, createLabeledNode(Map("title" -> "Movie 2"), "Movie"))
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, """MATCH (actor:Actor)-->(movie:Movie)
-            |RETURN actor{ .name, movies: collect(movie{.title}) }""".stripMargin, ignoreMorselRuntimeFailures = true)
+            |RETURN actor{ .name, movies: collect(movie{.title}) }""".stripMargin)
     result.toList should equal(
       List(Map("actor" ->
         Map("name" -> "Actor 1", "movies" -> Seq(

@@ -8,9 +8,9 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{EstimatedRows, ExpandExpression}
-import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.graphdb.Node
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.scalatest.Matchers
 
 class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSuite with Matchers with CypherComparisonSupport {
@@ -22,9 +22,8 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    // TODO: this seems flaky for morsel
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
-      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")), ignoreMorsel = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
 
     result.toList.head("p").asInstanceOf[Seq[_]] should have size 2
   }
@@ -63,9 +62,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val rel3 = relate(start2, d)
     val rel4 = relate(start2, d)
 
-    // TODO: This seems flaky for morsel
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) return case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p",
-      ignoreMorsel = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p")
       .toList.map(_.mapValues {
         case l: Seq[Any] => l.toSet
         case x => x
@@ -84,15 +81,13 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    // TODO: this seems flaky for morsel
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       """match (n)
         |with case
         |       when id(n) >= 0 then (n)-->()
         |       else 42
         |     end as p, count(n) as c
-        |return p, c order by c""".stripMargin,
-      ignoreMorsel = true)
+        |return p, c order by c""".stripMargin)
       .toList.head("p").asInstanceOf[Seq[_]]
 
     result should have size 2
@@ -119,9 +114,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     val rel3 = relate(start2, d)
     val rel4 = relate(start2, d)
 
-    // TODO: this seems flaky for morsel
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) with case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p, count(n) as c return p, c",
-      ignoreMorsel = true)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) with case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p, count(n) as c return p, c")
       .toList.map(_.mapValues {
         case l: Seq[Any] => l.toSet
         case x => x
@@ -236,9 +229,8 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
     relate(start, createNode())
 
-    // TODO: this seems flaky for morsel
-    executeWith(Configs.InterpretedAndSlotted, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
-      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")), ignoreMorsel = true)
+    executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) return case when id(n) >= 0 then (n)-->() else 42 end as p",
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("Expand(All)")))
   }
 
   test("should not use full expand 2") {

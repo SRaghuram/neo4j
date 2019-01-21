@@ -231,8 +231,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
 
   test("Should avg durations") {
     val query = "UNWIND [duration('PT10S'), duration('P3D'), duration('PT20.6S')] as x RETURN avg(x) AS length"
-    // TODO: morsel fails at runtime with a MatchError
-    executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true).toList should equal(List(Map("length" -> DurationValue.duration(0,1,10,200000000))))
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,10,200000000))))
   }
 
   test("Should avg durations from stored nodes") {
@@ -240,9 +239,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("d" -> DurationValue.duration(0,3,0,0)))
     createNode(Map("d" -> DurationValue.duration(0,0,20,600000000)))
 
-    // TODO: morsel fails at runtime with a MatchError
     val query = "MATCH (n) RETURN avg(n.d) AS length"
-    executeWith(Configs.InterpretedAndSlotted, query, ignoreMorselRuntimeFailures = true).toList should equal(List(Map("length" -> DurationValue.duration(0,1,10,200000000))))
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,10,200000000))))
   }
 
   test("Should not avg durations and numbers together") {

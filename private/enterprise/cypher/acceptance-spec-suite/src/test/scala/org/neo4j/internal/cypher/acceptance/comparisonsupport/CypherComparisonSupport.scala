@@ -198,7 +198,6 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                             executeExpectedFailures: Boolean = true,
                             params: Map[String, Any] = Map.empty,
                             printExecutionPlan: Boolean = false,
-                            ignoreMorsel: Boolean = false,
                             ignoreMorselRuntimeFailures: Boolean = false): RewindableExecutionResult = {
     if (printExecutionPlan) {
       val planResult = innerExecute(s"EXPLAIN $query", params)
@@ -210,7 +209,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)
       val explicitlyRequestedExperimentalScenarios = expectSucceed.scenarios intersect Configs.Experimental.scenarios
 
-      val allConfigs = Configs.All - (if(ignoreMorsel) Configs.Morsel else Configs.Empty)
+      val allConfigs = Configs.All
       val positiveResults = ((allConfigs.scenarios ++ explicitlyRequestedExperimentalScenarios) - baseScenario).flatMap {
         thisScenario =>
           executeScenario(thisScenario,
