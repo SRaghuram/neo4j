@@ -9,6 +9,8 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
 
+import scala.collection.immutable
+
 class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
   with CypherComparisonSupport with CreateTempFileTestSupport {
 
@@ -69,7 +71,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       result.executionPlanDescription() should
         includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[$property]")
 
-      val expected = List("abc", "cc", 18, 3.0, 1.5491933384829668, 1.4142135623730951, 40, 41.75, 6, 2)
+      val expected: immutable.Seq[Any] = List("abc", "cc", 18, 3.0, 1.5491933384829668, 1.4142135623730951, 40, 41.75, 6, 2)
 
       result.toList should equal(List(Map("aggregation" -> expected(i))))
     }
@@ -87,9 +89,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
       result.executionPlanDescription() should includeSomewhere.aPlan("NodeByLabelScan")
 
-      val expected = List(
+      val expected: List[Set[Map[String, Any]]] = List(
         Set(Map("res1" -> "cc", "res2" -> "cc"), Map("res1" -> "abc", "res2" -> "abc"), Map("res1" -> null, "res2" -> null)),
-        Set(Map("res1" -> "cc", "res2" -> "cc"), Map("res1" -> "abc", "res2" -> "abc"), Map("res1" -> null, "res2" -> null)),
+        Set[Map[String, Any]](Map("res1" -> "cc", "res2" -> "cc"), Map("res1" -> "abc", "res2" -> "abc"), Map("res1" -> null, "res2" -> null)),
         Set(Map("res1" -> 1, "res2" -> 2), Map("res1" -> 4, "res2" -> 16), Map("res1" -> null, "res2" -> 0)),
         Set(Map("res1" -> 1, "res2" -> 1.0), Map("res1" -> 4, "res2" -> 4.0), Map("res1" -> null, "res2" -> null)),
         Set(Map("res1" -> 1, "res2" -> 0.0), Map("res1" -> 4, "res2" -> 0.0), Map("res1" -> null, "res2" -> 0.0)),
@@ -112,7 +114,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       result.executionPlanDescription() should
         includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[$property]")
 
-      val expected = List(
+      val expected: List[Set[Map[String, Any]]] = List(
         Set(Map("res1" -> "cc", "res2" -> "cc"), Map("res1" -> "abc", "res2" -> "abc")),
         Set(Map("res1" -> "cc", "res2" -> "cc"), Map("res1" -> "abc", "res2" -> "abc")),
         Set(Map("res1" -> 1, "res2" -> 2), Map("res1" -> 4, "res2" -> 16)),
