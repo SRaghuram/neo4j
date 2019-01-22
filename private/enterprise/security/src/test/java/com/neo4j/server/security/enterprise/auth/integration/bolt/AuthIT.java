@@ -357,14 +357,10 @@ public class AuthIT extends AuthTestBase
     {
         Map<Setting<?>, String> settings = new HashMap<>();
 
-        if ( !ldapWithAD )
-        {
-            settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" );
-            settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
-            settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, "gidnumber" );
-            settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin;505=role1" );
-        }
-
+        settings.put( SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=users,dc=example,dc=com" );
+        settings.put( SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(uid={0}))" );
+        settings.put( SecuritySettings.ldap_authorization_group_membership_attribute_names, "gidnumber" );
+        settings.put( SecuritySettings.ldap_authorization_group_to_role_mapping, "500=reader;501=publisher;502=architect;503=admin;505=role1" );
         settings.put( SecuritySettings.ldap_authentication_cache_enabled, "true" );
         settings.put( SecuritySettings.ldap_authorization_user_search_base, "dc=example,dc=com" );
         settings.put( SecuritySettings.procedure_roles, "test.staticReadProcedure:role1" );
@@ -393,26 +389,26 @@ public class AuthIT extends AuthTestBase
     {
         assumeTrue( ldapWithAD );
 
-        // dn: cn=n.neo4j,ou=local,ou=users,dc=example,dc=com
-        assertAuth( "neo4j", "abc123" );
-        assertAuth( "neo4j", "abc123" );
-        // dn: cn=n.neo,ou=remote,ou=users,dc=example,dc=com
-        assertAuth( "neo", "abc123" );
-        assertAuth( "neo", "abc123" );
+        // dn: cn=local.user,ou=local,ou=users,dc=example,dc=com
+        assertAuth( "luser", "abc123" );
+        assertAuth( "luser", "abc123" );
+        // dn: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
+        assertAuth( "ruser", "abc123" );
+        assertAuth( "ruser", "abc123" );
     }
 
     @Test
     public void shouldFailLoginSamAccountNameWrongPassword()
     {
         assumeTrue( ldapWithAD );
-        assertAuthFail( "neo4j", "wrong" );
+        assertAuthFail( "luser", "wrong" );
     }
 
     @Test
     public void shouldFailLoginSamAccountNameWithDN()
     {
         assumeTrue( ldapWithAD );
-        assertAuthFail( "n.neo4j", "abc123" );
+        assertAuthFail( "local.user", "abc123" );
     }
 
     @Test
@@ -420,7 +416,7 @@ public class AuthIT extends AuthTestBase
     {
         assumeTrue( ldapWithAD );
 
-        try ( Driver driver = connectDriver( "neo4j", "abc123" ) )
+        try ( Driver driver = connectDriver( "luser", "abc123" ) )
         {
             assertReadSucceeds( driver );
         }
