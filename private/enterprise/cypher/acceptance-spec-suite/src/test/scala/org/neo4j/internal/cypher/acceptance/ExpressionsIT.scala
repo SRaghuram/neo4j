@@ -2612,7 +2612,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val outgoing = SlottedExecutionContext(slots)
     incoming.setLongAt(0, node.id())
     val projections = Map("a" -> literal("hello"),
-                                                 "b" -> NodeFromSlot(0, "node"))
+                          "b" -> NodeFromSlot(0, "node"))
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
@@ -2637,7 +2637,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     incoming.setLongAt(1, node.id())
     val outgoing = SlottedExecutionContext(slots)
     val projections = Map("rel" -> RelationshipFromSlot(0, "rel"),
-                                                 "node" -> NodeFromSlot(1, "node"))
+                          "node" -> NodeFromSlot(1, "node"))
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
