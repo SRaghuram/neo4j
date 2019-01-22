@@ -28,8 +28,8 @@ public class IdFilesDeleter
                 if ( fileSystem.fileExists( idFile ) )
                 {
                     fileSystem.deleteFileOrThrow( idFile );
+                    anyIdFilesDeleted = true;
                 }
-                anyIdFilesDeleted = true;
             }
             catch ( IOException e )
             {
