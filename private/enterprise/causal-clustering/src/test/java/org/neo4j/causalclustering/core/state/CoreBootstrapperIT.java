@@ -5,6 +5,7 @@
  */
 package org.neo4j.causalclustering.core.state;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -26,7 +27,6 @@ import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.helper.TemporaryDatabase;
 import org.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -51,10 +51,12 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState.INITIAL_LOCK_TOKEN;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
@@ -63,7 +65,6 @@ public class CoreBootstrapperIT
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final PageCacheRule pageCacheRule = new PageCacheRule();
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
-    private final Config activeDatabaseConfig = Config.defaults();
 
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( pageCacheRule ).around( testDirectory );
@@ -81,16 +82,28 @@ public class CoreBootstrapperIT
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final Monitors monitors = new Monitors();
 
+    private File neo4jHome;
+    private File storeDirectory;
+
+    @Before
+    public void setup()
+    {
+        this.neo4jHome = testDirectory.directory();
+        File dataDirectory = new File( neo4jHome, "data" );
+        this.storeDirectory = new File( dataDirectory, "databases" );
+    }
+
     @Test
     public void shouldBootstrapWhenNoDirectoryExists() throws Exception
     {
         // given
-        File notExistingDirectory = new File( testDirectory.directory(), DEFAULT_DATABASE_NAME );
-
+        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, DEFAULT_DATABASE_NAME );
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( notExistingDirectory ) )
+                .withDatabaseLayout( databaseLayout )
                 .register();
+
+        Config activeDatabaseConfig = Config.builder().withHome( neo4jHome ).build();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
@@ -105,13 +118,15 @@ public class CoreBootstrapperIT
     @Test
     public void shouldBootstrapWhenEmptyDirectoryExists() throws IOException, RecoveryRequiredException
     {
-        File databaseDirectory = new File( testDirectory.directory(), DEFAULT_DATABASE_NAME );
-        fileSystem.mkdir( databaseDirectory );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, DEFAULT_DATABASE_NAME );
+        fileSystem.mkdirs( databaseLayout.databaseDirectory() );
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( databaseDirectory ) )
+                .withDatabaseLayout( databaseLayout )
                 .register();
+
+        Config activeDatabaseConfig = Config.builder().withHome( neo4jHome ).build();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
@@ -128,16 +143,18 @@ public class CoreBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        ClassicNeo4jDatabase classicNeo4jDatabase = ClassicNeo4jDatabase
-                .builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase database = ClassicNeo4jDatabase
+                .builder( storeDirectory, fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
                 .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( classicNeo4jDatabase.layout() )
+                .withDatabaseLayout( database.layout() )
                 .register();
+
+        Config activeDatabaseConfig = Config.builder().withHome( neo4jHome ).build();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
@@ -155,19 +172,22 @@ public class CoreBootstrapperIT
         // given
         int nodeCount = 100;
         String customTransactionLogsLocation = "transaction-logs";
-        ClassicNeo4jDatabase classicNeo4jDatabase = ClassicNeo4jDatabase
-                .builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase database = ClassicNeo4jDatabase
+                .builder( storeDirectory, fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
                 .logicalLogsLocation( customTransactionLogsLocation )
                 .build();
 
+        Config activeDatabaseConfig = Config.builder().withHome( neo4jHome )
+                                            .withSetting( logical_logs_location, customTransactionLogsLocation )
+                                            .build();
+
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( classicNeo4jDatabase.layout() )
+                .withDatabaseLayout( database.layout() )
                 .register();
 
-        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
 
@@ -184,7 +204,7 @@ public class CoreBootstrapperIT
         // given
         int nodeCount = 100;
         ClassicNeo4jDatabase database = ClassicNeo4jDatabase
-                .builder( testDirectory.directory(), fileSystem )
+                .builder( storeDirectory, fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
                 .build();
@@ -195,6 +215,11 @@ public class CoreBootstrapperIT
                        .withDatabaseName( DEFAULT_DATABASE_NAME )
                        .withDatabaseLayout( database.layout() )
                        .register();
+
+        String logicalLogsLocation = database.layout().databaseDirectory().getAbsolutePath();
+        Config activeDatabaseConfig = Config.builder().withHome( neo4jHome )
+                                            .withSetting( logical_logs_location, logicalLogsLocation )
+                                            .build();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
@@ -211,8 +236,8 @@ public class CoreBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        ClassicNeo4jDatabase databaseInNeedOfRecovery = ClassicNeo4jDatabase
-                .builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase database = ClassicNeo4jDatabase
+                .builder( storeDirectory, fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
                 .needToRecover()
@@ -220,8 +245,13 @@ public class CoreBootstrapperIT
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( databaseInNeedOfRecovery.layout() )
+                .withDatabaseLayout( database.layout() )
                 .register();
+
+        String logicalLogsLocation = database.layout().databaseDirectory().getAbsolutePath();
+        Config activeDatabaseConfig = Config.builder().withHome( neo4jHome )
+                                            .withSetting( logical_logs_location, logicalLogsLocation )
+                                            .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers, fileSystem,
@@ -232,7 +262,7 @@ public class CoreBootstrapperIT
         try
         {
             bootstrapper.bootstrap( membership );
-            fail();
+            fail( "Bootstrap should have failed because the store is unrecovered" );
         }
         catch ( RecoveryRequiredException e )
         {
@@ -246,8 +276,8 @@ public class CoreBootstrapperIT
         // given
         int nodeCount = 100;
         String customTransactionLogsLocation = "transaction-logs";
-        ClassicNeo4jDatabase databaseInNeedOfRecovery = ClassicNeo4jDatabase
-                .builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase database = ClassicNeo4jDatabase
+                .builder( storeDirectory, fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
                 .logicalLogsLocation( customTransactionLogsLocation )
@@ -256,10 +286,13 @@ public class CoreBootstrapperIT
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( databaseInNeedOfRecovery.layout() )
+                .withDatabaseLayout( database.layout() )
                 .register();
 
-        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.logical_logs_location, customTransactionLogsLocation );
+        Config activeDatabaseConfig = Config.builder()
+            .withHome( neo4jHome )
+            .withSetting( logical_logs_location, customTransactionLogsLocation )
+            .build();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
@@ -270,7 +303,7 @@ public class CoreBootstrapperIT
         try
         {
             bootstrapper.bootstrap( membership );
-            fail();
+            fail( "Bootstrap should have failed because the store is unrecovered" );
         }
         catch ( Exception e )
         {
