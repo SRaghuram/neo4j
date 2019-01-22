@@ -186,3 +186,25 @@ sn: jane
 uid: jane
 uidnumber: 1005
 userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
+
+# Entry 17: cn=local.user,ou=local,ou=users,dc=example,dc=com
+dn: cn=local.user,ou=local,ou=users,dc=example,dc=com
+memberOf: cn=admin,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: inetOrgPerson
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: luser
+cn: local.user
+sn: local.user
+userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
+
+ # Entry 18: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
+dn: cn=remote.user,ou=remote,ou=users,dc=example,dc=com
+memberOf: cn=reader,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: inetOrgPerson
+objectclass: simulatedMicrosoftSecurityPrincipal
+samAccountName: ruser
+cn: remote.user
+sn: remote.user
+userpassword: {MD5}6ZoYxCjLONXyYIU2eJIuAw==
