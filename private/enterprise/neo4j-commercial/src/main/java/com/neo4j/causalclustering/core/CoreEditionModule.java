@@ -462,7 +462,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         }
 
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storage, databaseService,
-                databaseInitializerMap::get );
+                dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
     }
 
     @Override
