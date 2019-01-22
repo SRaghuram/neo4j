@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
@@ -26,14 +25,12 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
-import static com.neo4j.causalclustering.catchup.CatchupResult.E_DATABASE_UNKNOWN;
-import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
-import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -65,8 +62,8 @@ public class StoreDownloaderTest
         components.getOrCreate( databaseName );
 
         // create some more components just to test that they're not mixed up
-        mockRemoteStore( "other.db ", randomStoreId(), E_DATABASE_UNKNOWN );
-        mockRemoteStore( "other.db ", randomStoreId(), E_DATABASE_UNKNOWN );
+        mockRemoteUnsuccessfulStore( "other.db ", randomStoreId() );
+        mockRemoteUnsuccessfulStore( "other.db ", randomStoreId() );
     }
 
     private StoreId randomStoreId()
@@ -120,7 +117,7 @@ public class StoreDownloaderTest
     {
         // given
         LocalDatabase database = mockLocalDatabase( databaseName, false, storeId );
-        RemoteStore remoteStore = mockRemoteStore( databaseName, storeId, SUCCESS_END_OF_STREAM );
+        RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseName, storeId );
 
         // when
         boolean downloadOk = downloader.bringUpToDate( database, primaryAddress, fromSingleAddress( secondaryAddress ) );
@@ -137,7 +134,7 @@ public class StoreDownloaderTest
     {
         // given
         LocalDatabase database = mockLocalDatabase( databaseName, false, storeId );
-        RemoteStore remoteStore = mockRemoteStore( databaseName, storeId, E_TRANSACTION_PRUNED );
+        RemoteStore remoteStore = mockRemoteUnsuccessfulStore( databaseName, storeId );
         StoreCopyProcess storeCopyProcess = components.getOrCreate( databaseName ).storeCopyProcess();
 
         // when
@@ -168,12 +165,20 @@ public class StoreDownloaderTest
         }
     }
 
-    private RemoteStore mockRemoteStore( String databaseName, StoreId storeId, CatchupResult result )
+    private RemoteStore mockRemoteSuccessfulStore( String databaseName, StoreId storeId )
+            throws StoreIdDownloadFailedException
+    {
+        RemoteStore remoteStore = components.getOrCreate( databaseName ).remoteStore();
+        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
+        return remoteStore;
+    }
+
+    private RemoteStore mockRemoteUnsuccessfulStore( String databaseName, StoreId storeId )
             throws StoreIdDownloadFailedException, StoreCopyFailedException, IOException
     {
         RemoteStore remoteStore = components.getOrCreate( databaseName ).remoteStore();
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
-        when( remoteStore.tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() ) ).thenReturn( result );
+        doThrow( StoreCopyFailedException.class ).when( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
         return remoteStore;
     }
 

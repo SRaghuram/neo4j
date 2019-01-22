@@ -51,7 +51,6 @@ class DefaultBackupStrategyTest
     void incrementalBackupsUseCorrectAddress() throws Exception
     {
         // given
-        when( backupDelegator.tryCatchingUp( any(), any(), any() ) ).thenReturn( CatchupResult.SUCCESS_END_OF_STREAM );
 
         // when
         strategy.performIncrementalBackup( desiredBackupLayout, address );
@@ -77,7 +76,6 @@ class DefaultBackupStrategyTest
     void incrementalRunsCatchupWithTargetsStoreId() throws Exception
     {
         // given
-        when( backupDelegator.tryCatchingUp( any(), any(), any() ) ).thenReturn( CatchupResult.SUCCESS_END_OF_STREAM );
 
         // when
         strategy.performIncrementalBackup( desiredBackupLayout, address );
@@ -121,7 +119,7 @@ class DefaultBackupStrategyTest
     {
         // given
         StoreCopyFailedException storeCopyFailedException = new StoreCopyFailedException( "Ops" );
-        when( backupDelegator.tryCatchingUp( any(), eq( expectedStoreId ), any() ) ).thenThrow( storeCopyFailedException );
+        doThrow( storeCopyFailedException ).when( backupDelegator).tryCatchingUp( any(), eq( expectedStoreId ), any() );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
@@ -162,23 +160,6 @@ class DefaultBackupStrategyTest
 
         // then
         assertEquals( storeCopyFailedException, error.getCause() );
-    }
-
-    @Test
-    void incrementalBackupsEndingInUnacceptedCatchupStateCauseException() throws Exception
-    {
-        // given
-        CatchupResult unexpectedStatus = CatchupResult.E_STORE_UNAVAILABLE;
-        when( backupDelegator.tryCatchingUp( any(), any(), any() ) ).thenReturn( unexpectedStatus );
-
-        // when
-        BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> strategy.performIncrementalBackup( desiredBackupLayout, address ) );
-
-        // then
-        Throwable cause = error.getCause();
-        assertThat( cause, instanceOf( StoreCopyFailedException.class ) );
-        assertEquals( "End state of catchup was not a successful end of stream: " + unexpectedStatus, cause.getMessage() );
     }
 
     @Test

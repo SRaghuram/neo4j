@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
-import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
@@ -23,11 +22,6 @@ import java.util.Optional;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-import static com.neo4j.causalclustering.catchup.CatchupResult.E_GENERAL_ERROR;
-import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
-import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
-import static java.lang.String.format;
 
 public class StoreDownloader
 {
@@ -58,20 +52,13 @@ public class StoreDownloader
 
         if ( !database.isEmpty() )
         {
-            CatchupResult catchupResult = tryCatchup( database, addressProvider, components.remoteStore() );
-            if ( catchupResult == SUCCESS_END_OF_STREAM )
+            if ( tryCatchup( database, addressProvider, components.remoteStore() ) )
             {
                 return true;
             }
-            else if ( catchupResult == E_TRANSACTION_PRUNED )
-            {
-                String message = "Member at %s has pruned the transaction logs necessary for a catchup and a full store copy is required.";
-                log.warn( format( message, primaryAddress ) );
-                database.delete();
-            }
             else
             {
-                return false;
+                database.delete();
             }
         }
 
@@ -107,20 +94,18 @@ public class StoreDownloader
     /**
      * @return true if catchup was successful.
      */
-    private CatchupResult tryCatchup( LocalDatabase database, CatchupAddressProvider addressProvider, RemoteStore remoteStore ) throws IOException
+    private boolean tryCatchup( LocalDatabase database, CatchupAddressProvider addressProvider, RemoteStore remoteStore ) throws IOException
     {
-        CatchupResult catchupResult;
         try
         {
-            catchupResult = remoteStore.tryCatchingUp( addressProvider, database.storeId(), database.databaseLayout(), false, false );
+            remoteStore.tryCatchingUp( addressProvider, database.storeId(), database.databaseLayout(), false, false );
+            return true;
         }
         catch ( StoreCopyFailedException e )
         {
             log.warn( "Failed to catch up", e );
-            return E_GENERAL_ERROR;
+            return false;
         }
-
-        return catchupResult;
     }
 
     private boolean replaceWithStore( StoreId remoteStoreId, CatchupAddressProvider addressProvider, StoreCopyProcess storeCopy )

@@ -5,14 +5,14 @@
  */
 package org.neo4j.backup.impl;
 
-import java.io.IOException;
-import java.util.Objects;
-
-import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.identity.StoreId;
+
+import java.io.IOException;
+import java.util.Objects;
+
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -119,12 +119,7 @@ class DefaultBackupStrategy extends LifecycleAdapter implements BackupStrategy
     {
         try
         {
-            CatchupResult catchupResult = backupDelegator.tryCatchingUp( fromAddress, storeId, databaseLayout );
-            if ( catchupResult != CatchupResult.SUCCESS_END_OF_STREAM )
-            {
-                throw new BackupExecutionException( new StoreCopyFailedException(
-                        "End state of catchup was not a successful end of stream: " + catchupResult ) );
-            }
+            backupDelegator.tryCatchingUp( fromAddress, storeId, databaseLayout );
         }
         catch ( StoreCopyFailedException e )
         {

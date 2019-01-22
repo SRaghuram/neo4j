@@ -65,7 +65,7 @@ public class RemoteStore
         this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
-    public CatchupResult tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout,
+    public void tryCatchingUp( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId, DatabaseLayout databaseLayout,
             boolean keepTxLogsInDir,
             boolean forceTransactionLogRotation )
             throws StoreCopyFailedException, IOException
@@ -74,7 +74,7 @@ public class RemoteStore
         log.info( "Store commit state: " + commitState );
 
         TxPullRequestContext txPullRequestContext = createContextFromCatchingUp( expectedStoreId, commitState );
-        return pullTransactions( catchupAddressProvider, databaseLayout, txPullRequestContext, false, keepTxLogsInDir, forceTransactionLogRotation );
+        pullTransactions( catchupAddressProvider, databaseLayout, txPullRequestContext, false, keepTxLogsInDir, forceTransactionLogRotation );
     }
 
     public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout, boolean rotateTransactionsManually )
@@ -88,11 +88,7 @@ public class RemoteStore
         log.info( "Store files need to be recovered starting from: %s", requiredTransactionRange );
 
         TxPullRequestContext context = createContextFromStoreCopy( requiredTransactionRange, expectedStoreId );
-        CatchupResult catchupResult = pullTransactions( addressProvider, destinationLayout, context, true, true, rotateTransactionsManually );
-        if ( catchupResult != SUCCESS_END_OF_STREAM )
-        {
-            throw new StoreCopyFailedException( "Failed to pull transactions: " + catchupResult );
-        }
+        pullTransactions( addressProvider, destinationLayout, context, true, true, rotateTransactionsManually );
     }
 
     private MaximumTotalTime getTerminationCondition()
@@ -100,7 +96,7 @@ public class RemoteStore
         return new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ).getSeconds(), TimeUnit.SECONDS );
     }
 
-    private CatchupResult pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,
+    private void pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,
             boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir, boolean rotateTransactionsManually )
             throws StoreCopyFailedException
     {
@@ -112,7 +108,6 @@ public class RemoteStore
 
             executor.pullTransactions( context, writer, txPullClient );
             storeCopyClientMonitor.finishReceivingTransactions( writer.lastTx() );
-            return SUCCESS_END_OF_STREAM;
         }
         catch ( IOException e )
         {
