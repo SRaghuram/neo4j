@@ -126,6 +126,7 @@ mkdir -p %{buildroot}/%{neo4jhome}/certificates
 mkdir -p %{buildroot}/%{neo4jhome}/plugins
 mkdir -p %{buildroot}/%{neo4jhome}/data/databases
 mkdir -p %{buildroot}/%{neo4jhome}/data/dbms
+mkdir -p %{buildroot}/%{neo4jhome}/data/tx-logs
 mkdir -p %{buildroot}/%{neo4jhome}/import
 mkdir -p %{buildroot}/%{_sysconfdir}/neo4j
 mkdir -p %{buildroot}/%{_localstatedir}/log/neo4j
