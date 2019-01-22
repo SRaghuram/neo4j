@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,10 +53,7 @@ import org.neo4j.logging.LogProvider;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.active_database;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.ignore_store_lock;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
-import static org.neo4j.kernel.configuration.Settings.FALSE;
-import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
@@ -181,13 +177,6 @@ public class CoreBootstrapper
         params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
         params.put( GraphDatabaseSettings.active_database.name(), databaseConfig.get( active_database ) );
 
-        /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
-        params.put( GraphDatabaseSettings.pagecache_warmup_enabled.name(), FALSE );
-        params.put( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
-
-        /* Touching the store is allowed during bootstrapping. */
-        params.put( ignore_store_lock.name(), TRUE );
-
         return params;
     }
 
@@ -243,7 +232,6 @@ public class CoreBootstrapper
      * This method has the purpose of both creating a database and optionally initializing its contents.
      */
     private void initializeDatabase( DatabaseLayout databaseLayout, Config databaseConfig, DatabaseInitializer databaseInitializer )
-            throws IOException
     {
         Map<String,String> params = initializerParams( databaseConfig, databaseLayout );
 
