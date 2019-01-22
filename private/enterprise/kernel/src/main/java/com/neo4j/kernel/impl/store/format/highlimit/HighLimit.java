@@ -6,8 +6,8 @@
 package com.neo4j.kernel.impl.store.format.highlimit;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
-import org.neo4j.kernel.impl.store.format.Capability;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
+import org.neo4j.kernel.impl.store.format.LuceneCapability;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
@@ -37,9 +37,9 @@ public class HighLimit extends BaseRecordFormats
 
     protected HighLimit()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_0_0.introductionVersion(), 6, Capability.DENSE_NODES,
-                Capability.RELATIONSHIP_TYPE_3BYTES, Capability.SCHEMA, Capability.LUCENE_7, Capability.POINT_PROPERTIES, Capability.TEMPORAL_PROPERTIES,
-                Capability.SECONDARY_RECORD_UNITS );
+        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_0_0.introductionVersion(), 6, LuceneCapability.DENSE_NODES,
+                LuceneCapability.RELATIONSHIP_TYPE_3BYTES, LuceneCapability.SCHEMA, LuceneCapability.LUCENE_7, LuceneCapability.POINT_PROPERTIES, LuceneCapability.TEMPORAL_PROPERTIES,
+                LuceneCapability.SECONDARY_RECORD_UNITS );
     }
 
     @Override

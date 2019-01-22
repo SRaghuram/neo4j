@@ -22,7 +22,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
-import org.neo4j.kernel.impl.transaction.state.NeoStoreFileIndexListing;
+import org.neo4j.kernel.impl.transaction.state.SchemaAndIndexingFileIndexListing;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -42,7 +42,7 @@ public class PrepareStoreCopyFilesTest
     @Rule
     public final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemAbstraction );
     private PrepareStoreCopyFiles prepareStoreCopyFiles;
-    private NeoStoreFileIndexListing indexListingMock;
+    private SchemaAndIndexingFileIndexListing indexListingMock;
     private DatabaseLayout databaseLayout;
     private DatabaseFileListing.StoreFileListingBuilder fileListingBuilder;
 
@@ -53,7 +53,7 @@ public class PrepareStoreCopyFilesTest
         fileListingBuilder = mock( DatabaseFileListing.StoreFileListingBuilder.class, CALLS_REAL_METHODS );
         databaseLayout = testDirectory.databaseLayout();
         when( dataSource.getDatabaseLayout() ).thenReturn( databaseLayout );
-        indexListingMock = mock( NeoStoreFileIndexListing.class );
+        indexListingMock = mock( SchemaAndIndexingFileIndexListing.class );
         when( indexListingMock.getIndexIds() ).thenReturn( new LongHashSet() );
         DatabaseFileListing storeFileListing = mock( DatabaseFileListing.class );
         when( storeFileListing.getNeoStoreFileIndexListing() ).thenReturn( indexListingMock );

@@ -9,8 +9,8 @@ import com.neo4j.kernel.impl.store.format.highlimit.DynamicRecordFormat;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
-import org.neo4j.kernel.impl.store.format.Capability;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
+import org.neo4j.kernel.impl.store.format.LuceneCapability;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
@@ -45,8 +45,8 @@ public class HighLimitV3_1_0 extends BaseRecordFormats
 
     public HighLimitV3_1_0()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V3_1_0.introductionVersion(), 3, Capability.DENSE_NODES,
-                Capability.RELATIONSHIP_TYPE_3BYTES, Capability.SCHEMA, Capability.LUCENE_5, Capability.SECONDARY_RECORD_UNITS );
+        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V3_1_0.introductionVersion(), 3, LuceneCapability.DENSE_NODES,
+                LuceneCapability.RELATIONSHIP_TYPE_3BYTES, LuceneCapability.SCHEMA, LuceneCapability.LUCENE_5, LuceneCapability.SECONDARY_RECORD_UNITS );
     }
 
     @Override

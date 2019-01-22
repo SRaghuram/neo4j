@@ -5,14 +5,15 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit.v340;
 
+import com.neo4j.kernel.impl.store.format.highlimit.DynamicRecordFormat;
+import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
+
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
-import org.neo4j.kernel.impl.store.format.Capability;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
+import org.neo4j.kernel.impl.store.format.LuceneCapability;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.StoreVersion;
-import com.neo4j.kernel.impl.store.format.highlimit.DynamicRecordFormat;
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
 import org.neo4j.kernel.impl.store.format.standard.LabelTokenRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.PropertyKeyTokenRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipTypeTokenRecordFormat;
@@ -41,9 +42,9 @@ public class HighLimitV3_4_0 extends BaseRecordFormats
 
     protected HighLimitV3_4_0()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V3_4_0.introductionVersion(), 5, Capability.DENSE_NODES,
-                Capability.RELATIONSHIP_TYPE_3BYTES, Capability.SCHEMA, Capability.LUCENE_5, Capability.POINT_PROPERTIES, Capability.TEMPORAL_PROPERTIES,
-                Capability.SECONDARY_RECORD_UNITS );
+        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V3_4_0.introductionVersion(), 5, LuceneCapability.DENSE_NODES,
+                LuceneCapability.RELATIONSHIP_TYPE_3BYTES, LuceneCapability.SCHEMA, LuceneCapability.LUCENE_5, LuceneCapability.POINT_PROPERTIES, LuceneCapability.TEMPORAL_PROPERTIES,
+                LuceneCapability.SECONDARY_RECORD_UNITS );
     }
 
     @Override
