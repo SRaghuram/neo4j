@@ -46,6 +46,7 @@ import org.neo4j.ssl.SslPolicy;
 
 import static com.neo4j.security.configuration.CommercialSecuritySettings.isSystemDatabaseEnabled;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -81,7 +82,8 @@ public class CommercialCoreEditionModule extends EnterpriseCoreEditionModule
             ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService, databaseInitializerMap::get );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), platformModule, storage, databaseService,
+                dbName -> databaseInitializerMap.getOrDefault( dbName, NO_INITIALIZATION ) );
     }
 
     @Override

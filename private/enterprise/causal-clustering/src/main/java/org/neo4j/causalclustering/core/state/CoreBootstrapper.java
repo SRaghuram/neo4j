@@ -55,6 +55,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NA
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.active_database;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_logs_location;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
 import static org.neo4j.kernel.impl.recovery.RecoveryRequiredChecker.assertRecoveryIsNotRequired;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
@@ -181,7 +182,7 @@ public class CoreBootstrapper
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
 
-        bootstrapDatabase( activeDatabase, activeDatabaseParams, activeDatabaseFilteredConfig, null );
+        bootstrapDatabase( activeDatabase, activeDatabaseParams, activeDatabaseFilteredConfig, NO_INITIALIZATION );
         appendNullTransactionLogEntryToSetRaftIndexToMinusOne( activeDatabase.databaseLayout(), activeDatabaseFilteredConfig );
 
         IdAllocationState activeDatabaseIdAllocationState = deriveIdAllocationState( activeDatabase.databaseLayout() );
@@ -262,10 +263,7 @@ public class CoreBootstrapper
     {
         try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( databaseDirectory, params ) )
         {
-            if ( databaseInitializer != null )
-            {
-                databaseInitializer.initialize( temporaryDatabase.graphDatabaseService() );
-            }
+            databaseInitializer.initialize( temporaryDatabase.graphDatabaseService() );
         }
     }
 
