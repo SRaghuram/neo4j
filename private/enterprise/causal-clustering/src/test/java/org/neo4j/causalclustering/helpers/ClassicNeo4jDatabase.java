@@ -35,52 +35,52 @@ public class ClassicNeo4jDatabase
         return databaseLayout;
     }
 
-    public static Neo4jStoreBuilder builder( File baseDir, FileSystemAbstraction fsa )
+    public static Neo4jDatabaseBuilder builder( File storeDirectory, FileSystemAbstraction fsa )
     {
-        return new Neo4jStoreBuilder( baseDir, fsa );
+        return new Neo4jDatabaseBuilder( storeDirectory, fsa );
     }
 
-    public static class Neo4jStoreBuilder
+    public static class Neo4jDatabaseBuilder
     {
         private String dbName = "graph.db";
         private boolean needRecover;
         private int nrOfNodes = 10;
         private String recordFormat = Standard.LATEST_NAME;
-        private final File baseDir;
+        private final File storeDirectory;
         private final FileSystemAbstraction fsa;
         private String logicalLogsLocation = "";
 
-        Neo4jStoreBuilder( File baseDir, FileSystemAbstraction fsa )
+        Neo4jDatabaseBuilder( File storeDirectory, FileSystemAbstraction fsa )
         {
-            this.baseDir = baseDir;
+            this.storeDirectory = storeDirectory;
             this.fsa = fsa;
         }
 
-        public Neo4jStoreBuilder dbName( String string )
+        public Neo4jDatabaseBuilder dbName( String string )
         {
             dbName = string;
             return this;
         }
 
-        public Neo4jStoreBuilder needToRecover()
+        public Neo4jDatabaseBuilder needToRecover()
         {
             needRecover = true;
             return this;
         }
 
-        public Neo4jStoreBuilder amountOfNodes( int nodes )
+        public Neo4jDatabaseBuilder amountOfNodes( int nodes )
         {
             nrOfNodes = nodes;
             return this;
         }
 
-        public Neo4jStoreBuilder recordFormats( String format )
+        public Neo4jDatabaseBuilder recordFormats( String format )
         {
             recordFormat = format;
             return this;
         }
 
-        public Neo4jStoreBuilder logicalLogsLocation( String logicalLogsLocation )
+        public Neo4jDatabaseBuilder logicalLogsLocation( String logicalLogsLocation )
         {
             this.logicalLogsLocation = logicalLogsLocation;
             return this;
@@ -88,13 +88,13 @@ public class ClassicNeo4jDatabase
 
         public ClassicNeo4jDatabase build() throws IOException
         {
-            createStore();
-            return new ClassicNeo4jDatabase( new File( baseDir, dbName ) );
+            createDatabase();
+            return new ClassicNeo4jDatabase( new File( storeDirectory, dbName ) );
         }
 
-        private void createStore() throws IOException
+        private void createDatabase() throws IOException
         {
-            File storeDir = new File( baseDir, dbName );
+            File storeDir = new File( storeDirectory, dbName );
             GraphDatabaseService db = new TestGraphDatabaseFactory()
                     .setFileSystem( fsa )
                     .newEmbeddedDatabaseBuilder( storeDir )
@@ -116,7 +116,7 @@ public class ClassicNeo4jDatabase
 
             if ( needRecover )
             {
-                File tmpLogs = new File( baseDir, "unrecovered" );
+                File tmpLogs = new File( storeDirectory, "unrecovered" );
                 fsa.mkdir( tmpLogs );
                 File txLogsDir = new File( storeDir, logicalLogsLocation );
                 for ( File file : fsa.listFiles( txLogsDir, TransactionLogFiles.DEFAULT_FILENAME_FILTER ) )

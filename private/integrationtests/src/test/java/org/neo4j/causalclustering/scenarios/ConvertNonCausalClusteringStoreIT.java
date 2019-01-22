@@ -61,9 +61,9 @@ public class ConvertNonCausalClusteringStoreIT
     {
         // given
         TestDirectory testDirectory = clusterRule.testDirectory();
-        File baseDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
+        File storeDirectory = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
         int classicNodeCount = 1024;
-        File classicNeo4jDatabase = createDatabase( baseDir, classicNodeCount ).layout().databaseDirectory();
+        File classicNeo4jDatabase = createDatabase( storeDirectory, classicNodeCount ).layout().databaseDirectory();
 
         Cluster<?> cluster = clusterRule.withRecordFormat( recordFormat ).createCluster();
 
@@ -109,11 +109,11 @@ public class ConvertNonCausalClusteringStoreIT
         }
     }
 
-    private ClassicNeo4jDatabase createDatabase( File baseDir, int classicNodeCount ) throws IOException
+    private ClassicNeo4jDatabase createDatabase( File storeDirectory, int classicNodeCount ) throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            return ClassicNeo4jDatabase.builder( baseDir, fileSystem ).amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
+            return ClassicNeo4jDatabase.builder( storeDirectory, fileSystem ).amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
         }
     }
 }
