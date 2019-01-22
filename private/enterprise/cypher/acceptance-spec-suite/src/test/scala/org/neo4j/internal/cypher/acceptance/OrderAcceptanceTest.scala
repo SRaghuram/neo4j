@@ -673,7 +673,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     makeJoeAndFriends()
     val query =
       """MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Jo'
+        |WHERE u.start = true
         |SET u.name = 'joe'
         |RETURN u.name, u.foo
         |ORDER BY u.name ASC, u.foo DESC""".stripMargin
@@ -699,13 +699,13 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val query =
       """
         |MATCH (u:Person)-[f:FRIEND]->(p:Person)-[r:READ]->(b:Book)
-        |WHERE u.name STARTS WITH 'Jo'
+        |WHERE u.start = true
         |WITH u, b
         |ORDER BY u.name
         |RETURN u.name, b.title
         |ORDER BY u.name, b.title
       """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.All, query)
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Expand(All)").onTopOf(                                                          // 8 rows
@@ -731,7 +731,6 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should plan sort with property on non-variable") {
-    makeJoeAndFriends()
     val query =
       """
         |WITH [{name: 'a'},{name: 'b'},{name: 'c'}] AS ns
@@ -744,8 +743,8 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   private def makeJoeAndFriends(friendCount:Int = 10): Unit = {
-    val joe = createLabeledNode(Map("name" -> s"Joe", "foo" -> 0), "Person")
-    val joseph = createLabeledNode(Map("name" -> s"Joseph", "foo" -> 1), "Person")
+    val joe = createLabeledNode(Map("name" -> s"Joe", "foo" -> 0, "start" -> true), "Person")
+    val joseph = createLabeledNode(Map("name" -> s"Joseph", "foo" -> 1, "start" -> true), "Person")
 
     val friends = Range(0, friendCount).map(f => createLabeledNode(Map("name" -> s"Jane_$f"), "Person"))
     friends.reduce { (previous, friend) => relate(previous, friend, "FRIEND"); friend }
@@ -754,7 +753,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(friends(i), book, "READ")
     }
 
-    val relCount = if (friendCount < 6) friendCount else 4 // friends(relCount+2) has to exist
+    val relCount = if (friendCount < 6) friendCount - 2 else 4 // friends(relCount+2) has to exist
     for (i <- 0 until relCount) {
       relate(joe, friends(i), "FRIEND")
       relate(joseph, friends(i+2), "FRIEND")
