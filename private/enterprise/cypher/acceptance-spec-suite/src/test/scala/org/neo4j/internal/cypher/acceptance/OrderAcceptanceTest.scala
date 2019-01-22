@@ -27,8 +27,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   }
 
   test("should sort first unaliased and then aliased columns in the right order") {
-    // TODO 3.5 returns different results until ~3.5.2
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday", expectedDifferentResults = Configs.Version3_5)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
         .aPlan("Sort")
       .withOrder(ProvidedOrder.asc("anon[54]").asc("bday"))

@@ -1,2 +1,0 @@
-// TODO: remove when 3.5.2 is released
-Feature "OptionalMatchAcceptance": Scenario "optional match with OR where clause"
