@@ -24,7 +24,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.CappedLogger;
 import org.neo4j.util.VisibleForTesting;
 
-import static com.neo4j.causalclustering.catchup.CatchupResult.E_GENERAL_ERROR;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static java.lang.Long.max;
 import static java.lang.String.format;
@@ -61,8 +60,8 @@ class TxPullRequestExecutor
         long requestedTxId = context.startTxId();
         do
         {
-            CatchupResult response = execute( client, expectedStoreId, writer, requestedTxId );
-            updateState( response, writer, context );
+            Result result = execute( client, expectedStoreId, writer, requestedTxId );
+            updateState( result, writer, context );
             requestedTxId = max( requestedTxId, fallbackOnLastAttempt( writer, context ) );
         }
         while ( shouldContinue() );
@@ -84,7 +83,7 @@ class TxPullRequestExecutor
         return currentTxId;
     }
 
-    private CatchupResult execute( TxPullClient txPullClient, StoreId expectedStoreId, TransactionLogCatchUpWriter writer, long fromTxId )
+    private Result execute( TxPullClient txPullClient, StoreId expectedStoreId, TransactionLogCatchUpWriter writer, long fromTxId )
     {
         try
         {
@@ -92,22 +91,25 @@ class TxPullRequestExecutor
             try
             {
                 log.info( "Pulling transactions from %s starting with txId: %d", fromAddress, fromTxId );
-                return txPullClient.pullTransactions( fromAddress, expectedStoreId, fromTxId, writer ).status();
+                CatchupResult status = txPullClient.pullTransactions( fromAddress, expectedStoreId, fromTxId, writer ).status();
+                return status == SUCCESS_END_OF_STREAM ? Result.SUCCESS : Result.ERROR;
             }
             catch ( ConnectException e )
             {
                 connectionErrorLogger.info( format( "Unable to connect. [Address: %s] [Message: %s]", fromAddress, e.getMessage() ) );
+                return Result.TRANSIENT_ERROR;
             }
             catch ( Exception e )
             {
                 log.warn( format( "Unexpected exception when pulling transactions. [Address: %s]", fromAddress ), e );
+                return Result.ERROR;
             }
         }
         catch ( CatchupAddressResolutionException e )
         {
             log.info( "Unable to find a suitable address to pull transactions from" );
+            return Result.TRANSIENT_ERROR;
         }
-        return E_GENERAL_ERROR;
     }
 
     private boolean shouldContinue()
@@ -115,18 +117,18 @@ class TxPullRequestExecutor
         return currentState != State.COMPLETE;
     }
 
-    private void updateState( CatchupResult response, TransactionLogCatchUpWriter writer, TxPullRequestContext context ) throws StoreCopyFailedException
+    private void updateState( Result result, TransactionLogCatchUpWriter writer, TxPullRequestContext context ) throws StoreCopyFailedException
     {
         long currentHighest = max( highestTx, writer.lastTx() );
         try
         {
-            boolean completed = context.constraintReached( currentHighest ) && response == SUCCESS_END_OF_STREAM;
+            boolean completed = context.constraintReached( currentHighest ) && result == Result.SUCCESS;
             if ( completed )
             {
                 currentState = State.COMPLETE;
                 return;
             }
-            currentState = checkProgress( currentHighest );
+            currentState = checkProgress( currentHighest, result );
         }
         finally
         {
@@ -134,7 +136,7 @@ class TxPullRequestExecutor
         }
     }
 
-    private State checkProgress( long lastWrittenTx ) throws StoreCopyFailedException
+    private State checkProgress( long lastWrittenTx, Result result ) throws StoreCopyFailedException
     {
         if ( hasProgressed( lastWrittenTx ) )
         {
@@ -148,7 +150,7 @@ class TxPullRequestExecutor
             {
                 throw new StoreCopyFailedException( "Pulling tx failed consecutively without progress" );
             }
-            if ( resettableCondition.canContinue() )
+            if ( resettableCondition.canContinue() && result != Result.ERROR )
             {
                 return State.NORMAL;
             }
@@ -185,6 +187,13 @@ class TxPullRequestExecutor
                 return catchupAddressProvider.secondary();
             }
         }
+    }
+
+    private enum Result
+    {
+        SUCCESS,
+        TRANSIENT_ERROR,
+        ERROR
     }
 
     private enum State
