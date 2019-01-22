@@ -71,7 +71,7 @@ class TxPullRequestExecutor
     }
 
     /**
-     * For a particular scenario when seeding a cluster from a store with no tx logs. We will result to fallback id on last attempt if no progress has been made.
+     * For a particular scenario when seeding a cluster from a store with no tx logs. We will result to fallback id on last attempt if no progress has been made
      */
     private long fallbackOnLastAttempt( TransactionLogCatchUpWriter writer, TxPullRequestContext context )
     {

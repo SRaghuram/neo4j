@@ -136,7 +136,7 @@ public class SupportedProtocolCreatorTest
         ApplicationSupportedProtocols supportedCatchupProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getMinimumCatchupProtocols( 2 );
 
         // then
-        assertThat( supportedCatchupProtocols.versions(), contains( 2 ) );
+        assertThat( supportedCatchupProtocols.versions(), contains( 2, 3 ) );
     }
 
     @Test

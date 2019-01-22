@@ -52,7 +52,7 @@ class TxPullRequestExecutorTest
     @BeforeEach
     void setUp()
     {
-        lastTxTracker = new AtomicLong(-1);
+        lastTxTracker = new AtomicLong( -1 );
         writer = mock( TransactionLogCatchUpWriter.class );
         when( writer.lastTx() ).thenAnswer( i -> lastTxTracker.longValue() );
         addressProvider = mock( CatchupAddressProvider.class );
@@ -243,7 +243,7 @@ class TxPullRequestExecutorTest
 
     private static class MaxCount implements ResettableCondition
     {
-        int count = 0;
+        int count;
 
         @Override
         public boolean canContinue()

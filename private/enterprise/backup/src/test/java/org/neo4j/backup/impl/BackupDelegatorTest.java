@@ -23,8 +23,8 @@ import java.io.IOException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 
-import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -61,7 +61,8 @@ public class BackupDelegatorTest
         subject.tryCatchingUp( fromAddress, expectedStoreId, databaseLayout );
 
         // then
-        verify( remoteStore ).tryCatchingUp( fromSingleAddress( fromAddress ), expectedStoreId, databaseLayout, true, true );
+        verify( remoteStore ).tryCatchingUp( any( CatchupAddressProvider.SingleAddressProvider.class ), eq( expectedStoreId ), eq( databaseLayout ), eq( true ),
+                eq( true ) );
     }
 
     @Test

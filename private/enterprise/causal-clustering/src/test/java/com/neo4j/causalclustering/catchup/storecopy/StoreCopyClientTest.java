@@ -21,15 +21,17 @@ import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 import java.io.File;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -46,7 +48,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
@@ -57,10 +59,11 @@ import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_2;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_3;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -72,22 +75,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@RunWith( Parameterized.class )
-public class StoreCopyClientTest
+@ExtendWith( SuppressOutputExtension.class )
+class StoreCopyClientTest
 {
-
     private static final long LAST_CHECKPOINTED_TX = 11;
 
-    @Parameterized.Parameters( name = "catchup-protocol:{0}" )
     public static Protocol.ApplicationProtocol[] protocols()
     {
         return new Protocol.ApplicationProtocol[]{CATCHUP_1, CATCHUP_2, CATCHUP_3};
     }
 
-    @Rule
-    public final ExpectedException expectedException = ExpectedException.none();
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
     private final Monitors monitors = new Monitors();
@@ -106,32 +103,38 @@ public class StoreCopyClientTest
     private LongSet indexIds = LongSets.immutable.of( 13 );
     private ConstantTimeTimeoutStrategy backOffStrategy;
     private MockCatchupClient catchupClient;
-    private final Protocol.ApplicationProtocol protocol;
     private final MockCatchupClient.MockClientResponses clientResponses = responses();
     private final CatchupClientV1 v1Client = spy( new MockClientV1( clientResponses ) );
     private final CatchupClientV2 v2Client = spy( new MockClientV2( clientResponses ) );
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
 
-    public StoreCopyClientTest( Protocol.ApplicationProtocol protocol )
-    {
-        this.protocol = protocol;
-    }
+    @Target( ElementType.METHOD )
+    @Retention( RetentionPolicy.RUNTIME )
+    @ParameterizedTest( name = "{0}" )
+    @MethodSource( "protocols" )
+    @interface TestWithCatchupProtocols
+    { }
 
-    @Before
-    public void setup() throws Throwable
+    @BeforeEach
+    void setup() throws Throwable
     {
-        catchupClient = new MockCatchupClient( protocol, v1Client, v2Client, v3Client );
-        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
         backOffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
         subject = new StoreCopyClient( catchupClientFactory, DEFAULT_DATABASE_NAME, () -> monitors, logProvider, backOffStrategy );
     }
 
-    @Test
-    public void clientRequestsAllFilesListedInListingResponse() throws Exception
+    private void mockClient( Protocol.ApplicationProtocol protocol ) throws Exception
+    {
+        catchupClient = new MockCatchupClient( protocol, v1Client, v2Client, v3Client );
+        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
+    }
+
+    @TestWithCatchupProtocols
+    void clientRequestsAllFilesListedInListingResponse( Protocol.ApplicationProtocol protocol ) throws Exception
     {
         // given
+        mockClient( protocol );
         // setup fake catchup client responses. Lots of files, and any request for a store or index file will succeed
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
@@ -142,15 +145,16 @@ public class StoreCopyClientTest
         subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation );
 
         // then there are as many requests to the server for individual requests
-        List<String> filteredRequests = getRequestFileNames();
+        List<String> filteredRequests = getRequestFileNames( protocol );
         List<String> expectedFiles = Stream.of( serverFiles ).map( File::getName ).collect( Collectors.toList() );
         assertThat( expectedFiles, containsInAnyOrder( filteredRequests.toArray() ) );
     }
 
-    @Test
-    public void shouldRetrieveCorrectStoreIdForGivenDatabaseName() throws Exception
+    @TestWithCatchupProtocols
+    void shouldRetrieveCorrectStoreIdForGivenDatabaseName( Protocol.ApplicationProtocol protocol ) throws Exception
     {
         // given
+        mockClient( protocol );
         String altDbName = "alternative.db";
         StoreId defaultDbStoreId = new StoreId( 6, 3, 2, 6 );
         StoreId altDbStoreId = new StoreId( 4, 6,1,9 );
@@ -180,17 +184,18 @@ public class StoreCopyClientTest
         }
     }
 
-    @Test
-    public void shouldNotAwaitOnSuccess() throws Exception
+    @TestWithCatchupProtocols
+    void shouldNotAwaitOnSuccess( Protocol.ApplicationProtocol protocol ) throws Exception
     {
         // given
+        mockClient( protocol );
         TimeoutStrategy.Timeout mockedTimeout = mock( TimeoutStrategy.Timeout.class );
         TimeoutStrategy backoffStrategy = mock( TimeoutStrategy.class );
         when( backoffStrategy.newTimeout() ).thenReturn( mockedTimeout );
 
         subject = new StoreCopyClient( catchupClientFactory, DEFAULT_DATABASE_NAME, () -> monitors, logProvider, backoffStrategy );
 
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
         clientResponses
                 .withPrepareStoreCopyResponse( prepareStoreCopyResponse )
@@ -205,14 +210,15 @@ public class StoreCopyClientTest
         verify( mockedTimeout, never() ).getMillis();
     }
 
-    @Test
-    public void shouldFailIfTerminationConditionFails()
+    @TestWithCatchupProtocols
+    void shouldFailIfTerminationConditionFails( Protocol.ApplicationProtocol protocol ) throws Exception
     {
+        mockClient( protocol );
         // given a file will fail an expected number of times
         // and requesting the individual file will fail
         StoreCopyFinishedResponse failed = expectedStoreCopyFinishedResponse( E_TOO_FAR_BEHIND, protocol );
         // and the initial list+count store files request is successful
-        PrepareStoreCopyResponse initialListingOfFilesResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
+        PrepareStoreCopyResponse initialListingOfFilesResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, LAST_CHECKPOINTED_TX );
 
         clientResponses
                 .withStoreFilesResponse( failed )
@@ -236,9 +242,10 @@ public class StoreCopyClientTest
         fail( "Expected a StoreCopyFailedException" );
     }
 
-    @Test
-    public void errorOnListingStore() throws Exception
+    @TestWithCatchupProtocols
+    void errorOnListingStore( Protocol.ApplicationProtocol protocol ) throws Exception
     {
+        mockClient( protocol );
         // given store listing fails
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_LISTING_STORE );
 
@@ -251,17 +258,18 @@ public class StoreCopyClientTest
 
         clientResponses.withPrepareStoreCopyResponse( ignored -> responses.poll().get() );
 
-        // then
-        expectedException.expectMessage( "Preparing store failed due to: E_LISTING_STORE" );
-        expectedException.expect( StoreCopyFailedException.class );
-
         // when
-        subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation );
+        StoreCopyFailedException exception = assertThrows( StoreCopyFailedException.class,
+                () -> subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation ) );
+
+        // then
+        assertEquals( "Preparing store failed due to: E_LISTING_STORE", exception.getMessage() );
     }
 
-    @Test
-    public void storeIdMismatchOnListing() throws Exception
+    @TestWithCatchupProtocols
+    void storeIdMismatchOnListing( Protocol.ApplicationProtocol protocol ) throws Exception
     {
+        mockClient( protocol );
         // given store listing fails
         PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
 
@@ -274,19 +282,21 @@ public class StoreCopyClientTest
 
         clientResponses.withPrepareStoreCopyResponse( ignored -> responses.poll().get() );
 
-        // then
-        expectedException.expectMessage( "Preparing store failed due to: E_STORE_ID_MISMATCH" );
-        expectedException.expect( StoreCopyFailedException.class );
-
         // when
-        subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation );
+        StoreCopyFailedException exception = assertThrows( StoreCopyFailedException.class,
+                () -> subject.copyStoreFiles( catchupAddressProvider, expectedStoreId, expectedStoreFileStream, continueIndefinitely(), targetLocation ) );
+
+        // then
+        assertEquals( "Preparing store failed due to: E_STORE_ID_MISMATCH", exception.getMessage() );
+
     }
 
-    @Test
-    public void storeFileEventsAreReported() throws Exception
+    @TestWithCatchupProtocols
+    void storeFileEventsAreReported( Protocol.ApplicationProtocol protocol ) throws Exception
     {
+        mockClient( protocol );
         // given
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
 
         clientResponses
@@ -311,11 +321,12 @@ public class StoreCopyClientTest
         verify( storeCopyClientMonitor ).finishReceivingStoreFiles();
     }
 
-    @Test
-    public void snapshotEventsAreReported() throws Exception
+    @TestWithCatchupProtocols
+    void snapshotEventsAreReported( Protocol.ApplicationProtocol protocol ) throws Exception
     {
+        mockClient( protocol );
         // given
-        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, -123L );
+        PrepareStoreCopyResponse prepareStoreCopyResponse = PrepareStoreCopyResponse.success( serverFiles, indexIds, LAST_CHECKPOINTED_TX );
         StoreCopyFinishedResponse success = expectedStoreCopyFinishedResponse( SUCCESS, protocol );
 
         clientResponses
@@ -342,7 +353,7 @@ public class StoreCopyClientTest
         verify( storeCopyClientMonitor ).finishReceivingIndexSnapshots();
     }
 
-    private List<String> getRequestFileNames()
+    private List<String> getRequestFileNames( Protocol.ApplicationProtocol protocol )
     {
 
         ArgumentCaptor<File> fileArgumentCaptor = ArgumentCaptor.forClass( File.class );

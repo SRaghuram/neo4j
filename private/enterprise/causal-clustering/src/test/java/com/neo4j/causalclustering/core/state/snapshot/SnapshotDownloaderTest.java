@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.catchup.MockCatchupClient.MockClientV3;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
+import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.protocol.Protocol;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -87,7 +88,7 @@ public class SnapshotDownloaderTest
 
         CatchupClientV1 v1Client = new MockClientV1( clientResponses );
         CatchupClientV2 v2Client = new MockClientV2( clientResponses );
-        VersionedCatchupClients.CatchupClientV3 v3Client = new MockClientV3( clientResponses );
+        CatchupClientV3 v3Client = new MockClientV3( clientResponses );
 
         VersionedCatchupClients catchupClient = new MockCatchupClient( protocol, v1Client, v2Client, v3Client );
         when( catchupClientFactory.getClient( remoteAddress ) ).thenReturn( catchupClient );

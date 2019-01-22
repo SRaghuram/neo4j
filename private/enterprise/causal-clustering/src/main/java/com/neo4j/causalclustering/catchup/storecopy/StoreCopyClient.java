@@ -67,6 +67,10 @@ public class StoreCopyClient
                     requestWiseTerminationCondition, txIdHandler );
             return txIdHandler.requiredTransactionRange();
         }
+        catch ( StoreCopyFailedException e )
+        {
+            throw e;
+        }
         catch ( Exception e )
         {
             throw new StoreCopyFailedException( e );
@@ -89,7 +93,8 @@ public class StoreCopyClient
             persistentCallToSecondary( addressProvider,
                     c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId ),
                     c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ),
-                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ), storeFileStream, terminationConditions.get(), txIdHandler );
+                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ),
+                    storeFileStream, terminationConditions.get(), txIdHandler );
 
             storeCopyClientMonitor.finishReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
         }
