@@ -47,8 +47,11 @@ object MorselExpressionConverters extends ExpressionConverter {
         case functions.Collect =>
           Some(CollectOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
 
-        case _: AggregatingFunction if c.distinct =>
+        case _: AggregatingFunction =>
           throw new CantCompileQueryException(s"Aggregating function ${c.name} is not yet supported by the morsel runtime")
+
+        case functions.Linenumber | functions.Filename =>
+          throw new CantCompileQueryException(s"Function ${c.name} is not yet supported by the morsel runtime")
 
         case _ => None
       }

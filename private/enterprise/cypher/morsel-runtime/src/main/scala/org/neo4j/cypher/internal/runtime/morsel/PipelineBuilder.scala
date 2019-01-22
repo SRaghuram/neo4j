@@ -12,10 +12,10 @@ import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.AggregationExpressionOperator
 import org.neo4j.cypher.internal.runtime.morsel.operators._
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
@@ -224,6 +224,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
              _: plans.Eager | // We do not support eager plans since the resulting iterators cannot be recreated and fed a single input row at a time
              _: plans.EmptyResult | // Eagerly exhausts the source iterator
              _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
+             _: plans.LoadCSV | // Not verified to be thread safe
              _: plans.ProcedureCall => // Even READ_ONLY Procedures are not allowed because they will/might access the
                                        // transaction via Core API reads, which is not thread safe because of the transaction
                                        // bound CursorFactory.

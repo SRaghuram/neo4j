@@ -8,15 +8,10 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 import cypher.features.Phase
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.runtime.planDescription.Argument
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{PlannerVersion => IPDPlannerVersion}
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{RuntimeVersion => IPDRuntimeVersion}
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Planner => IPDPlanner}
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Runtime => IPDRuntime}
+import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Planner => IPDPlanner, PlannerVersion => IPDPlannerVersion, Runtime => IPDRuntime, RuntimeVersion => IPDRuntimeVersion}
 import org.scalatest.Assertions
 
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * A single scenario, which can be composed to configurations.
@@ -46,7 +41,7 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
       fail(s"did not use ${version.acceptedPlannerVersionNames} planner version - instead $reportedPlannerVersion was used. Scenario $name")
   }
 
-  def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult], maybePhase: Option[String], ignoreMorselRuntimeFailures: Boolean): Unit = {
+  def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult], maybePhase: Option[String]): Unit = {
     internalExecutionResult match {
       case Failure(_) if maybePhase.contains(Phase.compile) =>
         // A compile-time failure is expected and ok
@@ -54,14 +49,12 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
         // Not executed is also expected and ok
       case Failure(e) =>
         val phase = maybePhase.get
-        // TODO: remove when morsel is stable enough
-        if (!ignoreMorselRuntimeFailures || !runtime.acceptedRuntimeNames.contains("MORSEL"))
-          fail(s"""Failed at $phase using $name for query:
-                  |
-                  |$query
-                  |
-                  |(NOTE: This test is marked as expected to fail, but failing at $phase is not ok)
-                  |""".stripMargin, e)
+        fail(s"""Failed at $phase using $name for query:
+                |
+                |$query
+                |
+                |(NOTE: This test is marked as expected to fail, but failing at $phase is not ok)
+                |""".stripMargin, e)
       case Success(result) =>
         val ScenarioConfig(reportedRuntimeName, reportedPlannerName, reportedVersionName, reportedPlannerVersionName) = extractConfiguration(result)
 
