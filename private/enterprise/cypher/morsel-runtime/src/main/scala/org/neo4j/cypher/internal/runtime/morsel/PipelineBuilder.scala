@@ -31,7 +31,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
                       fallbackPipeMapper: PipeMapper)
   extends TreeBuilder[Pipeline] {
 
-  override def create(plan: LogicalPlan): Pipeline = {if (!readOnly)
+  override def create(plan: LogicalPlan): Pipeline = {
     if (!readOnly)
       throw new CantCompileQueryException("Write queries are not supported in the morsel runtime")
 
