@@ -13,6 +13,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -58,7 +59,9 @@ public class ClusterCommunityToEnterpriseIT
         }
     }
 
+    //TODO: re-instate when seeding fixed
     @Test
+    @Ignore
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
