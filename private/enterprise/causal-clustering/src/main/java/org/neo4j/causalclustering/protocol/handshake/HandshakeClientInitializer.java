@@ -71,8 +71,6 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
             handshakeClient.protocol().completeExceptionally( e );
         }
 
-        debugLog.info( "Scheduling handshake (and timeout) local %s remote %s", channel.localAddress(), channel.remoteAddress() );
-
         scheduleHandshake( channel, handshakeClient, handshakeDelay.newTimeout() );
         scheduleTimeout( channel, handshakeClient );
     }
