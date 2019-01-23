@@ -13,6 +13,7 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -21,6 +22,7 @@ public class StoreCopyProcess
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
     private final LocalDatabase localDatabase;
+    private final Config config;
     private final CopiedStoreRecovery copiedStoreRecovery;
     private final Log log;
     private final RemoteStore remoteStore;
@@ -31,6 +33,7 @@ public class StoreCopyProcess
         this.fs = fs;
         this.pageCache = pageCache;
         this.localDatabase = localDatabase;
+        this.config = localDatabase.database().getConfig();
         this.copiedStoreRecovery = copiedStoreRecovery;
         this.remoteStore = remoteStore;
         this.log = logProvider.getLog( getClass() );
@@ -39,12 +42,12 @@ public class StoreCopyProcess
     public void replaceWithStoreFrom( CatchupAddressProvider addressProvider, StoreId expectedStoreId )
             throws IOException, StoreCopyFailedException, DatabaseShutdownException
     {
-        try ( TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, localDatabase.databaseLayout().databaseDirectory() ) )
+        try ( TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, localDatabase.databaseLayout() ) )
         {
             remoteStore.copy( addressProvider, expectedStoreId, tempStore.databaseLayout(), false );
             try
             {
-                copiedStoreRecovery.recoverCopiedStore( tempStore.databaseLayout() );
+                copiedStoreRecovery.recoverCopiedStore( config, tempStore.databaseLayout() );
             }
             catch ( Throwable e )
             {

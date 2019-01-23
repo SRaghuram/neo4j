@@ -51,4 +51,5 @@ public class CommercialInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuild
         config.augment( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.name() );
         return new CommercialNeoServer( config, graphFactory, dependencies );
     }
+
 }

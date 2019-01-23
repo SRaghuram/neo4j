@@ -23,6 +23,7 @@ import java.util.Optional;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStore;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeData;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeDataButNoTransactionLogs;
+import org.neo4j.backup.clusteringsupport.backup_stores.DefaultDatabasesBackup;
 import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStore;
 import org.neo4j.backup.clusteringsupport.cluster_load.ClusterLoad;
 import org.neo4j.backup.clusteringsupport.cluster_load.NoLoad;
@@ -31,6 +32,8 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
@@ -117,7 +120,7 @@ public class NewMemberSeedingIT
         cluster.start();
 
         // when
-        Optional<File> backup = seedStore.generate( baseBackupDir, cluster );
+        Optional<DefaultDatabasesBackup> backupsOpt = seedStore.generate( baseBackupDir, cluster );
 
         // then
         // possibly add load to cluster in between backup
@@ -125,9 +128,11 @@ public class NewMemberSeedingIT
 
         // when
         CoreClusterMember newCoreClusterMember = cluster.addCoreMemberWithId( 3 );
-        if ( backup.isPresent() )
+        if ( backupsOpt.isPresent() )
         {
-            restoreFromBackup( backup.get(), fileSystemRule.get(), newCoreClusterMember );
+            DefaultDatabasesBackup backups = backupsOpt.get();
+            restoreFromBackup( backups.systemDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+            restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         }
 
         // we want the new instance to seed from backup and not delete and re-download the store

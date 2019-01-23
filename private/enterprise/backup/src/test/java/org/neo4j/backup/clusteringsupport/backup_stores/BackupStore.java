@@ -12,5 +12,5 @@ import com.neo4j.causalclustering.common.Cluster;
 
 public interface BackupStore
 {
-    Optional<File> generate( File backupDir, Cluster<?> backupCluster ) throws Exception;
+    Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster<?> backupCluster ) throws Exception;
 }

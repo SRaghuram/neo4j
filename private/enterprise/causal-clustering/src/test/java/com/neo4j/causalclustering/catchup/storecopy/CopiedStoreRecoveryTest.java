@@ -23,10 +23,11 @@ class CopiedStoreRecoveryTest
     @Test
     void shouldThrowIfAlreadyShutdown()
     {
-        CopiedStoreRecovery copiedStoreRecovery = new CopiedStoreRecovery( Config.defaults(), mock( PageCache.class ), new EphemeralFileSystemAbstraction() );
+        CopiedStoreRecovery copiedStoreRecovery = new CopiedStoreRecovery( mock( PageCache.class ), new EphemeralFileSystemAbstraction() );
         copiedStoreRecovery.shutdown();
 
-        Exception exception = assertThrows( Exception.class, () -> copiedStoreRecovery.recoverCopiedStore( DatabaseLayout.of( new File( "nowhere" ) ) ) );
+        Exception exception = assertThrows( Exception.class,
+                () -> copiedStoreRecovery.recoverCopiedStore( Config.defaults(), DatabaseLayout.of( new File( "nowhere" ) ) ) );
         assertEquals( "Abort store-copied store recovery due to database shutdown", exception.getMessage() );
     }
 }

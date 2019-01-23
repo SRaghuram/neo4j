@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStore;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeData;
 import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeDataButNoTransactionLogs;
+import org.neo4j.backup.clusteringsupport.backup_stores.DefaultDatabasesBackup;
 import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStore;
 import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStoreWithoutTransactionLogs;
 import org.neo4j.backup.clusteringsupport.backup_stores.NoStore;
@@ -107,14 +108,16 @@ public class ClusterSeedingIT
     {
         // given
         backupCluster.start();
-        Optional<File> backup = initialStore.generate( baseBackupDir, backupCluster );
+        Optional<DefaultDatabasesBackup> backupsOpt = initialStore.generate( baseBackupDir, backupCluster );
         backupCluster.shutdown();
 
-        if ( backup.isPresent() )
+        if ( backupsOpt.isPresent() )
         {
             for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
             {
-                restoreFromBackup( backup.get(), fileSystemRule.get(), coreClusterMember );
+                DefaultDatabasesBackup backups = backupsOpt.get();
+                restoreFromBackup( backups.systemDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
             }
         }
 
@@ -125,10 +128,11 @@ public class ClusterSeedingIT
         cluster.start();
 
         // then
-        if ( backup.isPresent() )
+        if ( backupsOpt.isPresent() )
         {
-            Config config = Config.defaults( GraphDatabaseSettings.active_database, backup.get().getName() );
-            dataMatchesEventually( DbRepresentation.of( backup.get(), config ), cluster.coreMembers() );
+            DefaultDatabasesBackup backups = backupsOpt.get();
+            Config config = Config.defaults( GraphDatabaseSettings.active_database, backups.defaultDb().getName() );
+            dataMatchesEventually( DbRepresentation.of( backups.defaultDb(), config ), cluster.coreMembers() );
         }
         assertEquals( shouldStoreCopy, fileCopyDetector.hasDetectedAnyFileCopied() );
     }

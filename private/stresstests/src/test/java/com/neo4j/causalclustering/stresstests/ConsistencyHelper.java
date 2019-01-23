@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
 import com.neo4j.causalclustering.catchup.storecopy.TemporaryStoreDirectory;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.configuration.Config;
@@ -27,26 +28,25 @@ final class ConsistencyHelper
     {
     }
 
-    static void assertStoreConsistent( FileSystemAbstraction fs, File storeDir ) throws Exception
+    static void assertStoreConsistent( FileSystemAbstraction fs, DatabaseLayout databaseLayout ) throws Exception
     {
-        File parent = storeDir.getParentFile();
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler );
-              TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, parent ) )
+              TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, databaseLayout ) )
         {
-            fs.copyRecursively( storeDir, tempStore.storeDir() );
+            fs.copyRecursively( databaseLayout.databaseDirectory(), tempStore.storeDir() );
 
-            new CopiedStoreRecovery( Config.defaults(), pageCache, fs )
-                    .recoverCopiedStore( tempStore.databaseLayout() );
+            new CopiedStoreRecovery( pageCache, fs )
+                    .recoverCopiedStore( Config.defaults(), tempStore.databaseLayout() );
 
             ConsistencyCheckService.Result result = runConsistencyCheckTool(
-                    new String[]{storeDir.getAbsolutePath()},
+                    new String[]{databaseLayout.databaseDirectory().getAbsolutePath()},
                     new PrintStream( NULL_OUTPUT_STREAM ),
                     new PrintStream( NULL_OUTPUT_STREAM ) );
 
             if ( !result.isSuccessful() )
             {
-                throw new RuntimeException( "Not consistent database in " + storeDir );
+                throw new RuntimeException( "Not consistent database in " + databaseLayout.databaseDirectory() );
             }
         }
     }

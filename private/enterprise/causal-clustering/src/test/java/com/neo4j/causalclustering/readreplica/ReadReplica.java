@@ -47,7 +47,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
 
     protected final DiscoveryServiceFactory discoveryServiceFactory;
     private final File neo4jHome;
-    protected DatabaseLayout defaultDatabaseLayout;
+    protected final DatabaseLayout defaultDatabaseLayout;
     private final int serverId;
     private final String boltAdvertisedSocketAddress;
     private final Config memberConfig;
@@ -110,6 +110,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         this.monitors = monitors;
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
+        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     public String boltAdvertisedAddress()
@@ -127,7 +128,6 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     {
         database = dbFactory.create( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory, memberId()  );
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         PanicService panicService = database.getDependencyResolver().resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );

@@ -18,6 +18,8 @@ import java.util.UUID;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 
 import static org.neo4j.backup.clusteringsupport.BackupUtil.createBackupFromCore;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public abstract class AbstractStoreGenerator implements BackupStore
 {
@@ -26,12 +28,14 @@ public abstract class AbstractStoreGenerator implements BackupStore
     abstract void modify( File backup ) throws Exception;
 
     @Override
-    public Optional<File> generate( File backupDir, Cluster<?> backupCluster ) throws Exception
+    public Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster<?> backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
-        File backupFromCore = createBackupFromCore( core, backupName(), backupDir );
-        modify( backupFromCore );
-        return Optional.of( backupFromCore );
+        File defaultBackupFromCore = createBackupFromCore( core, backupName( DEFAULT_DATABASE_NAME ), backupDir, DEFAULT_DATABASE_NAME );
+        File systemBackupFromCore = createBackupFromCore( core, backupName( SYSTEM_DATABASE_NAME ), backupDir, SYSTEM_DATABASE_NAME );
+        DefaultDatabasesBackup backups = new DefaultDatabasesBackup( defaultBackupFromCore, systemBackupFromCore );
+        modify( defaultBackupFromCore );
+        return Optional.of( backups );
     }
 
     @Override
@@ -53,8 +57,8 @@ public abstract class AbstractStoreGenerator implements BackupStore
         }
     }
 
-    private static String backupName()
+    private static String backupName( String database )
     {
-        return "backup-" + UUID.randomUUID().toString().substring( 5 );
+        return database + "-backup-" + UUID.randomUUID().toString().substring( 5 );
     }
 }

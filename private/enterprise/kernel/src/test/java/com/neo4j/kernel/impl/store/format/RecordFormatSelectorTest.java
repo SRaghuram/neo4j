@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
@@ -131,7 +132,7 @@ class RecordFormatSelectorTest
     @Test
     void selectForStoreWithThrowingPageCache() throws IOException
     {
-        createNeoStoreFile();
+        createNeoStoreFile( testDirectory.databaseLayout() );
         PageCache pageCache = mock( PageCache.class );
         when( pageCache.pageSize() ).thenReturn( PageCache.PAGE_SIZE );
         when( pageCache.map( any(), anyInt(), any() ) ).thenThrow( new IOException( "No reading..." ) );
@@ -318,14 +319,19 @@ class RecordFormatSelectorTest
 
     private void prepareNeoStoreFile( String storeVersion, PageCache pageCache ) throws IOException
     {
-        File neoStoreFile = createNeoStoreFile();
+        prepareNeoStoreFile( storeVersion, pageCache, testDirectory.databaseLayout() );
+    }
+
+    private void prepareNeoStoreFile( String storeVersion, PageCache pageCache, DatabaseLayout databaseLayout ) throws IOException
+    {
+        File neoStoreFile = createNeoStoreFile( databaseLayout );
         long value = MetaDataStore.versionStringToLong( storeVersion );
         MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value );
     }
 
-    private File createNeoStoreFile() throws IOException
+    private File createNeoStoreFile( DatabaseLayout databaseLayout ) throws IOException
     {
-        File neoStoreFile = testDirectory.databaseLayout().metadataStore();
+        File neoStoreFile = databaseLayout.metadataStore();
         fs.create( neoStoreFile ).close();
         return neoStoreFile;
     }

@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.common.Cluster;
 public class NoStore implements BackupStore
 {
     @Override
-    public Optional<File> generate( File backupDir, Cluster<?> backupCluster )
+    public Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster<?> backupCluster )
     {
         return Optional.empty();
     }

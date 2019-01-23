@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
@@ -39,17 +40,26 @@ public class BackupUtil
         return core.settingValue( "causal_clustering.transaction_listen_address" );
     }
 
-    public static File createBackupFromCore( CoreClusterMember core, String backupName, File baseBackupDir ) throws Exception
+    public static File createBackupFromCore( CoreClusterMember core, String backupName, File baseBackupDir, String database ) throws Exception
     {
-        String[] args = backupArguments( backupAddress( core ), baseBackupDir, backupName );
+        String[] args = backupArguments( backupAddress( core ), baseBackupDir, backupName, database );
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( baseBackupDir, args ) );
         return new File( baseBackupDir, backupName );
     }
 
     public static void restoreFromBackup( File backup, FileSystemAbstraction fsa, ClusterMember clusterMember ) throws IOException, CommandFailed
     {
-        Config config = clusterMember.config();
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, true );
+        restoreFromBackup( backup, fsa, clusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+    }
+
+    public static void restoreFromBackup( File backup, FileSystemAbstraction fsa,
+            ClusterMember clusterMember, String database ) throws IOException, CommandFailed
+    {
+        Config config = Config.fromSettings( clusterMember.config().getRaw() )
+                .withSetting( GraphDatabaseSettings.active_database, database )
+                .withConnectorsDisabled()
+                .build();
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, database, true );
         restoreDatabaseCommand.execute();
     }
 
@@ -65,12 +75,22 @@ public class BackupUtil
 
     public static String[] backupArguments( String from, File backupsDir, String name )
     {
+        return backupArguments( from, backupsDir, name, null );
+    }
+
+    public static String[] backupArguments( String from, File backupsDir, String name, String database )
+    {
         List<String> args = new ArrayList<>();
         args.add( "--from=" + from );
         args.add( "--cc-report-dir=" + backupsDir );
         args.add( "--backup-dir=" + backupsDir );
+        if ( database != null )
+        {
+            args.add( "--database=" + database );
+        }
         args.add( "--name=" + name );
         return args.toArray( new String[0] );
+
     }
 
     public static Config getConfig()

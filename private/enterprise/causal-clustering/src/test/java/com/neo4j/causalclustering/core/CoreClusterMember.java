@@ -146,6 +146,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         this.dbName = memberConfig.get( CausalClusteringSettings.database );
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
+        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     public String boltAdvertisedAddress()
@@ -173,7 +174,6 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     {
         database = dbFactory.create( databasesDirectory, memberConfig,
                 GraphDatabaseDependencies.newDependencies().monitors( monitors ), discoveryServiceFactory );
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         PanicService panicService = database.getDependencyResolver().resolveDependency( PanicService.class );
         panicService.addPanicEventHandler( () -> hasPanicked = true );

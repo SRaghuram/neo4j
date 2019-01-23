@@ -25,10 +25,11 @@ public class TemporaryStoreDirectory implements AutoCloseable
     private LogFiles tempLogFiles;
     private boolean keepStore;
 
-    public TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, File parent ) throws IOException
+    public TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout ) throws IOException
     {
-        this.tempStoreDir = new File( parent, TEMP_COPY_DIRECTORY_NAME );
-        this.tempDatabaseLayout = DatabaseLayout.of( tempStoreDir, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+
+        this.tempStoreDir = databaseLayout.file( TEMP_COPY_DIRECTORY_NAME );
+        this.tempDatabaseLayout = DatabaseLayout.of( tempStoreDir, databaseLayout.getDatabaseName() );
         storeFiles = new StoreFiles( fs, pageCache, ( directory, name ) -> true );
         tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.databaseDirectory(), fs ).build();
         storeFiles.delete( tempStoreDir, tempLogFiles );

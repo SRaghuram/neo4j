@@ -23,15 +23,13 @@ import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 public class CopiedStoreRecovery extends LifecycleAdapter
 {
-    private final Config config;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
 
     private boolean shutdown;
 
-    public CopiedStoreRecovery( Config config, PageCache pageCache, FileSystemAbstraction fs )
+    public CopiedStoreRecovery( PageCache pageCache, FileSystemAbstraction fs )
     {
-        this.config = config;
         this.pageCache = pageCache;
         this.fs = fs;
     }
@@ -42,7 +40,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         shutdown = true;
     }
 
-    public synchronized void recoverCopiedStore( DatabaseLayout databaseLayout ) throws DatabaseShutdownException, IOException
+    public synchronized void recoverCopiedStore( Config config, DatabaseLayout databaseLayout ) throws DatabaseShutdownException, IOException
     {
         if ( shutdown )
         {
@@ -50,7 +48,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         }
         if ( !isStoreAndConfigFormatsCompatible( config, databaseLayout, fs, pageCache, NullLogProvider.getInstance() ) )
         {
-            throw new RuntimeException( failedToStartMessage() );
+            throw new RuntimeException( failedToStartMessage( config ) );
         }
 
         try
@@ -62,7 +60,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
             Throwable peeled = Exceptions.peel( e, t -> !(t instanceof UpgradeNotAllowedException) );
             if ( peeled != null )
             {
-                throw new RuntimeException( failedToStartMessage(), e );
+                throw new RuntimeException( failedToStartMessage( config ), e );
             }
             else
             {
@@ -71,7 +69,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         }
     }
 
-    private String failedToStartMessage()
+    private String failedToStartMessage( Config config )
     {
         String recordFormat = config.get( record_format );
 
