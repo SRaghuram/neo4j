@@ -6,12 +6,13 @@
 package com.neo4j.kernel.monitoring.tracing;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.io.ByteUnit;
-import org.neo4j.io.pagecache.tracing.DummyPageSwapper;
+import org.neo4j.io.pagecache.PageSwapper;
 import org.neo4j.io.pagecache.tracing.EvictionEvent;
 import org.neo4j.io.pagecache.tracing.EvictionRunEvent;
 import org.neo4j.io.pagecache.tracing.FlushEvent;
@@ -21,6 +22,8 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
+
+import static org.mockito.Mockito.mock;
 
 public class VerbosePageCacheTracerTest
 {
@@ -51,7 +54,7 @@ public class VerbosePageCacheTracerTest
         try ( MajorFlushEvent majorFlushEvent = tracer.beginCacheFlush() )
         {
             FlushEventOpportunity flushEventOpportunity = majorFlushEvent.flushEventOpportunity();
-            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, new DummyPageSwapper( "testFile", 1 ) );
+            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, mock( PageSwapper.class) );
             flushEvent.addBytesWritten( 2 );
             flushEvent.addPagesFlushed( 7 );
             flushEvent.done();
@@ -68,7 +71,7 @@ public class VerbosePageCacheTracerTest
         try ( MajorFlushEvent majorFlushEvent = tracer.beginCacheFlush() )
         {
             FlushEventOpportunity flushEventOpportunity = majorFlushEvent.flushEventOpportunity();
-            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, new DummyPageSwapper( "testFile", 1 ) );
+            FlushEvent flushEvent = flushEventOpportunity.beginFlush( 1, 2, mock( PageSwapper.class ) );
             clock.forward( 2, TimeUnit.MILLISECONDS );
 
             try ( EvictionRunEvent evictionRunEvent = tracer.beginPageEvictions( 5 ) )
@@ -76,8 +79,7 @@ public class VerbosePageCacheTracerTest
                 try ( EvictionEvent evictionEvent = evictionRunEvent.beginEviction() )
                 {
                     FlushEventOpportunity evictionEventOpportunity = evictionEvent.flushEventOpportunity();
-                    FlushEvent evictionFlush = evictionEventOpportunity.beginFlush( 2, 3,
-                            new DummyPageSwapper( "evictionFile", 1 ) );
+                    FlushEvent evictionFlush = evictionEventOpportunity.beginFlush( 2, 3, mock( PageSwapper.class ) );
                     evictionFlush.addPagesFlushed( 10 );
                     evictionFlush.addPagesFlushed( 100 );
                 }
@@ -95,7 +97,8 @@ public class VerbosePageCacheTracerTest
     public void traceFileFlush()
     {
         VerbosePageCacheTracer tracer = createTracer();
-        DummyPageSwapper swapper = new DummyPageSwapper( "fileToFlush", 1 );
+        PageSwapper swapper = mock( PageSwapper.class );
+        Mockito.when( swapper.file() ).thenReturn( new File( "fileToFlush" ) );
         try ( MajorFlushEvent fileToFlush = tracer.beginFileFlush( swapper ) )
         {
             FlushEventOpportunity flushEventOpportunity = fileToFlush.flushEventOpportunity();
