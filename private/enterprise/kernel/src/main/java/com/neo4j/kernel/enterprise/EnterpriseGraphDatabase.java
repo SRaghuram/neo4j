@@ -9,6 +9,7 @@ import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 
 import java.io.File;
 
+import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -17,7 +18,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 public class EnterpriseGraphDatabase extends GraphDatabaseFacade
 {
     public EnterpriseGraphDatabase( File storeDir, Config config,
-            GraphDatabaseFacadeFactory.Dependencies dependencies )
+            ExternalDependencies dependencies )
     {
         new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new )
                 .initFacade( storeDir, config, dependencies, this );

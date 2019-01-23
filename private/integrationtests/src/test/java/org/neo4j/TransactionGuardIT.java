@@ -33,10 +33,11 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
@@ -570,14 +571,14 @@ public class TransactionGuardIT
 
         @Override
         protected CommunityNeoServer build( File configFile, Config config,
-                GraphDatabaseFacadeFactory.Dependencies dependencies )
+                ExternalDependencies dependencies )
         {
             return new GuardTestServer( config, newDependencies(dependencies).userLogProvider( NullLogProvider.getInstance() ) );
         }
 
         private class GuardTestServer extends CommercialNeoServer
         {
-            GuardTestServer( Config config, GraphDatabaseFacadeFactory.Dependencies dependencies )
+            GuardTestServer( Config config, ExternalDependencies dependencies )
             {
                 super( config, new SimpleGraphFactory( graphDatabaseFacade ), dependencies );
             }
@@ -612,17 +613,18 @@ public class TransactionGuardIT
 
     private class TransactionGuardTerminationEditionModule extends EnterpriseEditionModule
     {
-        TransactionGuardTerminationEditionModule( PlatformModule platformModule )
+        TransactionGuardTerminationEditionModule( GlobalModule globalModule )
         {
-            super( platformModule );
+            super( globalModule );
         }
 
         @Override
-        protected IdContextFactory createIdContextFactory( PlatformModule platformModule, FileSystemAbstraction fileSystem )
+        protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
         {
-            return IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( platformModule.config ),
-                    platformModule.jobScheduler )
-                    .withIdGenerationFactoryProvider( any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( platformModule.fileSystem ) ) )
+            return IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
+                    globalModule.getJobScheduler() )
+                    .withIdGenerationFactoryProvider(
+                            any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( globalModule.getFileSystem() ) ) )
                     .build();
         }
     }
@@ -633,19 +635,19 @@ public class TransactionGuardIT
         CustomClockEnterpriseFacadeFactory()
         {
             // XXX: This has to be a Function, JVM crashes with ClassFormatError if you pass a lambda here
-            super( DatabaseInfo.COMMERCIAL, new Function<PlatformModule,AbstractEditionModule>() // Don't make a lambda
+            super( DatabaseInfo.COMMERCIAL, new Function<GlobalModule,AbstractEditionModule>() // Don't make a lambda
             {
                 @Override
-                public AbstractEditionModule apply( PlatformModule platformModule )
+                public AbstractEditionModule apply( GlobalModule globalModule )
                 {
-                    return new TransactionGuardTerminationEditionModule( platformModule );
+                    return new TransactionGuardTerminationEditionModule( globalModule );
                 }
             } );
         }
         @Override
-        protected PlatformModule createPlatform( File storeDir, Config config, Dependencies dependencies )
+        protected GlobalModule createGlobalPlatform( File storeDir, Config config, ExternalDependencies dependencies )
         {
-            return new PlatformModule( storeDir, config, databaseInfo, dependencies )
+            return new GlobalModule( storeDir, config, databaseInfo, dependencies )
             {
                 @Override
                 protected SystemNanoClock createClock()

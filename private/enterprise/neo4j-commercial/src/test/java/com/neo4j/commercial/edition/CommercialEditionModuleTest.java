@@ -10,7 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -36,7 +36,7 @@ class CommercialEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults();
-        PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, COMMERCIAL, newDependencies() )
+        GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, COMMERCIAL, newDependencies() )
         {
             @Override
             protected LogService createLogService( LogProvider userLogProvider )
@@ -44,7 +44,7 @@ class CommercialEditionModuleTest
                 return NullLogService.getInstance();
             }
         };
-        CommercialEditionModule editionModule = new CommercialEditionModule( platformModule );
+        CommercialEditionModule editionModule = new CommercialEditionModule( globalModule );
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );

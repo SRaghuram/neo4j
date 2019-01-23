@@ -16,17 +16,16 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 
 import java.io.File;
 
+import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.server.database.GraphFactory;
 
-import static org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
-
 public class CommercialGraphFactory implements GraphFactory
 {
     @Override
-    public GraphDatabaseFacade newGraphDatabase( Config config, Dependencies dependencies )
+    public GraphDatabaseFacade newGraphDatabase( Config config, ExternalDependencies dependencies )
     {
         CommercialEditionSettings.Mode mode = config.get( CommercialEditionSettings.mode );
         File storeDir = config.get( GraphDatabaseSettings.databases_root_path );

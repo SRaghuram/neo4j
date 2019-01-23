@@ -51,7 +51,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -76,7 +76,9 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
+import org.neo4j.time.SystemNanoClock;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -90,98 +92,100 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     protected final LogProvider logProvider;
     protected final DefaultDatabaseService<ReadReplicaLocalDatabase> databaseService;
     private final String activeDatabaseName;
-    private final Config config;
-    private final PlatformModule platformModule;
+    private final Config globaConfig;
+    private final GlobalModule globalModule;
     private final GlobalTransactionStats transactionStats;
 
-    public ReadReplicaEditionModule( final PlatformModule platformModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
+    public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
-        this.platformModule = platformModule;
-        LogService logging = platformModule.logService;
-        this.config = platformModule.config;
-        this.activeDatabaseName = config.get( GraphDatabaseSettings.active_database );
-        logProvider = platformModule.logService.getInternalLogProvider();
-        LogProvider userLogProvider = platformModule.logService.getUserLogProvider();
+        this.globalModule = globalModule;
+        LogService logService = globalModule.getLogService();
+        this.globaConfig = globalModule.getGlobalConfig();
+        this.activeDatabaseName = globaConfig.get( GraphDatabaseSettings.active_database );
+        logProvider = logService.getInternalLogProvider();
+        LogProvider userLogProvider = logService.getUserLogProvider();
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myself ) );
 
-        platformModule.jobScheduler.setTopLevelGroupName( "ReadReplica " + myself );
+        JobScheduler jobScheduler = globalModule.getJobScheduler();
+        jobScheduler.setTopLevelGroupName( "ReadReplica " + myself );
 
-        Dependencies dependencies = platformModule.dependencies;
-        FileSystemAbstraction fileSystem = platformModule.fileSystem;
+        Dependencies globalDependencies = globalModule.getGlobalDependencies();
+        FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 
-        final PanicService panicService = new PanicService( logging.getUserLogProvider() );
+        final PanicService panicService = new PanicService( logService.getUserLogProvider() );
         // used in tests
-        dependencies.satisfyDependencies( panicService );
+        globalDependencies.satisfyDependencies( panicService );
 
-        LifeSupport life = platformModule.life;
+        LifeSupport globalLife = globalModule.getGlobalLife();
 
-        threadToTransactionBridge = dependencies.satisfyDependency(
-                new ThreadToStatementContextBridge( getGlobalAvailabilityGuard( platformModule.clock, logging, platformModule.config ) ) );
+        SystemNanoClock globalClock = globalModule.getGlobalClock();
+        threadToTransactionBridge = globalDependencies.satisfyDependency(
+                new ThreadToStatementContextBridge( getGlobalAvailabilityGuard( globalClock, logService, globaConfig ) ) );
         this.accessCapability = new ReadOnly();
 
-        watcherServiceFactory =
-                layout -> createDatabaseFileSystemWatcher( platformModule.fileSystemWatcher.getFileWatcher(), layout, logging, fileWatcherFileNameFilter() );
+        watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService,
+                fileWatcherFileNameFilter() );
 
-        RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( config, platformModule.logService);
+        RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globaConfig, logService);
 
-        dependencies.satisfyDependency( SslPolicyLoader.create( config, logProvider ) );
+        globalDependencies.satisfyDependency( SslPolicyLoader.create( globaConfig, logProvider ) );
 
-        configureDiscoveryService( discoveryServiceFactory, dependencies, config, logProvider );
+        configureDiscoveryService( discoveryServiceFactory, globalDependencies, globaConfig, logProvider );
 
-        topologyService = discoveryServiceFactory.readReplicaTopologyService( config, logProvider, platformModule.jobScheduler, myself, hostnameResolver,
-                resolveStrategy( config, logProvider ) );
+        topologyService = discoveryServiceFactory.readReplicaTopologyService( globaConfig, logProvider, jobScheduler, myself, hostnameResolver,
+                resolveStrategy( globaConfig, logProvider ) );
 
-        life.add( dependencies.satisfyDependency( topologyService ) );
+        globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, config, dependencies );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, globaConfig, globalDependencies );
 
-        Supplier<DatabaseManager> databaseManagerSupplier = () -> platformModule.dependencies.resolveDependency( DatabaseManager.class );
+        Supplier<DatabaseManager> databaseManagerSupplier = () -> globalDependencies.resolveDependency( DatabaseManager.class );
         Supplier<DatabaseHealth> databaseHealthSupplier =
                 () -> databaseManagerSupplier.get().getDatabaseContext( DEFAULT_DATABASE_NAME )
                         .map( DatabaseContext::getDependencies)
                         .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
                         .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
-        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, platformModule,
-                databaseManagerSupplier, logProvider, config );
+        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, globalModule,
+                databaseManagerSupplier, logProvider, globaConfig );
 
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
-        defaultStrategy.inject( topologyService, config, logProvider, myself );
+        defaultStrategy.inject( topologyService, globaConfig, logProvider, myself );
 
         UpstreamDatabaseStrategySelector upstreamDatabaseStrategySelector =
-                createUpstreamDatabaseStrategySelector( myself, config, logProvider, topologyService, defaultStrategy );
+                createUpstreamDatabaseStrategySelector( myself, globaConfig, logProvider, topologyService, defaultStrategy );
 
-        CatchupHandlerFactory handlerFactory = ignored -> getHandlerFactory( platformModule, fileSystem );
+        CatchupHandlerFactory handlerFactory = ignored -> getHandlerFactory( globalModule, fileSystem );
         ReadReplicaServerModule serverModule =
-                new ReadReplicaServerModule( databaseService, pipelineBuilders, handlerFactory, platformModule, activeDatabaseName );
+                new ReadReplicaServerModule( databaseService, pipelineBuilders, handlerFactory, globalModule, activeDatabaseName );
 
-        CommandIndexTracker commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
+        CommandIndexTracker commandIndexTracker = globalDependencies.satisfyDependency( new CommandIndexTracker() );
 
         CompositeSuspendable servicesToStopOnStoreCopy = new CompositeSuspendable();
-        Executor catchupExecutor = platformModule.jobScheduler.executor( Group.CATCHUP_CLIENT );
+        Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
 
-        TimerService timerService = new TimerService( platformModule.jobScheduler, logProvider );
+        TimerService timerService = new TimerService( jobScheduler, logProvider );
 
         CatchupProcessManager catchupProcessManager =
                 new CatchupProcessManager( catchupExecutor, serverModule.catchupComponents(), databaseService, servicesToStopOnStoreCopy,
                         databaseHealthSupplier, topologyService, serverModule.catchupClient(), upstreamDatabaseStrategySelector, timerService,
-                        commandIndexTracker, platformModule.logService.getInternalLogProvider(), platformModule.versionContextSupplier,
-                        platformModule.tracers.getPageCursorTracerSupplier(), platformModule.config );
+                        commandIndexTracker, logService.getInternalLogProvider(), globalModule.getVersionContextSupplier(),
+                        globalModule.getTracers().getPageCursorTracerSupplier(), globaConfig );
 
-        life.add( new ReadReplicaStartupProcess( catchupExecutor, databaseService, catchupProcessManager, upstreamDatabaseStrategySelector,
+        globalLife.add( new ReadReplicaStartupProcess( catchupExecutor, databaseService, catchupProcessManager, upstreamDatabaseStrategySelector,
                 logProvider, userLogProvider, topologyService, serverModule.catchupComponents() ) );
 
         servicesToStopOnStoreCopy.add( serverModule.catchupServer() );
         serverModule.backupServer().ifPresent( servicesToStopOnStoreCopy::add );
 
-        life.add( serverModule.catchupServer() ); // must start last and stop first, since it handles external requests
-        serverModule.backupServer().ifPresent( life::add );
+        globalLife.add( serverModule.catchupServer() ); // must start last and stop first, since it handles external requests
+        serverModule.backupServer().ifPresent( globalLife::add );
 
-        editionInvariants( platformModule, dependencies, config, life );
+        editionInvariants( globalModule, globalDependencies, globaConfig, globalLife );
 
-        addPanicEventHandlers( panicService, life, databaseHealthSupplier, serverModule.catchupServer(), serverModule.backupServer() );
+        addPanicEventHandlers( panicService, globalLife, databaseHealthSupplier, serverModule.catchupServer(), serverModule.backupServer() );
 
         this.transactionStats = new GlobalTransactionStats();
-        initGlobalGuard( platformModule.clock, platformModule.logService );
+        initGlobalGuard( globalClock, logService );
     }
 
     @Override
@@ -233,19 +237,19 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     @Override
     public EditionDatabaseContext createDatabaseContext( String databaseName )
     {
-        return new ReadReplicaDatabaseContext( platformModule, this, databaseName );
+        return new ReadReplicaDatabaseContext( globalModule, this, databaseName );
     }
 
     private DefaultDatabaseService<ReadReplicaLocalDatabase> createDatabasesService( Supplier<DatabaseHealth> databaseHealthSupplier,
-            FileSystemAbstraction fileSystem, AvailabilityGuard availabilityGuard, PlatformModule platformModule,
+            FileSystemAbstraction fileSystem, AvailabilityGuard availabilityGuard, GlobalModule globalModule,
             Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, Config config )
     {
-        return new DefaultDatabaseService<>( ReadReplicaLocalDatabase::new, databaseManagerSupplier, platformModule.storeLayout,
-                availabilityGuard, databaseHealthSupplier, fileSystem, platformModule.pageCache, logProvider, config );
+        return new DefaultDatabaseService<>( ReadReplicaLocalDatabase::new, databaseManagerSupplier, globalModule.getStoreLayout(),
+                availabilityGuard, databaseHealthSupplier, fileSystem, globalModule.getPageCache(), logProvider, config );
     }
 
     @Override
-    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, AbstractEditionModule edition,
+    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule platform, AbstractEditionModule edition,
             GlobalProcedures globalProcedures, Logger msgLog )
     {
         return new MultiDatabaseManager( platform, edition, globalProcedures, msgLog, graphDatabaseFacade );
@@ -298,9 +302,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return globalAvailabilityGuard;
     }
 
-    protected CatchupServerHandler getHandlerFactory( PlatformModule platformModule, FileSystemAbstraction fileSystem )
+    protected CatchupServerHandler getHandlerFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
     {
-        Supplier<DatabaseManager> databaseManagerSupplier = platformModule.dependencies.provideDependency( DatabaseManager.class );
+        Supplier<DatabaseManager> databaseManagerSupplier = globalModule.getGlobalDependencies().provideDependency( DatabaseManager.class );
         return new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem );
     }
 
@@ -311,14 +315,14 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public void createSecurityModule( PlatformModule platformModule, GlobalProcedures globalProcedures )
+    public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
-        if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
+        if ( globaConfig.get( GraphDatabaseSettings.auth_enabled ) )
         {
-            CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( platformModule, this,
-                    platformModule.logService.getUserLog( ReadReplicaEditionModule.class ), globalProcedures, "commercial-security-module" );
-            platformModule.life.add( securityModule );
+            CommercialSecurityModule securityModule = (CommercialSecurityModule) setupSecurityModule( globalModule, this,
+                    globalModule.getLogService().getUserLog( ReadReplicaEditionModule.class ), globalProcedures, "commercial-security-module" );
+            globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }
         else

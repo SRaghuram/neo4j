@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
@@ -39,7 +39,7 @@ class CoreEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
-        PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
+        GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
         {
             @Override
             protected LogService createLogService( LogProvider userLogProvider )
@@ -47,7 +47,7 @@ class CoreEditionModuleTest
                 return NullLogService.getInstance();
             }
         };
-        CoreEditionModule editionModule = new CoreEditionModule( platformModule, new SslSharedDiscoveryServiceFactory() );
+        CoreEditionModule editionModule = new CoreEditionModule( globalModule, new SslSharedDiscoveryServiceFactory() );
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );

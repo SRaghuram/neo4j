@@ -41,9 +41,11 @@ import java.util.Collection;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
@@ -55,7 +57,7 @@ public class RaftServerModule
 {
     public static final String RAFT_SERVER_NAME = "raft-server";
 
-    private final PlatformModule platformModule;
+    private final GlobalModule globalModule;
     private final ConsensusModule consensusModule;
     private final IdentityModule identityModule;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
@@ -65,18 +67,18 @@ public class RaftServerModule
     private CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
 
-    private RaftServerModule( PlatformModule platformModule, ConsensusModule consensusModule, IdentityModule identityModule, CoreServerModule coreServerModule,
-            NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
+    private RaftServerModule( GlobalModule globalModule, ConsensusModule consensusModule, IdentityModule identityModule,
+            CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
             CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider,
             ApplicationSupportedProtocols supportedApplicationProtocol, Collection<ModifierSupportedProtocols> supportedModifierProtocols,
             ChannelInboundHandler installedProtocolsHandler, String activeDatabaseName, Panicker panicker )
     {
-        this.platformModule = platformModule;
+        this.globalModule = globalModule;
         this.consensusModule = consensusModule;
         this.identityModule = identityModule;
         this.supportedApplicationProtocol = supportedApplicationProtocol;
         this.messageLogger = messageLogger;
-        this.logProvider = platformModule.logService.getInternalLogProvider();
+        this.logProvider = globalModule.getLogService().getInternalLogProvider();
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.catchupAddressProvider = catchupAddressProvider;
         this.supportedModifierProtocols = supportedModifierProtocols;
@@ -86,13 +88,13 @@ public class RaftServerModule
         createRaftServer( coreServerModule, messageHandlerChain, installedProtocolsHandler, activeDatabaseName );
     }
 
-    static void createAndStart( PlatformModule platformModule, ConsensusModule consensusModule, IdentityModule identityModule,
+    static void createAndStart( GlobalModule globalModule, ConsensusModule consensusModule, IdentityModule identityModule,
             CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
             CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider addressProvider, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, ChannelInboundHandler installedProtocolsHandler,
             String activeDatabaseName, Panicker panicker )
     {
-        new RaftServerModule( platformModule, consensusModule, identityModule, coreServerModule, pipelineBuilderFactory, messageLogger, addressProvider,
+        new RaftServerModule( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilderFactory, messageLogger, addressProvider,
                 supportedApplicationProtocol, supportedModifierProtocols, installedProtocolsHandler, activeDatabaseName, panicker );
     }
 
@@ -117,27 +119,30 @@ public class RaftServerModule
         HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider );
 
-        ListenSocketAddress raftListenAddress = platformModule.config.get( CausalClusteringSettings.raft_listen_address );
+        Config globalConfig = globalModule.getGlobalConfig();
+        ListenSocketAddress raftListenAddress = globalConfig.get( CausalClusteringSettings.raft_listen_address );
 
-        Executor raftServerExecutor = platformModule.jobScheduler.executor( Group.RAFT_SERVER );
-        Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider, platformModule.logService.getUserLogProvider(),
-                raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor, BootstrapConfiguration.serverConfig( platformModule.config ) );
-        platformModule.dependencies.satisfyDependency( raftServer ); // resolved in tests
+        Executor raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
+        Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider,
+                globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
+                BootstrapConfiguration.serverConfig( globalConfig ) );
+        globalModule.getGlobalDependencies().satisfyDependency( raftServer ); // resolved in tests
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =
                 new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );
         loggingRaftInbound.registerHandler( messageHandlerChain );
 
         RecoveryRequiredChecker recoveryChecker =
-                recoveryRequiredChecker( platformModule.fileSystem, platformModule.pageCache, platformModule.config );
+                recoveryRequiredChecker( globalModule.getFileSystem(), globalModule.getPageCache(), globalConfig );
 
         //TODO: Understand that we add the CatchupServer to life here because we need to enforce an ordering between Raft and Catchup, but we should surface
         // all the separate components and do this ordered adding to life somewhere top level. Putting this in this method is just a bit weird.
-        platformModule.life.add( raftServer ); // must start before core state so that it can trigger snapshot downloads when necessary
-        platformModule.life.add( coreServerModule.createCoreLife( messageHandlerChain, logProvider, recoveryChecker ) );
-        platformModule.life.add( coreServerModule.catchupServer() ); // must start last and stop first, since it handles external requests
-        coreServerModule.backupServer().ifPresent( platformModule.life::add );
-        platformModule.life.add( coreServerModule.downloadService() );
+        LifeSupport globalLife = globalModule.getGlobalLife();
+        globalLife.add( raftServer ); // must start before core state so that it can trigger snapshot downloads when necessary
+        globalLife.add( coreServerModule.createCoreLife( messageHandlerChain, logProvider, recoveryChecker ) );
+        globalLife.add( coreServerModule.catchupServer() ); // must start last and stop first, since it handles external requests
+        coreServerModule.backupServer().ifPresent( globalLife::add );
+        globalLife.add( coreServerModule.downloadService() );
     }
 
     private LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> createMessageHandlerChain( CoreServerModule coreServerModule, Panicker panicker )
@@ -146,10 +151,12 @@ public class RaftServerModule
                 consensusModule.raftMachine(), coreServerModule.downloadService(),
                 coreServerModule.commandApplicationProcess(), catchupAddressProvider, panicker );
 
-        ComposableMessageHandler monitoringHandler = RaftMessageMonitoringHandler.composable( platformModule.clock, platformModule.monitors );
-        ComposableMessageHandler batchingMessageHandler = createBatchingHandler( platformModule.config );
+        Monitors globalMonitors = globalModule.getGlobalMonitors();
+        ComposableMessageHandler monitoringHandler =
+                RaftMessageMonitoringHandler.composable( globalModule.getGlobalClock(), globalMonitors );
+        ComposableMessageHandler batchingMessageHandler = createBatchingHandler( globalModule.getGlobalConfig() );
         ComposableMessageHandler leaderAvailabilityHandler = LeaderAvailabilityHandler.composable( consensusModule.getLeaderAvailabilityTimers(),
-                platformModule.monitors.newMonitor( RaftMessageTimerResetMonitor.class ), consensusModule.raftMachine()::term );
+                globalMonitors.newMonitor( RaftMessageTimerResetMonitor.class ), consensusModule.raftMachine()::term );
         ComposableMessageHandler clusterBindingHandler = ClusterBindingHandler.composable( logProvider );
 
         return clusterBindingHandler
@@ -162,7 +169,7 @@ public class RaftServerModule
     private ComposableMessageHandler createBatchingHandler( Config config )
     {
         Function<Runnable,ContinuousJob> jobFactory = runnable -> new ContinuousJob(
-                platformModule.jobScheduler.threadFactory( Group.RAFT_BATCH_HANDLER ), runnable,
+                globalModule.getJobScheduler().threadFactory( Group.RAFT_BATCH_HANDLER ), runnable,
                 logProvider );
 
         BoundedPriorityQueue.Config inQueueConfig = new BoundedPriorityQueue.Config( config.get( CausalClusteringSettings.raft_in_queue_size ),

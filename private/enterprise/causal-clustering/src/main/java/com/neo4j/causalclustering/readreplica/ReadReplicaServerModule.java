@@ -15,14 +15,14 @@ import com.neo4j.causalclustering.net.Server;
 
 import java.util.Optional;
 
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 
 public class ReadReplicaServerModule extends CatchupServersModule
 {
     ReadReplicaServerModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, CatchupHandlerFactory handlerFactory,
-            PlatformModule platformModule, String activeDatabaseName )
+            GlobalModule globalModule, String activeDatabaseName )
     {
-        super( databaseService, pipelineBuilders, platformModule );
+        super( databaseService, pipelineBuilders, globalModule );
 
         CatchupServerHandler catchupServerHandler = handlerFactory.create( null );
         InstalledProtocolHandler installedProtocolsHandler = new InstalledProtocolHandler();

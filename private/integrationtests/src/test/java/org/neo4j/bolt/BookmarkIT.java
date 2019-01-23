@@ -21,7 +21,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -101,10 +101,10 @@ public class BookmarkIT
 
     private GraphDatabaseAPI createDb( CommitBlocker commitBlocker )
     {
-        return createDb( platformModule -> new CustomCommunityEditionModule( platformModule, commitBlocker ) );
+        return createDb( globalModule -> new CustomCommunityEditionModule( globalModule, commitBlocker ) );
     }
 
-    private GraphDatabaseAPI createDb( Function<PlatformModule,AbstractEditionModule> editionModuleFactory )
+    private GraphDatabaseAPI createDb( Function<GlobalModule,AbstractEditionModule> editionModuleFactory )
     {
         GraphDatabaseFactoryState state = new GraphDatabaseFactoryState();
         GraphDatabaseFacadeFactory facadeFactory = new GraphDatabaseFacadeFactory( DatabaseInfo.COMMUNITY, editionModuleFactory );
@@ -142,9 +142,9 @@ public class BookmarkIT
 
     private static class CustomCommunityEditionModule extends CommunityEditionModule
     {
-        CustomCommunityEditionModule( PlatformModule platformModule, CommitBlocker commitBlocker )
+        CustomCommunityEditionModule( GlobalModule globalModule, CommitBlocker commitBlocker )
         {
-            super( platformModule );
+            super( globalModule );
             commitProcessFactory = new CustomCommitProcessFactory( commitBlocker );
         }
     }

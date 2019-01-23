@@ -13,16 +13,16 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.logging.Log;
 
 public class IdentityModule
 {
     private MemberId myself;
 
-    IdentityModule( PlatformModule platformModule, CoreStateStorageService storage )
+    IdentityModule( GlobalModule globalModule, CoreStateStorageService storage )
     {
-        Log log = platformModule.logService.getInternalLogProvider().getLog( getClass() );
+        Log log = globalModule.getLogService().getInternalLogProvider().getLog( getClass() );
 
         SimpleStorage<MemberId> memberIdStorage = storage.simpleStorage( CoreStateFiles.CORE_MEMBER_ID );
 
@@ -50,7 +50,7 @@ public class IdentityModule
             throw new RuntimeException( e );
         }
 
-        platformModule.jobScheduler.setTopLevelGroupName( "Core " + myself );
+        globalModule.getJobScheduler().setTopLevelGroupName( "Core " + myself );
     }
 
     public MemberId myself()

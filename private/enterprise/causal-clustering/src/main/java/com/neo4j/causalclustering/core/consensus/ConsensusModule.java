@@ -40,10 +40,12 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
@@ -63,70 +65,72 @@ public class ConsensusModule
 
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
-    public ConsensusModule( MemberId myself, final PlatformModule platformModule, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
+    public ConsensusModule( MemberId myself, final GlobalModule globalModule, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
             File clusterStateDirectory, CoreTopologyService coreTopologyService, CoreStateStorageService coreStorageService, String activeDatabaseName )
     {
-        final Config config = platformModule.config;
-        final LogService logging = platformModule.logService;
-        final FileSystemAbstraction fileSystem = platformModule.fileSystem;
-        final LifeSupport life = platformModule.life;
+        final Config globalConfig = globalModule.getGlobalConfig();
+        final LogService logService = globalModule.getLogService();
+        final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
+        final LifeSupport globalLife = globalModule.getGlobalLife();
+        final Monitors globalMonitors = globalModule.getGlobalMonitors();
+        final Dependencies globalDependencies = globalModule.getGlobalDependencies();
 
-        LogProvider logProvider = logging.getInternalLogProvider();
+        LogProvider logProvider = logService.getInternalLogProvider();
 
         Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = new HashMap<>();
         marshals.put( 1, CoreReplicatedContentMarshalFactory.marshalV1( activeDatabaseName ) );
         marshals.put( 2, CoreReplicatedContentMarshalFactory.marshalV2() );
 
-        RaftLog underlyingLog = createRaftLog( config, life, fileSystem, clusterStateDirectory, marshals, logProvider,
-                platformModule.jobScheduler );
+        JobScheduler jobScheduler = globalModule.getJobScheduler();
+        RaftLog underlyingLog = createRaftLog( globalConfig, globalLife, fileSystem, clusterStateDirectory, marshals, logProvider, jobScheduler );
 
-        raftLog = new MonitoredRaftLog( underlyingLog, platformModule.monitors );
+        raftLog = new MonitoredRaftLog( underlyingLog, globalMonitors );
 
         StateStorage<TermState> durableTermState = coreStorageService.stateStorage( CoreStateFiles.RAFT_TERM );
-        StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, platformModule.monitors );
+        StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, globalMonitors );
         StateStorage<VoteState> voteState = coreStorageService.stateStorage( CoreStateFiles.RAFT_VOTE );
         StateStorage<RaftMembershipState> raftMembershipStorage = coreStorageService.stateStorage( CoreStateFiles.RAFT_MEMBERSHIP );
 
-        TimerService timerService = new TimerService( platformModule.jobScheduler, logProvider );
+        TimerService timerService = new TimerService( jobScheduler, logProvider );
 
-        leaderAvailabilityTimers = createElectionTiming( config, timerService, logProvider );
+        leaderAvailabilityTimers = createElectionTiming( globalConfig, timerService, logProvider );
 
-        Integer minimumConsensusGroupSize = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
+        Integer minimumConsensusGroupSize = globalConfig.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
 
         MemberIdSetBuilder memberSetBuilder = new MemberIdSetBuilder();
 
         SendToMyself leaderOnlyReplicator = new SendToMyself( myself, outbound );
 
         raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, memberSetBuilder, raftLog, logProvider,
-                minimumConsensusGroupSize, leaderAvailabilityTimers.getElectionTimeout(), systemClock(), config.get( join_catch_up_timeout ).toMillis(),
+                minimumConsensusGroupSize, leaderAvailabilityTimers.getElectionTimeout(), systemClock(), globalConfig.get( join_catch_up_timeout ).toMillis(),
                 raftMembershipStorage );
-        platformModule.dependencies.satisfyDependency( raftMembershipManager );
+        globalDependencies.satisfyDependency( raftMembershipManager );
 
-        life.add( raftMembershipManager );
+        globalLife.add( raftMembershipManager );
 
-        inFlightCache = InFlightCacheFactory.create( config, platformModule.monitors );
+        inFlightCache = InFlightCacheFactory.create( globalConfig, globalMonitors );
 
         RaftLogShippingManager logShipping =
                 new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself,
-                        raftMembershipManager, leaderAvailabilityTimers.getElectionTimeout(), config.get( catchup_batch_size ),
-                        config.get( log_shipping_max_lag ), inFlightCache );
+                        raftMembershipManager, leaderAvailabilityTimers.getElectionTimeout(), globalConfig.get( catchup_batch_size ),
+                        globalConfig.get( log_shipping_max_lag ), inFlightCache );
 
-        boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
+        boolean supportsPreVoting = globalConfig.get( CausalClusteringSettings.enable_pre_voting );
 
         raftMachine = new RaftMachine( myself, termState, voteState, raftLog, leaderAvailabilityTimers,
                 outbound, logProvider, raftMembershipManager, logShipping, inFlightCache,
-                config.get( refuse_to_be_leader ),
-                supportsPreVoting, platformModule.monitors );
+                globalConfig.get( refuse_to_be_leader ),
+                supportsPreVoting, globalMonitors );
 
         DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor();
-        platformModule.monitors.addMonitorListener( durationSinceLastMessageMonitor );
-        platformModule.dependencies.satisfyDependency( durationSinceLastMessageMonitor );
+        globalMonitors.addMonitorListener( durationSinceLastMessageMonitor );
+        globalDependencies.satisfyDependency( durationSinceLastMessageMonitor );
 
-        String dbName = config.get( CausalClusteringSettings.database );
+        String dbName = globalConfig.get( CausalClusteringSettings.database );
 
-        life.add( new RaftCoreTopologyConnector( coreTopologyService, raftMachine, dbName ) );
+        globalLife.add( new RaftCoreTopologyConnector( coreTopologyService, raftMachine, dbName ) );
 
-        life.add( logShipping );
+        globalLife.add( logShipping );
     }
 
     private LeaderAvailabilityTimers createElectionTiming( Config config, TimerService timerService, LogProvider logProvider )

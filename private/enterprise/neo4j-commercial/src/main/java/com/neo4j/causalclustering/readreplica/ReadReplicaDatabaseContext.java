@@ -9,7 +9,7 @@ import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider
 
 import java.util.function.Function;
 
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
@@ -47,16 +47,17 @@ public class ReadReplicaDatabaseContext implements EditionDatabaseContext
     private final DatabaseTransactionStats transactionMonitor;
     private final ReadReplicaEditionModule editionModule;
 
-    public ReadReplicaDatabaseContext( PlatformModule platformModule, ReadReplicaEditionModule editionModule, String databaseName )
+    public ReadReplicaDatabaseContext( GlobalModule globalModule, ReadReplicaEditionModule editionModule, String databaseName )
     {
         this.editionModule = editionModule;
         this.databaseName = databaseName;
         this.locksManager = new ReadReplicaLockManager();
-        this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, platformModule.config, platformModule.logService ).select();
+        Config globalConfig = globalModule.getGlobalConfig();
+        this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, globalModule.getLogService() ).select();
 
         IdContextFactory idContextFactory =
-                IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( platformModule.config ), platformModule.jobScheduler )
-                .withFileSystem( platformModule.fileSystem )
+                IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( globalConfig ), globalModule.getJobScheduler() )
+                .withFileSystem( globalModule.getFileSystem() )
                 .build();
 
         this.idContext = idContextFactory.createIdContext( databaseName );

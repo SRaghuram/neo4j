@@ -45,7 +45,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.graphdb.factory.EditionLocksFactories;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
@@ -107,15 +107,16 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     private final VersionContextSupplier versionContextSupplier;
     private final PageCursorTracerSupplier cursorTracerSupplier;
     private final FileSystemAbstraction fs;
-    private final PlatformModule platform;
+    private final GlobalModule platform;
     private final Config config;
     private final RaftMachine raftMachine;
     private final AggregateStateMachinesCommandDispatcher dispatchers;
 
-    public CoreStateService( MemberId myself, PlatformModule platformModule, CoreStateStorageService storage, Config config, RaftMachine raftMachine,
-            DatabaseService databaseService, ReplicationModule replicationModule, StateStorage<Long> lastFlushedStorage, Panicker panicker )
+    public CoreStateService( MemberId myself, GlobalModule globalModule, CoreStateStorageService storage, Config config,
+            RaftMachine raftMachine, DatabaseService databaseService, ReplicationModule replicationModule, StateStorage<Long> lastFlushedStorage,
+            Panicker panicker )
     {
-        this.logging = platformModule.logService;
+        this.logging = globalModule.getLogService();
         this.panicker = panicker;
         this.logProvider = logging.getInternalLogProvider();
         this.lastFlushedStorage = lastFlushedStorage;
@@ -125,14 +126,14 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         this.myself = myself;
         this.config = config;
 
-        platform = platformModule;
-        fs = platformModule.fileSystem;
+        platform = globalModule;
+        fs = globalModule.getFileSystem();
         sessionTracker = replicationModule.getSessionTracker();
         allocationSizes = getIdTypeAllocationSizeFromConfig( config );
-        commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
+        commandIndexTracker = globalModule.getGlobalDependencies().satisfyDependency( new CommandIndexTracker() );
 
-        versionContextSupplier = platformModule.versionContextSupplier;
-        cursorTracerSupplier = platformModule.tracers.getPageCursorTracerSupplier();
+        versionContextSupplier = globalModule.getVersionContextSupplier();
+        cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
 
         dbStateMap = new CopyOnWriteHashMap<>();
         dispatchers = new AggregateStateMachinesCommandDispatcher( databaseService, this );
@@ -141,7 +142,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myself );
         Function<String,IdGeneratorFactory> idGeneratorProvider =
                 databaseName -> createIdGeneratorFactory( fs, logProvider, idTypeConfigurationProvider, databaseName );
-        idContextFactory = IdContextFactoryBuilder.of( idTypeConfigurationProvider, platformModule.jobScheduler )
+        idContextFactory = IdContextFactoryBuilder.of( idTypeConfigurationProvider, globalModule.getJobScheduler() )
                 .withIdGenerationFactoryProvider( idGeneratorProvider )
                 .withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) ).build();
     }
@@ -186,7 +187,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
                         config.get( state_machine_apply_max_batch_size ), logProvider, cursorTracerSupplier,
                         versionContextSupplier );
 
-        Locks lockManager = createLockManager( config, platform.clock, logging, replicator, myself, raftMachine,
+        Locks lockManager = createLockManager( config, platform.getGlobalClock(), logging, replicator, myself, raftMachine,
                 replicatedLockTokenStateMachine, databaseName );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( localDatabase, logProvider );

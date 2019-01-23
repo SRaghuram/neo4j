@@ -13,9 +13,9 @@ import java.io.File;
 import java.util.UUID;
 import java.util.function.Function;
 
+import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -26,20 +26,20 @@ public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
 
     public interface ReadReplicaEditionModuleFactory
     {
-        ClusteringEditionModule create( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
+        ClusteringEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
     }
 
-    public ReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies,
+    public ReadReplicaGraphDatabase( File storeDir, Config config, ExternalDependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory, ReadReplicaEditionModuleFactory editionModuleFactory )
     {
         this( storeDir, config, dependencies, discoveryServiceFactory, new MemberId( UUID.randomUUID() ), editionModuleFactory );
     }
 
-    public ReadReplicaGraphDatabase( File storeDir, Config config, Dependencies dependencies,
+    public ReadReplicaGraphDatabase( File storeDir, Config config, ExternalDependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId, ReadReplicaEditionModuleFactory editionModuleFactory )
     {
-        Function<PlatformModule,AbstractEditionModule> factory =
-                platformModule -> editionModuleFactory.create( platformModule, discoveryServiceFactory, memberId );
+        Function<GlobalModule,AbstractEditionModule> factory =
+                globalModule -> editionModuleFactory.create( globalModule, discoveryServiceFactory, memberId );
         new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
                 dependencies, this );
     }

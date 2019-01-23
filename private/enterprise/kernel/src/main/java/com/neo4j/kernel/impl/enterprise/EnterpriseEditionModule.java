@@ -19,7 +19,7 @@ import java.util.function.Predicate;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.internal.LogService;
 
 /**
@@ -50,16 +51,17 @@ public class EnterpriseEditionModule extends CommunityEditionModule
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
     }
 
-    public EnterpriseEditionModule( PlatformModule platformModule )
+    public EnterpriseEditionModule( GlobalModule globalModule )
     {
-        super( platformModule );
-        ioLimiter = new ConfigurableIOLimiter( platformModule.config );
+        super( globalModule );
+        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
     }
 
     @Override
-    protected IdContextFactory createIdContextFactory( PlatformModule platformModule, FileSystemAbstraction fileSystem )
+    protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
     {
-        return IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( platformModule.config ), platformModule.jobScheduler )
+        return IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
+                globalModule.getJobScheduler() )
                 .withFileSystem( fileSystem )
                 .build();
     }
@@ -97,26 +99,28 @@ public class EnterpriseEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public void createSecurityModule( PlatformModule platformModule, GlobalProcedures globalProcedures )
+    public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
-        EnterpriseEditionModule.createEnterpriseSecurityModule( this, platformModule, globalProcedures );
+        EnterpriseEditionModule.createEnterpriseSecurityModule( this, globalModule, globalProcedures );
     }
 
-    public static void createEnterpriseSecurityModule( AbstractEditionModule editionModule, PlatformModule platformModule, GlobalProcedures globalProcedures )
+    public static void createEnterpriseSecurityModule( AbstractEditionModule editionModule, GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
-        if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
+        Config globalConfig = globalModule.getGlobalConfig();
+        LifeSupport globalLife = globalModule.getGlobalLife();
+        if ( globalConfig.get( GraphDatabaseSettings.auth_enabled ) )
         {
-            SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
-                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ), globalProcedures,
-                    platformModule.config.get( CommercialEditionSettings.security_module ) );
-            platformModule.life.add( securityModule );
+            SecurityModule securityModule = setupSecurityModule( globalModule, editionModule,
+                    globalModule.getLogService().getUserLog( EnterpriseEditionModule.class ), globalProcedures,
+                    globalConfig.get( CommercialEditionSettings.security_module ) );
+            globalLife.add( securityModule );
             securityProvider = securityModule;
         }
         else
         {
             EnterpriseNoAuthSecurityProvider provider = EnterpriseNoAuthSecurityProvider.INSTANCE;
-            platformModule.life.add( provider );
+            globalLife.add( provider );
             securityProvider = provider;
         }
         editionModule.setSecurityProvider( securityProvider );

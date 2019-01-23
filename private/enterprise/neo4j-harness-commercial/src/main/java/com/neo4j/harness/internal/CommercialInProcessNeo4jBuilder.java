@@ -5,16 +5,16 @@
  */
 package com.neo4j.harness.internal;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import org.apache.commons.lang3.SystemUtils;
 
 import java.io.File;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory.Dependencies;
+import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.harness.internal.AbstractInProcessNeo4jBuilder;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.server.AbstractNeoServer;
@@ -46,7 +46,7 @@ public class CommercialInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuild
     }
 
     @Override
-    protected AbstractNeoServer createNeoServer( GraphFactory graphFactory, Config config, Dependencies dependencies )
+    protected AbstractNeoServer createNeoServer( GraphFactory graphFactory, Config config, ExternalDependencies dependencies )
     {
         config.augment( CausalClusteringSettings.discovery_implementation, discoveryServiceFactory.name() );
         return new CommercialNeoServer( config, graphFactory, dependencies );

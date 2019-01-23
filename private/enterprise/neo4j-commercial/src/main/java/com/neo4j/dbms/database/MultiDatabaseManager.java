@@ -17,9 +17,10 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.facade.spi.ClassicCoreSPI;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseModule;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.GlobalProcedures;
@@ -33,17 +34,17 @@ import static java.util.Objects.requireNonNull;
 public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
 {
     private final ConcurrentHashMap<String, DatabaseContext> databaseMap = new ConcurrentHashMap<>();
-    private final PlatformModule platform;
+    private final GlobalModule globalModule;
     private final AbstractEditionModule edition;
     private final GlobalProcedures globalProcedures;
     private final Logger log;
     private final GraphDatabaseFacade graphDatabaseFacade;
     private volatile boolean started;
 
-    public MultiDatabaseManager( PlatformModule platform, AbstractEditionModule edition, GlobalProcedures globalProcedures,
+    public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, GlobalProcedures globalProcedures,
             Logger log, GraphDatabaseFacade graphDatabaseFacade )
     {
-        this.platform = platform;
+        this.globalModule = globalModule;
         this.edition = edition;
         this.globalProcedures = globalProcedures;
         this.log = log;
@@ -152,12 +153,13 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     private DatabaseContext createNewDatabaseContext( String databaseName )
     {
         log.log( "Creating '%s' database.", databaseName );
+        Config globalConfig = globalModule.getGlobalConfig();
         GraphDatabaseFacade facade =
-                platform.config.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
-        DatabaseModule dataSource = new DatabaseModule( databaseName, platform, edition, globalProcedures, facade );
-        ClassicCoreSPI spi = new ClassicCoreSPI( platform, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
+                globalConfig.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
+        DatabaseModule dataSource = new DatabaseModule( databaseName, globalModule, edition, globalProcedures, facade );
+        ClassicCoreSPI spi = new ClassicCoreSPI( globalModule, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
         Database database = dataSource.database;
-        facade.init( spi, edition.getThreadToTransactionBridge(), platform.config, database.getTokenHolders() );
+        facade.init( spi, edition.getThreadToTransactionBridge(), globalConfig, database.getTokenHolders() );
         if ( started )
         {
             database.start();

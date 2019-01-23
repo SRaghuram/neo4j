@@ -5,11 +5,12 @@
  */
 package com.neo4j.causalclustering.core;
 
-import java.util.function.Function;
-
 import com.neo4j.causalclustering.core.state.CoreStateService;
 import com.neo4j.causalclustering.core.state.PerDatabaseCoreStateComponents;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+
+import java.util.function.Function;
+
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
@@ -38,14 +39,15 @@ public class CoreDatabaseContext implements EditionDatabaseContext
     private final DatabaseTransactionStats transactionMonitor;
     private final String databaseName;
 
-    public CoreDatabaseContext( PlatformModule platformModule, CoreEditionModule editionModule, String databaseName )
+    public CoreDatabaseContext( GlobalModule globalModule, CoreEditionModule editionModule, String databaseName )
     {
         this.databaseName =  databaseName;
         this.editionModule = editionModule;
         CoreStateService coreStateService = editionModule.coreStateComponents();
         databaseState = coreStateService.getDatabaseState( databaseName )
                 .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseName ) ) );
-        statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), platformModule.config, platformModule.logService ).select();
+        statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), globalModule.getGlobalConfig(),
+                globalModule.getLogService() ).select();
         transactionMonitor = editionModule.createTransactionMonitor();
     }
 

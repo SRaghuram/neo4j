@@ -10,8 +10,9 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 
 import java.io.File;
 
+import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
@@ -21,19 +22,19 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
 {
     public interface CoreEditionModuleFactory
     {
-        AbstractCoreEditionModule create( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory );
+        AbstractCoreEditionModule create( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory );
     }
 
     private AbstractCoreEditionModule editionModule;
     private final CoreEditionModuleFactory editionModuleFactory;
 
     public CoreGraphDatabase( File storeDir, Config config,
-            GraphDatabaseFacadeFactory.Dependencies dependencies,
+            ExternalDependencies dependencies,
             DiscoveryServiceFactory discoveryServiceFactory,
             CoreEditionModuleFactory editionModuleFactory )
     {
         this.editionModuleFactory = editionModuleFactory;
-        new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, platformModule -> cachingFactory( platformModule, discoveryServiceFactory ) )
+        new GraphDatabaseFacadeFactory( DatabaseInfo.CORE, globalModule -> cachingFactory( globalModule, discoveryServiceFactory ) )
                 .initFacade( storeDir, config, dependencies, this );
     }
 
@@ -45,11 +46,11 @@ public class CoreGraphDatabase extends GraphDatabaseFacade
                 .currentRole();
     }
 
-    private AbstractEditionModule cachingFactory( PlatformModule platformModule, DiscoveryServiceFactory discoveryServiceFactory )
+    private AbstractEditionModule cachingFactory( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory )
     {
         if ( editionModule == null )
         {
-            editionModule = editionModuleFactory.create( platformModule, discoveryServiceFactory );
+            editionModule = editionModuleFactory.create( globalModule, discoveryServiceFactory );
         }
         return editionModule;
     }

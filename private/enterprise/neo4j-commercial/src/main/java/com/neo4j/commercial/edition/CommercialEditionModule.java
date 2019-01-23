@@ -26,7 +26,7 @@ import java.util.function.Supplier;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -55,19 +55,19 @@ public class CommercialEditionModule extends EnterpriseEditionModule
 {
     private final GlobalTransactionStats globalTransactionStats;
 
-    public CommercialEditionModule( PlatformModule platformModule )
+    public CommercialEditionModule( GlobalModule globalModule )
     {
-        super( platformModule );
+        super( globalModule );
         globalTransactionStats = new GlobalTransactionStats();
-        initGlobalGuard( platformModule.clock, platformModule.logService );
-        initBackupIfNeeded( platformModule, platformModule.config );
+        initGlobalGuard( globalModule.getGlobalClock(), globalModule.getLogService() );
+        initBackupIfNeeded( globalModule, globalModule.getGlobalConfig() );
     }
 
-    protected Function<String,TokenHolders> createTokenHolderProvider( PlatformModule platform )
+    protected Function<String,TokenHolders> createTokenHolderProvider( GlobalModule platform )
     {
-        Config config = platform.config;
+        Config globalConfig = platform.getGlobalConfig();
         return databaseName -> {
-            DatabaseManager databaseManager = platform.dependencies.resolveDependency( DatabaseManager.class );
+            DatabaseManager databaseManager = platform.getGlobalDependencies().resolveDependency( DatabaseManager.class );
             Supplier<Kernel> kernelSupplier = () ->
             {
                 DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseName )
@@ -75,14 +75,14 @@ public class CommercialEditionModule extends EnterpriseEditionModule
                 return databaseContext.getDependencies().resolveDependency( Kernel.class );
             };
             return new TokenHolders(
-                    new DelegatingTokenHolder( createPropertyKeyCreator( config, kernelSupplier ), TokenHolder.TYPE_PROPERTY_KEY ),
-                    new DelegatingTokenHolder( createLabelIdCreator( config, kernelSupplier ), TokenHolder.TYPE_LABEL ),
-                    new DelegatingTokenHolder( createRelationshipTypeCreator( config, kernelSupplier ), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
+                    new DelegatingTokenHolder( createPropertyKeyCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_PROPERTY_KEY ),
+                    new DelegatingTokenHolder( createLabelIdCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_LABEL ),
+                    new DelegatingTokenHolder( createRelationshipTypeCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_RELATIONSHIP_TYPE ) );
         };
     }
 
     @Override
-    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, PlatformModule platform, AbstractEditionModule edition,
+    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule platform, AbstractEditionModule edition,
             GlobalProcedures globalProcedures, Logger msgLog )
     {
         return new MultiDatabaseManager( platform, edition, globalProcedures, msgLog, graphDatabaseFacade );
@@ -131,19 +131,19 @@ public class CommercialEditionModule extends EnterpriseEditionModule
     }
 
     @Override
-    public void createSecurityModule( PlatformModule platformModule, GlobalProcedures globalProcedures )
+    public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
-        createCommercialSecurityModule( this, platformModule, globalProcedures );
+        createCommercialSecurityModule( this, globalModule, globalProcedures );
     }
 
-    private static void createCommercialSecurityModule( AbstractEditionModule editionModule, PlatformModule platformModule, GlobalProcedures globalProcedures )
+    private static void createCommercialSecurityModule( AbstractEditionModule editionModule, GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
-        if ( platformModule.config.get( GraphDatabaseSettings.auth_enabled ) )
+        if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
         {
-            SecurityModule securityModule = setupSecurityModule( platformModule, editionModule,
-                    platformModule.logService.getUserLog( EnterpriseEditionModule.class ), globalProcedures, "commercial-security-module" );
-            platformModule.life.add( securityModule );
+            SecurityModule securityModule = setupSecurityModule( globalModule, editionModule,
+                    globalModule.getLogService().getUserLog( EnterpriseEditionModule.class ), globalProcedures, "commercial-security-module" );
+            globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }
         else
@@ -161,18 +161,18 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         }
     }
 
-    private void initBackupIfNeeded( PlatformModule platformModule, Config config )
+    private void initBackupIfNeeded( GlobalModule globalModule, Config config )
     {
-        Dependencies dependencies = platformModule.dependencies;
-        Supplier<DatabaseManager> databaseManagerSupplier = dependencies.provideDependency( DatabaseManager.class );
-        FileSystemAbstraction fs = platformModule.fileSystem;
-        JobScheduler jobScheduler = platformModule.jobScheduler;
-        ConnectorPortRegister portRegister = platformModule.connectorPortRegister;
+        Dependencies globalDependencies = globalModule.getGlobalDependencies();
+        Supplier<DatabaseManager> databaseManagerSupplier = globalDependencies.provideDependency( DatabaseManager.class );
+        FileSystemAbstraction fs = globalModule.getFileSystem();
+        JobScheduler jobScheduler = globalModule.getJobScheduler();
+        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
 
-        LogProvider internalLogProvider = platformModule.logService.getInternalLogProvider();
+        LogProvider internalLogProvider = globalModule.getLogService().getInternalLogProvider();
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, internalLogProvider );
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( SecurePipelineFactory::new, internalLogProvider, config, dependencies );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( SecurePipelineFactory::new, internalLogProvider, config, globalDependencies );
 
         TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
@@ -187,6 +187,6 @@ public class CommercialEditionModule extends EnterpriseEditionModule
 
         Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
 
-        backupServer.ifPresent( platformModule.life::add );
+        backupServer.ifPresent( globalModule.getGlobalLife()::add );
     }
 }

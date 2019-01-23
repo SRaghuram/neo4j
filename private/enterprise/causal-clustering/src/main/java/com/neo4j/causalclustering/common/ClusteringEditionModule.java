@@ -15,7 +15,7 @@ import java.util.function.Predicate;
 
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -33,13 +33,14 @@ import org.neo4j.udc.UsageData;
 public abstract class ClusteringEditionModule extends AbstractEditionModule
 {
 
-    protected void editionInvariants( PlatformModule platformModule, Dependencies dependencies, Config config, LifeSupport life )
+    protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies, Config config, LifeSupport life )
     {
-        KernelData kernelData = createKernelData( platformModule.fileSystem, platformModule.pageCache, platformModule.storeLayout.storeDirectory(), config );
+        KernelData kernelData = createKernelData( globalModule.getFileSystem(), globalModule.getPageCache(),
+                                                globalModule.getStoreLayout().storeDirectory(), config );
         dependencies.satisfyDependency( kernelData );
         life.add( kernelData );
 
-        ioLimiter = new ConfigurableIOLimiter( platformModule.config );
+        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
 
         headerInformationFactory = createHeaderInformationFactory();
 
@@ -49,7 +50,7 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
 
         constraintSemantics = new EnterpriseConstraintSemantics();
 
-        publishEditionInfo( dependencies.resolveDependency( UsageData.class ), platformModule.databaseInfo, config );
+        publishEditionInfo( dependencies.resolveDependency( UsageData.class ), globalModule.getDatabaseInfo(), config );
 
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
     }

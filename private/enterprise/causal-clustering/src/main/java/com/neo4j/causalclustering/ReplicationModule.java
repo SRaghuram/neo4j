@@ -25,7 +25,7 @@ import com.neo4j.causalclustering.messaging.Outbound;
 import java.time.Duration;
 import java.util.UUID;
 
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
@@ -36,7 +36,7 @@ public class ReplicationModule
     private final ProgressTrackerImpl progressTracker;
     private final SessionTracker sessionTracker;
 
-    public ReplicationModule( RaftMachine raftMachine, MemberId myself, PlatformModule platformModule, Config config,
+    public ReplicationModule( RaftMachine raftMachine, MemberId myself, GlobalModule globalModule, Config config,
             Outbound<MemberId,RaftMessages.RaftMessage> outbound, CoreStateStorageService stateStorageService, LogProvider logProvider,
             AvailabilityGuard globalAvailabilityGuard, DatabaseService localDatabases )
     {
@@ -60,7 +60,7 @@ public class ReplicationModule
                 sessionPool,
                 progressTracker, progressRetryStrategy, availabilityTimeoutMillis,
                 globalAvailabilityGuard, logProvider, localDatabases,
-                platformModule.monitors );
+                globalModule.getGlobalMonitors() );
     }
 
     public RaftReplicator getReplicator()

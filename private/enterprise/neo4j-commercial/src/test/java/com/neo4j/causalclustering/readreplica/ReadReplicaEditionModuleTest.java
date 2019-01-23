@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.discovery.SslSharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,9 +15,8 @@ import org.mockito.InOrder;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-import com.neo4j.causalclustering.identity.MemberId;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
@@ -48,7 +48,7 @@ class ReadReplicaEditionModuleTest
     {
         DatabaseManager manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
-        PlatformModule platformModule = new PlatformModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
+        GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
         {
             @Override
             protected LogService createLogService( LogProvider userLogProvider )
@@ -56,7 +56,7 @@ class ReadReplicaEditionModuleTest
                 return NullLogService.getInstance();
             }
         };
-        ReadReplicaEditionModule editionModule = new ReadReplicaEditionModule( platformModule, new SslSharedDiscoveryServiceFactory(),
+        ReadReplicaEditionModule editionModule = new ReadReplicaEditionModule( globalModule, new SslSharedDiscoveryServiceFactory(),
                 new MemberId( UUID.randomUUID() ) );
         editionModule.createDatabases( manager, config );
 

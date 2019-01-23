@@ -20,11 +20,14 @@ import java.util.Collection;
 import java.util.Optional;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
@@ -39,8 +42,8 @@ public abstract class CatchupServersModule
     protected final CatchupClientFactory catchupClientFactory;
     protected final DatabaseService databaseService;
     protected final LogProvider logProvider;
-    protected final Config config;
-    protected final LifeSupport lifeSupport;
+    protected final Config globalConfig;
+    protected final LifeSupport globalLife;
     protected final JobScheduler scheduler;
 
     private final ApplicationSupportedProtocols supportedCatchupProtocols;
@@ -50,45 +53,47 @@ public abstract class CatchupServersModule
     private final LogProvider userLogProvider;
     private final ConnectorPortRegister portRegister;
 
-    public CatchupServersModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, PlatformModule platformModule )
+    public CatchupServersModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, GlobalModule globalModule )
     {
         this.databaseService = databaseService;
         this.pipelineBuilders = pipelineBuilders;
 
-        this.logProvider = platformModule.logService.getInternalLogProvider();
-        this.userLogProvider = platformModule.logService.getUserLogProvider();
-        this.config = platformModule.config;
-        this.lifeSupport = platformModule.life;
-        this.scheduler = platformModule.jobScheduler;
-        this.portRegister = platformModule.connectorPortRegister;
+        LogService logService = globalModule.getLogService();
+        this.logProvider = logService.getInternalLogProvider();
+        this.userLogProvider = logService.getUserLogProvider();
+        this.globalConfig = globalModule.getGlobalConfig();
+        this.globalLife = globalModule.getGlobalLife();
+        this.scheduler = globalModule.getJobScheduler();
+        this.portRegister = globalModule.getConnectorPortRegister();
 
-        SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
+        SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( globalConfig, logProvider );
         this.supportedCatchupProtocols = supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration();
         this.supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
 
         this.catchupClientFactory = createCatchupClient();
 
-        CopiedStoreRecovery copiedStoreRecovery = lifeSupport.add( new CopiedStoreRecovery( config, platformModule.pageCache,
-                platformModule.fileSystem ) );
-        this.databaseComponents = new CatchupComponentsService( databaseService, catchupClientFactory, copiedStoreRecovery,
-                platformModule.fileSystem, platformModule.pageCache, config, logProvider, platformModule.monitors );
+        FileSystemAbstraction fileSystem = globalModule.getFileSystem();
+        PageCache pageCache = globalModule.getPageCache();
+        CopiedStoreRecovery copiedStoreRecovery = globalLife.add( new CopiedStoreRecovery( globalConfig, pageCache, fileSystem ) );
+        this.databaseComponents = new CatchupComponentsService( databaseService, catchupClientFactory, copiedStoreRecovery, fileSystem,
+                pageCache, globalConfig, logProvider, globalModule.getGlobalMonitors() );
     }
 
     private CatchupClientFactory createCatchupClient()
     {
         CatchupClientFactory catchupClient = CatchupClientBuilder.builder()
-                .defaultDatabaseName( config.get( GraphDatabaseSettings.active_database ) )
+                .defaultDatabaseName( globalConfig.get( GraphDatabaseSettings.active_database ) )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.client() )
-                .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
+                .inactivityTimeout( globalConfig.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( scheduler )
-                .bootstrapConfig( clientConfig( config ) )
-                .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
+                .bootstrapConfig( clientConfig( globalConfig ) )
+                .handShakeTimeout( globalConfig.get( CausalClusteringSettings.handshake_timeout ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( userLogProvider )
                 .build();
-        lifeSupport.add( catchupClient );
+        globalLife.add( catchupClient );
         return catchupClient;
     }
 
@@ -102,9 +107,9 @@ public abstract class CatchupServersModule
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.server() )
                 .installedProtocolsHandler( installedProtocolsHandler )
-                .listenAddress( config.get( CausalClusteringSettings.transaction_listen_address ) )
+                .listenAddress( globalConfig.get( CausalClusteringSettings.transaction_listen_address ) )
                 .scheduler( scheduler )
-                .bootstrapConfig( serverConfig( config ) )
+                .bootstrapConfig( serverConfig( globalConfig ) )
                 .userLogProvider( userLogProvider )
                 .debugLogProvider( logProvider )
                 .serverName( "catchup-server" )
@@ -124,7 +129,7 @@ public abstract class CatchupServersModule
                         scheduler,
                         portRegister );
 
-        return transactionBackupServiceProvider.resolveIfBackupEnabled( config );
+        return transactionBackupServiceProvider.resolveIfBackupEnabled( globalConfig );
     }
 
     public final CatchupClientFactory catchupClient()
