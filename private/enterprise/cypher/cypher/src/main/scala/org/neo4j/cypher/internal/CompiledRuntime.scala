@@ -42,7 +42,8 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
                      params: MapValue,
-                     prePopulateResults: Boolean): RuntimeResult = {
+                     prePopulateResults: Boolean,
+                     input: InputDataStream): RuntimeResult = {
 
       val executionMode = if (doProfile) ProfileMode else NormalMode
       val tracer =

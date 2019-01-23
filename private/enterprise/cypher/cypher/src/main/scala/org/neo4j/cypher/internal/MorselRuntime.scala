@@ -123,7 +123,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
                      params: MapValue,
-                     prePopulateResults: Boolean): RuntimeResult = {
+                     prePopulateResults: Boolean,
+                     input: InputDataStream): RuntimeResult = {
 
       if (queryIndexes.hasLabelScan)
         queryContext.transactionalContext.dataRead.prepareForLabelScans()

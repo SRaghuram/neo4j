@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.IteratorBasedResult
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{BaseExecutionResultBuilderFactory, ExecutionResultBuilder}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, QueryContext, QueryIndexes}
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.virtual.MapValue
@@ -29,7 +29,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
   case class SlottedExecutionResultBuilder(queryContext: QueryContext) extends BaseExecutionResultBuilder {
 
     val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
-    override protected def createQueryState(params: MapValue, prePopulateResults: Boolean): SlottedQueryState = {
+    override protected def createQueryState(params: MapValue, prePopulateResults: Boolean, input: InputDataStream): SlottedQueryState = {
       new SlottedQueryState(queryContext,
                             externalResource,
                             params,
