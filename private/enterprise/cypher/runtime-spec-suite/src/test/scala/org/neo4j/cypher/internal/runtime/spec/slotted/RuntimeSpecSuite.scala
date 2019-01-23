@@ -7,6 +7,8 @@ package org.neo4j.cypher.internal.runtime.spec.slotted
 
 import org.neo4j.cypher.internal.SlottedRuntime
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_EDITION
-import org.neo4j.cypher.internal.runtime.spec.interpreted.AllNodeScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.interpreted.{AllNodeScanTestBase, InputTestBase}
 
 class SlottedAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_EDITION, SlottedRuntime)
+
+class SlottedInputTest extends InputTestBase(ENTERPRISE_EDITION, SlottedRuntime)

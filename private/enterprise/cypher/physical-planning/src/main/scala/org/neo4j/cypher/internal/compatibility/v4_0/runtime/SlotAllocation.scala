@@ -287,6 +287,12 @@ object SlotAllocation {
         result.newReference(leaf.idName, false, CTInteger)
         result
 
+      case leaf: Input =>
+        val result = argument
+        for (v <- leaf.variables)
+          result.newReference(v, true, CTAny)
+        result
+
       case p => throw new SlotAllocationFailed(s"Don't know how to handle $p")
     }
 

@@ -37,7 +37,8 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                             queryIndexes.indexes.map(index => queryContext.transactionalContext.dataRead.indexReadSession(index)),
                             pipeDecorator,
                             lenientCreateRelationship = lenientCreateRelationship,
-                            prePopulateResults = prePopulateResults)
+                            prePopulateResults = prePopulateResults,
+                            input = input)
     }
 
     override def buildResultIterator(results: Iterator[ExecutionContext], readOnly: Boolean): IteratorBasedResult = {
