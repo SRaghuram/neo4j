@@ -103,9 +103,7 @@ public class OnlineBackupCommandCcIT
     @Parameters( name = "{0}" )
     public static List<String> recordFormats()
     {
-        //TODO: re-instate HighLimit.NAME test
-        //return Arrays.asList( Standard.LATEST_NAME, HighLimit.NAME );
-        return Arrays.asList( Standard.LATEST_NAME );
+        return Arrays.asList( Standard.LATEST_NAME, HighLimit.NAME );
     }
 
     @Before

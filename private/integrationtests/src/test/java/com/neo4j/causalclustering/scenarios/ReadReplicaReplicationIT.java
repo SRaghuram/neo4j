@@ -21,7 +21,6 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -490,9 +489,7 @@ public class ReadReplicaReplicationIT
         }
     }
 
-    //TODO: re-instate after format checking fixed
     @Test
-    @Ignore
     public void shouldThrowExceptionIfReadReplicaRecordFormatDiffersToCoreRecordFormat() throws Exception
     {
         // given
@@ -514,9 +511,7 @@ public class ReadReplicaReplicationIT
         }
     }
 
-    //TODO: re-instate after format checking fixed
     @Test
-    @Ignore
     public void shouldBeAbleToCopyStoresFromCoreToReadReplica() throws Exception
     {
         // given
