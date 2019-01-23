@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.VirtualValues
 import org.scalatest.mock.MockitoSugar
@@ -12,6 +13,6 @@ import org.scalatest.mock.MockitoSugar
 object EmptyQueryState extends MockitoSugar {
   private val session: IndexReadSession = mock[IndexReadSession]
   def apply(): QueryState = {
-    QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(session), NO_TRANSACTION_BINDER, numberOfWorkers = 1)
+    QueryState(VirtualValues.EMPTY_MAP, null, 10000, Array(session), NO_TRANSACTION_BINDER, numberOfWorkers = 1, NoInput)
   }
 }

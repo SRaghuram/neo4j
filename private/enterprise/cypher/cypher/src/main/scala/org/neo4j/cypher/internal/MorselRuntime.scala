@@ -136,7 +136,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                               params,
                               fieldNames,
                               dispatcher,
-                              schedulerTracer)
+                              schedulerTracer,
+                              input)
     }
 
     override def runtimeName: RuntimeName = MorselRuntimeName
@@ -154,12 +155,13 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             params: MapValue,
                             override val fieldNames: Array[String],
                             dispatcher: Dispatcher,
-                            schedulerTracer: SchedulerTracer) extends RuntimeResult {
+                            schedulerTracer: SchedulerTracer,
+                            input: InputDataStream) extends RuntimeResult {
 
     private var resultRequested = false
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      dispatcher.execute(operators, queryContext, params, schedulerTracer, queryIndexes)(visitor)
+      dispatcher.execute(operators, queryContext, params, schedulerTracer, queryIndexes, input)(visitor)
       resultRequested = true
     }
 

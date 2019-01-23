@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
@@ -18,6 +19,7 @@ case class QueryState(params: MapValue,
                       queryIndexes: Array[IndexReadSession],
                       transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeProxy logic
                       numberOfWorkers: Int,
+                      input: InputDataStream,
                       reduceCollector: Option[ReduceCollector] = None) {
 
   def singeThreaded: Boolean = numberOfWorkers == 1

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.MorselRuntime
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_EDITION, LogicalQueryBuilder}
-import org.neo4j.cypher.internal.runtime.spec.interpreted.AllNodeScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.interpreted.{AllNodeScanTestBase, InputTestBase}
 
 class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_EDITION, MorselRuntime) {
 
@@ -25,5 +25,24 @@ class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_EDITION, Mors
 
     // then
     runtimeResult should beColumns("x").withSingleValueRows(nodes)
+  }
+}
+
+class MorselInputTest extends InputTestBase(ENTERPRISE_EDITION, MorselRuntime) {
+
+  test("should process input batches in parallel") {
+    // when
+    val logicalQuery = new LogicalQueryBuilder()
+      .produceResults("x")
+      .input("x")
+      .build()
+
+    val input = inputSingleColumn(nBatches = 10000, batchSize = 2, rowNumber => rowNumber)
+
+    val (result, context) = executeAndContext(logicalQuery, runtime, input)
+
+    // then
+    result should beColumns("x").withRows(input.flatten)
+    ENTERPRISE_EDITION.hasEvidenceOfParallelism(context) should be(true)
   }
 }

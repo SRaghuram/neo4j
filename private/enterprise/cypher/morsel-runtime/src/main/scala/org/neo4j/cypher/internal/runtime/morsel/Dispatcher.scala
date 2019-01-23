@@ -5,9 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.scheduling.{Scheduler, SchedulerTracer}
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
@@ -18,7 +17,8 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources], transact
                               queryContext: QueryContext,
                               params: MapValue,
                               schedulerTracer: SchedulerTracer,
-                              queryIndexes: Array[IndexReadSession])
+                              queryIndexes: Array[IndexReadSession],
+                              input: InputDataStream)
                              (visitor: QueryResultVisitor[E]): Unit = {
     val leafPipeline = pipeline.getUpstreamLeafPipeline
 
@@ -27,7 +27,8 @@ class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources], transact
                            morselSize,
                            queryIndexes,
                            transactionBinder,
-                           scheduler.numberOfWorkers)
+                           scheduler.numberOfWorkers,
+                           input)
 
     // instead of creating new cursors here only for initializing the query, we could
     //    a) delegate the task of finding the initial task to the scheduler, and use the schedulers cursors
