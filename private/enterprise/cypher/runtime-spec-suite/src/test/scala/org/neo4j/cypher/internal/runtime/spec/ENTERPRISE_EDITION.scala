@@ -25,7 +25,7 @@ object ENTERPRISE_EDITION extends Edition[EnterpriseRuntimeContext](
       val jobScheduler = resolver.resolveDependency(classOf[JobScheduler])
       val kernel = resolver.resolveDependency(classOf[Kernel])
       val txBridge = resolver.resolveDependency(classOf[ThreadToStatementContextBridge])
-      RuntimeEnvironment(runtimeConfig, jobScheduler, kernel.cursors(), txBridge)
+      RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), txBridge)
     }
 
     EnterpriseRuntimeContextCreator(
