@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.spec
 
 import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{CypherConfiguration, EnterpriseRuntimeContext, EnterpriseRuntimeContextCreator, RuntimeEnvironment}
-import org.neo4j.graphdb.DependencyResolver
 import org.neo4j.internal.kernel.api.Kernel
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
