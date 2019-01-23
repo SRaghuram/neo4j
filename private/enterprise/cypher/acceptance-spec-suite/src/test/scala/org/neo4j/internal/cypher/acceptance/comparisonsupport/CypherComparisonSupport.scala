@@ -236,6 +236,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
 
       // Assumption: baseOption.get is safe because the baseScenario is expected to succeed
       val baseResult = baseOption.get._2
+      //must also check planComparisonStrategy on baseScenario
+      planComparisonStrategy.compare(expectSucceed, baseScenario, baseResult)
 
       positiveResults.foreach {
         case (scenario, result) =>
