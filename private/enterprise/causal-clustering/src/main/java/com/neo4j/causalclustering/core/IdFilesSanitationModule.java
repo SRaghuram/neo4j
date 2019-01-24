@@ -30,12 +30,12 @@ public class IdFilesSanitationModule extends LifecycleAdapter
     private final Supplier<DatabaseManager> databaseManagerSupplier;
     private final FileSystemAbstraction fileSystem;
     private final Log log;
-    private final boolean unboundOnCreation;
+    private final CoreStartupState coreStartupState;
 
-    IdFilesSanitationModule( boolean wasUnboundOnCreation, Supplier<DatabaseManager> databaseManagerSupplier, FileSystemAbstraction fileSystem,
+    IdFilesSanitationModule( CoreStartupState coreStartupState, Supplier<DatabaseManager> databaseManagerSupplier, FileSystemAbstraction fileSystem,
             LogProvider logProvider )
     {
-        this.unboundOnCreation = wasUnboundOnCreation;
+        this.coreStartupState = coreStartupState;
         this.databaseManagerSupplier = databaseManagerSupplier;
         this.fileSystem = fileSystem;
         this.log = logProvider.getLog( getClass() );
@@ -44,7 +44,7 @@ public class IdFilesSanitationModule extends LifecycleAdapter
     @Override
     public void start() throws Throwable
     {
-        if ( !unboundOnCreation )
+        if ( !coreStartupState.wasUnboundOnStartup() )
         {
             return;
         }
