@@ -100,12 +100,10 @@ case class RuntimeEnvironment(config: CypherRuntimeConfiguration,
   val tracer: SchedulerTracer = createTracer()
 
   def getDispatcher(debugOptions: Set[String]): Dispatcher =
-    if (singleThreadedRequested(debugOptions) && !isAlreadySingleThreaded)
+    if (MorselOptions.singleThreaded(debugOptions) && !isAlreadySingleThreaded)
       new Dispatcher(config.morselSize, new SingleThreadScheduler(() => new QueryResources(cursors)), NO_TRANSACTION_BINDER)
     else
       dispatcher
-
-  private def singleThreadedRequested(debugOptions: Set[String]) = debugOptions.contains("singlethreaded")
 
   private def isAlreadySingleThreaded = config.scheduler == SingleThreaded
 

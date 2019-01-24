@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal
 
+import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption.SingleThreaded
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
@@ -63,7 +64,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val tracer = context.runtimeEnvironment.tracer
     val fieldNames = query.resultColumns
 
-    val threadSafeCursors = context.runtimeEnvironment.cursors
+    val maybeThreadSafeCursors = if (context.config.scheduler == SingleThreaded) None else Some(context.runtimeEnvironment.cursors)
 
     MorselExecutionPlan(operators,
                         physicalPlan.slotConfigurations,
@@ -72,8 +73,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                         fieldNames,
                         dispatcher,
                         tracer,
-                        threadSafeCursors)
-
+                        maybeThreadSafeCursors)
   }
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan,
@@ -115,9 +115,10 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                  fieldNames: Array[String],
                                  dispatcher: Dispatcher,
                                  schedulerTracer: SchedulerTracer,
-                                 threadSafeCursors: CursorFactory) extends ExecutionPlan {
+                                 maybeThreadSafeCursors: Option[CursorFactory]) extends ExecutionPlan {
 
-    override def threadSafeCursorFactory: Option[CursorFactory] = Some(threadSafeCursors)
+    override def threadSafeCursorFactory(debugOptions: Set[String]): Option[CursorFactory] =
+      if (MorselOptions.singleThreaded(debugOptions)) None else maybeThreadSafeCursors
 
     override def run(queryContext: QueryContext,
                      doProfile: Boolean,
