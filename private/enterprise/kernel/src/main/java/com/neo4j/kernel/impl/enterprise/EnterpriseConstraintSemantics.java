@@ -38,11 +38,11 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
     @Override
     protected ConstraintDescriptor readNonStandardConstraint( ConstraintRule rule, String errorMessage )
     {
-        if ( !rule.getConstraintDescriptor().enforcesPropertyExistence() )
+        if ( !rule.enforcesPropertyExistence() )
         {
             throw new IllegalStateException( "Unsupported constraint type: " + rule );
         }
-        return rule.getConstraintDescriptor();
+        return rule;
     }
 
     @Override
