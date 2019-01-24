@@ -10,25 +10,21 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.helpers.DataCreator;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.readreplica.ReadReplica;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.Service;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.monitoring.Monitors;
 
-import static com.neo4j.causalclustering.scenarios.ReadReplicaToReadReplicaCatchupIT.SpecificReplicaStrategy.upstreamFactory;
+import static com.neo4j.causalclustering.upstream.SpecificReplicaStrategy.upstreamFactory;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -154,49 +150,4 @@ public class ReadReplicaToReadReplicaCatchupIT
         }
     }
 
-    @Service.Implementation( UpstreamDatabaseSelectionStrategy.class )
-    public static class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
-    {
-        // This because we need a stable point for config to inject into Service loader loaded classes
-        static final UpstreamFactory upstreamFactory = new UpstreamFactory();
-
-        public SpecificReplicaStrategy()
-        {
-            super( "specific" );
-        }
-
-        @Override
-        public Optional<MemberId> upstreamDatabase()
-        {
-            ReadReplica current = upstreamFactory.current();
-            if ( current == null )
-            {
-                return Optional.empty();
-            }
-            else
-            {
-                return Optional.of( current.memberId() );
-            }
-        }
-    }
-
-    private static class UpstreamFactory
-    {
-        private ReadReplica current;
-
-        public void setCurrent( ReadReplica readReplica )
-        {
-            this.current = readReplica;
-        }
-
-        public ReadReplica current()
-        {
-            return current;
-        }
-
-        void reset()
-        {
-            current = null;
-        }
-    }
 }
