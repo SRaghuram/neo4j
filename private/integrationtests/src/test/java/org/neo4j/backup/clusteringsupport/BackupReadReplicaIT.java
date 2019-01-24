@@ -5,7 +5,11 @@
  */
 package org.neo4j.backup.clusteringsupport;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,20 +17,16 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
-import com.neo4j.test.causalclustering.ClusterRule;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.transactionAddress;
 import static com.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.transactionAddress;
 import static org.neo4j.backup.clusteringsupport.BackupUtil.backupArguments;
 import static org.neo4j.backup.clusteringsupport.BackupUtil.createSomeData;
 import static org.neo4j.backup.clusteringsupport.BackupUtil.getConfig;

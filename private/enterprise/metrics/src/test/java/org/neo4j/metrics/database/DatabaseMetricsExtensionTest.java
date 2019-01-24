@@ -5,13 +5,13 @@
  */
 package org.neo4j.metrics.database;
 
+import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Supplier;
 
-import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
@@ -24,7 +24,6 @@ import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.DefaultCheckPointMonitor;
 import org.neo4j.kernel.impl.transaction.log.rotation.monitor.DefaultLogRotationMonitor;
@@ -42,6 +41,7 @@ import org.neo4j.metrics.global.GlobalMetricsExtension;
 import org.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import org.neo4j.metrics.global.MetricsManager;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;

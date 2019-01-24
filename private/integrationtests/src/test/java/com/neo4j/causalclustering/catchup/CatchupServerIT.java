@@ -283,7 +283,7 @@ public class CatchupServerIT
 
     private static LongSet getExpectedIndexIds( Database database )
     {
-        return database.getDatabaseFileListing().getNeoStoreFileIndexListing().getIndexIds();
+        return database.getDatabaseFileListing().getIndexFileListing().getIndexIds();
     }
 
     private static List<File> listServerExpectedNonReplayableFiles( Database database ) throws IOException

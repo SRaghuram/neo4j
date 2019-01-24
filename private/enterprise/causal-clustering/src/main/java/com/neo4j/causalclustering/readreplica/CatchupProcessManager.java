@@ -33,7 +33,6 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -41,6 +40,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;

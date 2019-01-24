@@ -20,8 +20,9 @@ import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
-import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 public class CommitStateHelper
 {
@@ -38,19 +39,19 @@ public class CommitStateHelper
 
     CommitState getStoreState( DatabaseLayout databaseLayout ) throws IOException
     {
-        ReadOnlyTransactionIdStore metaDataStore = new ReadOnlyTransactionIdStore( pageCache, databaseLayout );
-        long metaDataStoreTxId = metaDataStore.getLastCommittedTransactionId();
+        TransactionIdStore txIdStore = new ReadOnlyTransactionIdStore( pageCache, databaseLayout );
+        long lastCommittedTxId = txIdStore.getLastCommittedTransactionId();
 
-        Optional<Long> latestTransactionLogIndex = getLatestTransactionLogIndex( metaDataStoreTxId, databaseLayout );
+        Optional<Long> latestTransactionLogIndex = getLatestTransactionLogIndex( lastCommittedTxId, databaseLayout );
 
         //noinspection OptionalIsPresent
         if ( latestTransactionLogIndex.isPresent() )
         {
-            return new CommitState( metaDataStoreTxId, latestTransactionLogIndex.get() );
+            return new CommitState( lastCommittedTxId, latestTransactionLogIndex.get() );
         }
         else
         {
-            return new CommitState( metaDataStoreTxId );
+            return new CommitState( lastCommittedTxId );
         }
     }
 

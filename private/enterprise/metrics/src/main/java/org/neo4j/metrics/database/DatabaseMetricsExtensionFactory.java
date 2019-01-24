@@ -12,7 +12,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointerMonitor;
 import org.neo4j.kernel.impl.transaction.log.rotation.monitor.LogRotationMonitor;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
@@ -20,6 +19,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.metrics.global.MetricsManager;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static org.neo4j.kernel.extension.ExtensionType.DATABASE;
 

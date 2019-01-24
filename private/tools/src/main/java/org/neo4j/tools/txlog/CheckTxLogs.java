@@ -34,7 +34,7 @@ import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.tools.txlog.checktypes.CheckType;
 import org.neo4j.tools.txlog.checktypes.CheckTypes;
 
-import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 import static org.neo4j.tools.util.TransactionLogUtils.openLogs;
 
 /**

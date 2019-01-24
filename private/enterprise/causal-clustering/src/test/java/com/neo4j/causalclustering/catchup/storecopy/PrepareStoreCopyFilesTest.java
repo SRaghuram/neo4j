@@ -56,7 +56,7 @@ public class PrepareStoreCopyFilesTest
         indexListingMock = mock( SchemaAndIndexingFileIndexListing.class );
         when( indexListingMock.getIndexIds() ).thenReturn( new LongHashSet() );
         DatabaseFileListing storeFileListing = mock( DatabaseFileListing.class );
-        when( storeFileListing.getNeoStoreFileIndexListing() ).thenReturn( indexListingMock );
+        when( storeFileListing.getIndexFileListing() ).thenReturn( indexListingMock );
         when( storeFileListing.builder() ).thenReturn( fileListingBuilder );
         when( dataSource.getDatabaseFileListing() ).thenReturn( storeFileListing );
         prepareStoreCopyFiles = new PrepareStoreCopyFiles( dataSource, fileSystemAbstraction );

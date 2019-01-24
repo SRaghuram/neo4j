@@ -5,20 +5,21 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.readreplica.ReadReplica;
+
 import java.io.IOException;
 import java.time.Clock;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeoutException;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.helper.Workload;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.function.Predicates.awaitForever;

@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
 
 import java.util.Objects;
 
-import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 public class TxPullRequest implements DatabaseCatchupRequest
 {

@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.common.LocalDatabase;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 /**
  * Retrieves last raft log index that was appended to the transaction log, so that raft log replay can recover while

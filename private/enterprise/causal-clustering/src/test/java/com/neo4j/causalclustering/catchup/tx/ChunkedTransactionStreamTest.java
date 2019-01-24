@@ -30,7 +30,7 @@ import static org.mockito.AdditionalAnswers.returnsElementsOf;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @SuppressWarnings( {"unchecked", "UnnecessaryLocalVariable"} )
 public class ChunkedTransactionStreamTest

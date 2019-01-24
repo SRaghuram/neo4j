@@ -5,10 +5,8 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import java.util.concurrent.TimeoutException;
-
-import org.neo4j.kernel.impl.store.TransactionId;
-import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
+import org.neo4j.storageengine.api.TransactionId;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 class FakeTransactionIdStore implements TransactionIdStore
 {
@@ -66,7 +64,7 @@ class FakeTransactionIdStore implements TransactionIdStore
     }
 
     @Override
-    public void awaitClosedTransactionId( long txId, long timeoutMillis ) throws InterruptedException, TimeoutException
+    public void awaitClosedTransactionId( long txId, long timeoutMillis )
     {
     }
 
