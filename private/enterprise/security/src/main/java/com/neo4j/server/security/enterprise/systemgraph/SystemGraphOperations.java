@@ -5,12 +5,16 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -26,10 +30,10 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.values.storable.Values.NO_VALUE;
 
 public class SystemGraphOperations
 {
@@ -64,12 +68,21 @@ public class SystemGraphOperations
     AuthorizationInfo doGetAuthorizationInfo( String username )
     {
         MutableBoolean existingUser = new MutableBoolean( false );
+        MutableBoolean isAdmin = new MutableBoolean( false );
         MutableBoolean passwordChangeRequired = new MutableBoolean( false );
         MutableBoolean suspended = new MutableBoolean( false );
         Set<String> roleNames = new TreeSet<>();
+        Set<String> permissions = new TreeSet<>();
 
-        String query = "MATCH (u:User {name: $username}) OPTIONAL MATCH (u)-[:HAS_DB_ROLE]->(:DbRole)-[:FOR_ROLE]->(r:Role) " +
-                "RETURN u.passwordChangeRequired, u.suspended, r.name";
+        String query =
+                "MATCH (u:User {name: $username}) " +
+                "OPTIONAL MATCH (u)-[:HAS_DB_ROLE]->(dbr:DbRole)-[:FOR_ROLE]->(r:Role), " +
+                "(dbr)-[:FOR_DATABASE]->(db:Database) " +
+                "OPTIONAL MATCH (r)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource) " +
+                "WITH DISTINCT db.name AS dbname, res, p.action AS action, u, r " +
+                "RETURN u.passwordChangeRequired, u.suspended, r.name, r.admin, " +
+                "'database:' + dbname + ':' + action + ':' + res.type + ':' + res.scope as permissions";
+
         Map<String,Object> params = map( "username", username );
 
         final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
@@ -80,11 +93,22 @@ public class SystemGraphOperations
             suspended.setValue( ((BooleanValue) fields[1]).booleanValue() );
 
             Value role = (Value) fields[2];
-            if ( role != Values.NO_VALUE )
+            if ( role != NO_VALUE )
             {
                 roleNames.add( ((TextValue) role).stringValue() );
             }
 
+            Value admin = (Value) fields[3];
+            if ( admin != NO_VALUE )
+            {
+                isAdmin.setValue( ((BooleanValue) admin).booleanValue() );
+            }
+
+            Value permission = (Value) fields[4];
+            if ( permission != NO_VALUE )
+            {
+                permissions.add( ((TextValue) permission).stringValue() );
+            }
             return true;
         };
 
@@ -100,7 +124,15 @@ public class SystemGraphOperations
             return new SimpleAuthorizationInfo();
         }
 
-        return new SimpleAuthorizationInfo( roleNames );
+        SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo( roleNames );
+        authorizationInfo.addStringPermissions( permissions );
+
+        if ( isAdmin.isTrue() )
+        {
+            authorizationInfo.addStringPermission( "system:*" );
+        }
+
+        return authorizationInfo;
     }
 
     void suspendUser( String username ) throws InvalidArgumentsException
@@ -213,6 +245,74 @@ public class SystemGraphOperations
     void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
     {
         addRoleToUserForDb( roleName, DEFAULT_DATABASE_NAME, username );
+    }
+
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    {
+        assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+        Map<String,Object> params = map(
+                "roleName", roleName,
+                "action", resourcePrivilege.getAction(),
+                "resource", resourcePrivilege.getResource(),
+                "scope", resourcePrivilege.getScope()
+        );
+
+        queryExecutor.executeQueryWithParamCheck( "MERGE (:Resource {type: $resource, scope: $scope}) RETURN 0", params );
+        String query = "MATCH (r:Role {name: $roleName}), (res:Resource {type: $resource, scope: $scope}) " +
+                        "MERGE (r)-[:GRANTED]->(:Privilege {action: $action})-[:APPLIES_TO]->(res) RETURN 0";
+        queryExecutor.executeQueryWithParamCheck( query, params );
+    }
+
+    Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    {
+        assertValidUsername( username );
+        String query = "MATCH (u:User {name: $username})-[:HAS_DB_ROLE]->(r:DbRole)-[:FOR_ROLE]->(t:Role),  " +
+                "(r)-[:FOR_DATABASE]->(db:Database) " +
+                "OPTIONAL MATCH (t)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res) " +
+                "WITH DISTINCT db.name AS dbname, res.type AS resource, p.action AS action, res, t.admin as admin " +
+                "RETURN dbname, action, resource, res.scope AS scope, admin ORDER BY dbname, resource, scope";
+
+        Map<String, DatabasePrivilege> results = new HashMap<>();
+
+        final QueryResult.QueryResultVisitor<RuntimeException> resultVisitor = row ->
+        {
+            String dbName = ((TextValue) row.fields()[0]).stringValue();
+            DatabasePrivilege dbpriv = results.getOrDefault( dbName, new DatabasePrivilege( dbName ) );
+            AnyValue actionValue = row.fields()[1];
+            AnyValue resourceValue = row.fields()[2];
+            AnyValue scopeValue = row.fields()[3];
+            if ( actionValue != NO_VALUE && resourceValue != NO_VALUE && scopeValue != NO_VALUE )
+            {
+                String action = ((TextValue) actionValue).stringValue();
+                String resource = ((TextValue) resourceValue).stringValue();
+                String scope = ((TextValue) scopeValue).stringValue();
+                ResourcePrivilege privilege = new ResourcePrivilege( action, resource, scope );
+                dbpriv.addPrivilege( privilege );
+                results.put( dbName, dbpriv );
+            }
+            AnyValue adminValue = row.fields()[4];
+            if ( adminValue != NO_VALUE && ((BooleanValue) adminValue).booleanValue() )
+            {
+                dbpriv.setAdmin();
+                results.put( dbName, dbpriv );
+            }
+            return true;
+        };
+
+        queryExecutor.executeQuery( query, Collections.singletonMap( "username", username ), resultVisitor );
+
+        return new HashSet<>( results.values() );
+    }
+
+    @SuppressWarnings( "SameParameterValue" )
+    void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
+    {
+        assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+        Map<String,Object> params = map(
+                "roleName", roleName,
+                "isAdmin", setToAdmin
+        );
+        queryExecutor.executeQueryWithParamCheck( "MATCH (r:Role {name: $roleName}) SET r.admin = $isAdmin RETURN 0", params );
     }
 
     Set<String> getAllRoleNames()

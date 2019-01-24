@@ -263,6 +263,56 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
+    public void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege )
+            throws InvalidArgumentsException
+    {
+        try
+        {
+            assertUserManager();
+            userManager.grantPrivilegeToRole( roleName, resourcePrivilege );
+            securityLog.info( subject, "added `%s` privilege on `%s` for role `%s`",
+                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName );
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            securityLog.error( subject, "tried to add `%s` privilege on `%s` for role `%s`: %s",
+                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName, e.getMessage() );
+            throw e;
+        }
+    }
+
+    @Override
+    public Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    {
+        try
+        {
+            assertSelfOrUserManager( username );
+            return userManager.showPrivilegesForUser( username );
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            securityLog.error( subject, "tried to show privileges for user `%s`: %s", username, e.getMessage() );
+            throw e;
+        }
+    }
+
+    @Override
+    public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
+    {
+        try
+        {
+            assertUserManager();
+            userManager.setAdmin( roleName, setToAdmin );
+            securityLog.info( subject, "%s admin privilege for role `%s`", setToAdmin ? "granted" : "revoked", roleName );
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            securityLog.error( subject, "tried to %s admin privilege for role `%s`: %s", setToAdmin ? "grant" : "revoke", roleName, e.getMessage() );
+            throw e;
+        }
+    }
+
+    @Override
     public Set<String> getAllRoleNames() throws AuthorizationViolationException
     {
         try

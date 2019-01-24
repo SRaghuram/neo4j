@@ -618,13 +618,13 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldThrowIfTryingToDeletePredefinedRole()
     {
         testFailDeleteRole( adminSubject, ADMIN,
-                format( "'%s' is a predefined role and can not be deleted.", ADMIN ) );
+                format( "'%s' is a predefined role and can not be deleted or modified.", ADMIN ) );
         testFailDeleteRole( adminSubject, ARCHITECT,
-                format( "'%s' is a predefined role and can not be deleted.", ARCHITECT ) );
+                format( "'%s' is a predefined role and can not be deleted or modified.", ARCHITECT ) );
         testFailDeleteRole( adminSubject, PUBLISHER,
-                format( "'%s' is a predefined role and can not be deleted.", PUBLISHER ) );
+                format( "'%s' is a predefined role and can not be deleted or modified.", PUBLISHER ) );
         testFailDeleteRole( adminSubject, READER,
-                format( "'%s' is a predefined role and can not be deleted.", READER ) );
+                format( "'%s' is a predefined role and can not be deleted or modified.", READER ) );
     }
 
     @Test

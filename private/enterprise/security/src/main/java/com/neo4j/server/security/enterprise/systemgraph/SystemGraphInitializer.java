@@ -7,9 +7,15 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.SecureHasher;
+import com.neo4j.server.security.enterprise.auth.StandardCommercialLoginContext;
+import org.apache.shiro.authz.SimpleRole;
+import org.apache.shiro.authz.permission.WildcardPermission;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -223,6 +229,7 @@ public class SystemGraphInitializer
             for ( String role : PredefinedRolesBuilder.roles.keySet() )
             {
                 systemGraphOperations.newRole( role );
+                assignDefaultPrivileges( role );
             }
         }
 
@@ -232,6 +239,39 @@ public class SystemGraphInitializer
             systemGraphOperations.addRoleToUser( PredefinedRoles.ADMIN, username );
             log.info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, username );
         }
+    }
+
+    private void assignDefaultPrivileges( String roleName ) throws InvalidArgumentsException
+    {
+        if ( PredefinedRolesBuilder.roles.containsKey( roleName ) )
+        {
+            SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
+            if ( isPermitted( simpleRole, StandardCommercialLoginContext.ADMIN ) )
+            {
+                systemGraphOperations.setAdmin( roleName, true );
+            }
+            if ( isPermitted( simpleRole, StandardCommercialLoginContext.SCHEMA_WRITE ) )
+            {
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ) );
+            }
+            if ( isPermitted( simpleRole, StandardCommercialLoginContext.TOKEN_CREATE ) )
+            {
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.TOKEN ) );
+            }
+            if ( isPermitted( simpleRole, StandardCommercialLoginContext.WRITE ) )
+            {
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+            }
+            if ( isPermitted( simpleRole, StandardCommercialLoginContext.READ ) )
+            {
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+            }
+        }
+    }
+
+    private boolean isPermitted( SimpleRole role, String permission )
+    {
+        return role.isPermitted( new WildcardPermission( permission ) );
     }
 
     private void migrateFromFlatFileRealm() throws Exception
@@ -352,6 +392,8 @@ public class SystemGraphInitializer
                 for ( RoleRecord role : roles.values() )
                 {
                     systemGraphOperations.newRole( role.name() );
+                    assignDefaultPrivileges( role.name() );
+
                     for ( String username : role.users() )
                     {
                         systemGraphOperations.addRoleToUser( role.name(), username );

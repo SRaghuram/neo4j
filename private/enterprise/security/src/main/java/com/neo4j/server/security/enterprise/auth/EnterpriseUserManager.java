@@ -47,6 +47,18 @@ public interface EnterpriseUserManager extends UserManager
      */
     void removeRoleFromUser( String roleName, String username ) throws IOException, InvalidArgumentsException;
 
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException;
+
+    /**
+     * Show the privileges for a user.
+     *
+     * @param username name of user
+     * @throws InvalidArgumentsException if the user does not exist
+     */
+    Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException;
+
+    void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException;
+
     Set<String> getAllRoleNames();
 
     Set<String> getRoleNamesForUser( String username ) throws InvalidArgumentsException;
@@ -92,6 +104,22 @@ public interface EnterpriseUserManager extends UserManager
 
         @Override
         public void removeRoleFromUser( String roleName, String username )
+        {
+        }
+
+        @Override
+        public void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege )
+        {
+        }
+
+        @Override
+        public Set<DatabasePrivilege> showPrivilegesForUser( String username )
+        {
+            return emptySet();
+        }
+
+        @Override
+        public void setAdmin( String roleName, boolean setToAdmin )
         {
         }
 

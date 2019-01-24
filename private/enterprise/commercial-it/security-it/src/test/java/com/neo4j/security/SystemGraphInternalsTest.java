@@ -5,11 +5,15 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
+import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.ContextSwitchingSystemGraphQueryExecutor;
+import com.neo4j.server.security.enterprise.systemgraph.ImportOptionsBuilder;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphOperations;
@@ -22,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
 import java.io.File;
+import java.util.Set;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -32,14 +37,17 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
+import static org.neo4j.test.assertion.Assert.assertException;
 
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphInternalsTest
@@ -47,6 +55,7 @@ class SystemGraphInternalsTest
     private GraphDatabaseService database;
     private ContextSwitchingSystemGraphQueryExecutor systemGraphExecutor;
     private SystemGraphRealm realm;
+    private String activeDbName;
 
     @Inject
     private TestDirectory testDirectory;
@@ -59,7 +68,7 @@ class SystemGraphInternalsTest
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         database = builder.newGraphDatabase();
-        String activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
+        activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
         DatabaseManager<?> databaseManager = getDatabaseManager();
         systemGraphExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, activeDbName );
         setupSystemGraphRealm();
@@ -73,9 +82,7 @@ class SystemGraphInternalsTest
         AssertableLogProvider log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
-        SystemGraphImportOptions importOptions =
-                new SystemGraphImportOptions( false, false, false, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
-                        InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
+        SystemGraphImportOptions importOptions = new ImportOptionsBuilder().build();
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( systemGraphExecutor, secureHasher );
@@ -147,6 +154,54 @@ class SystemGraphInternalsTest
 
         realm.deleteRole( "tmpRole" );
         assertEquals( 1, nbrOfDbRoleNodes() );
+    }
+
+    @Test
+    void shouldFailShowPrivilegeForUnknownUser() throws Exception
+    {
+        // this just returns an empty result... should probably generate an error message about the user not existing
+        realm.showPrivilegesForUser( "TomRiddle" );
+
+        // these throw because the user name is not valid
+        assertException( () -> realm.showPrivilegesForUser( "" ), InvalidArgumentsException.class, "The provided username is empty." );
+        assertException( () -> realm.showPrivilegesForUser( "Neo," ), InvalidArgumentsException.class,
+                "Username 'Neo,' contains illegal characters. Use ascii characters that are not ',', ':' or whitespaces." );
+    }
+
+    @Test
+    void shouldShowPrivilegesForUser() throws Exception
+    {
+        realm.newUser( "Neo", password( "abc" ), false );
+        realm.newRole( "custom", "Neo" );
+
+        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "Neo" );
+        assertTrue( privileges.isEmpty() );
+
+        realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        privileges = realm.showPrivilegesForUser( "Neo" );
+        DatabasePrivilege databasePrivilege = new DatabasePrivilege( activeDbName );
+        databasePrivilege.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
+    }
+
+    @Test
+    void shouldShowAdminPrivileges() throws Exception
+    {
+        realm.newUser( "Neo", password( "abc" ), false );
+        realm.newRole( "custom", "Neo" );
+
+        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "Neo" );
+        assertTrue( privileges.isEmpty() );
+
+        realm.setAdmin( "custom", true );
+        privileges = realm.showPrivilegesForUser( "Neo" );
+        DatabasePrivilege databasePrivilege = new DatabasePrivilege( activeDbName );
+        databasePrivilege.setAdmin();
+        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
+
+        realm.setAdmin( "custom", false );
+        privileges = realm.showPrivilegesForUser( "Neo" );
+        assertTrue( privileges.isEmpty() );
     }
 
     private void setupTwoReaders() throws InvalidArgumentsException

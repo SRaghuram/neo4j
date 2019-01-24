@@ -6,8 +6,13 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<CommercialLoginContext>
 {
@@ -28,5 +33,37 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         {
             return obj;
         }
+    }
+
+    @Test
+    void shouldAllowReadsForCustomRoleWithReadPrivilege() throws Throwable
+    {
+        // Given
+        userManager.newUser( "Alice", password( "foo" ), false );
+        userManager.newRole( "CustomRead", "Alice" );
+
+        // When
+        userManager.grantPrivilegeToRole( "CustomRead", new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+
+        // Then
+        CommercialLoginContext subject = neo.login( "Alice", "foo" );
+        testSuccessfulRead( subject, 3 );
+        testFailWrite( subject );
+    }
+
+    @Test
+    void shouldAllowUserManagementForCustomRoleWithAdminPrivilege() throws Throwable
+    {
+        // Given
+        userManager.newUser( "Alice", password( "foo" ), false );
+        userManager.newRole( "UserManager", "Alice" );
+
+        // When
+        userManager.setAdmin( "UserManager", true );
+
+        // Then
+        CommercialLoginContext subject = neo.login( "Alice", "foo" );
+        assertEmpty( subject, "CALL dbms.security.createUser('Bob', 'bar', false)" );
+        testFailRead( subject, 3 );
     }
 }

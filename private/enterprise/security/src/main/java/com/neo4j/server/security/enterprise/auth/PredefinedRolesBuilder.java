@@ -22,11 +22,11 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 
 public class PredefinedRolesBuilder implements RolesBuilder
 {
-    private static final WildcardPermission SCHEMA = new WildcardPermission( "schema:*" );
-    private static final WildcardPermission FULL = new WildcardPermission( "*" );
-    private static final WildcardPermission TOKEN = new WildcardPermission( "token:*" );
-    private static final WildcardPermission READ_WRITE = new WildcardPermission( "data:*" );
-    private static final WildcardPermission READ = new WildcardPermission( "data:read" );
+    private static final WildcardPermission SYSTEM = new WildcardPermission( "system:*" );
+    private static final WildcardPermission SCHEMA = new WildcardPermission( "database:*:*:schema" );
+    private static final WildcardPermission TOKEN = new WildcardPermission( "database:*:*:token" );
+    private static final WildcardPermission WRITE = new WildcardPermission( "database:*:write:graph" );
+    private static final WildcardPermission READ = new WildcardPermission( "database:*:read:graph" );
 
     private static final Map<String,SimpleRole> innerRoles = staticBuildRoles();
     public static final Map<String,SimpleRole> roles = Collections.unmodifiableMap( innerRoles );
@@ -36,22 +36,29 @@ public class PredefinedRolesBuilder implements RolesBuilder
         Map<String,SimpleRole> roles = new ConcurrentHashMap<>( 4 );
 
         SimpleRole admin = new SimpleRole( ADMIN );
-        admin.add( FULL );
+        admin.add( SYSTEM );
+        admin.add( SCHEMA );
+        admin.add( TOKEN );
+        admin.add( WRITE );
+        admin.add( READ );
         roles.put( ADMIN, admin );
 
         SimpleRole architect = new SimpleRole( ARCHITECT );
         architect.add( SCHEMA );
-        architect.add( READ_WRITE );
         architect.add( TOKEN );
+        architect.add( WRITE );
+        architect.add( READ );
         roles.put( ARCHITECT, architect );
 
         SimpleRole publisher = new SimpleRole( PUBLISHER );
-        publisher.add( READ_WRITE );
         publisher.add( TOKEN );
+        publisher.add( WRITE );
+        publisher.add( READ );
         roles.put( PUBLISHER, publisher );
 
         SimpleRole editor = new SimpleRole( EDITOR );
-        editor.add( READ_WRITE );
+        editor.add( WRITE );
+        editor.add( READ );
         roles.put( EDITOR, editor );
 
         SimpleRole reader = new SimpleRole( READER );

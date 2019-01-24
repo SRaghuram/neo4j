@@ -483,7 +483,7 @@ class UserManagementProceduresLoggingTest
                 error( "[admin]: tried to delete role `%s`: %s", null, "Role 'null' does not exist." ),
                 error( "[admin]: tried to delete role `%s`: %s", "", "Role '' does not exist." ),
                 error( "[admin]: tried to delete role `%s`: %s", "foo", "Role 'foo' does not exist." ),
-                error( "[admin]: tried to delete role `%s`: %s", ADMIN, "'admin' is a predefined role and can not be deleted." )
+                error( "[admin]: tried to delete role `%s`: %s", ADMIN, "'admin' is a predefined role and can not be deleted or modified." )
         );
     }
 

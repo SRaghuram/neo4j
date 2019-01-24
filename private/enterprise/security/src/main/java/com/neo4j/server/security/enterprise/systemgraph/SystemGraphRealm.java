@@ -5,9 +5,11 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
@@ -84,7 +86,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         setAuthenticationCachingEnabled( true );
         setAuthorizationCachingEnabled( true );
         setCredentialsMatcher( this );
-        setRolePermissionResolver( PredefinedRolesBuilder.rolePermissionResolver );
     }
 
     @Override
@@ -317,6 +318,28 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
+    public void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    {
+        assertNotPredefinedRoleName( roleName );
+        systemGraphOperations.grantPrivilegeToRole( roleName, resourcePrivilege );
+        clearCachedAuthorizationInfo();
+    }
+
+    @Override
+    public Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    {
+        return systemGraphOperations.showPrivilegesForUser( username );
+    }
+
+    @Override
+    public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
+    {
+        assertNotPredefinedRoleName( roleName );
+        systemGraphOperations.setAdmin( roleName, setToAdmin );
+        clearCachedAuthorizationInfo();
+    }
+
+    @Override
     public Set<String> getAllRoleNames()
     {
         return systemGraphOperations.getAllRoleNames();
@@ -461,7 +484,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         if ( roleName != null && PredefinedRolesBuilder.roles.keySet().contains( roleName ) )
         {
             throw new InvalidArgumentsException(
-                    format( "'%s' is a predefined role and can not be deleted.", roleName ) );
+                    format( "'%s' is a predefined role and can not be deleted or modified.", roleName ) );
         }
     }
 

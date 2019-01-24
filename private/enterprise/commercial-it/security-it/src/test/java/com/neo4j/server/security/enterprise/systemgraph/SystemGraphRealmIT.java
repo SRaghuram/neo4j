@@ -5,11 +5,17 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
+import org.apache.shiro.authz.AuthorizationInfo;
+import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +47,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -48,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.server.security.auth.BasicAuthManagerTest.clearedPasswordWithSameLenghtAs;
@@ -355,6 +363,163 @@ class SystemGraphRealmIT
         // Then
         assertThat( newPassword, equalTo( clearedPasswordWithSameLenghtAs( "jake" ) ) );
         assertAuthenticationSucceeds( realm, "jake" );
+    }
+
+    @Test
+    void shouldGetDefaultPrivilegesForDefaultRoles() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "admin", "architect", "publisher", "editor", "reader" )
+                .migrateRole( PredefinedRoles.ADMIN, "admin" )
+                .migrateRole( PredefinedRoles.ARCHITECT, "architect" )
+                .migrateRole( PredefinedRoles.PUBLISHER, "publisher" )
+                .migrateRole( PredefinedRoles.EDITOR, "editor" )
+                .migrateRole( PredefinedRoles.READER, "reader" )
+                .build(), securityLog, dbManager );
+
+        // When
+        AuthorizationInfo info = getAuthSnapshot( realm, "admin" );
+
+        // Then
+        assertThat( info.getStringPermissions(), containsInAnyOrder(
+                equalTo( "system:*" ),
+                equalTo( String.format( "database:%s:write:schema:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
+        assertThat( info.getStringPermissions().size(), equalTo( 4 ) );
+
+        // When
+        info = getAuthSnapshot( realm, "architect" );
+        assertThat( info.getStringPermissions(), containsInAnyOrder(
+                equalTo( String.format( "database:%s:write:schema:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
+        assertThat( info.getStringPermissions().size(), equalTo( 3 ) );
+
+        // When
+        info = getAuthSnapshot( realm, "publisher" );
+
+        // Then
+        assertThat( info.getStringPermissions(), containsInAnyOrder(
+                equalTo( String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
+        assertThat( info.getStringPermissions().size(), equalTo( 2 ) );
+
+        // When
+        info = getAuthSnapshot( realm, "editor" );
+
+        // Then
+        assertThat( info.getStringPermissions(), contains(
+                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
+        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
+
+        // When
+        info = getAuthSnapshot( realm, "reader" );
+
+        // Then
+        assertThat( info.getStringPermissions(), contains(
+                String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) );
+        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
+    }
+
+    @Test
+    void shouldSetPrivilegesForCustomRoles() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob", "circe" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .migrateRole( "custom", "bob" )
+                .migrateRole( "role", "circe" )
+                .build(), securityLog, dbManager );
+
+        // When
+        realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
+        realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.WRITE, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
+        realm.grantPrivilegeToRole( "role", new ResourcePrivilege( Action.WRITE, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
+        realm.grantPrivilegeToRole( "role", new ResourcePrivilege( Action.WRITE, Resource.TOKEN, ResourcePrivilege.FULL_SCOPE ) );
+        realm.grantPrivilegeToRole( "role", new ResourcePrivilege( Action.WRITE, Resource.SCHEMA, ResourcePrivilege.FULL_SCOPE ) );
+
+        // Then
+        AuthorizationInfo info = getAuthSnapshot( realm, "bob" );
+        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
+        assertThat( info.getStringPermissions(), contains(
+                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
+                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
+
+        info = getAuthSnapshot( realm, "circe" );
+        assertThat( info.getStringPermissions().size(), equalTo( 3 ) );
+        assertThat( info.getStringPermissions(), containsInAnyOrder(
+                String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ),
+                String.format( "database:%s:write:schema:*", DEFAULT_DATABASE_NAME ),
+                String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME )
+        ) );
+    }
+
+    @Test
+    void shouldSetAdminForCustomRole() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .migrateRole( "CustomAdmin", "bob" )
+                .build(), securityLog, dbManager );
+
+        // When
+        realm.setAdmin( "CustomAdmin", true );
+
+        // Then
+        AuthorizationInfo info = getAuthSnapshot( realm, "bob" );
+        assertThat( info.getStringPermissions(), contains( "system:*" ) );
+        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
+        assertThat( info.getRoles(), contains( "CustomAdmin" ) );
+        assertThat( info.getRoles().size(), equalTo( 1 ) );
+
+        // When
+        realm.setAdmin( "CustomAdmin", false );
+
+        // Then
+        info = getAuthSnapshot( realm, "bob" );
+        assertThat( info.getStringPermissions().size(), equalTo( 0 ) );
+        assertThat( info.getRoles(), contains( "CustomAdmin" ) );
+        assertThat( info.getRoles().size(), equalTo( 1 ) );
+    }
+
+    @Test
+    void shouldFailSetPrivilegesForNonExistingRole() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .build(), securityLog, dbManager );
+
+        try
+        {
+            // When
+            realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
+            fail( "Should not allow setting privilege on non existing role." );
+        }
+        catch ( InvalidArgumentsException e )
+        {
+            // Then
+            assertThat( e.getMessage(), equalTo( "Role 'custom' does not exist." ) );
+        }
+    }
+
+    private AuthorizationInfo getAuthSnapshot( SystemGraphRealm realm, String username )
+    {
+        return realm.getAuthorizationInfoSnapshot( new SimplePrincipalCollection( username, SecuritySettings.SYSTEM_GRAPH_REALM_NAME ) );
     }
 
     private void prePopulateUsers( String... usernames ) throws Throwable

@@ -227,7 +227,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     //------------- Helper functions---------------
 
-    void testSuccessfulRead( S subject, Object count )
+    protected void testSuccessfulRead( S subject, Object count )
     {
         assertSuccess( subject, "MATCH (n) RETURN count(n) as count", r ->
         {
@@ -237,7 +237,7 @@ public abstract class ProcedureInteractionTestBase<S>
         } );
     }
 
-    void testFailRead( S subject, int count )
+    protected void testFailRead( S subject, int count )
     {
         testFailRead( subject, count, READ_OPS_NOT_ALLOWED );
     }
@@ -252,7 +252,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertEmpty( subject, "CREATE (:Node)" );
     }
 
-    void testFailWrite( S subject )
+    protected void testFailWrite( S subject )
     {
         testFailWrite( subject, WRITE_OPS_NOT_ALLOWED );
     }
