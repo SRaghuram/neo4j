@@ -19,7 +19,7 @@ import java.util.Collection;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.helpers.ClassicNeo4jStore;
+import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -63,7 +63,7 @@ public class ConvertNonCausalClusteringStoreIT
         TestDirectory testDirectory = clusterRule.testDirectory();
         File dbDir = testDirectory.cleanDirectory( "classic-db-" + recordFormat );
         int classicNodeCount = 1024;
-        File classicNeo4jStore = createNeoStore( dbDir, classicNodeCount );
+        File classicNeo4jDatabase = createNeoDatabase( dbDir, classicNodeCount ).layout().databaseDirectory();
 
         Cluster<?> cluster = this.clusterRule.withRecordFormat( recordFormat ).createCluster();
 
@@ -71,7 +71,7 @@ public class ConvertNonCausalClusteringStoreIT
         {
             for ( CoreClusterMember core : cluster.coreMembers() )
             {
-                new RestoreDatabaseCommand( fileSystem, classicNeo4jStore, core.config(),
+                new RestoreDatabaseCommand( fileSystem, classicNeo4jDatabase, core.config(),
                         core.settingValue( GraphDatabaseSettings.active_database.name() ), true ).execute();
             }
         }
@@ -109,11 +109,11 @@ public class ConvertNonCausalClusteringStoreIT
         }
     }
 
-    private File createNeoStore( File dbDir, int classicNodeCount ) throws IOException
+    private ClassicNeo4jDatabase createNeoDatabase( File dbDir, int classicNodeCount ) throws IOException
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            return ClassicNeo4jStore.builder( dbDir, fileSystem ).amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build().getStoreDir();
+            return ClassicNeo4jDatabase.builder( dbDir, fileSystem ).amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
         }
     }
 }

@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenS
 import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
-import com.neo4j.causalclustering.helpers.ClassicNeo4jStore;
+import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -129,15 +129,14 @@ class CoreBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase classicNeo4jDatabase = ClassicNeo4jDatabase.builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
-                .build()
-                .getStoreDir();
+                .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( classicNeo4jStore ) )
+                .withDatabaseLayout( classicNeo4jDatabase.layout() )
                 .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
@@ -155,20 +154,19 @@ class CoreBootstrapperIT
     {
         // given
         int nodeCount = 100;
-        String customTransactionLogsLocation = testDirectory.directory( "transaction-logs" ).getAbsolutePath();
-        File classicNeo4jStore = ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
+        File customTransactionLogsLocation = testDirectory.directory( "transaction-logs" ).getAbsoluteFile();
+        ClassicNeo4jDatabase classicNeo4jDatabase = ClassicNeo4jDatabase.builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
-                .logicalLogsRootLocation( customTransactionLogsLocation )
-                .build()
-                .getStoreDir();
+                .transactionLogsRootDirectory( customTransactionLogsLocation )
+                .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( classicNeo4jStore ) )
+                .withDatabaseLayout( classicNeo4jDatabase.layout() )
                 .register();
 
-        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogsLocation );
+        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogsLocation.getAbsolutePath() );
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
                 fileSystem, activeDatabaseConfig, logProvider, pageCache );
 
@@ -180,21 +178,20 @@ class CoreBootstrapperIT
     }
 
     @Test
-    void shouldFailToBootstrapWithUnrecoveredStore() throws Exception
+    void shouldFailToBootstrapWithUnrecoveredDatabase() throws Exception
     {
         // given
         int nodeCount = 100;
-        File storeInNeedOfRecovery =
-                ClassicNeo4jStore.builder( testDirectory.directory(), fileSystem )
+        ClassicNeo4jDatabase databaseInNeedOfRecovery =
+                ClassicNeo4jDatabase.builder( testDirectory.directory(), fileSystem )
                         .dbName( DEFAULT_DATABASE_NAME )
                         .amountOfNodes( nodeCount )
                         .needToRecover()
-                        .build()
-                        .getStoreDir();
+                        .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery ) )
+                .withDatabaseLayout( databaseInNeedOfRecovery.layout() )
                 .register();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
@@ -208,24 +205,23 @@ class CoreBootstrapperIT
     }
 
     @Test
-    void shouldFailToBootstrapWithUnrecoveredStoreWithCustomTransactionLogsLocation() throws IOException
+    void shouldFailToBootstrapWithUnrecoveredDatabaseWithCustomTransactionLogsLocation() throws IOException
     {
         // given
         int nodeCount = 100;
-        String customTransactionLogsLocation = testDirectory.directory( "transaction-logs" ).getAbsolutePath();
-        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogsLocation );
-        File storeInNeedOfRecovery = ClassicNeo4jStore
+        File customTransactionLogsLocation = testDirectory.directory( "transaction-logs" );
+        Config activeDatabaseConfig = Config.defaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogsLocation.getAbsolutePath() );
+        ClassicNeo4jDatabase databaseInNeedOfRecovery = ClassicNeo4jDatabase
                 .builder( testDirectory.directory(), fileSystem )
                 .dbName( DEFAULT_DATABASE_NAME )
                 .amountOfNodes( nodeCount )
-                .logicalLogsRootLocation( customTransactionLogsLocation )
+                .transactionLogsRootDirectory( customTransactionLogsLocation )
                 .needToRecover()
-                .build()
-                .getStoreDir();
+                .build();
 
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
-                .withDatabaseLayout( DatabaseLayout.of( storeInNeedOfRecovery, LayoutConfig.of( activeDatabaseConfig ) ) )
+                .withDatabaseLayout( DatabaseLayout.of( databaseInNeedOfRecovery.layout().databaseDirectory(), LayoutConfig.of( activeDatabaseConfig ) ) )
                 .register();
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
@@ -254,11 +250,11 @@ class CoreBootstrapperIT
             verifyDatabaseSpecificState( type -> snapshot.get( databaseEntry.getKey(), type ), nodeCount );
             if ( databaseEntry.getKey().equals( SYSTEM_DATABASE_NAME ) )
             {
-                verifyStore( databaseEntry.getValue().databaseLayout(), pageCache, Config.defaults() );
+                verifyDatabase( databaseEntry.getValue().databaseLayout(), pageCache, Config.defaults() );
             }
             else
             {
-                verifyStore( databaseEntry.getValue().databaseLayout(), pageCache, activeDatabaseConfig );
+                verifyDatabase( databaseEntry.getValue().databaseLayout(), pageCache, activeDatabaseConfig );
             }
         }
     }
@@ -274,7 +270,7 @@ class CoreBootstrapperIT
                 allOf( greaterThanOrEqualTo( (long) nodeCount ), lessThanOrEqualTo( (long) nodeCount + recordIdBatchSize() ) ) );
     }
 
-    private void verifyStore( DatabaseLayout databaseLayout, PageCache pageCache, Config config ) throws IOException
+    private void verifyDatabase( DatabaseLayout databaseLayout, PageCache pageCache, Config config ) throws IOException
     {
         ReadOnlyTransactionStore transactionStore = new ReadOnlyTransactionStore( pageCache, fileSystem,
                 databaseLayout, config, monitors );
