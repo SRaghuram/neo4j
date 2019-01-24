@@ -27,10 +27,11 @@ public interface BootstrapConfiguration<TYPE extends Channel>
             {
                 return EpollBootstrapConfig.epollServerConfig();
             }
-            else if ( KQueue.isAvailable() )
-            {
-                return KQueueBootstrapConfig.kQueueServerConfig();
-            }
+            // TODO: kqueue is causing issues, disabling temporarily
+//            else if ( KQueue.isAvailable() )
+//            {
+//                return KQueueBootstrapConfig.kQueueServerConfig();
+//            }
         }
         return NioBootstrapConfig.nioServerConfig();
     }
@@ -48,10 +49,11 @@ public interface BootstrapConfiguration<TYPE extends Channel>
             {
                 return EpollBootstrapConfig.epollClientConfig();
             }
-            else if ( KQueue.isAvailable() )
-            {
-                return KQueueBootstrapConfig.kQueueClientConfig();
-            }
+            // TODO: kqueue is causing issues, disabling temporarily
+//            else if ( KQueue.isAvailable() )
+//            {
+//                return KQueueBootstrapConfig.kQueueClientConfig();
+//            }
         }
         return NioBootstrapConfig.nioClientConfig();
     }
