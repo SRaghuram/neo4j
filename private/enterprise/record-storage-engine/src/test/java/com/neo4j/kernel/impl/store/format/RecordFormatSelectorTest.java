@@ -329,7 +329,7 @@ class RecordFormatSelectorTest
         MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value );
     }
 
-    private File createNeoStoreFile( DatabaseLayout databaseLayout ) throws IOException
+    private File createNeoStoreFile( DatabaseLayout databaseLayout )
     {
         File neoStoreFile = databaseLayout.metadataStore();
         fs.create( neoStoreFile ).close();

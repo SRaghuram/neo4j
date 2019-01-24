@@ -8,6 +8,7 @@ package org.neo4j.tools.dump;
 import java.io.File;
 import java.io.PrintStream;
 
+import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -61,7 +62,7 @@ public class DumpIndexStatisticsStore
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs ),
                         pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
                 NeoStores neoStores = factory.openAllNeoStores();
-                TokenHolders tokenHolders = TokenHolders.readOnlyTokenHolders( neoStores );
+                TokenHolders tokenHolders = RecordStorageEngineFactory.readOnlyTokenHolders( neoStores );
                 SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
                 schema = new SimpleSchemaRuleCache( neoStores, schemaStorage );
             }

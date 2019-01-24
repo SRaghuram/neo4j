@@ -3,12 +3,13 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.kernel.impl.store.format.highlimit.v320;
+package com.neo4j.kernel.impl.store.format.highlimit.v300;
 
 import com.neo4j.kernel.impl.store.format.highlimit.DynamicRecordFormat;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitFormatFamily;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
+import org.neo4j.kernel.impl.store.format.Capability;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.LuceneCapability;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
@@ -29,43 +30,54 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 /**
  * Record format with very high limits, 50-bit per ID, while at the same time keeping store size small.
  *
- * @see BaseHighLimitRecordFormatV3_2_0
+ * NOTE: this format is also vE.H.0, but it's the first incarnation of it, without fixed references.
+ * The reason the same store version was kept when introducing fixed references was to avoid migration
+ * because the change was backwards compatible. Although this turned out to be a mistake because the
+ * format isn't forwards compatible and the way we prevent downgrading a db is by using store version,
+ * therefore we cannot prevent opening a db with fixed reference format on a neo4j patch version before
+ * fixed references were introduced (3.0.4).
+ *
+ * @see BaseHighLimitRecordFormatV3_0_0
  */
-public class HighLimitV3_2_0 extends BaseRecordFormats
+public class HighLimitV3_0_0 extends BaseRecordFormats
 {
-    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V3_2_0.versionString();
+    /**
+     * Default maximum number of bits that can be used to represent id
+     */
+    static final int DEFAULT_MAXIMUM_BITS_PER_ID = 50;
 
-    public static final RecordFormats RECORD_FORMATS = new HighLimitV3_2_0();
-    public static final String NAME = "high_limitV3_2_0";
+    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V3_0_0.versionString();
+    public static final RecordFormats RECORD_FORMATS = new HighLimitV3_0_0();
+    public static final String NAME = "high_limitV3_0_0";
 
-    public HighLimitV3_2_0()
+    public HighLimitV3_0_0()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V3_2_0.introductionVersion(), 4, LuceneCapability.DENSE_NODES,
-                LuceneCapability.RELATIONSHIP_TYPE_3BYTES, LuceneCapability.SCHEMA, LuceneCapability.LUCENE_5, LuceneCapability.SECONDARY_RECORD_UNITS );
+        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V3_0_0.introductionVersion(), 1, Capability.DENSE_NODES,
+                Capability.SCHEMA, LuceneCapability.LUCENE_5, Capability.SECONDARY_RECORD_UNITS );
     }
 
     @Override
     public RecordFormat<NodeRecord> node()
     {
-        return new NodeRecordFormatV3_2_0();
+        return new NodeRecordFormatV3_0_0();
     }
 
     @Override
     public RecordFormat<RelationshipRecord> relationship()
     {
-        return new RelationshipRecordFormatV3_2_0();
+        return new RelationshipRecordFormatV3_0_0();
     }
 
     @Override
     public RecordFormat<RelationshipGroupRecord> relationshipGroup()
     {
-        return new RelationshipGroupRecordFormatV3_2_0();
+        return new RelationshipGroupRecordFormatV3_0_0();
     }
 
     @Override
     public RecordFormat<PropertyRecord> property()
     {
-        return new PropertyRecordFormatV3_2_0();
+        return new PropertyRecordFormatV3_0_0();
     }
 
     @Override

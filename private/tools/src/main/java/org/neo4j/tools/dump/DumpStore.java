@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
@@ -246,7 +247,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
     {
         try ( SchemaStore store = neoStores.getSchemaStore() )
         {
-            TokenHolders tokenHolders = TokenHolders.readOnlyTokenHolders( neoStores );
+            TokenHolders tokenHolders = RecordStorageEngineFactory.readOnlyTokenHolders( neoStores );
             final SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
             new DumpStore<DynamicRecord,SchemaStore>( System.out )
             {

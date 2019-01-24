@@ -5,6 +5,8 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit.v340;
 
+import com.neo4j.kernel.impl.store.format.highlimit.Reference;
+
 import java.io.IOException;
 import java.util.function.Function;
 
@@ -14,7 +16,6 @@ import org.neo4j.kernel.impl.store.StoreHeader;
 import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 import org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
-import com.neo4j.kernel.impl.store.format.highlimit.Reference;
 import org.neo4j.kernel.impl.store.id.IdSequence;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;

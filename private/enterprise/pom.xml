@@ -39,6 +39,7 @@
     <module>security</module>
     <module>kernel</module>
     <module>neo4j-harness-commercial</module>
+    <module>record-storage-engine</module>
   </modules>
 
     <profiles>
