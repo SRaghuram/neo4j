@@ -1257,7 +1257,7 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldCallFunctionWithByteArrayWithParameter() throws Throwable
+    void shouldCallFunctionWithByteArrayWithParameter()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
@@ -1272,7 +1272,7 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldCallFuctionWithByteArrayWithBoundLiteral() throws Throwable
+    void shouldCallFunctionWithByteArrayWithBoundLiteral()
     {
         // Given
         try ( Transaction ignore = db.beginTx() )
