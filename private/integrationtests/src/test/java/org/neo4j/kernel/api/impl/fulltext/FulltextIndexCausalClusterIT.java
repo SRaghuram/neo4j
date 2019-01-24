@@ -13,6 +13,7 @@ import com.neo4j.test.causalclustering.ClusterRule;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -51,6 +52,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 
+@Ignore( "Ignored waiting on PR #1394" )
 public class FulltextIndexCausalClusterIT
 {
     private static final Label LABEL = Label.label( "LABEL" );
@@ -80,7 +82,7 @@ public class FulltextIndexCausalClusterIT
     }
 
     @Test
-    public void fulltextIndexContentsMustBeReplicatedWhenPopulaing() throws Exception
+    public void fulltextIndexContentsMustBeReplicatedWhenPopulating() throws Exception
     {
         cluster.coreTx( ( db, tx ) ->
         {
