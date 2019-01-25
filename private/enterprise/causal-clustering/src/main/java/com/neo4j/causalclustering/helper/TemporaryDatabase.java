@@ -15,6 +15,7 @@ import java.util.Map;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.ignore_store_lock;
@@ -65,9 +66,14 @@ public class TemporaryDatabase implements AutoCloseable
             /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
             augmentedParams.putIfAbsent( GraphDatabaseSettings.pagecache_warmup_enabled.name(), FALSE );
             augmentedParams.putIfAbsent( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
+            augmentedParams.putIfAbsent( "metrics.enabled", Settings.FALSE );
+            augmentedParams.putIfAbsent( "metrics.csv.enabled", Settings.FALSE );
 
             /* Touching the store is allowed during bootstrapping. */
             augmentedParams.putIfAbsent( ignore_store_lock.name(), TRUE );
+
+            augmentedParams.putIfAbsent( GraphDatabaseSettings.store_internal_log_path.name(),
+                    new File( databaseDirectory, "bootstrap.debug.log" ).getAbsolutePath() );
 
             return augmentedParams;
         }
