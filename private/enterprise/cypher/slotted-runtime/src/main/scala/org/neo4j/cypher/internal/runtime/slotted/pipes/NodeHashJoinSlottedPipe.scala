@@ -9,7 +9,7 @@ import java.util
 
 import org.eclipse.collections.api.multimap.list.MutableListMultimap
 import org.eclipse.collections.impl.factory.Multimaps
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}

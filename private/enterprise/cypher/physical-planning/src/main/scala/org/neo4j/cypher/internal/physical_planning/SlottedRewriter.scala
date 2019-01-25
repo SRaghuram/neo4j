@@ -3,10 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compatibility.v4_0.runtime
+package org.neo4j.cypher.internal.physical_planning
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
+import org.neo4j.cypher.internal.physical_planning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.physical_planning.ast._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.v4_0.logical.plans

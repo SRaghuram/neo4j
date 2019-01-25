@@ -3,6 +3,6 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast
+package org.neo4j.cypher.internal.physical_planning.ast
 
-case class IsPrimitiveNull(offset: Int) extends RuntimeExpression
+case class IdFromSlot(offset: Int) extends RuntimeExpression

@@ -3,8 +3,8 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast
+package org.neo4j.cypher.internal.physical_planning.ast
 
-case class RelationshipFromSlot(offset: Int, override val name: String) extends RuntimeVariable(name = name) {
+case class NodeFromSlot(offset: Int, override val name: String) extends RuntimeVariable(name) {
   override def asCanonicalStringVal: String = name
 }

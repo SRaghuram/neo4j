@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{LongSlot, RefSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.physical_planning.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.ValueConversion.asValue
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}

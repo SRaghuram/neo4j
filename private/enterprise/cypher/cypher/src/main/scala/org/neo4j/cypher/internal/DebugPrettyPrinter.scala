@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal
 
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter._
 import org.neo4j.cypher.internal.compatibility.LogicalQuery
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.physical_planning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id

@@ -10,10 +10,10 @@ import java.time.{Clock, Duration}
 import java.util.concurrent.ThreadLocalRandom
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.{ArgumentSizes, SlotConfigurations}
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{ast, _}
+import org.neo4j.cypher.internal.physical_planning.PhysicalPlanningAttributes.{ArgumentSizes, SlotConfigurations}
+import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physical_planning.ast._
+import org.neo4j.cypher.internal.physical_planning.{ast, _}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor

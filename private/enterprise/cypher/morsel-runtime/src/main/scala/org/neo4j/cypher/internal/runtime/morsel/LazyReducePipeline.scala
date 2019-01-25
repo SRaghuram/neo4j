@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.scheduling.{Task, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.morsel.Pipeline.dprintln

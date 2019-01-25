@@ -5,14 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physical_planning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyTypes, Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.physical_planning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{RelationshipValue, VirtualValues}

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util.Comparator
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physical_planning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.ExecutionContextOrdering

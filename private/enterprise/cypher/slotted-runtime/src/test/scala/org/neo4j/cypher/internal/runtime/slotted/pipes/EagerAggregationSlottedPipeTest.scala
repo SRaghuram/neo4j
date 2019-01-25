@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physical_planning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{CountStar, Expression}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot

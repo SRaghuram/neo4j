@@ -3,10 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compatibility.v4_0.runtime
+package org.neo4j.cypher.internal.physical_planning
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.PhysicalPlanningAttributes.{ArgumentSizes, SlotConfigurations}
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration.Size
+import org.neo4j.cypher.internal.physical_planning.PhysicalPlanningAttributes.{ArgumentSizes, SlotConfigurations}
+import org.neo4j.cypher.internal.physical_planning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.ir.v4_0.{HasHeaders, NoHeaders, ShortestPathPattern}
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.logical.plans.Union

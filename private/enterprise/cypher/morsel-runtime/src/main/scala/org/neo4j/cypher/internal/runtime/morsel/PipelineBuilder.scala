@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{RefSlot, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physical_planning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physical_planning.{RefSlot, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters

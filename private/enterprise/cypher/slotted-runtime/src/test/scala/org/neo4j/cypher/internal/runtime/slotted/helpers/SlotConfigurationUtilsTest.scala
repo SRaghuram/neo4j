@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.helpers
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physical_planning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfigurationUtils._
+import org.neo4j.cypher.internal.physical_planning.SlotConfigurationUtils._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues

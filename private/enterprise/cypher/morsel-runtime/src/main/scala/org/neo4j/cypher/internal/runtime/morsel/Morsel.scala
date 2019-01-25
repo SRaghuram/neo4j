@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
 import org.neo4j.values.AnyValue
 
 /*

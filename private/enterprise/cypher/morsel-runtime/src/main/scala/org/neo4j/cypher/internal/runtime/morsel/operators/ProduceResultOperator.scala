@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import java.util
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
+import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}

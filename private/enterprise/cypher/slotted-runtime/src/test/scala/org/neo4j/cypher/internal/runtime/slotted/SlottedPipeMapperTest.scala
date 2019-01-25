@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.mockito.Mockito._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration.Size
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime._
+import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physical_planning.SlotConfiguration.Size
+import org.neo4j.cypher.internal.physical_planning._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.{HardcodedGraphStatistics, LogicalPlanningTestSupport2}
 import org.neo4j.cypher.internal.ir.v4_0.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.planner.v4_0.spi.{PlanContext, TokenContext}
