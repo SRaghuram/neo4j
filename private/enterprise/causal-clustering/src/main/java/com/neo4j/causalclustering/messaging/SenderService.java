@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 
@@ -38,23 +37,28 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     @Override
     public void send( AdvertisedSocketAddress to, Message message, boolean block )
     {
-        ChannelFuture channelFuture;
+        PooledChannel pooledChannel;
         if ( !senderServiceRunning )
         {
             return;
         }
         synchronized ( this )
         {
-            channelFuture =
-                    loggingBlock( to, channels.acquire( to ).thenApply( p -> p.channel().writeAndFlush( message ).addListener( future -> p.release() ) ) );
+            pooledChannel = loggingBlock( to, channels.acquire( to ) );
+            if ( pooledChannel == null )
+            {
+                return;
+            }
         }
 
         if ( block )
         {
-            if ( channelFuture != null )
-            {
-                loggingBlock( to, channelFuture );
-            }
+            loggingBlock( to, pooledChannel.channel().writeAndFlush( message ) );
+            loggingBlock( to, pooledChannel.release() );
+        }
+        else
+        {
+            pooledChannel.channel().writeAndFlush( message ).addListener( future -> pooledChannel.release() );
         }
     }
 
