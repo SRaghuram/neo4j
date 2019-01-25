@@ -204,7 +204,8 @@ public class CoreBootstrapper
         return coreSnapshot;
     }
 
-    private void bootstrapDatabase( LocalDatabase database, Map<String,String> params, Config databaseConfig, DatabaseInitializer databaseInitializer ) throws Exception
+    private void bootstrapDatabase( LocalDatabase database, Map<String,String> params, Config databaseConfig, DatabaseInitializer databaseInitializer )
+            throws Exception
     {
         DatabaseLayout databaseLayout = database.databaseLayout();
         ensureRecoveredOrThrow( databaseLayout, databaseConfig );
