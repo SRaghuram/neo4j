@@ -7,8 +7,8 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import cypher.features.Phase
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.runtime.planDescription.Argument
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Planner => IPDPlanner, PlannerVersion => IPDPlannerVersion, Runtime => IPDRuntime, RuntimeVersion => IPDRuntimeVersion}
+import org.neo4j.cypher.internal.plan_description.Argument
+import org.neo4j.cypher.internal.plan_description.Arguments.{Planner => IPDPlanner, PlannerVersion => IPDPlannerVersion, Runtime => IPDRuntime, RuntimeVersion => IPDRuntimeVersion}
 import org.scalatest.Assertions
 
 import scala.util.{Failure, Success, Try}

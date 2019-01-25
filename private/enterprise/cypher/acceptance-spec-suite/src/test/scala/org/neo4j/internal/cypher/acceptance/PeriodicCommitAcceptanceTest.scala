@@ -9,7 +9,7 @@ import java.io.PrintWriter
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{PageCacheHits, PageCacheMisses, PlannerImpl}
+import org.neo4j.cypher.internal.plan_description.Arguments.{PageCacheHits, PageCacheMisses, PlannerImpl}
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore

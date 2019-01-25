@@ -7,13 +7,12 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.compatibility.{CypherRuntimeConfiguration, RuntimeContextCreator}
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.morsel.Dispatcher
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
+import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, RuntimeContextCreator, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.logging.Log
 

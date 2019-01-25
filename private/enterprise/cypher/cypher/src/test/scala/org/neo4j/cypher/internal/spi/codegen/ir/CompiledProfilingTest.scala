@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.spi.codegen.ir
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.compiled_runtime.v4_0.codegen.ir.CodeGenSugar
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.planner.v4_0.spi.KernelStatisticProvider
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable

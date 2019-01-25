@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription
+import org.neo4j.cypher.internal.plan_description.InternalPlanDescription
 import org.scalatest.Assertions
 
 import scala.util.{Failure, Success, Try}

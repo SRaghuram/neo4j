@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.physical_planning
 
 import org.neo4j.cypher.internal.physical_planning.ast.ReferenceFromSlot
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments._
-import org.neo4j.cypher.internal.runtime.planDescription.{NoChildren, PlanDescriptionImpl, renderAsTreeTable}
+import org.neo4j.cypher.internal.plan_description.Arguments._
+import org.neo4j.cypher.internal.plan_description.{NoChildren, PlanDescriptionImpl, renderAsTreeTable}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, WindowsStringSafe}
 

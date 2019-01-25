@@ -6,8 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.plan_description.Arguments.{EstimatedRows, ExpandExpression}
 import org.neo4j.cypher.internal.runtime.PathImpl
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{EstimatedRows, ExpandExpression}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}

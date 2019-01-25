@@ -12,7 +12,7 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.idp.IDPSolverMonitor
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription
+import org.neo4j.cypher.internal.plan_description.InternalPlanDescription
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.factory.GraphDatabaseSettings.{cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}

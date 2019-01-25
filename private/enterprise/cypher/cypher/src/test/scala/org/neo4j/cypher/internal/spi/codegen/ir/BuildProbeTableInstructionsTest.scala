@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compiled_runtime.v4_0.codegen.ir
+package org.neo4j.cypher.internal.spi.codegen.ir
 
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, JoinTableMethod, Variable}
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
+import org.neo4j.cypher.internal.spi.codegen.ir.CodeGenSugar
 import org.neo4j.function.ThrowingBiConsumer
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.kernel.api._

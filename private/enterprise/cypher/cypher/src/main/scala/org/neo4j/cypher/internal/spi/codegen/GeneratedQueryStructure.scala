@@ -16,22 +16,20 @@ import org.neo4j.codegen.source.SourceCode.SOURCECODE
 import org.neo4j.codegen.source.{SourceCode, SourceVisitor}
 import org.neo4j.codegen.{CodeGenerator, Parameter, TypeReference, _}
 import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream, QueryExecutionTracer}
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.Provider
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.javacompat.ResultRecord
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{CodeStructure, CodeStructureResult, MethodStructure}
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription
-import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext}
+import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api._
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
-import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.symbols
 
 import scala.collection.mutable
 

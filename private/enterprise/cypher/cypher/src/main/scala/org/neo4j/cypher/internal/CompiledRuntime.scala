@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.plan_description.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration, CodeGenerator}
 import org.neo4j.cypher.internal.runtime.compiled.{CompiledPlan, projectIndexProperties}
-import org.neo4j.cypher.internal.runtime.planDescription.Argument
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.values.virtual.MapValue

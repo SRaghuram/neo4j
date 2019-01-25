@@ -17,12 +17,12 @@ import org.neo4j.codegen.MethodReference._
 import org.neo4j.codegen._
 import org.neo4j.common.TokenNameLookup
 import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream, QueryExecutionTracer}
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.Provider
 import org.neo4j.cypher.internal.javacompat.ResultRowImpl
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription
-import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext, QueryTransactionalContext}
+import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
 import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeProxyById, newRelationshipProxyById}
+import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
+import org.neo4j.cypher.internal.v4_0.util.CypherExecutionException
 import org.neo4j.exceptions.KernelException
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.kernel.api._
@@ -34,8 +34,6 @@ import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.{Value, ValueComparator, Values}
 import org.neo4j.values.virtual._
 import org.neo4j.values.{AnyValue, AnyValues}
-import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
-import org.neo4j.cypher.internal.v4_0.util.CypherExecutionException
 
 /**
   * Contains common code generation constructs.
