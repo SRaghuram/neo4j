@@ -7,6 +7,8 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ir.v4_0.ProvidedOrder
+import org.neo4j.cypher.internal.v4_0.expressions.{Property, PropertyKeyName, Variable}
+import org.neo4j.cypher.internal.v4_0.util.DummyPosition
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
@@ -30,7 +32,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
         .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("a.name").asc("bday"))
+      .withOrder(ProvidedOrder.asc(prop("a", "name")).asc(varFor("bday")))
 
     result.toList should equal(List(
       Map("a.name" -> "A", "bday" -> false),
@@ -46,7 +48,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY bday, a.name RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("bday").asc("a.name"))
+      .withOrder(ProvidedOrder.asc(varFor("bday")).asc(prop("a", "name")))
 
     result.toList should equal(List(
       Map("a.name" -> "A", "bday" -> false),
@@ -65,7 +67,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("a.age"))
+        .withOrder(ProvidedOrder.asc(prop("a", "age")))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
           .containingArgument("{a.age : a.age}")
@@ -81,7 +83,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name, a.age : a.age}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("a.age"))
+        .withOrder(ProvidedOrder.asc(prop("a", "age")))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
           .containingArgument("{a.age : a.age}")
@@ -110,7 +112,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("age"))
+        .withOrder(ProvidedOrder.asc(varFor("age")))
         .containingArgument("age")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
@@ -141,7 +143,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{age : a.age}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("b"))
+        .withOrder(ProvidedOrder.asc(varFor("b")))
         .containingArgument("b")
         .onTopOf(aPlan("Projection")
           .containingArgument("{b : name}")
@@ -171,7 +173,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{age : a.age}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("b"))
+        .withOrder(ProvidedOrder.asc(varFor("b")))
         .containingArgument("b")
         .onTopOf(aPlan("Projection")
           .containingArgument("{b : name}")
@@ -252,7 +254,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Projection")
       .containingArgument("{a.name : a.name}")
       .onTopOf(aPlan("Sort")
-        .withOrder(ProvidedOrder.asc("a.age"))
+        .withOrder(ProvidedOrder.asc(prop("a", "age")))
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
           .containingArgument("{a.age : a.age}")
@@ -436,7 +438,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("age"))
+      .withOrder(ProvidedOrder.asc(varFor("age")))
       .containingArgument("age")
       .onTopOf(aPlan("Distinct")
         .containingVariables("age")
@@ -458,7 +460,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("a.age"))
+      .withOrder(ProvidedOrder.asc(prop("a", "age")))
       .onTopOf(aPlan("Projection")
         .containingArgument("{a.age : a.age}")
         .onTopOf(aPlan("Distinct")
@@ -489,7 +491,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("age"))
+      .withOrder(ProvidedOrder.asc(varFor("age")))
       .containingArgument("age")
       .onTopOf(aPlan("EagerAggregation")
         .containingVariables("age", "name") // the introduced variables
@@ -518,7 +520,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("name"))
+      .withOrder(ProvidedOrder.asc(varFor("name")))
       .containingArgument("name")
       .onTopOf(aPlan("EagerAggregation")
         .containingVariables("age", "name") // the introduced variables
@@ -541,7 +543,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
-      .withOrder(ProvidedOrder.asc("a.foo"))
+      .withOrder(ProvidedOrder.asc(prop("a", "foo")))
       .onTopOf(aPlan("Projection")
         .containingArgument("{a.foo : a.foo}")
         .onTopOf(aPlan("EagerAggregation")
@@ -602,9 +604,9 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // n.prop is written as `n`.prop in the plan due to the reuse of the variable
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Sort").withOrder(ProvidedOrder.asc("n.age")).onTopOf(includeSomewhere
-        .aPlan("Projection").containingArgument("{name : `n`.name}")
-          .onTopOf(aPlan("Sort").withOrder(ProvidedOrder.asc("n.foo"))
+      .aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "age"))).onTopOf(
+      includeSomewhere.aPlan("Projection").containingArgument("{name : `n`.name}")
+          .onTopOf(aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "foo")))
             .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
           )
       )
@@ -631,7 +633,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Sort").withOrder(ProvidedOrder.desc("zfoo"))
+      .aPlan("Sort").withOrder(ProvidedOrder.desc(varFor("zfoo")))
     result.toList should be(List(
       Map("zfoo" -> 6),
       Map("zfoo" -> 5),
@@ -690,7 +692,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Map("u.name" -> "joe", "u.foo" -> 0)))
 
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Sort").withOrder(ProvidedOrder.asc("u.name").desc("u.foo"))
+      .aPlan("Sort").withOrder(ProvidedOrder.asc(prop("u", "name")).desc(prop("u", "foo")))
       .onTopOf(includeSomewhere.aPlan("SetProperty"))
   }
 
@@ -708,11 +710,11 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.All, query)
 
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Expand(All)").onTopOf(                                                          // 8 rows
-        includeSomewhere.aPlan("Expand(All)").onTopOf(                                        // 8 rows
-          includeSomewhere.aPlan("Sort").withOrder(ProvidedOrder.asc("u.name")).onTopOf(
-            includeSomewhere.aPlan("Filter").onTopOf(                                         // 2 rows
-              aPlan("NodeByLabelScan")                                                               // 12 rows
+      .aPlan("Expand(All)").onTopOf(                                                               // 8 rows
+        includeSomewhere.aPlan("Expand(All)").onTopOf(                                             // 8 rows
+          includeSomewhere.aPlan("Sort").withOrder(ProvidedOrder.asc(prop("u", "name"))).onTopOf(
+            includeSomewhere.aPlan("Filter").onTopOf(                                              // 2 rows
+              aPlan("NodeByLabelScan")                                                             // 12 rows
             )
           )
         )
@@ -738,7 +740,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
         |ORDER BY n.name
       """.stripMargin
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
-    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withOrder(ProvidedOrder.asc("n.name"))
+    result.executionPlanDescription() should includeSomewhere.aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "name")))
     result.toList should be(List(Map("n" -> Map("name" -> "a"))))
   }
 
@@ -759,4 +761,8 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(joseph, friends(i+2), "FRIEND")
     }
   }
+
+  private val pos = DummyPosition(0)
+  private def varFor(name: String) = Variable(name)(pos)
+  private def prop(varName: String, propName: String) = Property(varFor(varName), PropertyKeyName(propName)(pos))(pos)
 }

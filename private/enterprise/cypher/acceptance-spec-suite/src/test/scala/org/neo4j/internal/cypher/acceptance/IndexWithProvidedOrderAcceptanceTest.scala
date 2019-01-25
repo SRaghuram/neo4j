@@ -7,13 +7,15 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ir.v4_0.ProvidedOrder
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression, Property, PropertyKeyName, Variable}
+import org.neo4j.cypher.internal.v4_0.util.DummyPosition
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
   case class TestOrder(cypherToken: String,
                        expectedOrder: Seq[Map[String, Any]] => Seq[Map[String, Any]],
-                       providedOrder: String => ProvidedOrder)
+                       providedOrder: Expression => ProvidedOrder)
   val ASCENDING = TestOrder("ASC", x => x, ProvidedOrder.asc)
   val DESCENDING = TestOrder("DESC", x => x.reverse, ProvidedOrder.desc)
 
@@ -87,9 +89,9 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       result.executionPlanDescription() should (
         not(includeSomewhere.aPlan("Sort")) and
           includeSomewhere.aPlan("Projection")
-            .withOrder(providedOrder("nnn.prop3"))
+            .withOrder(providedOrder(prop("nnn", "prop3")))
             .onTopOf(aPlan("NodeIndexSeekByRange")
-              .withOrder(providedOrder("n.prop3"))
+              .withOrder(providedOrder(prop("n", "prop3")))
             )
         )
 
@@ -107,10 +109,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
       result.executionPlanDescription() should (
         not(includeSomewhere.aPlan("Sort")) and
           includeSomewhere.aPlan("Apply")
-            .withOrder(providedOrder("a.ds"))
+            .withOrder(providedOrder(prop("a", "ds")))
             .withLHS(
               aPlan("NodeIndexSeekByRange")
-                .withOrder(providedOrder("a.ds"))
+                .withOrder(providedOrder(prop("a", "ds")))
             )
             .withRHS(
               aPlan("NodeIndexSeekByRange")
@@ -136,10 +138,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
           includeSomewhere.aPlan("EagerAggregation")
             .onTopOf(
               aPlan("Expand(All)")
-                .withOrder(providedOrder("a.prop2"))
+                .withOrder(providedOrder(prop("a", "prop2")))
                 .onTopOf(
                   aPlan("NodeIndexSeekByRange")
-                    .withOrder(providedOrder("a.prop2"))))
+                    .withOrder(providedOrder(prop("a", "prop2")))))
         )
 
       result.toList should be(expectedOrder(List(
@@ -161,10 +163,10 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
           includeSomewhere.aPlan("Distinct")
             .onTopOf(
               aPlan("Expand(All)")
-                .withOrder(providedOrder("a.prop2"))
+                .withOrder(providedOrder(prop("a", "prop2")))
                 .onTopOf(
                   aPlan("NodeIndexSeekByRange")
-                    .withOrder(providedOrder("a.prop2"))))
+                    .withOrder(providedOrder(prop("a", "prop2")))))
         )
 
       result.toList should be(expectedOrder(List(
@@ -225,7 +227,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder(prop("n", "prop1"))))
             )
           )
 
@@ -247,7 +249,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder(prop("n", "prop1"))))
             )
           )
 
@@ -267,7 +269,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
-                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder(prop("n", "prop1"))))
               )
             )
           )
@@ -288,7 +290,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
-                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder(prop("n", "prop1"))))
               )
             )
           )
@@ -310,7 +312,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
             .onTopOf(aPlan("Projection")
               .onTopOf(aPlan("Projection")
                 .onTopOf(aPlan("Projection")
-                  .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+                  .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder(prop("n", "prop1"))))
                 )
               )
             )
@@ -333,7 +335,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop]", "n").withOrder(providedOrder("n.prop")))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop]", "n").withOrder(providedOrder(prop("n", "prop"))))
             )
           )
 
@@ -349,7 +351,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         includeSomewhere.aPlan("Optional")
           .onTopOf(aPlan("Limit")
             .onTopOf(aPlan("Projection")
-              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder("n.prop1")))
+              .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop1]", "n").withOrder(providedOrder(prop("n", "prop1"))))
             )
           )
 
@@ -387,7 +389,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
           .onTopOf(aPlan("Optional")
             .onTopOf(aPlan("Limit")
               .onTopOf(aPlan("Projection")
-                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop3]", "n").withOrder(providedOrder("n.prop3")))
+                .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("cached[n.prop3]", "n").withOrder(providedOrder(prop("n", "prop3"))))
               )
             )
           )
@@ -533,13 +535,13 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Sort")) and
         includeSomewhere.aPlan("NodeLeftOuterHashJoin")
-          .withOrder(ProvidedOrder.asc("a.prop3"))
+          .withOrder(ProvidedOrder.asc(prop("a", "prop3")))
           .withRHS(
             aPlan("Expand(All)")
-              .withOrder(ProvidedOrder.asc("a.prop3"))
+              .withOrder(ProvidedOrder.asc(prop("a", "prop3")))
               .onTopOf(
                 aPlan("NodeIndexSeekByRange")
-                  .withOrder(ProvidedOrder.asc("a.prop3"))))
+                  .withOrder(ProvidedOrder.asc(prop("a", "prop3")))))
       )
 
     result.toList should be(List(
@@ -563,4 +565,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         |CREATE (:Awesome {prop3: 'tree-cat-bog'})
         |""".stripMargin)
 
+  private val pos = DummyPosition(0)
+  private def varFor(name: String) = Variable(name)(pos)
+  private def prop(varName: String, propName: String) = Property(varFor(varName), PropertyKeyName(propName)(pos))(pos)
 }
