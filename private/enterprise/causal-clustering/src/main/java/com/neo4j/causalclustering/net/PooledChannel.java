@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging;
+package com.neo4j.causalclustering.net;
 
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
@@ -13,7 +13,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.CompletableFuture;
 
-class PooledChannel
+public class PooledChannel
 {
     private final Channel channel;
     private final ChannelPool pool;
@@ -55,7 +55,7 @@ class PooledChannel
         return pooledChannelFuture;
     }
 
-    Channel channel()
+    public Channel channel()
     {
         if ( released )
         {
@@ -69,7 +69,7 @@ class PooledChannel
      *
      * @return {@link Future} which is completed when the channel has been released.
      */
-    Future<Void> release()
+    public Future<Void> release()
     {
         released = true;
         return pool.release( channel );

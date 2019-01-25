@@ -6,8 +6,12 @@
 package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
+import com.neo4j.causalclustering.net.ChannelPools;
+import com.neo4j.causalclustering.net.PooledChannel;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.ExecutionException;
@@ -30,7 +34,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     public SenderService( ChannelInitializer channelInitializer, JobScheduler scheduler, LogProvider logProvider,
             BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
     {
-        this.channels = new ChannelPools( bootstrapConfiguration, scheduler, channelInitializer, logProvider );
+        this.channels = new ChannelPools( bootstrapConfiguration, scheduler, new ChannelInitializingHandler( channelInitializer ) );
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -96,5 +100,19 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     public Stream<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols()
     {
         return channels.installedProtocols();
+    }
+
+    private class ChannelInitializingHandler extends AbstractChannelPoolHandler
+    {
+        private final ChannelInitializer channelInitializer;
+
+        ChannelInitializingHandler( ChannelInitializer channelInitializer ) {this.channelInitializer = channelInitializer;}
+
+        @Override
+        public void channelCreated( Channel ch )
+        {
+            log.info( "Channel created [%s]", ch );
+            ch.pipeline().addLast( channelInitializer );
+        }
     }
 }

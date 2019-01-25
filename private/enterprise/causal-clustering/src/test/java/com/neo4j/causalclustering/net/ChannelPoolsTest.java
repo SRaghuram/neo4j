@@ -3,9 +3,8 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.messaging;
+package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.handshake.ChannelAttribute;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import com.neo4j.causalclustering.protocol.handshake.TestProtocols.TestApplicationProtocols;
@@ -18,6 +17,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.socket.ServerSocketChannel;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -37,7 +37,6 @@ import java.util.stream.Stream;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobSchedulerAdapter;
@@ -67,8 +66,7 @@ class ChannelPoolsIT
     void setUpServers() throws ExecutionException, InterruptedException
     {
         poolEventsMonitor = new PoolEventsMonitor();
-        pool = new ChannelPools( BootstrapConfiguration.clientConfig( Config.defaults() ), new SimpleJobScheduler(), new ProtocolStackInitializer(),
-                NullLogProvider.getInstance(), poolEventsMonitor );
+        pool = new ChannelPools( BootstrapConfiguration.clientConfig( Config.defaults() ), new SimpleJobScheduler(), poolEventsMonitor );
 
         startServers();
 
@@ -233,41 +231,34 @@ class ChannelPoolsIT
     private static class EmptyChannelHandler extends ChannelHandlerAdapter
     { }
 
-    private class ProtocolStackInitializer extends ChannelInitializer
-    {
-        @Override
-        protected void initChannel( Channel ch )
-        {
-            ch.attr( ChannelAttribute.PROTOCOL_STACK ).set( CompletableFuture.completedFuture( protocolStackRaft ) );
-        }
-    }
 
     private ByteBuf emptyBuffer()
     {
         return ByteBufAllocator.DEFAULT.heapBuffer();
     }
 
-    private static class PoolEventsMonitor implements PoolEventsListener
+    private class PoolEventsMonitor implements ChannelPoolHandler
     {
         private int created;
         private int acquired;
         private int released;
 
         @Override
-        public void onChannelAcquired()
-        {
-            acquired++;
-        }
-
-        @Override
-        public void onChannelReleased()
+        public void channelReleased( Channel ch )
         {
             released++;
         }
 
         @Override
-        public void onChannelCreated()
+        public void channelAcquired( Channel ch )
         {
+            acquired++;
+        }
+
+        @Override
+        public void channelCreated( Channel ch )
+        {
+            ch.attr( ChannelAttribute.PROTOCOL_STACK ).set( CompletableFuture.completedFuture( protocolStackRaft ) );
             created++;
         }
     }
