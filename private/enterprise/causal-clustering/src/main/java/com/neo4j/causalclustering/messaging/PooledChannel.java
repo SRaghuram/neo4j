@@ -31,7 +31,7 @@ class PooledChannel
         this.pool = pool;
     }
 
-    public static CompletableFuture<PooledChannel> future( Future<Channel> acquire, SimpleChannelPool channelPool )
+    static CompletableFuture<PooledChannel> future( Future<Channel> acquire, SimpleChannelPool channelPool )
     {
         CompletableFuture<PooledChannel> pooledChannelFuture = new CompletableFuture<>();
         acquire.addListener( (GenericFutureListener<Future<Channel>>) future ->
