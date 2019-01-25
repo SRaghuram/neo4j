@@ -52,13 +52,13 @@ public class TemporaryDatabase implements AutoCloseable
             GraphDatabaseService db = factory
                     .setUserLogProvider( NullLogProvider.getInstance() )
                     .newEmbeddedDatabaseBuilder( databaseDirectory )
-                    .setConfig( augmentParams( params ) )
+                    .setConfig( augmentParams( params, databaseDirectory ) )
                     .newGraphDatabase();
 
             return new TemporaryDatabase( db );
         }
 
-        private Map<String,String> augmentParams( Map<String,String> params )
+        private Map<String,String> augmentParams( Map<String,String> params, File databaseDirectory )
         {
             Map<String,String> augmentedParams = new HashMap<>( params );
 

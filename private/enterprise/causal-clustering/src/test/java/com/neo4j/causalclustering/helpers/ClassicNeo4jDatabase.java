@@ -23,50 +23,59 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
+import static java.util.Optional.of;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
+import static org.neo4j.kernel.configuration.Settings.FALSE;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
 
 public class ClassicNeo4jDatabase
 {
-    private final File databaseDirectory;
+    private final DatabaseLayout databaseLayout;
 
-    private ClassicNeo4jDatabase( File databaseDirectory )
+    private ClassicNeo4jDatabase( DatabaseLayout databaseLayout )
     {
-        this.databaseDirectory = databaseDirectory;
+        this.databaseLayout = databaseLayout;
     }
 
-    public File getDatabaseDirectory()
+    public DatabaseLayout databaseLayout()
     {
-        return databaseDirectory;
+        return databaseLayout;
     }
 
-    public static Neo4jDatabaseBuilder builder( File baseDir, FileSystemAbstraction fsa )
+    /**
+     * @param baseDir generally corresponds to $NEO4J_HOME/data/ in tests.
+     */
+    public static Neo4jDatabaseBuilder builder( File baseDir, FileSystemAbstraction fileSystem )
     {
-        return new Neo4jDatabaseBuilder( baseDir, fsa );
+        return new Neo4jDatabaseBuilder( baseDir, fileSystem );
     }
 
     public DatabaseLayout layout()
     {
-        return DatabaseLayout.of( databaseDirectory );
+        return databaseLayout;
     }
 
     public static class Neo4jDatabaseBuilder
     {
         private final File baseDirectoryAbsolute;
-        private final FileSystemAbstraction fsa;
+        private final FileSystemAbstraction fileSystem;
 
-        private String dbName = "graph.db";
+        private String databaseName = "graph.db";
         private boolean needRecover;
         private int nrOfNodes = 10;
-        private String recordsFormat = Standard.LATEST_NAME;
+        private String recordFormat = Standard.LATEST_NAME;
         private File transactionLogsRootDirectoryAbsolute;
+        private File databasesRootDirectoryAbsolute;
 
-        Neo4jDatabaseBuilder( File baseDirectoryAbsolute, FileSystemAbstraction fsa )
+        Neo4jDatabaseBuilder( File baseDirectoryAbsolute, FileSystemAbstraction fileSystem )
         {
             assertAbsolute( baseDirectoryAbsolute );
 
             this.baseDirectoryAbsolute = baseDirectoryAbsolute;
-            this.transactionLogsRootDirectoryAbsolute = baseDirectoryAbsolute;
-            this.fsa = fsa;
+            this.transactionLogsRootDirectoryAbsolute = new File( baseDirectoryAbsolute, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
+            this.databasesRootDirectoryAbsolute = new File( baseDirectoryAbsolute, DEFAULT_DATABASES_ROOT_DIR_NAME );
+            this.fileSystem = fileSystem;
         }
 
         private void assertAbsolute( File directory )
@@ -77,27 +86,27 @@ public class ClassicNeo4jDatabase
             }
         }
 
-        public Neo4jDatabaseBuilder dbName( String dbName )
+        public Neo4jDatabaseBuilder databaseName( String databaseName )
         {
-            this.dbName = dbName;
+            this.databaseName = databaseName;
             return this;
         }
 
         public Neo4jDatabaseBuilder needToRecover()
         {
-            needRecover = true;
+            this.needRecover = true;
             return this;
         }
 
-        public Neo4jDatabaseBuilder amountOfNodes( int nodes )
+        public Neo4jDatabaseBuilder amountOfNodes( int nrOfNodes )
         {
-            nrOfNodes = nodes;
+            this.nrOfNodes = nrOfNodes;
             return this;
         }
 
-        public Neo4jDatabaseBuilder recordFormats( String format )
+        public Neo4jDatabaseBuilder recordFormats( String recordFormat )
         {
-            recordsFormat = format;
+            this.recordFormat = recordFormat;
             return this;
         }
 
@@ -110,12 +119,12 @@ public class ClassicNeo4jDatabase
 
         public ClassicNeo4jDatabase build() throws IOException
         {
-            File databaseDirectory = new File( baseDirectoryAbsolute, dbName );
+            File databaseDirectory = new File( databasesRootDirectoryAbsolute, databaseName );
             GraphDatabaseService db = new TestGraphDatabaseFactory()
-                    .setFileSystem( fsa )
+                    .setFileSystem( fileSystem )
                     .newEmbeddedDatabaseBuilder( databaseDirectory )
-                    .setConfig( GraphDatabaseSettings.record_format, recordsFormat )
-                    .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() )
+                    .setConfig( GraphDatabaseSettings.record_format, recordFormat )
+                    .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
                     .setConfig( GraphDatabaseSettings.transaction_logs_root_path, transactionLogsRootDirectoryAbsolute.getAbsolutePath() )
                     .newGraphDatabase();
 
@@ -132,33 +141,49 @@ public class ClassicNeo4jDatabase
 
             if ( needRecover )
             {
-                LogFiles logFiles = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( LogFiles.class );
-                File logFilesDirectory = logFiles.logFilesDirectory();
-                File tmpLogs = new File( baseDirectoryAbsolute, "unrecovered" );
-                fsa.mkdir( tmpLogs );
-                for ( File file : logFiles.logFiles() )
-                {
-                    fsa.copyFile( file, new File( tmpLogs, file.getName() ) );
-                }
-
-                db.shutdown();
-
-                for ( File file : logFiles.logFiles() )
-                {
-                    fsa.deleteFile( file );
-                }
-
-                LogFiles copyLogFiles = logFilesBasedOnlyBuilder( tmpLogs, fsa ).build();
-                for ( File file : copyLogFiles.logFiles() )
-                {
-                    fsa.copyToDirectory( file, logFilesDirectory );
-                }
+                fakeUnrecoveredDatabase( db );
             }
             else
             {
                 db.shutdown();
             }
-            return new ClassicNeo4jDatabase( databaseDirectory );
+
+            return new ClassicNeo4jDatabase( DatabaseLayout.of( databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
+        }
+
+        /**
+         * This fakes the need of recovery by copying the transaction logs to a temporary directory
+         * while the database still is running. The transaction logs should thus in general not
+         * have been check-pointed. These copied transaction logs are then re-installed causing
+         * the database to appear as if it requires recovery on startup.
+         */
+        private void fakeUnrecoveredDatabase( GraphDatabaseService db ) throws IOException
+        {
+            LogFiles logFiles = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( LogFiles.class );
+            File logFilesDirectory = logFiles.logFilesDirectory();
+
+            /* Copy live transaction logs to temporary directory. */
+            File temporaryDirectory = new File( baseDirectoryAbsolute, "temp" );
+            fileSystem.mkdirs( temporaryDirectory );
+            for ( File file : logFiles.logFiles() )
+            {
+                fileSystem.copyFile( file, new File( temporaryDirectory, file.getName() ) );
+            }
+
+            db.shutdown();
+
+            /* Delete proper transaction logs. */
+            for ( File file : logFiles.logFiles() )
+            {
+                fileSystem.deleteFileOrThrow( file );
+            }
+
+            /* Restore the previously copied transaction logs. */
+            LogFiles copyLogFiles = logFilesBasedOnlyBuilder( temporaryDirectory, fileSystem ).build();
+            for ( File file : copyLogFiles.logFiles() )
+            {
+                fileSystem.copyToDirectory( file, logFilesDirectory );
+            }
         }
     }
 }

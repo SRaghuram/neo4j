@@ -36,6 +36,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreFactory;
+import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -54,6 +55,7 @@ import org.neo4j.logging.LogProvider;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.active_database;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
@@ -102,21 +104,53 @@ public class CoreBootstrapper
     private final Function<String,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
-    private final Config activeDatabaseConfig;
     private final LogProvider logProvider;
     private final Log log;
 
+    private final Map<String,String> activeDatabaseParams;
+    private final Map<String,String> systemDatabaseParams;
+    private final Config activeDatabaseFilteredConfig;
+    private final Config systemDatabaseFilteredConfig;
+
     CoreBootstrapper( DatabaseService databaseService, TemporaryDatabase.Factory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
-            FileSystemAbstraction fs, Config activeDatabaseConfig, LogProvider logProvider, PageCache pageCache )
+            FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache )
     {
         this.databaseService = databaseService;
         this.tempDatabaseFactory = tempDatabaseFactory;
         this.databaseInitializers = databaseInitializers;
         this.fs = fs;
-        this.activeDatabaseConfig = activeDatabaseConfig;
         this.logProvider = logProvider;
         this.pageCache = pageCache;
         this.log = logProvider.getLog( getClass() );
+
+        this.activeDatabaseParams = initialActiveDatabaseParams( config );
+        this.systemDatabaseParams = initialSystemDatabaseParams( config );
+
+        this.activeDatabaseFilteredConfig = Config.defaults( activeDatabaseParams );
+        this.systemDatabaseFilteredConfig = Config.defaults( systemDatabaseParams );
+    }
+
+    private Map<String,String> initialActiveDatabaseParams( Config config )
+    {
+        Map<String,String> params = new HashMap<>();
+
+        /* We want to only inherit things that will affect the storage as necessary during bootstrap of the database. */
+        params.put( GraphDatabaseSettings.active_database.name(), config.get( active_database ) );
+        params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
+        params.put( GraphDatabaseSettings.record_format.name(), config.get( record_format ) );
+
+        return params;
+    }
+
+    private Map<String,String> initialSystemDatabaseParams( Config config )
+    {
+        Map<String,String> params = new HashMap<>();
+
+        params.put( GraphDatabaseSettings.active_database.name(), SYSTEM_DATABASE_NAME );
+        params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
+        params.put( GraphDatabaseSettings.record_format.name(), Standard.LATEST_NAME );
+
+        return params;
     }
 
     /**
@@ -134,8 +168,9 @@ public class CoreBootstrapper
             throw new IllegalArgumentException( "Not supporting " + databaseCount + " number of databases." );
         }
 
-        String activeDatabaseName = activeDatabaseConfig.get( GraphDatabaseSettings.active_database );
+        String activeDatabaseName = activeDatabaseFilteredConfig.get( GraphDatabaseSettings.active_database );
         LocalDatabase activeDatabase = getDatabaseOrThrow( activeDatabaseName );
+        assert activeDatabase.databaseLayout().getTransactionLogsDirectory().isAbsolute();
 
         LocalDatabase systemDatabase = null;
         if ( databaseCount == 2 )
@@ -147,8 +182,8 @@ public class CoreBootstrapper
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
 
-        bootstrapDatabase( activeDatabase, activeDatabaseConfig, null );
-        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( activeDatabase.databaseLayout(), activeDatabaseConfig );
+        bootstrapDatabase( activeDatabase, activeDatabaseParams, activeDatabaseFilteredConfig, null );
+        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( activeDatabase.databaseLayout(), activeDatabaseFilteredConfig );
 
         IdAllocationState activeDatabaseIdAllocationState = deriveIdAllocationState( activeDatabase.databaseLayout() );
         coreSnapshot.add( activeDatabaseName, CoreStateFiles.ID_ALLOCATION, activeDatabaseIdAllocationState );
@@ -157,8 +192,8 @@ public class CoreBootstrapper
         if ( databaseCount == 2 )
         {
             DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
-            bootstrapDatabase( systemDatabase, Config.defaults(), systemDatabaseInitializer );
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( systemDatabase.databaseLayout(), Config.defaults() );
+            bootstrapDatabase( systemDatabase, systemDatabaseParams, systemDatabaseFilteredConfig, systemDatabaseInitializer );
+            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( systemDatabase.databaseLayout(), systemDatabaseFilteredConfig );
 
             IdAllocationState systemDatabaseIdAllocationState = deriveIdAllocationState( systemDatabase.databaseLayout() );
             coreSnapshot.add( SYSTEM_DATABASE_NAME, CoreStateFiles.ID_ALLOCATION, systemDatabaseIdAllocationState );
@@ -168,19 +203,7 @@ public class CoreBootstrapper
         return coreSnapshot;
     }
 
-    private Map<String,String> initializerParams( Config databaseConfig, DatabaseLayout databaseLayout )
-    {
-        Map<String,String> params = new HashMap<>();
-
-        /* This adhoc inheritance of configuration options is unfortunate and fragile, but there really aren't any better options currently. */
-        params.put( GraphDatabaseSettings.record_format.name(), databaseConfig.get( record_format ) );
-        params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
-        params.put( GraphDatabaseSettings.active_database.name(), databaseConfig.get( active_database ) );
-
-        return params;
-    }
-
-    private void bootstrapDatabase( LocalDatabase database, Config databaseConfig, DatabaseInitializer databaseInitializer ) throws Exception
+    private void bootstrapDatabase( LocalDatabase database, Map<String,String> params, Config databaseConfig, DatabaseInitializer databaseInitializer ) throws Exception
     {
         DatabaseLayout databaseLayout = database.databaseLayout();
         ensureRecoveredOrThrow( databaseLayout, databaseConfig );
@@ -191,7 +214,7 @@ public class CoreBootstrapper
             return;
         }
 
-        initializeDatabase( databaseLayout, databaseConfig, databaseInitializer );
+        initializeDatabase( databaseLayout.databaseDirectory(), params, databaseInitializer );
     }
 
     private LocalDatabase getDatabaseOrThrow( String databaseName )
@@ -231,11 +254,9 @@ public class CoreBootstrapper
     /**
      * This method has the purpose of both creating a database and optionally initializing its contents.
      */
-    private void initializeDatabase( DatabaseLayout databaseLayout, Config databaseConfig, DatabaseInitializer databaseInitializer )
+    private void initializeDatabase( File databaseDirectory, Map<String,String> params, DatabaseInitializer databaseInitializer )
     {
-        Map<String,String> params = initializerParams( databaseConfig, databaseLayout );
-
-        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( databaseLayout.databaseDirectory(), params ) )
+        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( databaseDirectory, params ) )
         {
             if ( databaseInitializer != null )
             {
