@@ -17,7 +17,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import java.io.IOException;
 
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.impl.store.StoreFileClosedException;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -125,8 +124,9 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
         {
             txIdPromise = transactionIdStore.getLastCommittedTransactionId();
         }
-        catch ( StoreFileClosedException e )
+        catch ( Exception e )
         {
+            // Could be caused by closed transactionIdStore
             log.info( "Failed to serve TxPullRequest. Reason: %s", e.getMessage() );
             return Prepare.fail( E_STORE_UNAVAILABLE );
         }

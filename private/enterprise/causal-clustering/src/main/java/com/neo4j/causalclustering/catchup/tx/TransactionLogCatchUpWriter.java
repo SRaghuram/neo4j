@@ -5,22 +5,19 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
-import org.neo4j.dbms.database.DatabaseConfig;
+import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
-import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
+import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
@@ -29,27 +26,27 @@ import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.TransactionId;
+import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static java.lang.String.format;
+import static java.lang.System.currentTimeMillis;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier.EMPTY;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
-import static org.neo4j.kernel.impl.store.StoreType.META_DATA;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable
 {
     private final Lifespan lifespan = new Lifespan();
-    private final PageCache pageCache;
     private final Log log;
     private final boolean asPartOfStoreCopy;
     private final TransactionLogWriter writer;
     private final LogFiles logFiles;
-    private final DatabaseLayout databaseLayout;
-    private final NeoStores stores;
+    private final TransactionMetaDataStore metaDataStore;
     private final boolean rotateTransactionsManually;
+    private final FlushablePositionAwareChannel logChannel;
+    private final LogPositionMarker logPositionMarker = new LogPositionMarker();
 
     private long lastTxId = -1;
     private long expectedTxId;
@@ -58,28 +55,32 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
             LogProvider logProvider, long fromTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
             boolean forceTransactionRotations ) throws IOException
     {
-        this.pageCache = pageCache;
         this.log = logProvider.getLog( getClass() );
         this.asPartOfStoreCopy = asPartOfStoreCopy;
         this.rotateTransactionsManually = forceTransactionRotations;
-        //Select for store, or select default
-        RecordFormats recordFormats = RecordFormatSelector.selectForStoreOrConfig( Config.defaults(), databaseLayout, fs, pageCache, logProvider );
-        Config databaseConfig = DatabaseConfig.from( config, databaseLayout.getDatabaseName() );
-        this.stores = new StoreFactory( databaseLayout, databaseConfig, new DefaultIdGeneratorFactory( fs ), pageCache, fs, recordFormats, logProvider, EMPTY )
-                .openNeoStores( META_DATA );
+        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependency( stores.getMetaDataStore() );
+        dependencies.satisfyDependencies( databaseLayout, fs, pageCache, configWithoutSpecificStoreFormat( config ) );
+        metaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs )
                 .withDependencies( dependencies )
                 .withLastCommittedTransactionIdSupplier( () -> fromTxId - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
-                .withLogVersionRepository( stores.getMetaDataStore() );
+                .withLogVersionRepository( metaDataStore );
+                // TODO do this too? .withTransactionIdStore( metaDataStore );
         this.logFiles = logFilesBuilder.build();
         this.lifespan.add( logFiles );
-        this.writer = new TransactionLogWriter( new LogEntryWriter( logFiles.getLogFile().getWriter() ) );
-        this.databaseLayout = databaseLayout;
+        this.logChannel = logFiles.getLogFile().getWriter();
+        this.writer = new TransactionLogWriter( new LogEntryWriter( logChannel ) );
         this.expectedTxId = fromTxId;
+    }
+
+    private Config configWithoutSpecificStoreFormat( Config config )
+    {
+        Map<String,String> raw = config.getRaw();
+        raw.remove( GraphDatabaseSettings.record_format.name() );
+        return Config.defaults( raw );
     }
 
     private Config customisedConfig( Config original, boolean keepTxLogsInStoreDir, boolean forceTransactionRotations )
@@ -120,6 +121,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
 
         try
         {
+            logChannel.getCurrentPosition( logPositionMarker );
             writer.append( tx.getTransactionRepresentation(), lastTxId );
         }
         catch ( IOException e )
@@ -161,21 +163,19 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
             // Recovery will treat that as last checkpoint and will not try to recover store till new
             // last closed transaction offset will not overcome old one. Till that happens it will be
             // impossible for recovery process to restore the store
-            File neoStore = databaseLayout.metadataStore();
-            MetaDataStore.setRecord(
-                    pageCache,
-                    neoStore,
-                    LAST_CLOSED_TRANSACTION_LOG_BYTE_OFFSET,
-                    checkPointPosition.getByteOffset() );
+            TransactionId lastCommittedTx = metaDataStore.getLastCommittedTransaction();
+            metaDataStore.setLastCommittedAndClosedTransactionId( lastCommittedTx.transactionId(), lastCommittedTx.checksum(),
+                    lastCommittedTx.commitTimestamp(), checkPointPosition.getByteOffset(), logVersion );
         }
 
         lifespan.close();
 
         if ( lastTxId != -1 )
         {
-            File neoStoreFile = databaseLayout.metadataStore();
-            MetaDataStore.setRecord( pageCache, neoStoreFile, LAST_TRANSACTION_ID, lastTxId );
+            metaDataStore.setLastCommittedAndClosedTransactionId( lastTxId,
+                    0, currentTimeMillis(), // <-- we don't seem to care about these fields anymore
+                    logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );
         }
-        stores.close();
+        metaDataStore.close();
     }
 }

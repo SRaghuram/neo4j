@@ -8,24 +8,27 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.io.IOException;
 import java.util.Optional;
 
+import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException;
-import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 public class CommitStateHelper
 {
+    private final StorageEngineFactory storageEngineFactory;
     private PageCache pageCache;
     private FileSystemAbstraction fs;
     private Config config;
@@ -35,11 +38,14 @@ public class CommitStateHelper
         this.pageCache = pageCache;
         this.fs = fs;
         this.config = config;
+        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
     }
 
     CommitState getStoreState( DatabaseLayout databaseLayout ) throws IOException
     {
-        TransactionIdStore txIdStore = new ReadOnlyTransactionIdStore( pageCache, databaseLayout );
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( pageCache, databaseLayout );
+        TransactionIdStore txIdStore = storageEngineFactory.readOnlyTransactionIdStore( dependencies );
         long lastCommittedTxId = txIdStore.getLastCommittedTransactionId();
 
         Optional<Long> latestTransactionLogIndex = getLatestTransactionLogIndex( lastCommittedTxId, databaseLayout );

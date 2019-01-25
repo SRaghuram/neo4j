@@ -6,25 +6,31 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreVersion;
+import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
-import static org.neo4j.kernel.impl.store.format.RecordFormatSelector.isStoreAndConfigFormatsCompatible;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 public class CopiedStoreRecovery extends LifecycleAdapter
 {
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
+    private final StorageEngineFactory storageEngineFactory;
 
     private boolean shutdown;
 
@@ -32,6 +38,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
     {
         this.pageCache = pageCache;
         this.fs = fs;
+        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
     }
 
     @Override
@@ -46,9 +53,19 @@ public class CopiedStoreRecovery extends LifecycleAdapter
         {
             throw new DatabaseShutdownException( "Abort store-copied store recovery due to database shutdown" );
         }
-        if ( !isStoreAndConfigFormatsCompatible( config, databaseLayout, fs, pageCache, NullLogProvider.getInstance() ) )
+
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( config, pageCache, fs, NullLogService.getInstance(), databaseLayout );
+        StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck( dependencies );
+        Optional<String> storeVersion = storeVersionCheck.storeVersion();
+        if ( storeVersion.isPresent() )
         {
-            throw new RuntimeException( failedToStartMessage( config ) );
+            StoreVersion version = storeVersionCheck.versionInformation( storeVersion.get() );
+            String configuredVersion = storeVersionCheck.configuredVersion();
+            if ( configuredVersion != null && !version.isCompatibleWith( storeVersionCheck.versionInformation( configuredVersion ) ) )
+            {
+                throw new RuntimeException( failedToStartMessage( config ) );
+            }
         }
 
         try

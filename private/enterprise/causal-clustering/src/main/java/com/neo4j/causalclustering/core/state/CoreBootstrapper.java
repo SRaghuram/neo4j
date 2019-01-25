@@ -28,37 +28,44 @@ import java.util.function.Function;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
-import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
+import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.kernel.impl.api.DatabaseSchemaState;
+import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
+import org.neo4j.kernel.impl.locking.LockService;
+import org.neo4j.kernel.impl.store.id.DefaultIdController;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
+import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLog;
+import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
+import static java.lang.System.currentTimeMillis;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.active_database;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_TRANSACTION_ID;
+import static org.neo4j.kernel.impl.core.TokenHolders.readOnlyTokenHolders;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN_NAME;
@@ -74,6 +81,7 @@ import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP_TYPE_TOKEN;
 import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP_TYPE_TOKEN_NAME;
 import static org.neo4j.kernel.impl.store.id.IdType.SCHEMA;
 import static org.neo4j.kernel.impl.store.id.IdType.STRING_BLOCK;
+import static org.neo4j.kernel.internal.DatabaseHealth.newDatabaseHealth;
 
 /**
  * Bootstraps the core. A single instance is chosen as the bootstrapper, by the discovery service.
@@ -108,6 +116,7 @@ public class CoreBootstrapper
     private final FileSystemAbstraction fs;
     private final LogProvider logProvider;
     private final Log log;
+    private final StorageEngineFactory storageEngineFactory;
 
     private final Map<String,String> activeDatabaseParams;
     private final Map<String,String> systemDatabaseParams;
@@ -121,8 +130,8 @@ public class CoreBootstrapper
         this.tempDatabaseFactory = tempDatabaseFactory;
         this.databaseInitializers = databaseInitializers;
         this.fs = fs;
-        this.logProvider = logProvider;
         this.pageCache = pageCache;
+        this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
 
         this.activeDatabaseParams = initialActiveDatabaseParams( config );
@@ -130,6 +139,8 @@ public class CoreBootstrapper
 
         this.activeDatabaseFilteredConfig = Config.defaults( activeDatabaseParams );
         this.systemDatabaseFilteredConfig = Config.defaults( systemDatabaseParams );
+
+        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
     }
 
     private Map<String,String> initialActiveDatabaseParams( Config config )
@@ -150,7 +161,7 @@ public class CoreBootstrapper
 
         params.put( GraphDatabaseSettings.active_database.name(), SYSTEM_DATABASE_NAME );
         params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
-        params.put( GraphDatabaseSettings.record_format.name(), Standard.LATEST_NAME );
+        // default store format will be used, not the configured one
 
         return params;
     }
@@ -211,13 +222,18 @@ public class CoreBootstrapper
         DatabaseLayout databaseLayout = database.databaseLayout();
         ensureRecoveredOrThrow( databaseLayout, databaseConfig );
 
-        if ( NeoStores.isStorePresent( pageCache, databaseLayout ) )
+        if ( isStorePresent( databaseLayout ) )
         {
             recoverMissingFiles( databaseLayout, databaseConfig );
             return;
         }
 
         initializeDatabase( databaseLayout.databaseDirectory(), params, databaseInitializer );
+    }
+
+    private boolean isStorePresent( DatabaseLayout databaseLayout )
+    {
+        return storageEngineFactory.storageExists( fs, pageCache, databaseLayout );
     }
 
     private LocalDatabase getDatabaseOrThrow( String databaseName )
@@ -247,11 +263,15 @@ public class CoreBootstrapper
      */
     private void recoverMissingFiles( DatabaseLayout databaseLayout, Config config )
     {
-        StoreFactory factory = new StoreFactory( databaseLayout, config,
-                new DefaultIdGeneratorFactory( fs ), pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
-
-        NeoStores neoStores = factory.openAllNeoStores( true );
-        neoStores.close();
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( databaseLayout, config, pageCache, fs, logProvider, readOnlyTokenHolders(), new DatabaseSchemaState( logProvider ),
+                new StandardConstraintSemantics(), LockService.NO_LOCK_SERVICE, newDatabaseHealth( NullLog.getInstance() ),
+                new DefaultIdGeneratorFactory( fs ), new DefaultIdController(), EmptyVersionContextSupplier.EMPTY );
+        StorageEngine storageEngine = storageEngineFactory.instantiate( dependencies, dependencies );
+        try ( Lifespan lifespan = new Lifespan( storageEngine ) )
+        {
+            // A simple start/stop will do
+        }
     }
 
     /**
@@ -273,7 +293,9 @@ public class CoreBootstrapper
      */
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout databaseLayout, Config config ) throws IOException
     {
-        TransactionIdStore readOnlyTransactionIdStore = new ReadOnlyTransactionIdStore( pageCache, databaseLayout );
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( pageCache, databaseLayout );
+        TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( dependencies );
         LogFiles logFiles = LogFilesBuilder
                 .activeFilesBuilder( databaseLayout, fs, pageCache )
                 .withConfig( config )
@@ -281,9 +303,10 @@ public class CoreBootstrapper
                 .build();
 
         long dummyTransactionId;
+        LogPositionMarker logPositionMarker = new LogPositionMarker();
         try ( Lifespan ignored = new Lifespan( logFiles ) )
         {
-            FlushableChannel channel = logFiles.getLogFile().getWriter();
+            FlushablePositionAwareChannel channel = logFiles.getLogFile().getWriter();
             TransactionLogWriter writer = new TransactionLogWriter( new LogEntryWriter( channel ) );
 
             long lastCommittedTransactionId = readOnlyTransactionIdStore.getLastCommittedTransactionId();
@@ -292,12 +315,17 @@ public class CoreBootstrapper
             tx.setHeader( txHeaderBytes, -1, -1, -1, lastCommittedTransactionId, -1, -1 );
 
             dummyTransactionId = lastCommittedTransactionId + 1;
+            channel.getCurrentPosition( logPositionMarker );
             writer.append( tx, dummyTransactionId );
             channel.prepareForFlush().flush();
         }
 
-        File neoStoreFile = databaseLayout.metadataStore();
-        MetaDataStore.setRecord( pageCache, neoStoreFile, LAST_TRANSACTION_ID, dummyTransactionId );
+        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
+        try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies ) )
+        {
+            transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
+                    logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );
+        }
     }
 
     /**

@@ -16,12 +16,16 @@ import java.util.Collection;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.storageengine.api.StorageEngineFactory;
+
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 public class StoreFiles
 {
@@ -149,7 +153,9 @@ public class StoreFiles
         {
             return null;
         }
-        org.neo4j.storageengine.api.StoreId kernelStoreId = MetaDataStore.getStoreId( pageCache, neoStoreFile );
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependencies( fs, pageCache, databaseLayout );
+        org.neo4j.storageengine.api.StoreId kernelStoreId = selectStorageEngine( Service.load( StorageEngineFactory.class ) ).storeId( dependencies );
         return new StoreId( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(),
                 kernelStoreId.getUpgradeTime(), kernelStoreId.getUpgradeId() );
     }
