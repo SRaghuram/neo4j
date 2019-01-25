@@ -29,6 +29,7 @@
     </scm>
 
     <dependencies>
+        <!-- Main dependencies -->
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j</artifactId>
@@ -64,7 +65,14 @@
             <artifactId>neo4j-bolt</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-commercial-record-storage-engine</artifactId>
+            <version>${project.version}</version>
+            <scope>runtime</scope>
+        </dependency>
 
+        <!-- Test dependencies -->
         <dependency>
             <groupId>org.neo4j.community</groupId>
             <artifactId>kernel-it</artifactId>
