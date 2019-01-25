@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption.SingleThreaded
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.ExecutionPlan
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.physical_planning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan

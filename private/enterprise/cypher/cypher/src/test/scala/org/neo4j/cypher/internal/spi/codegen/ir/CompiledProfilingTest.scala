@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.spi.codegen.ir
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.Provider
 import org.neo4j.cypher.internal.compiled_runtime.v4_0.codegen.ir.CodeGenSugar
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.planner.v4_0.spi.KernelStatisticProvider
@@ -16,7 +15,6 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.{AcceptVisitor, ScanAllNodes, WhileLoop}
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
-import org.neo4j.cypher.internal.runtime.planDescription.{InternalPlanDescription, NoChildren, PlanDescriptionImpl, SingleChild}
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
@@ -59,11 +57,6 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     when(transactionalContext.dataRead).thenReturn(dataRead)
     when(entityAccessor.newNodeProxy(anyLong())).thenReturn(mock[NodeProxy])
     when(queryContext.entityAccessor).thenReturn(entityAccessor)
-
-    val provider = new Provider[InternalPlanDescription] {
-      override def get(): InternalPlanDescription =
-        PlanDescriptionImpl(id2, "accept", SingleChild(PlanDescriptionImpl(id1, "scanallnodes", NoChildren, Seq.empty, Set.empty)), Seq.empty, Set.empty)
-    }
 
     // when
     val tracer = new ProfilingTracer(transactionalContext.kernelStatisticProvider)

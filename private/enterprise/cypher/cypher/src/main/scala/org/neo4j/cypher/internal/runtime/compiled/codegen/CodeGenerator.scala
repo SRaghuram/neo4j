@@ -10,33 +10,27 @@ import java.util
 
 import org.neo4j.cypher.internal.codegen.QueryExecutionTracer
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.Provider
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.{Cardinalities, ProvidedOrders}
+import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{CodeStructure, CodeStructureResult}
 import org.neo4j.cypher.internal.runtime.compiled.{CompiledExecutionResult, CompiledPlan, RunnablePlan}
-import org.neo4j.cypher.internal.runtime.planDescription.InternalPlanDescription.Arguments.{Runtime, RuntimeImpl}
-import org.neo4j.cypher.internal.runtime.planDescription.{Argument, InternalPlanDescription, LogicalPlan2PlanDescription}
+import org.neo4j.cypher.internal.runtime.planDescription.Argument
 import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext, compiled}
-import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, ProduceResult}
-import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
-import org.neo4j.values.virtual.MapValue
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
+import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.v4_0.util.Eagerly
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.values.virtual.MapValue
 
 class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
                     clock: Clock,
                     conf: CodeGenConfiguration = CodeGenConfiguration()) {
 
   import CodeGenerator.generateCode
-
-  type PlanDescriptionProvider =
-          InternalPlanDescription => (Provider[InternalPlanDescription], Option[QueryExecutionTracer])
 
   def generate(plan: LogicalPlan,
                tokenContext: TokenContext,

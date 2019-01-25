@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.queryReduction
 
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.PeriodicCommitInfo
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.compiler.v4_0.phases.{LogicalPlanState, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
