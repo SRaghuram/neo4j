@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 

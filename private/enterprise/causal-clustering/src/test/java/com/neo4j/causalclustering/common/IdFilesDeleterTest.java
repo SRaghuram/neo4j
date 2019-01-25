@@ -9,7 +9,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
@@ -44,7 +43,7 @@ public class IdFilesDeleterTest
     }
 
     @Test
-    public void shouldDeleteIdFiles() throws IOException
+    public void shouldDeleteIdFiles()
     {
         // given
         DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.directory() );
@@ -62,7 +61,7 @@ public class IdFilesDeleterTest
     }
 
     @Test
-    public void shouldNotDeleteUnknownFiles() throws IOException
+    public void shouldNotDeleteUnknownFiles()
     {
         // given
         DatabaseLayout databaseLayout = DatabaseLayout.of( testDirectory.directory() );
