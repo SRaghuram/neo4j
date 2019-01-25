@@ -7,14 +7,11 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
-import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 
-import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
@@ -24,93 +21,65 @@ import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
-
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 public class SenderService extends LifecycleAdapter implements Outbound<AdvertisedSocketAddress,Message>
 {
-    private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
-    private ReconnectingChannels channels;
-
-    private final ChannelInitializer channelInitializer;
+    private final ChannelPools channels;
     private final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
-    private final JobScheduler scheduler;
     private final Log log;
 
     private boolean senderServiceRunning;
-    private Bootstrap bootstrap;
-    private EventLoopGroup eventLoopGroup;
 
     public SenderService( ChannelInitializer channelInitializer, JobScheduler scheduler, LogProvider logProvider,
             BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
     {
-        this.channelInitializer = channelInitializer;
-        this.scheduler = scheduler;
+        this.channels = new ChannelPools( bootstrapConfiguration, scheduler, channelInitializer, logProvider );
         this.log = logProvider.getLog( getClass() );
-        this.channels = new ReconnectingChannels();
-        this.bootstrapConfiguration = bootstrapConfiguration;
     }
 
     @Override
     public void send( AdvertisedSocketAddress to, Message message, boolean block )
     {
-        Future<Void> future;
-        serviceLock.readLock().lock();
+        ChannelFuture channelFuture;
+        if ( !senderServiceRunning )
+        {
+            return;
+        }
         try
         {
-            if ( !senderServiceRunning )
-            {
-                return;
-            }
-
-            future = channel( to ).writeAndFlush( message );
+            serviceLock.readLock().lock();
+            channelFuture =
+                    loggingBlock( to, channels.acquire( to ).thenApply( p -> p.channel().writeAndFlush( message ).addListener( future -> p.release() ) ) );
         }
         finally
         {
             serviceLock.readLock().unlock();
         }
-
         if ( block )
         {
-            try
+            if ( channelFuture != null )
             {
-                future.get();
-            }
-            catch ( ExecutionException e )
-            {
-                log.error( "Exception while sending to: " + to, e );
-            }
-            catch ( InterruptedException e )
-            {
-                log.info( "Interrupted while sending", e );
+                loggingBlock( to, channelFuture );
             }
         }
     }
 
-    private Channel channel( AdvertisedSocketAddress destination )
+    private <V> V loggingBlock( AdvertisedSocketAddress to, java.util.concurrent.Future<V> future )
     {
-        ReconnectingChannel channel = channels.get( destination );
-
-        if ( channel == null )
+        try
         {
-            channel = new ReconnectingChannel( bootstrap, eventLoopGroup.next(), destination, log );
-            channel.start();
-            ReconnectingChannel existingNonBlockingChannel = channels.putIfAbsent( destination, channel );
-
-            if ( existingNonBlockingChannel != null )
-            {
-                channel.dispose();
-                channel = existingNonBlockingChannel;
-            }
-            else
-            {
-                log.info( "Creating channel to: [%s] ", destination );
-            }
+            return future.get();
         }
-
-        return channel;
+        catch ( ExecutionException e )
+        {
+            log.error( "Exception while sending to: " + to, e );
+        }
+        catch ( InterruptedException e )
+        {
+            log.info( "Interrupted while sending", e );
+        }
+        return null;
     }
 
     @Override
@@ -119,12 +88,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         serviceLock.writeLock().lock();
         try
         {
-            eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.RAFT_CLIENT ) );
-            bootstrap = new Bootstrap()
-                    .group( eventLoopGroup )
-                    .channel( bootstrapConfiguration.channelClass() )
-                    .handler( channelInitializer );
-
+            channels.start();
             senderServiceRunning = true;
         }
         finally
@@ -140,23 +104,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         try
         {
             senderServiceRunning = false;
-
-            Iterator<ReconnectingChannel> itr = channels.values().iterator();
-            while ( itr.hasNext() )
-            {
-                Channel timestampedChannel = itr.next();
-                timestampedChannel.dispose();
-                itr.remove();
-            }
-
-            try
-            {
-                eventLoopGroup.shutdownGracefully( 0, 0, MICROSECONDS ).sync();
-            }
-            catch ( InterruptedException e )
-            {
-                log.warn( "Interrupted while stopping sender service." );
-            }
+            channels.stop();
         }
         finally
         {
