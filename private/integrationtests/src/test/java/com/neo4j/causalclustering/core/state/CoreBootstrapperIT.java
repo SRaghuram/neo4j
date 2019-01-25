@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.common.IdFilesDeleter;
 import com.neo4j.causalclustering.common.LocalDatabase;
 import com.neo4j.causalclustering.common.StubLocalDatabaseService;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
@@ -24,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.neo4j.causalclustering.common.IdFilesDeleter;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;

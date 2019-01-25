@@ -5,10 +5,11 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.common.IdFilesDeleter;
+
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.common.IdFilesDeleter;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
