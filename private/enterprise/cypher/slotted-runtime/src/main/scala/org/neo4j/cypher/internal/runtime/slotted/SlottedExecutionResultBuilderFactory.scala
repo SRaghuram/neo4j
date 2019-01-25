@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.IteratorBasedResult
 import org.neo4j.cypher.internal.physical_planning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.{BaseExecutionResultBuilderFactory, ExecutionResultBuilder}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe

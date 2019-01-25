@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher.internal.queryReduction
 
-import org.neo4j.cypher.internal.compatibility.{CommunityRuntimeContextCreator, LogicalQuery}
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
+import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.PeriodicCommitInfo
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.compiler.v4_0.phases.{LogicalPlanState, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
@@ -15,22 +16,11 @@ import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
 import org.neo4j.cypher.internal.planner.v4_0.spi.{IDPPlannerName, PlanContext, PlannerNameFor, PlanningAttributes}
 import org.neo4j.cypher.internal.queryReduction.DDmin.Oracle
+import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted._
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.spi.v4_0.TransactionBoundPlanContext
-import org.neo4j.cypher.internal._
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.executionplan.PeriodicCommitInfo
-import org.neo4j.cypher.internal.runtime.NoInput
-import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
-import org.neo4j.internal.kernel.api.Transaction
-import org.neo4j.internal.kernel.api.security.LoginContext
-import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}
-import org.neo4j.kernel.monitoring.Monitors
-import org.neo4j.logging.NullLog
-import org.neo4j.test.TestGraphDatabaseFactory
-import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticFeature, SemanticState}
@@ -39,7 +29,16 @@ import org.neo4j.cypher.internal.v4_0.frontend.phases._
 import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer}
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
+import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
+import org.neo4j.internal.kernel.api.Transaction
+import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.configuration.Config
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}
+import org.neo4j.kernel.monitoring.Monitors
+import org.neo4j.logging.NullLog
+import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 import scala.util.Try
 

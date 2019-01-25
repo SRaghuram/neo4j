@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher
 
-import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{CompiledRuntimeName, InterpretedRuntimeName, RuntimeName, SlottedRuntimeName}
+import org.neo4j.cypher.internal.{CompiledRuntimeName, InterpretedRuntimeName, RuntimeName, SlottedRuntimeName}
 import org.neo4j.cypher.internal.planner.v4_0.spi.{CostBasedPlannerName, DPPlannerName, IDPPlannerName}
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
