@@ -51,7 +51,7 @@ public class TemporaryDatabase implements AutoCloseable
                     ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
 
             GraphDatabaseService db = factory
-                    .setUserLogProvider( NullLogProvider.getInstance() )
+                    .setUserLogProvider( NullLogProvider.getInstance() ) // TODO: Could be good to save the user log somewhere.
                     .newEmbeddedDatabaseBuilder( databaseDirectory )
                     .setConfig( augmentParams( params, databaseDirectory ) )
                     .newGraphDatabase();
