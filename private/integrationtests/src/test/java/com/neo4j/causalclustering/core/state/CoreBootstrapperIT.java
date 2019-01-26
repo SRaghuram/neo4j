@@ -43,6 +43,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState.INITIAL_LOCK_TOKEN;
 import static java.lang.Integer.parseInt;
+import static java.util.Optional.of;
 import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -50,7 +51,10 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
@@ -79,6 +83,7 @@ class CoreBootstrapperIT
     private File neo4jHome;
     private File dataDirectory;
     private File storeDirectory; // "databases"
+    private File txLogsDirectory;
 
     private Config defaultConfig;
 
@@ -87,8 +92,9 @@ class CoreBootstrapperIT
     {
         this.temporaryDatabaseFactory = new TemporaryDatabase.Factory( pageCache );
         this.neo4jHome = testDirectory.directory();
-        this.dataDirectory = new File( neo4jHome, "data" );
-        this.storeDirectory = new File( dataDirectory, "databases" );
+        this.dataDirectory = new File( neo4jHome, DEFAULT_DATA_DIR_NAME );
+        this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );
+        this.txLogsDirectory = new File( dataDirectory, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         this.defaultConfig = Config.builder().withHome( neo4jHome ).build();
     }
 
@@ -96,7 +102,7 @@ class CoreBootstrapperIT
     void shouldBootstrapWhenNoDirectoryExists() throws Exception
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withDatabaseLayout( databaseLayout )
@@ -116,7 +122,7 @@ class CoreBootstrapperIT
     void shouldBootstrapWhenEmptyDirectoryExists() throws Exception
     {
         // given
-        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, DEFAULT_DATABASE_NAME );
+        DatabaseLayout databaseLayout = DatabaseLayout.of( storeDirectory, () -> of( txLogsDirectory ), DEFAULT_DATABASE_NAME );
         fileSystem.mkdirs( databaseLayout.databaseDirectory() );
 
         databaseService.givenDatabaseWithConfig()
