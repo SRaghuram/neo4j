@@ -68,9 +68,9 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
 
         override def create(ctx: Context): UserAggregator = new UserAggregator {
 
-          override def result() = value
+          override def result() = ValueUtils.of(value)
 
-          override def update(input: Array[AnyRef]) = {}
+          override def update(input: Array[AnyValue]) = {}
         }
       }
     }
