@@ -5,12 +5,10 @@
  */
 package org.neo4j.tools.dump;
 
+import org.eclipse.collections.api.set.primitive.MutableLongSet;
+import org.eclipse.collections.impl.factory.primitive.LongSets;
+
 import java.util.EnumMap;
-
-import org.neo4j.collection.primitive.Primitive;
-import org.neo4j.collection.primitive.PrimitiveLongSet;
-
-import static org.neo4j.collection.primitive.base.Empty.EMPTY_PRIMITIVE_LONG_SET;
 
 /**
  * Container for ids of entities that are considered to be inconsistent.
@@ -76,18 +74,18 @@ public class InconsistentRecords
         }
     }
 
-    private final EnumMap<Type,PrimitiveLongSet> ids = new EnumMap<>( Type.class );
+    private final EnumMap<Type,MutableLongSet> ids = new EnumMap<>( Type.class );
 
     public boolean containsId( Type recordType, long id )
     {
-        return ids.getOrDefault( recordType, EMPTY_PRIMITIVE_LONG_SET ).contains( id );
+        return ids.getOrDefault( recordType, LongSets.mutable.empty() ).contains( id );
     }
 
     public void reportInconsistency( Type recordType, long recordId )
     {
         if ( recordId != NO_ID )
         {
-            ids.computeIfAbsent( recordType, t -> Primitive.longSet() ).add( recordId );
+            ids.computeIfAbsent( recordType, t -> LongSets.mutable.empty() ).add( recordId );
         }
     }
 }
