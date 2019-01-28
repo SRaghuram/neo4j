@@ -44,12 +44,12 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @RunWith( Parameterized.class )
@@ -85,18 +85,16 @@ public class StoreMigrationIT
         {
             for ( RecordFormats fromFormat : recordFormats )
             {
-                try
+                createDb( fromFormat, databaseLayout.databaseDirectory() );
+                String configuredVersion = storeVersionCheck.configuredVersion();
+                String actualStoreVersion = storeVersionCheck.storeVersion();
+                if ( !actualStoreVersion.equals( configuredVersion ) )
                 {
-                    createDb( fromFormat, databaseLayout.databaseDirectory() );
-                    if ( !storeVersionCheck.storeVersion().equals( storeVersionCheck.configuredVersion() ) )
+                    StoreVersionCheck.Result result = storeVersionCheck.checkUpgrade( configuredVersion );
+                    if ( result.outcome.isSuccessful() )
                     {
-                        assertTrue( storeVersionCheck.checkUpgrade( storeVersionCheck.configuredVersion() ).outcome.isSuccessful() );
                         data.add( new Object[]{fromFormat, toFormat} );
                     }
-                }
-                catch ( Exception e )
-                {
-                    //This means that the combination is not migratable.
                 }
                 fs.deleteRecursively( databaseLayout.databaseDirectory() );
             }
