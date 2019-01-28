@@ -217,7 +217,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                           executeBefore,
                           params,
                           resultAssertionInTx,
-                          executeExpectedFailures
+                          executeExpectedFailures)
       }
 
       //Must be run last and have no rollback to be able to do certain result assertions
