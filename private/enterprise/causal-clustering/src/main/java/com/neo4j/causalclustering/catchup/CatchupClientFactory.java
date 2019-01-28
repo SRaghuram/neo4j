@@ -5,164 +5,52 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
-import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.handshake.ChannelAttribute;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
-import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 
-import java.net.ConnectException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.function.Function;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
-
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 public class CatchupClientFactory extends LifecycleAdapter
 {
     private final Log log;
-    private final Clock clock;
-    private final CatchupChannelPool<CatchupChannel> pool = new CatchupChannelPool<>( CatchupChannel::new );
-    private final Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory;
+    private final CatchupChannelPool pool;
     private final String defaultDatabaseName;
-    private final JobScheduler scheduler;
     private final Duration inactivityTimeout;
-    private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
-
-    private EventLoopGroup eventLoopGroup;
 
     public CatchupClientFactory( LogProvider logProvider, Clock clock, Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory,
             String defaultDatabaseName, Duration inactivityTimeout, JobScheduler scheduler,
             BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
     {
         this.log = logProvider.getLog( getClass() );
-        this.clock = clock;
-        this.channelInitializerFactory = channelInitializerFactory;
         this.defaultDatabaseName = defaultDatabaseName;
-        this.scheduler = scheduler;
         this.inactivityTimeout = inactivityTimeout;
-        this.bootstrapConfiguration = bootstrapConfiguration;
+        this.pool = new CatchupChannelPool( bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
     }
 
-    public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream, Log log ) throws Exception
+    public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream, Log log )
     {
-        return new CatchupClient( upstream, pool, defaultDatabaseName, inactivityTimeout, log );
-    }
-
-    class CatchupChannel implements CatchupChannelPool.Channel
-    {
-        private final TrackingResponseHandler handler;
-        private final AdvertisedSocketAddress destination;
-        private Channel nettyChannel;
-        private final Bootstrap bootstrap;
-        private final HandshakeClientInitializer channelInitializer;
-        private Future<com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol> protocol;
-
-        CatchupChannel( AdvertisedSocketAddress destination )
-        {
-            this.destination = destination;
-            this.handler = new TrackingResponseHandler( clock );
-            this.channelInitializer = channelInitializerFactory.apply( handler );
-            this.bootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() )
-                    .handler( channelInitializer );
-        }
-
-        void clearResponseHandler()
-        {
-            handler.clearResponseHandler();
-        }
-
-        void setResponseHandler( CatchupResponseCallback responseHandler, CompletableFuture<?> requestOutcomeSignal )
-        {
-            handler.setResponseHandler( responseHandler, requestOutcomeSignal );
-        }
-
-        void send( CatchupProtocolMessage request ) throws ConnectException
-        {
-            if ( !isActive() )
-            {
-                throw new ConnectException( "Channel is not connected" );
-            }
-            nettyChannel.write( request.messageType() );
-            nettyChannel.writeAndFlush( request );
-        }
-
-        Optional<Long> millisSinceLastResponse()
-        {
-            return handler.lastResponseTime().map( responseMillis -> clock.millis() - responseMillis );
-        }
-
-        @Override
-        public AdvertisedSocketAddress destination()
-        {
-            return destination;
-        }
-
-        @Override
-        public void connect() throws Exception
-        {
-            ChannelFuture channelFuture = bootstrap.connect( destination.socketAddress() );
-            nettyChannel = channelFuture.sync().channel();
-            nettyChannel.closeFuture().addListener( (ChannelFutureListener) future -> handler.onClose() );
-            protocol = nettyChannel.attr( ChannelAttribute.PROTOCOL_STACK ).get().thenApply( ProtocolStack::applicationProtocol );
-        }
-
-        @Override
-        public boolean isActive()
-        {
-            return nettyChannel.isActive();
-        }
-
-        @Override
-        public void close()
-        {
-            if ( nettyChannel != null )
-            {
-                nettyChannel.close();
-            }
-        }
-
-        Future<Protocol.ApplicationProtocol> protocol()
-        {
-            return protocol;
-        }
+        return new CatchupClient( pool.acquire( upstream ), defaultDatabaseName, inactivityTimeout, log );
     }
 
     @Override
     public void start()
     {
-        eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.CATCHUP_CLIENT ) );
+        pool.start();
     }
 
     @Override
     public void stop()
     {
         log.info( "CatchUpClient stopping" );
-        try
-        {
-            pool.close();
-            eventLoopGroup.shutdownGracefully( 0, 0, MICROSECONDS ).sync();
-        }
-        catch ( InterruptedException e )
-        {
-            log.warn( "Interrupted while stopping catch up client." );
-        }
+        pool.stop();
     }
 }

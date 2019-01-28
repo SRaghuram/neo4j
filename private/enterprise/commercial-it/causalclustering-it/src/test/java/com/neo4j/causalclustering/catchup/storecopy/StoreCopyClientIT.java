@@ -147,6 +147,17 @@ public class StoreCopyClientIT
     }
 
     @Test
+    public void shouldHandleMultipleRequestsOnReusedChannel() throws StoreCopyFailedException
+    {
+        CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( from( catchupServer.address().getPort() ) );
+        for ( int i = 0; i < 100; i++ )
+        {
+            StoreFileStreamProvider storeFileStream = new IgnoringStoreFileStreamProvider();
+            subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, () -> defaultTerminationCondition, targetLocation );
+        }
+    }
+
+    @Test
     public void failedFileCopyShouldRetry() throws StoreCopyFailedException, IOException
     {
         // given a file will fail twice before succeeding
@@ -376,6 +387,28 @@ public class StoreCopyClientIT
         public void assertContinue() throws StoreCopyFailedException
         {
             throw new StoreCopyFailedException( "One try only" );
+        }
+    }
+
+    private static class IgnoringStoreFileStreamProvider implements StoreFileStreamProvider
+    {
+        @Override
+        public StoreFileStream acquire( String destination, int requiredAlignment )
+        {
+            return new StoreFileStream()
+            {
+                @Override
+                public void write( byte[] data )
+                {
+                    // ignore
+                }
+
+                @Override
+                public void close()
+                {
+                    // ignore
+                }
+            };
         }
     }
 }

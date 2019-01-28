@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.net.PooledChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.pool.ChannelPool;
 import org.junit.jupiter.api.Assertions;
@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class PooledChannelTest
+public class PooledChannelTest
 {
     private ChannelPool pool;
 
@@ -55,6 +55,11 @@ class PooledChannelTest
         IllegalStateException illegalStateException = Assertions.assertThrows( IllegalStateException.class, pooledChannel::channel );
 
         assertEquals( "Channel has been released back into the pool.", illegalStateException.getMessage() );
+    }
+
+    public static PooledChannel createPooledChannel( Channel channel, ChannelPool channelPool )
+    {
+        return new PooledChannel( channel, channelPool );
     }
 
     private EmbeddedChannel newMockedChannel()

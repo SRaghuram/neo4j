@@ -152,9 +152,9 @@ class TrackingResponseHandler implements CatchupResponseHandler
         requestOutcomeSignal.completeExceptionally( new ClosedChannelException().fillInStackTrace() );
     }
 
-    Optional<Long> lastResponseTime()
+    Optional<Long> millisSinceLastResponse()
     {
-        return Optional.ofNullable( lastResponseTime );
+        return Optional.ofNullable( lastResponseTime ).map( responseMillis -> clock.millis() - responseMillis );
     }
 
     private void recordLastResponse()

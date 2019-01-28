@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.net;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
@@ -55,13 +56,24 @@ public class PooledChannel
         return pooledChannelFuture;
     }
 
+    public <ATTR> ATTR getAttribute( AttributeKey<ATTR> key )
+    {
+        notReleased();
+        return channel.attr( key ).get();
+    }
+
     public Channel channel()
+    {
+        notReleased();
+        return channel;
+    }
+
+    private void notReleased()
     {
         if ( released )
         {
             throw new IllegalStateException( "Channel has been released back into the pool." );
         }
-        return channel;
     }
 
     /**
@@ -71,6 +83,7 @@ public class PooledChannel
      */
     public Future<Void> release()
     {
+        notReleased();
         released = true;
         return pool.release( channel );
     }

@@ -5,132 +5,81 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import java.net.ConnectException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Set;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
+import com.neo4j.causalclustering.net.ChannelPools;
+import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
+import io.netty.channel.Channel;
+import io.netty.channel.pool.ChannelPoolHandler;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.util.AttributeKey;
+
+import java.time.Clock;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.scheduler.JobScheduler;
 
-import static java.util.stream.Stream.concat;
-
-class CatchupChannelPool<CHANNEL extends CatchupChannelPool.Channel>
+public class CatchupChannelPool extends LifecycleAdapter
 {
-    private final Map<AdvertisedSocketAddress,LinkedList<CHANNEL>> idleChannels = new HashMap<>();
-    private final Set<CHANNEL> activeChannels = new HashSet<>();
-    private final Function<AdvertisedSocketAddress,CHANNEL> factory;
+    static final AttributeKey<TrackingResponseHandler> TRACKING_RESPONSE_HANDLER = AttributeKey.valueOf( "TRACKING_RESPONSE_HANDLER" );
 
-    CatchupChannelPool( Function<AdvertisedSocketAddress,CHANNEL> factory )
+    private final ChannelPools channelPools;
+
+    CatchupChannelPool( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler jobScheduler, Clock clock,
+            Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory )
     {
-        this.factory = factory;
+        this.channelPools = new ChannelPools( bootstrapConfiguration, jobScheduler, new TrackingResponsePoolHandler( initializerFactory, clock ) );
     }
 
-    CHANNEL acquire( AdvertisedSocketAddress catchUpAddress ) throws Exception
+    CompletableFuture<CatchupChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
     {
-        CHANNEL channel = getIdleChannel( catchUpAddress );
+        return channelPools.acquire( advertisedSocketAddress ).thenApply( CatchupChannel::new );
+    }
 
-        if ( channel == null )
+    @Override
+    public void start()
+    {
+        channelPools.start();
+    }
+
+    @Override
+    public void stop()
+    {
+        channelPools.stop();
+    }
+
+    private static class TrackingResponsePoolHandler implements ChannelPoolHandler
+    {
+        private final Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory;
+        private final Clock clock;
+
+        TrackingResponsePoolHandler( Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory, Clock clock )
         {
-            channel = factory.apply( catchUpAddress );
-            try
-            {
-                channel.connect();
-                assertActive( channel, catchUpAddress );
-            }
-            catch ( Exception e )
-            {
-                channel.close();
-                throw e;
-            }
+            this.initializerFactory = initializerFactory;
+            this.clock = clock;
         }
 
-        addActiveChannel( channel );
-
-        return channel;
-    }
-
-    private void assertActive( CHANNEL channel, AdvertisedSocketAddress address ) throws ConnectException
-    {
-        if ( !channel.isActive() )
+        @Override
+        public void channelReleased( Channel ch )
         {
-            throw new ConnectException( "Unable to connect to " + address );
+            ch.attr( TRACKING_RESPONSE_HANDLER ).get().clearResponseHandler();
         }
-    }
 
-    private synchronized CHANNEL getIdleChannel( AdvertisedSocketAddress catchUpAddress )
-    {
-        CHANNEL channel = null;
-        LinkedList<CHANNEL> channels = idleChannels.get( catchUpAddress );
-        if ( channels != null )
+        @Override
+        public void channelAcquired( Channel ch )
         {
-            while ( (channel = channels.poll()) != null )
-            {
-                if ( channel.isActive() )
-                {
-                    break;
-                }
-            }
-            if ( channels.isEmpty() )
-            {
-                idleChannels.remove( catchUpAddress );
-            }
+            // do nothing
         }
-        return channel;
-    }
 
-    private synchronized void addActiveChannel( CHANNEL channel )
-    {
-        activeChannels.add( channel );
-    }
-
-    private synchronized void removeActiveChannel( CHANNEL channel )
-    {
-        activeChannels.remove( channel );
-    }
-
-    void dispose( CHANNEL channel )
-    {
-        removeActiveChannel( channel );
-        channel.close();
-    }
-
-    synchronized void release( CHANNEL channel )
-    {
-        removeActiveChannel( channel );
-        idleChannels.computeIfAbsent( channel.destination(), address -> new LinkedList<>() ).add( channel );
-    }
-
-    void close()
-    {
-        collectDisposed().forEach( Channel::close );
-    }
-
-    private synchronized Set<CHANNEL> collectDisposed()
-    {
-        Set<CHANNEL> disposed;
-        disposed = concat(
-                idleChannels.values().stream().flatMap( Collection::stream ),
-                activeChannels.stream() )
-                .collect( Collectors.toSet() );
-
-        idleChannels.clear();
-        activeChannels.clear();
-        return disposed;
-    }
-
-    interface Channel
-    {
-        AdvertisedSocketAddress destination();
-
-        void connect() throws Exception;
-
-        boolean isActive();
-
-        void close();
+        @Override
+        public void channelCreated( Channel ch )
+        {
+            TrackingResponseHandler trackingResponseHandler = new TrackingResponseHandler( clock );
+            ch.pipeline().addLast( initializerFactory.apply( trackingResponseHandler ) );
+            ch.attr( TRACKING_RESPONSE_HANDLER ).set( trackingResponseHandler );
+            ch.closeFuture().addListener( f -> trackingResponseHandler.onClose() );
+        }
     }
 }

@@ -42,9 +42,6 @@ public interface VersionedCatchupClients extends AutoCloseable
      */
     <RESULT> NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest );
 
-    /** The version of the Catchup protocol agreed upon during handshake */
-    Protocol.ApplicationProtocol protocol();
-
     /** Step builder interface for Catchup requests (instances of {@link CatchupProtocolMessage}) against multiple versions of the protocol */
     interface CatchupRequestBuilder<RESULT>
             extends NeedsV1Handler<RESULT>, NeedsV2Handler<RESULT>, NeedsV3Handler<RESULT>, NeedsResponseHandler<RESULT>, IsPrepared<RESULT>

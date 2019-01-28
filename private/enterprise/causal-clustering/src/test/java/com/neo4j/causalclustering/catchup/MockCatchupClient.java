@@ -68,7 +68,6 @@ public class MockCatchupClient implements VersionedCatchupClients
         return reqBuilder.any( allVersionsRequest );
     }
 
-    @Override
     public ApplicationProtocol protocol()
     {
         return protocol;

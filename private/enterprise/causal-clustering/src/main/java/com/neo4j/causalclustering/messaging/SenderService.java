@@ -106,7 +106,10 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     {
         private final ChannelInitializer channelInitializer;
 
-        ChannelInitializingHandler( ChannelInitializer channelInitializer ) {this.channelInitializer = channelInitializer;}
+        ChannelInitializingHandler( ChannelInitializer channelInitializer )
+        {
+            this.channelInitializer = channelInitializer;
+        }
 
         @Override
         public void channelCreated( Channel ch )

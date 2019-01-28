@@ -15,7 +15,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -78,6 +77,24 @@ class ChannelPoolsIT
     {
         closeServers();
         pool.stop();
+    }
+
+    @Test
+    void shouldNotReleaseMoreThanOnce() throws InterruptedException, ExecutionException, TimeoutException
+    {
+        PooledChannel pooledChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+
+        pooledChannel.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+        assertThrows( IllegalStateException.class, () -> pooledChannel.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT ) );
+    }
+
+    @Test
+    void shouldNotAllowGettingChannelIfItHasBeenScheduledForReleased() throws InterruptedException, ExecutionException, TimeoutException
+    {
+        PooledChannel pooledChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+
+        pooledChannel.release();
+        assertThrows( IllegalStateException.class, pooledChannel::channel );
     }
 
     @Test
@@ -156,7 +173,7 @@ class ChannelPoolsIT
 
         PooledChannel postRestartChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
 
-        postRestartChannel.channel().writeAndFlush( emptyBuffer() ).addListener( f -> preRestartChannel.release() ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+        postRestartChannel.channel().writeAndFlush( emptyBuffer() ).addListener( f -> postRestartChannel.release() ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
     }
 
     @Test
@@ -230,7 +247,6 @@ class ChannelPoolsIT
     @ChannelHandler.Sharable
     private static class EmptyChannelHandler extends ChannelHandlerAdapter
     { }
-
 
     private ByteBuf emptyBuffer()
     {
