@@ -52,7 +52,6 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 
-@Ignore( "Ignored waiting on PR #1394" )
 public class FulltextIndexCausalClusterIT
 {
     private static final Label LABEL = Label.label( "LABEL" );
