@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.collection.RawIterator
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
@@ -18,7 +19,8 @@ import org.neo4j.kernel.api.proc.Context.KERNEL_TRANSACTION
 import org.neo4j.kernel.api.proc._
 import org.neo4j.procedure.Mode
 import org.neo4j.test.TestGraphDatabaseFactory
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values
 
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
@@ -66,8 +68,8 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
     }.asJava
 
     override def apply(context: Context,
-                       objects: Array[AnyRef],
-                       resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] = {
+                       objects: Array[AnyValue],
+                       resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
       val ktx = context.get(KERNEL_TRANSACTION)
       val nodeBuffer = new ArrayBuffer[Long]()
       val cursor = ktx.cursors().allocateNodeCursor()
@@ -76,10 +78,10 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
       cursor.close()
       val nodes = nodeBuffer.iterator
       var count = 0
-      new RawIterator[Array[AnyRef], ProcedureException] {
-        override def next(): Array[AnyRef] = {
+      new RawIterator[Array[AnyValue], ProcedureException] {
+        override def next(): Array[AnyValue] = {
           count = count + 1
-          Array(new java.lang.Long(nodes.next()))
+          Array(Values.longValue(nodes.next()))
         }
 
         override def hasNext: Boolean = {

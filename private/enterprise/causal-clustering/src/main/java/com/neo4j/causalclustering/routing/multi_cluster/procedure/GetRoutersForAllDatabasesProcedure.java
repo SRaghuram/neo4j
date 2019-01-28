@@ -27,6 +27,7 @@ import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.values.AnyValue;
 
 public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
 {
@@ -56,11 +57,11 @@ public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
     }
 
     @Override
-    public RawIterator<Object[],ProcedureException> apply( Context ctx, Object[] input, ResourceTracker resourceTracker ) throws ProcedureException
+    public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
     {
         Map<String,List<Endpoint>> routersPerDb = routeEndpoints();
         MultiClusterRoutingResult result = new MultiClusterRoutingResult( routersPerDb, timeToLiveMillis );
-        return RawIterator.<Object[], ProcedureException>of( MultiClusterRoutingResultFormat.build( result ) );
+        return RawIterator.<AnyValue[], ProcedureException>of( MultiClusterRoutingResultFormat.build( result ) );
     }
 
     private Map<String, List<Endpoint>> routeEndpoints()

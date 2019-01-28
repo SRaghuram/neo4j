@@ -29,6 +29,9 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.LongValue;
+import org.neo4j.values.storable.TextValue;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_SNAPPY;
@@ -102,17 +105,17 @@ public class InstalledProtocolsProcedureIT
         Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
         try ( Transaction tx = kernel.beginTransaction( Transaction.Type.implicit, AnonymousContext.read() ) )
         {
-            RawIterator<Object[],ProcedureException> itr =
+            RawIterator<AnyValue[],ProcedureException> itr =
                     tx.procedures().procedureCallRead( procedureName( "dbms", "cluster", InstalledProtocolsProcedure.PROCEDURE_NAME ), null );
 
             while ( itr.hasNext() )
             {
-                Object[] row = itr.next();
-                String orientation = (String) row[0];
-                String address = localhost( (String) row[1] );
-                String protocol = (String) row[2];
-                long version = (long) row[3];
-                String modifiers = (String) row[4];
+                AnyValue[] row = itr.next();
+                String orientation = ((TextValue) row[0]).stringValue();
+                String address = localhost( ((TextValue) row[1]).stringValue() );
+                String protocol = ((TextValue) row[2]).stringValue();
+                long version = ((LongValue) row[3]).longValue();
+                String modifiers = ((TextValue) row[4]).stringValue();
                 if ( orientation.equals( wantedOrientation ) )
                 {
                     infos.add( new ProtocolInfo( orientation, address, protocol, version, modifiers ) );

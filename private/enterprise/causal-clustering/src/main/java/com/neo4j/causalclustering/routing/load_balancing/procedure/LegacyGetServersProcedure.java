@@ -32,6 +32,7 @@ import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.values.AnyValue;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.causalclustering.routing.load_balancing.procedure.ProcedureNames.GET_SERVERS_V1;
@@ -74,14 +75,14 @@ public class LegacyGetServersProcedure implements CallableProcedure
     }
 
     @Override
-    public RawIterator<Object[],ProcedureException> apply(
-            Context ctx, Object[] input, ResourceTracker resourceTracker )
+    public RawIterator<AnyValue[],ProcedureException> apply(
+            Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
         List<Endpoint> routeEndpoints = routeEndpoints();
         List<Endpoint> writeEndpoints = writeEndpoints();
         List<Endpoint> readEndpoints = readEndpoints();
 
-        return RawIterator.<Object[],ProcedureException>of( ResultFormatV1.build(
+        return RawIterator.<AnyValue[],ProcedureException>of( ResultFormatV1.build(
                 new LoadBalancingResult( routeEndpoints, writeEndpoints, readEndpoints,
                         config.get( CausalClusteringSettings.cluster_routing_ttl ).toMillis() ) ) );
     }

@@ -40,6 +40,8 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.TextValue;
 
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -56,6 +58,7 @@ import static org.neo4j.metrics.MetricsSettings.jmxEnabled;
 import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
+import static org.neo4j.values.storable.Values.stringValue;
 
 public class GlobalMetricsExtensionFactoryIT
 {
@@ -139,10 +142,10 @@ public class GlobalMetricsExtensionFactoryIT
         QualifiedName qualifiedName = ProcedureSignature.procedureName( "metricsQuery" );
         JmxQueryProcedure procedure = new JmxQueryProcedure( qualifiedName, mBeanServer );
 
-        String jmxQuery = "neo4j.metrics:*";
-        RawIterator<Object[],ProcedureException> result = procedure.apply( null, new Object[]{jmxQuery}, resourceTracker );
+        TextValue jmxQuery = stringValue( "neo4j.metrics:*" );
+        RawIterator<AnyValue[],ProcedureException> result = procedure.apply( null, new AnyValue[]{jmxQuery}, resourceTracker );
 
-        List<Object[]> queryResult = asList( result );
+        List<AnyValue[]> queryResult = asList( result );
         assertThat( queryResult, hasItem( new MetricsRecordMatcher() ) );
     }
 
@@ -159,13 +162,13 @@ public class GlobalMetricsExtensionFactoryIT
         }
     }
 
-    private static class MetricsRecordMatcher extends TypeSafeMatcher<Object[]>
+    private static class MetricsRecordMatcher extends TypeSafeMatcher<AnyValue[]>
     {
         @Override
-        protected boolean matchesSafely( Object[] item )
+        protected boolean matchesSafely( AnyValue[] item )
         {
-            return item.length > 2 && "neo4j.metrics:name=neo4j.system.db.transaction.active_write".equals( item[0] ) &&
-                    "Information on the management interface of the MBean".equals( item[1] );
+            return item.length > 2 && stringValue( "neo4j.metrics:name=neo4j.system.db.transaction.active_write" ).equals( item[0] ) &&
+                    stringValue( "Information on the management interface of the MBean" ).equals( item[1] );
         }
 
         @Override

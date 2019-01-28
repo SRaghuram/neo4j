@@ -26,6 +26,8 @@ import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.TextValue;
 
 public class GetRoutersForDatabaseProcedure implements CallableProcedure
 {
@@ -55,17 +57,17 @@ public class GetRoutersForDatabaseProcedure implements CallableProcedure
     }
 
     @Override
-    public RawIterator<Object[],ProcedureException> apply( Context ctx, Object[] input, ResourceTracker resourceTracker ) throws ProcedureException
+    public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
     {
         @SuppressWarnings( "unchecked" )
-        String dbName = (String) input[0];
+        String dbName = ((TextValue) input[0]).stringValue();
         List<Endpoint> routers = routeEndpoints( dbName );
 
         HashMap<String,List<Endpoint>> routerMap = new HashMap<>();
         routerMap.put( dbName, routers );
 
         MultiClusterRoutingResult result = new MultiClusterRoutingResult( routerMap, timeToLiveMillis );
-        return RawIterator.<Object[], ProcedureException>of( MultiClusterRoutingResultFormat.build( result ) );
+        return RawIterator.<AnyValue[], ProcedureException>of( MultiClusterRoutingResultFormat.build( result ) );
     }
 
     private List<Endpoint> routeEndpoints( String dbName )

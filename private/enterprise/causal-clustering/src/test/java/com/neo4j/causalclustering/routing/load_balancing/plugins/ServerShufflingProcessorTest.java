@@ -12,10 +12,10 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -62,7 +62,7 @@ public class ServerShufflingProcessorTest
         for ( int i = 0; i < 1000; i++ ) // we try many times to make false negatives extremely unlikely
         {
             // when
-            LoadBalancingProcessor.Result shuffledResult = plugin.run( Collections.emptyMap() );
+            LoadBalancingProcessor.Result shuffledResult = plugin.run( VirtualValues.EMPTY_MAP );
 
             // then: should still contain the same endpoints
             assertThat( shuffledResult.routeEndpoints(), containsInAnyOrder( routers.toArray() ) );

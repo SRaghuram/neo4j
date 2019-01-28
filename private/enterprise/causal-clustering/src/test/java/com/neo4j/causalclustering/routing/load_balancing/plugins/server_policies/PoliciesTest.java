@@ -15,14 +15,16 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.logging.Log;
+import org.neo4j.values.virtual.MapValue;
+import org.neo4j.values.virtual.MapValueBuilder;
 
-import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.helpers.collection.Iterators.asSet;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 public class PoliciesTest
 {
@@ -35,7 +37,7 @@ public class PoliciesTest
         Policies policies = new Policies( log );
 
         // when
-        Policy policy = policies.selectFor( emptyMap() );
+        Policy policy = policies.selectFor( EMPTY_MAP );
         Set<ServerInfo> input = asSet(
                 new ServerInfo( new AdvertisedSocketAddress( "bolt", 1 ), new MemberId( UUID.randomUUID() ), asSet( "groupA" ) ),
                 new ServerInfo( new AdvertisedSocketAddress( "bolt", 2 ), new MemberId( UUID.randomUUID() ), asSet( "groupB" ) )
@@ -57,7 +59,7 @@ public class PoliciesTest
         try
         {
             // when
-            policies.selectFor( stringMap( Policies.POLICY_KEY, "unknown-policy" ) );
+            policies.selectFor( stringMapValue( Policies.POLICY_KEY, "unknown-policy" ) );
             fail();
         }
         catch ( ProcedureException e )
@@ -75,7 +77,7 @@ public class PoliciesTest
         try
         {
             // when
-            policies.selectFor( stringMap( Policies.POLICY_KEY, Policies.DEFAULT_POLICY_NAME ) );
+            policies.selectFor( stringMapValue( Policies.POLICY_KEY, Policies.DEFAULT_POLICY_NAME ) );
             fail();
         }
         catch ( ProcedureException e )
@@ -95,7 +97,7 @@ public class PoliciesTest
 
         // when
         policies.addPolicy( defaultPolicyName, defaultPolicy );
-        Policy selectedPolicy = policies.selectFor( emptyMap() );
+        Policy selectedPolicy = policies.selectFor( EMPTY_MAP );
 
         // then
         assertEquals( defaultPolicy, selectedPolicy );
@@ -113,9 +115,19 @@ public class PoliciesTest
 
         // when
         policies.addPolicy( myPolicyName, myPolicy );
-        Policy selectedPolicy = policies.selectFor( stringMap( Policies.POLICY_KEY, myPolicyName ) );
+        Policy selectedPolicy = policies.selectFor( stringMapValue( Policies.POLICY_KEY, myPolicyName ) );
 
         // then
         assertEquals( myPolicy, selectedPolicy );
+    }
+
+    private MapValue stringMapValue( String...keyValues )
+    {
+        MapValueBuilder builder = new MapValueBuilder();
+        for ( int i = 0; i < keyValues.length; i += 2 )
+        {
+            builder.add( keyValues[i], stringValue( keyValues[i + 1] ) );
+        }
+        return builder.build();
     }
 }

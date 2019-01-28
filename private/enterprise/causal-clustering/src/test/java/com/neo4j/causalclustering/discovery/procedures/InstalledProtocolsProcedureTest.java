@@ -17,12 +17,15 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.values.AnyValue;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.Matchers.arrayContaining;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.neo4j.values.storable.Values.longValue;
+import static org.neo4j.values.storable.Values.stringValue;
 
 public class InstalledProtocolsProcedureTest
 {
@@ -48,7 +51,7 @@ public class InstalledProtocolsProcedureTest
                 new InstalledProtocolsProcedure( Stream::empty, Stream::empty );
 
         // when
-        RawIterator<Object[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
+        RawIterator<AnyValue[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
 
         // then
         assertFalse( result.hasNext() );
@@ -62,11 +65,15 @@ public class InstalledProtocolsProcedureTest
                 new InstalledProtocolsProcedure( () -> Stream.of( outbound1, outbound2 ), Stream::empty );
 
         // when
-        RawIterator<Object[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
+        RawIterator<AnyValue[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
 
         // then
-        assertThat( result.next(), arrayContaining( "outbound", "host1:1", "raft", 1L, "[TestSnappy]" ) );
-        assertThat( result.next(), arrayContaining( "outbound", "host2:2", "raft", 2L, "[TestSnappy,ROT13]" ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "outbound" ), stringValue( "host1:1" ), stringValue( "raft" ),
+                        longValue( 1L ), stringValue( "[TestSnappy] )" ) ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "outbound" ), stringValue( "host2:2" ), stringValue( "raft" ),
+                        longValue( 2L ), stringValue( "[TestSnappy,ROT13]" ) ) );
         assertFalse( result.hasNext() );
     }
 
@@ -78,11 +85,15 @@ public class InstalledProtocolsProcedureTest
                 new InstalledProtocolsProcedure( Stream::empty, () -> Stream.of( inbound1, inbound2 ) );
 
         // when
-        RawIterator<Object[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
+        RawIterator<AnyValue[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
 
         // then
-        assertThat( result.next(), arrayContaining( "inbound", "host3:3", "raft", 3L, "[TestSnappy]" ) );
-        assertThat( result.next(), arrayContaining( "inbound", "host4:4", "raft", 4L, "[]" ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "inbound" ), stringValue( "host3:3" ), stringValue( "raft" ),
+                        longValue( 3L ), stringValue( "[TestSnappy]" ) ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "inbound" ), stringValue( "host4:4" ), stringValue( "raft" ),
+                        longValue( 4L ), stringValue( "[]" ) ) );
         assertFalse( result.hasNext() );
     }
 
@@ -94,13 +105,21 @@ public class InstalledProtocolsProcedureTest
                 new InstalledProtocolsProcedure( () -> Stream.of( outbound1, outbound2 ), () -> Stream.of( inbound1, inbound2 ) );
 
         // when
-        RawIterator<Object[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
+        RawIterator<AnyValue[],ProcedureException> result = installedProtocolsProcedure.apply( null, null, null );
 
         // then
-        assertThat( result.next(), arrayContaining( "outbound", "host1:1", "raft", 1L, "[TestSnappy]" ) );
-        assertThat( result.next(), arrayContaining( "outbound", "host2:2", "raft", 2L, "[TestSnappy,ROT13]" ) );
-        assertThat( result.next(), arrayContaining( "inbound", "host3:3", "raft", 3L, "[TestSnappy]" ) );
-        assertThat( result.next(), arrayContaining( "inbound", "host4:4", "raft", 4L, "[]" ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "outbound" ), stringValue( "host1:1" ), stringValue( "raft" ),
+                        longValue( 1L ), stringValue( "[TestSnappy]" ) ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "outbound" ), stringValue( "host2:2" ), stringValue( "raft" ),
+                        longValue( 2L ), stringValue( "[TestSnappy,ROT13]" ) ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "inbound" ), stringValue( "host3:3" ), stringValue( "raft" ),
+                        longValue( 3L ), stringValue( "[TestSnappy]" ) ) );
+        assertThat( result.next(),
+                arrayContaining( stringValue( "inbound" ), stringValue( "host4:4" ), stringValue( "raft" ),
+                        longValue( 4L ), stringValue( "[]" ) ) );
         assertFalse( result.hasNext() );
     }
 }

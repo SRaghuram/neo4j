@@ -12,6 +12,7 @@ import org.junit.Test;
 import java.util.List;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.values.AnyValue;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -41,7 +42,7 @@ public class ResultFormatV1Test
         LoadBalancingResult original = new LoadBalancingResult( routers, writers, readers, ttlSeconds * 1000 );
 
         // when
-        Object[] record = ResultFormatV1.build( original );
+        AnyValue[] record = ResultFormatV1.build( original );
 
         // then
         LoadBalancingResult parsed = ResultFormatV1.parse( record );
@@ -61,7 +62,7 @@ public class ResultFormatV1Test
         LoadBalancingResult original = new LoadBalancingResult( routers, writers, readers, ttlSeconds * 1000 );
 
         // when
-        Object[] record = ResultFormatV1.build( original );
+        AnyValue[] record = ResultFormatV1.build( original );
 
         // then
         LoadBalancingResult parsed = ResultFormatV1.parse( record );

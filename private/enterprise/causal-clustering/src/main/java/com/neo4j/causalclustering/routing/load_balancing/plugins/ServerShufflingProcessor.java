@@ -8,9 +8,9 @@ package com.neo4j.causalclustering.routing.load_balancing.plugins;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 
 import java.util.Collections;
-import java.util.Map;
 
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.values.virtual.MapValue;
 
 /**
  * Shuffles the servers of the delegate around so that every client
@@ -28,7 +28,7 @@ public class ServerShufflingProcessor implements LoadBalancingProcessor
     }
 
     @Override
-    public Result run( Map<String,String> context ) throws ProcedureException
+    public Result run( MapValue context ) throws ProcedureException
     {
         Result result = delegate.run( context );
 

@@ -37,6 +37,7 @@ import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationExcep
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.api.integrationtest.KernelIntegrationTest;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -222,14 +223,14 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return pattern.toString();
     }
 
-    private RawIterator<Object[],ProcedureException> callIndexProcedure( String pattern, String specifiedProvider )
+    private RawIterator<AnyValue[],ProcedureException> callIndexProcedure( String pattern, String specifiedProvider )
             throws ProcedureException, TransactionFailureException
     {
         return procsSchema().procedureCallSchema( ProcedureSignature.procedureName( "db", indexProcedureName ),
-                new Object[]
+                new AnyValue[]
                         {
-                                pattern, // index
-                                specifiedProvider // providerName
+                                stringValue( pattern ), // index
+                                stringValue( specifiedProvider ) // providerName
                         } );
     }
 
@@ -256,9 +257,10 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         newTransaction( AnonymousContext.full() );
         String pattern = indexPattern( label, properties );
         String specifiedProvider = NATIVE10.providerName();
-        RawIterator<Object[],ProcedureException> result = callIndexProcedure( pattern, specifiedProvider );
+        RawIterator<AnyValue[],ProcedureException> result = callIndexProcedure( pattern, specifiedProvider );
         // then
-        assertThat( Arrays.asList( result.next() ), contains( pattern, specifiedProvider, expectedSuccessfulCreationStatus ) );
+        assertThat( Arrays.asList( result.next() ), contains( stringValue( pattern ), stringValue( specifiedProvider ),
+                stringValue( expectedSuccessfulCreationStatus ) ) );
         commit();
         awaitIndexOnline();
 

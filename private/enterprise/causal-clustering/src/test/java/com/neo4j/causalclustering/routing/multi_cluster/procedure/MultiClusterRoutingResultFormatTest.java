@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.values.AnyValue;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -43,7 +44,7 @@ public class MultiClusterRoutingResultFormatTest
         long ttlSeconds = 5;
         MultiClusterRoutingResult original = new MultiClusterRoutingResult( routers, ttlSeconds * 1000 );
 
-        Object[] record = MultiClusterRoutingResultFormat.build( original );
+        AnyValue[] record = MultiClusterRoutingResultFormat.build( original );
 
         MultiClusterRoutingResult parsed = MultiClusterRoutingResultFormat.parse( record );
 

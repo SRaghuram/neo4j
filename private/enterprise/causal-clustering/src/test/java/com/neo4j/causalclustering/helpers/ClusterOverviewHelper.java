@@ -18,7 +18,6 @@ import org.hamcrest.TypeSafeMatcher;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +35,10 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.SequenceValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.virtual.ListValue;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
@@ -44,6 +47,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureName;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.values.storable.Values.stringValue;
 
 public class ClusterOverviewHelper
 {
@@ -92,10 +96,10 @@ public class ClusterOverviewHelper
                     @Override
                     protected boolean matchesSafely( MemberInfo item )
                     {
-                        Set<String> addresses = asSet( item.addresses );
+                        Set<AnyValue> addresses = asSet( item.addresses.iterator() );
                         for ( URI uri : coreClusterMember.clientConnectorAddresses().uriList() )
                         {
-                            if ( !addresses.contains( uri.toString() ) )
+                            if ( !addresses.contains( stringValue( uri.toString() ) ) )
                             {
                                 return false;
                             }
@@ -139,14 +143,14 @@ public class ClusterOverviewHelper
         List<MemberInfo> infos = new ArrayList<>();
         try ( Transaction tx = kernel.beginTransaction( Transaction.Type.implicit, AnonymousContext.read() ) )
         {
-            RawIterator<Object[],ProcedureException> itr =
+            RawIterator<AnyValue[],ProcedureException> itr =
                     tx.procedures().procedureCallRead( procedureName( "dbms", "cluster", ClusterOverviewProcedure.PROCEDURE_NAME ), null );
 
             while ( itr.hasNext() )
             {
-                Object[] row = itr.next();
-                List<String> addresses = (List<String>) row[1];
-                infos.add( new MemberInfo( addresses.toArray( new String[addresses.size()] ), RoleInfo.valueOf( (String) row[2] ) ) );
+                AnyValue[] row = itr.next();
+                ListValue addresses = (ListValue) row[1];
+                infos.add( new MemberInfo( addresses, RoleInfo.valueOf( ((TextValue) row[2]).stringValue() ) ) );
             }
             return infos;
         }
@@ -161,10 +165,10 @@ public class ClusterOverviewHelper
 
     public static class MemberInfo
     {
-        private final String[] addresses;
+        private final ListValue addresses;
         private final RoleInfo role;
 
-        MemberInfo( String[] addresses, RoleInfo role )
+        MemberInfo( ListValue addresses, RoleInfo role )
         {
             this.addresses = addresses;
             this.role = role;
@@ -182,19 +186,19 @@ public class ClusterOverviewHelper
                 return false;
             }
             MemberInfo that = (MemberInfo) o;
-            return Arrays.equals( addresses, that.addresses ) && role == that.role;
+            return addresses.equals( (SequenceValue) that.addresses ) && role == that.role;
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash( Arrays.hashCode( addresses ), role );
+            return Objects.hash( addresses, role );
         }
 
         @Override
         public String toString()
         {
-            return String.format( "MemberInfo{addresses='%s', role=%s}", Arrays.toString( addresses ), role );
+            return String.format( "MemberInfo{addresses='%s', role=%s}", addresses, role );
         }
     }
 }

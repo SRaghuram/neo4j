@@ -16,6 +16,7 @@ import org.neo4j.kernel.api.proc.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.proc.CallableUserAggregationFunction.BasicUserAggregationFunction
 import org.neo4j.kernel.api.proc.CallableUserFunction.BasicUserFunction
 import org.neo4j.kernel.api.proc.Context
+import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
 
 abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
@@ -30,9 +31,9 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
       }
 
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] =
-          RawIterator.of[Array[AnyRef], ProcedureException](input)
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
+          RawIterator.of[Array[AnyValue], ProcedureException](input)
       }
   }
 
@@ -42,9 +43,9 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
       builder.out("out", Neo4jTypes.NTAny)
 
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] =
-          RawIterator.of[Array[AnyRef], ProcedureException](Array(value))
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
+          RawIterator.of[Array[AnyValue], ProcedureException](Array(ValueUtils.of(value)))
       }
     }
 
@@ -80,8 +81,8 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
       builder.out(ProcedureSignature.VOID)
 
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] =
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
           RawIterator.empty()
       }
     }
@@ -89,8 +90,8 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
   protected def registerProcedureReturningNoRowsOrColumns() =
     registerProcedure("dbms.return_nothing") { builder =>
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] =
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
           RawIterator.empty()
       }
     }

@@ -9,9 +9,9 @@ import com.neo4j.causalclustering.routing.Endpoint;
 import com.neo4j.causalclustering.routing.RoutingResult;
 
 import java.util.List;
-import java.util.Map;
 
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.values.virtual.MapValue;
 
 public interface LoadBalancingProcessor
 {
@@ -22,7 +22,7 @@ public interface LoadBalancingProcessor
      * @param context The client supplied context.
      * @return The result of invoking the procedure.
      */
-    Result run( Map<String,String> context ) throws ProcedureException;
+    Result run( MapValue context ) throws ProcedureException;
 
     interface Result extends RoutingResult
     {

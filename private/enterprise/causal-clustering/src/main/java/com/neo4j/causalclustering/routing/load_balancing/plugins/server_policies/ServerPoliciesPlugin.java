@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,6 +29,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.values.virtual.MapValue;
 
 import static java.util.Collections.emptyList;
 
@@ -81,7 +81,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public Result run( Map<String,String> context ) throws ProcedureException
+    public Result run( MapValue context ) throws ProcedureException
     {
         Policy policy = policies.selectFor( context );
 

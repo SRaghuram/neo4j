@@ -7,8 +7,6 @@ package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 
-import java.util.Map;
-
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
@@ -16,6 +14,8 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.virtual.MapValue;
 
 /**
  * Returns endpoints and their capabilities.
@@ -50,14 +50,14 @@ public class GetServersProcedureForMultiDC implements CallableProcedure
     }
 
     @Override
-    public RawIterator<Object[],ProcedureException> apply(
-            Context ctx, Object[] input, ResourceTracker resourceTracker ) throws ProcedureException
+    public RawIterator<AnyValue[],ProcedureException> apply(
+            Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
     {
         @SuppressWarnings( "unchecked" )
-        Map<String,String> clientContext = (Map<String,String>) input[0];
+        MapValue clientContext = (MapValue) input[0];
 
         LoadBalancingProcessor.Result result = loadBalancingProcessor.run( clientContext );
 
-        return RawIterator.<Object[],ProcedureException>of( ResultFormatV1.build( result ) );
+        return RawIterator.<AnyValue[],ProcedureException>of( ResultFormatV1.build( result ) );
     }
 }

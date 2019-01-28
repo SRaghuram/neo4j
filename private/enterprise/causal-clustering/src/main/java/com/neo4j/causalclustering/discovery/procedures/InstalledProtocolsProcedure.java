@@ -26,6 +26,10 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.values.AnyValue;
+
+import static org.neo4j.values.storable.Values.longValue;
+import static org.neo4j.values.storable.Values.stringValue;
 
 public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedure
 {
@@ -52,17 +56,17 @@ public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedur
     }
 
     @Override
-    public RawIterator<Object[],ProcedureException> apply(
-            Context ctx, Object[] input, ResourceTracker resourceTracker )
+    public RawIterator<AnyValue[],ProcedureException> apply(
+            Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
-        Stream<Object[]> outbound = toOutputRows( clientInstalledProtocols, ProtocolInstaller.Orientation.Client.OUTBOUND );
+        Stream<AnyValue[]> outbound = toOutputRows( clientInstalledProtocols, ProtocolInstaller.Orientation.Client.OUTBOUND );
 
-        Stream<Object[]> inbound = toOutputRows( serverInstalledProtocols, ProtocolInstaller.Orientation.Server.INBOUND );
+        Stream<AnyValue[]> inbound = toOutputRows( serverInstalledProtocols, ProtocolInstaller.Orientation.Server.INBOUND );
 
         return Iterators.asRawIterator( Stream.concat( outbound, inbound ) );
     }
 
-    private <T extends SocketAddress> Stream<Object[]> toOutputRows( Supplier<Stream<Pair<T,ProtocolStack>>> installedProtocols, String orientation )
+    private <T extends SocketAddress> Stream<AnyValue[]> toOutputRows( Supplier<Stream<Pair<T,ProtocolStack>>> installedProtocols, String orientation )
     {
         Comparator<Pair<T,ProtocolStack>> connectionInfoComparator = Comparator.comparing( ( Pair<T,ProtocolStack> entry ) -> entry.first().getHostname() )
                 .thenComparing( entry -> entry.first().getPort() );
@@ -72,17 +76,17 @@ public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedur
                 .map( entry -> buildRow( entry, orientation ) );
     }
 
-    private <T extends SocketAddress> Object[] buildRow( Pair<T,ProtocolStack> connectionInfo, String orientation )
+    private <T extends SocketAddress> AnyValue[] buildRow( Pair<T,ProtocolStack> connectionInfo, String orientation )
     {
         T socketAddress = connectionInfo.first();
         ProtocolStack protocolStack = connectionInfo.other();
-        return new Object[]
+        return new AnyValue[]
                 {
-                    orientation,
-                    socketAddress.toString(),
-                    protocolStack.applicationProtocol().category(),
-                    (long) protocolStack.applicationProtocol().implementation(),
-                    modifierString( protocolStack )
+                        stringValue( orientation ),
+                        stringValue( socketAddress.toString() ),
+                        stringValue( protocolStack.applicationProtocol().category() ),
+                        longValue( (long) protocolStack.applicationProtocol().implementation() ),
+                        stringValue( modifierString( protocolStack ) )
                 };
     }
 

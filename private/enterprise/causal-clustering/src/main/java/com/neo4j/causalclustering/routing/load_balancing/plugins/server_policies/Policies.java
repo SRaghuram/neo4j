@@ -13,6 +13,10 @@ import java.util.Map;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.logging.Log;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.storable.Values;
+import org.neo4j.values.virtual.MapValue;
 
 import static java.lang.String.format;
 
@@ -40,17 +44,17 @@ public class Policies
         }
     }
 
-    Policy selectFor( Map<String,String> context ) throws ProcedureException
+    Policy selectFor( MapValue context ) throws ProcedureException
     {
-        String policyName = context.get( POLICY_KEY );
+        AnyValue policyName = context.get( POLICY_KEY );
 
-        if ( policyName == null )
+        if ( policyName == Values.NO_VALUE )
         {
             return defaultPolicy();
         }
         else
         {
-            Policy selectedPolicy = policies.get( policyName );
+            Policy selectedPolicy = policies.get( ((TextValue) policyName ).stringValue() );
             if ( selectedPolicy == null )
             {
                 throw new ProcedureException( Status.Procedure.ProcedureCallFailed,

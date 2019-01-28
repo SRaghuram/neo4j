@@ -17,11 +17,19 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
-import org.neo4j.helpers.SocketAddress;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.ArrayValue;
+import org.neo4j.values.storable.LongValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.MapValue;
+import org.neo4j.values.virtual.MapValueBuilder;
+import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.values.storable.Values.longValue;
+import static org.neo4j.values.storable.Values.stringValue;
 
 /**
  * The result format of GetServersV1 and GetServersV2 procedures.
@@ -35,53 +43,56 @@ public class ResultFormatV1
     {
     }
 
-    static Object[] build( LoadBalancingProcessor.Result result )
+    static AnyValue[] build( LoadBalancingProcessor.Result result )
     {
-        Object[] routers = result.routeEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).toArray();
-        Object[] readers = result.readEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).toArray();
-        Object[] writers = result.writeEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).toArray();
+        AnyValue[] routers = result.routeEndpoints().stream()
+                .map( Endpoint::address ).map( a -> stringValue(a.toString()) ).toArray( ArrayValue[]::new );
+        AnyValue[] readers = result.readEndpoints().stream()
+                .map( Endpoint::address ).map(  a -> stringValue(a.toString()) ).toArray( ArrayValue[]::new );
+        AnyValue[] writers = result.writeEndpoints().stream()
+                .map( Endpoint::address ).map(  a -> stringValue(a.toString()) ).toArray( ArrayValue[]::new );
 
-        List<Map<String,Object>> servers = new ArrayList<>();
+        List<AnyValue> servers = new ArrayList<>();
 
         if ( writers.length > 0 )
         {
-            Map<String,Object> map = new TreeMap<>();
+            MapValueBuilder builder = new MapValueBuilder(  );
 
-            map.put( ROLE_KEY, Role.WRITE.name() );
-            map.put( ADDRESSES_KEY, writers );
+            builder.add( ROLE_KEY, stringValue( Role.WRITE.name() ));
+            builder.add( ADDRESSES_KEY, VirtualValues.list( writers ) );
 
-            servers.add( map );
+            servers.add( builder.build() );
         }
 
         if ( readers.length > 0 )
         {
-            Map<String,Object> map = new TreeMap<>();
+            MapValueBuilder builder = new MapValueBuilder(  );
 
-            map.put( ROLE_KEY, Role.READ.name() );
-            map.put( ADDRESSES_KEY, readers );
+            builder.add( ROLE_KEY, stringValue( Role.READ.name() ));
+            builder.add( ADDRESSES_KEY,  VirtualValues.list( readers ) );
 
-            servers.add( map );
+            servers.add( builder.build() );
         }
 
         if ( routers.length > 0 )
         {
-            Map<String,Object> map = new TreeMap<>();
+            MapValueBuilder builder = new MapValueBuilder(  );
 
-            map.put( ROLE_KEY, Role.ROUTE.name() );
-            map.put( ADDRESSES_KEY, routers );
+            builder.add( ROLE_KEY, stringValue( Role.ROUTE.name() ) );
+            builder.add( ADDRESSES_KEY, VirtualValues.list( routers ) );
 
-            servers.add( map );
+            servers.add( builder.build() );
         }
 
-        long timeToLiveSeconds = MILLISECONDS.toSeconds( result.ttlMillis() );
-        return new Object[]{timeToLiveSeconds, servers};
+        LongValue timeToLiveSeconds = longValue(MILLISECONDS.toSeconds( result.ttlMillis() ));
+        return new AnyValue[]{timeToLiveSeconds, VirtualValues.fromList( servers )};
     }
 
-    public static LoadBalancingResult parse( Object[] record )
+    public static LoadBalancingResult parse( AnyValue[] record )
     {
-        long timeToLiveSeconds = (long) record[0];
+        long timeToLiveSeconds = ((LongValue) record[0]).longValue();
         @SuppressWarnings( "unchecked" )
-        List<Map<String,Object>> endpointData = (List<Map<String,Object>>) record[1];
+        ListValue endpointData = (ListValue) record[1];
 
         Map<Role,List<Endpoint>> endpoints = parseRows( endpointData );
 
@@ -92,21 +103,22 @@ public class ResultFormatV1
                 timeToLiveSeconds * 1000 );
     }
 
-    public static LoadBalancingResult parse( Map<String,Object> record )
+    public static LoadBalancingResult parse( MapValue record )
     {
-        return parse( new Object[]{
+        return parse( new AnyValue[]{
                 record.get( ParameterNames.TTL.parameterName() ),
                 record.get( ParameterNames.SERVERS.parameterName() )
         } );
     }
 
-    private static Map<Role,List<Endpoint>> parseRows( List<Map<String,Object>> result )
+    private static Map<Role,List<Endpoint>> parseRows( ListValue result )
     {
         Map<Role,List<Endpoint>> endpoints = new HashMap<>();
-        for ( Map<String,Object> single : result )
+        for ( AnyValue single : result )
         {
-            Role role = Role.valueOf( (String) single.get( "role" ) );
-            List<Endpoint> addresses = RoutingResultFormatHelper.parseEndpoints( (Object[]) single.get( "addresses" ), role );
+            MapValue map = (MapValue)single;
+            Role role = Role.valueOf( ((TextValue) map.get( "role" )).stringValue() );
+            List<Endpoint> addresses = RoutingResultFormatHelper.parseEndpoints( (ListValue) map.get( "addresses" ), role );
             endpoints.put( role, addresses );
         }
 

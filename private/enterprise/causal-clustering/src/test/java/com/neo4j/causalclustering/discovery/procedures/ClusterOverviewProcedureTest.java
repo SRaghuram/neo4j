@@ -28,6 +28,7 @@ import org.neo4j.collection.RawIterator;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.values.AnyValue;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
@@ -74,7 +75,7 @@ public class ClusterOverviewProcedureTest
                 new ClusterOverviewProcedure( topologyService, NullLogProvider.getInstance() );
 
         // when
-        final RawIterator<Object[],ProcedureException> members = procedure.apply( null, new Object[0], null );
+        final RawIterator<AnyValue[],ProcedureException> members = procedure.apply( null, new AnyValue[0], null );
 
         assertThat( members.next(), new IsRecord( theLeader.getUuid(), 5000, RoleInfo.LEADER, asSet( "core", "core0" ) ) );
         assertThat( members.next(),

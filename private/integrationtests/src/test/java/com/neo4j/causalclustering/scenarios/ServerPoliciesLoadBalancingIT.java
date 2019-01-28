@@ -43,6 +43,7 @@ import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.values.virtual.MapValueBuilder;
 
 import static com.neo4j.causalclustering.routing.load_balancing.procedure.ProcedureNames.GET_SERVERS_V2;
 import static java.util.Collections.emptyMap;
@@ -214,7 +215,11 @@ public class ServerPoliciesLoadBalancingIT
             {
                 while ( result.hasNext() )
                 {
-                    lbResult = ResultFormatV1.parse( result.next() );
+                    Map<String,Object> next = result.next();
+                    MapValueBuilder builder = new MapValueBuilder();
+                    next.forEach( ( k, v ) -> builder.add( k, ValueUtils.asValue( v ) ) );
+
+                    lbResult = ResultFormatV1.parse( builder.build() );
                 }
             }
         }

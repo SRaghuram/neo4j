@@ -24,6 +24,8 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.proc.GlobalProcedures
 import org.neo4j.procedure.Mode
 import org.neo4j.test.TestGraphDatabaseFactory
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.VirtualValues
 
 import scala.collection.immutable.Map
@@ -487,21 +489,21 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
     }.asJava
 
     override def apply(context: Context,
-                       objects: Array[AnyRef],
-                       resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] = {
+                       objects: Array[AnyValue],
+                       resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
       val ktx = context.get(KERNEL_TRANSACTION)
       val nodeBuffer = new ArrayBuffer[Long]()
       val cursor = ktx.cursors().allocateNodeCursor()
       ktx.dataRead().allNodesScan(cursor)
       while (cursor.next()) nodeBuffer.append(cursor.nodeReference())
       cursor.close()
-      new RawIterator[Array[AnyRef], ProcedureException] {
+      new RawIterator[Array[AnyValue], ProcedureException] {
         var index = 0
 
-        override def next(): Array[AnyRef] = {
+        override def next(): Array[AnyValue] = {
           val value = nodeBuffer(index)
           index += 1
-          Array(new java.lang.Long(value))
+          Array(Values.longValue(value))
         }
 
         override def hasNext: Boolean = {

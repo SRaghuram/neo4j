@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,12 +30,16 @@ import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.Values;
 
 import static java.util.Comparator.comparing;
 import static org.neo4j.helpers.collection.Iterables.asList;
 import static org.neo4j.helpers.collection.Iterators.asRawIterator;
 import static org.neo4j.helpers.collection.Iterators.map;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
+import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.virtual.VirtualValues.fromList;
 
 /**
  * Overview procedure with added support for server groups.
@@ -63,8 +66,8 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     }
 
     @Override
-    public RawIterator<Object[],ProcedureException> apply(
-            Context ctx, Object[] input, ResourceTracker resourceTracker )
+    public RawIterator<AnyValue[],ProcedureException> apply(
+            Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
         Map<MemberId,RoleInfo> roleMap = topologyService.allCoreRoles();
         List<ReadWriteEndPoint> endpoints = new ArrayList<>();
@@ -97,13 +100,15 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 
         endpoints.sort( comparing( o -> o.addresses().toString() ) );
 
-        return map( endpoint -> new Object[]
+        return map( endpoint -> new AnyValue[]
                         {
-                                endpoint.memberId().toString(),
-                                endpoint.addresses().uriList().stream().map( URI::toString ).collect( Collectors.toList() ),
-                                endpoint.role().name(),
-                                endpoint.groups(),
-                                endpoint.dbName()
+                                stringValue( endpoint.memberId().toString() ),
+                                fromList( endpoint.addresses().uriList().stream().map( uri -> stringValue( uri.toString() ) )
+                                        .collect( Collectors.toList() ) ),
+                                stringValue( endpoint.role().name() ),
+                                fromList(
+                                        endpoint.groups().stream().map( Values::stringValue ).collect( Collectors.toList() ) ),
+                                stringValue( endpoint.dbName() )
                         },
                 asRawIterator( endpoints.iterator() ) );
     }

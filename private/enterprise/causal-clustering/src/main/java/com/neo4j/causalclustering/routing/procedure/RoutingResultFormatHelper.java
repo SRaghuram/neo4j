@@ -8,27 +8,31 @@ package com.neo4j.causalclustering.routing.procedure;
 import com.neo4j.causalclustering.routing.Endpoint;
 import com.neo4j.causalclustering.routing.Role;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
-
-import static java.util.stream.Collectors.toList;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.virtual.ListValue;
 
 public final class RoutingResultFormatHelper
 {
 
-    public static List<Endpoint> parseEndpoints( Object[] addresses, Role role )
+    public static List<Endpoint> parseEndpoints( ListValue addresses, Role role )
     {
-        return Stream.of( addresses )
-                .map( rawAddress -> parseAddress( (String) rawAddress ) )
-                .map( address -> new Endpoint( address, role ) )
-                .collect( toList() );
+        List<Endpoint> endpoints = new ArrayList<>( addresses.size() );
+        for ( AnyValue address : addresses )
+        {
+            endpoints.add( new Endpoint( parseAddress( (TextValue) address ), role ) );
+        }
+        return endpoints;
     }
 
-    private static AdvertisedSocketAddress parseAddress( String address )
+    private static AdvertisedSocketAddress parseAddress( TextValue address )
     {
-        String[] split = address.split( ":" );
-        return new AdvertisedSocketAddress( split[0], Integer.valueOf( split[1] ) );
+        ListValue split = address.split( ":" );
+        return new AdvertisedSocketAddress( ((TextValue) split.value( 0 )).stringValue(),
+                Integer.valueOf( ((TextValue) split.value( 1 ) ).stringValue()) );
     }
 }

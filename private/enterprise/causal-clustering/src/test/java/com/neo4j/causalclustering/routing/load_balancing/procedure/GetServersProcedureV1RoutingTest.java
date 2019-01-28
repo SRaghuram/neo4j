@@ -26,11 +26,14 @@ import java.util.UUID;
 
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Collections.emptyMap;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.runners.Parameterized.Parameters;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -74,13 +77,13 @@ public class GetServersProcedureV1RoutingTest
                 new LegacyGetServersProcedure( coreTopologyService, leaderLocator, config, getInstance() );
 
         // when
-        Object[] endpoints = getEndpoints( proc );
+        AnyValue endpoints = getEndpoints( proc );
 
         //then
-        Object[] endpointsInDifferentOrder = getEndpoints( proc );
+        AnyValue endpointsInDifferentOrder = getEndpoints( proc );
         for ( int i = 0; i < 100; i++ )
         {
-            if ( Arrays.deepEquals( endpointsInDifferentOrder, endpoints ) )
+            if ( endpointsInDifferentOrder.equals( endpoints ) )
             {
                 endpointsInDifferentOrder = getEndpoints( proc );
             }
@@ -90,16 +93,16 @@ public class GetServersProcedureV1RoutingTest
                 break;
             }
         }
-        assertFalse( Arrays.deepEquals( endpoints, endpointsInDifferentOrder ) );
+        assertNotEquals( endpoints, endpointsInDifferentOrder );
     }
 
-    private Object[] getEndpoints( LegacyGetServersProcedure proc )
+    private AnyValue getEndpoints( LegacyGetServersProcedure proc )
             throws ProcedureException
     {
-        List<Object[]> results = asList( proc.apply( null, new Object[0], null ) );
-        Object[] rows = results.get( 0 );
-        List<Map<String,Object[]>> servers = (List<Map<String,Object[]>>) rows[1];
-        Map<String,Object[]> endpoints = servers.get( serverClass );
+        List<AnyValue[]> results = asList( proc.apply( null, new AnyValue[0], null ) );
+        AnyValue[] rows = results.get( 0 );
+        ListValue servers = (ListValue) rows[1];
+        MapValue endpoints = (MapValue) servers.value( serverClass );
         return endpoints.get( "addresses" );
     }
 }

@@ -18,6 +18,7 @@ import org.neo4j.kernel.api.proc.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.proc.Context
 import org.neo4j.kernel.api.{ResourceTracker, proc}
 import org.neo4j.procedure.Mode
+import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -178,8 +179,8 @@ class EagerizationAcceptanceTest
       builder.out("relId", Neo4jTypes.NTInteger)
       builder.mode(Mode.WRITE)
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] = {
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
           val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
           val statement = transaction.acquireStatement()
           try {
@@ -190,7 +191,7 @@ class EagerizationAcceptanceTest
             val prop = transaction.tokenWrite().propertyKeyGetOrCreateForName( "foo" )
             transaction.dataWrite().relationshipSetProperty(rel, prop, Values.of(counter.counted))
             counter += 1
-            RawIterator.of(Array(new java.lang.Long(rel)))
+            RawIterator.of(Array(Values.longValue(rel)))
           } finally {
             statement.close()
           }
@@ -220,8 +221,8 @@ class EagerizationAcceptanceTest
       builder.out(ProcedureSignature.VOID)
       builder.mode(Mode.WRITE)
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] = {
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
           val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
           val statement = transaction.acquireStatement()
           try {
@@ -260,8 +261,8 @@ class EagerizationAcceptanceTest
       builder.in("y", Neo4jTypes.NTNode)
       builder.out("relId", Neo4jTypes.NTInteger)
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] = {
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
           val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor()
@@ -270,12 +271,12 @@ class EagerizationAcceptanceTest
             val idX = input(0).asInstanceOf[Node].getId
             val idY = input(1).asInstanceOf[Node].getId
             transaction.dataRead().singleNode(idX, nodeCursor)
-            val result = Array.newBuilder[Array[AnyRef]]
+            val result = Array.newBuilder[Array[AnyValue]]
             if (nodeCursor.next()) {
               relCursor = RelationshipSelections.outgoingCursor(cursors, nodeCursor, null)
               while (relCursor.next()) {
                 if (relCursor.targetNodeReference() == idY) {
-                  result += Array(new java.lang.Long(relCursor.relationshipReference()))
+                  result += Array(Values.longValue(relCursor.relationshipReference()))
                 }
               }
             }
@@ -314,8 +315,8 @@ class EagerizationAcceptanceTest
       builder.in("y", Neo4jTypes.NTNode)
       builder.out(procs.ProcedureSignature.VOID)
       new BasicProcedure(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] = {
+        override def apply(ctx: Context, input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
           val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor()

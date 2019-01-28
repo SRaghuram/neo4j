@@ -12,11 +12,18 @@ import com.neo4j.causalclustering.routing.procedure.RoutingResultFormatHelper;
 
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.neo4j.kernel.impl.util.ValueUtils;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.LongValue;
+import org.neo4j.values.virtual.MapValueBuilder;
+import org.neo4j.values.virtual.VirtualValues;
+
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.neo4j.values.storable.Values.longValue;
+import static org.neo4j.values.storable.Values.stringValue;
 
 /**
  * The result format of {@link GetRoutersForDatabaseProcedure} and
@@ -32,26 +39,26 @@ public class MultiClusterRoutingResultFormat
     {
     }
 
-    static Object[] build( MultiClusterRoutingResult result )
+    static AnyValue[] build( MultiClusterRoutingResult result )
     {
-        Function<List<Endpoint>, Object[]> stringifyAddresses = es ->
-                es.stream().map( e -> e.address().toString() ).toArray();
+        Function<List<Endpoint>, AnyValue[]> stringifyAddresses = es ->
+                es.stream().map( e -> stringValue(e.address().toString()) ).toArray(AnyValue[]::new);
 
-        List<Map<String,Object>> response = result.routers().entrySet().stream().map( entry ->
+        List<AnyValue> response = result.routers().entrySet().stream().map( entry ->
         {
             String dbName = entry.getKey();
-            Object[] addresses = stringifyAddresses.apply( entry.getValue() );
+            AnyValue[] addresses = stringifyAddresses.apply( entry.getValue() );
 
-            Map<String,Object> responseRow = new TreeMap<>();
+            MapValueBuilder responseRow = new MapValueBuilder();
 
-            responseRow.put( DB_NAME_KEY, dbName );
-            responseRow.put( ADDRESSES_KEY, addresses );
+            responseRow.add( DB_NAME_KEY, stringValue(dbName) );
+            responseRow.add( ADDRESSES_KEY, VirtualValues.list(addresses) );
 
-            return responseRow;
+            return responseRow.build();
         } ).collect( Collectors.toList() );
 
-        long ttlSeconds = MILLISECONDS.toSeconds( result.ttlMillis() );
-        return new Object[]{ttlSeconds, response};
+        LongValue ttlSeconds = longValue( MILLISECONDS.toSeconds( result.ttlMillis() ) );
+        return new AnyValue[]{ttlSeconds, VirtualValues.fromList( response )};
     }
 
     public static MultiClusterRoutingResult parse( Map<String,Object> record )
@@ -76,7 +83,8 @@ public class MultiClusterRoutingResultFormat
     {
         Function<Map<String,Object>,String> dbNameFromRow = row -> (String) row.get( DB_NAME_KEY );
         Function<Map<String,Object>,List<Endpoint>> endpointsFromRow =
-                row -> RoutingResultFormatHelper.parseEndpoints( (Object[]) row.get( ADDRESSES_KEY ), Role.ROUTE );
+                row -> RoutingResultFormatHelper
+                        .parseEndpoints( ValueUtils.asListValue( (Iterable<?>) row.get( ADDRESSES_KEY ) ), Role.ROUTE );
         return responseRows.stream().collect( Collectors.toMap( dbNameFromRow, endpointsFromRow ) );
     }
 }

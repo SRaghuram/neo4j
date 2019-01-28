@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShuffling
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
 import org.junit.Test;
 
-import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.graphdb.config.InvalidSettingException;
@@ -21,6 +20,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.values.virtual.MapValue;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -170,7 +170,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public Result run( Map<String,String> context )
+        public Result run( MapValue context )
         {
             return null;
         }

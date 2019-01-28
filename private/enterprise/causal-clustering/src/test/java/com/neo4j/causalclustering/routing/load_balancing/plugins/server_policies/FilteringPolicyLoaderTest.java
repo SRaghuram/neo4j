@@ -8,16 +8,17 @@ package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policie
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import org.junit.Test;
 
-import java.util.Map;
-
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.virtual.MapValue;
+import org.neo4j.values.virtual.VirtualValues;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.load_balancing_config;
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.values.storable.Values.stringValue;
 
 public class FilteringPolicyLoaderTest
 {
@@ -83,9 +84,9 @@ public class FilteringPolicyLoaderTest
         }
     }
 
-    private static Map<String,String> policyNameContext( String policyName )
+    private static MapValue policyNameContext( String policyName )
     {
-        return stringMap( Policies.POLICY_KEY, policyName );
+        return VirtualValues.map( new String[]{Policies.POLICY_KEY}, new AnyValue[]{stringValue( policyName )} );
     }
 
     private static String configNameFor( String pluginName, String policyName )

@@ -18,6 +18,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -27,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -35,6 +35,11 @@ import org.neo4j.internal.kernel.api.procs.FieldSignature;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.LongValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_routing_ttl;
@@ -43,7 +48,6 @@ import static com.neo4j.causalclustering.discovery.TestTopology.addressesForRead
 import static com.neo4j.causalclustering.discovery.TestTopology.readReplicaInfoMap;
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Collections.emptyMap;
-import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
@@ -55,6 +59,7 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTInteger;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.values.storable.Values.longValue;
 
 @RunWith( Parameterized.class )
 public class GetServersProcedureV1Test
@@ -98,11 +103,11 @@ public class GetServersProcedureV1Test
                 new LegacyGetServersProcedure( coreTopologyService, leaderLocator, config, getInstance() );
 
         // when
-        List<Object[]> results = asList( proc.apply( null, new Object[0], null ) );
+        List<AnyValue[]> results = asList( proc.apply( null, new AnyValue[0], null ) );
 
         // then
-        Object[] rows = results.get( 0 );
-        long ttlInSeconds = (long) rows[0];
+        AnyValue[] rows = results.get( 0 );
+        LongValue ttlInSeconds = (LongValue) rows[0];
         assertEquals( 600, ttlInSeconds );
     }
 
@@ -345,9 +350,9 @@ public class GetServersProcedureV1Test
     @SuppressWarnings( "unchecked" )
     private ClusterView run( LegacyGetServersProcedure proc ) throws ProcedureException
     {
-        final Object[] rows = asList( proc.apply( null, new Object[0], null ) ).get( 0 );
-        assertEquals( config.get( cluster_routing_ttl ).getSeconds(), /* ttl */(long) rows[0] );
-        return ClusterView.parse( (List<Map<String,Object>>) rows[1] );
+        final AnyValue[] rows = asList( proc.apply( null, new AnyValue[0], null ) ).get( 0 );
+        assertEquals( longValue( config.get( cluster_routing_ttl ).getSeconds() ), /* ttl */(LongValue) rows[0] );
+        return ClusterView.parse( (ListValue) rows[1] );
     }
 
     private static class ClusterView
@@ -386,13 +391,14 @@ public class GetServersProcedureV1Test
             return "ClusterView{" + "clusterView=" + clusterView + '}';
         }
 
-        static ClusterView parse( List<Map<String,Object>> result )
+        static ClusterView parse( ListValue result )
         {
             Map<Role,Set<AdvertisedSocketAddress>> view = new HashMap<>();
-            for ( Map<String,Object> single : result )
+            for ( AnyValue value : result )
             {
-                Role role = Role.valueOf( (String) single.get( "role" ) );
-                Set<AdvertisedSocketAddress> addresses = parse( (Object[]) single.get( "addresses" ) );
+                MapValue single = (MapValue) value;
+                Role role = Role.valueOf( ((TextValue) single.get( "role" )).stringValue() );
+                Set<AdvertisedSocketAddress> addresses = parseAdresses( (ListValue) single.get( "addresses" ) );
                 assertFalse( view.containsKey( role ) );
                 view.put( role, addresses );
             }
@@ -400,10 +406,14 @@ public class GetServersProcedureV1Test
             return new ClusterView( view );
         }
 
-        private static Set<AdvertisedSocketAddress> parse( Object[] addresses )
+        private static Set<AdvertisedSocketAddress> parseAdresses( ListValue addresses )
         {
-            List<AdvertisedSocketAddress> list =
-                    Stream.of( addresses ).map( address -> parse( (String) address ) ).collect( toList() );
+
+            List<AdvertisedSocketAddress> list = new ArrayList<>( addresses.size() );
+            for ( AnyValue address : addresses )
+            {
+                list.add( parse( ((TextValue) address).stringValue() ) );
+            }
             Set<AdvertisedSocketAddress> set = new HashSet<>( list );
             assertEquals( list.size(), set.size() );
             return set;

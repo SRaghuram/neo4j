@@ -14,8 +14,10 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.values.AnyValue;
 
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
+import static org.neo4j.values.storable.Values.stringValue;
 
 abstract class RoleProcedure extends CallableProcedure.BasicProcedure
 {
@@ -32,10 +34,10 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
     }
 
     @Override
-    public RawIterator<Object[],ProcedureException> apply(
-            Context ctx, Object[] input, ResourceTracker resourceTracker )
+    public RawIterator<AnyValue[],ProcedureException> apply(
+            Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
-        return RawIterator.<Object[],ProcedureException>of( new Object[]{role().name()} );
+        return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{stringValue(role().name())} );
     }
 
     abstract RoleInfo role();

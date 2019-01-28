@@ -15,6 +15,8 @@ import org.neo4j.internal.kernel.api.procs.{FieldSignature, Neo4jTypes}
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.proc.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.proc.Context
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values.stringValue
 
 class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
@@ -67,9 +69,9 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
         FieldSignature.outputField("newTwo",Neo4jTypes.NTString) ))
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context,
-                           input: Array[AnyRef],
-                           resourceTracker: ResourceTracker): RawIterator[Array[AnyRef], ProcedureException] =
-          RawIterator.of[Array[AnyRef], ProcedureException](Array("alpha","junk","beta"))
+                           input: Array[AnyValue],
+                           resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
+          RawIterator.of[Array[AnyValue], ProcedureException](Array(stringValue("alpha"), stringValue("junk"), stringValue("beta")))
       }
     }
 

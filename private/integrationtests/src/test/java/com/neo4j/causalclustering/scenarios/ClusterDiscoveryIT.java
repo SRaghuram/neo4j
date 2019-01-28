@@ -12,8 +12,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +26,12 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.security.AnonymousContext;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.util.DefaultValueMapper;
+import org.neo4j.values.AnyValue;
+import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
 import static com.neo4j.causalclustering.routing.load_balancing.procedure.ProcedureNames.GET_SERVERS_V1;
@@ -33,6 +40,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureName;
 
@@ -112,10 +120,23 @@ public class ClusterDiscoveryIT
         try ( Transaction tx = kernel.beginTransaction( Type.implicit, AnonymousContext.read() ) )
         {
             // when
-            List<Object[]> currentMembers =
-                    asList( tx.procedures().procedureCallRead( procedureName( GET_SERVERS_V1.fullyQualifiedProcedureName() ), new Object[0] ) );
+            List<AnyValue[]> currentMembers =
+                    asList( tx.procedures()
+                            .procedureCallRead( procedureName( GET_SERVERS_V1.fullyQualifiedProcedureName() ),
+                                    new AnyValue[0] ) );
 
-            return (List<Map<String,Object>>) currentMembers.get( 0 )[1];
+            ListValue anyValues = (ListValue) currentMembers.get( 0 )[1];
+            List<Map<String,Object>> toReturn = new ArrayList<>( anyValues.size() );
+            DefaultValueMapper mapper = new DefaultValueMapper( mock( EmbeddedProxySPI.class ) );
+            for ( AnyValue anyValue : anyValues )
+            {
+                MapValue mapValue = (MapValue) anyValue;
+                Map<String,Object> map = new HashMap<>();
+                mapValue.foreach( ( k, v ) -> map.put( k, v.map( mapper ) ) );
+                toReturn.add( map );
+            }
+
+            return toReturn;
         }
     }
 }
