@@ -47,11 +47,12 @@ public class BackupHelper
         boolean failure = false;
         try
         {
-            try ( BackupProtocolService backupProtocolService = backupProtocolService( outputStream ) )
+            Config config = Config.defaults();
+            try ( BackupProtocolService backupProtocolService = backupProtocolService( outputStream, config ) )
             {
                 BackupOutcome backupOutcome =
                         backupProtocolService.doIncrementalBackupOrFallbackToFull( host, port, DatabaseLayout.of( targetDirectory.toFile() ),
-                                ConsistencyCheck.FULL, Config.defaults(), BackupClient.BIG_READ_TIMEOUT, false );
+                                ConsistencyCheck.FULL, config, BackupClient.BIG_READ_TIMEOUT, false );
                 consistent = backupOutcome.isConsistent();
             }
         }
