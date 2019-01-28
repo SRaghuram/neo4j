@@ -69,7 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier.ON_HEAP;
-import static org.neo4j.test.MockedNeoStores.mockedTokenHolders;
+import static org.neo4j.test.rule.DatabaseRule.mockedTokenHolders;
 
 class TransactionStatusResultTest
 {

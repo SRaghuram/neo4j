@@ -53,8 +53,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler.STRICT;
+import static org.neo4j.storageengine.api.LogVersionRepository.BASE_TX_LOG_VERSION;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
-import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_LOG_VERSION;
 
 public class TransactionLogAnalyzerTest
 {
