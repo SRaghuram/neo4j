@@ -176,7 +176,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         storage.migrateIfNecessary( activeDatabaseName );
 
         CoreStartupState coreStartupState = new CoreStartupState( storage ); // must be constructed before storage is touched by other modules
-        globalLife.add( new IdFilesSanitationModule( coreStartupState, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem, logProvider ) );
+        globalLife.add( new IdFilesSanitationModule( coreStartupState, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem,
+                logProvider ) );
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( globalModule.getGlobalClock(), logService, globalConfig );
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
