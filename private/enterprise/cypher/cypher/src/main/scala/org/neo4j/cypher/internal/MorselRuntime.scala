@@ -51,6 +51,10 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     val queryIndexes = new QueryIndexes(context.schemaRead)
 
+    if (true) {
+      return ZombieRuntime.compileToExecutable(query, context, logicalPlan, physicalPlan, converters, queryIndexes)
+    }
+
     // We can use lazy slotted pipes as a fallback for some missing operators. This also converts nested logical plans
     val (slottedPipeMapper: SlottedPipeMapper, logicalPlanWithConvertedNestedPlans: LogicalPlan) =
       createSlottedPipeFallback(query, context, logicalPlan, physicalPlan, converters, queryIndexes)

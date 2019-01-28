@@ -41,6 +41,7 @@
                 <module>physical-planning</module>
                 <module>slotted-runtime</module>
                 <module>morsel-runtime</module>
+                <module>zombie-runtime</module>
                 <module>compiled-expressions</module>
                 <module>cypher</module>
                 <module>runtime-spec-suite</module>

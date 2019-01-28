@@ -79,7 +79,10 @@ trait StatelessOperator extends OperatorTask with HasWorkIdentity
   * Operator related task.
   */
 trait OperatorTask {
-  def operate(data: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit
+  def operate(output: MorselExecutionContext,
+              context: QueryContext,
+              state: QueryState,
+              resources: QueryResources): Unit
 }
 
 /**

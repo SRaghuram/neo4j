@@ -98,11 +98,16 @@
             <artifactId>neo4j-cypher-slotted-runtime</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-cypher-morsel-runtime</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+          <dependency>
+              <groupId>com.neo4j</groupId>
+              <artifactId>neo4j-cypher-morsel-runtime</artifactId>
+              <version>${project.version}</version>
+          </dependency>
+          <dependency>
+              <groupId>com.neo4j</groupId>
+              <artifactId>neo4j-cypher-zombie-runtime</artifactId>
+              <version>${project.version}</version>
+          </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-cypher-physical-planning</artifactId>
