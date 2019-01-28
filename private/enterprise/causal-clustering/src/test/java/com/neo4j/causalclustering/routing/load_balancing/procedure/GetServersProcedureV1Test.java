@@ -108,7 +108,7 @@ public class GetServersProcedureV1Test
         // then
         AnyValue[] rows = results.get( 0 );
         LongValue ttlInSeconds = (LongValue) rows[0];
-        assertEquals( 600, ttlInSeconds );
+        assertEquals( longValue( 600 ), ttlInSeconds );
     }
 
     @Test

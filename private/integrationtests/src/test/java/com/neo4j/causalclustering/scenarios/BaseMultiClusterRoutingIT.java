@@ -191,7 +191,8 @@ public abstract class BaseMultiClusterRoutingIT
         {
             if ( result.hasNext() )
             {
-                routingResult = Optional.of( MultiClusterRoutingResultFormat.parse( result.next() ) );
+                routingResult =
+                        Optional.of( MultiClusterRoutingResultFormat.parse( ValueUtils.asMapValue( result.next() ) ) );
             }
         }
         return routingResult;

@@ -217,7 +217,7 @@ public class ServerPoliciesLoadBalancingIT
                 {
                     Map<String,Object> next = result.next();
                     MapValueBuilder builder = new MapValueBuilder();
-                    next.forEach( ( k, v ) -> builder.add( k, ValueUtils.asValue( v ) ) );
+                    next.forEach( ( k, v ) -> builder.add( k, ValueUtils.of( v ) ) );
 
                     lbResult = ResultFormatV1.parse( builder.build() );
                 }

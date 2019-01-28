@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.values.AnyValue;
-import org.neo4j.values.storable.ArrayValue;
 import org.neo4j.values.storable.LongValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.virtual.ListValue;
@@ -46,11 +45,11 @@ public class ResultFormatV1
     static AnyValue[] build( LoadBalancingProcessor.Result result )
     {
         AnyValue[] routers = result.routeEndpoints().stream()
-                .map( Endpoint::address ).map( a -> stringValue(a.toString()) ).toArray( ArrayValue[]::new );
+                .map( Endpoint::address ).map( a -> stringValue(a.toString()) ).toArray( AnyValue[]::new );
         AnyValue[] readers = result.readEndpoints().stream()
-                .map( Endpoint::address ).map(  a -> stringValue(a.toString()) ).toArray( ArrayValue[]::new );
+                .map( Endpoint::address ).map(  a -> stringValue(a.toString()) ).toArray( AnyValue[]::new );
         AnyValue[] writers = result.writeEndpoints().stream()
-                .map( Endpoint::address ).map(  a -> stringValue(a.toString()) ).toArray( ArrayValue[]::new );
+                .map( Endpoint::address ).map(  a -> stringValue(a.toString()) ).toArray( AnyValue[]::new );
 
         List<AnyValue> servers = new ArrayList<>();
 

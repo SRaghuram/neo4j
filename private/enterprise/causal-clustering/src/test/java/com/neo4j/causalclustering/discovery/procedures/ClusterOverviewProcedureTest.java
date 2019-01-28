@@ -17,18 +17,19 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.values.AnyValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.VirtualValues;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
@@ -37,6 +38,7 @@ import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.helpers.collection.Iterators.asSet;
+import static org.neo4j.values.storable.Values.stringValue;
 
 public class ClusterOverviewProcedureTest
 {
@@ -91,7 +93,7 @@ public class ClusterOverviewProcedureTest
         assertFalse( members.hasNext() );
     }
 
-    class IsRecord extends TypeSafeMatcher<Object[]>
+    class IsRecord extends TypeSafeMatcher<AnyValue[]>
     {
         private final UUID memberId;
         private final int boltPort;
@@ -109,37 +111,41 @@ public class ClusterOverviewProcedureTest
         }
 
         @Override
-        protected boolean matchesSafely( Object[] record )
+        protected boolean matchesSafely( AnyValue[] record )
         {
             if ( record.length != 5 )
             {
                 return false;
             }
 
-            if ( !memberId.toString().equals( record[0] ) )
+            if ( !stringValue( memberId.toString() ).equals( record[0] ) )
             {
                 return false;
             }
 
-            List<String> boltAddresses = Collections.singletonList( "bolt://localhost:" + boltPort );
+            ListValue boltAddresses = VirtualValues.list( stringValue( "bolt://localhost:" + boltPort ) );
 
             if ( !boltAddresses.equals( record[1] ) )
             {
                 return false;
             }
 
-            if ( !role.name().equals( record[2] ) )
+            if ( !stringValue( role.name() ).equals( record[2] ) )
             {
                 return false;
             }
 
-            Set<String> recordGroups = Iterables.asSet( (List<String>) record[3] );
+            Set<String> recordGroups = new HashSet<>();
+            for ( AnyValue value : (ListValue) record[3] )
+            {
+                recordGroups.add( ((TextValue) value).stringValue() );
+            }
             if ( !groups.equals( recordGroups ) )
             {
                 return false;
             }
 
-            return dbName.equals( record[4] );
+            return stringValue( dbName ).equals( record[4] );
         }
 
         @Override

@@ -114,6 +114,6 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     val value = new Arbitrary
 
     // When & then
-    intercept[QueryExecutionException](graph.execute("CALL my.first.proc({p})", map("p", value)))
+    intercept[QueryExecutionException](graph.execute("CALL my.first.proc({p})", map("p", value)).next())
   }
 }

@@ -70,7 +70,7 @@ public class InstalledProtocolsProcedureTest
         // then
         assertThat( result.next(),
                 arrayContaining( stringValue( "outbound" ), stringValue( "host1:1" ), stringValue( "raft" ),
-                        longValue( 1L ), stringValue( "[TestSnappy] )" ) ) );
+                        longValue( 1L ), stringValue( "[TestSnappy]" ) ) );
         assertThat( result.next(),
                 arrayContaining( stringValue( "outbound" ), stringValue( "host2:2" ), stringValue( "raft" ),
                         longValue( 2L ), stringValue( "[TestSnappy,ROT13]" ) ) );

@@ -20,6 +20,7 @@ import org.neo4j.kernel.api.{ResourceTracker, proc}
 import org.neo4j.procedure.Mode
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.NodeValue
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 import scala.util.matching.Regex
@@ -185,9 +186,9 @@ class EagerizationAcceptanceTest
           val statement = transaction.acquireStatement()
           try {
             val relType = transaction.tokenWrite().relationshipTypeGetOrCreateForName("KNOWS")
-            val nodeX = input(0).asInstanceOf[Node]
-            val nodeY = input(1).asInstanceOf[Node]
-            val rel = transaction.dataWrite().relationshipCreate( nodeX.getId, relType, nodeY.getId)
+            val nodeX = input(0).asInstanceOf[NodeValue]
+            val nodeY = input(1).asInstanceOf[NodeValue]
+            val rel = transaction.dataWrite().relationshipCreate( nodeX.id(), relType, nodeY.id())
             val prop = transaction.tokenWrite().propertyKeyGetOrCreateForName( "foo" )
             transaction.dataWrite().relationshipSetProperty(rel, prop, Values.of(counter.counted))
             counter += 1
@@ -227,9 +228,9 @@ class EagerizationAcceptanceTest
           val statement = transaction.acquireStatement()
           try {
             val relType = transaction.tokenWrite().relationshipTypeGetOrCreateForName("KNOWS")
-            val nodeX = input(0).asInstanceOf[Node]
-            val nodeY = input(1).asInstanceOf[Node]
-            val rel = transaction.dataWrite().relationshipCreate( nodeX.getId, relType, nodeY.getId)
+            val nodeX = input(0).asInstanceOf[NodeValue]
+            val nodeY = input(1).asInstanceOf[NodeValue]
+            val rel = transaction.dataWrite().relationshipCreate( nodeX.id(), relType, nodeY.id())
             val prop = transaction.tokenWrite().propertyKeyGetOrCreateForName( "foo" )
             transaction.dataWrite().relationshipSetProperty(rel, prop, Values.of(counter.counted))
             counter += 1
@@ -268,8 +269,8 @@ class EagerizationAcceptanceTest
           val nodeCursor = cursors.allocateNodeCursor()
           var relCursor: RelationshipSelectionCursor = null
           try {
-            val idX = input(0).asInstanceOf[Node].getId
-            val idY = input(1).asInstanceOf[Node].getId
+            val idX = input(0).asInstanceOf[NodeValue].id()
+            val idY = input(1).asInstanceOf[NodeValue].id()
             transaction.dataRead().singleNode(idX, nodeCursor)
             val result = Array.newBuilder[Array[AnyValue]]
             if (nodeCursor.next()) {
@@ -323,8 +324,8 @@ class EagerizationAcceptanceTest
           var relCursor: RelationshipSelectionCursor = null
 
           try {
-            val idX = input(0).asInstanceOf[Node].getId
-            val idY = input(1).asInstanceOf[Node].getId
+            val idX = input(0).asInstanceOf[NodeValue].id()
+            val idY = input(1).asInstanceOf[NodeValue].id()
             transaction.dataRead().singleNode(idX, nodeCursor)
             if (nodeCursor.next()) {
               relCursor = RelationshipSelections.outgoingCursor(cursors, nodeCursor, null)

@@ -8,19 +8,22 @@ package com.neo4j.causalclustering.routing.multi_cluster.procedure;
 import com.neo4j.causalclustering.routing.Endpoint;
 import com.neo4j.causalclustering.routing.Role;
 import com.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
-import com.neo4j.causalclustering.routing.procedure.RoutingResultFormatHelper;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.LongValue;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.virtual.ListValue;
+import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.MapValueBuilder;
 import org.neo4j.values.virtual.VirtualValues;
 
+import static com.neo4j.causalclustering.routing.procedure.RoutingResultFormatHelper.parseEndpoints;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -61,30 +64,33 @@ public class MultiClusterRoutingResultFormat
         return new AnyValue[]{ttlSeconds, VirtualValues.fromList( response )};
     }
 
-    public static MultiClusterRoutingResult parse( Map<String,Object> record )
+    public static MultiClusterRoutingResult parse( MapValue record )
     {
-        return parse( new Object[]{
+        return parse( new AnyValue[]{
                 record.get( ParameterNames.TTL.parameterName() ),
                 record.get( ParameterNames.ROUTERS.parameterName() )
         } );
     }
 
-    public static MultiClusterRoutingResult parse( Object[] record )
+    public static MultiClusterRoutingResult parse( AnyValue[] record )
     {
-        long ttlSeconds = (long) record[0];
+        long ttlSeconds = ((LongValue) record[0]).longValue();
         @SuppressWarnings( "unchecked" )
-        List<Map<String,Object>> rows = (List<Map<String,Object>>) record[1];
+        ListValue rows = (ListValue) record[1];
         Map<String,List<Endpoint>> routers = parseRouters( rows );
 
         return new MultiClusterRoutingResult( routers, ttlSeconds * 1000 );
     }
 
-    private static Map<String,List<Endpoint>> parseRouters( List<Map<String,Object>> responseRows )
+    private static Map<String,List<Endpoint>> parseRouters( ListValue responseRows )
     {
-        Function<Map<String,Object>,String> dbNameFromRow = row -> (String) row.get( DB_NAME_KEY );
-        Function<Map<String,Object>,List<Endpoint>> endpointsFromRow =
-                row -> RoutingResultFormatHelper
-                        .parseEndpoints( ValueUtils.asListValue( (Iterable<?>) row.get( ADDRESSES_KEY ) ), Role.ROUTE );
-        return responseRows.stream().collect( Collectors.toMap( dbNameFromRow, endpointsFromRow ) );
+        Map<String, List<Endpoint>> routers = new HashMap<>(  );
+        for ( AnyValue row : responseRows )
+        {
+            MapValue map = (MapValue) row;
+            routers.put( ((TextValue) map.get( DB_NAME_KEY )).stringValue(),
+                    parseEndpoints( (ListValue) map.get( ADDRESSES_KEY ), Role.ROUTE ) );
+        }
+        return routers;
     }
 }

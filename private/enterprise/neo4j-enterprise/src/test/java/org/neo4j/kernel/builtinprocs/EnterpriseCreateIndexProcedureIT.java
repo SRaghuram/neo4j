@@ -55,6 +55,7 @@ import static org.junit.Assume.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SchemaIndex.NATIVE10;
 import static org.neo4j.helpers.Exceptions.rootCause;
+import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
 @RunWith( Parameterized.class )
@@ -229,8 +230,8 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         return procsSchema().procedureCallSchema( ProcedureSignature.procedureName( "db", indexProcedureName ),
                 new AnyValue[]
                         {
-                                stringValue( pattern ), // index
-                                stringValue( specifiedProvider ) // providerName
+                                stringOrNoValue( pattern ), // index
+                                stringOrNoValue( specifiedProvider ) // providerName
                         } );
     }
 
