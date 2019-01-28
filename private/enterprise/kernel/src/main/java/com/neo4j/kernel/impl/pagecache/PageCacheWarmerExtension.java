@@ -21,7 +21,7 @@ import org.neo4j.scheduler.JobScheduler;
 class PageCacheWarmerExtension extends LifecycleAdapter
 {
     private final DatabaseAvailabilityGuard databaseAvailabilityGuard;
-    private final Database dataSource;
+    private final Database database;
     private final Config config;
     private final PageCacheWarmer pageCacheWarmer;
     private final WarmupAvailabilityListener availabilityListener;
@@ -29,13 +29,13 @@ class PageCacheWarmerExtension extends LifecycleAdapter
 
     PageCacheWarmerExtension(
             JobScheduler scheduler, DatabaseAvailabilityGuard databaseAvailabilityGuard, PageCache pageCache, FileSystemAbstraction fs,
-            Database dataSource, Log log, PageCacheWarmerMonitor monitor, Config config )
+            Database database, Log log, PageCacheWarmerMonitor monitor, Config config )
     {
         this.databaseAvailabilityGuard = databaseAvailabilityGuard;
-        this.dataSource = dataSource;
+        this.database = database;
         this.config = config;
-        pageCacheWarmer = new PageCacheWarmer( fs, pageCache, scheduler, dataSource.getDatabaseLayout().databaseDirectory() );
-        availabilityListener = new WarmupAvailabilityListener( scheduler, pageCacheWarmer, config, log, monitor );
+        this.pageCacheWarmer = new PageCacheWarmer( fs, pageCache, scheduler, database.getDatabaseLayout().databaseDirectory() );
+        this.availabilityListener = new WarmupAvailabilityListener( scheduler, pageCacheWarmer, config, log, monitor );
     }
 
     @Override
@@ -64,6 +64,6 @@ class PageCacheWarmerExtension extends LifecycleAdapter
 
     private DatabaseFileListing getNeoStoreFileListing()
     {
-        return dataSource.getDependencyResolver().resolveDependency( DatabaseFileListing.class );
+        return database.getDependencyResolver().resolveDependency( DatabaseFileListing.class );
     }
 }
