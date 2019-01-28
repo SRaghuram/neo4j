@@ -68,6 +68,7 @@ class StreamingComposablePipeline[T](override val start: StreamingOperator with 
 
   def addComposableOperator(operator: ComposableOperator[_], slots: SlotConfiguration): Unit = {
     composableOperators += operator
+    // We need to end up with the slot configuration of the last operator added, thus we override it here for every added operator
     this.slots = slots
   }
 

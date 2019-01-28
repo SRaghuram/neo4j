@@ -35,8 +35,9 @@ object MorselExpressionConverters extends ExpressionConverter {
 
 // Disable Avg since we currently do not support Duration avg
 // and implement average different from interpreted (no cumulative moving avg)
-//        case functions.Avg =>
+        case functions.Avg =>
 //          Some(AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+          None
 
         case functions.Max =>
           Some(MaxOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
