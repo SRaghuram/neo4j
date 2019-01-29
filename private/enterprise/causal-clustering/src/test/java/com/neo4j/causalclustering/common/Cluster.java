@@ -21,6 +21,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.readreplica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -54,6 +55,7 @@ import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -498,7 +500,7 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
                 throw new DatabaseShutdownException();
             }
 
-            try ( Transaction tx = db.beginTx() )
+            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
             {
                 op.accept( db, tx );
                 return member;
