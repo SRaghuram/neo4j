@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
-import org.neo4j.cypher.internal.runtime.slotted.pipes
-import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.morsel.EmptyQueryState
+import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
+import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.stringValue
@@ -18,7 +18,7 @@ class AggregationMapperOperatorTest extends MorselUnitTest {
   test("single grouping key aggregation") {
     val groupSlot = RefSlot(0, nullable = false, CTAny)
     val aggregation = new AggregationMapperOperator(workId,
-                                                    Array(AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(0))),
+                                                    Array(AggregationOffsets(1, ReferenceFromSlot(1), 1, DummyEvenNodeIdAggregation(0))),
                                                     SlottedGroupingExpression1(groupSlot,
                                                                                new DummyExpression(stringValue("A"), stringValue("B"))))
 
@@ -46,7 +46,7 @@ class AggregationMapperOperatorTest extends MorselUnitTest {
     val groupSlot1 = RefSlot(0, nullable = false, CTAny)
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
     val aggregation = new AggregationMapperOperator(workId,
-                                                    Array(AggregationOffsets(2, 2, DummyEvenNodeIdAggregation(0))),
+                                                    Array(AggregationOffsets(2, ReferenceFromSlot(2), 2, DummyEvenNodeIdAggregation(0))),
                                                     SlottedGroupingExpression2(
                                                       groupSlot1, new DummyExpression(stringValue("A"), stringValue("B")),
                                                       groupSlot2, new DummyExpression(stringValue("C"), stringValue("D"),
@@ -81,7 +81,7 @@ class AggregationMapperOperatorTest extends MorselUnitTest {
     val groupSlot2 = RefSlot(1, nullable = false, CTAny)
     val groupSlot3 = RefSlot(2, nullable = false, CTAny)
     val aggregation = new AggregationMapperOperator(workId,
-                                                    Array(AggregationOffsets(3, 3, DummyEvenNodeIdAggregation(0))),
+                                                    Array(AggregationOffsets(3, ReferenceFromSlot(3), 3, DummyEvenNodeIdAggregation(0))),
                                                     SlottedGroupingExpression3(
                                                       groupSlot1, new DummyExpression(stringValue("A"), stringValue("B")),
                                                       groupSlot2, new DummyExpression(stringValue("C"), stringValue("D")),
@@ -114,14 +114,13 @@ class AggregationMapperOperatorTest extends MorselUnitTest {
     val groupSlot4 = RefSlot(3, nullable = false, CTAny)
     val groupSlot5 = RefSlot(4, nullable = false, CTAny)
     val aggregation = new AggregationMapperOperator(workId,
-                                                    Array(AggregationOffsets(5, 5, DummyEvenNodeIdAggregation(0))),
+                                                    Array(AggregationOffsets(5, ReferenceFromSlot(5), 5, DummyEvenNodeIdAggregation(0))),
                                                     SlottedGroupingExpression(Array(
                                                       SlotExpression(groupSlot1, new DummyExpression(stringValue("A"), stringValue("B"))),
                                                       SlotExpression(groupSlot2, new DummyExpression(stringValue("C"), stringValue("D"))),
                                                       SlotExpression(groupSlot3, new DummyExpression(stringValue("E"), stringValue("F"))),
                                                       SlotExpression(groupSlot4, new DummyExpression(stringValue("G"), stringValue("H"))),
                                                       SlotExpression(groupSlot5, new DummyExpression(stringValue("I"), stringValue("J"))))))
-    val longs = Array[Long](0,1,2,3,4,5,6,7,8,9)
     val given = new Given()
       .withOperator(aggregation)
       .withQueryState(EmptyQueryState())

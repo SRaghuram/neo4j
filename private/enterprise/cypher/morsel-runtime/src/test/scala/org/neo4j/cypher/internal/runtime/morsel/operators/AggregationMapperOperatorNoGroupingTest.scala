@@ -6,13 +6,14 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.runtime.morsel.EmptyQueryState
+import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
 import org.neo4j.values.storable.Values
 
 class AggregationMapperOperatorNoGroupingTest extends MorselUnitTest {
 
   test("single aggregation on a single morsel") {
     val given = new Given()
-      .withOperator(new AggregationMapperOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0)))))
+      .withOperator(new AggregationMapperOperatorNoGrouping(workId, Array(AggregationOffsets(0, ReferenceFromSlot(0), 0, DummyEvenNodeIdAggregation(0)))))
       .withQueryState(EmptyQueryState())
       .addInputRow(Longs(0), Refs(Values.NO_VALUE))
       .addInputRow(Longs(1), Refs(Values.NO_VALUE))
@@ -34,8 +35,8 @@ class AggregationMapperOperatorNoGroupingTest extends MorselUnitTest {
     val aggregation = new AggregationMapperOperatorNoGrouping(
       workId,
       Array(
-        AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0)),
-        AggregationOffsets(1, 1, DummyEvenNodeIdAggregation(1))
+        AggregationOffsets(0, ReferenceFromSlot(0), 0, DummyEvenNodeIdAggregation(0)),
+        AggregationOffsets(1, ReferenceFromSlot(1), 1, DummyEvenNodeIdAggregation(1))
       ))
     val given = new Given()
       .withOperator(aggregation)

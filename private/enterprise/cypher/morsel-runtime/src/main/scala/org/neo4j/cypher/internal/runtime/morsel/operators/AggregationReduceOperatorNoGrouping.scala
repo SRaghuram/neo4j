@@ -6,8 +6,10 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.morsel._
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.internal.kernel.api.IndexReadSession
 
 /*
 Responsible for reducing the output of AggregationMapperOperatorNoGrouping
@@ -28,8 +30,13 @@ class AggregationReduceOperatorNoGrouping(val workIdentity: WorkIdentity,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      val incomingSlots = aggregations.map(_.mapperOutputSlot)
-      val reducers = aggregations.map(_.aggregation.createAggregationReducer)
+      val queryState = new OldQueryState(context,
+        resources = null,
+        params = state.params,
+        resources.expressionCursors,
+        Array.empty[IndexReadSession])
+
+      val reducers = aggregations.map(_.createReducer)
 
       //Go through the morsels and collect the output from the map step
       //and reduce the values
@@ -38,7 +45,7 @@ class AggregationReduceOperatorNoGrouping(val workIdentity: WorkIdentity,
         val currentInputRow = inputMorsels(i)
         var j = 0
         while (j < aggregations.length) {
-          reducers(j).reduce(currentInputRow.getRefAt(incomingSlots(j)))
+          reducers(j).apply(currentInputRow, queryState)
           j += 1
         }
         i += 1
@@ -47,7 +54,7 @@ class AggregationReduceOperatorNoGrouping(val workIdentity: WorkIdentity,
       //Write the reduced value to output
       i = 0
       while (i < aggregations.length) {
-        currentRow.setRefAt(aggregations(i).reducerOutputSlot, reducers(i).result)
+        currentRow.setRefAt(aggregations(i).reducerOutputSlot, reducers(i).result(queryState))
         i += 1
       }
       currentRow.moveToNextRow()

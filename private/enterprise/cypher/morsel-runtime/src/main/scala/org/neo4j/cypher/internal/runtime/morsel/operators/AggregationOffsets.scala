@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.morsel.expressions.AggregationExpressionOperator
 
 /**
@@ -16,4 +18,12 @@ import org.neo4j.cypher.internal.runtime.morsel.expressions.AggregationExpressio
   * @param aggregation
   * Aggregation expression to be operated on by the Mapper.
   */
-case class AggregationOffsets(mapperOutputSlot: Int, reducerOutputSlot: Int, aggregation: AggregationExpressionOperator)
+case class AggregationOffsets(mapperOutputSlot: Int,
+                              reducerInputExpression: Expression,
+                              reducerOutputSlot: Int,
+                              aggregation: AggregationExpressionOperator) {
+
+  def createMapper: AggregationFunction = aggregation.createAggregationMapper
+
+  def createReducer: AggregationFunction = aggregation.createAggregationReducer(reducerInputExpression)
+}

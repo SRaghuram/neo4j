@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.MorselRuntime
+import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, InputTestBase}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_EDITION, LogicalQueryBuilder}
-import org.neo4j.cypher.internal.runtime.spec.interpreted.{AllNodeScanTestBase, InputTestBase}
 
 class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_EDITION, MorselRuntime) {
 
@@ -46,3 +46,5 @@ class MorselInputTest extends InputTestBase(ENTERPRISE_EDITION, MorselRuntime) {
     ENTERPRISE_EDITION.hasEvidenceOfParallelism(context) should be(true)
   }
 }
+
+class MorselAggregationTest extends AggregationTestBase(ENTERPRISE_EDITION, MorselRuntime)

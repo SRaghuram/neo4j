@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.runtime.{ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel._
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 
@@ -25,7 +25,7 @@ class AggregationMapperOperatorNoGrouping(val workIdentity: WorkIdentity,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val aggregationMappers = aggregations.map(_.aggregation.createAggregationMapper)
+    val aggregationMappers = aggregations.map(_.createMapper)
     val queryState = new OldQueryState(context,
                                        resources = null,
                                        params = state.params,
@@ -36,7 +36,7 @@ class AggregationMapperOperatorNoGrouping(val workIdentity: WorkIdentity,
     while (currentRow.isValidRow) {
       var accCount = 0
       while (accCount < aggregations.length) {
-        aggregationMappers(accCount).map(currentRow, queryState)
+        aggregationMappers(accCount).apply(currentRow, queryState)
         accCount += 1
       }
       currentRow.moveToNextRow()
@@ -48,7 +48,7 @@ class AggregationMapperOperatorNoGrouping(val workIdentity: WorkIdentity,
     currentRow.resetToFirstRow()
     while (i < aggregations.length) {
       val aggregation = aggregations(i)
-      currentRow.setRefAt(aggregation.mapperOutputSlot, aggregationMappers(i).result)
+      currentRow.setRefAt(aggregation.mapperOutputSlot, aggregationMappers(i).result(queryState))
       i += 1
     }
     currentRow.moveToNextRow()

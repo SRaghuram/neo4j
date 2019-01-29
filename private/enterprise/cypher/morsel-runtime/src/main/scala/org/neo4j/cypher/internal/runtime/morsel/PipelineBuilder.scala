@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
+import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{RefSlot, SlottedIndexedProperty}
-import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.morsel.expressions.AggregationExpressio
 import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
@@ -172,14 +173,22 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           val aggregations = aggregationExpression.map {
             case (key, expression) =>
               val currentSlot = slots.get(key).get
-              //we need to make room for storing aggregation value in
-              //source slot
+              //we need to make room for storing aggregation value in the input morsel
               source.slots.newReference(key, currentSlot.nullable, currentSlot.typ)
-              val morselAggExpression = converters.toCommandExpression(id, expression) match {
+
+              val mapperSlot = source.slots.getReferenceOffsetFor(key)
+              val reducerSlot = currentSlot.offset
+              val aggregationExpressionOperator = converters.toCommandExpression(id, expression) match {
                 case e:AggregationExpressionOperator => e
                 case _ => throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
               }
-              AggregationOffsets(source.slots.getReferenceOffsetFor(key), currentSlot.offset, morselAggExpression)
+              val reducerInputExpression = ReferenceFromSlot(mapperSlot)
+
+              AggregationOffsets(
+                mapperSlot,
+                reducerInputExpression,
+                reducerSlot,
+                aggregationExpressionOperator)
           }.toArray
 
           //add mapper to source
@@ -199,14 +208,22 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           val aggregations = aggregationExpression.map {
             case (key, expression) =>
               val currentSlot = slots.get(key).get
-              //we need to make room for storing aggregation value in
-              //source slot
+              //we need to make room for storing aggregation value in the input morsel
               source.slots.newReference(key, currentSlot.nullable, currentSlot.typ)
-              val morselAggExpression = converters.toCommandExpression(id, expression) match {
+
+              val mapperSlot = source.slots.getReferenceOffsetFor(key)
+              val reducerSlot = currentSlot.offset
+              val aggregationExpressionOperator = converters.toCommandExpression(id, expression)match {
                 case e:AggregationExpressionOperator => e
                 case _ => throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
               }
-              AggregationOffsets(source.slots.getReferenceOffsetFor(key), currentSlot.offset, morselAggExpression)
+              val reducerInputExpression = ReferenceFromSlot(mapperSlot)
+
+              AggregationOffsets(
+                mapperSlot,
+                reducerInputExpression,
+                reducerSlot,
+                aggregationExpressionOperator)
           }.toArray
 
           //add mapper to source

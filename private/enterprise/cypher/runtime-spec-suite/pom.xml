@@ -96,6 +96,11 @@
       <artifactId>neo4j-enterprise-cypher</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-values</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <!-- neo4j testing -->
 
@@ -136,6 +141,12 @@
 
     <!-- neo4j-cypher -->
 
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-ast-4.0</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
     <!-- neo4j-cypher test -->
 
     <dependency>
@@ -148,6 +159,13 @@
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-util-4.0</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-ast-4.0</artifactId>
       <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>

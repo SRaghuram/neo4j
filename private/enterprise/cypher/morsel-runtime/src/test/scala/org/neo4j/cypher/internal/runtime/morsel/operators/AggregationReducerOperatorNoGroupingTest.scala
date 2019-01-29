@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.runtime.morsel.EmptyQueryState
+import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
 import org.neo4j.values.storable.Values
 
 import scala.language.postfixOps
@@ -13,7 +14,7 @@ import scala.language.postfixOps
 class AggregationReducerOperatorNoGroupingTest extends MorselUnitTest {
 
   test("reduce from single morsel") {
-    val aggregation = new AggregationReduceOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
+    val aggregation = new AggregationReduceOperatorNoGrouping(workId, Array(AggregationOffsets(0, ReferenceFromSlot(0), 0, DummyEvenNodeIdAggregation(0))))
 
     val input = new Input()
       .addRow(Longs(0), Refs(Values.longArray(Array(2, 4, 42))))
@@ -31,7 +32,7 @@ class AggregationReducerOperatorNoGroupingTest extends MorselUnitTest {
 
   test("reduce values from multiple morsels") {
     // Given
-    val aggregation = new AggregationReduceOperatorNoGrouping(workId, Array(AggregationOffsets(0, 0, DummyEvenNodeIdAggregation(0))))
+    val aggregation = new AggregationReduceOperatorNoGrouping(workId, Array(AggregationOffsets(0, ReferenceFromSlot(0), 0, DummyEvenNodeIdAggregation(0))))
     val inputs = for (i <- 1 to 10) yield {
       new Input().addRow(Longs(0), Refs(Values.longArray(Array(2 * i))))
     }

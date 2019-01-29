@@ -5,60 +5,49 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, AvgFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.morsel._
+import org.neo4j.cypher.internal.v4_0.util.symbols.{AnyType, CTAny}
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.LongValue
 import org.neo4j.values.storable.Values.longValue
-import org.neo4j.values.storable.{LongValue, NumberValue, Values}
-import org.neo4j.values.utils.ValueMath.overflowSafeAdd
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
-import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
 
 /*
 Vectorized version of the average aggregation function
  */
-case class AvgOperatorExpression(anInner: Expression) extends AggregationExpressionOperatorWithInnerExpression(anInner) {
+case class AvgOperatorExpression(innerMapperExpression: Expression) extends AggregationExpressionOperatorWithInnerExpression(innerMapperExpression) {
 
-  override def expectedInnerType = CTAny
+  override def expectedInnerType: AnyType = CTAny
 
-  override def rewrite(f: (Expression) => Expression): Expression = f(AvgOperatorExpression(anInner.rewrite(f)))
+  override def rewrite(f: Expression => Expression): Expression = f(AvgOperatorExpression(innerMapperExpression.rewrite(f)))
 
-  override def createAggregationMapper: AggregationMapper = new AvgMapper(anInner)
+  override def createAggregationMapper: AggregationFunction = new AvgMapper(new AvgFunction(innerMapperExpression))
 
-  override def createAggregationReducer: AggregationReducer = new AvgReducer
+  override def createAggregationReducer(expression: Expression): AggregationFunction = new AvgReducer(expression)
 }
 
-class AvgMapper(value: Expression) extends AggregationMapper {
+class AvgMapper(func: AvgFunction) extends AggregationFunction {
 
-  private var count: Long = 0L
-  private var sum: NumberValue = Values.ZERO_INT
+  override def result(state: OldQueryState): AnyValue = VirtualValues.list(longValue(func.aggregatedRowCount), func.result(state))
 
-  override def result: AnyValue = VirtualValues.list(longValue(count), sum)
-
-  override def map(data: MorselExecutionContext,
-                   state: OldQueryState): Unit = value(data, state) match {
-    case Values.NO_VALUE =>
-    case number: NumberValue =>
-      count += 1
-      sum = overflowSafeAdd(sum, number);
-  }
+  override def apply(data: ExecutionContext, state: OldQueryState): Unit = func(data, state)
 }
 
-class AvgReducer extends AggregationReducer {
+class AvgReducer(expression: Expression) extends AggregationFunction {
 
-  private var count: Long = 0L
-  private var sum: NumberValue = longValue(0L)
+  private val func: AvgFunction = new AvgFunction(expression)
 
-  override def result: AnyValue = if (count > 0L) sum.times(1.0 / count.toDouble) else Values.NO_VALUE
+  override def result(state: OldQueryState): AnyValue = func.result(state)
 
-  override def reduce(value: AnyValue): Unit = value match {
+  override def apply(data: ExecutionContext, state: OldQueryState): Unit = expression(data, state) match {
     case l: ListValue =>
-      count += l.value(0).asInstanceOf[LongValue].longValue()
-      sum = overflowSafeAdd(sum, l.value(1).asInstanceOf[NumberValue]);
-    case _ =>
+      val weightOfMorsel = l.value(0).asInstanceOf[LongValue].longValue()
+      val avgOfMorsel = l.value(1)
+      for (_ <- 1L to weightOfMorsel) { func.applyValueDirectly(avgOfMorsel) }
+    case x =>
+      throw new IllegalStateException(s"Unexpected value in avg reducer: $x")
   }
 }
-
-
-

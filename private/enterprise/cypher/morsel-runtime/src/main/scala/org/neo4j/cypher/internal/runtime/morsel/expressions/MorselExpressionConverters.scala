@@ -33,11 +33,11 @@ object MorselExpressionConverters extends ExpressionConverter {
         case functions.Count =>
           Some(CountOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
 
-// Disable Avg since we currently do not support Duration avg
-// and implement average different from interpreted (no cumulative moving avg)
+        case functions.Sum =>
+          Some(SumOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
+
         case functions.Avg =>
-//          Some(AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
-          None
+          Some(AvgOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
 
         case functions.Max =>
           Some(MaxOperatorExpression(self.toCommandExpression(id, c.arguments.head)))
@@ -59,11 +59,10 @@ object MorselExpressionConverters extends ExpressionConverter {
 
     // We need to convert NestedPipeExpression here so we can register a noop dummy pipe as owner
     // TODO: Later we may want to establish a connection with the id of the operator for proper PROFILE support
-    case e: NestedPipeExpression => {
+    case e: NestedPipeExpression =>
       val ce = commandexpressions.NestedPipeExpression(e.pipe, self.toCommandExpression(id, e.projection))
       ce.registerOwningPipe(new NoPipe)
       Some(ce)
-    }
 
     //Queries containing these expression cant be handled by morsel runtime yet
     case e: NestedPlanExpression => throw new CantCompileQueryException(s"$e is not yet supported by the morsel runtime")

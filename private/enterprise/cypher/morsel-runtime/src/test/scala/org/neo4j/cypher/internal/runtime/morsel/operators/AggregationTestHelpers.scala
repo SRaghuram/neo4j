@@ -7,9 +7,9 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.morsel.expressions.{AggregationExpressionOperator, AggregationMapper, AggregationReducer}
+import org.neo4j.cypher.internal.runtime.morsel.expressions.AggregationExpressionOperator
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.{LongArray, Values}
 
@@ -18,11 +18,11 @@ import scala.collection.mutable
 //Dummy aggregation, for test only
 case class DummyEvenNodeIdAggregation(offset: Int) extends AggregationExpressionOperator {
 
-  override def createAggregationMapper: AggregationMapper = new EvenNodeIdMapper(offset)
+  override def createAggregationMapper: AggregationFunction = new EvenNodeIdMapper(offset)
 
-  override def createAggregationReducer: AggregationReducer = new EvenNodeIdReducer
+  override def createAggregationReducer(expression: Expression): AggregationFunction = new EvenNodeIdReducer(expression)
 
-  override def rewrite(f: (Expression) => Expression): Expression = ???
+  override def rewrite(f: Expression => Expression): Expression = this
 
   override def arguments: Seq[Expression] = Seq.empty
 
@@ -32,7 +32,7 @@ case class DummyEvenNodeIdAggregation(offset: Int) extends AggregationExpression
 class DummyExpression(values: AnyValue*) extends Expression {
   private var current = 0
 
-  override def rewrite(f: (Expression) => Expression): Expression = this
+  override def rewrite(f: Expression => Expression): Expression = this
 
   override def arguments: Seq[Expression] = Seq.empty
 
@@ -46,26 +46,26 @@ class DummyExpression(values: AnyValue*) extends Expression {
   }
 }
 
-private class EvenNodeIdMapper(offset: Int) extends AggregationMapper {
+private class EvenNodeIdMapper(offset: Int) extends AggregationFunction {
 
   private val evenNodes = mutable.Set[Long]()
 
-  override def map(data: MorselExecutionContext, ignore: OldQueryState): Unit = {
+  override def apply(data: ExecutionContext, ignore: OldQueryState): Unit = {
     val id = data.getLongAt(offset)
     if (id % 2 == 0) evenNodes.add(id)
   }
 
-  override def result: AnyValue = Values.longArray(evenNodes.toArray.sorted)
+  override def result(state: OldQueryState): AnyValue = Values.longArray(evenNodes.toArray.sorted)
 }
 
-private class EvenNodeIdReducer extends AggregationReducer {
+private class EvenNodeIdReducer(expression: Expression) extends AggregationFunction {
 
   private val evenNodes = mutable.Set[Long]()
 
-  override def reduce(value: AnyValue): Unit = value match {
+  override def apply(data: ExecutionContext, state: OldQueryState): Unit = expression(data, state) match {
     case ls: LongArray => ls.asObjectCopy().foreach(evenNodes.add)
   }
 
-  override def result: AnyValue = Values.longArray(evenNodes.toArray.sorted)
+  override def result(state: OldQueryState): AnyValue = Values.longArray(evenNodes.toArray.sorted)
 }
 

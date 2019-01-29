@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel._
-import org.neo4j.cypher.internal.runtime.morsel.expressions.AggregationMapper
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 import scala.collection.mutable
@@ -29,7 +29,7 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val result = mutable.LinkedHashMap[groupings.KeyType, Array[(Int,AggregationMapper)]]()
+    val result = mutable.LinkedHashMap[groupings.KeyType, Array[(Int,AggregationFunction)]]()
 
     val queryState = new OldQueryState(context,
                                        resources = null,
@@ -41,8 +41,8 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
     while (currentRow.isValidRow) {
       val groupingValue = groupings.computeGroupingKey(currentRow, queryState)
       val functions = result
-        .getOrElseUpdate(groupingValue, aggregations.map(a => a.mapperOutputSlot -> a.aggregation.createAggregationMapper))
-      functions.foreach(f => f._2.map(currentRow, queryState))
+        .getOrElseUpdate(groupingValue, aggregations.map(a => a.mapperOutputSlot -> a.createMapper))
+      functions.foreach(f => f._2.apply(currentRow, queryState))
       currentRow.moveToNextRow()
     }
 
@@ -54,7 +54,7 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
         var i = 0
         while (i < aggregations.length) {
           val (offset, mapper) = aggregator(i)
-          currentRow.setRefAt(offset, mapper.result)
+          currentRow.setRefAt(offset, mapper.result(queryState))
           i += 1
         }
         currentRow.moveToNextRow()
