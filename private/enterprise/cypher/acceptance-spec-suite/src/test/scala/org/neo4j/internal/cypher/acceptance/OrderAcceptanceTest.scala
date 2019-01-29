@@ -604,7 +604,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // n.prop is written as `n`.prop in the plan due to the reuse of the variable
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "age"))).onTopOf(
+      .aPlan("Sort").withOrder(ProvidedOrder.asc(varFor("n.age"))).onTopOf(
       includeSomewhere.aPlan("Projection").containingArgument("{name : `n`.name}")
           .onTopOf(aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "foo")))
             .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
@@ -692,7 +692,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       Map("u.name" -> "joe", "u.foo" -> 0)))
 
     result.executionPlanDescription() should includeSomewhere
-      .aPlan("Sort").withOrder(ProvidedOrder.asc(prop("u", "name")).desc(prop("u", "foo")))
+      .aPlan("Sort").withOrder(ProvidedOrder.asc(varFor("u.name")).desc(varFor("u.foo")))
       .onTopOf(includeSomewhere.aPlan("SetProperty"))
   }
 
