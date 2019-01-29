@@ -13,26 +13,19 @@
 
     <groupId>com.neo4j.bench</groupId>
     <artifactId>benchmark</artifactId>
+    <version>3.3.10-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Neo4j - Benchmarks</name>
+    <name>Neo4j Benchmarks</name>
 
     <properties>
+        <neo4j.version>${project.version}</neo4j.version>
         <junit.version>5.2.0</junit.version>
         <junit.platform.version>1.2.0</junit.platform.version>
-        <neo4j-java-driver.version>1.4.4</neo4j-java-driver.version>
-        <license-text.header>build/license-header.txt</license-text.header>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <checkstyle.strict>true</checkstyle.strict>
     </properties>
-
-    <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
-        Copyright (c) 2002-2019 "Neo4j,"
-        Neo4j Sweden AB [http://neo4j.com]
-        This file is part of Neo4j internal tooling.
-        </comments>
-      </license>
-    </licenses>
 
     <dependencyManagement>
         <dependencies>
@@ -99,19 +92,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <skipTests>false</skipTests>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                            <configuration>
-                                <skipTests>false</skipTests>
-                                <skipITs>false</skipITs>
-                            </configuration>
-                    </plugin>
                 </plugins>
             </build>
             <id>CI</id>
@@ -120,34 +100,131 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.neo4j.build.plugins</groupId>
-                <artifactId>licensing-maven-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>check-licenses</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <skipTests>true</skipTests>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                    <configuration>
-                        <skipTests>true</skipTests>
-                        <skipITs>true</skipITs>
-                    </configuration>
-            </plugin>
+          <plugin>
+            <artifactId>maven-checkstyle-plugin</artifactId>
+          </plugin>
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.8.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>2.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.8.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>2.5.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.9.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>2.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.3</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.0.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.22.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>2.22.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>3.0.0-M2</version>
+                    <executions>
+                        <execution>
+                            <id>enforce-maven</id>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <requireMavenVersion>
+                                        <version>3.5.4</version>
+                                    </requireMavenVersion>
+                                </rules>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                  <artifactId>maven-checkstyle-plugin</artifactId>
+                  <version>2.17</version>
+                  <configuration>
+                    <configLocation>build/checkstyle.xml</configLocation>
+                    <consoleOutput>true</consoleOutput>
+                    <logViolationsToConsole>true</logViolationsToConsole>
+                    <failsOnError>${checkstyle.strict}</failsOnError>
+                    <failOnViolation>${checkstyle.strict}</failOnViolation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                  </configuration>
+                  <dependencies>
+                    <dependency>
+                      <groupId>com.puppycrawl.tools</groupId>
+                      <artifactId>checkstyle</artifactId>
+                      <version>8.2</version>
+                    </dependency>
+                  </dependencies>
+                  <executions>
+                    <execution>
+                      <id>validate</id>
+                      <phase>validate</phase>
+                      <goals>
+                        <goal>check</goal>
+                      </goals>
+                    </execution>
+                  </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
+
+    <distributionManagement>
+        <repository>
+            <id>neo4j-internal-releases</id>
+            <name>Neo4j Internal Releases</name>
+            <url>https://neo.jfrog.io/neo/docs-maven-local</url>
+        </repository>
+        <snapshotRepository>
+            <id>neo4j-internal-snapshots</id>
+            <name>Neo4j Internal Releases</name>
+            <url>https://neo.jfrog.io/neo/docs-maven-local</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <repositories>
         <repository>
