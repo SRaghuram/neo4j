@@ -1,0 +1,91 @@
+{
+  "name": "recommendations",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "HR Analytics: Find a carpenter who has a skill in Java Programming and some other skills",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "HR Analytics: find the persons that have the same competencies, work/have worked at the same companies",
+      "queryFile": "queries/Q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "HR Analytics: find how many people with same competencies have worked at same company",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "find the paths from some person outward",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/persons.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "Graph Theory: finding potential triadic closures",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "description": "Graph Global: find the persons that have the same competencies, have worked at the same companies, are currently not working together, and are foaf",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "description": "Graph Local: find foaf of Mike that have the same competencies, have worked at the same companies, are currently not working together",
+      "queryFile": "queries/Q7.cypher"
+    },
+    {
+      "name": "Q8",
+      "description": "Find the people already owning Brand X products",
+      "queryFile": "queries/Q8.cypher",
+      "parameters": {
+        "file": "parameters/brands.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "description": "Find what kinds of people buy Brand X products",
+      "queryFile": "queries/Q9.cypher",
+      "parameters": {
+        "file": "parameters/brands.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "RECOMMEND PRODUCTS: find the OTHER products that 2 people that have the same competencies, work/have worked at the same companies, are friends and have bought the same product from that brand - Shawna Luna was the pathological input",
+      "queryFile": "queries/Q10.cypher"
+    },
+    {
+      "name": "Q11",
+      "description": "Same as Q10 - RECOMMEND PRODUCTS, but starting at all Person-labelled nodes",
+      "queryFile": "queries/Q11.cypher"
+    },
+    {
+      "name": "Q12",
+      "description": "Graph Theory: betweenness centrality",
+      "queryFile": "queries/Q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "description": "Same as Q7 - FOAF same competencies - parametrized",
+      "queryFile": "queries/Q13.cypher",
+      "parameters": {
+        "file": "parameters/persons.txt"
+      }
+    },
+    {
+      "name": "Q14",
+      "description": "Same as Q10 - RECOMMEND PRODUCTS - parametrized",
+      "queryFile": "queries/Q14.cypher",
+      "parameters": {
+        "file": "parameters/persons.txt"
+      }
+    }
+  ]
+}

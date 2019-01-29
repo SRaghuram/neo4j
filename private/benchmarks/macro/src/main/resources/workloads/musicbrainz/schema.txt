@@ -1,0 +1,12 @@
+CONSTRAINT ON (n:Country) ASSERT n.name IS UNIQUE
+CONSTRAINT ON (n:Entry) ASSERT n.mbid IS UNIQUE
+INDEX ON :Recording(name)
+INDEX ON :Release(name)
+INDEX ON :Track(name)
+INDEX ON :Url(name)
+INDEX ON :Work(name)
+INDEX ON :Area(name)
+INDEX ON :Artist(name)
+INDEX ON :ArtistCredit(name)
+INDEX ON :Label(name)
+INDEX ON :Place(name)

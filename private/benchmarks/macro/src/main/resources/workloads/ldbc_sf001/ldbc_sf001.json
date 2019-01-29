@@ -1,0 +1,153 @@
+{
+  "name": "ldbc_sf001",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Read 1",
+      "queryFile": "queries/query_1.cypher",
+      "parameters": {
+        "file": "parameters/query_1.txt"
+      }
+    },
+    {
+      "name": "Read 2",
+      "queryFile": "queries/query_2.cypher",
+      "parameters": {
+        "file": "parameters/query_2.txt"
+      }
+    },
+    {
+      "name": "Read 3",
+      "queryFile": "queries/query_3.cypher",
+      "parameters": {
+        "file": "parameters/query_3.txt"
+      }
+    },
+    {
+      "name": "Read 4",
+      "queryFile": "queries/query_4.cypher",
+      "parameters": {
+        "file": "parameters/query_4.txt"
+      }
+    },
+    {
+      "name": "Read 5",
+      "queryFile": "queries/query_5.cypher",
+      "parameters": {
+        "file": "parameters/query_5.txt"
+      }
+    },
+    {
+      "name": "Read 6",
+      "queryFile": "queries/query_6.cypher",
+      "parameters": {
+        "file": "parameters/query_6.txt"
+      }
+    },
+    {
+      "name": "Read 7",
+      "queryFile": "queries/query_7.cypher",
+      "parameters": {
+        "file": "parameters/query_7.txt"
+      }
+    },
+    {
+      "name": "Read 8",
+      "queryFile": "queries/query_8.cypher",
+      "parameters": {
+        "file": "parameters/query_8.txt"
+      }
+    },
+    {
+      "name": "Read 9",
+      "queryFile": "queries/query_9.cypher",
+      "parameters": {
+        "file": "parameters/query_9.txt"
+      }
+    },
+    {
+      "name": "Read 10",
+      "queryFile": "queries/query_10.cypher",
+      "parameters": {
+        "file": "parameters/query_10.txt"
+      }
+    },
+    {
+      "name": "Read 11",
+      "queryFile": "queries/query_11.cypher",
+      "parameters": {
+        "file": "parameters/query_11.txt"
+      }
+    },
+    {
+      "name": "Read 12",
+      "queryFile": "queries/query_12.cypher",
+      "parameters": {
+        "file": "parameters/query_12.txt"
+      }
+    },
+    {
+      "name": "Read 13",
+      "queryFile": "queries/query_13.cypher",
+      "parameters": {
+        "file": "parameters/query_13.txt"
+      }
+    },
+    {
+      "name": "Read 14",
+      "queryFile": "queries/query_14.cypher",
+      "parameters": {
+        "file": "parameters/query_14.txt"
+      }
+    },
+    {
+      "name": "Short Read 1",
+      "queryFile": "queries/short_read_1.cypher",
+      "parameters": {
+        "file": "parameters/short_read_1.txt"
+      }
+    },
+    {
+      "name": "Short Read 2",
+      "queryFile": "queries/short_read_2.cypher",
+      "parameters": {
+        "file": "parameters/short_read_2.txt"
+      }
+    },
+    {
+      "name": "Short Read 3",
+      "queryFile": "queries/short_read_3.cypher",
+      "parameters": {
+        "file": "parameters/short_read_3.txt"
+      }
+    },
+    {
+      "name": "Short Read 4",
+      "queryFile": "queries/short_read_4.cypher",
+      "parameters": {
+        "file": "parameters/short_read_4.txt"
+      }
+    },
+    {
+      "name": "Short Read 5",
+      "queryFile": "queries/short_read_5.cypher",
+      "parameters": {
+        "file": "parameters/short_read_5.txt"
+      }
+    },
+    {
+      "name": "Short Read 6",
+      "queryFile": "queries/short_read_6.cypher",
+      "parameters": {
+        "file": "parameters/short_read_6.txt"
+      }
+    },
+    {
+      "name": "Short Read 7",
+      "queryFile": "queries/short_read_7.cypher",
+      "parameters": {
+        "file": "parameters/short_read_7.txt"
+      }
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+INDEX ON :Topic(name)
+INDEX ON :User(name)
+INDEX ON :company(name)

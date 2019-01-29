@@ -1,0 +1,3 @@
+MATCH (n:OSMNode)
+WHERE 10000000 < n.osm_id < 20000000
+RETURN count(n)

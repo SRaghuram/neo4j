@@ -1,0 +1,12 @@
+# source me
+if [ -f ./devenv.local ]; then
+  . ./devenv.local
+
+  export ARTIFACTORY_USERNAME
+  export ARTIFACTORY_PASSWORD
+
+else
+  echo "Couldn't find ./devenv.local."
+fi
+
+# vim: set sw=2 ts=2 ft=sh:

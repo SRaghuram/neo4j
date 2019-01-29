@@ -1,0 +1,211 @@
+{
+  "name": "accesscontrol",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "More complex should get accessible companies for admin",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "Should find admin for account resource where allowed inherit and allowed not inherit",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/resources.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "More complex should find accessible accounts for admin and company",
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/administrators_companies.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "description": "More complex should find accessible accounts for admin and any matching company",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "Should find admin for company with allowed inherit",
+      "queryFile": "queries/Q5.cypher",
+      "parameters": {
+        "file": "parameters/companies.txt"
+      }
+    },
+    {
+      "name": "Q6",
+      "description": "Allowed with inherit=true gives access to sub-companies and accounts",
+      "queryFile": "queries/Q6.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
+      "name": "Q7",
+      "description": "Should determine whether admin has access to a resource",
+      "queryFile": "queries/Q7.cypher",
+      "parameters": {
+        "file": "parameters/union_administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q8",
+      "description": "More complex should get accessible companies for admin (orig. varlength paths)",
+      "queryFile": "queries/Q8.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "description": "Should find admin for account resource where allowed inherit and allowed not inherit (orig. varlength paths)",
+      "queryFile": "queries/Q9.cypher",
+      "parameters": {
+        "file": "parameters/resources.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "More complex should find accessible accounts for admin and company (orig. varlength paths)",
+      "queryFile": "queries/Q10.cypher",
+      "parameters": {
+        "file": "parameters/union_administrators_companies.txt"
+      }
+    },
+    {
+      "name": "Q11",
+      "description": "More complex should find accessible accounts for admin and any matching company (orig. varlength paths)",
+      "queryFile": "queries/Q11.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
+      "name": "Q12",
+      "description": "Should find admin for company with allowed inherit (orig. varlength paths)",
+      "queryFile": "queries/Q12.cypher",
+      "parameters": {
+        "file": "parameters/companies.txt"
+      }
+    },
+    {
+      "name": "Q13",
+      "description": "Allowed with inherit=true gives access to sub-companies and accounts (orig. varlength paths)",
+      "queryFile": "queries/Q13.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
+      "name": "Q14",
+      "description": "Should determine whether admin has access to resource (orig. varlength paths)",
+      "queryFile": "queries/Q14.cypher",
+      "parameters": {
+        "file": "parameters/administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q15",
+      "description": "first part of Q7",
+      "queryFile": "queries/Q15.cypher",
+      "parameters": {
+        "file": "parameters/administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q16",
+      "description": "second part of Q7",
+      "queryFile": "queries/Q16.cypher",
+      "parameters": {
+        "file": "parameters/administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q17",
+      "description": "third part of Q7",
+      "queryFile": "queries/Q17.cypher",
+      "parameters": {
+        "file": "parameters/administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q18",
+      "description": "fourth part of Q7",
+      "queryFile": "queries/Q18.cypher",
+      "parameters": {
+        "file": "parameters/administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q19",
+      "description": "fifth part of Q7",
+      "queryFile": "queries/Q19.cypher",
+      "parameters": {
+        "file": "parameters/administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q20",
+      "description": "sixth part of Q7",
+      "queryFile": "queries/Q20.cypher",
+      "parameters": {
+        "file": "parameters/administrators_resources.txt"
+      }
+    },
+    {
+      "name": "Q21",
+      "description": "Get a count of all nodes",
+      "queryFile": "queries/Q21.cypher"
+    },
+    {
+      "name": "Q22",
+      "description": "Get a count of all nodes having a particular label",
+      "queryFile": "queries/Q22.cypher"
+    },
+    {
+      "name": "Q23",
+      "description": "Get a count of all relationships",
+      "queryFile": "queries/Q23.cypher"
+    },
+    {
+      "name": "Q24",
+      "description": "Get a count of all relationships of a particular type",
+      "queryFile": "queries/Q24.cypher"
+    },
+    {
+      "name": "Q25",
+      "description": "Get a count of all relationships using the type disjunction pattern",
+      "queryFile": "queries/Q25.cypher"
+    },
+    {
+      "name": "Q26",
+      "description": "Get a count of all relationships of a particular type originating from a labelled node",
+      "queryFile": "queries/Q26.cypher"
+    },
+    {
+      "name": "Q27",
+      "description": "Get a count of all relationships of a particular type terminating at a labelled node",
+      "queryFile": "queries/Q27.cypher"
+    },
+    {
+      "name": "Q28",
+      "description": "Get a count of all relationships originating from a labelled node",
+      "queryFile": "queries/Q28.cypher"
+    },
+    {
+      "name": "Q29",
+      "description": "Get a count of all relationships terminating at a labelled node",
+      "queryFile": "queries/Q29.cypher"
+    }
+  ]
+}

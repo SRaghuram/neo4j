@@ -1,0 +1,62 @@
+package com.neo4j.bench.client.profiling;
+
+import com.neo4j.bench.client.model.Benchmark;
+import com.neo4j.bench.client.model.Benchmark.Mode;
+import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.results.BenchmarkDirectory;
+import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.client.results.ForkDirectory;
+import com.neo4j.bench.client.util.JvmVersion;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.core.IsCollectionContaining.hasItem;
+import static org.junit.Assert.assertThat;
+
+public class JfrProfilerTest
+{
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+    private ForkDirectory forkDirectory;
+    private BenchmarkGroup benchmarkGroup;
+    private Benchmark benchmark;
+
+    @Before
+    public void setUp() throws Exception
+    {
+        Path parentDir = tempFolder.newFolder().toPath();
+
+        benchmarkGroup = new BenchmarkGroup( "group" );
+        benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, Collections.emptyMap() );
+
+        BenchmarkGroupDirectory groupDirectory = BenchmarkGroupDirectory.createAt( parentDir, benchmarkGroup );
+        BenchmarkDirectory benchmarkDirectory = groupDirectory.findOrCreate( benchmark );
+        forkDirectory = benchmarkDirectory.create( "fork", Collections.emptyList() );
+    }
+
+    @Test
+    public void jvmArgsForPreJdk11() throws Exception
+    {
+        JvmVersion jvmVersion = JvmVersion.create( 8, "Oracle Corporation" );
+        JfrProfiler profiler = new JfrProfiler();
+        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
+        assertThat( jvmArgs, hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) );
+    }
+
+    @Test
+    public void jvmArgsForPostJdk11() throws Exception
+    {
+        JvmVersion jvmVersion = JvmVersion.create( 11, "Oracle Corporation" );
+        JfrProfiler profiler = new JfrProfiler();
+        List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
+        assertThat( jvmArgs, not( hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) ) );
+    }
+}

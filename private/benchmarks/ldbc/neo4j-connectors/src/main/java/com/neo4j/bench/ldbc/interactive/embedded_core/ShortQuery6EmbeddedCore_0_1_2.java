@@ -1,0 +1,93 @@
+/*
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
+ */
+
+package com.neo4j.bench.ldbc.interactive.embedded_core;
+
+import com.ldbc.driver.DbException;
+import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery6MessageForum;
+import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcShortQuery6MessageForumResult;
+import com.neo4j.bench.ldbc.Domain.Forum;
+import com.neo4j.bench.ldbc.Domain.Message;
+import com.neo4j.bench.ldbc.Domain.Nodes;
+import com.neo4j.bench.ldbc.Domain.Person;
+import com.neo4j.bench.ldbc.Domain.Rels;
+import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
+import com.neo4j.bench.ldbc.interactive.Neo4jShortQuery6;
+import com.neo4j.bench.ldbc.operators.Operators;
+
+import java.util.Map;
+
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+
+public class ShortQuery6EmbeddedCore_0_1_2 extends Neo4jShortQuery6<Neo4jConnectionState>
+{
+    private static final String[] PERSON_PROPERTIES = new String[]{
+            Person.ID,
+            Person.FIRST_NAME,
+            Person.LAST_NAME};
+
+    @Override
+    public LdbcShortQuery6MessageForumResult execute( Neo4jConnectionState connection,
+            LdbcShortQuery6MessageForum operation ) throws DbException
+    {
+        Node message = Operators.findNode( connection.db(), Nodes.Message, Message.ID, operation.messageId() );
+        Node post;
+        if ( message.hasLabel( Nodes.Comment ) )
+        {
+            post = getParentPostOfComment( message );
+        }
+        else
+        {
+            post = message;
+        }
+        Node forum = post.getSingleRelationship( Rels.CONTAINER_OF, Direction.INCOMING ).getStartNode();
+        Node moderator = forum.getSingleRelationship( Rels.HAS_MODERATOR, Direction.OUTGOING ).getEndNode();
+        Map<String,Object> moderatorProperties = moderator.getProperties( PERSON_PROPERTIES );
+        return new LdbcShortQuery6MessageForumResult(
+                (long) forum.getProperty( Forum.ID ),
+                (String) forum.getProperty( Forum.TITLE ),
+                (long) moderatorProperties.get( Person.ID ),
+                (String) moderatorProperties.get( Person.FIRST_NAME ),
+                (String) moderatorProperties.get( Person.LAST_NAME )
+        );
+    }
+
+    Node getParentPostOfComment( Node message )
+    {
+        Relationship replyOf = message.getRelationships(
+                Direction.OUTGOING,
+                Rels.REPLY_OF_COMMENT,
+                Rels.REPLY_OF_POST ).iterator().next();
+        while ( replyOf.isType( Rels.REPLY_OF_COMMENT ) )
+        {
+            replyOf = replyOf.getEndNode().getRelationships(
+                    Direction.OUTGOING,
+                    Rels.REPLY_OF_COMMENT,
+                    Rels.REPLY_OF_POST ).iterator().next();
+        }
+        return replyOf.getEndNode();
+    }
+}

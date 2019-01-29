@@ -1,0 +1,155 @@
+{
+  "name": "generatedmusicdata_write",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "WQ1",
+      "queryFile": "queries/WQ1.cypher",
+      "description": "Create dummy nodes for each track",
+      "isSingleShot": true,
+      "hasWarmup": false,
+      "isMutating": true
+    },
+    {
+      "name": "WQ2",
+      "queryFile": "queries/WQ2.cypher",
+      "description": "Merge albums and relationships for each track",
+      "isSingleShot": true,
+      "hasWarmup": false,
+      "isMutating": true
+    },
+    {
+      "name": "WQ3",
+      "queryFile": "queries/WQ3.cypher",
+      "description": "Find relationships between tracks and set properties",
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ4",
+      "queryFile": "queries/WQ4.cypher",
+      "isSingleShot": true,
+      "hasWarmup": false,
+      "isMutating": true
+    },
+    {
+      "name": "WQ5",
+      "description": "From read query Q8 (eager in older code)",
+      "queryFile": "queries/WQ5.cypher",
+      "parameters": {
+        "file": "parameters/relationship.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ6",
+      "description": "From read query Q11",
+      "queryFile": "queries/WQ6.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ7",
+      "description": "From read query Q17 (not eager)",
+      "queryFile": "queries/WQ7.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ8",
+      "description": "From read query Q30",
+      "queryFile": "queries/WQ8.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ9",
+      "description": "Match albums based on date and delete them and their tracks",
+      "queryFile": "queries/WQ9.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ9.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ10",
+      "description": "Refactor graph to used category nodes for release year",
+      "queryFile": "queries/WQ10.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ10.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ11",
+      "description": "Refactor graph to move tracks into album array properties",
+      "queryFile": "queries/WQ11.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ11.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ12",
+      "description": "Refactor graph to re-label tracks",
+      "queryFile": "queries/WQ12.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ12.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ13",
+      "description": "Refactor graph to merge all concerts in the same year",
+      "queryFile": "queries/WQ13.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ13.cypher",
+      "parameters": {
+        "file": "parameters/years.txt",
+        "isLoopable": false
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ14",
+      "description": "Remove Artist labels when redundant",
+      "queryFile": "queries/WQ14.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ14.cypher",
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ15",
+      "description": "Create unlabeled node",
+      "queryFile": "queries/WQ15.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ15.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ16",
+      "description": "Create labeled node",
+      "queryFile": "queries/WQ16.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ16.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ17",
+      "description": "Create labeled node which is also schema indexed",
+      "queryFile": "queries/WQ17.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ17.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ18",
+      "description": "Create labeled node with two labels, one of which is indexed",
+      "queryFile": "queries/WQ18.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ18.cypher",
+      "isMutating": true
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "name": "cineasts_csv",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "WQ1",
+      "description": "Create Users",
+      "queryFile": "queries/WQ1.cypher",
+      "parameters": {
+        "csv": "csv/user.csv"
+      },
+      "isSingleShot": true,
+      "hasWarmup": false,
+      "isMutating": true
+    },
+    {
+      "name": "WQ2",
+      "description": "Create Persons",
+      "queryFile": "queries/WQ2.cypher",
+      "parameters": {
+        "csv": "csv/person.csv"
+      },
+      "isSingleShot": true,
+      "hasWarmup": false,
+      "isMutating": true
+    },
+    {
+      "name": "WQ3",
+      "description": "Create Movies",
+      "queryFile": "queries/WQ3.cypher",
+      "parameters": {
+        "csv": "csv/movie.csv"
+      },
+      "isSingleShot": true,
+      "hasWarmup": false,
+      "isMutating": true
+    },
+    {
+      "name": "WQ4",
+      "description": "Add ACTS_IN relationships between Persons and Movies",
+      "queryFile": "queries/WQ4.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ4.cypher",
+      "parameters": {
+        "csv": "csv/acts_in.csv"
+      },
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ5",
+      "description": "Add DIRECTED relationships between Persons and Movies",
+      "queryFile": "queries/WQ5.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ5.cypher",
+      "parameters": {
+        "csv": "csv/directed.csv"
+      },
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ6",
+      "description": "Add FRIEND relationships among Users",
+      "queryFile": "queries/WQ6.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ6.cypher",
+      "parameters": {
+        "csv": "csv/friend.csv"
+      },
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ7",
+      "description": "Add RATED relationships between Users and Moviesl",
+      "queryFile": "queries/WQ7.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ7.cypher",
+      "parameters": {
+        "csv": "csv/rated.csv"
+      },
+      "isSingleShot": true,
+      "isMutating": true
+    }
+  ]
+}

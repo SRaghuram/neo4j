@@ -1,0 +1,271 @@
+/*
+ * Copyright (c) 2002-2018 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
+ */
+
+package com.neo4j.bench.ldbc.cli;
+
+import com.ldbc.driver.DbException;
+import com.neo4j.bench.ldbc.Neo4jDb;
+import com.neo4j.bench.ldbc.connection.CsvSchema;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.Neo4jImporter;
+import com.neo4j.bench.ldbc.connection.Neo4jSchema;
+import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
+import com.neo4j.bench.ldbc.utils.Utils;
+import io.airlift.airline.Command;
+import io.airlift.airline.Option;
+import io.airlift.airline.OptionType;
+
+import java.io.File;
+import java.util.Arrays;
+
+import static java.lang.String.format;
+
+@Command(
+        name = "import",
+        description = "Imports LDBC CSV file into Neo4j" )
+public class ImportCommand implements Runnable
+{
+    public static final String CMD_IMPORTER = "--importer";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_IMPORTER},
+            description = "Neo4j importer to use: BATCH, PARALLEL",
+            title = "Importer",
+            required = false )
+    private String neo4jImporterString = Neo4jImporter.defaultImporter().name();
+
+    public static final String CMD_CSV_SCHEMA = "--csv-schema";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_CSV_SCHEMA},
+            description = "Format of source CSV files: CSV_REGULAR, CSV_MERGE",
+            title = "CSV Schema",
+            required = true )
+    private String csvSchemaString;
+
+    public static final String CMD_NEO4J_SCHEMA = "--neo4j-schema";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_NEO4J_SCHEMA},
+            description = "Desired schema of target Neo4j store: NEO4J_REGULAR, NEO4J_DENSE_1",
+            title = "Neo4j Schema",
+            required = true )
+    private String neo4jSchemaString;
+
+    public static final String CMD_DB = "--db";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_DB},
+            description = "Target Neo4j database directory",
+            title = "Database Directory",
+            required = true )
+    private File dbDir;
+
+    public static final String CMD_CSV = "--csv";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_CSV},
+            description = "Source CSV dataset directory",
+            title = "CSV Dir",
+            required = true )
+    private File csvDir;
+
+    public static final String CMD_WITH_UNIQUE = "--with-unique";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_WITH_UNIQUE},
+            description = "Create unique constraints for properties that should have unique values",
+            title = "Create Unique Constraints",
+            required = false )
+    private boolean withUnique;
+
+    public static final String CMD_WITH_MANDATORY = "--with-mandatory";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_WITH_MANDATORY},
+            description = "Create mandatory constraints for required properties",
+            title = "Create Mandatory Constraints",
+            required = false )
+    private boolean withMandatory;
+
+    public static final String CMD_SOURCE_DATE = "--source-date";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_SOURCE_DATE},
+            description = "Format of date values in source CSV files: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
+            title = "Source Date Format",
+            required = true )
+    private LdbcDateCodec.Format fromCsvFormat = LdbcDateCodec.Format.NUMBER_ENCODED;
+
+    public static final String CMD_TARGET_DATE = "--target-date";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_TARGET_DATE},
+            description = "Format to store date in, in Neo4j database: STRING_ENCODED, NUMBER_UTC, NUMBER_ENCODED",
+            title = "Target Date Format",
+            required = true )
+    private LdbcDateCodec.Format toNeo4JFormat = LdbcDateCodec.Format.NUMBER_ENCODED;
+
+    public static final String CMD_TIMESTAMP_RESOLUTION = "--timestamp-resolution";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_TIMESTAMP_RESOLUTION},
+            description = "Resolution of timestamp to append to 'dense' relationship types: " +
+                          "NOT_APPLICABLE, YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND",
+            title = "Timestamp Resolution",
+            required = false )
+    private LdbcDateCodec.Resolution timestampResolution = LdbcDateCodec.Resolution.NOT_APPLICABLE;
+
+    public static final String CMD_CONFIG = "--config";
+    @Option( type = OptionType.COMMAND,
+            name = {CMD_CONFIG},
+            description = "Import configuration file (only applicable to Batch Inserter importer variants)",
+            title = "Importer Config",
+            required = false )
+    private File importerConfigurationFile;
+
+    @Override
+    public void run()
+    {
+        System.out.println( format( "Importer                       : %s",
+                neo4jImporterString ) );
+        System.out.println( format( "Source CSV Schema              : %s",
+                csvSchemaString ) );
+        System.out.println( format( "Source CSV Directory           : %s",
+                (null == csvDir) ? null : csvDir.getAbsolutePath() ) );
+        System.out.println( format( "Target Neo4j Schema            : %s",
+                neo4jSchemaString ) );
+        System.out.println( format( "Target Neo4j Directory         : %s",
+                (null == dbDir) ? null : dbDir.getAbsolutePath() ) );
+        System.out.println( format( "Create Unique Constraints      : %s",
+                withUnique ) );
+        System.out.println( format( "Create Mandatory Constraints   : %s",
+                withMandatory ) );
+        System.out.println( format( "Source CSV Date Format         : %s",
+                fromCsvFormat ) );
+        System.out.println( format( "Target Neo4j Date Format       : %s",
+                toNeo4JFormat ) );
+        System.out.println( format( "Dense Timestamp Resolution     : %s",
+                timestampResolution ) );
+        System.out.println( format( "Importer Configuration File    : %s",
+                (null == importerConfigurationFile) ? null : importerConfigurationFile.getAbsolutePath() ) );
+
+        System.out.println( "*** Neo4j DB Properties ***" );
+        try
+        {
+            System.out.println( Neo4jDb.configToString( importerConfigurationFile ) );
+        }
+        catch ( DbException e )
+        {
+            throw new RuntimeException( "Unable to read importer configuration file to string", e );
+        }
+        System.out.println( "************************" );
+
+        if ( !csvDir.exists() )
+        {
+            throw new RuntimeException( format( "Source CSV directory not found: %s", csvDir.getAbsolutePath() ) );
+        }
+
+        CsvSchema csvSchema;
+        try
+        {
+            csvSchema = CsvSchema.valueOf( csvSchemaString );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( format( "Invalid CSV Schema: %s\nValid values are: %s",
+                    csvSchemaString, Arrays.toString( CsvSchema.values() ) ) );
+        }
+        Neo4jSchema neo4jSchema;
+        try
+        {
+            neo4jSchema = Neo4jSchema.valueOf( neo4jSchemaString );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( format( "Invalid Neo4j Schema: %s\nValid values are: %s",
+                    neo4jSchemaString, Arrays.toString( Neo4jSchema.values() ) ) );
+        }
+        Neo4jImporter neo4jImporter;
+        try
+        {
+            neo4jImporter = Neo4jImporter.valueOf( neo4jImporterString );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( format( "Invalid Neo4j Importer: %s\nValid values are: %s",
+                    neo4jImporterString, Arrays.toString( Neo4jImporter.values() ) ) );
+        }
+
+        LdbcSnbImporter importer = LdbcSnbImporter.importerFor( csvSchema, neo4jSchema, neo4jImporter );
+
+        try
+        {
+            importer.load(
+                    dbDir,
+                    csvDir,
+                    importerConfigurationFile,
+                    fromCsvFormat,
+                    toNeo4JFormat,
+                    timestampResolution,
+                    withUnique,
+                    withMandatory
+            );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( "Encountered error while importing data", e );
+        }
+    }
+
+    public static String[] buildArgs(
+            Neo4jImporter neo4jImporter,
+            CsvSchema csvSchema,
+            Neo4jSchema neo4jSchema,
+            File dbDir,
+            File csvDir,
+            File importerConfigurationFile,
+            boolean withUnique,
+            boolean withMandatory,
+            LdbcDateCodec.Format fromCsvFormat,
+            LdbcDateCodec.Format toNeo4JFormat,
+            LdbcDateCodec.Resolution timestampResolution )
+    {
+        String[] args = new String[]{
+                "import",
+                CMD_IMPORTER, neo4jImporter.name(),
+                CMD_CSV_SCHEMA, csvSchema.name(),
+                CMD_NEO4J_SCHEMA, neo4jSchema.name(),
+                CMD_DB, dbDir.getAbsolutePath(),
+                CMD_CSV, csvDir.getAbsolutePath(),
+                CMD_SOURCE_DATE, fromCsvFormat.name(),
+                CMD_TARGET_DATE, toNeo4JFormat.name(),
+                CMD_TIMESTAMP_RESOLUTION, timestampResolution.name()
+        };
+        if ( null != importerConfigurationFile )
+        {
+            args = Utils.copyArrayAndAddElement( args, CMD_CONFIG );
+            args = Utils.copyArrayAndAddElement( args, importerConfigurationFile.getAbsolutePath() );
+        }
+        if ( withUnique )
+        {
+            args = Utils.copyArrayAndAddElement( args, CMD_WITH_UNIQUE );
+        }
+        if ( withMandatory )
+        {
+            args = Utils.copyArrayAndAddElement( args, CMD_WITH_MANDATORY );
+        }
+        return args;
+    }
+}

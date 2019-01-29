@@ -1,0 +1,9 @@
+{
+  "name": "invalid_no_query",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1"
+    }
+  ]
+}

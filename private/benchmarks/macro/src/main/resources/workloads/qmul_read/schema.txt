@@ -1,0 +1,6 @@
+INDEX ON :Person(email)
+INDEX ON :Person(nid)
+INDEX ON :Person(name)
+INDEX ON :Person(number)
+INDEX ON :Person(gender)
+INDEX ON :Person(uid)

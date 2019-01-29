@@ -1,0 +1,5 @@
+{
+  "name": "invalid_empty_queries",
+  "schema": "schema.txt",
+  "queries": []
+}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata modelVersion="1.1.0">
+  <groupId>com.github.chewiebug</groupId>
+  <artifactId>gcviewer</artifactId>
+  <version>1.36-SNAPSHOT</version>
+  <versioning>
+    <snapshot>
+      <localCopy>true</localCopy>
+    </snapshot>
+    <lastUpdated>20181009092227</lastUpdated>
+    <snapshotVersions>
+      <snapshotVersion>
+        <extension>jar</extension>
+        <value>1.36-SNAPSHOT</value>
+        <updated>20181009092227</updated>
+      </snapshotVersion>
+      <snapshotVersion>
+        <extension>pom</extension>
+        <value>1.36-SNAPSHOT</value>
+        <updated>20181009092227</updated>
+      </snapshotVersion>
+    </snapshotVersions>
+  </versioning>
+</metadata>

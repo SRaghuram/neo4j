@@ -1,0 +1,5001 @@
+name_1|name_2
+New Zealand|Cameroon
+Comoros|Estonia
+Qatar|Vanuatu
+Timor-Leste|Serbia
+Turkey|Saudi Arabia
+Soviet Union|Albania
+Kyrgyzstan|Kazakhstan
+Oman|Cocos (Keeling) Islands
+Palestine|Saudi Arabia
+Comoros|Mauritius
+Portugal|Uganda
+Albania|Cape Verde
+East Germany|Moldova
+Kuwait|Antarctica
+Chad|Zimbabwe
+Netherlands Antilles|Benin
+Jordan|American Samoa
+Palau|Kenya
+Réunion|Eritrea
+Bangladesh|U.S. Virgin Islands
+Paraguay|China
+Andorra|Mexico
+Guadeloupe|Netherlands
+Ecuador|Brunei
+Trinidad and Tobago|Andorra
+Mexico|Uganda
+Jordan|Bermuda
+Timor-Leste|French Guiana
+Lithuania|Paraguay
+Macedonia|Chad
+Romania|Greenland
+Nicaragua|Benin
+Vanuatu|Afghanistan
+Grenada|Dominican Republic
+Norfolk Island|Saudi Arabia
+Jersey|Sweden
+Iraq|South Africa
+Puerto Rico|Liechtenstein
+U.S. Virgin Islands|French Guiana
+Mozambique|Monaco
+Mongolia|East Germany
+Honduras|Nicaragua
+Cape Verde|Samoa
+Ghana|Paraguay
+Lithuania|Austria
+Bangladesh|Puerto Rico
+Comoros|Fiji
+Falkland Islands|Chad
+Slovenia|Cuba
+Democratic Republic of the Congo|Equatorial Guinea
+Germany|Falkland Islands
+South Sudan|Singapore
+Burundi|Latvia
+Palau|Sint Maarten (Dutch part)
+Austria|Guinea-Bissau
+Maldives|Serbia
+Syria|Belize
+Sweden|French Guiana
+Benin|Tanzania
+Turkey|Macedonia
+Canada|Canada
+Austria|Bangladesh
+Sierra Leone|Greenland
+Niger|United States Minor Outlying Islands
+Curaçao|Mauritania
+Malawi|Bermuda
+Gabon|Libya
+Iran|Uruguay
+Kenya|Qatar
+Turkmenistan|Bermuda
+Bhutan|Laos
+Switzerland|Serbia
+Heard Island and McDonald Islands|Saint Pierre and Miquelon
+Faroe Islands|Algeria
+India|Czech Republic
+French Southern Territories|Myanmar
+Vatican City State (Holy See)|United Arab Emirates
+Ireland|Norway
+Belarus|Armenia
+Israel|Pakistan
+Oman|Bouvet Island
+Saint Pierre and Miquelon|Ecuador
+Slovakia|Iran
+Fiji|Guyana
+Belgium|Estonia
+Guinea-Bissau|Czechoslovakia
+Sint Maarten (Dutch part)|San Marino
+Bahamas|Guinea-Bissau
+Mongolia|Christmas Island
+Slovakia|Lebanon
+Pakistan|Venezuela
+Micronesia, Federated States of|United States
+Djibouti|Lithuania
+Greece|Samoa
+Montserrat|Macedonia
+Falkland Islands|Latvia
+Poland|Zimbabwe
+Greece|Algeria
+Guinea-Bissau|Benin
+Timor-Leste|Faroe Islands
+Saint Pierre and Miquelon|Åland Islands
+Australia|Togo
+Tajikistan|Brazil
+France|Azerbaijan
+South Sudan|North Korea
+Macao|Portugal
+Estonia|Uzbekistan
+Cameroon|Singapore
+Grenada|Estonia
+Guyana|U.S. Virgin Islands
+Costa Rica|Guam
+Sweden|Liberia
+Guadeloupe|United Kingdom
+Guinea|Uganda
+Cocos (Keeling) Islands|Trinidad and Tobago
+Andorra|Morocco
+United States|Bonaire, Sint Eustatius and Saba
+East Germany|Djibouti
+Mozambique|Kuwait
+Bolivia|Tajikistan
+British Virgin Islands|Grenada
+Gibraltar|Pitcairn
+Luxembourg|Fiji
+Haiti|French Polynesia
+Afghanistan|Iraq
+Niue|Cambodia
+Guam|Israel
+Kiribati|Malta
+Hong Kong|Honduras
+Antarctica|Yemen
+Norway|Saint Lucia
+Puerto Rico|Réunion
+Bonaire, Sint Eustatius and Saba|Armenia
+Brazil|Barbados
+Canada|Monaco
+Mayotte|Congo
+Japan|Democratic Republic of the Congo
+Serbia and Montenegro|Palau
+Indonesia|Andorra
+Brunei|Niger
+Ghana|Saint Pierre and Miquelon
+Norway|South Georgia and the South Sandwich Islands
+Bosnia and Herzegovina|Canada
+Senegal|Macedonia
+Soviet Union|French Southern Territories
+U.S. Virgin Islands|Ethiopia
+Poland|Mozambique
+South Korea|Netherlands
+Philippines|Montserrat
+India|Norway
+Pakistan|Namibia
+South Sudan|Saint Lucia
+Philippines|Kazakhstan
+Poland|Greenland
+Ethiopia|Albania
+Cambodia|British Indian Ocean Territory
+French Guiana|Bahrain
+Solomon Islands|Taiwan
+Mayotte|Qatar
+Bahrain|Réunion
+Gabon|Puerto Rico
+Papua New Guinea|Qatar
+South Georgia and the South Sandwich Islands|Cayman Islands
+United Kingdom|Cocos (Keeling) Islands
+Tanzania|Kazakhstan
+Yugoslavia|Mali
+Djibouti|Germany
+Norfolk Island|Angola
+Finland|French Southern Territories
+Yugoslavia|Puerto Rico
+Fiji|Spain
+Niue|Chad
+Côte d'Ivoire|Nigeria
+Democratic Republic of the Congo|Anguilla
+Jersey|South Korea
+Georgia|Bonaire, Sint Eustatius and Saba
+Saint Pierre and Miquelon|Thailand
+Sint Maarten (Dutch part)|Trinidad and Tobago
+Jordan|Cayman Islands
+Madagascar|Tuvalu
+Jamaica|Venezuela
+Togo|Denmark
+Turkmenistan|Burundi
+Mauritania|Georgia
+Honduras|Bonaire, Sint Eustatius and Saba
+Nigeria|Tajikistan
+Palestine|Isle of Man
+Isle of Man|U.S. Virgin Islands
+Fiji|Bouvet Island
+Åland Islands|Romania
+Guadeloupe|Bangladesh
+Macao|China
+Soviet Union|Fiji
+Grenada|South Sudan
+Saint Helena, Ascension and Tristan da Cunha|Swaziland
+Sao Tome and Principe|Belgium
+Solomon Islands|South Sudan
+Curaçao|Saint Martin (French part)
+Indonesia|Western Sahara
+Trinidad and Tobago|Chad
+Anguilla|Malaysia
+Guinea-Bissau|Morocco
+Botswana|East Germany
+Gambia|Somalia
+Belize|Serbia
+Denmark|Suriname
+Egypt|South Korea
+Solomon Islands|Malawi
+Cape Verde|Jersey
+Uruguay|Kuwait
+Eritrea|Denmark
+Albania|Svalbard and Jan Mayen
+Sao Tome and Principe|Tanzania
+Nicaragua|Haiti
+British Indian Ocean Territory|Lesotho
+Eritrea|Bangladesh
+Saint Kitts and Nevis|Belgium
+Benin|Romania
+Northern Mariana Islands|Guyana
+Qatar|Réunion
+Benin|Marshall Islands
+Trinidad and Tobago|French Guiana
+Egypt|Fiji
+Syria|Wallis and Futuna
+Palestine|Maldives
+Belarus|Isle of Man
+Faroe Islands|Vanuatu
+Austria|Ghana
+Mongolia|Zambia
+Saint Kitts and Nevis|Mali
+Montenegro|Afghanistan
+Cambodia|Czechoslovakia
+Vietnam|Israel
+Montserrat|Australia
+Saudi Arabia|Trinidad and Tobago
+French Southern Territories|Vanuatu
+Canada|Micronesia, Federated States of
+Nauru|Hungary
+Montenegro|Marshall Islands
+Oman|American Samoa
+Syria|Vietnam
+Cook Islands|North Korea
+Indonesia|Armenia
+Tajikistan|Hungary
+Cyprus|Sierra Leone
+United Arab Emirates|Denmark
+Oman|Botswana
+Mongolia|Macao
+Sri Lanka|Martinique
+Liechtenstein|Madagascar
+Moldova|Algeria
+Panama|Belgium
+Jordan|Micronesia, Federated States of
+Mongolia|Cyprus
+Angola|Saint Helena, Ascension and Tristan da Cunha
+Haiti|Tajikistan
+North Korea|Cocos (Keeling) Islands
+Argentina|Brazil
+Suriname|Georgia
+Montserrat|Oman
+Thailand|Guam
+Guernsey|Netherlands Antilles
+Grenada|Antigua and Barbuda
+Croatia|Guadeloupe
+Australia|Saint Helena, Ascension and Tristan da Cunha
+Saint Helena, Ascension and Tristan da Cunha|Hungary
+Svalbard and Jan Mayen|Philippines
+Isle of Man|Eritrea
+Togo|Montserrat
+Yugoslavia|Papua New Guinea
+Belarus|Sudan
+Netherlands|Democratic Republic of the Congo
+Costa Rica|Belize
+Georgia|Sao Tome and Principe
+Netherlands Antilles|Congo
+South Korea|Peru
+East Germany|Finland
+Cameroon|Azerbaijan
+Gambia|Lesotho
+Kuwait|Somalia
+Chile|New Caledonia
+Somalia|Benin
+Japan|Germany
+Lebanon|Comoros
+Papua New Guinea|Zambia
+Honduras|Montenegro
+Andorra|Mongolia
+Sudan|Jersey
+Christmas Island|Yugoslavia
+Hungary|India
+Netherlands|Austria
+Mexico|Aruba
+Czechoslovakia|Belize
+Botswana|Indonesia
+Grenada|Azerbaijan
+Netherlands Antilles|Mayotte
+New Zealand|Wallis and Futuna
+Japan|Canada
+Kyrgyzstan|Eritrea
+New Zealand|Dominica
+Rwanda|Indonesia
+Switzerland|Ukraine
+Sudan|Sri Lanka
+South Korea|Turkey
+Rwanda|Suriname
+Mauritius|Colombia
+Bosnia and Herzegovina|Gibraltar
+Namibia|Democratic Republic of the Congo
+Portugal|Sierra Leone
+French Polynesia|Chile
+Uruguay|Colombia
+Moldova|Mauritania
+Armenia|Kuwait
+Samoa|Pakistan
+South Georgia and the South Sandwich Islands|Uruguay
+Uganda|Heard Island and McDonald Islands
+Czech Republic|Gambia
+Honduras|Mongolia
+Macao|Canada
+Saint Kitts and Nevis|Central African Republic
+Serbia|South Korea
+Timor-Leste|Sudan
+Sierra Leone|Réunion
+Guam|Western Sahara
+Sierra Leone|United States Minor Outlying Islands
+Madagascar|Barbados
+Uruguay|Slovakia
+Sweden|Bangladesh
+Switzerland|San Marino
+Pitcairn|Malta
+Mexico|Jamaica
+Yugoslavia|Chad
+Sweden|Germany
+Haiti|Chile
+Bonaire, Sint Eustatius and Saba|Puerto Rico
+British Virgin Islands|Uruguay
+Ethiopia|Christmas Island
+Christmas Island|Vanuatu
+Tuvalu|Mexico
+Uzbekistan|Pitcairn
+British Indian Ocean Territory|Djibouti
+Egypt|Malaysia
+British Virgin Islands|Oman
+British Virgin Islands|Hong Kong
+Jersey|Saudi Arabia
+Russian Federation|East Germany
+Rwanda|Palestine
+Anguilla|Saint Pierre and Miquelon
+Israel|Burkina Faso
+Norway|Cyprus
+Pakistan|Greece
+Christmas Island|French Southern Territories
+Thailand|Morocco
+Argentina|Antarctica
+Tokelau|Marshall Islands
+Grenada|Romania
+Croatia|United Arab Emirates
+Benin|Niue
+Uruguay|Palestine
+India|Israel
+Rwanda|Fiji
+Svalbard and Jan Mayen|Chad
+Cayman Islands|Wallis and Futuna
+India|Syria
+Antarctica|Cambodia
+Macao|Greece
+Guyana|Uganda
+Turkey|South Africa
+Grenada|Guam
+Monaco|Guyana
+Samoa|Cocos (Keeling) Islands
+Czechoslovakia|Taiwan
+Denmark|Italy
+Eritrea|Armenia
+Guernsey|Costa Rica
+Malaysia|Guatemala
+Jersey|Central African Republic
+Palau|Myanmar
+Iran|Armenia
+Rwanda|Italy
+Algeria|Grenada
+Cambodia|Trinidad and Tobago
+Réunion|Tokelau
+New Zealand|Montenegro
+Haiti|United States
+Montenegro|Bangladesh
+United Kingdom|Zambia
+Canada|Saint Kitts and Nevis
+Mayotte|Réunion
+Heard Island and McDonald Islands|Nauru
+Turks and Caicos Islands|Uruguay
+South Korea|Palestine
+Tajikistan|Aruba
+Iraq|Malaysia
+Cape Verde|Italy
+Hungary|Bermuda
+Faroe Islands|Kiribati
+Taiwan|Cook Islands
+Lithuania|Malawi
+Sudan|Tunisia
+Sweden|Slovenia
+Slovakia|Fiji
+Afghanistan|Switzerland
+Malta|Mayotte
+Equatorial Guinea|Slovenia
+Armenia|Norfolk Island
+Greenland|Saint Helena, Ascension and Tristan da Cunha
+Malaysia|France
+Mozambique|Sweden
+Thailand|Serbia
+Slovenia|Djibouti
+Saint Lucia|Eritrea
+Egypt|Luxembourg
+Ireland|Isle of Man
+East Germany|Malta
+Montenegro|Serbia and Montenegro
+Mali|Venezuela
+Guam|Lesotho
+United States Minor Outlying Islands|Barbados
+Mauritania|France
+Italy|Italy
+British Indian Ocean Territory|British Virgin Islands
+Nauru|Somalia
+Georgia|Curaçao
+Burundi|U.S. Virgin Islands
+Turkmenistan|Cape Verde
+Namibia|Netherlands
+Argentina|Czech Republic
+Curaçao|Colombia
+Thailand|Bhutan
+Tuvalu|Syria
+Ireland|Kyrgyzstan
+Poland|Colombia
+Mauritania|Niger
+United Kingdom|Turkey
+Australia|Georgia
+United Kingdom|Yemen
+Heard Island and McDonald Islands|Belarus
+Cyprus|Portugal
+East Germany|Singapore
+Tonga|Fiji
+Rwanda|Marshall Islands
+Barbados|Croatia
+Botswana|Malta
+Chile|East Germany
+Sao Tome and Principe|Guam
+Belgium|Romania
+Mayotte|Bolivia
+French Southern Territories|Kuwait
+Libya|Gabon
+Haiti|Haiti
+Cambodia|Niger
+Netherlands Antilles|Mexico
+Paraguay|Marshall Islands
+Algeria|Panama
+Sweden|Netherlands Antilles
+Togo|Netherlands Antilles
+Iceland|Bolivia
+Qatar|U.S. Virgin Islands
+Yugoslavia|Tokelau
+Monaco|Switzerland
+United States|Italy
+Ethiopia|Dominica
+Curaçao|Honduras
+Nepal|Gibraltar
+Pakistan|Cameroon
+Honduras|Oman
+Malaysia|Belgium
+Chile|Hong Kong
+Lithuania|Philippines
+Gambia|Zambia
+Mayotte|Kenya
+Ecuador|Macedonia
+Djibouti|Liberia
+Bahamas|Pitcairn
+Bosnia and Herzegovina|Saint Vincent and The Grenadines
+Mongolia|Malawi
+Portugal|Estonia
+Yugoslavia|Tuvalu
+Puerto Rico|Italy
+Samoa|Mauritania
+Bhutan|Lesotho
+Niger|Italy
+Malta|Netherlands
+Mexico|Saudi Arabia
+Timor-Leste|San Marino
+Mali|Equatorial Guinea
+South Sudan|Armenia
+Libya|Tajikistan
+Saint Barthélemy|Romania
+Falkland Islands|Marshall Islands
+Bhutan|Grenada
+Kiribati|Nepal
+Germany|Bahrain
+New Zealand|Bahamas
+Belarus|Argentina
+Kyrgyzstan|Albania
+Tonga|Seychelles
+Syria|Saint Pierre and Miquelon
+Democratic Republic of the Congo|Egypt
+Jamaica|Tonga
+Suriname|Albania
+Fiji|Grenada
+Syria|Djibouti
+Macedonia|Macedonia
+Grenada|Norfolk Island
+Mozambique|Wallis and Futuna
+Luxembourg|Netherlands
+Liberia|Libya
+Palau|Bhutan
+Macao|Montserrat
+Russian Federation|French Guiana
+Uzbekistan|Samoa
+India|Grenada
+Tonga|Suriname
+East Germany|Malaysia
+Armenia|North Korea
+Greenland|Palau
+Guadeloupe|Saint Kitts and Nevis
+Aruba|Bosnia and Herzegovina
+Nauru|Bhutan
+Norway|Macao
+Oman|Kenya
+South Georgia and the South Sandwich Islands|Sierra Leone
+Christmas Island|Bonaire, Sint Eustatius and Saba
+Tajikistan|Ecuador
+Réunion|Gambia
+Antigua and Barbuda|Nicaragua
+Western Sahara|Sri Lanka
+British Indian Ocean Territory|Pitcairn
+India|Nigeria
+Tajikistan|Nigeria
+Belarus|Taiwan
+Tonga|Macedonia
+Turks and Caicos Islands|Ecuador
+Indonesia|Hong Kong
+United States Minor Outlying Islands|Norfolk Island
+Pakistan|Niue
+Belize|Italy
+Czechoslovakia|Saint Vincent and The Grenadines
+Gibraltar|Andorra
+New Caledonia|Brunei
+Namibia|Kenya
+Western Sahara|Bahrain
+Bahamas|Iceland
+Italy|Poland
+Montenegro|New Zealand
+Antigua and Barbuda|Greenland
+Liberia|Montserrat
+Tanzania|Guam
+Micronesia, Federated States of|Poland
+Russian Federation|Gibraltar
+Iran|Papua New Guinea
+Madagascar|Bosnia and Herzegovina
+Gibraltar|Anguilla
+Kenya|Macao
+Switzerland|South Sudan
+Svalbard and Jan Mayen|Saint Kitts and Nevis
+Tokelau|Israel
+Uruguay|Bonaire, Sint Eustatius and Saba
+U.S. Virgin Islands|Bhutan
+Serbia|Venezuela
+Fiji|Saint Barthélemy
+Montserrat|Armenia
+Jersey|Réunion
+U.S. Virgin Islands|Saint Helena, Ascension and Tristan da Cunha
+Indonesia|Martinique
+Micronesia, Federated States of|Azerbaijan
+Laos|Estonia
+Netherlands Antilles|Barbados
+Niue|Mongolia
+Laos|Russian Federation
+Brunei|Barbados
+Thailand|Comoros
+Afghanistan|Montenegro
+Libya|Cambodia
+United Kingdom|Isle of Man
+Tokelau|Kazakhstan
+Portugal|Colombia
+Latvia|Venezuela
+Spain|Solomon Islands
+Martinique|Barbados
+Vatican City State (Holy See)|French Southern Territories
+Japan|El Salvador
+British Indian Ocean Territory|Bulgaria
+Guinea-Bissau|India
+Bosnia and Herzegovina|British Indian Ocean Territory
+Iceland|Cayman Islands
+Indonesia|Tajikistan
+Afghanistan|Pitcairn
+United Kingdom|Cameroon
+Réunion|Barbados
+Sweden|Pitcairn
+Poland|Saint Barthélemy
+Cook Islands|Pitcairn
+British Indian Ocean Territory|Liechtenstein
+Ethiopia|Papua New Guinea
+Italy|Kuwait
+Antigua and Barbuda|Cambodia
+Kenya|Barbados
+Comoros|Democratic Republic of the Congo
+Mexico|Afghanistan
+Guatemala|Estonia
+Italy|Guinea-Bissau
+South Africa|Lithuania
+China|Myanmar
+Lebanon|Togo
+Turkmenistan|Guadeloupe
+Estonia|French Guiana
+North Korea|Dominican Republic
+Cayman Islands|Congo
+Tonga|Andorra
+Lithuania|Georgia
+Western Sahara|Taiwan
+Nigeria|Switzerland
+Mayotte|Argentina
+Vietnam|Bouvet Island
+North Korea|French Polynesia
+Zambia|Luxembourg
+Bermuda|Turkey
+Kiribati|U.S. Virgin Islands
+Vanuatu|Libya
+Cuba|Cape Verde
+Gabon|Guinea
+Nepal|Spain
+Kenya|Argentina
+Somalia|Puerto Rico
+Jordan|Kuwait
+South Georgia and the South Sandwich Islands|Saint Barthélemy
+San Marino|Nepal
+Faroe Islands|Norway
+Brazil|Svalbard and Jan Mayen
+Yemen|Finland
+Kenya|Sint Maarten (Dutch part)
+Liberia|Wallis and Futuna
+Congo|Kenya
+Sudan|Mauritius
+Egypt|Vatican City State (Holy See)
+East Germany|Armenia
+Cameroon|Trinidad and Tobago
+Western Sahara|Bosnia and Herzegovina
+Comoros|Falkland Islands
+French Polynesia|Turks and Caicos Islands
+Netherlands Antilles|El Salvador
+Monaco|New Zealand
+Nauru|United States Minor Outlying Islands
+Timor-Leste|Nicaragua
+French Polynesia|Cocos (Keeling) Islands
+Yugoslavia|Malta
+New Caledonia|Suriname
+Turks and Caicos Islands|British Virgin Islands
+Iceland|Russian Federation
+France|Haiti
+Gibraltar|Bahamas
+Somalia|Hong Kong
+Luxembourg|Palestine
+Bolivia|Moldova
+Nepal|Rwanda
+Bulgaria|Guam
+Saint Kitts and Nevis|China
+Lithuania|Western Sahara
+Wallis and Futuna|Guinea
+Uzbekistan|Swaziland
+Saint Martin (French part)|Dominica
+Colombia|Mongolia
+Palau|Malaysia
+Taiwan|Australia
+Guernsey|Panama
+Estonia|Martinique
+Mozambique|Nepal
+Brazil|Saint Martin (French part)
+Serbia|Mauritius
+Saint Vincent and The Grenadines|Tonga
+Saint Kitts and Nevis|Greece
+Martinique|Slovakia
+Jersey|Ecuador
+Greece|Russian Federation
+Belgium|Saint Kitts and Nevis
+Åland Islands|Serbia
+Gambia|Peru
+Antigua and Barbuda|Guyana
+Jersey|Iran
+Burkina Faso|Montserrat
+Bulgaria|Tunisia
+Serbia|Philippines
+Vatican City State (Holy See)|Brunei
+Grenada|Malawi
+Chile|Azerbaijan
+Grenada|Saint Barthélemy
+Nigeria|United Kingdom
+Kazakhstan|Bermuda
+Netherlands|Niger
+Belarus|Lithuania
+Japan|Antigua and Barbuda
+Nicaragua|Saudi Arabia
+Malta|New Caledonia
+Barbados|Serbia
+Malaysia|Nicaragua
+Martinique|Ghana
+Cayman Islands|Antarctica
+Anguilla|Mauritania
+Falkland Islands|Turkmenistan
+French Southern Territories|Lithuania
+Côte d'Ivoire|Åland Islands
+Solomon Islands|Gabon
+Togo|Indonesia
+Dominica|Gibraltar
+Moldova|Sri Lanka
+U.S. Virgin Islands|Luxembourg
+Faroe Islands|Benin
+French Southern Territories|Svalbard and Jan Mayen
+Belarus|South Sudan
+Monaco|Antigua and Barbuda
+Brunei|Nicaragua
+Antigua and Barbuda|Togo
+British Indian Ocean Territory|Western Sahara
+Hong Kong|Martinique
+Guernsey|Samoa
+Vanuatu|Iran
+Turkey|Austria
+Cyprus|Sweden
+Sri Lanka|Taiwan
+East Germany|Bonaire, Sint Eustatius and Saba
+Cayman Islands|Kazakhstan
+Peru|Togo
+Spain|Vietnam
+Ethiopia|Cameroon
+Swaziland|Suriname
+Côte d'Ivoire|Cambodia
+Bouvet Island|Sweden
+Saint Barthélemy|Cape Verde
+Guadeloupe|Denmark
+Macedonia|Sao Tome and Principe
+Dominica|Mongolia
+Monaco|Greenland
+El Salvador|Northern Mariana Islands
+Ireland|British Indian Ocean Territory
+Tajikistan|Nepal
+Democratic Republic of the Congo|Mongolia
+Greece|Namibia
+Cocos (Keeling) Islands|Guadeloupe
+Botswana|Saint Barthélemy
+Antigua and Barbuda|Serbia and Montenegro
+Bermuda|Hong Kong
+Greece|Sint Maarten (Dutch part)
+Palestine|Solomon Islands
+Malta|Vatican City State (Holy See)
+French Guiana|Tunisia
+Saudi Arabia|Tokelau
+Bulgaria|South Sudan
+Algeria|Japan
+Lesotho|Mongolia
+Iran|Denmark
+Tuvalu|Niger
+Gambia|Bahrain
+San Marino|Democratic Republic of the Congo
+New Caledonia|Saint Lucia
+Kyrgyzstan|Saint Barthélemy
+Christmas Island|Thailand
+East Germany|Falkland Islands
+Swaziland|Bermuda
+Swaziland|Jersey
+Lebanon|Micronesia, Federated States of
+Mauritania|Mauritania
+Tanzania|Somalia
+Andorra|Madagascar
+Cocos (Keeling) Islands|Belarus
+Réunion|United States
+India|East Germany
+Brazil|Réunion
+Denmark|Gambia
+Faroe Islands|Nepal
+Afghanistan|Kiribati
+Ghana|Gibraltar
+Grenada|Maldives
+United Kingdom|South Georgia and the South Sandwich Islands
+Senegal|Nauru
+Bahrain|Vatican City State (Holy See)
+Cape Verde|Mexico
+Japan|Croatia
+Libya|Burundi
+Oman|Malta
+Albania|Bahamas
+Thailand|Fiji
+Barbados|Eritrea
+Solomon Islands|Myanmar
+Azerbaijan|Antigua and Barbuda
+Angola|Panama
+Chad|Spain
+Ecuador|Sint Maarten (Dutch part)
+Palau|Sudan
+Syria|Lesotho
+Samoa|Antigua and Barbuda
+Romania|Poland
+Kuwait|Guam
+Sint Maarten (Dutch part)|Portugal
+Heard Island and McDonald Islands|Guam
+U.S. Virgin Islands|Turkey
+Bangladesh|Guinea
+Micronesia, Federated States of|Syria
+Antigua and Barbuda|South Sudan
+Togo|Jamaica
+Bolivia|Colombia
+Jordan|Liberia
+Chile|Lebanon
+Antigua and Barbuda|Sint Maarten (Dutch part)
+Sudan|Cook Islands
+San Marino|Saint Kitts and Nevis
+Gabon|Bosnia and Herzegovina
+Cambodia|Guyana
+Nepal|Faroe Islands
+Macao|Australia
+Morocco|Czechoslovakia
+Central African Republic|Serbia
+Australia|Sierra Leone
+Swaziland|Montserrat
+Sudan|Guinea
+Angola|Cameroon
+Mexico|American Samoa
+Norfolk Island|Sint Maarten (Dutch part)
+Morocco|U.S. Virgin Islands
+Belize|Jersey
+Spain|Western Sahara
+Montenegro|Lesotho
+Sierra Leone|Nepal
+Pakistan|Lesotho
+Algeria|Switzerland
+Guernsey|Germany
+Bermuda|Seychelles
+Netherlands Antilles|Ghana
+Wallis and Futuna|Australia
+Liechtenstein|Argentina
+Nepal|Poland
+Côte d'Ivoire|Argentina
+Romania|Uzbekistan
+Tokelau|Aruba
+Netherlands Antilles|Nicaragua
+Swaziland|Cyprus
+Democratic Republic of the Congo|Philippines
+Bosnia and Herzegovina|Faroe Islands
+Ecuador|Austria
+Guinea|Armenia
+Andorra|French Southern Territories
+Belarus|Cocos (Keeling) Islands
+Haiti|Curaçao
+South Georgia and the South Sandwich Islands|Turks and Caicos Islands
+Hungary|United Arab Emirates
+Bermuda|Kyrgyzstan
+Grenada|Ukraine
+India|Australia
+Bhutan|Chile
+Montenegro|Belize
+Cuba|Faroe Islands
+Taiwan|Jordan
+Albania|Greenland
+Solomon Islands|Bolivia
+Mayotte|Democratic Republic of the Congo
+Heard Island and McDonald Islands|Guinea-Bissau
+Saint Vincent and The Grenadines|Bonaire, Sint Eustatius and Saba
+Dominican Republic|Tokelau
+Côte d'Ivoire|British Virgin Islands
+Algeria|United Kingdom
+France|Nicaragua
+Madagascar|Cambodia
+Guadeloupe|Curaçao
+Macao|Antarctica
+Iran|Cameroon
+Honduras|Greece
+Canada|Guam
+Pakistan|Armenia
+Marshall Islands|Costa Rica
+Slovakia|Seychelles
+Ecuador|Mayotte
+Malta|Kazakhstan
+Italy|Singapore
+Egypt|French Southern Territories
+Niger|Afghanistan
+Marshall Islands|Uruguay
+Laos|Ghana
+Serbia and Montenegro|Philippines
+Bermuda|Côte d'Ivoire
+Azerbaijan|Morocco
+Guam|British Indian Ocean Territory
+Qatar|Uzbekistan
+Kuwait|New Zealand
+Uganda|Ghana
+Puerto Rico|Guyana
+Czech Republic|Afghanistan
+Myanmar|Portugal
+Australia|China
+South Korea|Liberia
+Luxembourg|Macao
+Belgium|Cyprus
+Nigeria|Thailand
+Nicaragua|Montenegro
+Haiti|Somalia
+Azerbaijan|Panama
+Dominican Republic|Liberia
+Barbados|Georgia
+Russian Federation|India
+Libya|American Samoa
+Montserrat|Cambodia
+Jamaica|China
+Sweden|Palau
+Nepal|Turkey
+Saint Lucia|Malaysia
+Fiji|Dominican Republic
+Egypt|Svalbard and Jan Mayen
+Thailand|Qatar
+Moldova|Samoa
+North Korea|Iceland
+Soviet Union|Spain
+China|Gambia
+Lebanon|Angola
+South Africa|Yemen
+Algeria|Sudan
+Israel|Saint Vincent and The Grenadines
+Saint Martin (French part)|Australia
+Suriname|Puerto Rico
+Iraq|Syria
+Estonia|Costa Rica
+Malaysia|Namibia
+Japan|Marshall Islands
+Georgia|Sudan
+Guernsey|Namibia
+Ghana|Jersey
+Guinea-Bissau|Guyana
+Liberia|Belarus
+Iceland|Yugoslavia
+Yemen|Macao
+Mauritius|Moldova
+Swaziland|Mexico
+Liberia|Botswana
+Greece|Azerbaijan
+North Korea|Nauru
+Guinea|Greece
+British Virgin Islands|Faroe Islands
+Australia|South Sudan
+Jamaica|Philippines
+Sint Maarten (Dutch part)|Cayman Islands
+Saint Kitts and Nevis|Angola
+Brazil|Saint Barthélemy
+Serbia|Montserrat
+Botswana|Mayotte
+Netherlands|Solomon Islands
+Libya|Iceland
+Ethiopia|Niger
+Sudan|Panama
+Latvia|Taiwan
+Jersey|Greenland
+Costa Rica|Bolivia
+Andorra|Tuvalu
+Guatemala|Bosnia and Herzegovina
+Russian Federation|Norway
+Nauru|Eritrea
+Bhutan|Spain
+U.S. Virgin Islands|United Arab Emirates
+Jersey|Saint Kitts and Nevis
+Comoros|Czech Republic
+Guinea-Bissau|Thailand
+Slovakia|Uruguay
+Hong Kong|Georgia
+Uruguay|Lithuania
+Sri Lanka|Montenegro
+Saint Martin (French part)|Mali
+Vietnam|Kiribati
+Singapore|Pitcairn
+Ghana|Pakistan
+Malta|China
+Bulgaria|Bermuda
+Serbia and Montenegro|Guatemala
+Vietnam|South Sudan
+Pakistan|Togo
+Bahamas|North Korea
+Cambodia|Colombia
+Tajikistan|Eritrea
+Botswana|Burundi
+Cambodia|Samoa
+Serbia and Montenegro|Rwanda
+Barbados|Algeria
+Andorra|Romania
+Solomon Islands|Sao Tome and Principe
+Colombia|Equatorial Guinea
+Liechtenstein|Czechoslovakia
+Egypt|Grenada
+Gabon|Tunisia
+Saint Helena, Ascension and Tristan da Cunha|Tonga
+Madagascar|Dominican Republic
+Moldova|Paraguay
+Turkey|French Southern Territories
+Nigeria|Guinea
+Liechtenstein|Norfolk Island
+Kiribati|Spain
+Qatar|Nicaragua
+Guadeloupe|East Germany
+Paraguay|Japan
+Åland Islands|Portugal
+Azerbaijan|Botswana
+Chad|Tokelau
+Pakistan|Cambodia
+Saint Barthélemy|Grenada
+Tokelau|Kuwait
+United States|Switzerland
+Panama|Bulgaria
+United States Minor Outlying Islands|Switzerland
+Saint Vincent and The Grenadines|Rwanda
+Honduras|Syria
+Suriname|Tokelau
+Soviet Union|Greece
+Indonesia|Finland
+Netherlands|Palestine
+Northern Mariana Islands|Mexico
+Estonia|French Polynesia
+Tuvalu|Andorra
+Thailand|Yemen
+Micronesia, Federated States of|Germany
+Sri Lanka|Cameroon
+Mauritius|Vietnam
+Grenada|Macedonia
+Democratic Republic of the Congo|Yemen
+Tonga|Hungary
+Croatia|Czechoslovakia
+French Polynesia|Sierra Leone
+Mozambique|Iceland
+French Southern Territories|Bermuda
+Costa Rica|Finland
+Australia|Iceland
+Bolivia|France
+Taiwan|Burkina Faso
+Faroe Islands|Mali
+Hong Kong|Norfolk Island
+Moldova|Svalbard and Jan Mayen
+United States|Belize
+Réunion|Ecuador
+Bahrain|Australia
+Bangladesh|Cayman Islands
+Angola|Taiwan
+Peru|Tajikistan
+Libya|Bouvet Island
+Greenland|India
+Tajikistan|Lesotho
+Zimbabwe|Serbia
+Madagascar|Puerto Rico
+Lithuania|Iraq
+Georgia|China
+Tanzania|Ghana
+Grenada|New Zealand
+Iraq|Bolivia
+Rwanda|Jordan
+South Sudan|Martinique
+Hong Kong|Cyprus
+Costa Rica|Honduras
+Marshall Islands|Martinique
+American Samoa|Kyrgyzstan
+Saudi Arabia|Macedonia
+Falkland Islands|Micronesia, Federated States of
+Haiti|Tonga
+Antigua and Barbuda|Gambia
+Saint Vincent and The Grenadines|Ecuador
+Qatar|Pitcairn
+Nigeria|Cape Verde
+Chad|Falkland Islands
+Maldives|Switzerland
+Mauritius|Cook Islands
+Equatorial Guinea|Paraguay
+Lebanon|Nauru
+Solomon Islands|Réunion
+Turkmenistan|Benin
+Serbia and Montenegro|Peru
+Israel|Western Sahara
+Samoa|Algeria
+Albania|United States Minor Outlying Islands
+Venezuela|French Southern Territories
+Ecuador|Sudan
+Australia|Bermuda
+Bouvet Island|Cuba
+Montserrat|Portugal
+Hungary|Micronesia, Federated States of
+El Salvador|Christmas Island
+Saint Vincent and The Grenadines|Kazakhstan
+Hungary|Chad
+Dominica|Sri Lanka
+Morocco|Venezuela
+Pakistan|Iran
+Azerbaijan|Germany
+United States|American Samoa
+Spain|Germany
+Uganda|United States Minor Outlying Islands
+Bosnia and Herzegovina|Malawi
+Nauru|Malta
+Bulgaria|Faroe Islands
+Zimbabwe|United States
+Hungary|Slovakia
+Estonia|Cape Verde
+Cayman Islands|Monaco
+Lebanon|Seychelles
+Jamaica|South Sudan
+Somalia|Taiwan
+Oman|Canada
+Puerto Rico|Kenya
+Guinea|Serbia and Montenegro
+Sweden|Yugoslavia
+Liberia|Kenya
+South Sudan|El Salvador
+Qatar|Ethiopia
+Antarctica|Chad
+French Guiana|United Kingdom
+Bangladesh|Saint Vincent and The Grenadines
+Hungary|Uzbekistan
+Netherlands|Marshall Islands
+Sint Maarten (Dutch part)|Kazakhstan
+Yemen|Argentina
+Andorra|Saint Lucia
+Jordan|Japan
+Eritrea|Bouvet Island
+Madagascar|Maldives
+Pitcairn|Haiti
+American Samoa|Soviet Union
+Pakistan|Antarctica
+Spain|Lithuania
+French Southern Territories|Equatorial Guinea
+Belarus|Christmas Island
+Trinidad and Tobago|Indonesia
+Austria|Romania
+Malaysia|Tonga
+Macedonia|Laos
+Comoros|Saint Pierre and Miquelon
+Falkland Islands|Guinea
+China|British Indian Ocean Territory
+Paraguay|Angola
+Rwanda|Ethiopia
+Antigua and Barbuda|Timor-Leste
+Tunisia|Solomon Islands
+Jordan|Costa Rica
+Sao Tome and Principe|Hong Kong
+British Indian Ocean Territory|Libya
+Seychelles|Congo
+Austria|Portugal
+Netherlands Antilles|Montserrat
+Greenland|Northern Mariana Islands
+Åland Islands|Sudan
+Singapore|Finland
+Taiwan|Guam
+Saint Martin (French part)|Slovenia
+Anguilla|Barbados
+Côte d'Ivoire|French Polynesia
+Germany|Israel
+Macao|Togo
+Norfolk Island|Brazil
+Uzbekistan|Myanmar
+Bouvet Island|Australia
+Guinea|United States
+Sierra Leone|French Polynesia
+Gambia|Montenegro
+Saudi Arabia|Brazil
+Italy|Guadeloupe
+Guadeloupe|Isle of Man
+Haiti|Rwanda
+Yemen|Norway
+Aruba|Burkina Faso
+Kiribati|Andorra
+Fiji|Singapore
+Ukraine|Hong Kong
+Nigeria|Aruba
+Åland Islands|Bulgaria
+Ukraine|Ecuador
+Gibraltar|Serbia
+Kazakhstan|South Georgia and the South Sandwich Islands
+Guadeloupe|Macedonia
+Moldova|Sint Maarten (Dutch part)
+Faroe Islands|Wallis and Futuna
+Lesotho|Ireland
+Guam|Syria
+Albania|Palestine
+French Guiana|Laos
+Oman|Switzerland
+Saint Lucia|Moldova
+French Guiana|Niue
+Central African Republic|Trinidad and Tobago
+Brunei|British Virgin Islands
+Belarus|Saint Helena, Ascension and Tristan da Cunha
+Curaçao|Libya
+Peru|Hungary
+Yugoslavia|Mauritania
+Western Sahara|Sweden
+Laos|Benin
+Benin|Mauritius
+Equatorial Guinea|Serbia and Montenegro
+Malta|Honduras
+Dominican Republic|Sierra Leone
+Antarctica|Trinidad and Tobago
+Suriname|Haiti
+Swaziland|Nepal
+Croatia|Mali
+El Salvador|Sierra Leone
+Canada|Barbados
+Japan|Namibia
+Somalia|Swaziland
+Central African Republic|Saint Barthélemy
+El Salvador|Mayotte
+Mauritius|Belgium
+Iraq|Macao
+Laos|Cook Islands
+Bulgaria|Nepal
+South Sudan|Liechtenstein
+Ghana|El Salvador
+Marshall Islands|Kiribati
+Belize|Guinea-Bissau
+Rwanda|Democratic Republic of the Congo
+Monaco|Nigeria
+Saint Lucia|Canada
+Pitcairn|Jamaica
+Curaçao|Tokelau
+Greenland|Burkina Faso
+North Korea|Bolivia
+Gambia|Mali
+Cocos (Keeling) Islands|Equatorial Guinea
+Saint Pierre and Miquelon|Mexico
+Niger|Norfolk Island
+Togo|Cape Verde
+Niue|Namibia
+Estonia|Tonga
+Sweden|Yemen
+Bosnia and Herzegovina|Réunion
+Nicaragua|Saint Barthélemy
+Hong Kong|Benin
+Brazil|Latvia
+East Germany|Dominica
+Fiji|Barbados
+British Virgin Islands|Antigua and Barbuda
+Gibraltar|Aruba
+Romania|Palau
+Ecuador|Tunisia
+Netherlands|Guam
+Gambia|Sao Tome and Principe
+Uzbekistan|Ethiopia
+Turkey|Ireland
+United States Minor Outlying Islands|Guatemala
+Austria|Palau
+United Kingdom|Cyprus
+Yugoslavia|Honduras
+Guernsey|American Samoa
+Yugoslavia|Bahrain
+Afghanistan|Panama
+Northern Mariana Islands|Andorra
+Sudan|Moldova
+Cook Islands|Wallis and Futuna
+Czech Republic|Anguilla
+East Germany|Sierra Leone
+Greece|Netherlands Antilles
+Israel|Switzerland
+Morocco|Suriname
+Slovenia|Antigua and Barbuda
+Tokelau|Vanuatu
+French Southern Territories|India
+Vietnam|Norfolk Island
+Andorra|United Kingdom
+Germany|Paraguay
+Morocco|Nigeria
+Portugal|Zimbabwe
+Saint Vincent and The Grenadines|Ukraine
+Pitcairn|Antarctica
+Puerto Rico|Curaçao
+Mayotte|Antarctica
+Laos|Kazakhstan
+Estonia|Monaco
+Uganda|Peru
+Saint Helena, Ascension and Tristan da Cunha|Kenya
+Mongolia|Saint Lucia
+Switzerland|Uzbekistan
+South Sudan|Vatican City State (Holy See)
+Guam|Sierra Leone
+Côte d'Ivoire|Malawi
+Eritrea|Turks and Caicos Islands
+Iceland|Western Sahara
+Isle of Man|Hong Kong
+Tokelau|Saint Barthélemy
+Papua New Guinea|Armenia
+Puerto Rico|Ethiopia
+North Korea|Anguilla
+Estonia|Pakistan
+Nepal|British Indian Ocean Territory
+Mauritius|Venezuela
+Latvia|Nepal
+South Africa|Sint Maarten (Dutch part)
+North Korea|Moldova
+Sierra Leone|Dominican Republic
+Nicaragua|Antarctica
+Kenya|Niue
+Burundi|China
+Albania|Uruguay
+Lesotho|Macedonia
+Fiji|Yemen
+Lithuania|Brunei
+Somalia|Mauritius
+Christmas Island|United Arab Emirates
+Ukraine|Soviet Union
+Tanzania|Czechoslovakia
+Bahamas|French Guiana
+Ethiopia|Somalia
+Austria|Uganda
+Benin|Palestine
+South Africa|Cook Islands
+Palau|Spain
+Antigua and Barbuda|Hungary
+Nauru|El Salvador
+Faroe Islands|South Africa
+Georgia|Venezuela
+Seychelles|Monaco
+Ethiopia|Guatemala
+Guinea|Gabon
+Myanmar|Barbados
+Barbados|Djibouti
+Australia|Djibouti
+Montserrat|Eritrea
+Brazil|Ethiopia
+Montenegro|Mozambique
+Panama|Malawi
+Jersey|Mauritania
+Mexico|Malaysia
+Burkina Faso|Barbados
+Eritrea|Djibouti
+Greenland|Albania
+Sierra Leone|Barbados
+Cape Verde|Estonia
+Yemen|Romania
+Austria|Kenya
+French Polynesia|Suriname
+Kuwait|Madagascar
+Tokelau|Moldova
+Puerto Rico|Palau
+Botswana|Denmark
+Thailand|Guinea
+Samoa|Netherlands
+Hong Kong|South Sudan
+French Southern Territories|Antarctica
+Madagascar|Argentina
+Lithuania|Yugoslavia
+Russian Federation|Northern Mariana Islands
+India|Nepal
+Paraguay|France
+Burundi|Estonia
+Uzbekistan|Antarctica
+Togo|Pitcairn
+Democratic Republic of the Congo|Cuba
+Dominica|Côte d'Ivoire
+Uzbekistan|Belarus
+Brazil|Ukraine
+Sri Lanka|Brazil
+United States Minor Outlying Islands|Morocco
+Malawi|Hungary
+Botswana|Pakistan
+Andorra|Syria
+Thailand|Saint Pierre and Miquelon
+Pakistan|Morocco
+France|Svalbard and Jan Mayen
+Cocos (Keeling) Islands|Bonaire, Sint Eustatius and Saba
+Kyrgyzstan|Kuwait
+Aruba|Nicaragua
+Ghana|Trinidad and Tobago
+Guinea|Liechtenstein
+Isle of Man|Dominica
+Myanmar|Micronesia, Federated States of
+Finland|Sudan
+Turkmenistan|Suriname
+Slovenia|Solomon Islands
+Tonga|Marshall Islands
+Belize|Burkina Faso
+Rwanda|Timor-Leste
+Tajikistan|Belarus
+Mongolia|Cayman Islands
+Brazil|Guadeloupe
+United States Minor Outlying Islands|Monaco
+Dominican Republic|Tanzania
+San Marino|Saint Lucia
+Russian Federation|Djibouti
+Eritrea|French Polynesia
+Palau|Sweden
+Northern Mariana Islands|Azerbaijan
+Costa Rica|Iran
+Western Sahara|Thailand
+Saint Helena, Ascension and Tristan da Cunha|Nauru
+Kenya|Belarus
+Heard Island and McDonald Islands|Dominican Republic
+Solomon Islands|Cape Verde
+Russian Federation|Guadeloupe
+Gambia|Finland
+Mayotte|Senegal
+Bouvet Island|Sudan
+Venezuela|Croatia
+Uzbekistan|Fiji
+Nepal|Djibouti
+Congo|India
+Poland|Brunei
+Seychelles|Barbados
+Mozambique|Maldives
+Australia|Fiji
+Côte d'Ivoire|Indonesia
+Honduras|Portugal
+Samoa|Madagascar
+Uzbekistan|North Korea
+Aruba|French Polynesia
+Norfolk Island|Colombia
+Somalia|Guyana
+Bulgaria|Jordan
+Argentina|Bouvet Island
+Bahrain|Namibia
+Paraguay|Jordan
+Saudi Arabia|Italy
+Svalbard and Jan Mayen|Nauru
+Pitcairn|Ghana
+Heard Island and McDonald Islands|Luxembourg
+Brazil|Armenia
+Hong Kong|Belarus
+British Virgin Islands|Czechoslovakia
+Yugoslavia|United States Minor Outlying Islands
+Central African Republic|Equatorial Guinea
+Christmas Island|Burkina Faso
+Qatar|Indonesia
+Poland|British Virgin Islands
+Myanmar|Pitcairn
+Turkey|Argentina
+Maldives|Bahamas
+Congo|U.S. Virgin Islands
+Kyrgyzstan|Tokelau
+Honduras|Mozambique
+South Sudan|Turkmenistan
+Switzerland|Brazil
+Cocos (Keeling) Islands|India
+Croatia|New Caledonia
+Malawi|Belarus
+Tajikistan|Northern Mariana Islands
+Saint Vincent and The Grenadines|Iran
+Brunei|Angola
+Australia|Sudan
+Saint Helena, Ascension and Tristan da Cunha|Gibraltar
+Albania|Togo
+Falkland Islands|Bhutan
+Liberia|Central African Republic
+Burundi|France
+Chile|Timor-Leste
+Switzerland|Qatar
+Comoros|Antigua and Barbuda
+Sudan|Mali
+Venezuela|Saudi Arabia
+Ecuador|Northern Mariana Islands
+Norway|Afghanistan
+Togo|Bulgaria
+Australia|Laos
+Barbados|Israel
+Mozambique|Vietnam
+Singapore|Saint Barthélemy
+Monaco|Syria
+Portugal|Sudan
+Costa Rica|Switzerland
+Jamaica|Egypt
+Iceland|Cocos (Keeling) Islands
+Åland Islands|Bermuda
+Sint Maarten (Dutch part)|Armenia
+Anguilla|Saudi Arabia
+Suriname|Philippines
+Kiribati|Colombia
+Ireland|Grenada
+Italy|Uzbekistan
+Saudi Arabia|Djibouti
+Isle of Man|Indonesia
+Sudan|South Georgia and the South Sandwich Islands
+South Georgia and the South Sandwich Islands|Mozambique
+Venezuela|Seychelles
+Mongolia|Latvia
+Monaco|Poland
+Norfolk Island|Poland
+South Africa|Saint Kitts and Nevis
+Niger|Pakistan
+Iceland|Guyana
+Armenia|East Germany
+South Korea|Western Sahara
+Trinidad and Tobago|Guyana
+Oman|Australia
+Malta|Ireland
+Netherlands Antilles|Bolivia
+Guam|Laos
+Gabon|Togo
+Myanmar|Panama
+Vanuatu|Mali
+Estonia|Micronesia, Federated States of
+Sweden|Qatar
+Tanzania|Nigeria
+Benin|Malta
+South Sudan|Laos
+Soviet Union|Tonga
+Belize|Serbia and Montenegro
+Puerto Rico|Palestine
+Venezuela|Congo
+Greece|Chad
+Ghana|Vatican City State (Holy See)
+Saint Kitts and Nevis|Gibraltar
+Turkey|Solomon Islands
+Guatemala|Tunisia
+Suriname|Mozambique
+Denmark|Martinique
+Gambia|South Sudan
+Singapore|Gibraltar
+Falkland Islands|Trinidad and Tobago
+Tajikistan|Réunion
+Qatar|Ghana
+Chile|Maldives
+Gibraltar|United Arab Emirates
+Australia|Gibraltar
+Switzerland|Peru
+Cape Verde|Turkey
+Netherlands|Guyana
+Monaco|Honduras
+Suriname|Bouvet Island
+Ukraine|Norway
+Burundi|Cuba
+Trinidad and Tobago|United States
+Azerbaijan|Ecuador
+Sao Tome and Principe|Portugal
+Hong Kong|British Indian Ocean Territory
+Sierra Leone|Pitcairn
+Italy|Honduras
+Guinea|Samoa
+United Kingdom|Antigua and Barbuda
+Papua New Guinea|Samoa
+United Kingdom|Haiti
+Seychelles|Fiji
+Greenland|Peru
+Turkmenistan|Pitcairn
+Grenada|Israel
+Kyrgyzstan|Turkmenistan
+Chile|Mauritius
+Kuwait|Uganda
+Trinidad and Tobago|Italy
+South Africa|Luxembourg
+Indonesia|Saudi Arabia
+Philippines|Ireland
+Angola|Yemen
+Anguilla|Bosnia and Herzegovina
+El Salvador|Myanmar
+United Kingdom|Costa Rica
+Haiti|South Georgia and the South Sandwich Islands
+Belize|Philippines
+Fiji|Ghana
+Serbia|Sint Maarten (Dutch part)
+Tokelau|Botswana
+Bosnia and Herzegovina|Seychelles
+Comoros|Christmas Island
+Czech Republic|Comoros
+Slovakia|Cocos (Keeling) Islands
+Sao Tome and Principe|Malaysia
+Portugal|Yemen
+Iceland|Nicaragua
+Guadeloupe|Mali
+Poland|South Africa
+Equatorial Guinea|Sao Tome and Principe
+Netherlands Antilles|Côte d'Ivoire
+Namibia|Honduras
+Germany|Trinidad and Tobago
+Mayotte|Moldova
+Burkina Faso|Ecuador
+Northern Mariana Islands|Cape Verde
+Namibia|Åland Islands
+Georgia|Maldives
+Tuvalu|Iran
+Wallis and Futuna|Cuba
+Zambia|Tanzania
+Lithuania|Saint Helena, Ascension and Tristan da Cunha
+Morocco|New Zealand
+Ireland|North Korea
+Palestine|Dominican Republic
+Vanuatu|Chile
+Portugal|Samoa
+Mongolia|Comoros
+Guatemala|Cape Verde
+Guinea|Hungary
+Bhutan|Chad
+Vanuatu|Andorra
+Anguilla|Puerto Rico
+Barbados|Albania
+South Georgia and the South Sandwich Islands|Indonesia
+Malta|Australia
+Saint Martin (French part)|Saint Helena, Ascension and Tristan da Cunha
+Venezuela|Cyprus
+Guinea|Guadeloupe
+Botswana|Northern Mariana Islands
+Costa Rica|Hungary
+South Korea|Bouvet Island
+Cook Islands|Laos
+Malawi|Algeria
+Canada|United States
+Djibouti|Falkland Islands
+Cuba|Åland Islands
+Italy|Portugal
+Norfolk Island|Grenada
+Maldives|Liechtenstein
+Nicaragua|Belarus
+Azerbaijan|Afghanistan
+Brazil|Chad
+Tonga|Cuba
+Germany|Comoros
+China|Syria
+Saint Helena, Ascension and Tristan da Cunha|East Germany
+Faroe Islands|Burkina Faso
+China|Argentina
+Indonesia|Indonesia
+Oman|Antarctica
+Poland|Canada
+Slovenia|Sao Tome and Principe
+Martinique|Mozambique
+Saint Barthélemy|Jersey
+Bangladesh|United States
+Ethiopia|Andorra
+Monaco|Saint Martin (French part)
+Somalia|Nicaragua
+Mauritania|Guernsey
+Bolivia|Angola
+Ethiopia|Togo
+Tajikistan|Botswana
+Heard Island and McDonald Islands|Aruba
+Åland Islands|Honduras
+Mongolia|Honduras
+Denmark|Sri Lanka
+Romania|Guernsey
+Cape Verde|Burundi
+Saint Martin (French part)|Egypt
+Brunei|Mongolia
+Sierra Leone|Malawi
+Macedonia|China
+Chad|Jordan
+Barbados|Benin
+Slovenia|Zimbabwe
+Curaçao|Senegal
+Gibraltar|Jersey
+Kuwait|Marshall Islands
+Haiti|Cameroon
+United Arab Emirates|Sweden
+Bonaire, Sint Eustatius and Saba|Myanmar
+Svalbard and Jan Mayen|Saint Lucia
+Israel|Mexico
+Portugal|Chad
+Ghana|U.S. Virgin Islands
+Panama|Moldova
+Algeria|Saint Barthélemy
+Cyprus|Algeria
+Canada|Saint Pierre and Miquelon
+Benin|Iceland
+Switzerland|Estonia
+Timor-Leste|Palestine
+Svalbard and Jan Mayen|Seychelles
+Antigua and Barbuda|Angola
+Aruba|Fiji
+Iceland|Palau
+Antarctica|Paraguay
+Maldives|Malaysia
+Belarus|Swaziland
+French Guiana|American Samoa
+Netherlands Antilles|Iraq
+Montenegro|Ghana
+Ghana|Bermuda
+Mali|Burkina Faso
+Antigua and Barbuda|Marshall Islands
+Rwanda|Malta
+Ireland|Congo
+Morocco|Philippines
+Turkmenistan|Congo
+Seychelles|Kazakhstan
+Bermuda|Switzerland
+Vatican City State (Holy See)|Slovakia
+China|Palau
+Guam|Bouvet Island
+Jersey|Netherlands Antilles
+Cayman Islands|Burundi
+Faroe Islands|Iran
+Mauritius|Argentina
+Tanzania|Côte d'Ivoire
+Germany|Hong Kong
+Solomon Islands|Sint Maarten (Dutch part)
+Laos|Nigeria
+Ireland|Sao Tome and Principe
+Algeria|Norfolk Island
+Faroe Islands|Papua New Guinea
+Grenada|Vanuatu
+El Salvador|Colombia
+Saudi Arabia|Serbia and Montenegro
+Syria|Swaziland
+Paraguay|Spain
+Kuwait|Honduras
+Serbia and Montenegro|Uganda
+Cambodia|Kenya
+United States|Åland Islands
+Svalbard and Jan Mayen|Czech Republic
+Lesotho|Belgium
+Côte d'Ivoire|Cameroon
+American Samoa|Sao Tome and Principe
+Bosnia and Herzegovina|Somalia
+Niger|Portugal
+Cambodia|Uzbekistan
+Mayotte|Guam
+Congo|Gabon
+Sri Lanka|Armenia
+United States Minor Outlying Islands|Jordan
+Djibouti|Bouvet Island
+Fiji|Democratic Republic of the Congo
+East Germany|Cocos (Keeling) Islands
+Yemen|Indonesia
+South Korea|Romania
+French Southern Territories|Seychelles
+Guyana|Martinique
+Palestine|Soviet Union
+Cocos (Keeling) Islands|Namibia
+Moldova|Papua New Guinea
+Thailand|Poland
+Tunisia|Nepal
+Côte d'Ivoire|United States Minor Outlying Islands
+Comoros|Niue
+Poland|Martinique
+Pakistan|Syria
+South Africa|Nepal
+Venezuela|Bonaire, Sint Eustatius and Saba
+Latvia|Djibouti
+Gambia|Gabon
+Bahrain|Barbados
+Tanzania|Libya
+Trinidad and Tobago|Argentina
+Ukraine|Colombia
+Haiti|Pitcairn
+Tanzania|Christmas Island
+Bangladesh|Sint Maarten (Dutch part)
+Tunisia|Qatar
+Western Sahara|Albania
+United States Minor Outlying Islands|Azerbaijan
+Paraguay|Democratic Republic of the Congo
+Serbia|Lithuania
+Nepal|Indonesia
+Uzbekistan|Côte d'Ivoire
+Sint Maarten (Dutch part)|Zimbabwe
+Montserrat|Iraq
+Czech Republic|Guinea
+British Indian Ocean Territory|Netherlands Antilles
+Israel|Saint Barthélemy
+Jordan|Guinea
+Nicaragua|Sao Tome and Principe
+Czech Republic|Saint Vincent and The Grenadines
+New Zealand|China
+Argentina|Rwanda
+Puerto Rico|Wallis and Futuna
+Nepal|Sierra Leone
+Colombia|Hong Kong
+Malaysia|Lithuania
+Nepal|Egypt
+Antarctica|Samoa
+United Arab Emirates|Yemen
+United Arab Emirates|Bangladesh
+Suriname|Armenia
+Thailand|Dominica
+Denmark|Greenland
+Botswana|Mozambique
+Serbia and Montenegro|Curaçao
+Jersey|Faroe Islands
+Azerbaijan|Yemen
+San Marino|Japan
+Kyrgyzstan|Netherlands Antilles
+Nigeria|Ecuador
+Croatia|Peru
+Montenegro|Oman
+Madagascar|Romania
+Slovenia|Togo
+Aruba|Rwanda
+Gabon|Botswana
+Croatia|Ukraine
+Democratic Republic of the Congo|Bahrain
+Switzerland|Palau
+Isle of Man|South Korea
+Poland|Jamaica
+Barbados|Cuba
+Ecuador|Costa Rica
+Bermuda|Qatar
+Burundi|Paraguay
+Pitcairn|Brunei
+Djibouti|South Korea
+Guyana|Bosnia and Herzegovina
+Tunisia|Falkland Islands
+Uganda|Bulgaria
+Northern Mariana Islands|Saint Barthélemy
+Malaysia|Sri Lanka
+Croatia|Western Sahara
+Liberia|Gibraltar
+United States Minor Outlying Islands|Tokelau
+Palestine|Mongolia
+Libya|Burkina Faso
+Venezuela|Saint Vincent and The Grenadines
+East Germany|Mexico
+Iceland|American Samoa
+Oman|Sao Tome and Principe
+Greece|Guyana
+Turkmenistan|Ghana
+Bangladesh|Vietnam
+China|Kyrgyzstan
+Guernsey|Indonesia
+Iraq|Yemen
+Luxembourg|New Caledonia
+Kenya|Heard Island and McDonald Islands
+Myanmar|Qatar
+Singapore|North Korea
+Åland Islands|Poland
+Sierra Leone|Slovenia
+Togo|Saint Lucia
+Uganda|Estonia
+Burkina Faso|Djibouti
+Liechtenstein|Turks and Caicos Islands
+Rwanda|Congo
+Samoa|Svalbard and Jan Mayen
+Saint Vincent and The Grenadines|South Korea
+Serbia and Montenegro|Colombia
+Guadeloupe|Croatia
+Cape Verde|Rwanda
+Argentina|Nigeria
+South Africa|Italy
+French Southern Territories|Jordan
+Gabon|Panama
+Latvia|Netherlands Antilles
+Sao Tome and Principe|Burkina Faso
+Sao Tome and Principe|Angola
+Guatemala|South Africa
+Slovakia|Ghana
+Libya|Laos
+Sint Maarten (Dutch part)|Chile
+Honduras|Sint Maarten (Dutch part)
+Nicaragua|Germany
+Antarctica|Mayotte
+Botswana|Dominica
+Czechoslovakia|Albania
+Croatia|Saint Helena, Ascension and Tristan da Cunha
+Guinea-Bissau|Greenland
+New Zealand|Faroe Islands
+Netherlands Antilles|Nauru
+Niger|Uruguay
+Jersey|Myanmar
+Saint Kitts and Nevis|Japan
+South Africa|British Virgin Islands
+Canada|Anguilla
+Guernsey|Faroe Islands
+Sudan|Georgia
+Qatar|Kazakhstan
+Wallis and Futuna|Algeria
+Réunion|Romania
+Democratic Republic of the Congo|United States Minor Outlying Islands
+Heard Island and McDonald Islands|Honduras
+Algeria|Kyrgyzstan
+Ethiopia|Ethiopia
+Monaco|Maldives
+Saint Vincent and The Grenadines|Peru
+Honduras|Norfolk Island
+Benin|Montserrat
+Niger|Central African Republic
+Åland Islands|South Georgia and the South Sandwich Islands
+Bouvet Island|Heard Island and McDonald Islands
+Greenland|Guinea
+Djibouti|Serbia and Montenegro
+Grenada|Sudan
+Vatican City State (Holy See)|Laos
+United Kingdom|Tunisia
+Netherlands Antilles|Switzerland
+Antarctica|Iraq
+Venezuela|Panama
+Samoa|Tokelau
+Belarus|Mozambique
+Nicaragua|Burundi
+Costa Rica|Tokelau
+Peru|Cook Islands
+Macao|Guadeloupe
+Honduras|Jordan
+Iceland|Oman
+Heard Island and McDonald Islands|Bulgaria
+Japan|United Arab Emirates
+Vatican City State (Holy See)|Mozambique
+Hong Kong|United States
+Iran|French Polynesia
+Mexico|Greece
+Germany|Senegal
+Monaco|Hong Kong
+Trinidad and Tobago|Namibia
+Kuwait|Armenia
+Guinea-Bissau|Andorra
+Åland Islands|Kiribati
+Bahrain|Cuba
+Gabon|Svalbard and Jan Mayen
+Gibraltar|Bangladesh
+Antarctica|Montenegro
+United States|South Georgia and the South Sandwich Islands
+Uzbekistan|Cayman Islands
+India|Peru
+Samoa|United States
+Angola|Brazil
+Belgium|Saint Martin (French part)
+Norfolk Island|Gibraltar
+Bolivia|Kiribati
+Curaçao|Mali
+Bolivia|Lebanon
+Mozambique|Mauritania
+Bolivia|Afghanistan
+Sudan|Guinea-Bissau
+Costa Rica|Moldova
+Nepal|Mongolia
+Rwanda|Cayman Islands
+Micronesia, Federated States of|Sri Lanka
+Kyrgyzstan|Syria
+Burundi|Vanuatu
+Taiwan|Luxembourg
+Lithuania|Mexico
+Greece|Christmas Island
+Ukraine|Libya
+Jordan|Jersey
+Côte d'Ivoire|New Zealand
+Costa Rica|British Virgin Islands
+American Samoa|Paraguay
+Pitcairn|Laos
+Kazakhstan|North Korea
+United States|Turkmenistan
+South Sudan|Ireland
+Colombia|Denmark
+Haiti|Palestine
+Greenland|Morocco
+Israel|Portugal
+India|Saint Pierre and Miquelon
+Israel|Côte d'Ivoire
+Costa Rica|Monaco
+Austria|Saint Kitts and Nevis
+Costa Rica|Tunisia
+Iraq|Barbados
+Cayman Islands|Saint Pierre and Miquelon
+Vatican City State (Holy See)|Mauritania
+Sint Maarten (Dutch part)|Togo
+Italy|Albania
+Guadeloupe|Vietnam
+Luxembourg|Cyprus
+South Korea|Nicaragua
+Honduras|Georgia
+Brazil|Saudi Arabia
+Russian Federation|Kenya
+Zimbabwe|Afghanistan
+Central African Republic|Kuwait
+Saint Helena, Ascension and Tristan da Cunha|Montserrat
+Germany|Sao Tome and Principe
+Somalia|Mali
+Kenya|Yugoslavia
+Northern Mariana Islands|Maldives
+Suriname|Greenland
+French Polynesia|Belarus
+Tokelau|United Arab Emirates
+Curaçao|Burkina Faso
+Norway|Trinidad and Tobago
+Switzerland|Ireland
+Paraguay|Singapore
+Tokelau|Uzbekistan
+Uganda|Bangladesh
+Bosnia and Herzegovina|Tunisia
+Palestine|Peru
+Benin|Central African Republic
+Chad|Guatemala
+Sweden|Kenya
+Palau|Czech Republic
+Colombia|Curaçao
+Palestine|South Sudan
+Burundi|Western Sahara
+Zimbabwe|Gibraltar
+Chile|South Africa
+Saint Kitts and Nevis|Azerbaijan
+Malta|French Guiana
+Honduras|Belarus
+Saint Pierre and Miquelon|Angola
+Anguilla|Cayman Islands
+Israel|South Georgia and the South Sandwich Islands
+Iraq|Panama
+Trinidad and Tobago|Cameroon
+Cook Islands|Turkey
+Guernsey|Nicaragua
+Czech Republic|Paraguay
+Saint Pierre and Miquelon|Iraq
+Swaziland|Bahamas
+San Marino|Montserrat
+Soviet Union|Cyprus
+Myanmar|Mauritius
+Sweden|Nauru
+Portugal|Saint Pierre and Miquelon
+Azerbaijan|Seychelles
+American Samoa|Burundi
+Wallis and Futuna|Vatican City State (Holy See)
+French Polynesia|Samoa
+Andorra|Haiti
+Cook Islands|Libya
+Benin|Faroe Islands
+Venezuela|Kuwait
+Germany|Cayman Islands
+Seychelles|Cambodia
+Cocos (Keeling) Islands|South Africa
+Egypt|Malta
+Indonesia|Turkey
+Lebanon|Dominican Republic
+Somalia|Cameroon
+Armenia|Kiribati
+India|Brunei
+Algeria|Angola
+Turkey|Bonaire, Sint Eustatius and Saba
+Macedonia|Antigua and Barbuda
+Isle of Man|Saint Kitts and Nevis
+Antigua and Barbuda|Jersey
+Tunisia|Bouvet Island
+Tanzania|Gabon
+Norfolk Island|Mayotte
+Finland|Hungary
+United States|Suriname
+Mexico|Czech Republic
+Madagascar|Uruguay
+Christmas Island|Chile
+Equatorial Guinea|Benin
+Malaysia|Uganda
+Ecuador|Equatorial Guinea
+Ireland|Antigua and Barbuda
+Mauritania|Ethiopia
+Macedonia|Mali
+Togo|French Guiana
+Belgium|Israel
+San Marino|Paraguay
+Bouvet Island|Luxembourg
+Saint Lucia|Antigua and Barbuda
+Heard Island and McDonald Islands|Paraguay
+Bahrain|Chad
+Peru|Puerto Rico
+American Samoa|Bulgaria
+Ireland|Nigeria
+Belgium|Pakistan
+British Virgin Islands|Bolivia
+Serbia|Burkina Faso
+Bahrain|Trinidad and Tobago
+Japan|South Africa
+Afghanistan|Belgium
+Wallis and Futuna|Ethiopia
+Zimbabwe|Cook Islands
+Nicaragua|Sierra Leone
+Guinea-Bissau|Colombia
+Tokelau|Iran
+Antarctica|Antarctica
+Åland Islands|Venezuela
+Timor-Leste|Cambodia
+Tonga|Netherlands
+Lesotho|Philippines
+Christmas Island|Mauritania
+Honduras|Solomon Islands
+Guatemala|Sao Tome and Principe
+Myanmar|Singapore
+United Kingdom|Brazil
+Kenya|New Caledonia
+Angola|Brunei
+Latvia|Fiji
+Somalia|Uruguay
+Iran|Kenya
+Chad|Belize
+Singapore|Uganda
+Pitcairn|Mongolia
+Ireland|Equatorial Guinea
+Wallis and Futuna|Benin
+Thailand|Isle of Man
+Greenland|Turkmenistan
+French Guiana|Aruba
+Latvia|U.S. Virgin Islands
+Antarctica|France
+Poland|North Korea
+China|United States Minor Outlying Islands
+Grenada|Tuvalu
+United States|Bulgaria
+Moldova|Macedonia
+Saint Barthélemy|Gibraltar
+Algeria|Montserrat
+Saint Barthélemy|Burundi
+Botswana|Macedonia
+Western Sahara|Guinea
+Qatar|Bahamas
+Zambia|Qatar
+Egypt|Cameroon
+Togo|Bouvet Island
+Guyana|Qatar
+Samoa|Mozambique
+Burkina Faso|Belize
+Czechoslovakia|Heard Island and McDonald Islands
+Mali|Nicaragua
+U.S. Virgin Islands|Nigeria
+Finland|Netherlands
+Turkmenistan|French Southern Territories
+Brazil|Burundi
+Christmas Island|Serbia
+Bahamas|Myanmar
+Suriname|Ireland
+Romania|Uruguay
+Taiwan|Djibouti
+Bahrain|Saint Barthélemy
+Panama|Vietnam
+Falkland Islands|Denmark
+Cocos (Keeling) Islands|Kyrgyzstan
+Soviet Union|Luxembourg
+Antarctica|Finland
+Argentina|Serbia
+Marshall Islands|Mayotte
+Suriname|Cook Islands
+Cameroon|Malaysia
+Barbados|Bosnia and Herzegovina
+Mayotte|American Samoa
+Heard Island and McDonald Islands|Panama
+Saint Pierre and Miquelon|Guernsey
+Czech Republic|Cayman Islands
+Antarctica|Kazakhstan
+Palau|Taiwan
+Hungary|Greenland
+Niger|United Kingdom
+Serbia and Montenegro|Italy
+Burkina Faso|French Southern Territories
+South Sudan|Iceland
+Philippines|United States
+Norfolk Island|Singapore
+China|Serbia
+French Southern Territories|El Salvador
+Burkina Faso|Nepal
+Japan|Vatican City State (Holy See)
+Mexico|Angola
+Mauritius|Uruguay
+Antarctica|Andorra
+Estonia|Jordan
+Venezuela|Egypt
+Puerto Rico|Turkey
+India|Mali
+Liechtenstein|Sierra Leone
+Zimbabwe|Argentina
+Nauru|Bolivia
+Algeria|Cambodia
+Serbia|Martinique
+Libya|Norway
+Vanuatu|Hungary
+Saint Barthélemy|French Southern Territories
+Democratic Republic of the Congo|Martinique
+Cape Verde|Sao Tome and Principe
+Mexico|Solomon Islands
+Vanuatu|Bermuda
+Ethiopia|Côte d'Ivoire
+Western Sahara|Brunei
+Portugal|Soviet Union
+Algeria|Barbados
+Cocos (Keeling) Islands|Vanuatu
+Serbia and Montenegro|Antarctica
+Latvia|Antarctica
+New Caledonia|Palestine
+Luxembourg|Bermuda
+Uruguay|Burundi
+Saint Lucia|Yemen
+Bangladesh|Anguilla
+Romania|Falkland Islands
+Falkland Islands|Senegal
+Gambia|Burundi
+Ethiopia|Jordan
+Somalia|Netherlands Antilles
+Trinidad and Tobago|Curaçao
+Turks and Caicos Islands|South Sudan
+South Africa|Malaysia
+Saudi Arabia|Montserrat
+Indonesia|Bulgaria
+Estonia|Serbia and Montenegro
+Dominican Republic|Northern Mariana Islands
+Norfolk Island|New Caledonia
+French Guiana|Greenland
+Czech Republic|Faroe Islands
+Equatorial Guinea|Malawi
+United States Minor Outlying Islands|Jersey
+Brunei|Bermuda
+Denmark|Malta
+United States|Bahamas
+Mayotte|Comoros
+Barbados|Nigeria
+South Korea|Jordan
+Gabon|Cuba
+Swaziland|Somalia
+United States|Kuwait
+Belgium|Mexico
+Cayman Islands|Tajikistan
+Puerto Rico|Guam
+Nicaragua|Kiribati
+Bonaire, Sint Eustatius and Saba|Gabon
+China|Zimbabwe
+Timor-Leste|Madagascar
+Nigeria|Taiwan
+Macedonia|Suriname
+Paraguay|Réunion
+Equatorial Guinea|India
+Estonia|Grenada
+Mongolia|Guatemala
+Mayotte|Turks and Caicos Islands
+Taiwan|Burundi
+Switzerland|Albania
+Qatar|Sierra Leone
+Syria|Cook Islands
+Colombia|Saint Kitts and Nevis
+Saint Barthélemy|Liechtenstein
+Hong Kong|Jamaica
+Senegal|South Korea
+Åland Islands|Eritrea
+Malta|Somalia
+Serbia and Montenegro|Guinea
+British Virgin Islands|Jamaica
+Togo|Lithuania
+Seychelles|Vietnam
+Guyana|Åland Islands
+Bahrain|Uzbekistan
+Zimbabwe|Kenya
+Australia|Turkey
+Palau|Belize
+Togo|Malaysia
+Kenya|Slovenia
+Micronesia, Federated States of|Somalia
+Bulgaria|Tajikistan
+Laos|Belarus
+Azerbaijan|Sweden
+New Zealand|Hong Kong
+Slovenia|East Germany
+Antigua and Barbuda|Jamaica
+Grenada|Yemen
+Canada|Falkland Islands
+Lebanon|Moldova
+Oman|Dominica
+East Germany|Lithuania
+Serbia|Macao
+Papua New Guinea|Iceland
+Colombia|Ethiopia
+Saint Lucia|Zambia
+Canada|Sri Lanka
+Latvia|Morocco
+Pitcairn|Burundi
+Mayotte|Mali
+Saint Helena, Ascension and Tristan da Cunha|New Caledonia
+Côte d'Ivoire|Northern Mariana Islands
+Albania|Kuwait
+Sweden|Algeria
+Philippines|Peru
+Panama|Maldives
+Vietnam|Haiti
+Laos|Svalbard and Jan Mayen
+United Kingdom|Georgia
+Venezuela|Monaco
+Albania|Peru
+Solomon Islands|Comoros
+Jordan|Uzbekistan
+Sri Lanka|Dominica
+Belarus|South Korea
+Israel|Georgia
+Bosnia and Herzegovina|Christmas Island
+Oman|Rwanda
+Moldova|Thailand
+Japan|Bahrain
+Tonga|Vanuatu
+Marshall Islands|Zambia
+Burkina Faso|French Polynesia
+Angola|Timor-Leste
+Belarus|Ethiopia
+South Korea|Tonga
+Congo|Saint Martin (French part)
+Luxembourg|Guinea
+Djibouti|Monaco
+Andorra|Bolivia
+Vietnam|Cyprus
+San Marino|Niue
+Kenya|Falkland Islands
+British Virgin Islands|Saint Pierre and Miquelon
+Mauritius|French Guiana
+Northern Mariana Islands|Netherlands
+Armenia|Bangladesh
+French Polynesia|South Sudan
+Ghana|Cook Islands
+Greenland|Monaco
+Laos|Kenya
+El Salvador|British Virgin Islands
+Bangladesh|Andorra
+Sao Tome and Principe|India
+Gambia|Guernsey
+Hungary|Papua New Guinea
+Trinidad and Tobago|Netherlands
+Canada|Switzerland
+Nigeria|Cayman Islands
+Uganda|Uganda
+Bangladesh|Costa Rica
+Tanzania|Albania
+Vatican City State (Holy See)|Belize
+East Germany|Niue
+Romania|Tajikistan
+Colombia|Libya
+Burundi|Guinea
+British Indian Ocean Territory|Gibraltar
+Tajikistan|United States
+American Samoa|Djibouti
+New Caledonia|Saint Vincent and The Grenadines
+Belgium|New Zealand
+Libya|Panama
+Niger|Saint Pierre and Miquelon
+Netherlands|Macedonia
+Lesotho|Sweden
+Lithuania|Puerto Rico
+Qatar|Namibia
+Côte d'Ivoire|Sierra Leone
+Bangladesh|Christmas Island
+Brazil|Norway
+Mozambique|Iran
+Venezuela|Taiwan
+Lithuania|Poland
+Turkmenistan|Turkey
+Iran|Costa Rica
+Guinea-Bissau|Mayotte
+Belize|Venezuela
+Macedonia|Guatemala
+Liberia|Argentina
+Croatia|Cambodia
+Rwanda|Azerbaijan
+Angola|Christmas Island
+Brunei|Puerto Rico
+Sint Maarten (Dutch part)|Liberia
+Madagascar|Croatia
+Solomon Islands|Indonesia
+Vatican City State (Holy See)|British Indian Ocean Territory
+Mauritania|New Caledonia
+Mongolia|Saint Kitts and Nevis
+Liberia|Cocos (Keeling) Islands
+Portugal|Malta
+Slovakia|Monaco
+South Africa|Hungary
+Anguilla|Solomon Islands
+Indonesia|Anguilla
+Burkina Faso|Israel
+Barbados|Netherlands Antilles
+Guyana|Haiti
+Uruguay|China
+Gabon|Luxembourg
+Madagascar|Yemen
+Northern Mariana Islands|Réunion
+North Korea|Belize
+Niue|Malta
+Saint Helena, Ascension and Tristan da Cunha|American Samoa
+Germany|Papua New Guinea
+Slovakia|Bahamas
+Tanzania|Malaysia
+Samoa|Hong Kong
+Czechoslovakia|Trinidad and Tobago
+Pakistan|Egypt
+Brunei|Mozambique
+El Salvador|Monaco
+Sri Lanka|Curaçao
+Nicaragua|Martinique
+Timor-Leste|Papua New Guinea
+Svalbard and Jan Mayen|Denmark
+Sudan|Bangladesh
+Tuvalu|Zimbabwe
+Seychelles|Cameroon
+Western Sahara|Jordan
+Sri Lanka|Malta
+Germany|United Kingdom
+Lithuania|Pitcairn
+Myanmar|Armenia
+Kenya|Mali
+Côte d'Ivoire|United States
+Guatemala|Uruguay
+Angola|Ecuador
+Egypt|Democratic Republic of the Congo
+Denmark|Fiji
+Swaziland|Eritrea
+Monaco|Armenia
+Antarctica|Equatorial Guinea
+Guinea|Togo
+Réunion|Suriname
+Kyrgyzstan|Belarus
+Oman|Kiribati
+Falkland Islands|Iran
+Barbados|Azerbaijan
+Marshall Islands|Ecuador
+Antarctica|Netherlands
+Benin|Cameroon
+Albania|Burundi
+Botswana|South Sudan
+Samoa|Croatia
+Sint Maarten (Dutch part)|Singapore
+Saint Vincent and The Grenadines|French Guiana
+Mali|Rwanda
+Czechoslovakia|Chile
+Swaziland|Slovakia
+Central African Republic|Samoa
+Nauru|Libya
+British Indian Ocean Territory|Argentina
+Romania|Guinea-Bissau
+Cameroon|Serbia and Montenegro
+Gambia|Curaçao
+French Guiana|Timor-Leste
+Canada|Singapore
+Saint Martin (French part)|Turkey
+Sudan|Greenland
+Chad|Niue
+New Caledonia|Hong Kong
+Gibraltar|Kenya
+Liberia|Saudi Arabia
+Brazil|Iraq
+Argentina|United Arab Emirates
+Brunei|Cameroon
+Argentina|Réunion
+Armenia|Niue
+Oman|Christmas Island
+Bulgaria|Armenia
+Andorra|Papua New Guinea
+East Germany|Uganda
+Algeria|Antigua and Barbuda
+Paraguay|Turkmenistan
+Australia|New Caledonia
+Germany|Iceland
+Mali|Greece
+Isle of Man|Cameroon
+Sierra Leone|Laos
+Svalbard and Jan Mayen|Congo
+Georgia|Micronesia, Federated States of
+Afghanistan|Uzbekistan
+Bangladesh|Taiwan
+Bolivia|Myanmar
+Cook Islands|Cayman Islands
+Kiribati|Burundi
+Brazil|Zambia
+South Georgia and the South Sandwich Islands|Costa Rica
+Equatorial Guinea|Finland
+Greenland|Bosnia and Herzegovina
+Chile|Serbia
+Myanmar|Algeria
+Serbia|Svalbard and Jan Mayen
+Saint Pierre and Miquelon|Puerto Rico
+Mozambique|Liberia
+Nepal|Libya
+Nepal|Turks and Caicos Islands
+Uruguay|Bermuda
+El Salvador|Bermuda
+Macedonia|Bangladesh
+Norway|Nepal
+Guinea|Guatemala
+Bahamas|Greece
+Christmas Island|Iceland
+Niger|Saint Lucia
+Aruba|Pakistan
+Macedonia|Maldives
+Sint Maarten (Dutch part)|Luxembourg
+Yemen|Nauru
+Yemen|Faroe Islands
+Myanmar|Cyprus
+South Africa|Mexico
+Iraq|Albania
+Falkland Islands|Uzbekistan
+Nigeria|Côte d'Ivoire
+Grenada|Burkina Faso
+Cuba|Kazakhstan
+Åland Islands|Swaziland
+Poland|Saint Kitts and Nevis
+Panama|Israel
+Belarus|Uganda
+China|Libya
+Norway|Aruba
+Guernsey|Antigua and Barbuda
+Bhutan|Macao
+Burkina Faso|Romania
+Norway|Malta
+Vanuatu|Norfolk Island
+Ecuador|Israel
+Barbados|Bahamas
+United Arab Emirates|Brunei
+Congo|Niger
+Kuwait|Swaziland
+Falkland Islands|Brazil
+Benin|Netherlands
+Côte d'Ivoire|Qatar
+Barbados|Gabon
+Timor-Leste|Saudi Arabia
+Rwanda|Christmas Island
+Niue|Philippines
+Taiwan|Pakistan
+Niue|Western Sahara
+Bulgaria|Cape Verde
+British Indian Ocean Territory|Tokelau
+Switzerland|Chad
+Andorra|Greece
+Togo|Peru
+South Sudan|Andorra
+East Germany|Antigua and Barbuda
+Burkina Faso|Soviet Union
+Vatican City State (Holy See)|Monaco
+Mali|Isle of Man
+Turkmenistan|Tunisia
+Saint Vincent and The Grenadines|Turkmenistan
+Belize|Bouvet Island
+Moldova|El Salvador
+Turks and Caicos Islands|Gambia
+Oman|Afghanistan
+Burkina Faso|Kenya
+Portugal|United States Minor Outlying Islands
+Saint Vincent and The Grenadines|Belgium
+Gambia|Anguilla
+Belarus|Thailand
+Honduras|Philippines
+Iran|Anguilla
+Lithuania|Kenya
+Saint Vincent and The Grenadines|British Indian Ocean Territory
+Georgia|British Virgin Islands
+East Germany|Estonia
+Haiti|Mexico
+Liberia|Serbia
+San Marino|Vanuatu
+Angola|Norway
+Gibraltar|Jordan
+Bahrain|Bahrain
+Saint Martin (French part)|Djibouti
+Italy|Haiti
+Solomon Islands|U.S. Virgin Islands
+Serbia and Montenegro|East Germany
+Thailand|Bangladesh
+Bolivia|East Germany
+Georgia|Tunisia
+Estonia|Australia
+American Samoa|Turkey
+Spain|Timor-Leste
+Turkmenistan|Latvia
+Wallis and Futuna|Denmark
+Pitcairn|Jordan
+Austria|Australia
+Kyrgyzstan|Madagascar
+Maldives|Cocos (Keeling) Islands
+Dominica|Senegal
+Svalbard and Jan Mayen|South Korea
+Côte d'Ivoire|Maldives
+Bulgaria|Italy
+Democratic Republic of the Congo|Bhutan
+Greenland|Guyana
+Bosnia and Herzegovina|Angola
+Saint Kitts and Nevis|Suriname
+Spain|Tunisia
+Micronesia, Federated States of|Saint Barthélemy
+Falkland Islands|Congo
+Venezuela|Montenegro
+Cayman Islands|North Korea
+Ethiopia|Antarctica
+India|Somalia
+Panama|Croatia
+Montenegro|Kyrgyzstan
+Russian Federation|Falkland Islands
+Pitcairn|Czech Republic
+United Kingdom|Bhutan
+Panama|Nepal
+Montserrat|Bosnia and Herzegovina
+Saint Kitts and Nevis|Armenia
+Ethiopia|Jamaica
+Singapore|Austria
+Mexico|North Korea
+Bulgaria|Gibraltar
+Niue|Czech Republic
+Guernsey|Laos
+Venezuela|Slovenia
+Canada|Saint Martin (French part)
+Israel|Tajikistan
+Russian Federation|Egypt
+French Southern Territories|Georgia
+Namibia|Mozambique
+Algeria|Iraq
+Netherlands|Bouvet Island
+Syria|Myanmar
+Turkey|Georgia
+New Zealand|Falkland Islands
+Northern Mariana Islands|Iraq
+Marshall Islands|French Southern Territories
+Lesotho|Lebanon
+United Kingdom|Guinea
+Greenland|Greenland
+Norfolk Island|Somalia
+Faroe Islands|Macedonia
+Macao|Czech Republic
+Cuba|Uruguay
+Soviet Union|Kenya
+Guinea-Bissau|Jersey
+Slovenia|Nepal
+Guinea|Nigeria
+Guernsey|Barbados
+Swaziland|Marshall Islands
+Sweden|Cameroon
+Guinea-Bissau|Mongolia
+Colombia|Jamaica
+Tanzania|Niger
+Palau|Benin
+Benin|Maldives
+Kiribati|Kyrgyzstan
+Puerto Rico|Tuvalu
+Haiti|Honduras
+Uruguay|Ukraine
+Liechtenstein|Heard Island and McDonald Islands
+San Marino|Bouvet Island
+Belize|Malaysia
+Dominican Republic|British Indian Ocean Territory
+Egypt|Pakistan
+Botswana|Cyprus
+Armenia|Congo
+Hong Kong|Serbia
+Niger|Switzerland
+Angola|Myanmar
+Armenia|Peru
+Timor-Leste|Cuba
+Cayman Islands|United Kingdom
+Serbia|Papua New Guinea
+Austria|Trinidad and Tobago
+Yugoslavia|Pitcairn
+Morocco|Svalbard and Jan Mayen
+Namibia|Luxembourg
+South Georgia and the South Sandwich Islands|Ireland
+Myanmar|Ukraine
+Grenada|Anguilla
+Central African Republic|Macedonia
+Åland Islands|Maldives
+Pitcairn|Denmark
+Democratic Republic of the Congo|Gabon
+Soviet Union|Mexico
+Japan|Luxembourg
+Maldives|Cyprus
+Sao Tome and Principe|Barbados
+Bangladesh|Benin
+Bahamas|Costa Rica
+Jersey|Western Sahara
+Tuvalu|Kazakhstan
+Ireland|Cayman Islands
+Guyana|Slovakia
+Peru|Niger
+Tanzania|Tajikistan
+South Sudan|Gabon
+Tunisia|Japan
+Kiribati|Norfolk Island
+Slovenia|Greenland
+Spain|Montserrat
+New Caledonia|Mexico
+Norfolk Island|Central African Republic
+Hungary|Iran
+Russian Federation|Equatorial Guinea
+Samoa|Northern Mariana Islands
+Mozambique|Ukraine
+French Guiana|Guernsey
+Botswana|Saint Helena, Ascension and Tristan da Cunha
+South Georgia and the South Sandwich Islands|Macao
+Cocos (Keeling) Islands|Aruba
+Slovakia|San Marino
+French Polynesia|Yugoslavia
+Malta|Benin
+Bangladesh|Tanzania
+South Georgia and the South Sandwich Islands|Iran
+Iraq|Maldives
+Turks and Caicos Islands|Mayotte
+Czech Republic|Barbados
+Saint Barthélemy|Bangladesh
+India|French Guiana
+Antigua and Barbuda|France
+Armenia|Czechoslovakia
+Niger|Vietnam
+Fiji|Aruba
+Bermuda|Cocos (Keeling) Islands
+Saint Lucia|Burundi
+Czech Republic|Luxembourg
+Bosnia and Herzegovina|Eritrea
+Cambodia|Iceland
+Paraguay|Panama
+Pitcairn|French Southern Territories
+Pitcairn|Austria
+Vanuatu|Maldives
+Thailand|Slovakia
+Isle of Man|Pakistan
+Portugal|Brunei
+United States Minor Outlying Islands|Kazakhstan
+Guinea-Bissau|Ethiopia
+Portugal|Liechtenstein
+Moldova|Tuvalu
+Somalia|Indonesia
+Micronesia, Federated States of|Singapore
+French Polynesia|Norway
+Trinidad and Tobago|British Virgin Islands
+Albania|Austria
+Yugoslavia|Panama
+United States Minor Outlying Islands|Yugoslavia
+Niger|Gibraltar
+Antarctica|Czechoslovakia
+Latvia|Cocos (Keeling) Islands
+Serbia and Montenegro|Portugal
+Liechtenstein|Liechtenstein
+Netherlands Antilles|Gibraltar
+Sierra Leone|South Korea
+Germany|Sweden
+Georgia|Costa Rica
+China|Albania
+Cocos (Keeling) Islands|Slovakia
+Solomon Islands|Sri Lanka
+Vietnam|Iceland
+Martinique|Mauritania
+Netherlands Antilles|Cook Islands
+Botswana|Guernsey
+Trinidad and Tobago|Brazil
+Colombia|Laos
+Niue|Germany
+Gibraltar|Bosnia and Herzegovina
+British Indian Ocean Territory|Iran
+Belgium|China
+Spain|French Guiana
+U.S. Virgin Islands|Ecuador
+Mauritius|Paraguay
+Iran|Sri Lanka
+Sri Lanka|Bahamas
+Kuwait|Falkland Islands
+Gabon|Uzbekistan
+Nicaragua|France
+Czechoslovakia|Gabon
+Niger|Canada
+Faroe Islands|Georgia
+Georgia|Nauru
+Hong Kong|Gabon
+Curaçao|Palau
+Australia|Dominica
+Belize|France
+Gambia|Nigeria
+British Indian Ocean Territory|Malawi
+Panama|Germany
+Spain|San Marino
+South Korea|Ireland
+Anguilla|Canada
+Kazakhstan|Cambodia
+Tajikistan|New Zealand
+Macao|Maldives
+Zimbabwe|British Virgin Islands
+Tuvalu|Guatemala
+Brazil|Thailand
+Vietnam|Oman
+France|French Southern Territories
+Namibia|Kyrgyzstan
+Denmark|Namibia
+Nicaragua|South Georgia and the South Sandwich Islands
+Zimbabwe|Madagascar
+Saint Martin (French part)|Saint Lucia
+Greenland|Cook Islands
+Mozambique|Estonia
+Bangladesh|Greenland
+Japan|Syria
+Kiribati|Slovenia
+Yemen|Tokelau
+Bulgaria|San Marino
+Svalbard and Jan Mayen|Libya
+Qatar|Ukraine
+Myanmar|Fiji
+Honduras|Vietnam
+Mozambique|Zimbabwe
+Bulgaria|Poland
+Tuvalu|Sudan
+Åland Islands|Ukraine
+Venezuela|Central African Republic
+Nepal|Andorra
+Montserrat|Comoros
+Greece|Greenland
+Italy|Hungary
+Bolivia|Haiti
+Namibia|Brazil
+Senegal|Russian Federation
+Cape Verde|Micronesia, Federated States of
+Togo|Sierra Leone
+Cameroon|Tuvalu
+Uruguay|Guinea
+Puerto Rico|Papua New Guinea
+Tajikistan|French Guiana
+Cameroon|French Southern Territories
+Sweden|Gibraltar
+Kiribati|Cook Islands
+North Korea|China
+Hong Kong|Isle of Man
+Bosnia and Herzegovina|Iceland
+India|Faroe Islands
+American Samoa|Tuvalu
+Jersey|United States
+Belarus|Dominican Republic
+Afghanistan|Mauritius
+Seychelles|Czechoslovakia
+Guadeloupe|Azerbaijan
+Vietnam|Mayotte
+Heard Island and McDonald Islands|Benin
+East Germany|South Korea
+Finland|Uruguay
+Burkina Faso|Bahrain
+Poland|China
+Kenya|Costa Rica
+Saint Pierre and Miquelon|Hong Kong
+Cayman Islands|Timor-Leste
+Latvia|Rwanda
+Botswana|Liechtenstein
+Togo|San Marino
+United States Minor Outlying Islands|Saudi Arabia
+Marshall Islands|Isle of Man
+Saint Vincent and The Grenadines|Lithuania
+Maldives|Burundi
+Saint Helena, Ascension and Tristan da Cunha|Trinidad and Tobago
+East Germany|Ghana
+Armenia|Cape Verde
+Finland|Saint Martin (French part)
+Tunisia|Senegal
+Saint Kitts and Nevis|New Zealand
+Northern Mariana Islands|Cocos (Keeling) Islands
+Isle of Man|Hungary
+Democratic Republic of the Congo|French Guiana
+Oman|Bangladesh
+Denmark|Macedonia
+Heard Island and McDonald Islands|Cuba
+Gabon|Guam
+Equatorial Guinea|Bulgaria
+Moldova|Isle of Man
+Taiwan|Philippines
+Turkey|Portugal
+San Marino|Brazil
+Bulgaria|Pitcairn
+Romania|Montserrat
+Kazakhstan|Czechoslovakia
+Cocos (Keeling) Islands|British Virgin Islands
+Andorra|Anguilla
+East Germany|Ecuador
+Bhutan|Montserrat
+Brunei|Latvia
+Australia|Congo
+Canada|Macedonia
+Canada|Wallis and Futuna
+North Korea|Argentina
+Serbia|Guatemala
+Tanzania|Estonia
+Cocos (Keeling) Islands|Monaco
+Bouvet Island|Bhutan
+Côte d'Ivoire|Democratic Republic of the Congo
+Philippines|Jersey
+Réunion|Philippines
+Bangladesh|Sudan
+Romania|Lithuania
+France|Montenegro
+Swaziland|Belize
+Denmark|Guinea
+Iraq|Poland
+Montserrat|Pitcairn
+Israel|British Indian Ocean Territory
+Jersey|Aruba
+Poland|Côte d'Ivoire
+Bahrain|Bonaire, Sint Eustatius and Saba
+Romania|Sierra Leone
+Liechtenstein|Ireland
+Saint Pierre and Miquelon|South Africa
+Comoros|Gibraltar
+Equatorial Guinea|Svalbard and Jan Mayen
+Bahrain|Slovenia
+Montenegro|Cook Islands
+Guernsey|Pitcairn
+British Virgin Islands|Bermuda
+Soviet Union|Micronesia, Federated States of
+India|Mauritius
+United Arab Emirates|Wallis and Futuna
+Ghana|Nauru
+Afghanistan|Nauru
+Tanzania|Turkmenistan
+Israel|Poland
+Brunei|South Georgia and the South Sandwich Islands
+Comoros|Italy
+Lithuania|Vatican City State (Holy See)
+Bouvet Island|Cocos (Keeling) Islands
+Australia|Trinidad and Tobago
+Serbia|Gambia
+Seychelles|Gambia
+Lebanon|Turks and Caicos Islands
+Netherlands|Canada
+Iran|Timor-Leste
+Nauru|Northern Mariana Islands
+Guatemala|Croatia
+Cuba|Saint Martin (French part)
+Saint Helena, Ascension and Tristan da Cunha|Syria
+Palau|East Germany
+Saint Vincent and The Grenadines|Vatican City State (Holy See)
+Solomon Islands|Cambodia
+Germany|French Southern Territories
+Qatar|Aruba
+Hong Kong|Mozambique
+Nicaragua|Marshall Islands
+India|Latvia
+Turks and Caicos Islands|Mexico
+Denmark|Kiribati
+Liberia|Kyrgyzstan
+Guadeloupe|Kazakhstan
+Iraq|Cayman Islands
+Jersey|Moldova
+Cape Verde|Montenegro
+Montserrat|United Arab Emirates
+Brazil|Iran
+Bhutan|Kazakhstan
+Finland|Vatican City State (Holy See)
+Comoros|Spain
+Japan|Bhutan
+Lesotho|Martinique
+Hong Kong|Seychelles
+Hungary|Senegal
+Bosnia and Herzegovina|Saint Kitts and Nevis
+Côte d'Ivoire|Zimbabwe
+Germany|Jamaica
+Greece|Tokelau
+Gabon|Bermuda
+Vietnam|Montenegro
+Bahamas|Tanzania
+Moldova|Fiji
+Nicaragua|Dominican Republic
+Jordan|Swaziland
+Albania|Nicaragua
+Nigeria|Saint Kitts and Nevis
+Colombia|Ghana
+Angola|Somalia
+Serbia|Bulgaria
+Malaysia|Bulgaria
+Antarctica|Hungary
+Bangladesh|Trinidad and Tobago
+Cuba|Angola
+Sierra Leone|Georgia
+Croatia|Palestine
+Panama|Ethiopia
+Bahamas|Montenegro
+Tanzania|Luxembourg
+Kyrgyzstan|Thailand
+Niue|Nauru
+Anguilla|Andorra
+Saint Barthélemy|Philippines
+Timor-Leste|Yemen
+Zambia|Morocco
+Burundi|Solomon Islands
+Georgia|Panama
+Honduras|Pitcairn
+Soviet Union|Eritrea
+Democratic Republic of the Congo|South Africa
+Bermuda|Japan
+Iraq|Tonga
+Malta|Brunei
+Falkland Islands|Angola
+Macedonia|Palestine
+Heard Island and McDonald Islands|Trinidad and Tobago
+Ukraine|Botswana
+Qatar|Libya
+Cyprus|Switzerland
+United States|Maldives
+Georgia|Cayman Islands
+Congo|Italy
+Pakistan|Trinidad and Tobago
+Qatar|Myanmar
+Åland Islands|Trinidad and Tobago
+Kenya|Bhutan
+Belgium|Bouvet Island
+Seychelles|French Polynesia
+Haiti|Romania
+South Sudan|Tonga
+Malaysia|Cook Islands
+Saint Martin (French part)|Christmas Island
+Kuwait|Jersey
+French Polynesia|Netherlands
+Netherlands|Palau
+Portugal|Congo
+Réunion|Turkey
+Brazil|Nicaragua
+Trinidad and Tobago|Malta
+Cook Islands|Moldova
+North Korea|Barbados
+Saint Helena, Ascension and Tristan da Cunha|Democratic Republic of the Congo
+Norway|Curaçao
+Argentina|Chad
+Saint Vincent and The Grenadines|Finland
+Aruba|Martinique
+Taiwan|Namibia
+Australia|French Southern Territories
+Yugoslavia|Swaziland
+Iceland|Serbia and Montenegro
+Slovakia|Turkey
+Kenya|Serbia
+Kiribati|Gambia
+Afghanistan|Denmark
+Democratic Republic of the Congo|Cambodia
+Antarctica|Christmas Island
+Puerto Rico|Bermuda
+Argentina|Namibia
+Bermuda|Niue
+South Georgia and the South Sandwich Islands|Cape Verde
+Israel|Sweden
+Saint Kitts and Nevis|Vietnam
+Hungary|Soviet Union
+Niger|Nepal
+Costa Rica|Mali
+Romania|Guyana
+Colombia|Rwanda
+Algeria|Christmas Island
+Cuba|Equatorial Guinea
+Chad|Grenada
+Philippines|Slovakia
+Panama|Spain
+French Polynesia|Cuba
+Saint Vincent and The Grenadines|Côte d'Ivoire
+Wallis and Futuna|Nepal
+Brunei|Guyana
+Trinidad and Tobago|Saint Barthélemy
+Cyprus|Kiribati
+Georgia|Singapore
+Palestine|Pakistan
+Afghanistan|Somalia
+Kyrgyzstan|British Indian Ocean Territory
+Macedonia|Tanzania
+Singapore|Laos
+Kiribati|British Indian Ocean Territory
+Singapore|Greece
+Sweden|Marshall Islands
+Canada|Mexico
+Swaziland|Argentina
+United Kingdom|Australia
+Turkmenistan|Belize
+Cocos (Keeling) Islands|Costa Rica
+Martinique|Vietnam
+Guadeloupe|Nicaragua
+India|Guadeloupe
+Guernsey|Australia
+Cuba|Czech Republic
+Croatia|Monaco
+Congo|Malawi
+Gambia|Andorra
+Jamaica|Turkmenistan
+Kyrgyzstan|Palau
+Maldives|San Marino
+Sudan|Cape Verde
+Qatar|Guinea-Bissau
+Saint Helena, Ascension and Tristan da Cunha|Chile
+Kuwait|Bouvet Island
+Sweden|Vanuatu
+Guam|Palau
+Switzerland|Guam
+Zimbabwe|Serbia and Montenegro
+France|Northern Mariana Islands
+Norfolk Island|Syria
+Austria|Vietnam
+Costa Rica|Tonga
+South Africa|Belize
+South Korea|Cook Islands
+Netherlands Antilles|New Caledonia
+Peru|El Salvador
+Angola|Ukraine
+New Zealand|Madagascar
+Yugoslavia|Djibouti
+Pitcairn|Panama
+Gambia|Greece
+Saint Lucia|Panama
+Morocco|Guyana
+Belgium|Denmark
+Christmas Island|Bulgaria
+Curaçao|Luxembourg
+Qatar|Vietnam
+Macedonia|Gambia
+Falkland Islands|Liechtenstein
+Czechoslovakia|Jordan
+Kiribati|Belarus
+Timor-Leste|Estonia
+Åland Islands|United States
+Marshall Islands|South Korea
+Saint Pierre and Miquelon|Lithuania
+Cuba|Bhutan
+Solomon Islands|China
+Northern Mariana Islands|French Polynesia
+Algeria|Bonaire, Sint Eustatius and Saba
+Slovakia|Saint Vincent and The Grenadines
+Romania|Liberia
+Bonaire, Sint Eustatius and Saba|Zimbabwe
+El Salvador|Slovakia
+Luxembourg|Bahrain
+Denmark|French Polynesia
+Jordan|Syria
+Honduras|Lebanon
+Lebanon|Greenland
+Hong Kong|Sweden
+Czechoslovakia|Antigua and Barbuda
+South Korea|Hong Kong
+Puerto Rico|Montserrat
+Cambodia|Guinea
+Saint Barthélemy|Bahrain
+Maldives|Thailand
+Guinea-Bissau|Tajikistan
+Rwanda|South Georgia and the South Sandwich Islands
+Chile|Syria
+Morocco|Saint Helena, Ascension and Tristan da Cunha
+Singapore|Dominican Republic
+Mauritius|Saint Kitts and Nevis
+Estonia|Palau
+Equatorial Guinea|Grenada
+India|Curaçao
+Bahrain|United States
+Cape Verde|Zambia
+Sudan|Pitcairn
+Palestine|Nicaragua
+Morocco|Guadeloupe
+Kazakhstan|Bulgaria
+Liberia|Mayotte
+Saint Pierre and Miquelon|Tajikistan
+Soviet Union|Antigua and Barbuda
+Iceland|Saint Pierre and Miquelon
+Togo|New Caledonia
+Tunisia|Cyprus
+Northern Mariana Islands|Gabon
+Panama|Palau
+Haiti|Lithuania
+Bangladesh|American Samoa
+Saint Kitts and Nevis|Indonesia
+Lithuania|Costa Rica
+Bangladesh|Soviet Union
+Tunisia|Bahamas
+Czech Republic|Kazakhstan
+Bangladesh|Nigeria
+Iran|Faroe Islands
+Libya|Svalbard and Jan Mayen
+Taiwan|United Kingdom
+Azerbaijan|Switzerland
+Tonga|Malaysia
+Cook Islands|Netherlands
+Liechtenstein|Northern Mariana Islands
+American Samoa|Northern Mariana Islands
+Réunion|United Arab Emirates
+Saint Martin (French part)|Nigeria
+Guinea-Bissau|Austria
+Brunei|Georgia
+Cameroon|Yugoslavia
+Tokelau|Soviet Union
+Turkmenistan|Italy
+Kenya|Belize
+Vatican City State (Holy See)|Ukraine
+Djibouti|Sri Lanka
+Falkland Islands|Finland
+Georgia|Cyprus
+Ethiopia|Bermuda
+Ireland|Samoa
+Sint Maarten (Dutch part)|Vietnam
+Martinique|Guadeloupe
+Guatemala|Togo
+Sint Maarten (Dutch part)|Mexico
+Switzerland|Haiti
+China|South Sudan
+Bangladesh|Eritrea
+Soviet Union|South Africa
+Djibouti|Honduras
+Belgium|Martinique
+Bhutan|Gambia
+Luxembourg|Mauritius
+Paraguay|Vanuatu
+Palau|Palau
+Panama|Macedonia
+United Kingdom|Philippines
+Singapore|Egypt
+Andorra|Bermuda
+Guyana|Croatia
+Liechtenstein|Cambodia
+Yemen|Barbados
+Bhutan|Guadeloupe
+Swaziland|Costa Rica
+Gabon|Lithuania
+Trinidad and Tobago|Yemen
+Australia|Ukraine
+United Arab Emirates|Slovenia
+French Southern Territories|Switzerland
+Suriname|Burundi
+Nigeria|Antarctica
+Ghana|Libya
+Kazakhstan|Germany
+Congo|Burkina Faso
+Botswana|Guinea
+Palestine|Lesotho
+Gabon|Austria
+Slovakia|French Southern Territories
+Netherlands|Egypt
+Tajikistan|Paraguay
+Heard Island and McDonald Islands|Equatorial Guinea
+Bermuda|United Kingdom
+Malta|Azerbaijan
+Andorra|New Zealand
+Serbia and Montenegro|Cameroon
+Zambia|Puerto Rico
+Argentina|Kenya
+Chad|Martinique
+New Zealand|Bonaire, Sint Eustatius and Saba
+Palestine|Russian Federation
+Uganda|Philippines
+Mexico|Egypt
+Nauru|Indonesia
+Dominican Republic|Morocco
+Iran|Bahamas
+Falkland Islands|Antigua and Barbuda
+Puerto Rico|El Salvador
+French Guiana|Palau
+Saint Kitts and Nevis|Finland
+Solomon Islands|Togo
+Cuba|Greece
+El Salvador|Ireland
+Netherlands Antilles|Ethiopia
+Andorra|United States
+Japan|Solomon Islands
+Yemen|Seychelles
+Djibouti|Czech Republic
+San Marino|Peru
+Mauritius|Ghana
+Austria|Tunisia
+Tanzania|Switzerland
+Equatorial Guinea|Nigeria
+Gibraltar|Albania
+Mali|Bahrain
+Bonaire, Sint Eustatius and Saba|Philippines
+United Kingdom|Moldova
+Brazil|Marshall Islands
+Gambia|Germany
+Iceland|Latvia
+Serbia|Ukraine
+Italy|Luxembourg
+Romania|South Korea
+Macedonia|Serbia
+Soviet Union|Sao Tome and Principe
+Central African Republic|Norway
+Armenia|Sudan
+Guyana|Chile
+Nauru|Guam
+Norway|Bouvet Island
+Palau|Dominican Republic
+Trinidad and Tobago|Northern Mariana Islands
+Burkina Faso|Palau
+Kazakhstan|Netherlands
+Djibouti|Andorra
+Puerto Rico|Antarctica
+Cook Islands|Papua New Guinea
+Zimbabwe|Netherlands Antilles
+Germany|Niger
+Sao Tome and Principe|Saint Lucia
+French Guiana|Solomon Islands
+Vietnam|Sweden
+Tokelau|Democratic Republic of the Congo
+Vietnam|Cocos (Keeling) Islands
+Ethiopia|Maldives
+Trinidad and Tobago|Gabon
+Nigeria|Cocos (Keeling) Islands
+Bangladesh|Vanuatu
+Micronesia, Federated States of|Vietnam
+Bouvet Island|Vatican City State (Holy See)
+British Indian Ocean Territory|Saint Helena, Ascension and Tristan da Cunha
+France|Zimbabwe
+Bangladesh|Svalbard and Jan Mayen
+Turkey|Sweden
+Congo|Bolivia
+Zambia|Guinea
+Kiribati|Yemen
+Tonga|Bahamas
+Qatar|Gibraltar
+Canada|Liberia
+Turkey|Saint Barthélemy
+South Georgia and the South Sandwich Islands|Peru
+Laos|Honduras
+Trinidad and Tobago|Saint Vincent and The Grenadines
+Ukraine|Cayman Islands
+Isle of Man|San Marino
+Malaysia|American Samoa
+Sweden|Ukraine
+Puerto Rico|Saint Lucia
+Latvia|Latvia
+Slovenia|Turkey
+Saint Lucia|British Virgin Islands
+Iraq|Estonia
+Malaysia|Ethiopia
+Luxembourg|Cook Islands
+Burundi|Wallis and Futuna
+Guinea-Bissau|Cocos (Keeling) Islands
+Czechoslovakia|Egypt
+Saudi Arabia|Western Sahara
+Monaco|Somalia
+Brazil|Jersey
+South Korea|Sudan
+Svalbard and Jan Mayen|Turkmenistan
+Rwanda|Wallis and Futuna
+Kiribati|Haiti
+Democratic Republic of the Congo|Spain
+Cameroon|Jersey
+Myanmar|Palau
+Wallis and Futuna|Mozambique
+Mauritius|Serbia and Montenegro
+Uzbekistan|Curaçao
+Libya|Brazil
+Northern Mariana Islands|Sri Lanka
+Iran|Tuvalu
+Guatemala|Åland Islands
+Oman|Bahamas
+Bahrain|Botswana
+Czechoslovakia|Cook Islands
+Faroe Islands|Belarus
+Armenia|Montserrat
+Russian Federation|Iran
+Spain|Austria
+Sint Maarten (Dutch part)|New Zealand
+Nicaragua|United States
+Taiwan|Turkey
+France|Yugoslavia
+Saint Pierre and Miquelon|Cayman Islands
+Angola|Turkmenistan
+Estonia|Italy
+Fiji|Mauritania
+Mayotte|Malawi
+Cape Verde|Congo
+Russian Federation|Portugal
+British Indian Ocean Territory|Vanuatu
+Saint Martin (French part)|Thailand
+Gabon|Pakistan
+Senegal|Mauritius
+Senegal|Japan
+Ethiopia|El Salvador
+Cayman Islands|Bangladesh
+Iceland|San Marino
+Macedonia|Australia
+Malta|Thailand
+Iceland|Panama
+Argentina|Ethiopia
+Vanuatu|Luxembourg
+Saint Vincent and The Grenadines|Senegal
+Vatican City State (Holy See)|Sri Lanka
+Libya|Vanuatu
+Georgia|Haiti
+Saint Pierre and Miquelon|Saint Barthélemy
+Uzbekistan|Somalia
+Latvia|Mongolia
+New Zealand|Curaçao
+Serbia and Montenegro|Madagascar
+Lebanon|Qatar
+New Zealand|Honduras
+Mali|Ecuador
+Curaçao|Democratic Republic of the Congo
+Aruba|Somalia
+Italy|Czech Republic
+Ireland|Morocco
+Cyprus|Suriname
+Greenland|Niue
+Guam|Moldova
+Indonesia|Guyana
+Macao|Paraguay
+British Virgin Islands|Cameroon
+Uzbekistan|Vatican City State (Holy See)
+Brunei|Zimbabwe
+Martinique|Mauritius
+Chile|Italy
+Kiribati|Pakistan
+Saint Kitts and Nevis|Tuvalu
+Fiji|New Zealand
+Tokelau|Slovenia
+South Sudan|Syria
+Guinea-Bissau|Saint Vincent and The Grenadines
+Gambia|Iceland
+Poland|Jordan
+Bosnia and Herzegovina|Georgia
+Vietnam|Yemen
+Cuba|Malawi
+Heard Island and McDonald Islands|Singapore
+Tonga|Belize
+Bonaire, Sint Eustatius and Saba|Vanuatu
+Tajikistan|Curaçao
+Albania|British Virgin Islands
+Liechtenstein|Nigeria
+Guam|Brazil
+Micronesia, Federated States of|Saint Martin (French part)
+Germany|South Africa
+Cambodia|South Korea
+Slovakia|Libya
+Réunion|Saint Lucia
+Slovenia|Réunion
+South Georgia and the South Sandwich Islands|Greenland
+Jordan|Georgia
+Kuwait|Zambia
+Cambodia|Germany
+Bosnia and Herzegovina|Malta
+Denmark|Sweden
+Réunion|Vatican City State (Holy See)
+Tunisia|Saint Martin (French part)
+Bermuda|Norway
+Montenegro|U.S. Virgin Islands
+Niger|Wallis and Futuna
+Switzerland|Andorra
+Denmark|Saint Kitts and Nevis
+Macedonia|Saint Kitts and Nevis
+Azerbaijan|Netherlands Antilles
+Macao|Vatican City State (Holy See)
+Lithuania|Cayman Islands
+Tunisia|Czechoslovakia
+Saint Martin (French part)|Serbia
+Syria|Azerbaijan
+New Zealand|Anguilla
+Canada|Bangladesh
+Georgia|Denmark
+Antarctica|Central African Republic
+Saint Barthélemy|Åland Islands
+North Korea|Zambia
+Guinea|Yemen
+Chile|Morocco
+Croatia|Senegal
+Kyrgyzstan|Wallis and Futuna
+Honduras|Djibouti
+Turkmenistan|Niger
+Angola|Togo
+Guadeloupe|Gibraltar
+Ukraine|Brunei
+Mali|Guyana
+Mozambique|New Caledonia
+Montserrat|Serbia and Montenegro
+Anguilla|Saint Martin (French part)
+Costa Rica|Uruguay
+Afghanistan|Haiti
+U.S. Virgin Islands|Latvia
+Mongolia|Norfolk Island
+Antigua and Barbuda|Gibraltar
+Micronesia, Federated States of|Morocco
+Hungary|Jersey
+Bermuda|Netherlands
+Maldives|United Arab Emirates
+Tanzania|Cook Islands
+Isle of Man|American Samoa
+Ireland|Finland
+Kazakhstan|Senegal
+France|Bosnia and Herzegovina
+Soviet Union|Japan
+Western Sahara|Fiji
+Russian Federation|Bosnia and Herzegovina
+Soviet Union|Mayotte
+Barbados|San Marino
+Pitcairn|Vatican City State (Holy See)
+Bangladesh|Burundi
+Libya|Isle of Man
+Western Sahara|Tajikistan
+Bahamas|South Africa
+Bolivia|Côte d'Ivoire
+Czechoslovakia|Guyana
+Germany|Austria
+Svalbard and Jan Mayen|Eritrea
+Liberia|Democratic Republic of the Congo
+Morocco|Mozambique
+Turkmenistan|Indonesia
+Grenada|Belize
+Guyana|Lithuania
+Malta|Saint Barthélemy
+Cape Verde|Australia
+Austria|Burkina Faso
+Faroe Islands|Bonaire, Sint Eustatius and Saba
+Latvia|United Kingdom
+Mayotte|Guatemala
+British Indian Ocean Territory|Tanzania
+Papua New Guinea|Trinidad and Tobago
+Uganda|Singapore
+Kiribati|Isle of Man
+Gabon|Nepal
+Niger|Eritrea
+Latvia|Peru
+Guinea-Bissau|British Indian Ocean Territory
+Gabon|Montserrat
+Malta|Côte d'Ivoire
+Haiti|Andorra
+Fiji|Curaçao
+China|Czech Republic
+Finland|Congo
+Eritrea|Gabon
+Turkmenistan|Togo
+Macao|Burundi
+Albania|Vanuatu
+Moldova|French Guiana
+Denmark|Nicaragua
+Sint Maarten (Dutch part)|Cape Verde
+Slovakia|Hungary
+Anguilla|Congo
+South Africa|Bhutan
+Hungary|Burkina Faso
+Cambodia|Bosnia and Herzegovina
+Saint Vincent and The Grenadines|Falkland Islands
+Monaco|Guinea-Bissau
+Togo|Panama
+Faroe Islands|Egypt
+Cocos (Keeling) Islands|Morocco
+Latvia|Costa Rica
+Dominica|Timor-Leste
+Gabon|Palau
+Bangladesh|Cape Verde
+Vatican City State (Holy See)|Honduras
+Brunei|Ethiopia
+Mayotte|Gambia
+Slovenia|San Marino
+Tokelau|El Salvador
+Norfolk Island|Iran
+South Georgia and the South Sandwich Islands|Swaziland
+Montserrat|Mauritania
+Burundi|Montenegro
+Niue|Moldova
+Jersey|Gabon
+Kyrgyzstan|Honduras
+Cape Verde|Belize
+Bhutan|Rwanda
+Togo|Nigeria
+Saint Martin (French part)|Turks and Caicos Islands
+Tokelau|San Marino
+Benin|Jersey
+Mayotte|Nepal
+Jordan|Guatemala
+Isle of Man|Antarctica
+South Korea|Nigeria
+Palau|Uganda
+Sweden|Indonesia
+Western Sahara|South Georgia and the South Sandwich Islands
+Heard Island and McDonald Islands|Bahrain
+Belarus|Guyana
+Costa Rica|Sri Lanka
+Madagascar|Jersey
+Saint Helena, Ascension and Tristan da Cunha|Sudan
+Pakistan|British Virgin Islands
+Ecuador|Georgia
+Central African Republic|Panama
+Liberia|Guyana
+Côte d'Ivoire|Nauru
+Belize|Australia
+American Samoa|South Sudan
+Vatican City State (Holy See)|Trinidad and Tobago
+Ecuador|Zambia
+Cameroon|Antarctica
+Mauritius|Mexico
+Malta|Luxembourg
+Qatar|Laos
+Honduras|Northern Mariana Islands
+Zimbabwe|Aruba
+Angola|Serbia
+Nicaragua|Malawi
+Sierra Leone|Mali
+Hungary|Réunion
+Nigeria|Finland
+Nicaragua|Chile
+Kuwait|Cameroon
+Eritrea|Trinidad and Tobago
+Marshall Islands|Vietnam
+Portugal|Lithuania
+Morocco|Paraguay
+Libya|Liberia
+Niue|Saint Martin (French part)
+Peru|Palau
+South Korea|Åland Islands
+Peru|Saint Pierre and Miquelon
+Barbados|Western Sahara
+Switzerland|Samoa
+Cook Islands|Macedonia
+East Germany|Tokelau
+Tanzania|Chile
+Australia|Guernsey
+Netherlands Antilles|Fiji
+Syria|Bouvet Island
+Bouvet Island|Uzbekistan
+Sierra Leone|Botswana
+Luxembourg|Democratic Republic of the Congo
+Afghanistan|Northern Mariana Islands
+Peru|Sierra Leone
+Bonaire, Sint Eustatius and Saba|Solomon Islands
+Ghana|Guernsey
+Bolivia|Israel
+Macedonia|Aruba
+Antarctica|Guyana
+Bouvet Island|Northern Mariana Islands
+Equatorial Guinea|Guernsey
+Canada|Germany
+Iran|Réunion
+Peru|Martinique
+Malaysia|Ukraine
+Bangladesh|Saint Lucia
+South Sudan|Tuvalu
+Cambodia|U.S. Virgin Islands
+Anguilla|Brunei
+Micronesia, Federated States of|Soviet Union
+Cambodia|Somalia
+Tajikistan|Indonesia
+Somalia|El Salvador
+Central African Republic|Tajikistan
+Chile|Jamaica
+Georgia|Ukraine
+Niue|Colombia
+Poland|Soviet Union
+Denmark|Togo
+Czech Republic|Croatia
+Heard Island and McDonald Islands|Greenland
+Isle of Man|Ethiopia
+Chad|Macedonia
+Namibia|Cyprus
+Nigeria|Colombia
+Kenya|Peru
+Estonia|Laos
+Bahrain|Benin
+Palestine|Pitcairn
+Nigeria|Grenada
+Wallis and Futuna|Saint Pierre and Miquelon
+Wallis and Futuna|South Georgia and the South Sandwich Islands
+Serbia|East Germany
+United Arab Emirates|Hong Kong
+Kuwait|Saint Pierre and Miquelon
+Gambia|Rwanda
+Finland|British Indian Ocean Territory
+Isle of Man|Algeria
+Vatican City State (Holy See)|Mongolia
+Libya|Martinique
+Kyrgyzstan|Bangladesh
+Panama|Peru
+Cape Verde|Georgia
+Poland|Tokelau
+Bahamas|Central African Republic
+Turks and Caicos Islands|Czechoslovakia
+Georgia|Trinidad and Tobago
+Pitcairn|Sudan
+British Virgin Islands|Laos
+Liberia|India
+United States Minor Outlying Islands|Madagascar
+Poland|Nepal
+Austria|Paraguay
+Antarctica|Jordan
+Gibraltar|Chad
+Czech Republic|British Indian Ocean Territory
+Japan|Philippines
+Ireland|Mozambique
+Armenia|Puerto Rico
+Algeria|Mali
+Philippines|Kuwait
+Liechtenstein|Macao
+East Germany|Bhutan
+Malta|Aruba
+Niger|Malaysia
+Peru|Bangladesh
+Iceland|Laos
+Brazil|Guatemala
+Micronesia, Federated States of|Venezuela
+Cyprus|Belize
+South Africa|Ecuador
+Sint Maarten (Dutch part)|Laos
+Indonesia|French Guiana
+Argentina|Guadeloupe
+American Samoa|Pakistan
+Northern Mariana Islands|Jamaica
+Italy|Cameroon
+Antarctica|Mauritius
+Russian Federation|Togo
+Jordan|Libya
+Botswana|Bosnia and Herzegovina
+Liechtenstein|United States
+Austria|Iran
+Central African Republic|Thailand
+American Samoa|Iran
+Heard Island and McDonald Islands|Angola
+Somalia|Angola
+Palau|Saint Lucia
+Australia|Chad
+Saint Kitts and Nevis|Equatorial Guinea
+United States Minor Outlying Islands|Sao Tome and Principe
+Bouvet Island|Central African Republic
+South Africa|Tunisia
+Cook Islands|Namibia
+Maldives|Armenia
+Aruba|Kazakhstan
+Zambia|Syria
+Australia|Wallis and Futuna
+Serbia|Djibouti
+Heard Island and McDonald Islands|South Sudan
+Yugoslavia|Tunisia
+Sint Maarten (Dutch part)|Cocos (Keeling) Islands
+Sri Lanka|Angola
+Suriname|Antarctica
+Singapore|Puerto Rico
+Syria|Netherlands Antilles
+Saudi Arabia|Malta
+Central African Republic|Morocco
+Saint Helena, Ascension and Tristan da Cunha|Barbados
+Libya|Cape Verde
+Gabon|United Kingdom
+Croatia|Turkmenistan
+Cameroon|Greece
+Chile|Dominica
+Guam|Slovakia
+Liechtenstein|Brazil
+Russian Federation|San Marino
+Vatican City State (Holy See)|Chad
+South Africa|Singapore
+Tonga|Swaziland
+Andorra|Portugal
+Armenia|Taiwan
+Netherlands|Turkey
+Honduras|Saint Vincent and The Grenadines
+Namibia|Cambodia
+Lesotho|Åland Islands
+East Germany|Anguilla
+Finland|Trinidad and Tobago
+Burundi|Belize
+Germany|Monaco
+Nauru|Nepal
+Mexico|Heard Island and McDonald Islands
+Singapore|British Virgin Islands
+Vanuatu|Guinea
+Myanmar|Sao Tome and Principe
+Cuba|Malaysia
+Christmas Island|New Zealand
+Georgia|Saint Pierre and Miquelon
+Gibraltar|Costa Rica
+Turks and Caicos Islands|Cambodia
+Uzbekistan|East Germany
+Libya|South Africa
+Martinique|Jordan
+British Virgin Islands|Turkmenistan
+Saint Kitts and Nevis|Trinidad and Tobago
+Zimbabwe|China
+Namibia|Georgia
+U.S. Virgin Islands|Trinidad and Tobago
+Albania|Azerbaijan
+Eritrea|Afghanistan
+Ukraine|South Korea
+Poland|Israel
+Liberia|Vanuatu
+Monaco|Laos
+Suriname|Bolivia
+Equatorial Guinea|United States Minor Outlying Islands
+Panama|Laos
+Portugal|South Africa
+Tanzania|Bahamas
+Portugal|Mongolia
+Czechoslovakia|Italy
+Mexico|Chile
+Andorra|Côte d'Ivoire
+Marshall Islands|Botswana
+Saint Kitts and Nevis|Chad
+Tanzania|Afghanistan
+Dominica|Azerbaijan
+Micronesia, Federated States of|Gambia
+Burundi|Soviet Union
+Sweden|Sao Tome and Principe
+Saint Vincent and The Grenadines|Montserrat
+El Salvador|Cameroon
+Netherlands Antilles|Algeria
+Åland Islands|Chad
+Japan|Malawi
+Nauru|Colombia
+Grenada|Germany
+Andorra|China
+Luxembourg|Niger
+Philippines|Luxembourg
+Ukraine|Cuba
+Sint Maarten (Dutch part)|Gibraltar
+Cocos (Keeling) Islands|Jersey
+Saint Barthélemy|Greece
+Sierra Leone|French Southern Territories
+Hong Kong|U.S. Virgin Islands
+Angola|Netherlands
+Falkland Islands|Costa Rica
+Saint Martin (French part)|Greenland
+Réunion|Uganda
+Bulgaria|Georgia
+Bangladesh|Marshall Islands
+Luxembourg|Barbados
+Macao|Northern Mariana Islands
+Northern Mariana Islands|Uganda
+Nigeria|Pakistan
+American Samoa|Cocos (Keeling) Islands
+Palestine|Mayotte
+Curaçao|Cyprus
+Sri Lanka|Cuba
+Åland Islands|Kuwait
+Sweden|Papua New Guinea
+Luxembourg|Namibia
+Gibraltar|Yemen
+American Samoa|Honduras
+Vatican City State (Holy See)|Philippines
+Myanmar|Morocco
+Solomon Islands|Malaysia
+American Samoa|Lebanon
+Togo|Brazil
+Bulgaria|Kazakhstan
+Cambodia|Afghanistan
+Chile|Niger
+Algeria|Dominica
+British Virgin Islands|Bonaire, Sint Eustatius and Saba
+Monaco|Czechoslovakia
+Saudi Arabia|Anguilla
+Pitcairn|Cuba
+Bosnia and Herzegovina|Thailand
+Greece|Solomon Islands
+Tonga|Costa Rica
+Kuwait|San Marino
+Burundi|Albania
+Tonga|Nauru
+Uzbekistan|Zimbabwe
+Qatar|Mauritania
+Uzbekistan|Timor-Leste
+Jersey|Argentina
+Venezuela|Niger
+Kenya|Czechoslovakia
+French Guiana|Soviet Union
+Bhutan|Haiti
+Chad|Nigeria
+U.S. Virgin Islands|Sint Maarten (Dutch part)
+Vatican City State (Holy See)|Antarctica
+Belarus|Laos
+Slovenia|British Virgin Islands
+Isle of Man|Netherlands Antilles
+Macao|South Georgia and the South Sandwich Islands
+Benin|Solomon Islands
+Saint Martin (French part)|Kiribati
+Comoros|Saint Kitts and Nevis
+Canada|Austria
+Mauritius|Mozambique
+Czechoslovakia|Nepal
+Saint Helena, Ascension and Tristan da Cunha|Vietnam
+French Guiana|Zimbabwe
+Pakistan|Grenada
+Austria|Switzerland
+Netherlands Antilles|Chad
+India|Finland
+Guam|Gambia
+Iran|Belgium
+Papua New Guinea|Saint Kitts and Nevis
+Monaco|Cameroon
+Mongolia|Taiwan
+Pitcairn|South Sudan
+Finland|Afghanistan
+Gibraltar|Luxembourg
+United States Minor Outlying Islands|Cook Islands
+Palau|Chile
+Honduras|Saudi Arabia
+Albania|Myanmar
+Malta|Iraq
+Senegal|U.S. Virgin Islands
+Paraguay|Slovakia
+United Arab Emirates|Réunion
+Argentina|Montserrat
+Côte d'Ivoire|Netherlands Antilles
+Tanzania|Panama
+Belgium|Turkmenistan
+Maldives|New Caledonia
+Swaziland|Mayotte
+Saint Pierre and Miquelon|Liberia
+Cape Verde|Djibouti
+Saint Kitts and Nevis|Singapore
+Bermuda|Thailand
+Guernsey|Tuvalu
+Ecuador|American Samoa
+Faroe Islands|Norfolk Island
+Belarus|Angola
+Japan|Austria
+Saint Helena, Ascension and Tristan da Cunha|Montenegro
+San Marino|Senegal
+Guadeloupe|Mauritania
+Réunion|Cape Verde
+East Germany|Jersey
+Uruguay|Niger
+New Zealand|Norfolk Island
+Nigeria|Gibraltar
+Ghana|Rwanda
+Palestine|Vanuatu
+Slovakia|Nicaragua
+Lebanon|Hungary
+Benin|Egypt
+Cyprus|Guinea-Bissau
+Tunisia|Gabon
+Cayman Islands|Uzbekistan
+Panama|Togo
+Bahrain|Guam
+Niger|Saint Martin (French part)
+Palau|Jamaica
+Bonaire, Sint Eustatius and Saba|Ecuador
+Malta|Guernsey
+Latvia|Saint Barthélemy
+Andorra|Democratic Republic of the Congo
+Anguilla|Cape Verde
+Serbia and Montenegro|Brazil
+Haiti|Brazil
+Mongolia|Lebanon
+New Caledonia|Svalbard and Jan Mayen
+Algeria|Gabon
+Chad|Philippines
+Congo|Jordan
+Swaziland|Cayman Islands
+Latvia|Somalia
+Croatia|Pitcairn
+Lebanon|Curaçao
+Iran|Heard Island and McDonald Islands
+Latvia|Bangladesh
+Spain|Eritrea
+Paraguay|Gambia
+Egypt|Iceland
+Zimbabwe|Syria
+Bulgaria|Bouvet Island
+Cyprus|Syria
+Sweden|Serbia and Montenegro
+Palau|Dominica
+East Germany|Mongolia
+Serbia and Montenegro|Iran
+Taiwan|Saint Vincent and The Grenadines
+Cook Islands|Palau
+Trinidad and Tobago|Grenada
+Nauru|Latvia
+Papua New Guinea|Ukraine
+Puerto Rico|East Germany
+Turks and Caicos Islands|France
+Brunei|Norway
+Norway|Jersey
+Eritrea|Cambodia
+Kiribati|American Samoa
+Lesotho|Northern Mariana Islands
+Cyprus|Namibia
+East Germany|Palestine
+Cameroon|Fiji
+Tonga|Hong Kong
+Antigua and Barbuda|Antarctica
+Belgium|Mauritius
+Nauru|Comoros
+Sweden|Turkmenistan
+Cayman Islands|Swaziland
+Venezuela|Mauritius
+Albania|Iran
+Anguilla|Pakistan
+Swaziland|Estonia
+Turks and Caicos Islands|Macedonia
+Barbados|Sudan
+Guinea-Bissau|Pitcairn
+South Korea|Madagascar
+Gibraltar|Afghanistan
+Brunei|Saudi Arabia
+Norway|Tonga
+Luxembourg|Sudan
+Sao Tome and Principe|Iceland
+Barbados|Serbia and Montenegro
+Norfolk Island|South Sudan
+Haiti|Croatia
+Tokelau|Yemen
+Lesotho|French Southern Territories
+Saudi Arabia|Zimbabwe
+Ghana|Solomon Islands
+Slovakia|Guinea-Bissau
+Rwanda|Kiribati
+Saint Vincent and The Grenadines|Chile
+East Germany|Vanuatu
+Sint Maarten (Dutch part)|Nigeria
+Russian Federation|Haiti
+Suriname|Morocco
+Cape Verde|Iran
+India|Oman
+Hong Kong|Burundi
+Maldives|Åland Islands
+Chile|Myanmar
+Taiwan|Monaco
+Eritrea|Zambia
+United States|Egypt
+Tokelau|Saint Kitts and Nevis
+Denmark|Mauritius
+United Kingdom|Qatar
+Costa Rica|Kiribati
+Yemen|Syria
+Qatar|Georgia
+Lesotho|Tajikistan
+India|Belarus
+Venezuela|Tajikistan
+Luxembourg|Pitcairn
+Malaysia|Norway
+Greece|Cameroon
+East Germany|Hungary
+Antigua and Barbuda|Lebanon
+Svalbard and Jan Mayen|Timor-Leste
+Saint Helena, Ascension and Tristan da Cunha|Equatorial Guinea
+Nicaragua|Mali
+Cayman Islands|Philippines
+Canada|Argentina
+Greece|Ethiopia
+Bonaire, Sint Eustatius and Saba|Comoros
+Turks and Caicos Islands|Nepal
+Denmark|Qatar
+Guernsey|Equatorial Guinea
+Greenland|Panama
+Honduras|Dominica
+Tanzania|Fiji
+Qatar|Iraq
+Philippines|Nauru
+Paraguay|Falkland Islands
+Croatia|Mauritania
+Czech Republic|Palestine
+United Arab Emirates|Czech Republic
+Bahamas|Belize
+Cook Islands|Soviet Union
+Bulgaria|Svalbard and Jan Mayen
+Chile|Marshall Islands
+United Arab Emirates|U.S. Virgin Islands
+United Arab Emirates|Solomon Islands
+Italy|Papua New Guinea
+Tunisia|Ecuador
+Burundi|Finland
+Jordan|New Caledonia
+Croatia|Palau
+Saint Vincent and The Grenadines|Slovakia
+Zambia|Montenegro
+Curaçao|Slovakia
+French Guiana|Argentina
+Wallis and Futuna|Sierra Leone
+Iraq|Mali
+Saint Lucia|Portugal
+Chile|Malaysia
+Wallis and Futuna|Namibia
+Iceland|Tanzania
+Venezuela|Bermuda
+Cocos (Keeling) Islands|Zimbabwe
+New Caledonia|Cambodia
+Macao|Trinidad and Tobago
+Comoros|Norfolk Island
+Panama|Benin
+Sao Tome and Principe|Serbia
+Saint Martin (French part)|Liberia
+Lesotho|Equatorial Guinea
+Falkland Islands|Madagascar
+Micronesia, Federated States of|Sweden
+Guadeloupe|Russian Federation
+Tanzania|Sint Maarten (Dutch part)
+Norway|Bolivia
+Syria|Sri Lanka
+Martinique|Bonaire, Sint Eustatius and Saba
+Guinea-Bissau|Yugoslavia
+Côte d'Ivoire|Germany
+Serbia|Tonga
+Guinea|Ethiopia
+Portugal|Timor-Leste
+Vanuatu|Egypt
+Syria|Haiti
+Lithuania|Vanuatu
+New Zealand|Egypt
+Turkmenistan|Heard Island and McDonald Islands
+Saint Martin (French part)|Gibraltar
+Greenland|Côte d'Ivoire
+Samoa|Serbia
+Slovakia|Poland
+Soviet Union|Chad
+Thailand|Belgium
+Taiwan|Bolivia
+U.S. Virgin Islands|Saint Martin (French part)
+Cook Islands|Liberia
+Morocco|Pakistan
+Grenada|Benin
+Serbia and Montenegro|Zambia
+Uzbekistan|Dominica
+Guinea-Bissau|Côte d'Ivoire
+Mongolia|Togo
+Qatar|Gambia
+Democratic Republic of the Congo|Macao
+Faroe Islands|Czechoslovakia
+Turkey|United Arab Emirates
+Lesotho|Bhutan
+Guyana|Madagascar
+Oman|Finland
+Latvia|Jamaica
+Congo|Libya
+Central African Republic|El Salvador
+Gabon|Iceland
+United States|Senegal
+Taiwan|Costa Rica
+Lebanon|United States Minor Outlying Islands
+Niue|Samoa
+Ireland|Switzerland
+Fiji|Maldives
+Cyprus|Zambia
+United States Minor Outlying Islands|Bahrain
+Libya|British Indian Ocean Territory
+Burundi|Tonga
+San Marino|Réunion
+United States Minor Outlying Islands|French Polynesia
+Ireland|Bolivia
+Faroe Islands|Vatican City State (Holy See)
+Guinea|Wallis and Futuna
+United States Minor Outlying Islands|Martinique
+Guinea|Sweden
+Ukraine|Mayotte
+Mayotte|Laos
+Cuba|East Germany
+Palau|Saint Pierre and Miquelon
+Belarus|Cambodia
+Namibia|Seychelles
+South Korea|Singapore
+Bonaire, Sint Eustatius and Saba|Liberia
+Austria|Svalbard and Jan Mayen
+Uzbekistan|Tonga
+Uruguay|Lesotho
+China|Cook Islands
+Spain|Isle of Man
+Mali|Mali
+Netherlands|Brunei
+North Korea|Bahamas
+Nauru|Lithuania
+French Polynesia|Cameroon
+Netherlands Antilles|Montenegro
+Dominica|Svalbard and Jan Mayen
+Pitcairn|Guatemala
+French Guiana|Vatican City State (Holy See)
+U.S. Virgin Islands|Palestine
+Bhutan|Iraq
+Paraguay|Argentina
+Northern Mariana Islands|Canada
+Sao Tome and Principe|Solomon Islands
+Russian Federation|Kazakhstan
+Senegal|Honduras
+Jamaica|Bouvet Island
+Grenada|United Kingdom
+Saudi Arabia|Liberia
+Liechtenstein|Puerto Rico
+Réunion|Switzerland
+Côte d'Ivoire|Ethiopia
+Ireland|Falkland Islands
+Dominican Republic|Cambodia
+Tanzania|Serbia
+Mozambique|Ireland
+New Zealand|Yugoslavia
+Romania|British Indian Ocean Territory
+Myanmar|South Africa
+India|Mongolia
+Morocco|Brunei
+Palestine|French Polynesia
+Bahamas|Nauru
+Italy|Guernsey
+Greece|Monaco
+Montserrat|Tonga
+Egypt|Falkland Islands
+Denmark|Turkmenistan
+Northern Mariana Islands|Zambia
+Ethiopia|Costa Rica
+Norfolk Island|Bahamas
+United Arab Emirates|Libya
+Martinique|South Georgia and the South Sandwich Islands
+Ukraine|Sierra Leone
+Philippines|British Virgin Islands
+Chile|Netherlands
+Belgium|Curaçao
+Botswana|Guadeloupe
+Luxembourg|Montserrat
+Laos|Yemen
+Seychelles|Myanmar
+Cook Islands|Guinea-Bissau
+Namibia|Mauritania
+Nepal|Madagascar
+Mongolia|Faroe Islands
+Saint Kitts and Nevis|British Indian Ocean Territory
+Palestine|Canada
+Ireland|Armenia
+Belgium|Papua New Guinea
+Myanmar|Bhutan
+Laos|Morocco
+Central African Republic|Eritrea
+Wallis and Futuna|Bonaire, Sint Eustatius and Saba
+Niger|Cameroon
+Western Sahara|Ukraine
+Western Sahara|Saint Vincent and The Grenadines
+Singapore|Azerbaijan
+El Salvador|Mongolia
+French Polynesia|Nigeria
+Burkina Faso|New Caledonia
+Czech Republic|Réunion
+United States Minor Outlying Islands|Tonga
+Belize|Yemen
+Mauritius|Guinea-Bissau
+Turkey|Iran
+Palau|Anguilla
+Ethiopia|Guyana
+Fiji|Cook Islands
+Palau|Croatia
+Bahrain|Kiribati
+Falkland Islands|Russian Federation
+Eritrea|Sierra Leone
+Poland|Kyrgyzstan
+Mauritania|Switzerland
+French Guiana|United States Minor Outlying Islands
+Azerbaijan|Honduras
+Zimbabwe|Finland
+Bouvet Island|Belarus
+Belgium|French Guiana
+Senegal|Egypt
+Dominican Republic|Peru
+Norway|Somalia
+El Salvador|Uruguay
+Portugal|Tuvalu
+Saudi Arabia|Algeria
+Central African Republic|Austria
+Australia|East Germany
+Cambodia|Nepal
+Yugoslavia|Singapore
+Israel|Central African Republic
+Ethiopia|Ghana
+Bermuda|Eritrea
+Cuba|Togo
+San Marino|Malaysia
+South Korea|Martinique
+Nicaragua|Saint Helena, Ascension and Tristan da Cunha
+Malaysia|Libya
+Papua New Guinea|Bulgaria
+Senegal|Wallis and Futuna
+Montserrat|Kuwait
+Senegal|Tunisia
+Montenegro|Chile
+Rwanda|China
+Bahamas|Jersey
+Saint Martin (French part)|Yemen
+American Samoa|Sweden
+French Guiana|Saint Barthélemy
+Tuvalu|Solomon Islands
+French Polynesia|Niue
+Curaçao|Iraq
+Estonia|Peru
+Armenia|Belize
+Israel|San Marino
+Hong Kong|Russian Federation
+Saint Barthélemy|Armenia
+Bonaire, Sint Eustatius and Saba|Costa Rica
+Uzbekistan|Dominican Republic
+Haiti|Latvia
+Estonia|Luxembourg
+Poland|Cocos (Keeling) Islands
+Martinique|Puerto Rico
+Syria|Soviet Union
+Libya|Peru
+South Korea|Slovenia
+Burkina Faso|Democratic Republic of the Congo
+United Arab Emirates|Jordan
+Netherlands|Seychelles
+Albania|Sierra Leone
+Turkmenistan|South Sudan
+Bouvet Island|Saudi Arabia
+Pakistan|India
+Luxembourg|Pakistan
+Saint Barthélemy|Norway
+Niger|Madagascar
+Bolivia|Maldives
+Tanzania|Turkey
+Brunei|Greenland
+Belgium|Cambodia
+South Africa|Turks and Caicos Islands
+Soviet Union|Turkey
+Niger|Cyprus
+Chad|Mozambique
+Tonga|Macao
+Liechtenstein|Western Sahara
+Democratic Republic of the Congo|Norway
+Cameroon|Moldova
+China|Japan
+Palau|French Guiana
+New Zealand|Afghanistan
+Chile|Turks and Caicos Islands
+Latvia|Montenegro
+United Kingdom|Guadeloupe
+Iceland|Slovenia
+Saudi Arabia|Svalbard and Jan Mayen
+Mali|Ethiopia
+Taiwan|Portugal
+Lesotho|Dominica
+Serbia and Montenegro|Czechoslovakia
+Morocco|Åland Islands
+Greenland|Vietnam
+New Zealand|Czechoslovakia
+Iran|Uzbekistan
+Bahamas|Rwanda
+Heard Island and McDonald Islands|Western Sahara
+Montserrat|New Zealand
+Uruguay|Kenya
+Bouvet Island|Barbados
+Estonia|Denmark
+Tokelau|Luxembourg
+Papua New Guinea|Mayotte
+Zambia|Gambia
+Heard Island and McDonald Islands|Ghana
+Saint Martin (French part)|Sint Maarten (Dutch part)
+Sri Lanka|Liberia
+Panama|Saint Helena, Ascension and Tristan da Cunha
+Ukraine|Saint Barthélemy
+Hong Kong|Austria
+Sudan|Libya
+Armenia|Thailand
+Fiji|Liechtenstein
+Switzerland|Trinidad and Tobago
+Gibraltar|Guinea-Bissau
+Canada|Bahamas
+Venezuela|Cocos (Keeling) Islands
+Equatorial Guinea|Spain
+Sao Tome and Principe|Netherlands
+Soviet Union|Bulgaria
+Bosnia and Herzegovina|Mozambique
+Soviet Union|Soviet Union
+Haiti|Nicaragua
+Palau|Egypt
+Bahrain|Monaco
+Russian Federation|Nigeria
+Turkmenistan|Switzerland
+Romania|Gabon
+Barbados|Romania
+Seychelles|Mauritania
+Tonga|San Marino
+Liberia|Czech Republic
+Hong Kong|Bhutan
+Isle of Man|Switzerland
+Cape Verde|French Polynesia
+Montserrat|Martinique
+Syria|Tuvalu
+Belize|Papua New Guinea
+Spain|Bangladesh
+Estonia|Namibia
+Macedonia|Italy
+Eritrea|Latvia
+Grenada|Honduras
+Egypt|Burkina Faso
+Jersey|United Kingdom
+Afghanistan|Timor-Leste
+U.S. Virgin Islands|Mexico
+Mauritius|Tonga
+Taiwan|Antarctica
+United States Minor Outlying Islands|North Korea
+United Arab Emirates|Trinidad and Tobago
+Malawi|Albania
+South Sudan|Monaco
+Grenada|Sri Lanka
+Slovenia|Albania
+United Arab Emirates|Iraq
+Puerto Rico|Guinea-Bissau
+American Samoa|Congo
+Argentina|Malawi
+Czech Republic|Dominican Republic
+Israel|Bonaire, Sint Eustatius and Saba
+El Salvador|Panama
+Algeria|Sint Maarten (Dutch part)
+Barbados|Saint Kitts and Nevis
+Senegal|India
+Tuvalu|French Polynesia
+Luxembourg|Djibouti
+Puerto Rico|Barbados
+Egypt|Latvia
+Christmas Island|Netherlands Antilles
+Ethiopia|Syria
+Botswana|Cook Islands
+Sao Tome and Principe|Tajikistan
+Saint Barthélemy|Singapore
+Zimbabwe|Iceland
+Greece|Guadeloupe
+Sri Lanka|Bonaire, Sint Eustatius and Saba
+New Caledonia|Bahrain
+Botswana|Mauritania
+Cocos (Keeling) Islands|Fiji
+Kiribati|Martinique
+Qatar|Papua New Guinea
+Hong Kong|East Germany
+Jordan|Angola
+Iran|United States
+Andorra|Lesotho
+Kuwait|Sierra Leone
+Pakistan|Saint Lucia
+Cuba|Soviet Union
+Bosnia and Herzegovina|Saint Pierre and Miquelon
+Angola|Maldives
+Grenada|Saudi Arabia
+Germany|Macedonia
+Syria|Uruguay
+Sri Lanka|Norway
+Faroe Islands|Cuba
+United Kingdom|Sri Lanka
+Kyrgyzstan|Dominican Republic
+Mauritania|Serbia
+Turks and Caicos Islands|Chile
+Poland|Democratic Republic of the Congo
+Pakistan|Faroe Islands
+Burkina Faso|Guyana
+Lithuania|New Caledonia
+Mongolia|Turks and Caicos Islands
+Albania|Czechoslovakia
+Saint Martin (French part)|China
+Swaziland|Bangladesh
+East Germany|Switzerland
+Madagascar|British Virgin Islands
+Russian Federation|Tokelau
+Palau|Somalia
+Slovakia|Romania
+Sudan|Mexico
+Oman|Malaysia
+Angola|Guadeloupe
+Eritrea|Belgium
+North Korea|Turkey
+Cayman Islands|French Southern Territories
+Bahrain|United States Minor Outlying Islands
+Macedonia|Belgium
+Lesotho|Samoa
+Denmark|Iran
+Vietnam|Benin
+South Africa|Tonga
+Taiwan|Hong Kong
+Chile|Ghana
+Saint Lucia|San Marino
+Myanmar|Netherlands Antilles
+Haiti|Bhutan
+Sint Maarten (Dutch part)|Western Sahara
+Ukraine|Bahamas
+French Southern Territories|Saint Pierre and Miquelon
+Spain|Hungary
+Costa Rica|Mayotte
+Egypt|Romania
+New Caledonia|Latvia
+Qatar|Malta
+Guadeloupe|Åland Islands
+United Kingdom|Western Sahara
+Solomon Islands|Chad
+Bhutan|Palau
+Czech Republic|Indonesia
+Réunion|Libya
+Saint Martin (French part)|Hong Kong
+Cocos (Keeling) Islands|Saint Helena, Ascension and Tristan da Cunha
+Spain|Albania
+Kuwait|Central African Republic
+Qatar|Côte d'Ivoire
+Colombia|Guam
+Iraq|Hungary
+Singapore|Jersey
+Libya|Myanmar
+Malta|Myanmar
+Niger|Saint Helena, Ascension and Tristan da Cunha
+Antarctica|Mozambique
+Cyprus|Togo
+Dominican Republic|Burundi
+Barbados|South Korea
+Haiti|British Virgin Islands
+Chile|Soviet Union
+Heard Island and McDonald Islands|American Samoa
+Guadeloupe|Norway
+Kazakhstan|Qatar
+Sierra Leone|Comoros
+Japan|Antarctica
+Netherlands Antilles|Turkey
+Jamaica|Israel
+Maldives|Turkey
+Sierra Leone|Sweden
+Bonaire, Sint Eustatius and Saba|China
+Pakistan|Sierra Leone
+Western Sahara|Chile
+Iraq|Sao Tome and Principe
+Tokelau|Saudi Arabia
+Bouvet Island|Slovenia
+Chad|Sierra Leone
+Vietnam|Cambodia
+Austria|Pitcairn
+Burkina Faso|Sierra Leone
+Uruguay|Puerto Rico
+Mexico|Argentina
+Costa Rica|Trinidad and Tobago
+Mauritania|Bahamas
+Aruba|Bahamas
+Cyprus|Iraq
+Saint Barthélemy|Saint Helena, Ascension and Tristan da Cunha
+Lebanon|Ghana
+Western Sahara|British Virgin Islands
+Christmas Island|Grenada
+Bangladesh|Portugal
+New Caledonia|Martinique
+Georgia|Czech Republic
+Norway|Namibia
+Czech Republic|Cameroon
+French Southern Territories|Puerto Rico
+Iceland|Netherlands Antilles
+U.S. Virgin Islands|Bouvet Island
+Equatorial Guinea|Central African Republic
+Lesotho|Kiribati
+Bolivia|Poland
+Aruba|South Sudan
+Jordan|Israel
+Kiribati|Latvia
+Argentina|Uzbekistan
+Grenada|France
+Anguilla|Guadeloupe
+Netherlands Antilles|France
+Zambia|Lithuania
+Cyprus|Tonga
+Vietnam|Sint Maarten (Dutch part)
+Niger|Jersey
+Cook Islands|Bouvet Island
+Samoa|Ethiopia
+San Marino|Norfolk Island
+Saudi Arabia|Latvia
+Nicaragua|Svalbard and Jan Mayen
+Central African Republic|Belize
+Canada|Northern Mariana Islands
+Cambodia|Estonia
+United States|Netherlands
+Croatia|Uganda
+Vatican City State (Holy See)|Germany
+Georgia|Romania
+Chile|Albania
+Botswana|Sierra Leone
+Kyrgyzstan|Gibraltar
+Svalbard and Jan Mayen|Gabon
+Bhutan|Andorra
+Svalbard and Jan Mayen|Jersey
+Russian Federation|New Zealand
+Saint Vincent and The Grenadines|Hong Kong
+U.S. Virgin Islands|Botswana
+Fiji|Turks and Caicos Islands
+Sint Maarten (Dutch part)|Latvia
+Bolivia|Falkland Islands
+Canada|Kazakhstan
+Greenland|French Polynesia
+French Guiana|Nauru
+Mexico|Mauritania
+Papua New Guinea|Bangladesh
+Congo|Laos
+Ecuador|Antarctica
+Timor-Leste|Lesotho
+Congo|Tanzania
+Belarus|Lebanon
+Wallis and Futuna|Netherlands Antilles
+Nicaragua|Vatican City State (Holy See)
+Poland|Yemen
+Tanzania|Pitcairn
+Liberia|New Caledonia
+United Arab Emirates|Morocco
+Liechtenstein|Saint Kitts and Nevis
+Uganda|Sint Maarten (Dutch part)
+Côte d'Ivoire|Equatorial Guinea
+Greece|Guam
+South Korea|Lithuania
+Côte d'Ivoire|Canada
+Serbia|U.S. Virgin Islands
+Cocos (Keeling) Islands|Chile
+Tunisia|Latvia
+Burundi|North Korea
+Cuba|Gabon
+Isle of Man|Sao Tome and Principe
+Belgium|Ethiopia
+Czechoslovakia|Philippines
+Trinidad and Tobago|Iran
+South Korea|U.S. Virgin Islands
+Equatorial Guinea|Argentina
+Switzerland|Côte d'Ivoire
+South Georgia and the South Sandwich Islands|Australia
+Svalbard and Jan Mayen|Sweden
+Bhutan|Eritrea
+Indonesia|Malta
+Qatar|China
+Burkina Faso|Bulgaria
+Anguilla|Cambodia
+Bermuda|Georgia
+Austria|Ireland
+Paraguay|Yemen
+Japan|Congo
+Colombia|Georgia
+Brunei|Suriname
+Somalia|Cape Verde
+Papua New Guinea|Andorra
+Denmark|Serbia and Montenegro
+South Africa|Serbia
+China|Poland
+Ireland|Romania
+Mayotte|Uzbekistan
+Jordan|Indonesia
+Réunion|Equatorial Guinea
+Maldives|Svalbard and Jan Mayen
+Libya|Togo
+Jordan|Bulgaria
+Morocco|Kiribati
+Mali|Bouvet Island
+Chad|Finland
+Senegal|Yugoslavia
+Montenegro|Taiwan
+Sierra Leone|Kuwait
+Kiribati|Heard Island and McDonald Islands
+Jamaica|Oman
+Canada|Djibouti
+Serbia and Montenegro|Lithuania
+United States|Luxembourg
+Chad|Saint Helena, Ascension and Tristan da Cunha
+Russian Federation|Netherlands
+Tonga|Romania
+Jordan|Equatorial Guinea
+Iceland|Bosnia and Herzegovina
+Belgium|Nigeria
+Egypt|United States Minor Outlying Islands
+Georgia|Tajikistan
+Guadeloupe|Paraguay
+Bolivia|U.S. Virgin Islands
+Poland|Latvia
+Argentina|Micronesia, Federated States of
+Montenegro|French Guiana
+Ukraine|China
+India|Hong Kong
+Montserrat|Cyprus
+Maldives|Sao Tome and Principe
+Chile|Tanzania
+Jersey|Spain
+Myanmar|Cocos (Keeling) Islands
+French Southern Territories|Paraguay
+Bosnia and Herzegovina|Saint Barthélemy
+Switzerland|Dominica
+Portugal|Oman
+Dominica|New Caledonia
+New Caledonia|Switzerland
+Saint Kitts and Nevis|Falkland Islands
+Gambia|Central African Republic
+Saint Lucia|Iraq
+Guinea-Bissau|Saint Pierre and Miquelon
+Macao|France
+Suriname|Saint Pierre and Miquelon
+Lithuania|India
+American Samoa|Guam
+Timor-Leste|Cyprus
+French Guiana|French Polynesia
+Hong Kong|Guyana
+Switzerland|Netherlands
+Spain|Venezuela
+San Marino|Ukraine
+Montenegro|Syria
+Nauru|Greenland
+Guinea-Bissau|Sao Tome and Principe
+Haiti|South Sudan
+Bonaire, Sint Eustatius and Saba|Morocco
+Soviet Union|Cambodia
+Estonia|Puerto Rico
+Saint Pierre and Miquelon|New Zealand
+Colombia|Nauru
+Timor-Leste|Azerbaijan
+Czechoslovakia|Togo
+Saint Barthélemy|Guernsey
+Bonaire, Sint Eustatius and Saba|New Caledonia
+Denmark|Cyprus
+Côte d'Ivoire|United Kingdom
+Jamaica|New Caledonia
+Pakistan|Uzbekistan
+Marshall Islands|Spain
+Democratic Republic of the Congo|Solomon Islands
+Ghana|Falkland Islands
+Cook Islands|Kazakhstan
+Jersey|Nicaragua
+Burkina Faso|Kuwait
+Vietnam|Trinidad and Tobago
+Tokelau|Western Sahara
+Oman|Vietnam
+Burkina Faso|Mexico
+Cocos (Keeling) Islands|Martinique
+Nepal|Jamaica
+Uruguay|Jamaica
+Netherlands|Bonaire, Sint Eustatius and Saba
+Libya|Qatar
+Philippines|Vanuatu
+Bonaire, Sint Eustatius and Saba|Germany
+Australia|El Salvador
+French Polynesia|India
+Andorra|Lebanon
+Saint Vincent and The Grenadines|Belarus
+Bosnia and Herzegovina|Yemen
+Belize|India
+Spain|Burundi
+Slovenia|Puerto Rico
+Grenada|Norway
+Lebanon|Bouvet Island
+Falkland Islands|Burkina Faso
+Seychelles|Guinea
+Guam|Haiti
+Burundi|Côte d'Ivoire
+Falkland Islands|Pitcairn
+Austria|Vanuatu
+Oman|South Sudan
+Niger|Kazakhstan
+East Germany|Morocco
+Estonia|Cocos (Keeling) Islands
+Soviet Union|Austria
+Montserrat|Luxembourg
+Isle of Man|Barbados
+Zambia|Benin
+Singapore|Montserrat
+Guinea|Jersey
+Afghanistan|Gibraltar
+Georgia|Zimbabwe
+Cambodia|Saint Martin (French part)
+Macao|Gibraltar
+Sweden|Zambia
+Vatican City State (Holy See)|Lebanon
+Madagascar|Niger
+Albania|Papua New Guinea
+Japan|Nigeria
+Macao|Malaysia
+Marshall Islands|Cape Verde
+South Georgia and the South Sandwich Islands|Albania
+Northern Mariana Islands|Barbados
+Thailand|Saudi Arabia
+Timor-Leste|Réunion
+Côte d'Ivoire|Thailand
+Kuwait|Turks and Caicos Islands
+Turkey|Bangladesh
+Belarus|Burundi
+Panama|Mali
+Mexico|Isle of Man
+Gabon|Andorra
+Montserrat|Finland
+Cyprus|Somalia
+Iraq|Bahamas
+Albania|Tajikistan
+Brazil|Croatia
+Anguilla|Benin
+Sierra Leone|Isle of Man
+Timor-Leste|Cook Islands
+British Indian Ocean Territory|Saint Pierre and Miquelon
+Cook Islands|Isle of Man
+Lesotho|Saint Barthélemy
+Saudi Arabia|Wallis and Futuna
+French Polynesia|United States
+Cuba|Congo
+Palestine|Guyana
+Saint Barthélemy|Tunisia
+Bulgaria|Guatemala
+Faroe Islands|Singapore
+Spain|Uganda
+Chad|Afghanistan
+Luxembourg|Panama
+Northern Mariana Islands|Ireland
+Vatican City State (Holy See)|Vietnam
+Tuvalu|Belgium
+Serbia|Andorra
+Åland Islands|Morocco
+Angola|Bangladesh
+Taiwan|Honduras
+Saint Helena, Ascension and Tristan da Cunha|Mauritania
+Saint Kitts and Nevis|Turkmenistan
+Canada|Tuvalu
+Guyana|Nigeria
+Portugal|Taiwan
+Jordan|Ghana
+Yugoslavia|Cape Verde
+Sint Maarten (Dutch part)|Kuwait
+Guinea-Bissau|Gambia
+Soviet Union|Bosnia and Herzegovina
+Macao|Botswana
+Namibia|Albania
+Georgia|Dominican Republic
+British Indian Ocean Territory|Dominica
+Chad|Bangladesh
+Saudi Arabia|Kiribati
+India|Burundi
+Taiwan|Belarus
+Afghanistan|Bosnia and Herzegovina
+Curaçao|Canada
+San Marino|Jamaica
+Monaco|North Korea
+Sweden|Saudi Arabia
+Ethiopia|Oman
+Martinique|Norfolk Island
+Panama|Equatorial Guinea
+Solomon Islands|Vanuatu
+Bahrain|Iran
+Martinique|Guernsey
+Tuvalu|Seychelles
+Monaco|Sint Maarten (Dutch part)
+Somalia|Rwanda
+Portugal|Germany
+Brazil|Costa Rica
+Saint Helena, Ascension and Tristan da Cunha|Yugoslavia
+Vietnam|Sierra Leone
+Uzbekistan|Comoros
+Singapore|Vietnam
+Norway|Pitcairn
+Sri Lanka|Lebanon
+Moldova|Gibraltar
+Curaçao|Nauru
+Réunion|Burundi
+Zambia|China
+Venezuela|Iraq
+French Polynesia|Rwanda
+Romania|Cook Islands
+Liberia|Laos
+Angola|Vatican City State (Holy See)
+Côte d'Ivoire|Grenada
+Papua New Guinea|Cocos (Keeling) Islands
+Vanuatu|Papua New Guinea
+Czechoslovakia|Malaysia
+Portugal|Uruguay
+United Arab Emirates|Japan
+Niue|Seychelles
+Bangladesh|Curaçao
+Greenland|U.S. Virgin Islands
+Slovakia|Cook Islands
+South Sudan|Nauru
+Colombia|Guernsey
+Mexico|Taiwan
+Kazakhstan|Saint Vincent and The Grenadines
+Curaçao|Portugal
+Syria|Ireland
+Tajikistan|Madagascar
+Switzerland|Germany
+Puerto Rico|Fiji
+Monaco|Costa Rica
+Syria|Kuwait
+Kazakhstan|Portugal
+Vietnam|Kazakhstan
+Sierra Leone|Papua New Guinea
+Ethiopia|Dominican Republic
+Anguilla|Botswana
+Gambia|Iran
+Belize|Bahrain
+Iceland|Slovakia
+Serbia and Montenegro|Seychelles
+Luxembourg|Faroe Islands
+Italy|Burkina Faso
+Bangladesh|Montserrat
+Poland|Samoa
+Nicaragua|Pitcairn
+Vietnam|Switzerland
+Venezuela|Sint Maarten (Dutch part)
+Guyana|Paraguay
+France|Turks and Caicos Islands
+Zambia|France
+Papua New Guinea|Slovenia
+Turks and Caicos Islands|Maldives
+Iran|Antigua and Barbuda
+Singapore|Monaco
+Christmas Island|Denmark
+Guadeloupe|Colombia
+Haiti|Panama
+Netherlands|Sao Tome and Principe
+Morocco|Falkland Islands
+Saint Pierre and Miquelon|Cambodia
+Svalbard and Jan Mayen|Saint Helena, Ascension and Tristan da Cunha
+Lesotho|Togo
+Liechtenstein|Libya
+Barbados|Guyana
+Australia|Bonaire, Sint Eustatius and Saba
+Mayotte|Kyrgyzstan
+Pitcairn|Syria
+Isle of Man|Morocco
+Tajikistan|Kyrgyzstan
+Azerbaijan|El Salvador
+Ukraine|Martinique
+San Marino|Macao
+Aruba|Cambodia
+Egypt|Sierra Leone
+Northern Mariana Islands|Kuwait
+Nauru|Armenia
+Greece|British Virgin Islands
+Czech Republic|Chile
+Falkland Islands|El Salvador
+Saint Martin (French part)|Isle of Man
+Saint Lucia|Uganda
+Mali|Slovakia
+Cambodia|Tunisia
+Mozambique|Grenada
+Saint Pierre and Miquelon|Japan
+Montenegro|Suriname
+Libya|Dominican Republic
+Somalia|Mexico
+Iceland|Estonia
+Macao|Kazakhstan
+Netherlands Antilles|Colombia
+Saint Vincent and The Grenadines|Afghanistan
+Ethiopia|Israel
+Benin|Libya
+Sint Maarten (Dutch part)|Réunion
+Burkina Faso|Saint Vincent and The Grenadines
+Vatican City State (Holy See)|Andorra
+Portugal|Mali
+India|Tokelau
+Vanuatu|Mauritius
+Iran|Netherlands
+Saint Lucia|Kuwait
+France|Lesotho
+Bermuda|Andorra
+Trinidad and Tobago|Kyrgyzstan
+Guadeloupe|Faroe Islands
+Central African Republic|Niue
+Saint Kitts and Nevis|Myanmar
+Somalia|Netherlands
+Namibia|Peru
+Nigeria|Mayotte
+Namibia|Chad
+Hong Kong|Swaziland
+Tanzania|South Georgia and the South Sandwich Islands
+Austria|Christmas Island
+Guinea|Lesotho
+Somalia|Congo
+Sierra Leone|Azerbaijan
+France|Hungary
+Macao|South Sudan
+Nauru|Uruguay
+Jersey|Bangladesh
+Taiwan|Pitcairn
+Wallis and Futuna|Slovakia
+Oman|Saint Vincent and The Grenadines
+Nauru|New Zealand
+Ghana|Chad
+Guatemala|Marshall Islands
+Algeria|South Korea
+Liechtenstein|Netherlands
+Morocco|Djibouti
+Tanzania|Guatemala
+Djibouti|Latvia
+Poland|Somalia
+Ukraine|Palestine
+Estonia|Burundi
+North Korea|South Sudan
+Brazil|Belarus
+Greece|Barbados
+Tanzania|Kyrgyzstan
+Saint Lucia|Iran
+Suriname|Sao Tome and Principe
+Mauritania|Bahrain
+North Korea|Maldives
+Malawi|Poland
+Venezuela|Mayotte
+Timor-Leste|Singapore
+Chad|Liberia
+Vatican City State (Holy See)|Uzbekistan
+Turkmenistan|Botswana
+Guinea-Bissau|Egypt
+Angola|Germany
+San Marino|Sint Maarten (Dutch part)
+Ireland|Gambia
+Australia|Cape Verde
+Brunei|Martinique
+Armenia|Saint Vincent and The Grenadines
+United States|Ecuador
+Uruguay|Mauritius
+Guernsey|Swaziland
+Bahamas|Turkmenistan
+Somalia|Saudi Arabia
+Georgia|Ireland
+Jordan|South Korea
+Zimbabwe|Rwanda
+Aruba|Colombia
+Burkina Faso|Suriname
+Iraq|Democratic Republic of the Congo
+Sri Lanka|Israel
+Sri Lanka|Papua New Guinea
+Western Sahara|Montenegro
+Georgia|Guyana
+Malawi|Ecuador
+Bolivia|Croatia
+Somalia|Albania
+Saint Lucia|Christmas Island
+Greenland|Benin
+French Guiana|Malaysia
+Hong Kong|Philippines
+Bhutan|South Georgia and the South Sandwich Islands
+China|Antigua and Barbuda
+Tanzania|Turks and Caicos Islands
+Czechoslovakia|Nigeria
+Qatar|United States Minor Outlying Islands
+Argentina|Indonesia
+Sint Maarten (Dutch part)|Burundi
+South Georgia and the South Sandwich Islands|Colombia
+Tuvalu|Montenegro
+Sao Tome and Principe|Lesotho
+Åland Islands|Guernsey
+Palestine|British Virgin Islands
+Honduras|Suriname
+Lithuania|Namibia
+Mauritius|Malaysia
+Sweden|Eritrea
+Kuwait|Croatia
+Germany|Congo
+Sri Lanka|Cambodia
+Laos|United Arab Emirates
+Venezuela|Wallis and Futuna
+Wallis and Futuna|Azerbaijan
+Uzbekistan|Tunisia
+Gabon|Sri Lanka
+Nigeria|Croatia
+Djibouti|Mali
+Bermuda|Palestine
+Guinea|Australia
+Martinique|Falkland Islands
+Kyrgyzstan|Oman
+Cyprus|Saint Pierre and Miquelon
+Italy|Bangladesh
+Russian Federation|Thailand
+Côte d'Ivoire|Kenya
+Denmark|Bangladesh
+Albania|Switzerland
+Antarctica|Saint Vincent and The Grenadines
+Grenada|Vietnam
+Gibraltar|Ireland
+Saint Helena, Ascension and Tristan da Cunha|Christmas Island
+Latvia|Vatican City State (Holy See)
+Sierra Leone|Guyana
+Taiwan|Estonia
+Algeria|Mauritania
+Costa Rica|Niue
+Norfolk Island|Heard Island and McDonald Islands
+Tokelau|Netherlands Antilles
+Saint Vincent and The Grenadines|Cameroon
+Western Sahara|Sudan
+Saint Lucia|Barbados
+American Samoa|Nigeria
+Georgia|Fiji
+Réunion|Samoa
+Albania|Timor-Leste
+Senegal|Lebanon
+Papua New Guinea|Saint Helena, Ascension and Tristan da Cunha
+Wallis and Futuna|Swaziland
+American Samoa|Argentina
+Barbados|Cyprus
+Tokelau|Sudan
+Ireland|Sri Lanka
+Switzerland|Gibraltar
+Dominican Republic|Micronesia, Federated States of

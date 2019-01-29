@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.github.chewiebug</groupId>
+  <artifactId>gcviewer</artifactId>
+  <versioning>
+    <versions>
+      <version>1.36-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20181009092227</lastUpdated>
+  </versioning>
+</metadata>

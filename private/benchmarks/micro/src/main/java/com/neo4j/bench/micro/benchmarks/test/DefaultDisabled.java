@@ -1,0 +1,52 @@
+package com.neo4j.bench.micro.benchmarks.test;
+
+import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.Param;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
+
+@BenchmarkEnabled( false )
+public class DefaultDisabled extends BaseRegularBenchmark
+{
+    @ParamValues(
+            allowed = {"1"},
+            base = {"1"} )
+    @Param( {} )
+    public int DefaultDisabled_increment;
+
+    @Override
+    public String description()
+    {
+        return "Disabled by default";
+    }
+
+    @Override
+    public String benchmarkGroup()
+    {
+        return "TestOnly";
+    }
+
+    @Override
+    public boolean isThreadSafe()
+    {
+        return true;
+    }
+
+    @State( Scope.Thread )
+    public static class TxState
+    {
+        long count;
+    }
+
+    @Benchmark
+    @BenchmarkMode( {Mode.Throughput} )
+    public long method( TxState txState )
+    {
+        return txState.count += DefaultDisabled_increment;
+    }
+}

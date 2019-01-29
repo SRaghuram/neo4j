@@ -1,0 +1,125 @@
+package com.neo4j.bench.client.model;
+
+import java.util.Arrays;
+import java.util.regex.Pattern;
+
+import static java.lang.String.format;
+
+public enum Repository
+{
+    // -----------------------
+    // --- benchmark tools ---
+    // -----------------------
+
+    MICRO_BENCH( "micro",
+                 "benchmarks",
+                 "neo-technology",
+                 "^\\d\\.\\d$",
+                 "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    MACRO_BENCH( "macro",
+                 "benchmarks",
+                 "neo-technology",
+                 "^\\d\\.\\d$",
+                 "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    RONJA_BENCH( "ronja-benchmarks",
+                 "ronja-benchmarks",
+                 "neo-technology",
+                 "^\\d\\.\\d$",
+                 "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    LDBC_BENCH( "ldbc",
+                "benchmarks",
+                "neo-technology",
+                "^\\d\\.\\d$",
+                "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    IMPORT_BENCH( "import-benchmarks",
+                  "import-benchmarks",
+                  "neo-technology",
+                  "^\\d\\.\\d$",
+                  "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    CAPS_BENCH( "caps-continuous-benchmarks",
+                "caps-continuous-benchmarks",
+                "neo-technology",
+                "^master$",
+                "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    MORPHEUS_BENCH( "morpheus-integration",
+                    "morpheus-integration",
+                    "neo-technology",
+                    "^master$",
+                    "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+
+    // -----------------------
+    // --- target systems ----
+    // -----------------------
+
+    NEO4J( "neo4j",
+           "neo-technology",
+           "neo4j",
+           "^\\d\\.\\d$",
+           "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+    CAPS( "cypher-for-apache-spark",
+          "cypher-for-apache-spark",
+          "opencypher",
+          "^master$",
+          "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" );
+
+    public static Repository forName( String projectName )
+    {
+        return Arrays.stream( Repository.values() )
+                     .filter( repository -> repository.projectName().equals( projectName ) )
+                     .findFirst()
+                     .orElseThrow( () -> new RuntimeException( "Invalid project repository: " + projectName ) );
+    }
+
+    private final String projectName;
+    private final String repositoryName;
+    private final String defaultOwner;
+    private final Pattern standardBranch;
+    private final Pattern validVersion;
+
+    Repository( String projectName, String repositoryName, String defaultOwner, String standardBranchRegex, String validVersionRegex )
+    {
+        this.projectName = projectName;
+        this.repositoryName = repositoryName;
+        this.defaultOwner = defaultOwner;
+        this.standardBranch = Pattern.compile( standardBranchRegex );
+        this.validVersion = Pattern.compile( validVersionRegex );
+    }
+
+    public String projectName()
+    {
+        return projectName;
+    }
+
+    public String repositoryName()
+    {
+        return repositoryName;
+    }
+
+    public String defaultOwner()
+    {
+        return defaultOwner;
+    }
+
+    public boolean isDefaultOwner( String owner )
+    {
+        return defaultOwner.equalsIgnoreCase( owner );
+    }
+
+    public boolean isStandardBranch( String branch )
+    {
+        return standardBranch.matcher( branch ).matches();
+    }
+
+    public boolean isValidVersion( String version )
+    {
+        return validVersion.matcher( version ).matches();
+    }
+
+    public void assertValidVersion( String version )
+    {
+        if ( !isValidVersion( version ) )
+        {
+            throw new RuntimeException( format( "Invalid version: '%s'", version ) );
+        }
+    }
+}

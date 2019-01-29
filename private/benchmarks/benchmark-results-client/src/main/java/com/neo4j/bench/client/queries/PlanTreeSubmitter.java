@@ -1,0 +1,191 @@
+package com.neo4j.bench.client.queries;
+
+import com.neo4j.bench.client.model.BenchmarkPlan;
+import com.neo4j.bench.client.model.Plan;
+import com.neo4j.bench.client.model.PlanOperator;
+import com.neo4j.bench.client.model.PlanTree;
+import com.neo4j.bench.client.model.TestRun;
+import com.neo4j.bench.client.options.Planner;
+import com.neo4j.bench.client.util.Resources;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
+
+import org.neo4j.driver.v1.Record;
+import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.Transaction;
+
+import static com.neo4j.bench.client.model.PlanTree.PLAN_DESCRIPTION;
+
+import static java.lang.String.format;
+
+public class PlanTreeSubmitter
+{
+    private static final String SUBMIT_PLAN_TREE = Resources.fileToString( "/queries/write/submit_plan_tree.cypher" );
+    private static final String ATTACH_PLAN_TO_TEST_RUN = Resources.fileToString( "/queries/write/attach_plan_to_test_run.cypher" );
+
+    public static void execute( Session session, TestRun testRun, List<BenchmarkPlan> benchmarkPlans, Planner planner )
+    {
+        List<BenchmarkPlan> collisionBenchmarkPlans = new ArrayList<>();
+        for ( BenchmarkPlan benchmarkPlan : benchmarkPlans )
+        {
+            Plan plan = benchmarkPlan.plan();
+            try ( Transaction tx = session.beginTransaction() )
+            {
+                Map<String,Object> params = new HashMap<>();
+                params.put( "plan_description", plan.planTree().asciiPlanDescription() );
+                params.put( "plan_description_hash", plan.planTree().hashedPlanDescription() );
+                StatementResult statementResult = tx.run( SUBMIT_PLAN_TREE, params );
+                Record record = statementResult.next();
+                String storedPlanTreeDescription = record
+                        .get( "planTree" ).asNode()
+                        .get( PLAN_DESCRIPTION )
+                        .asString();
+                int planTreeNodesCreated = statementResult.consume().counters().nodesCreated();
+                switch ( planTreeNodesCreated )
+                {
+                case 0:
+                    // a plan tree with the same hash already exists
+                    if ( !storedPlanTreeDescription.equals( plan.planTree().asciiPlanDescription() ) )
+                    {
+                        // stored description does not match submitted description, possible hash collision
+                        collisionBenchmarkPlans.add( benchmarkPlan );
+                    }
+                    break;
+                case 1:
+                    // plan tree root was created, now remainder of tree (operators) must be attached to root
+                    StringBuilder sb = new StringBuilder()
+                            .append( "MATCH (planTree:PlanTree)\n" )
+                            .append( "WHERE planTree.description_hash={plan_description_hash} AND \n" )
+                            .append( "      planTree.description={plan_description}\n" )
+                            .append( "CREATE (planTree)-[:HAS_OPERATORS]->" )
+                            .append( toTreePattern( plan.planTree(), params ) );
+                    tx.run( format( "CYPHER planner=%s %s", planner.value(), sb.toString() ), params );
+                    break;
+                default:
+                    throw new RuntimeException(
+                            format( "Submit plan tree query created multiple nodes\n" +
+                                    " * nodes created: %s\n" +
+                                    " * plan hash:     %s",
+                                    planTreeNodesCreated,
+                                    plan.planTree().hashedPlanDescription() ) );
+                }
+                tx.success();
+            }
+            catch ( Exception e )
+            {
+                throw new RuntimeException( "Error writing plan to store", e );
+            }
+        }
+
+        for ( BenchmarkPlan benchmarkPlan : benchmarkPlans )
+        {
+            if ( collisionBenchmarkPlans.contains( benchmarkPlan ) )
+            {
+                // do not create/attach plans if their plan tree caused hash collision during creation
+                // their plan tree was never created, so there is nothing to connect with
+                continue;
+            }
+            try ( Transaction tx = session.beginTransaction() )
+            {
+                Map<String,Object> params = new HashMap<>();
+                params.put( "test_run_id", testRun.id() );
+                params.put( "benchmark_name", benchmarkPlan.benchmark().name() );
+                params.put( "benchmark_group_name", benchmarkPlan.benchmarkGroup().name() );
+                params.put( "plan", benchmarkPlan.plan().asMap() );
+                params.put( "compilation_metrics", benchmarkPlan.plan().planCompilationMetrics().asMap() );
+                params.put( "plan_description_hash", benchmarkPlan.plan().planTree().hashedPlanDescription() );
+                tx.run( ATTACH_PLAN_TO_TEST_RUN, params );
+                tx.success();
+            }
+            catch ( Exception e )
+            {
+                e.printStackTrace();
+                throw new RuntimeException( "Error writing plan to store", e );
+            }
+        }
+
+        if ( !collisionBenchmarkPlans.isEmpty() )
+        {
+            throw new RuntimeException( toCollisionsErrorMessage( collisionBenchmarkPlans ) );
+        }
+    }
+
+    private static String toTreePattern( PlanTree planTree, Map<String,Object> params )
+    {
+        Namer operatorNamer = new Namer( "operator" );
+        Namer propertiesNamer = new Namer( "operatorProperties" );
+
+        StringBuilder sb = new StringBuilder();
+        Stack<PlanOperator> planOperatorStack = new Stack<>();
+        Map<PlanOperator,String> operatorNames = new HashMap<>();
+
+        // root
+        PlanOperator root = planTree.planRoot();
+        String rootName = operatorNamer.nextName();
+        String rootPropertiesName = propertiesNamer.nextName();
+        params.put( rootPropertiesName, root.asMap() );
+        sb.append( format( "(%s:Operator {%s})", rootName, rootPropertiesName ) );
+        planOperatorStack.push( root );
+        operatorNames.put( root, rootName );
+
+        // children
+        while ( !planOperatorStack.isEmpty() )
+        {
+            PlanOperator current = planOperatorStack.pop();
+            String currentOperatorName = operatorNames.get( current );
+
+            current.children().forEach( child ->
+                                        {
+                                            String childOperatorName = operatorNamer.nextName();
+                                            String childPropertiesName = propertiesNamer.nextName();
+
+                                            params.put( childPropertiesName, child.asMap() );
+                                            sb.append( format( ",\n(%s)-[:HAS_CHILD]->(%s:Operator {%s})",
+                                                               currentOperatorName, childOperatorName, childPropertiesName ) );
+
+                                            planOperatorStack.push( child );
+                                            operatorNames.put( child, childOperatorName );
+                                        }
+            );
+        }
+
+        return sb.toString();
+    }
+
+    private static String toCollisionsErrorMessage( List<BenchmarkPlan> collisionBenchmarkPlans )
+    {
+        StringBuilder sb = new StringBuilder( "Due to hash collision the following plans were not created:\n" );
+        collisionBenchmarkPlans.stream().map( PlanTreeSubmitter::toBenchmarkPlanString ).forEach( sb::append );
+        return sb.toString();
+    }
+
+    private static String toBenchmarkPlanString( BenchmarkPlan benchmarkPlan )
+    {
+        return " * " +
+               benchmarkPlan.benchmarkGroup().name() + "." +
+               benchmarkPlan.benchmark().name() + " , " +
+               PlanTree.PLAN_DESCRIPTION_HASH + " = " +
+               benchmarkPlan.plan().planTree().hashedPlanDescription();
+    }
+
+    private static class Namer
+    {
+        private final String namePrefix;
+        private int count;
+
+        private Namer( String namePrefix )
+        {
+            this.namePrefix = namePrefix;
+        }
+
+        private String nextName()
+        {
+            return namePrefix + count++;
+        }
+    }
+}

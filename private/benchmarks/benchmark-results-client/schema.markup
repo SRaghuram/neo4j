@@ -1,0 +1,105 @@
+<ul class="graph-diagram-markup" data-internal-scale="1.55" data-external-scale="1">
+  <li class="node" data-node-id="0" data-x="-540.5434077491217" data-y="-991.2129603641177">
+    <span class="caption">:Project (UNIQUE)</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>owner</dt><dd>.</dd><dt>commit</dt><dd>.</dd><dt>branch</dt><dd>.</dd><dt>version</dt><dd>.</dd><dt>edition</dt><dd>(optional)</dd></dl></li>
+  <li class="node" data-node-id="1" data-x="-2413.891475193943" data-y="-637.8824232497676">
+    <span class="caption">:Environment (UNIQUE)</span><dl class="properties"><dt>operating_system</dt><dd>.</dd><dt>server</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="2" data-x="-1821.3401142577036" data-y="-318.21874415370706">
+    <span class="caption">:Neo4jConfig</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="3" data-x="-1291.6634578436206" data-y="-637.8824232497676">
+    <span class="caption">:TestRun (UNIQUE-id)</span><dl class="properties"><dt>date</dt><dd>.</dd><dt>id</dt><dd>.</dd><dt>duration</dt><dd>.</dd><dt>archive</dt><dd>.</dd><dt>build</dt><dd>.</dd><dt>parent_build</dt><dd>.</dd><dt>triggered_by</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="4" data-x="-181.21997261177268" data-y="715.3919714269505">
+    <span class="caption">:BenchmarkGroup (UNIQUE-name)</span><dl class="properties"><dt>name</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="5" data-x="-1291.6634578436206" data-y="715.3919714269505">
+    <span class="caption">:Benchmark</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>simple_name</dt><dd>.</dd><dt>mode</dt><dd>.</dd><dt>description</dt><dd>.</dd><dt>active</dt><dd>.</dd><dt>cypher_query</dt><dd>(optional)</dd></dl></li>
+  <li class="node" data-node-id="6" data-x="-1291.6634578436206" data-y="46.48105235167004">
+    <span class="caption">:Metrics</span><dl class="properties"><dt>unit</dt><dd>.</dd><dt>min</dt><dd>.</dd><dt>max</dt><dd>.</dd><dt>mean</dt><dd>.</dd><dt>error</dt><dd>.</dd><dt>error_confidence</dt><dd>.</dd><dt>sample_size</dt><dd>.</dd><dt>perc_25</dt><dd>.</dd><dt>perc_50</dt><dd>.</dd><dt>perc_75</dt><dd>.</dd><dt>perc_90</dt><dd>.</dd><dt>perc_95</dt><dd>.</dd><dt>perc_99</dt><dd>.</dd><dt>perc_99_9</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="7" data-x="-181.21997261177268" data-y="46.48105235167004">
+    <span class="caption">:BenchmarkTool (UNIQUE)</span><dl class="properties"><dt>name</dt><dd>.</dd><dt>repository_name</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="8" data-x="-2413.891475193943" data-y="-965.1552468958035">
+    <span class="caption">:Java (UNIQUE)</span><dl class="properties"><dt>jvm</dt><dd>.</dd><dt>version</dt><dd>.</dd><dt>args</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="9" data-x="-2240.340157522288" data-y="46.48105235167004">
+    <span class="caption">:Plan</span><dl class="properties"><dt>requested_planner</dt><dd>.</dd><dt>used_planner</dt><dd>.</dd><dt>default_planner</dt><dd>.</dd><dt>requested_runtime</dt><dd>.</dd><dt>used_runtime</dt><dd>.</dd><dt>default_runtime</dt><dd>.</dd><dt>cypher_version</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="11" data-x="-2081.6159933385834" data-y="715.3919714269505">
+    <span class="caption">:BenchmarkParams</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="12" data-x="-2413.891475193943" data-y="-1284.717100438939">
+    <span class="caption">:BenchmarkConfig</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="13" data-x="-2821.832840879205" data-y="715.3919714269505">
+    <span class="caption">:CompilationMetrics</span><dl class="properties"><dt>ast_rewrite</dt><dd>.</dd><dt>semantic_check</dt><dd>.</dd><dt>parsing</dt><dd>.</dd><dt>pipe_building</dt><dd>.</dd><dt>logical_planning</dt><dd>.</dd><dt>overhead</dt><dd>.</dd><dt>total</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="14" data-x="-2821.832840879205" data-y="46.48105235167004">
+    <span class="caption">:PlanTree</span><dl class="properties"><dt>description_hash</dt><dd>.</dd><dt>description</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="15" data-x="-3409.1770373599666" data-y="46.48105235167004">
+    <span class="caption">:Operator</span><dl class="properties"><dt>operator_type</dt><dd>.</dd><dt>estimated_rows</dt><dd>.</dd><dt>db_hits</dt><dd>.</dd><dt>rows</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="16" data-x="-3595.3968464488753" data-y="-944.3629520040167">
+    <span class="caption">:StoreSchema</span><dl class="properties"><dt>version</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="17" data-x="-637.9057433840246" data-y="312.2440705598353">
+    <span class="caption">:Profiles (UNIQUE-*)</span><dl class="properties"><dt>jfr</dt><dd>.</dd><dt>jfr_flamegraph</dt><dd>.</dd><dt>async</dt><dd>.</dd><dt>async_flamegraph</dt><dd>.</dd><dt>gc_log</dt><dd>.</dd><dt>gc_csv</dt><dd>.</dd><dt>gc_summary</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="18" data-x="-3932.967147021227" data-y="46.48105235167004">
+    <span class="caption">:Operator</span><dl class="properties"><dt>operator_type</dt><dd>.</dd><dt>estimated_rows</dt><dd>.</dd><dt>db_hits</dt><dd>.</dd><dt>rows</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="19" data-x="-181.21997261177268" data-y="-637.8824232497676">
+    <span class="caption">:BenchmarkToolVersion  (UNIQUE)</span><dl class="properties"><dt>commit</dt><dd>.</dd><dt>owner</dt><dd>.</dd><dt>branch</dt><dd>.</dd></dl></li>
+  <li class="node" data-node-id="26" data-x="-637.9057433840246" data-y="-318.21874415370706">
+    <span class="caption">:Annotation</span><dl class="properties"><dt>comment</dt><dd>.</dd><dt>date</dt><dd>.</dd><dt>event_id</dt><dd>.</dd><dt>author</dt><dd>.</dd></dl></li>
+  <li class="relationship" data-from="4" data-to="5">
+    <span class="type">:HAS_BENCHMARK (1+..1)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="0">
+    <span class="type">:WITH_PROJECT (1+..1+)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="1">
+    <span class="type">:IN_ENVIRONMENT (1..1+)</span>
+  </li>
+  <li class="relationship" data-from="6" data-to="5">
+    <span class="type">:METRICS_FOR (*..1)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="6">
+    <span class="type">:HAS_METRICS (1..*)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="8">
+    <span class="type">:WITH_JAVA (1..1+)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="2">
+    <span class="type">:HAS_CONFIG (1..1)</span>
+  </li>
+  <li class="relationship" data-from="6" data-to="17">
+    <span class="type">:HAS_PROFILES (1..[0-1])</span>
+  </li>
+  <li class="relationship" data-from="5" data-to="11">
+    <span class="type">:HAS_PARAMS (1..1)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="12">
+    <span class="type">:HAS_BENCHMARK_CONFIG (1..1)</span>
+  </li>
+  <li class="relationship" data-from="6" data-to="9">
+    <span class="type">:HAS_PLAN ([0,1]..1)</span>
+  </li>
+  <li class="relationship" data-from="9" data-to="13">
+    <span class="type">:HAS_COMPILATION_METRICS</span>
+  </li>
+  <li class="relationship" data-from="9" data-to="14">
+    <span class="type">:HAS_PLAN_TREE (1..1+)</span>
+  </li>
+  <li class="relationship" data-from="14" data-to="15">
+    <span class="type">:HAS_OPERATORS (1..1)</span>
+  </li>
+  <li class="relationship" data-from="7" data-to="4">
+    <span class="type">:IMPLEMENTS (1..*)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="26">
+    <span class="type">:WITH_ANNOTATION (1..*)</span>
+  </li>
+  <li class="relationship" data-from="6" data-to="26">
+    <span class="type">:WITH_ANNOTATION (1..*)</span>
+  </li>
+  <li class="relationship" data-from="6" data-to="2">
+    <span class="type">:HAS_CONFIG (1..1)</span>
+  </li>
+  <li class="relationship" data-from="15" data-to="18">
+    <span class="type">:HAS_CHILD ([0-2]..1)</span>
+  </li>
+  <li class="relationship" data-from="3" data-to="19">
+    <span class="type">:WITH_TOOL (1..1)</span>
+  </li>
+  <li class="relationship" data-from="19" data-to="7">
+    <span class="type">:VERSION_OF (*..1)</span>
+  </li>
+</ul>

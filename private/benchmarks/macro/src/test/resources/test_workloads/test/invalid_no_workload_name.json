@@ -1,0 +1,9 @@
+{
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "queryFile": "queries/Q1.cypher"
+    }
+  ]
+}

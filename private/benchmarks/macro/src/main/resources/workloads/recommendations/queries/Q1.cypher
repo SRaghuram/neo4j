@@ -1,0 +1,2 @@
+MATCH (p:Person)-[:HAS_COMPETENCY]->(c2:Competency { name:'Java Programming' }),(p)-[:HAS_COMPETENCY]->(c3:Competency { name:'Carpenter' }),(p)-[:HAS_COMPETENCY]->(c4:Competency)
+RETURN p.first_name, p.last_name, collect(c4.name)
