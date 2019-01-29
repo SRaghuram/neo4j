@@ -7,11 +7,12 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ir.v4_0.ProvidedOrder
-import org.neo4j.cypher.internal.v4_0.expressions.{Expression, Property, PropertyKeyName, Variable}
-import org.neo4j.cypher.internal.v4_0.util.DummyPosition
+import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.v4_0.expressions.Expression
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
-class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
+class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
+  with QueryStatisticsTestSupport with CypherComparisonSupport with AstConstructionTestSupport {
 
   case class TestOrder(cypherToken: String,
                        expectedOrder: Seq[Map[String, Any]] => Seq[Map[String, Any]],
@@ -564,8 +565,4 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite with 
         |CREATE (:Awesome {prop3: 'scratch'})
         |CREATE (:Awesome {prop3: 'tree-cat-bog'})
         |""".stripMargin)
-
-  private val pos = DummyPosition(0)
-  private def varFor(name: String) = Variable(name)(pos)
-  private def prop(varName: String, propName: String) = Property(varFor(varName), PropertyKeyName(propName)(pos))(pos)
 }

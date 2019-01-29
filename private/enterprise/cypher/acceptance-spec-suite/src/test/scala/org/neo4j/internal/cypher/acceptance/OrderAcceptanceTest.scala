@@ -7,14 +7,13 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ir.v4_0.ProvidedOrder
-import org.neo4j.cypher.internal.v4_0.expressions.{Property, PropertyKeyName, Variable}
-import org.neo4j.cypher.internal.v4_0.util.DummyPosition
+import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 import scala.collection.{Map, mutable}
 
-class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
+class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport with AstConstructionTestSupport {
 
   val nodeList: mutable.MutableList[Node] = mutable.MutableList()
 
@@ -761,8 +760,4 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       relate(joseph, friends(i+2), "FRIEND")
     }
   }
-
-  private val pos = DummyPosition(0)
-  private def varFor(name: String) = Variable(name)(pos)
-  private def prop(varName: String, propName: String) = Property(varFor(varName), PropertyKeyName(propName)(pos))(pos)
 }
