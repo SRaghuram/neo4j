@@ -1,29 +1,22 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.ASTAnnotationMap
-import org.neo4j.cypher.internal.v3_5.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.v3_5.expressions.Expression
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.util.symbols
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.ast._
+import org.neo4j.cypher.internal.frontend.v3_3.{ExpressionTypeInfo, SemanticTable, symbols}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-@BenchmarkEnabled(false)
+@BenchmarkEnabled(true)
 class Grouping extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var Grouping_runtime: String = _
@@ -51,13 +44,13 @@ class Grouping extends AbstractCypherBenchmark {
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
-    val leaf = plans.UnwindCollection(plans.Argument()(IdGen), "value", parameter)(IdGen)
+    val leaf = plans.UnwindCollection(plans.SingleRow()(Solved), "value", parameter)(Solved)
     val nodeGrouping = astVariable("value")
     val groupingExpressions = Map("value" -> nodeGrouping)
     val aggregationExpressions = Map[String, Expression]()
-    val aggregation: plans.Aggregation = plans.Aggregation(leaf, groupingExpressions, aggregationExpressions)(IdGen)
+    val aggregation: plans.Aggregation = plans.Aggregation(leaf, groupingExpressions, aggregationExpressions)(Solved)
     val resultColumns = List("value")
-    val produceResults: plans.LogicalPlan = plans.ProduceResult(aggregation, columns = resultColumns)(IdGen)
+    val produceResults: plans.LogicalPlan = plans.ProduceResult(columns = resultColumns, aggregation)
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 
@@ -68,7 +61,7 @@ class Grouping extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: GroupingThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
+    threadState.executionResult(params, threadState.tx).accept(visitor)
     assertExpectedRowCount(Grouping_distinctCount, visitor)
   }
 }
@@ -76,14 +69,14 @@ class Grouping extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class GroupingThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: Grouping): Unit = {
     benchmarkState.params = mapValuesOfList(
       "list",
       randomListOf(benchmarkState.Grouping_type, benchmarkState.VALUE_COUNT, benchmarkState.Grouping_distinctCount))
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.Grouping_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.Grouping_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

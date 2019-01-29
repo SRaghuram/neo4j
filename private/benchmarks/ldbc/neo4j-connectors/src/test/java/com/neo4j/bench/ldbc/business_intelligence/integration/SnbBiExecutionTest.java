@@ -1,8 +1,27 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
  */
+
 package com.neo4j.bench.ldbc.business_intelligence.integration;
 
 import com.ldbc.driver.DbException;
@@ -10,7 +29,6 @@ import com.ldbc.driver.client.ResultsDirectory;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
@@ -24,7 +42,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -75,13 +92,13 @@ public abstract class SnbBiExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.newFolder();
+        File dbDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
+                dbDir,
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -91,7 +108,6 @@ public abstract class SnbBiExecutionTest
                 false
         );
         File resultDir = temporaryFolder.newFolder();
-        Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
         int threadCount = 1;
@@ -127,7 +143,7 @@ public abstract class SnbBiExecutionTest
                         scenario.planner(),
                         scenario.runtime(),
                         scenario.neo4jSchema(),
-                        store.graphDbDirectory().toFile(),
+                        dbDir,
                         DriverConfigUtils.neo4jTestConfig(),
                         LdbcSnbBiWorkload.class,
                         null
@@ -224,7 +240,7 @@ public abstract class SnbBiExecutionTest
         File ldbcConfigFile = temporaryFolder.newFile();
         FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
         LdbcCli.benchmark(
-                store,
+                dbDir,
                 scenario.updatesDir(),
                 scenario.paramsDir(),
                 resultDir,

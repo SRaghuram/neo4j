@@ -1,19 +1,14 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
+import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.RelationshipDefinition;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
-import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -89,8 +84,7 @@ public class ReadRelationship extends AbstractCoreBenchmark
         Neo4jConfig neo4jConfig = Neo4jConfig
                 .empty()
                 .withSetting( dense_node_threshold, denseNodeThreshold() )
-                .withSetting( record_format, ReadRelationship_format )
-                .setTransactionMemory( ReadRelationship_txMemory );
+                .withSetting( record_format, ReadRelationship_format );
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIP_DEFINITIONS )

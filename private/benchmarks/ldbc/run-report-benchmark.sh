@@ -36,6 +36,7 @@ ldbc_run_count="${24}"
 ldbc_repetition_count="${25}"
 ldbc_results_dir="${26}"
 ldbc_working_dir="${27}"
+# TODO do something like ---> mkdir temp && mv ${ldbc_source_db} temp/ --> provide temp
 ldbc_source_db="${28}"
 ldbc_db_reuse_policy="${29}"
 ldbc_jvm_args="${30}"

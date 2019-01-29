@@ -6,40 +6,29 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark</artifactId>
-        <version>3.6.2-SNAPSHOT</version>
+        <version>3.3.10-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
+    <name>Neo4j Macro Benchmarks</name>
+
     <artifactId>macro</artifactId>
-    <name>Neo4j - Macro Benchmarks</name>
 
     <properties>
         <uberjar.name>macro</uberjar.name>
         <hamcrest.version>2.0.0.0</hamcrest.version>
-        <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
-
-    <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
-          Copyright (c) 2002-2019 "Neo4j,"
-          Neo4j Sweden AB [http://neo4j.com]
-          This file is part of Neo4j internal tooling.
-        </comments>
-      </license>
-    </licenses>
 
     <dependencies>
         <dependency>
-            <groupId>com.neo4j</groupId>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.neo4j</groupId>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
 
         <dependency>
@@ -75,9 +64,9 @@
             <version>${hamcrest.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.neo4j.test</groupId>
+            <groupId>org.neo4j.test</groupId>
             <artifactId>neo4j-harness-enterprise</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -137,7 +126,7 @@
                             </transformers>
                             <filters>
                                 <filter>
-                                    <!-- Shading signed JARs will fail without
+                                    <!-- Shading signed JARs will fail without 
                                         this. http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar -->
                                     <artifact>*:*</artifact>
                                     <excludes>

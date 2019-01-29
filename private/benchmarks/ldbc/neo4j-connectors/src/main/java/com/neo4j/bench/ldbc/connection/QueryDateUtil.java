@@ -1,8 +1,27 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
  */
+
 package com.neo4j.bench.ldbc.connection;
 
 import java.util.Calendar;
@@ -16,15 +35,14 @@ public abstract class QueryDateUtil
 {
     public static QueryDateUtil createFor(
             LdbcDateCodec.Format neo4jFormat,
-            LdbcDateCodec.Resolution relationshipTimestampResolution,
-            LdbcDateCodecUtil ldbcDateCodecUtil )
+            LdbcDateCodec.Resolution relationshipTimestampResolution )
     {
         switch ( neo4jFormat )
         {
         case NUMBER_UTC:
-            return new FromUtc( LdbcDateCodec.codecFor( relationshipTimestampResolution ), ldbcDateCodecUtil );
+            return new FromUtc( LdbcDateCodec.codecFor( relationshipTimestampResolution ) );
         case NUMBER_ENCODED:
-            return new FromEncodedLong( LdbcDateCodec.codecFor( relationshipTimestampResolution ), ldbcDateCodecUtil );
+            return new FromEncodedLong( LdbcDateCodec.codecFor( relationshipTimestampResolution ) );
         default:
             throw new RuntimeException( format( "Unsupported Format %s", neo4jFormat ) );
         }
@@ -43,13 +61,6 @@ public abstract class QueryDateUtil
      * @return
      */
     public abstract LdbcDateCodec dateCodec();
-
-    /**
-     * Internal instance of date codec util
-     *
-     * @return
-     */
-    public abstract LdbcDateCodecUtil ldbcDateCodecUtil();
 
     /**
      * Convert UTC encoded date time to configured format
@@ -106,14 +117,12 @@ public abstract class QueryDateUtil
 
     private static class FromUtc extends QueryDateUtil
     {
-        private final Calendar calendar = LdbcDateCodecUtil.newCalendar();
+        private final Calendar calendar = LdbcDateCodec.newCalendar();
         private final LdbcDateCodec dateCodec;
-        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        FromUtc( LdbcDateCodec dateCodec, LdbcDateCodecUtil ldbcDateCodecUtil )
+        FromUtc( LdbcDateCodec dateCodec )
         {
             this.dateCodec = dateCodec;
-            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -126,12 +135,6 @@ public abstract class QueryDateUtil
         public LdbcDateCodec dateCodec()
         {
             return dateCodec;
-        }
-
-        @Override
-        public LdbcDateCodecUtil ldbcDateCodecUtil()
-        {
-            return ldbcDateCodecUtil;
         }
 
         @Override
@@ -150,7 +153,7 @@ public abstract class QueryDateUtil
         public long formatToEncodedDateTime( long dateInFormat )
         {
             // YYYYMMDDhhmmssMMM
-            return ldbcDateCodecUtil.utcToEncodedLongDateTime( dateInFormat, calendar );
+            return LdbcDateCodec.utcToEncodedLongDateTime( dateInFormat, calendar );
         }
 
         @Override
@@ -183,14 +186,12 @@ public abstract class QueryDateUtil
 
     private static class FromEncodedLong extends QueryDateUtil
     {
-        private final Calendar calendar = LdbcDateCodecUtil.newCalendar();
+        private final Calendar calendar = LdbcDateCodec.newCalendar();
         private final LdbcDateCodec dateCodec;
-        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        FromEncodedLong( LdbcDateCodec dateCodec, LdbcDateCodecUtil ldbcDateCodecUtil )
+        FromEncodedLong( LdbcDateCodec dateCodec )
         {
             this.dateCodec = dateCodec;
-            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -206,15 +207,9 @@ public abstract class QueryDateUtil
         }
 
         @Override
-        public LdbcDateCodecUtil ldbcDateCodecUtil()
-        {
-            return ldbcDateCodecUtil;
-        }
-
-        @Override
         public long utcToFormat( long utc )
         {
-            return ldbcDateCodecUtil.utcToEncodedLongDateTime( utc, calendar );
+            return LdbcDateCodec.utcToEncodedLongDateTime( utc, calendar );
         }
 
         @Override
@@ -233,7 +228,7 @@ public abstract class QueryDateUtil
         @Override
         public long formatToUtc( long dateInFormat )
         {
-            return ldbcDateCodecUtil.encodedLongDateTimeToUtc( dateInFormat, calendar );
+            return LdbcDateCodec.encodedLongDateTimeToUtc( dateInFormat, calendar );
         }
 
         @Override

@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.data.ConstantGenerator.ConstantGeneratorFactory;
@@ -13,9 +8,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.SplittableRandom;
 import java.util.stream.Stream;
-
-import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
 
 public abstract class DiscreteGenerator
 {
@@ -126,8 +118,7 @@ public abstract class DiscreteGenerator
     {
         private final double ratiosSum;
         private final double[] cumulativeRatios;
-        private final List<Object> objectValues;
-        private final List<Value> valueValues;
+        private final List values;
 
         private DiscreteBucketGenerator( Bucket... buckets )
         {
@@ -138,15 +129,12 @@ public abstract class DiscreteGenerator
             this.ratiosSum = Stream.of( buckets ).mapToDouble( Bucket::ratio ).sum();
             this.cumulativeRatios = new double[buckets.length];
             this.cumulativeRatios[0] = buckets[0].ratio();
-            this.objectValues = new ArrayList<>();
-            this.valueValues = new ArrayList<>();
-            this.objectValues.add( 0, buckets[0].value() );
-            this.valueValues.add( 0, Values.of( buckets[0].value() ) );
+            this.values = new ArrayList<>();
+            this.values.add( 0, buckets[0].value() );
             for ( int i = 1; i < buckets.length; i++ )
             {
                 this.cumulativeRatios[i] = buckets[i].ratio() + this.cumulativeRatios[i - 1];
-                this.objectValues.add( i, buckets[i].value() );
-                this.valueValues.add( i, Values.of( buckets[i].value() ) );
+                this.values.add( i, buckets[i].value() );
             }
         }
 
@@ -159,23 +147,12 @@ public abstract class DiscreteGenerator
         @Override
         public Object next( SplittableRandom rng )
         {
-            return objectValues.get( getOffset( rng ) );
-        }
-
-        @Override
-        public Value nextValue( SplittableRandom rng )
-        {
-            return valueValues.get( getOffset( rng ) );
-        }
-
-        private int getOffset( SplittableRandom rng )
-        {
             final double randomValue = rng.nextDouble() * ratiosSum;
             for ( int i = 0; i < cumulativeRatios.length; i++ )
             {
                 if ( randomValue < cumulativeRatios[i] )
                 {
-                    return i;
+                    return values.get( i );
                 }
             }
             throw new RuntimeException( "No matching value found" );

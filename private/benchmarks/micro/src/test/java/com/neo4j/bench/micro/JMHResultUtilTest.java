@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro;
 
 import com.neo4j.bench.client.model.Benchmark.Mode;
@@ -26,7 +21,7 @@ import static com.neo4j.bench.micro.JMHResultUtil.THREADS_PARAM;
 import static com.neo4j.bench.micro.JMHResultUtil.extractParameterValues;
 import static com.neo4j.bench.micro.JMHResultUtil.parametersAsMap;
 import static com.neo4j.bench.micro.JMHResultUtil.toNameSuffix;
-import static org.junit.Assert.assertFalse;
+import static junit.framework.TestCase.assertFalse;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;

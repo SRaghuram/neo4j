@@ -26,9 +26,8 @@ db_and_workloads=(
  "pokec;pokec_read"
  "qmul;qmul_read"
  "recommendations;recommendations"
- "socialnetwork;socialnetwork"
- "osmnodes;osmnodes")
-
+ "socialnetwork;socialnetwork")
+ 
 for i in "${db_and_workloads[@]}"; do
 
     # shellcheck disable=SC2206

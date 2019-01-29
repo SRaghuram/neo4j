@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.util.Collections
@@ -11,12 +6,11 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.ASTAnnotationMap
-import org.neo4j.cypher.internal.v3_5.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans.Ascending
-import org.neo4j.cypher.internal.v3_5.util.symbols
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.ast._
+import org.neo4j.cypher.internal.frontend.v3_3.{ExpressionTypeInfo, SemanticTable, symbols}
+import org.neo4j.cypher.internal.v3_3.logical.plans.Ascending
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
@@ -25,14 +19,11 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class OrderBy extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var OrderBy_runtime: String = _
 
-  /*
-  Compiled runtime does not support Order By of Temporal/Spatial types
-   */
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML),
     base = Array(LNG, STR_SML))
@@ -47,15 +38,14 @@ class OrderBy extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val listElementType = cypherTypeFor(OrderBy_type)
-
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
     val unwindVariableName = unwindVariable.name
-    val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariableName, parameter)(IdGen)
-    val orderBy = plans.Sort(leaf, List(Ascending(unwindVariableName)))(IdGen)
+    val leaf = plans.UnwindCollection(plans.SingleRow()(Solved), unwindVariableName, parameter)(Solved)
+    val orderBy = plans.Sort(leaf, List(Ascending(unwindVariableName)))(Solved)
     val resultColumns = List(unwindVariableName)
-    val produceResults = plans.ProduceResult(orderBy, columns = resultColumns)(IdGen)
+    val produceResults: plans.LogicalPlan = plans.ProduceResult(columns = resultColumns, orderBy)
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 
@@ -66,7 +56,7 @@ class OrderBy extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: OrderByThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
+    threadState.executionResult(params, threadState.tx).accept(visitor)
     assertExpectedRowCount(EXPECTED_ROW_COUNT, visitor)
   }
 }
@@ -74,14 +64,14 @@ class OrderBy extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class OrderByThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: OrderBy): Unit = {
     val list = listOf(benchmarkState.OrderBy_type, benchmarkState.EXPECTED_ROW_COUNT)
     Collections.shuffle(list)
     benchmarkState.params = mapValuesOfList("list", list)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.OrderBy_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.OrderBy_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

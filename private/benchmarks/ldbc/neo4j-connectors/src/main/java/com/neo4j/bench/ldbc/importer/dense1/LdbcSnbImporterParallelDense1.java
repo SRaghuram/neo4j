@@ -1,37 +1,33 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
  */
+
 package com.neo4j.bench.ldbc.importer.dense1;
 
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.util.MapUtils;
-import com.neo4j.bench.ldbc.Neo4jDb;
-import com.neo4j.bench.ldbc.cli.LdbcCli;
-import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
-import com.neo4j.bench.ldbc.connection.Neo4jSchema;
-import com.neo4j.bench.ldbc.connection.TimeStampedRelationshipTypesCache;
-import com.neo4j.bench.ldbc.importer.CommentHasCreatorAtTimeRelationshipTypeDecorator;
-import com.neo4j.bench.ldbc.importer.CommentIsLocatedInAtTimeRelationshipTypeDecorator;
-import com.neo4j.bench.ldbc.importer.CommentReplyOfRelationshipTypeDecorator;
-import com.neo4j.bench.ldbc.importer.CsvFilesForMerge;
-import com.neo4j.bench.ldbc.importer.DateTimeDecorator;
-import com.neo4j.bench.ldbc.importer.ForumHasMemberAtTimeRelationshipTypeDecorator;
-import com.neo4j.bench.ldbc.importer.ForumHasMemberWithPostsLoader;
-import com.neo4j.bench.ldbc.importer.GraphMetadataTracker;
-import com.neo4j.bench.ldbc.importer.LabelCamelCaseDecorator;
-import com.neo4j.bench.ldbc.importer.LdbcHeaderFactory;
-import com.neo4j.bench.ldbc.importer.LdbcImporterConfig;
-import com.neo4j.bench.ldbc.importer.LdbcIndexer;
-import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
-import com.neo4j.bench.ldbc.importer.PersonDecorator;
-import com.neo4j.bench.ldbc.importer.PersonWorkAtYearDecorator;
-import com.neo4j.bench.ldbc.importer.PlaceIsPartOfPlaceNullReplacer;
-import com.neo4j.bench.ldbc.importer.PostHasCreatorAtTimeRelationshipTypeDecorator;
-import com.neo4j.bench.ldbc.importer.PostIsLocatedInAtTimeRelationshipTypeDecorator;
 import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,28 +37,48 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.neo4j.bench.ldbc.Neo4jDb;
+import com.neo4j.bench.ldbc.cli.LdbcCli;
+import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
+import com.neo4j.bench.ldbc.connection.ImportDateUtil;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.Neo4jSchema;
+import com.neo4j.bench.ldbc.connection.TimeStampedRelationshipTypesCache;
+import com.neo4j.bench.ldbc.importer.AdditiveLabelFromColumnDecorator;
+import com.neo4j.bench.ldbc.importer.CommentHasCreatorAtTimeRelationshipTypeDecorator;
+import com.neo4j.bench.ldbc.importer.CommentIsLocatedInAtTimeRelationshipTypeDecorator;
+import com.neo4j.bench.ldbc.importer.CommentReplyOfRelationshipTypeDecorator;
+import com.neo4j.bench.ldbc.importer.CsvFilesForMerge;
+import com.neo4j.bench.ldbc.importer.DateTimeDecorator;
+import com.neo4j.bench.ldbc.importer.ForumHasMemberAtTimeRelationshipTypeDecorator;
+import com.neo4j.bench.ldbc.importer.ForumHasMemberWithPostsLoader;
+import com.neo4j.bench.ldbc.importer.GraphMetadataTracker;
+import com.neo4j.bench.ldbc.importer.LdbcHeaderFactory;
+import com.neo4j.bench.ldbc.importer.LdbcImporterConfig;
+import com.neo4j.bench.ldbc.importer.LdbcIndexer;
+import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
+import com.neo4j.bench.ldbc.importer.PersonDecorator;
+import com.neo4j.bench.ldbc.importer.PersonWorkAtYearDecorator;
+import com.neo4j.bench.ldbc.importer.PlaceIsPartOfPlaceNullReplacer;
+import com.neo4j.bench.ldbc.importer.PostHasCreatorAtTimeRelationshipTypeDecorator;
+import com.neo4j.bench.ldbc.importer.PostIsLocatedInAtTimeRelationshipTypeDecorator;
+import com.neo4j.bench.ldbc.importer.TagClassIsSubClassOfTagClassDecorator;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
-import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.impl.logging.LogService;
+import org.neo4j.kernel.impl.logging.SimpleLogService;
 import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.logging.internal.LogService;
-import org.neo4j.logging.internal.SimpleLogService;
-import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.input.BadCollector;
 import org.neo4j.unsafe.impl.batchimport.input.Collectors;
-import org.neo4j.unsafe.impl.batchimport.input.Group;
-import org.neo4j.unsafe.impl.batchimport.input.Groups;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators;
+import org.neo4j.unsafe.impl.batchimport.input.InputNode;
+import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
 import org.neo4j.unsafe.impl.batchimport.input.csv.CsvInput;
 import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories;
 import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactory;
@@ -71,6 +87,8 @@ import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
+import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 import static com.neo4j.bench.ldbc.Domain.Forum;
 import static com.neo4j.bench.ldbc.Domain.HasMember;
 import static com.neo4j.bench.ldbc.Domain.Knows;
@@ -86,13 +104,22 @@ import static com.neo4j.bench.ldbc.Domain.StudiesAt;
 import static com.neo4j.bench.ldbc.Domain.Tag;
 import static com.neo4j.bench.ldbc.Domain.TagClass;
 import static com.neo4j.bench.ldbc.Domain.WorksAt;
-import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
-import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
-import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
 
 public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 {
+    private static final Logger LOGGER = Logger.getLogger( LdbcSnbImporterParallelDense1.class );
+
+    private static class IndexSpace
+    {
+        static final String MESSAGES = "messages_id_space";
+        static final String FORUMS = "forums_id_space";
+        static final String ORGANIZATIONS = "organizations_id_space";
+        static final String PERSONS = "persons_id_space";
+        static final String PLACES = "places_id_space";
+        static final String TAG_CLASSES = "tag_classes_id_space";
+        static final String TAGS = "tags_id_space";
+        static final String _ = "id_spaces_only_used_for_identifiers";
+    }
 
     @Override
     public void load(
@@ -110,15 +137,15 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
             throw new DbException( format( "Invalid Timestamp Resolution: %s", timestampResolution.name() ) );
         }
 
-        System.out.println( format( "Source CSV Dir:        %s", csvDataDir ) );
-        System.out.println( format( "Target DB Dir:         %s", dbDir ) );
-        System.out.println( format( "Source Date Format:    %s", fromCsvFormat.name() ) );
-        System.out.println( format( "Target Date Format:    %s", toNeo4JFormat.name() ) );
-        System.out.println( format( "Timestamp Resolution:  %s", timestampResolution.name() ) );
-        System.out.println( format( "With Unique:           %s", withUnique ) );
-        System.out.println( format( "With Mandatory:        %s", withMandatory ) );
+        LOGGER.info( format( "Source CSV Dir:        %s", csvDataDir ) );
+        LOGGER.info( format( "Target DB Dir:         %s", dbDir ) );
+        LOGGER.info( format( "Source Date Format:    %s", fromCsvFormat.name() ) );
+        LOGGER.info( format( "Target Date Format:    %s", toNeo4JFormat.name() ) );
+        LOGGER.info( format( "Timestamp Resolution:  %s", timestampResolution.name() ) );
+        LOGGER.info( format( "With Unique:           %s", withUnique ) );
+        LOGGER.info( format( "With Mandatory:        %s", withMandatory ) );
 
-        System.out.println( format( "Clear DB directory: %s", dbDir ) );
+        LOGGER.info( format( "Clear DB directory: %s", dbDir ) );
         FileUtils.deleteDirectory( dbDir );
 
         TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache =
@@ -268,17 +295,10 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 .filter( path -> CsvFilesForMerge.ORGANIZATION.matcher( path.getFileName().toString() ).matches() )
                 .collect( toList() );
 
-        Groups groups = new Groups();
-        Group messagesGroup = groups.getOrCreate( "messages_id_space" );
-        Group forumsGroup = groups.getOrCreate( "forums_id_space" );
-        Group organizationsGroup = groups.getOrCreate( "organizations_id_space" );
-        Group personsGroup = groups.getOrCreate( "persons_id_space" );
-        Group placesGroup = groups.getOrCreate( "places_id_space" );
-        Group tagClassesGroup = groups.getOrCreate( "tag_classes_id_space" );
-        Group tagsGroup = groups.getOrCreate( "tags_id_space" );
-        Group nonGroup = groups.getOrCreate( "id_spaces_are_only_used_for_identifiers" );
-
-        List<DataFactory> nodeDataFactories = new ArrayList<>();
+        /*
+        *** NODE FILES ***
+         */
+        List<DataFactory<InputNode>> nodeDataFactories = new ArrayList<>();
         List<Header> nodeHeaders = new ArrayList<>();
 
         // comments: id|creationDate|locationIP|browserUsed|content|length|creator|place|replyOfPost|replyOfComment
@@ -286,27 +306,29 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 {
                     nodeDataFactories.add( DataFactories.data(
                             InputEntityDecorators.decorators(
-                                    new DateTimeDecorator(
+                                    new DateTimeDecorator<>(
                                             Message.CREATION_DATE,
-                                            () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                            ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat,
+                                                    timestampResolution ) ),
                                     InputEntityDecorators
                                             .additiveLabels( new String[]{
                                                     Nodes.Comment.name(),
                                                     Nodes.Message.name()} )
                             ),
                             LdbcCli.CHARSET,
-                            path.toFile() ) );
+                            path.toFile()
+                    ) );
                     nodeHeaders.add( new Header(
-                            new Header.Entry( Message.ID, Type.ID, messagesGroup, extractors.long_() ),
-                            new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                            new Header.Entry( Message.LOCATION_IP, Type.PROPERTY, nonGroup, extractors.string() ),
-                            new Header.Entry( Message.BROWSER_USED, Type.PROPERTY, nonGroup, extractors.string() ),
-                            new Header.Entry( Message.CONTENT, Type.PROPERTY, nonGroup, extractors.string() ),
-                            new Header.Entry( Message.LENGTH, Type.PROPERTY, nonGroup, extractors.int_() ),
-                            new Header.Entry( "creator", Type.IGNORE, nonGroup, extractors.string() ),
-                            new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ),
-                            new Header.Entry( "replyOfPost", Type.IGNORE, nonGroup, extractors.string() ),
-                            new Header.Entry( "replyOfComment", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                            new Header.Entry( Message.ID, Type.ID, IndexSpace.MESSAGES, extractors.long_() ),
+                            new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                            new Header.Entry( Message.LOCATION_IP, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                            new Header.Entry( Message.BROWSER_USED, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                            new Header.Entry( Message.CONTENT, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                            new Header.Entry( Message.LENGTH, Type.PROPERTY, IndexSpace._, extractors.int_() ),
+                            new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                            new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                            new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                            new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
                 }
         );
 
@@ -315,9 +337,9 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             nodeDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
-                            new DateTimeDecorator(
+                            new DateTimeDecorator<>(
                                     Message.CREATION_DATE,
-                                    () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                    ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
                             InputEntityDecorators
                                     .additiveLabels( new String[]{
                                             Nodes.Post.name(),
@@ -326,17 +348,17 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             nodeHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Post.IMAGE_FILE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Post.LANGUAGE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.PROPERTY, nonGroup, extractors.int_() ),
-                    new Header.Entry( "creator", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "Forum.id", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( Message.ID, Type.ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( Post.IMAGE_FILE, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Message.LOCATION_IP, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Message.BROWSER_USED, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Post.LANGUAGE, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Message.CONTENT, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Message.LENGTH, Type.PROPERTY, IndexSpace._, extractors.int_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // forums: id|title|creationDate|moderator
@@ -344,34 +366,37 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             nodeDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
-                            new DateTimeDecorator(
+                            new DateTimeDecorator<>(
                                     Forum.CREATION_DATE,
-                                    () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                    ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
                             InputEntityDecorators.additiveLabels( new String[]{
                                     Nodes.Forum.name()} )
                     ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             nodeHeaders.add( new Header(
-                    new Header.Entry( Forum.ID, Type.ID, forumsGroup, extractors.long_() ),
-                    new Header.Entry( Forum.TITLE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Forum.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( "moderator", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( Forum.ID, Type.ID, IndexSpace.FORUMS, extractors.long_() ),
+                    new Header.Entry( Forum.TITLE, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Forum.CREATION_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // organizations: id|type|name|url|place
         organizationsFiles.forEach( path ->
         {
             nodeDataFactories.add( DataFactories.data(
-                    new LabelCamelCaseDecorator(),
+                    InputEntityDecorators.decorators(
+                            ( InputNode i ) -> i, // identify
+                            new AdditiveLabelFromColumnDecorator( 1 )
+                    ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             nodeHeaders.add( new Header(
-                    new Header.Entry( Organisation.ID, Type.ID, organizationsGroup, extractors.long_() ),
-                    new Header.Entry( "type", Type.LABEL, nonGroup, extractors.string() ),
-                    new Header.Entry( Organisation.NAME, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( Organisation.ID, Type.ID, IndexSpace.ORGANIZATIONS, extractors.long_() ),
+                    new Header.Entry( "type", Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Organisation.NAME, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // persons: id|firstName|lastName|gender|birthday|creationDate|locationIP|browserUsed|place
@@ -380,39 +405,40 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
             nodeDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
                             new PersonDecorator(
-                                    () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                    ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
                             InputEntityDecorators.additiveLabels( new String[]{
                                     Nodes.Person.name()} )
                     ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             nodeHeaders.add( new Header(
-                    new Header.Entry( Person.ID, Type.ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( Person.FIRST_NAME, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.LAST_NAME, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.GENDER, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.BIRTHDAY, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.LOCATION_IP, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.BROWSER_USED, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.LANGUAGES, Type.PROPERTY, nonGroup, extractors.stringArray() ),
-                    new Header.Entry( Person.EMAIL_ADDRESSES, Type.PROPERTY, nonGroup, extractors.stringArray() ) ) );
+                    new Header.Entry( Person.ID, Type.ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( Person.FIRST_NAME, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Person.LAST_NAME, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Person.GENDER, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Person.BIRTHDAY, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Person.CREATION_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Person.LOCATION_IP, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Person.BROWSER_USED, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( Person.LANGUAGES, Type.PROPERTY, IndexSpace._, extractors.stringArray() ),
+                    new Header.Entry( Person.EMAIL_ADDRESSES, Type.PROPERTY, IndexSpace._,
+                            extractors.stringArray() ) ) );
         } );
 
         // places: id|name|url|type|isPartOf
         placesFiles.forEach( path ->
         {
             nodeDataFactories.add( DataFactories.data(
-                    new LabelCamelCaseDecorator(),
+                    new AdditiveLabelFromColumnDecorator( 2 ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             nodeHeaders.add( new Header(
-                    new Header.Entry( Place.ID, Type.ID, placesGroup, extractors.long_() ),
-                    new Header.Entry( Place.NAME, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "type", Type.LABEL, nonGroup, extractors.string() ),
-                    new Header.Entry( "isPartOf", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( Place.ID, Type.ID, IndexSpace.PLACES, extractors.long_() ),
+                    new Header.Entry( Place.NAME, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( "type", Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // tag classes: id|name|url|isSubclassOf
@@ -424,13 +450,13 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             nodeHeaders.add( new Header(
-                    new Header.Entry( "id", Type.ID, tagClassesGroup, extractors.long_() ),
-                    new Header.Entry( TagClass.NAME, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "isSubclassOf", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.ID, IndexSpace.TAG_CLASSES, extractors.long_() ),
+                    new Header.Entry( TagClass.NAME, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
-        // tags: id|name|url|hasType
+        // tags: id|name|url
         tagsFiles.forEach( path ->
         {
             nodeDataFactories.add( DataFactories.data(
@@ -439,16 +465,16 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             nodeHeaders.add( new Header(
-                    new Header.Entry( Tag.ID, Type.ID, tagsGroup, extractors.long_() ),
-                    new Header.Entry( Tag.NAME, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "hasType", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( Tag.ID, Type.ID, IndexSpace.TAGS, extractors.long_() ),
+                    new Header.Entry( Tag.NAME, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         /*
         *** RELATIONSHIP FILES ***
          */
-        List<DataFactory> relationshipDataFactories = new ArrayList<>();
+        List<DataFactory<InputRelationship>> relationshipDataFactories = new ArrayList<>();
         List<Header> relationshipHeaders = new ArrayList<>();
 
         // comment has creator person
@@ -461,40 +487,41 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.END_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "replyOfPost", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "replyOfComment", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // comment has creator person - WITH TIME STAMP
-        // comments: id|creationDate|locationIP|browserUsed|content|length|creator|place|replyOfPost|replyOfComment
+        // comments: id|creationDate|locationIP|browserUsed|content|length|creator|place|replyOfPost
+        // |replyOfComment
         commentHasCreatorPersonFiles.forEach( path ->
         {
             relationshipDataFactories.add( DataFactories.data(
                     new CommentHasCreatorAtTimeRelationshipTypeDecorator(
-                            () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
+                            ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
                             timeStampedRelationshipTypesCache,
                             metadataTracker ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.END_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "replyOfPost", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "replyOfComment", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // comment is located in place
@@ -503,22 +530,22 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     new CommentIsLocatedInAtTimeRelationshipTypeDecorator(
-                            () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
+                            ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
                             timeStampedRelationshipTypesCache,
                             metadataTracker ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.END_ID, placesGroup, extractors.long_() ),
-                    new Header.Entry( "replyOfPost", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "replyOfComment", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PLACES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // comment reply of comment/post
@@ -526,20 +553,21 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         commentReplyOfCommentOrPostFiles.forEach( path ->
         {
             relationshipDataFactories.add( DataFactories.data(
-                    new CommentReplyOfRelationshipTypeDecorator( messagesGroup ),
+                    new CommentReplyOfRelationshipTypeDecorator(),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "replyOfPost", Type.PROPERTY, nonGroup, extractors.long_() ),
-                    new Header.Entry( "replyOfComment", Type.PROPERTY, nonGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    // NOTE: this is not really used, but an end node needs to be specified
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PLACES, extractors.long_() ),
+                    new Header.Entry( "replyOfPost", Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( "replyOfComment", Type.PROPERTY, IndexSpace._, extractors.string() ) ) );
         } );
 
         // forum container of post
@@ -552,17 +580,17 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.END_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Post.IMAGE_FILE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Post.LANGUAGE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.END_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.START_ID, IndexSpace.FORUMS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // forum has member person: Forum.id|Person.id|joinDate
@@ -570,15 +598,15 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     new ForumHasMemberAtTimeRelationshipTypeDecorator(
-                            () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
+                            ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
                             timeStampedRelationshipTypesCache,
                             metadataTracker ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
-                    new Header.Entry( "Person.id", Type.END_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( HasMember.JOIN_DATE, Type.PROPERTY, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.FORUMS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( HasMember.JOIN_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ) ) );
         } );
 
         // forum has member with posts person: Forum.id|Person.id|joinDate
@@ -586,18 +614,19 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
-                            new DateTimeDecorator(
+                            new DateTimeDecorator<>(
                                     HasMember.JOIN_DATE,
-                                    () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                    ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat,
+                                            timestampResolution ) ),
                             InputEntityDecorators.defaultRelationshipType(
                                     Rels.HAS_MEMBER_WITH_POSTS.name() )
                     ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
-                    new Header.Entry( "Person.id", Type.END_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( HasMember.JOIN_DATE, Type.PROPERTY, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.FORUMS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( HasMember.JOIN_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ) ) );
         } );
 
         // forum has moderator person
@@ -610,10 +639,10 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Forum.ID, Type.START_ID, forumsGroup, extractors.long_() ),
-                    new Header.Entry( Forum.TITLE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Forum.CREATION_DATE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "moderator", Type.END_ID, personsGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.FORUMS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ) ) );
         } );
 
         // forum has tag: Forum.id|Tag.id
@@ -625,8 +654,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Forum.id", Type.START_ID, forumsGroup, extractors.long_() ),
-                    new Header.Entry( "Tag.id", Type.END_ID, tagsGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.FORUMS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.TAGS, extractors.long_() ) ) );
         } );
 
         // person has interest tag: Person.id|Tag.id
@@ -638,8 +667,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Tag.id", Type.END_ID, tagsGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.TAGS, extractors.long_() ) ) );
         } );
 
         // person is located in place
@@ -652,17 +681,17 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Person.ID, Type.START_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( Person.FIRST_NAME, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.LAST_NAME, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.GENDER, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.BIRTHDAY, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.CREATION_DATE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.END_ID, placesGroup, extractors.long_() ),
-                    new Header.Entry( Person.LANGUAGES, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Person.EMAIL_ADDRESSES, Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PLACES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // person knows person: Person.id|Person.id|creationDate
@@ -670,18 +699,19 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
-                            new DateTimeDecorator(
+                            new DateTimeDecorator<>(
                                     Knows.CREATION_DATE,
-                                    () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                    ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat,
+                                            timestampResolution ) ),
                             InputEntityDecorators.defaultRelationshipType(
                                     Rels.KNOWS.name() )
                     ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Person.id", Type.END_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( Knows.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( Knows.CREATION_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ) ) );
         } );
 
         // person likes comment: Person.id|Comment.id|creationDate
@@ -689,18 +719,19 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
-                            new DateTimeDecorator(
+                            new DateTimeDecorator<>(
                                     Likes.CREATION_DATE,
-                                    () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                    ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat,
+                                            timestampResolution ) ),
                             InputEntityDecorators.defaultRelationshipType(
                                     Rels.LIKES_COMMENT.name() )
                     ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Comment.id", Type.END_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Likes.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( Likes.CREATION_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ) ) );
         } );
 
         // person likes post: Person.id|Post.id|creationDate
@@ -708,18 +739,19 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
-                            new DateTimeDecorator(
+                            new DateTimeDecorator<>(
                                     Likes.CREATION_DATE,
-                                    () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ) ),
+                                    ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat,
+                                            timestampResolution ) ),
                             InputEntityDecorators.defaultRelationshipType(
                                     Rels.LIKES_POST.name() )
                     ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Post.id", Type.END_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Likes.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( Likes.CREATION_DATE, Type.PROPERTY, IndexSpace._, extractors.string() ) ) );
         } );
 
         // person study at organization: Person.id|Organisation.id|classYear
@@ -731,9 +763,9 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Organisation.id", Type.END_ID, organizationsGroup, extractors.long_() ),
-                    new Header.Entry( StudiesAt.CLASS_YEAR, Type.PROPERTY, nonGroup, extractors.int_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.ORGANIZATIONS, extractors.long_() ),
+                    new Header.Entry( StudiesAt.CLASS_YEAR, Type.PROPERTY, IndexSpace._, extractors.int_() ) ) );
         } );
 
         // person works at organization: Person.id|Organisation.id|workFrom
@@ -746,9 +778,9 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Person.id", Type.START_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Organisation.id", Type.END_ID, organizationsGroup, extractors.long_() ),
-                    new Header.Entry( WorksAt.WORK_FROM, Type.PROPERTY, nonGroup, extractors.int_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.ORGANIZATIONS, extractors.long_() ),
+                    new Header.Entry( WorksAt.WORK_FROM, Type.PROPERTY, IndexSpace._, extractors.int_() ) ) );
         } );
 
         // place is part of place
@@ -759,14 +791,15 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 LdbcCli.CHARSET,
                 noNullPlaceIsPartOfPlaceFile ) );
         relationshipHeaders.add( new Header(
-                new Header.Entry( Place.ID, Type.START_ID, placesGroup, extractors.long_() ),
-                new Header.Entry( Place.NAME, Type.IGNORE, nonGroup, extractors.string() ),
-                new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                new Header.Entry( "type", Type.IGNORE, nonGroup, extractors.string() ),
-                new Header.Entry( "isPartOf", Type.END_ID, placesGroup, extractors.long_() ) ) );
+                new Header.Entry( null, Type.START_ID, IndexSpace.PLACES, extractors.long_() ),
+                new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                new Header.Entry( null, Type.END_ID, IndexSpace.PLACES, extractors.long_() ) ) );
 
         // post has creator person
-        // posts: id|imageFile|creationDate|locationIP|browserUsed|language|content|length|creator|Forum.id|place
+        // posts: id|imageFile|creationDate|locationIP|browserUsed|language|content|length|creator|Forum
+        // .id|place
         postHasCreatorPersonFiles.forEach( path ->
         {
             relationshipDataFactories.add( DataFactories.data(
@@ -775,42 +808,43 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Post.IMAGE_FILE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Post.LANGUAGE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.END_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Forum.id", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // post has creator person - WITH TIME STAMP
-        // posts: id|imageFile|creationDate|locationIP|browserUsed|language|content|length|creator|Forum.id|place
+        // posts: id|imageFile|creationDate|locationIP|browserUsed|language|content|length|creator|Forum
+        // .id|place
         postHasCreatorPersonFiles.forEach( path ->
         {
             relationshipDataFactories.add( DataFactories.data(
                     new PostHasCreatorAtTimeRelationshipTypeDecorator(
-                            () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
+                            ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
                             timeStampedRelationshipTypesCache,
                             metadataTracker ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Post.IMAGE_FILE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Post.LANGUAGE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.END_ID, personsGroup, extractors.long_() ),
-                    new Header.Entry( "Forum.id", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.IGNORE, nonGroup, extractors.string() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PERSONS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ) ) );
         } );
 
         // post has tag tag: Post.id|Tag.id
@@ -822,8 +856,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Post.id", Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( "Tag.id", Type.END_ID, tagsGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.TAGS, extractors.long_() ) ) );
         } );
 
         // comment has tag tag: Comment.id|Tag.id
@@ -835,8 +869,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "Comment.id", Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( "Tag.id", Type.END_ID, tagsGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.TAGS, extractors.long_() ) ) );
         } );
 
         // post is located in place
@@ -845,23 +879,23 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     new PostIsLocatedInAtTimeRelationshipTypeDecorator(
-                            () -> createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
+                            ImportDateUtil.createFor( fromCsvFormat, toNeo4JFormat, timestampResolution ),
                             timeStampedRelationshipTypesCache,
                             metadataTracker ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Message.ID, Type.START_ID, messagesGroup, extractors.long_() ),
-                    new Header.Entry( Post.IMAGE_FILE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CREATION_DATE, Type.PROPERTY, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LOCATION_IP, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.BROWSER_USED, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Post.LANGUAGE, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.CONTENT, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Message.LENGTH, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "creator", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "Forum.id", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.END_ID, placesGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.MESSAGES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.PROPERTY, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PLACES, extractors.long_() ) ) );
         } );
 
         // tags classes: id|name|url|isSubclassOf
@@ -869,18 +903,17 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         {
             relationshipDataFactories.add( DataFactories.data(
                     InputEntityDecorators.decorators(
-                            // TODO remove
-                            // new TagClassIsSubClassOfTagClassDecorator(),
+                            new TagClassIsSubClassOfTagClassDecorator(),
                             InputEntityDecorators.defaultRelationshipType(
                                     Rels.IS_SUBCLASS_OF.name() )
                     ),
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "id", Type.START_ID, tagClassesGroup, extractors.long_() ),
-                    new Header.Entry( TagClass.NAME, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "isSubclassOf", Type.END_ID, tagClassesGroup, extractors.long_() ) ) );
+                    new Header.Entry( "id", Type.START_ID, IndexSpace.TAG_CLASSES, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( "isSubclassOf", Type.END_ID, IndexSpace.TAG_CLASSES, extractors.long_() ) ) );
         } );
 
         // tag has type tag class: id|name|url|hasType|
@@ -892,10 +925,10 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( "id", Type.START_ID, tagsGroup, extractors.long_() ),
-                    new Header.Entry( "name", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "hasType", Type.END_ID, tagClassesGroup, extractors.long_() ) ) );
+                    new Header.Entry( "id", Type.START_ID, IndexSpace.TAGS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( "hasType", Type.END_ID, IndexSpace.TAG_CLASSES, extractors.long_() ) ) );
         } );
 
         // organization is located in place
@@ -908,11 +941,11 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                     LdbcCli.CHARSET,
                     path.toFile() ) );
             relationshipHeaders.add( new Header(
-                    new Header.Entry( Organisation.ID, Type.START_ID, organizationsGroup, extractors.long_() ),
-                    new Header.Entry( "type", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( Organisation.NAME, Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "url", Type.IGNORE, nonGroup, extractors.string() ),
-                    new Header.Entry( "place", Type.END_ID, placesGroup, extractors.long_() ) ) );
+                    new Header.Entry( null, Type.START_ID, IndexSpace.ORGANIZATIONS, extractors.long_() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.IGNORE, IndexSpace._, extractors.string() ),
+                    new Header.Entry( null, Type.END_ID, IndexSpace.PLACES, extractors.long_() ) ) );
         } );
 
         // note: assumes input factories are called in order they are given, and two times: first->last, first->last
@@ -930,36 +963,29 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 Collectors.badCollector(
                         System.out,
                         tagClassesFiles.stream().map( path -> (int) path.toFile().length() ).mapToInt( i -> i ).sum(),
-                        Collectors.collect( true, false, false ) )
+                        BadCollector.BAD_RELATIONSHIPS ),
+                batchImporterConfiguration.maxNumberOfProcessors(),
+                false
         );
 
         FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
         LogService logService = new SimpleLogService( systemOutLogProvider, systemOutLogProvider );
-        JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
-        LifeSupport lifeSupport = new LifeSupport();
-        lifeSupport.add( jobScheduler );
-        lifeSupport.start();
+
         BatchImporter batchImporter = new ParallelBatchImporter(
-                DatabaseLayout.of( dbDir ),
+                dbDir,
                 new DefaultFileSystemAbstraction(),
-                null,
                 batchImporterConfiguration,
                 logService,
-                ExecutionMonitors.defaultVisible( jobScheduler ),
-                AdditionalInitialIds.EMPTY,
+                ExecutionMonitors.defaultVisible(),
                 (null == importerProperties)
                 ? Config.defaults()
-                : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) ),
-                StandardV3_4.RECORD_FORMATS,
-                NO_MONITOR,
-                jobScheduler
+                : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) )
         );
 
-        System.out.println( "Loading CSV files" );
+        LOGGER.info( "Loading CSV files" );
         long startTime = System.currentTimeMillis();
 
         batchImporter.doImport( input );
-        lifeSupport.shutdown();
 
         long runtime = System.currentTimeMillis() - startTime;
         System.out.println( String.format(
@@ -968,7 +994,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 TimeUnit.MILLISECONDS.toSeconds( runtime )
                 - TimeUnit.MINUTES.toSeconds( TimeUnit.MILLISECONDS.toMinutes( runtime ) ) ) );
 
-        System.out.println( "Creating Indexes & Constraints" );
+        LOGGER.info( "Creating Indexes & Constraints" );
         startTime = System.currentTimeMillis();
 
         GraphDatabaseService db = Neo4jDb.newDb( dbDir, importerProperties );

@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.procs;
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
@@ -11,6 +6,7 @@ import org.openjdk.jmh.annotations.State;
 
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.BasicContext;
+import org.neo4j.kernel.api.proc.QualifiedName;
 import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
@@ -19,7 +15,7 @@ public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
 {
     static final ResourceTracker DUMMY_TRACKER = new DummyResourceTracker();
     Procedures procedures;
-    int token;
+    QualifiedName qualifiedName;
     BasicContext context;
 
     @Override

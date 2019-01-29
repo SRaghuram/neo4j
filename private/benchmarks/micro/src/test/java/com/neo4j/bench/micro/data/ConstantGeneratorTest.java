@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import org.junit.Test;
@@ -10,33 +5,18 @@ import org.junit.Test;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
-import org.neo4j.values.storable.DateTimeValue;
-import org.neo4j.values.storable.DateValue;
-import org.neo4j.values.storable.DurationValue;
-import org.neo4j.values.storable.LocalDateTimeValue;
-import org.neo4j.values.storable.LocalTimeValue;
-import org.neo4j.values.storable.TimeValue;
-import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
-
 import static com.neo4j.bench.micro.data.ConstantGenerator.BIG_STRING_PREFIX;
 import static com.neo4j.bench.micro.data.ConstantGenerator.constant;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.BYTE;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.BYTE_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.SHORT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.SHORT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
@@ -44,13 +24,8 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_INL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-
-import static java.time.ZoneOffset.UTC;
-
-import static org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian;
 
 public class ConstantGeneratorTest
 {
@@ -98,13 +73,6 @@ public class ConstantGeneratorTest
         assertConstant(
                 IntStream.range( 0, ArrayGenerator.DEFAULT_SIZE ).mapToObj( i -> BIG_STRING_PREFIX + "word" ).toArray( String[]::new ),
                 constant( STR_BIG_ARR, BIG_STRING_PREFIX + "word" ) );
-        assertConstant( DateTimeValue.datetime( 16, 0, UTC ).asObjectCopy(), constant( DATE_TIME, 16 ) );
-        assertConstant( LocalDateTimeValue.localDateTime( 17, 0 ).asObjectCopy(), constant( LOCAL_DATE_TIME, 17 ) );
-        assertConstant( TimeValue.time( 18, UTC ).asObjectCopy(), constant( TIME, 18 ) );
-        assertConstant( LocalTimeValue.localTime( 19 ).asObjectCopy(), constant( LOCAL_TIME, 19 ) );
-        assertConstant( DateValue.epochDate( 20 ).asObjectCopy(), constant( DATE, 20 ) );
-        assertConstant( DurationValue.duration( 0, 0, 0, 21 ).asObjectCopy(), constant( DURATION, 21 ) );
-        assertConstant( Values.pointValue( Cartesian, 22, 22 ), constant( POINT, 22 ) );
     }
 
     private void assertConstant( Object expectedValue, ValueGeneratorFactory factory )
@@ -112,15 +80,11 @@ public class ConstantGeneratorTest
         for ( int i = 0; i < 10; i++ )
         {
             // for a given factory the created functions is always the same
-            ValueGeneratorFun fun1 = factory.create();
-            ValueGeneratorFun fun2 = factory.create();
+            ValueGeneratorFun fun = factory.create();
             for ( int j = 0; j < 10; j++ )
             {
                 // for a given function the created values are always the same
-                Object objectValue = fun1.next( null );
-                Value valueValue = fun2.nextValue( null );
-                assertThat( expectedValue, equalTo( objectValue ) );
-                assertThat( valueValue, equalTo( Values.of( objectValue ) ) );
+                assertThat( expectedValue, equalTo( fun.next( null ) ) );
             }
         }
     }

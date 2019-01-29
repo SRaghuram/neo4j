@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.marketing;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -92,8 +87,8 @@ public class CreateNodesWithProperty extends AbstractMarketingBenchmark
         {
             txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateNodesWithProperty_txSize );
             valueGeneratorFun = Arrays.stream( propertyDefinitions )
-                                      .map( pd -> pd.value().create() )
-                                      .toArray( ValueGeneratorFun[]::new );
+                    .map( pd -> pd.value().create() )
+                    .toArray( ValueGeneratorFun[]::new );
         }
 
         void advance()

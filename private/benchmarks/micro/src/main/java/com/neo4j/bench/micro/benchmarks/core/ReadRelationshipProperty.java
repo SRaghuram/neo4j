@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -25,25 +20,18 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
@@ -59,7 +47,6 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
-                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
@@ -75,14 +62,14 @@ public class ReadRelationshipProperty extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of retrieving properties from relationships that have a single property.\n" +
-                "Method:\n" +
-                "- Every relationship has the same property (with different values)\n" +
-                "- During store creation, property values are generated with uniform random policy\n" +
-                "- When reading, relationship IDs are selected using two different policies: same, random\n" +
-                "--- same: Same relationship accessed every time. Best cache hit rate. Test cached performance.\n" +
-                "--- random: Accesses random relationship. Worst cache hit rate. Test non-cached performance.\n" +
-                "Outcome:\n" +
-                "- Tests performance of property reading in cached & non-cached scenarios";
+               "Method:\n" +
+               "- Every relationship has the same property (with different values)\n" +
+               "- During store creation, property values are generated with uniform random policy\n" +
+               "- When reading, relationship IDs are selected using two different policies: same, random\n" +
+               "--- same: Same relationship accessed every time. Best cache hit rate. Test cached performance.\n" +
+               "--- random: Accesses random relationship. Worst cache hit rate. Test non-cached performance.\n" +
+               "Outcome:\n" +
+               "- Tests performance of property reading in cached & non-cached scenarios";
     }
 
     @Override

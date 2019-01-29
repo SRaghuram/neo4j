@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -14,8 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
-
-import org.neo4j.values.storable.Values;
 
 import static com.neo4j.bench.micro.data.NumberGenerator.ascDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.ascFloat;
@@ -123,16 +116,12 @@ public class NumberGeneratorTest
     {
         long start = System.currentTimeMillis();
         int repeatedValueCount = 0;
-        SplittableRandom rng1 = RNGState.newRandom( 42 );
-        SplittableRandom rng2 = RNGState.newRandom( 42 );
-        ValueGeneratorFun<NUMBER> fun1 = generatorFactory.create();
-        ValueGeneratorFun<NUMBER> fun2 = generatorFactory.create();
-        NUMBER previous = fun1.next( rng1 );
-        assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( previous ) ) );
+        SplittableRandom rng = RNGState.newRandom( 42 );
+        ValueGeneratorFun<NUMBER> fun = generatorFactory.create();
+        NUMBER previous = fun.next( rng );
         for ( int i = 0; i < REPETITIONS; i++ )
         {
-            NUMBER current = fun1.next( rng1 );
-            assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( current ) ) );
+            NUMBER current = fun.next( rng );
             if ( current.equals( previous ) )
             {
                 repeatedValueCount++;
@@ -142,7 +131,7 @@ public class NumberGeneratorTest
         long duration = System.currentTimeMillis() - start;
         int toleratedRepetitions = (int) (0.001 * REPETITIONS);
         System.out.println( format( "Tolerated Repetitions = %s , Observed Repetitions = %s, Duration = %s (ms)",
-                                    toleratedRepetitions, repeatedValueCount, duration ) );
+                toleratedRepetitions, repeatedValueCount, duration ) );
         assertThat( "less than 0.01% value repetitions", repeatedValueCount, lessThan( toleratedRepetitions ) );
         assertThat( duration, lessThan( MAX_TOLERATED_DURATION ) );
     }
@@ -151,17 +140,13 @@ public class NumberGeneratorTest
             ValueGeneratorFactory<NUMBER> generatorFactory )
     {
         long start = System.currentTimeMillis();
-        SplittableRandom rng1 = RNGState.newRandom( 42 );
-        SplittableRandom rng2 = RNGState.newRandom( 42 );
-        ValueGeneratorFun<NUMBER> fun1 = generatorFactory.create();
-        ValueGeneratorFun<NUMBER> fun2 = generatorFactory.create();
-        NUMBER previous = fun1.next( rng1 );
-        assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( previous ) ) );
+        SplittableRandom rng = RNGState.newRandom( 42 );
+        ValueGeneratorFun<NUMBER> fun = generatorFactory.create();
+        NUMBER previous = fun.next( rng );
         for ( int i = 0; i < REPETITIONS; i++ )
         {
-            NUMBER current = fun1.next( rng1 );
+            NUMBER current = fun.next( rng );
             assertThat( current.doubleValue(), greaterThan( previous.doubleValue() ) );
-            assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( current ) ) );
             previous = current;
         }
         long duration = System.currentTimeMillis() - start;

@@ -1,19 +1,14 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, Plans, RelationshipDefinition}
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.expressions.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.v3_5.logical._
-import org.neo4j.cypher.internal.v3_5.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection.OUTGOING
+import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.v3_3.logical.plans.ExpandAll
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -22,7 +17,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class ExpandExpand extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var ExpandExpand_runtime: String = _
@@ -41,13 +36,13 @@ class ExpandExpand extends AbstractCypherBenchmark {
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
+    val allNodesScan = plans.AllNodesScan("a", Set.empty)(Solved)
     val relTypeNames = Seq(Plans.astRelTypeName(RELATIONSHIP_TYPE))
-    val exp1 = plans.Expand(allNodesScan, "a", OUTGOING, relTypeNames, "b", "r1", ExpandAll)(IdGen)
-    val exp2 = plans.Expand(exp1, "b", OUTGOING, relTypeNames, "c", "r2", ExpandAll)(IdGen)
-    val filter = plans.Selection(Seq(astNot(astEquals(astVariable("r1"), astVariable("r2")))), exp2)(IdGen)
+    val exp1 = plans.Expand(allNodesScan, "a", OUTGOING, relTypeNames, "b", "r1", ExpandAll)(Solved)
+    val exp2 = plans.Expand(exp1, "b", OUTGOING, relTypeNames, "c", "r2", ExpandAll)(Solved)
+    val filter = plans.Selection(Seq(astNot(astEquals(astVariable("r1"), astVariable("r2")))), exp2)(Solved)
     val resultColumns = List("a", "b", "c")
-    val produceResults = plans.ProduceResult(filter, resultColumns)(IdGen)
+    val produceResults = plans.ProduceResult(resultColumns, filter)
 
     val table = SemanticTable().
       addNode(astVariable("a")).
@@ -63,7 +58,7 @@ class ExpandExpand extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: ExpandExpandThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
+    threadState.executionResult(tx = threadState.tx).accept(visitor)
     visitor.count
   }
 }
@@ -71,11 +66,11 @@ class ExpandExpand extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class ExpandExpandThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: ExpandExpand): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.ExpandExpand_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.ExpandExpand_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.client.profiling;
 
 import com.google.common.collect.Lists;
@@ -63,10 +58,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                 "-XX:+PreserveFramePointer",
                 "-XX:FlightRecorderOptions=stackdepth=256" );
         List<String> jvmArgs = Lists.newArrayList();
-        if ( jvmVersion.majorVersion() < 11 &&
-             /* TODO this should replaced by check of jvm.runtime.name for OpenJDK builds */
-             (jvmVersion.implementor().orElse( "" ).contains( "Oracle Corporation" ) ||
-              !jvmVersion.implementor().isPresent() ) )
+        if ( jvmVersion.majorVersion() < 11 )
         {
             jvmArgs = Lists.newArrayList( "-XX:+UnlockCommercialFeatures" );
         }

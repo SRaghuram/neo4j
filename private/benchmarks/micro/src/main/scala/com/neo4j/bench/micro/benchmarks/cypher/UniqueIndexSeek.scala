@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.util
@@ -14,11 +9,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{ascGeneratorFor, randGeneratorFor}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans._
-import org.neo4j.cypher.internal.v3_5.util.symbols
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.{SemanticTable, symbols}
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.v3_3.logical.plans._
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -28,14 +22,14 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class UniqueIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var UniqueIndexSeek_runtime: String = _
 
   @ParamValues(
-    allowed = Array(LNG, DBL, STR_SML, STR_BIG, DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION),
-    base = Array(DATE_TIME))
+    allowed = Array(LNG, DBL, STR_SML, STR_BIG),
+    base = Array(LNG, STR_SML))
   @Param(Array[String]())
   var UniqueIndexSeek_type: String = _
 
@@ -65,12 +59,11 @@ class UniqueIndexSeek extends AbstractCypherBenchmark {
     val indexSeek = plans.NodeUniqueIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
-      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
+      Seq(astPropertyKeyToken(KEY, planContext)),
       seekExpression,
-      Set.empty,
-      IndexOrderNone)(IdGen)
+      Set.empty)(Solved)
     val resultColumns = List(node.name)
-    val produceResults = ProduceResult(indexSeek, resultColumns)(IdGen)
+    val produceResults = ProduceResult(resultColumns, indexSeek)
 
     val table = SemanticTable().addNode(node)
 
@@ -85,7 +78,7 @@ class UniqueIndexSeek extends AbstractCypherBenchmark {
     // we need instance of to box primitive java types from values
     val value = values.next(rngState.rng).asInstanceOf[AnyRef]
     paramsMap.put(PARAM, value)
-    threadState.executablePlan.execute(ValueUtils.asMapValue(paramsMap), threadState.tx).accept(visitor)
+    threadState.executionResult(ValueUtils.asMapValue(paramsMap), threadState.tx).accept(visitor)
     assertExpectedRowCount(EXPECTED_VALUE_COUNT, visitor)
   }
 }
@@ -93,12 +86,12 @@ class UniqueIndexSeek extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class UniqueIndexSeekThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: UniqueIndexSeek): Unit = {
     benchmarkState.values = randGeneratorFor(benchmarkState.UniqueIndexSeek_type, 0, benchmarkState.NODE_COUNT, true).create()
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.UniqueIndexSeek_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.UniqueIndexSeek_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

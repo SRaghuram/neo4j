@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
@@ -18,7 +13,7 @@ public abstract class Augmenterizer
      * Method is called after standard store generation, but before the store is cached.
      * Meaning augmentations will be cached along with the original store, and be available to all forks.
      */
-    public abstract void augment( int threads, StoreAndConfig storeAndConfig );
+    public abstract void augment( StoreAndConfig storeAndConfig );
 
     /**
      * Used to calculate equality of {@link com.neo4j.bench.micro.data.Augmenterizer} instances.
@@ -37,7 +32,7 @@ public abstract class Augmenterizer
         public static final String AUGMENT_KEY = "NONE";
 
         @Override
-        public void augment( int threads,  StoreAndConfig storeAndConfig )
+        public void augment( StoreAndConfig storeAndConfig )
         {
             // do nothing
         }

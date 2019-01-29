@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.client.model.Neo4jConfig;
@@ -23,21 +18,8 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.collection.MapUtil;
 
 import static com.neo4j.bench.micro.data.DiscreteGenerator.discrete;
-import static com.neo4j.bench.micro.data.NumberGenerator.ascLong;
-import static com.neo4j.bench.micro.data.NumberGenerator.randDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toFloat;
-import static com.neo4j.bench.micro.data.PointGenerator.circleGrid;
-import static com.neo4j.bench.micro.data.PointGenerator.clusterGrid;
-import static com.neo4j.bench.micro.data.PointGenerator.diagonal;
-import static com.neo4j.bench.micro.data.PointGenerator.grid;
-import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
-import static com.neo4j.bench.micro.data.TemporalGenerator.date;
-import static com.neo4j.bench.micro.data.TemporalGenerator.dateTime;
-import static com.neo4j.bench.micro.data.TemporalGenerator.duration;
-import static com.neo4j.bench.micro.data.TemporalGenerator.localDatetime;
-import static com.neo4j.bench.micro.data.TemporalGenerator.localTime;
-import static com.neo4j.bench.micro.data.TemporalGenerator.time;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
@@ -300,21 +282,7 @@ public class DataGeneratorConfigTest
                         new PropertyDefinition( "dis7", discrete( discreteBucketsFor( INT_ARR, 1, 2 ) ) ),
                         new PropertyDefinition( "dis8", discrete( discreteBucketsFor( LNG_ARR, 1, 2 ) ) ),
                         new PropertyDefinition( "dis9", discrete( discreteBucketsFor( FLT_ARR, 1, 2 ) ) ),
-                        new PropertyDefinition( "dis10", discrete( discreteBucketsFor( DBL_ARR, 1, 2 ) ) ),
-                        new PropertyDefinition( "spatial1", PointGenerator.random( 1, 2, 3, 4, new CRS.Cartesian() ) ),
-                        new PropertyDefinition( "spatial2", grid( 1, 2, 3, 4, 5, new CRS.WGS84() ) ),
-                        new PropertyDefinition( "spatial3", circleGrid( from( 1, 1, 2, 2, 0, 10, 0, 10, 100, new CRS.Cartesian() ) ) ),
-                        new PropertyDefinition( "spatial4", circleGrid( from( 1, 1, 0, 10, 0, 10, 100, new CRS.WGS84() ) ) ),
-                        new PropertyDefinition( "spatial5", clusterGrid( from( 1, 1, 2, 2, 0, 10, 0, 10, 100, new CRS.Cartesian() ) ) ),
-                        new PropertyDefinition( "spatial6", clusterGrid( from( 1, 1, 0, 10, 0, 10, 100, new CRS.WGS84() ) ) ),
-                        new PropertyDefinition( "spatial7", diagonal( randDouble( 1, 2 ), new CRS.Cartesian() ) ),
-                        new PropertyDefinition( "temporal1", date( ascLong( 1 ) ) ),
-                        new PropertyDefinition( "temporal2", dateTime( ascLong( 2 ) ) ),
-                        new PropertyDefinition( "temporal3", duration( ascLong( 3 ) ) ),
-                        new PropertyDefinition( "temporal4", localDatetime( ascLong( 4 ) ) ),
-                        new PropertyDefinition( "temporal5", localTime( ascLong( 5 ) ) ),
-                        new PropertyDefinition( "temporal6", time( ascLong( 6 ) ) )
-                )
+                        new PropertyDefinition( "dis10", discrete( discreteBucketsFor( DBL_ARR, 1, 2 ) ) ) )
                 .withRelationshipProperties(
                         new PropertyDefinition( "rand1", randPropertyFor( STR_SML ).value() ),
                         new PropertyDefinition( "rand2", randPropertyFor( STR_BIG ).value() ),
@@ -345,21 +313,7 @@ public class DataGeneratorConfigTest
                         new PropertyDefinition( "dis7", discrete( discreteBucketsFor( INT_ARR, 1, 2 ) ) ),
                         new PropertyDefinition( "dis8", discrete( discreteBucketsFor( LNG_ARR, 1, 2 ) ) ),
                         new PropertyDefinition( "dis9", discrete( discreteBucketsFor( FLT_ARR, 1, 2 ) ) ),
-                        new PropertyDefinition( "dis10", discrete( discreteBucketsFor( DBL_ARR, 1, 2 ) ) ),
-                        new PropertyDefinition( "spatial1", PointGenerator.random( 1, 2, 3, 4, new CRS.Cartesian() ) ),
-                        new PropertyDefinition( "spatial2", grid( 1, 2, 3, 4, 5, new CRS.WGS84() ) ),
-                        new PropertyDefinition( "spatial3", circleGrid( from( 1, 1, 2, 2, 0, 10, 0, 10, 100, new CRS.Cartesian() ) ) ),
-                        new PropertyDefinition( "spatial4", circleGrid( from( 1, 1, 0, 10, 0, 10, 100, new CRS.WGS84() ) ) ),
-                        new PropertyDefinition( "spatial5", clusterGrid( from( 1, 1, 2, 2, 0, 10, 0, 10, 100, new CRS.Cartesian() ) ) ),
-                        new PropertyDefinition( "spatial6", clusterGrid( from( 1, 1, 0, 10, 0, 10, 100, new CRS.WGS84() ) ) ),
-                        new PropertyDefinition( "spatial7", diagonal( randDouble( 1, 2 ), new CRS.Cartesian() ) ),
-                        new PropertyDefinition( "temporal1", date( ascLong( 1 ) ) ),
-                        new PropertyDefinition( "temporal2", dateTime( ascLong( 2 ) ) ),
-                        new PropertyDefinition( "temporal3", duration( ascLong( 3 ) ) ),
-                        new PropertyDefinition( "temporal4", localDatetime( ascLong( 4 ) ) ),
-                        new PropertyDefinition( "temporal5", localTime( ascLong( 5 ) ) ),
-                        new PropertyDefinition( "temporal6", time( ascLong( 6 ) ) )
-                )
+                        new PropertyDefinition( "dis10", discrete( discreteBucketsFor( DBL_ARR, 1, 2 ) ) ) )
                 .build();
 
         DataGeneratorConfig config1 = fun.get();

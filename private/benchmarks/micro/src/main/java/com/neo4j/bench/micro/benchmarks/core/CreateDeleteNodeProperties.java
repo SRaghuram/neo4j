@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.micro.benchmarks.Neo4jBenchmark;
@@ -11,16 +6,13 @@ import com.neo4j.bench.micro.benchmarks.TxBatch;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.Augmenterizer;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.IndexType;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
-import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.PropertyDefinition;
-import com.neo4j.bench.micro.data.Stores;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -31,10 +23,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.SplittableRandom;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -43,33 +32,20 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 
-import static com.neo4j.bench.micro.data.DataGenerator.createSchemaIndex;
-import static com.neo4j.bench.micro.data.DataGenerator.waitForSchemaIndexes;
-import static com.neo4j.bench.micro.data.IndexType.COMPOSITE_SCHEMA;
-import static com.neo4j.bench.micro.data.IndexType.SCHEMA;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
-
-import static java.util.stream.Collectors.toList;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
@@ -106,7 +82,6 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
-                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
@@ -159,65 +134,10 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                 .withLabels( LABEL )
                 .withPropertyOrder( Order.ORDERED )
                 .withNodeProperties( properties() )
-                .withNeo4jConfig( Neo4jConfig
-                        .empty()
-                        .withSetting( record_format, CreateDeleteNodeProperties_format )
-                        .setTransactionMemory( CreateDeleteNodeProperties_txMemory ) )
+                .withSchemaIndexes( indexes() )
+                .withNeo4jConfig( Neo4jConfig.empty().withSetting( record_format, CreateDeleteNodeProperties_format ) )
                 .isReusableStore( false )
                 .build();
-    }
-
-    @Override
-    protected Augmenterizer augmentDataGeneration()
-    {
-        return new Augmenterizer()
-        {
-            /**
-             * Performs one pass of thread's node ID sequence, i.e., visits every node that it owns once.
-             * At each node it visits it adds one property calculateFor 'properties[]' and removes the property next 'property[]' index.
-             * The property it add is already there, as nodes start with all 'properties[]' properties.
-             * The property it removes is actually removed.
-             * When the loop is complete the number of properties on each node in the store is equal to properties[].length - 1,
-             * which is the stable state.
-             */
-            @Override
-            public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
-            {
-                SplittableRandom rng = RNGState.newRandom( 0 );
-                ValueGeneratorFun values = randPropertyFor( CreateDeleteNodeProperties_type ).value().create();
-                File storeDir = storeAndConfig.store().toFile();
-                GraphDatabaseService db = ManagedStore.newDb( storeDir.toPath(), storeAndConfig.config() );
-                List<String> keys = Stream.of( properties() ).map( PropertyDefinition::key ).collect( toList() );
-                TxBatch txBatch = new TxBatch( db, 1000 );
-                for ( int thread = 0; thread < threads; thread++ )
-                {
-                    int createPropertyId = incrementPropertyId( thread, keys.size() );
-                    int deletePropertyId = incrementPropertyId( createPropertyId, keys.size() );
-                    ValueGeneratorFun<Long> nodeIds = nonContendingStridingFor( LNG, threads, thread, NODE_COUNT ).create();
-                    do
-                    {
-                        txBatch.advance();
-                        Node node = db.getNodeById( nodeIds.next( rng ) );
-                        node.setProperty( keys.get( createPropertyId ), values.next( rng ) );
-                        node.removeProperty( keys.get( deletePropertyId ) );
-                        createPropertyId = incrementPropertyId( createPropertyId, keys.size() );
-                        deletePropertyId = incrementPropertyId( createPropertyId, keys.size() );
-                    }
-                    while ( !nodeIds.wrapped() );
-                }
-                txBatch.close();
-
-                if ( COMPOSITE_SCHEMA.equals( CreateDeleteNodeProperties_index ) || SCHEMA.equals( CreateDeleteNodeProperties_index ) )
-                {
-                    // Create indexes
-                    LabelKeyDefinition[] indexes = indexes();
-                    Stream.of( indexes ).forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
-                    waitForSchemaIndexes( db, Stream.of( indexes ).map( LabelKeyDefinition::label ).toArray( Label[]::new ) );
-                }
-
-                db.shutdown();
-            }
-        };
     }
 
     private LabelKeyDefinition[] indexes()
@@ -228,55 +148,28 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
             return new LabelKeyDefinition[0];
         case SCHEMA:
             return Arrays.stream( keys() )
-                         .map( key -> new LabelKeyDefinition( LABEL, key ) )
-                         .toArray( LabelKeyDefinition[]::new );
+                    .map( key -> new LabelKeyDefinition( LABEL, key ) )
+                    .toArray( LabelKeyDefinition[]::new );
         case COMPOSITE_SCHEMA:
-            return compositeSchemaIndexDefinitions();
+            return new LabelKeyDefinition[]{new LabelKeyDefinition( LABEL, keys() )};
         default:
             throw new IllegalArgumentException( "Invalid index type: " + CreateDeleteNodeProperties_index );
         }
     }
 
-    private LabelKeyDefinition[] compositeSchemaIndexDefinitions()
-    {
-        List<String> allKeys = Arrays.asList( keys() );
-        LabelKeyDefinition[] labelKeyDefinitionsToIndex = new LabelKeyDefinition[allKeys.size()];
-        int index = 0;
-        for ( String keyToNotIncludeInIndex : allKeys )
-        {
-            List<String> keysToIndexList = copy( allKeys );
-            keysToIndexList.remove( keyToNotIncludeInIndex );
-            String[] keysToIndex = keysToIndexList.toArray( new String[keysToIndexList.size()] );
-            labelKeyDefinitionsToIndex[index++] = new LabelKeyDefinition( LABEL, keysToIndex );
-        }
-        return labelKeyDefinitionsToIndex;
-    }
-
-    private List<String> copy( List<String> list )
-    {
-        List<String> copy = new ArrayList<>( list.size() );
-        copy.addAll( list );
-        return copy;
-    }
-
     private PropertyDefinition[] properties()
     {
         return IntStream.range( 0, CreateDeleteNodeProperties_count )
-                        .mapToObj( i ->
-                                           new PropertyDefinition(
-                                                   CreateDeleteNodeProperties_type + "_" + i,
-                                                   randPropertyFor( CreateDeleteNodeProperties_type ).value() ) )
-                        .toArray( PropertyDefinition[]::new );
+                .mapToObj( i ->
+                        new PropertyDefinition(
+                                CreateDeleteNodeProperties_type + "_" + i,
+                                randPropertyFor( CreateDeleteNodeProperties_type ).value() ) )
+                .toArray( PropertyDefinition[]::new );
     }
 
     private String[] keys()
     {
         return Stream.of( properties() ).map( PropertyDefinition::key ).toArray( String[]::new );
-    }
-
-    private static int incrementPropertyId( int propertyId, int keyCount )
-    {
-        return (propertyId + 1) % keyCount;
     }
 
     @State( Scope.Thread )
@@ -293,7 +186,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
 
         @SuppressWarnings( "unchecked" )
         @Setup
-        public void setUp( ThreadParams threadParams, CreateDeleteNodeProperties benchmarkState )
+        public void setUp( ThreadParams threadParams, CreateDeleteNodeProperties benchmarkState, RNGState rngState )
         {
             int threads = Neo4jBenchmark.threadCountForSubgroupInstancesOf( threadParams );
             int thread = Neo4jBenchmark.uniqueSubgroupThreadIdFor( threadParams );
@@ -309,21 +202,33 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
             createPropertyId = initialCreatePropertyId;
             updateProperties();
             txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateDeleteNodeProperties_txSize );
-            advanceStoreToStableState( benchmarkState.db() );
+            advanceStoreToStableState( benchmarkState.db(), rngState.rng );
         }
 
         /**
-         * Advance to first property key without a value (technically not even a property).
-         * Every subsequent node in the node sequence for this thread will have the deleted property at the next higher keys offset, wrapping.
+         * Performs one pass of thread's node ID sequence, i.e., visits every node that it owns once.
+         * At each node it visits it adds one property calculateFor 'properties[]' and removes the property next
+         * 'property[]'
+         * index.
+         * The property it add is already there, as nodes start with all 'properties[]' properties.
+         * The property it removes is actually removed.
+         * When the loop is complete the number of properties on each node in the store is equal to
+         * properties[].length - 1,
+         * which is the stable state.
          */
-        private void advanceStoreToStableState( GraphDatabaseService db )
+        private void advanceStoreToStableState( GraphDatabaseService db, SplittableRandom rng )
         {
-            txBatch.advance();
-            Node node = db.getNodeById( nodeId() );
-            while ( node.hasProperty( deleteProperty() ) )
+            do
             {
+                txBatch.advance();
+                Node node = db.getNodeById( nodeId() );
+                node.setProperty( createProperty(), value( rng ) );
+                node.removeProperty( deleteProperty() );
                 updateProperties();
             }
+            while ( !ids.wrapped() );
+            createPropertyId = ++initialCreatePropertyId;
+            updateProperties();
         }
 
         long nodeId()
@@ -362,8 +267,8 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
 
         private void updateProperties()
         {
-            createPropertyId = incrementPropertyId( createPropertyId, keys.length );
-            deletePropertyId = incrementPropertyId( createPropertyId, keys.length );
+            createPropertyId = (createPropertyId + 1) % keys.length;
+            deletePropertyId = (createPropertyId + 1) % keys.length;
         }
 
         @TearDown

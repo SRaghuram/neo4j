@@ -1,8 +1,27 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
  */
+
 package com.neo4j.bench.ldbc.importer.dense1;
 
 import com.neo4j.bench.ldbc.Domain.Forum;
@@ -22,7 +41,7 @@ import com.neo4j.bench.ldbc.Domain.TagClass;
 import com.neo4j.bench.ldbc.Domain.WorksAt;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.connection.ImportDateUtil;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.TimeStampedRelationshipTypesCache;
 import com.neo4j.bench.ldbc.importer.CsvFileInserter;
 import com.neo4j.bench.ldbc.importer.CsvFilesForMerge;
@@ -102,7 +121,7 @@ class CsvFileInserters
             File csvDataDir,
             ImportDateUtil importDateUtil ) throws IOException
     {
-        final Calendar calendar = LdbcDateCodecUtil.newCalendar();
+        final Calendar calendar = LdbcDateCodec.newCalendar();
         final TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache =
                 new TimeStampedRelationshipTypesCache();
 

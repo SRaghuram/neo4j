@@ -1,8 +1,27 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
  */
+
 package com.neo4j.bench.ldbc.cli;
 
 import com.ldbc.driver.Client;
@@ -13,7 +32,6 @@ import com.ldbc.driver.control.DriverConfiguration;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
-import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
@@ -37,6 +55,7 @@ import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromPara
 import static com.ldbc.driver.util.ClassLoaderHelper.loadClass;
 import static com.ldbc.driver.util.MapUtils.loadPropertiesToMap;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.hasWrites;
+
 import static java.lang.String.format;
 import static java.time.Duration.between;
 import static java.time.Instant.now;
@@ -121,12 +140,10 @@ public class RunCommand implements Runnable
     public static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_DB},
-            description =
-                     "Top Store directory matching the selected workload." +
-                     " E.g. 'db_sf001_p064_regular_utc_40ce/' not 'db_sf001_p064_regular_utc_40ce/graph.db/'",
-            title = "Database store",
+            description = "Target Neo4j database directory - see: s3://quality.neotechnology.com/ldbc/db/",
+            title = "Database Directory",
             required = false )
-    private File storeDir;
+    private File neo4jDir;
 
     public static final String CMD_NEO4J_API = "--neo4j-api";
     @Option( type = OptionType.COMMAND,
@@ -148,7 +165,7 @@ public class RunCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_RUNTIME},
             description = "Cypher Runtime",
-            title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED",
+            title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED",
             required = false )
     private RuntimeType runtime = RuntimeType.DEFAULT;
 
@@ -164,7 +181,7 @@ public class RunCommand implements Runnable
     public void run()
     {
         System.out.println( format( "Neo4j Directory             : %s",
-                                    (null == storeDir) ? null : storeDir.getAbsolutePath() ) );
+                                    (null == neo4jDir) ? null : neo4jDir.getAbsolutePath() ) );
         System.out.println( format( "Write Queries Directory     : %s",
                                     (null == writeParams) ? null : writeParams.getAbsolutePath() ) );
         System.out.println( format( "Read Queries Directory      : %s",
@@ -186,7 +203,7 @@ public class RunCommand implements Runnable
         {
             DriverConfiguration ldbcConfig = fromParamsMap( loadPropertiesToMap( ldbcConfigFile ) );
 
-            String neo4jConnector = discoverConnector( storeDir, neo4jConfig, neo4jApi, ldbcConfigFile );
+            String neo4jConnector = discoverConnector( neo4jDir, neo4jConfig, neo4jApi, ldbcConfigFile );
             if ( null == neo4jConnector )
             {
                 throw new RuntimeException( "Parameter not set: " + CMD_NEO4J_API );
@@ -206,6 +223,10 @@ public class RunCommand implements Runnable
                     ConsoleAndFileDriverConfiguration.RESULT_DIR_PATH_ARG,
                     ldbcConfig );
             FileUtils.assertDirectoryExists( readParams );
+            if ( !neo4jConnector.equals( Neo4jDb.DB_TYPE_VALUE__REMOTE_CYPHER ) )
+            {
+                FileUtils.assertDirectoryExists( neo4jDir );
+            }
 
             if ( null != writeParams &&
                  LdbcSnbInteractiveWorkload.class.getName().equals( ldbcConfig.workloadClassName() ) &&
@@ -238,8 +259,7 @@ public class RunCommand implements Runnable
                     ConsoleAndFileDriverConfiguration.RESULT_DIR_PATH_ARG, resultsDir.getAbsolutePath() );
             if ( !neo4jConnector.equals( Neo4jDb.DB_TYPE_VALUE__REMOTE_CYPHER ) )
             {
-                Store store = Store.createFrom( storeDir.toPath() );
-                ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_PATH_KEY, store.graphDbDirectory().toAbsolutePath().toString() );
+                ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_PATH_KEY, neo4jDir.getAbsolutePath() );
             }
             ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_TYPE_KEY, neo4jConnector );
             if ( !neo4jConnector.equals( Neo4jDb.DB_TYPE_VALUE__REMOTE_CYPHER ) )
@@ -328,7 +348,7 @@ public class RunCommand implements Runnable
         if ( !ldbcRunConfig.neo4jApi.isRemote() )
         {
             args = Utils.copyArrayAndAddElement( args, CMD_DB );
-            args = Utils.copyArrayAndAddElement( args, ldbcRunConfig.storeDir.getAbsolutePath() );
+            args = Utils.copyArrayAndAddElement( args, ldbcRunConfig.dbDir.getAbsolutePath() );
             args = Utils.copyArrayAndAddElement( args, CMD_NEO4J_CONFIG );
             args = Utils.copyArrayAndAddElement( args, ldbcRunConfig.neo4jConfig.getAbsolutePath() );
         }
@@ -355,7 +375,7 @@ public class RunCommand implements Runnable
         return args;
     }
 
-    private static String discoverConnector( File storeDir, File neo4jConfig, Neo4jApi neo4jApi, File ldbcConfig )
+    private static String discoverConnector( File neo4jDir, File neo4jConfig, Neo4jApi neo4jApi, File ldbcConfig )
     {
         try
         {
@@ -367,7 +387,7 @@ public class RunCommand implements Runnable
             else
             {
                 Class<? extends Workload> workload = loadClass( config.workloadClassName(), Workload.class );
-                Neo4jSchema neo4jSchema = discoverSchema( storeDir, neo4jConfig, neo4jApi );
+                Neo4jSchema neo4jSchema = discoverSchema( neo4jDir, neo4jConfig, neo4jApi );
                 return Neo4jDb.neo4jConnectorFor( neo4jApi, neo4jSchema, workload );
             }
         }
@@ -377,7 +397,7 @@ public class RunCommand implements Runnable
         }
     }
 
-    static Neo4jSchema discoverSchema( File storeDir, File neo4jConfig, Neo4jApi neo4jApi )
+    static Neo4jSchema discoverSchema( File neo4jDir, File neo4jConfig, Neo4jApi neo4jApi )
     {
         if ( null != neo4jApi && neo4jApi.isRemote() )
         {
@@ -385,8 +405,7 @@ public class RunCommand implements Runnable
             // This error can happen if another process already started the DB, which is common in 'remote' scenario
             return Neo4jSchema.NEO4J_REGULAR;
         }
-        Store store = Store.createFrom( storeDir.toPath() );
-        GraphDatabaseService db = Neo4jDb.newDb( store.graphDbDirectory().toFile(), neo4jConfig );
+        GraphDatabaseService db = Neo4jDb.newDb( neo4jDir, neo4jConfig );
         try
         {
             GraphMetadataProxy metadataProxy = GraphMetadataProxy.loadFrom( db );
@@ -405,7 +424,7 @@ public class RunCommand implements Runnable
 
     static class LdbcRunConfig
     {
-        final File storeDir;
+        final File dbDir;
         final File writeParams;
         final File readParams;
         final Neo4jApi neo4jApi;
@@ -419,7 +438,7 @@ public class RunCommand implements Runnable
         final File waitForFile;
 
         LdbcRunConfig(
-                File storeDir,
+                File dbDir,
                 File writeParams,
                 File readParams,
                 Neo4jApi neo4jApi,
@@ -432,7 +451,7 @@ public class RunCommand implements Runnable
                 Long runCount,
                 File waitForFile )
         {
-            this.storeDir = storeDir;
+            this.dbDir = dbDir;
             this.writeParams = writeParams;
             this.readParams = readParams;
             this.neo4jApi = neo4jApi;

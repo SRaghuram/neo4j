@@ -1,20 +1,15 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.expressions.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.v3_5.expressions.functions.Id
-import org.neo4j.cypher.internal.v3_5.expressions.{Modulo, SignedDecimalIntegerLiteral}
-import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection.OUTGOING
+import org.neo4j.cypher.internal.frontend.v3_3.ast.Modulo
+import org.neo4j.cypher.internal.frontend.v3_3.ast.functions.Id
+import org.neo4j.cypher.internal.frontend.v3_3.{SemanticTable, ast}
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -23,8 +18,8 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class OptionalExpand extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(EnterpriseInterpreted.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var OptionalExpand_runtime: String = _
 
@@ -45,10 +40,10 @@ class OptionalExpand extends AbstractCypherBenchmark {
     val n1 = astVariable("n1")
     val r = astVariable("r")
     val n2 = astVariable("n2")
-    val two = SignedDecimalIntegerLiteral("2")(Pos)
-    val zero = SignedDecimalIntegerLiteral("0")(Pos)
+    val two = ast.SignedDecimalIntegerLiteral("2")(Pos)
+    val zero = ast.SignedDecimalIntegerLiteral("0")(Pos)
 
-    val allNodesScan = plans.AllNodesScan(n1.name, Set.empty)(IdGen)
+    val allNodesScan = plans.AllNodesScan(n1.name, Set.empty)(Solved)
     val modulo = Modulo(Id.asInvocation(n2)(Pos), two)(Pos)
     val equals = astEquals(modulo, zero)
     val optionalExpand = plans.OptionalExpand(
@@ -59,9 +54,9 @@ class OptionalExpand extends AbstractCypherBenchmark {
       n2.name,
       r.name,
       plans.ExpandAll,
-      Seq(equals))(IdGen)
+      Seq(equals))(Solved)
     val resultColumns = List(n1.name, n2.name, r.name)
-    val produceResults = plans.ProduceResult(optionalExpand, columns = resultColumns)(IdGen)
+    val produceResults = plans.ProduceResult(columns = resultColumns, optionalExpand)
 
     val table = SemanticTable()
       .addNode(n1)
@@ -75,7 +70,7 @@ class OptionalExpand extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: OptionalExpandThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
+    threadState.executionResult(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(EXPECTED_ROW_COUNT, visitor)
   }
 }
@@ -83,11 +78,11 @@ class OptionalExpand extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class OptionalExpandThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: OptionalExpand): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.OptionalExpand_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.OptionalExpand_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

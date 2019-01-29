@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks;
 
 import com.neo4j.bench.micro.JMHResultUtil;
@@ -30,7 +25,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
     public String storesDir;
 
     @Setup
-    public final void setUp( BenchmarkParams params ) throws Throwable
+    public final void setUp( BenchmarkParams params ) throws Exception
     {
         Stores stores = new Stores( Paths.get( storesDir ) );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
@@ -42,7 +37,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
     }
 
     @TearDown
-    public final void tearDown() throws Throwable
+    public final void tearDown() throws Exception
     {
         benchmarkTearDown();
     }
@@ -52,7 +47,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @Setup(Level.Trial).
      */
-    protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
+    protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Exception
     {
     }
 
@@ -61,7 +56,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @TearDown(Level.Trial).
      */
-    protected void benchmarkTearDown() throws Throwable
+    protected void benchmarkTearDown() throws Exception
     {
     }
 }

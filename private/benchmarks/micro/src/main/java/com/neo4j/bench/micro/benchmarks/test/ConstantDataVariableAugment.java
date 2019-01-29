@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.test;
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
@@ -11,7 +6,6 @@ import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.RelationshipDefinition;
 import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -29,6 +23,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.graphdb.Label.label;
@@ -80,10 +75,10 @@ public class ConstantDataVariableAugment extends BaseDatabaseBenchmark
         return new Augmenterizer()
         {
             @Override
-            public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
+            public void augment( Stores.StoreAndConfig storeAndConfig )
             {
                 File storeDir = storeAndConfig.store().toFile();
-                GraphDatabaseService db = ManagedStore.newDb( storeDir.toPath() );
+                GraphDatabaseService db = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();

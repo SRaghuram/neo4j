@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.Kaboom;
@@ -12,16 +7,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.SplittableRandom;
 import java.util.stream.IntStream;
-
-import org.neo4j.values.storable.CoordinateReferenceSystem;
-import org.neo4j.values.storable.DateTimeValue;
-import org.neo4j.values.storable.DateValue;
-import org.neo4j.values.storable.DurationValue;
-import org.neo4j.values.storable.LocalDateTimeValue;
-import org.neo4j.values.storable.LocalTimeValue;
-import org.neo4j.values.storable.TimeValue;
-import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
 
 import static com.neo4j.bench.micro.data.ArrayGenerator.DEFAULT_SIZE;
 import static com.neo4j.bench.micro.data.ArrayGenerator.byteArray;
@@ -35,20 +20,14 @@ import static com.neo4j.bench.micro.data.StringGenerator.BIG_STRING_LENGTH;
 import static com.neo4j.bench.micro.data.StringGenerator.SMALL_STRING_LENGTH;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.BYTE;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.BYTE_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.SHORT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.SHORT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
@@ -56,10 +35,8 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_INL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 
 import static java.lang.String.format;
-import static java.time.ZoneOffset.UTC;
 import static java.util.stream.Collectors.joining;
 
 public class ConstantGenerator
@@ -81,17 +58,10 @@ public class ConstantGenerator
         case STR_BIG_ARR:
         case LNG:
         case LNG_ARR:
-        case DATE_TIME:
-        case LOCAL_DATE_TIME:
-        case TIME:
-        case LOCAL_TIME:
-        case DATE:
-        case DURATION:
         case FLT:
         case FLT_ARR:
         case DBL:
         case DBL_ARR:
-        case POINT:
             return new ConstantGeneratorFactory( type, constant );
         default:
             throw new RuntimeException( "Unsupported type: " + type );
@@ -121,7 +91,6 @@ public class ConstantGenerator
         public ValueGeneratorFun<Object> create()
         {
             Object value = getValue( type, constant );
-            Value constantValue = Values.of( value );
 
             return new ValueGeneratorFun<Object>()
             {
@@ -135,12 +104,6 @@ public class ConstantGenerator
                 public Object next( SplittableRandom rng )
                 {
                     return value;
-                }
-
-                @Override
-                public Value nextValue( SplittableRandom rng )
-                {
-                    return constantValue;
                 }
             };
         }
@@ -170,20 +133,6 @@ public class ConstantGenerator
                 return isNumber( constant )
                        ? BIG_STRING_PREFIX + asNumber( constant ).intValue()
                        : asString( type, constant );
-            case POINT:
-                return Values.pointValue( CoordinateReferenceSystem.Cartesian, asNumber( constant ).doubleValue(), asNumber( constant ).doubleValue() );
-            case DATE_TIME:
-                return DateTimeValue.datetime( asNumber( constant ).longValue(), 0, UTC ).asObjectCopy();
-            case LOCAL_DATE_TIME:
-                return LocalDateTimeValue.localDateTime( asNumber( constant ).longValue(), 0 ).asObjectCopy();
-            case TIME:
-                return TimeValue.time( asNumber( constant ).longValue(), UTC ).asObjectCopy();
-            case LOCAL_TIME:
-                return LocalTimeValue.localTime( asNumber( constant ).longValue() ).asObjectCopy();
-            case DATE:
-                return DateValue.epochDate( asNumber( constant ).longValue() ).asObjectCopy();
-            case DURATION:
-                return DurationValue.duration( 0, 0, 0, asNumber( constant ).longValue() ).asObjectCopy();
             case BYTE_ARR:
                 // NOTE: it is safe for rng to be null, inner constant generator should not be using it
                 return byteArray( constant( BYTE, asNumber( constant ) ), DEFAULT_SIZE ).create().next( null );

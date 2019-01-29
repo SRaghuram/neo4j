@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.Kaboom;
@@ -108,8 +103,7 @@ public class Stores
             DataGeneratorConfig config,
             BenchmarkGroup group,
             Benchmark benchmark,
-            Augmenterizer augmenterizer,
-            int threads )
+            Augmenterizer augmenterizer )
     {
         List<Path> topLevelDirs = findAllStoresMatchingConfig( config, storesDir );
         FullBenchmarkName benchmarkName = FullBenchmarkName.from( group, benchmark );
@@ -119,8 +113,7 @@ public class Stores
             StoreAndConfig initialStoreAndConfig = generateDb(
                     config,
                     augmenterizer,
-                    benchmarkName,
-                    threads );
+                    benchmarkName );
             if ( config.isReusable() )
             {
                 return initialStoreAndConfig;
@@ -195,8 +188,7 @@ public class Stores
     private StoreAndConfig generateDb(
             DataGeneratorConfig config,
             Augmenterizer augmenterizer,
-            FullBenchmarkName benchmarkName,
-            int threads )
+            FullBenchmarkName benchmarkName )
     {
         Path topLevelStoreDir = randomTopLevelStoreDir();
         Path db = topLevelStoreDir.resolve( DB_DIR_NAME );
@@ -229,7 +221,7 @@ public class Stores
 
         System.out.println( "Executing store augmentation step..." );
         Instant augmentStart = Instant.now();
-        augmenterizer.augment( threads, storeAndConfig );
+        augmenterizer.augment( storeAndConfig );
         Duration augmentDuration = Duration.between( augmentStart, Instant.now() );
         System.out.println( "Store augmentation step took: " + durationToString( augmentDuration ) );
 

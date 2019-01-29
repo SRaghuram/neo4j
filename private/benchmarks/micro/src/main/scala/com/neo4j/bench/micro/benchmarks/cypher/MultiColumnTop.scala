@@ -1,22 +1,15 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML}
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.ASTAnnotationMap
-import org.neo4j.cypher.internal.v3_5.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.v3_5.expressions.Expression
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans.{Ascending, ColumnOrder, Descending}
-import org.neo4j.cypher.internal.v3_5.util.symbols
-import org.neo4j.cypher.internal.v3_5.util.symbols.ListType
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.ast._
+import org.neo4j.cypher.internal.frontend.v3_3.symbols.ListType
+import org.neo4j.cypher.internal.frontend.v3_3.{ExpressionTypeInfo, SemanticTable, symbols}
+import org.neo4j.cypher.internal.v3_3.logical.plans.{Ascending, ColumnOrder, Descending}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.virtual.MapValue
@@ -30,26 +23,26 @@ import scala.util.Random
 @BenchmarkEnabled(true)
 class MultiColumnTop extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var MultiColumnTop_runtime: String = _
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
-    base = Array(STR_SML))
+    base = Array(LNG, STR_SML))
   @Param(Array[String]())
   var MultiColumnTop_type: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100"),
-    base = Array("100"))
+    base = Array("1", "100"))
   @Param(Array[String]())
   var MultiColumnTop_columns: Int = _
 
   @ParamValues(
     allowed = Array("1", "100", "10000"),
-    base = Array("1", "10000"))
+    base = Array("1", "100", "10000"))
   @Param(Array[String]())
   var MultiColumnTop_limit: Long = _
 
@@ -79,20 +72,20 @@ class MultiColumnTop extends AbstractCypherBenchmark {
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
-    val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariable.name, parameter)(IdGen)
+    val leaf = plans.UnwindCollection(plans.SingleRow()(Solved), unwindVariable.name, parameter)(Solved)
     val expressionsAndSortItems: Map[String, (Expression, ColumnOrder)] = columnNames()
       .map(keyName => "c" + keyName -> (astProperty(unwindVariable, keyName), sortItemFor(keyName)))
       .toMap[String, (Expression, ColumnOrder)]
     val expressions = expressionsAndSortItems.map {
       case (key: String, value: (Expression, ColumnOrder)) => key -> value._1
     }
-    val projection = plans.Projection(leaf, expressions)(IdGen)
+    val projection = plans.Projection(leaf, expressions)(Solved)
     // TODO randomize Ascending/Descending?
     val sortItems: Seq[ColumnOrder] = expressionsAndSortItems.keys.map(key => Ascending(key)).toSeq
     val limitParameter = astParameter("limit", symbols.CTInteger)
-    val top = plans.Top(projection, sortItems, limitParameter)(IdGen)
+    val top = plans.Top(projection, sortItems, limitParameter)(Solved)
     val resultColumns = expressionsAndSortItems.keys.toList
-    val produceResults = plans.ProduceResult(top, resultColumns)(IdGen)
+    val produceResults = plans.ProduceResult(resultColumns, top)
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 
@@ -112,7 +105,7 @@ class MultiColumnTop extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: MultiColumnTopThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
+    threadState.executionResult(params, threadState.tx).accept(visitor)
     assertExpectedRowCount(MultiColumnTop_limit.toInt, visitor)
   }
 }
@@ -120,7 +113,7 @@ class MultiColumnTop extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class MultiColumnTopThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: MultiColumnTop): Unit = {
@@ -128,7 +121,7 @@ class MultiColumnTopThreadState {
       "list" -> benchmarkState.values,
       "limit" -> Long.box(benchmarkState.MultiColumnTop_limit)).asJava
     benchmarkState.params = ValueUtils.asMapValue(paramsMap)
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.MultiColumnTop_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.MultiColumnTop_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 
