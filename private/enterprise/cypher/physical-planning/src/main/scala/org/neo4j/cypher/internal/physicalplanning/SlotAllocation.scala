@@ -632,17 +632,9 @@ object SlotAllocation {
       case _ =>
     }
 
-  // TODO: We might get a list expression that has not been properly typed (RollupApply). Instead of failing,
-  // we are forgiving and just act like we know nothing at compile time
-  private def getTypeOf(semanticTable: SemanticTable, listExpression: Expression): TypeSpec = {
-    if (semanticTable.seen(listExpression)) {
-      semanticTable.getActualTypeFor(listExpression)
-    } else {
-      TypeSpec.all
-    }
-  }
-
-  private def addGroupingMap(groupingExpressions: Map[String, Expression], incoming: SlotConfiguration, outgoing: SlotConfiguration) = {
+  private def addGroupingMap(groupingExpressions: Map[String, Expression],
+                             incoming: SlotConfiguration,
+                             outgoing: SlotConfiguration): Unit = {
     groupingExpressions foreach {
       case (key, parserAst.Variable(ident)) =>
         val slotInfo = incoming(ident)
