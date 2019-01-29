@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotAllocation.Physi
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.{ast, _}
 import org.neo4j.cypher.internal.runtime._
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledGroupingExpression, CompiledProjection, IntermediateCodeGeneration}
+import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -23,7 +23,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryConte
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.logical.plans
@@ -1120,6 +1119,34 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(3), list(intValue(1), NO_VALUE, intValue(3)))), cursors) should equal(Values.TRUE)
     compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(4), list(intValue(1), NO_VALUE, intValue(3)))), cursors) should equal(Values.NO_VALUE)
     compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(4), NO_VALUE)), cursors) should equal(Values.NO_VALUE)
+  }
+
+  test("in with literal list not containing null") {
+    val compiled = compile(in(parameter("a"),
+                              literalList(literalString("a"), literalString("b"), literalString("c"))))
+
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.TRUE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("b"))), cursors) should equal(Values.TRUE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("c"))), cursors) should equal(Values.TRUE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("A"))), cursors) should equal(Values.FALSE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+  }
+
+  test("in with literal list containing null") {
+    val compiled = compile(in(parameter("a"),
+                              literalList(literalString("a"), nullLiteral, literalString("c"))))
+
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.TRUE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("c"))), cursors) should equal(Values.TRUE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("b"))), cursors) should equal(NO_VALUE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+  }
+
+  test("in with empty literal list") {
+    val compiled = compile(in(parameter("a"), literalList()))
+
+    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.FALSE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
   }
 
   test("should compare values using <") {

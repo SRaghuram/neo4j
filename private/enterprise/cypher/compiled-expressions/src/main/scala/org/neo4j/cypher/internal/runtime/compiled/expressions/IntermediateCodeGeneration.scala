@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
+import java.util
 import java.util.regex
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.ast._
@@ -23,6 +24,7 @@ import org.neo4j.cypher.operations._
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
+import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.kernel.impl.util.ValueUtils.asAnyValue
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
@@ -966,6 +968,28 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val ops = block(lazySet, load(variableName))
         val nullChecks = block(lazySet, equal(load(variableName), noValue))
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables :+ local, Set(nullChecks))
+      }
+
+    case In(lhs, ListLiteral(expressions)) if expressions.isEmpty =>
+      for (l <- internalCompileExpression(lhs, currentContext)) yield {
+        IntermediateExpression(falseValue, l.fields, l.variables, l.nullCheck)
+      }
+
+    case In(lhs, ListLiteral(expressions)) if expressions.forall(e => e.isInstanceOf[Literal]) =>
+      //we create the set at compile time here and at runtime we basically only
+      //do `set.contains`
+      val set = setFromLiterals(expressions.asInstanceOf[Seq[Literal]])
+      //in the case the list contains null we have true of null, otherwise true or false
+      val containsNull = expressions.exists {
+        case _: Null => true
+        case _ => false
+      }
+      val onNotFound = if (containsNull) noValue else falseValue
+      for (l <- internalCompileExpression(lhs, currentContext)) yield {
+        val setField = staticConstant[util.HashSet[AnyValue]](namer.nextVariableName(), set)
+        IntermediateExpression(
+          ternary(invoke(getStatic[util.HashSet[AnyValue]](setField.name), method[util.Set[AnyValue], Boolean, Object]("contains"), l.ir),
+                  truthValue, onNotFound), l.fields :+ setField, l.variables, l.nullCheck)
       }
 
     case In(lhs, rhs) =>
@@ -2540,6 +2564,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                              pathOps.flatMap(_.variables) :+ local :+ vRELATIONSHIP_CURSOR,
                              nullChecks)
     }
+  }
+
+  private def setFromLiterals(literals: Seq[Literal]): util.HashSet[AnyValue] = {
+    val set = new util.HashSet[AnyValue]()
+    literals.foreach(l => set.add(ValueUtils.of(l.value)))
+    set
   }
 }
 
