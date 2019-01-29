@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, Pipeline, PipelineBuilder}
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedBreakingPolicy, SlottedPipeMapper}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
@@ -76,7 +76,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan,
                           semanticTable: SemanticTable) = {
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable)
+    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedBreakingPolicy)
     val slottedRewriter = new SlottedRewriter(context.tokenContext)
     val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
     (logicalPlan, physicalPlan)

@@ -39,7 +39,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val planContext = mock[PlanContext]
     when(planContext.statistics).thenReturn(HardcodedGraphStatistics)
     when(planContext.getOptPropertyKeyId("propertyKey")).thenReturn(Some(0))
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, table)
+    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, table, SlottedBreakingPolicy)
     val slottedRewriter = new SlottedRewriter(planContext)
     val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),

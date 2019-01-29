@@ -26,7 +26,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = AllNodesScan(x, Set.empty)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 1
@@ -39,7 +39,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val expand = Expand(leaf, x, SemanticDirection.INCOMING, Seq.empty, z, r, ExpandAll)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(expand, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(expand, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 1
@@ -50,7 +50,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val argument = Argument(Set.empty)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(argument, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(argument, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 1
@@ -64,7 +64,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(pipe(lhs, 1, 0), rhs)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 2
@@ -79,7 +79,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(pipe(lhs, 0, 1), rhs)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 2
@@ -94,7 +94,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(pipe(lhs, 17, 11), rhs)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 2
@@ -118,7 +118,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(applyRight(pipe(leaf1, 1, 0), pipe(leaf2, 0, 1)), leaf3)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 3
@@ -143,7 +143,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(applyLeft(pipe(leaf1, 1, 0), pipe(leaf2, 0, 1)), leaf3)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 3
@@ -167,7 +167,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = pipe(applyLeft(pipe(leaf1, 1, 0), leaf2), 0, 1)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 2
@@ -190,7 +190,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(pipe(leaf1, 1, 0), pipe(break(leaf2), 0, 1))
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 2
@@ -212,7 +212,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     val plan = applyRight(pipe(leaf1, 1, 0), optional)
 
     // when
-    val arguments = SlotAllocation.allocateSlots(plan, semanticTable).argumentSizes
+    val arguments = SlotAllocation.allocateSlots(plan, semanticTable, I_BREAK_FOR_NOONE).argumentSizes
 
     // then
     arguments should have size 3
