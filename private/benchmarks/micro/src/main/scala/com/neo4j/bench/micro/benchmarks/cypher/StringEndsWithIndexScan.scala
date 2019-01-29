@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.util
@@ -15,11 +10,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{calculateCumulativeSelectivities, prefixPad, stringLengthFor}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.expressions.StringLiteral
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans.{DoNotGetValue, IndexOrderNone, IndexedProperty}
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
+import org.neo4j.cypher.internal.frontend.v3_3.ast.StringLiteral
+import org.neo4j.cypher.internal.v3_3.logical.plans
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -30,8 +24,8 @@ import scala.collection.JavaConverters._
 @BenchmarkEnabled(true)
 class StringEndsWithIndexScan extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
-    base = Array(Interpreted.NAME))
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var StringEndsWithIndexScan_runtime: String = _
 
@@ -100,13 +94,12 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
     val indexSeek = plans.NodeIndexEndsWithScan(
       node.name,
       astLabelToken(LABEL, planContext),
-      IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue),
+      astPropertyKeyToken(KEY, planContext),
       literal,
-      Set.empty,
-      IndexOrderNone)(IdGen)
+      Set.empty)(Solved)
 
     val resultColumn = List(node.name)
-    val produceResults = plans.ProduceResult(indexSeek, resultColumn)(IdGen)
+    val produceResults = plans.ProduceResult(resultColumn, indexSeek)
 
     val table = SemanticTable().addNode(node)
 
@@ -117,7 +110,7 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: StringEndsWithIndexScanThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
+    threadState.executionResult(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, visitor)
   }
 }
@@ -125,11 +118,11 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class StringEndsWithIndexScanThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: StringEndsWithIndexScan): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.StringEndsWithIndexScan_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.StringEndsWithIndexScan_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

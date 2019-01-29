@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.client.results;
 
 import com.google.common.collect.Lists;
@@ -25,8 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.sanitize;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static junit.framework.TestCase.assertFalse;
+import static junit.framework.TestCase.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.core.IsEqual.equalTo;

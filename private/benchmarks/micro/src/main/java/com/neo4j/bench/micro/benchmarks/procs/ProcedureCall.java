@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.procs;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -19,10 +14,9 @@ import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
-import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.internal.kernel.api.procs.ProcedureHandle;
-import org.neo4j.internal.kernel.api.procs.QualifiedName;
+import org.neo4j.kernel.api.exceptions.KernelException;
+import org.neo4j.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.api.proc.QualifiedName;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 
@@ -44,9 +38,7 @@ public class ProcedureCall extends AbstractProceduresBenchmark
         {
             super.afterDatabaseStart();
             procedures.registerProcedure( TestProcedure.class );
-            QualifiedName qualifiedName = new QualifiedName( new String[]{"tester"}, "procedure" );
-            ProcedureHandle handle = procedures.procedure( qualifiedName );
-            token = handle.id();
+            qualifiedName = new QualifiedName( new String[]{"tester"}, "procedure" );
         }
         catch ( KernelException e )
         {
@@ -60,7 +52,7 @@ public class ProcedureCall extends AbstractProceduresBenchmark
     {
         RawIterator<Object[],ProcedureException> iterator = procedures.callProcedure(
                 context,
-                token,
+                qualifiedName,
                 new Object[]{ProcedureCall_rows},
                 DUMMY_TRACKER );
 

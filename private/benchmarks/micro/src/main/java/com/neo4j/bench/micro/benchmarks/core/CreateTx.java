@@ -1,10 +1,9 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -14,12 +13,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 
 import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
@@ -56,7 +49,6 @@ public class CreateTx extends AbstractCoreBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .isReusableStore( true )
-                .withNeo4jConfig( Neo4jConfig.empty().setTransactionMemory( CreateTx_txMemory ) )
                 .build();
     }
 

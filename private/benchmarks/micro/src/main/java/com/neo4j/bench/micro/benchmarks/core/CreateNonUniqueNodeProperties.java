@@ -1,10 +1,17 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.benchmarks.TxBatch;
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.DiscreteGenerator;
+import com.neo4j.bench.micro.data.IndexType;
+import com.neo4j.bench.micro.data.LabelKeyDefinition;
+import com.neo4j.bench.micro.data.PropertyDefinition;
+import com.neo4j.bench.micro.data.ValueGeneratorFactory;
+import com.neo4j.bench.micro.data.ValueGeneratorFun;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -19,40 +26,22 @@ import java.util.SplittableRandom;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.IndexType;
-import com.neo4j.bench.micro.data.LabelKeyDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFactory;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
-
 import org.neo4j.graphdb.Label;
 
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
+import static com.neo4j.bench.micro.data.DiscreteGenerator.discrete;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteFor;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 
 @BenchmarkEnabled( true )
@@ -69,7 +58,6 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
-                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
@@ -103,21 +91,21 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of non-unique node property creation, with different transaction batch sizes.\n" +
-                "Benchmark creates key:value node property pairs.\n" +
-                "Runs in two indexing scenarios: no index, schema index.\n" +
-                "Setup is as follows:\n" +
-                "- Every node has exactly one, same label\n" +
-                "- Threads work on node ID sequences\n" +
-                "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
-                "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
-                "- When a sequence wraps the thread moves onto the next property key\n" +
-                "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
-                "- For property value generation a skewed distribution is used\n" +
-                "- There are three property values, with frequency of 1:10:100\n" +
-                "Outcome:\n" +
-                "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
-                "- Every node will have the same properties\n" +
-                "- Multiple nodes will have the same value for the same property";
+               "Benchmark creates key:value node property pairs.\n" +
+               "Runs in two indexing scenarios: no index, schema index.\n" +
+               "Setup is as follows:\n" +
+               "- Every node has exactly one, same label\n" +
+               "- Threads work on node ID sequences\n" +
+               "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
+               "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
+               "- When a sequence wraps the thread moves onto the next property key\n" +
+               "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
+               "- For property value generation a skewed distribution is used\n" +
+               "- There are three property values, with frequency of 1:10:100\n" +
+               "Outcome:\n" +
+               "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
+               "- Every node will have the same properties\n" +
+               "- Multiple nodes will have the same value for the same property";
     }
 
     @Override
@@ -135,7 +123,6 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
                 .withSchemaIndexes( schemaIndexes( KEYS ) )
                 .withUniqueConstraints( uniquenessConstraints( KEYS ) )
                 .isReusableStore( false )
-                .withNeo4jConfig( Neo4jConfig.empty().setTransactionMemory( CreateNonUniqueNodeProperties_txMemory ) )
                 .build();
     }
 
@@ -157,10 +144,17 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
                : new LabelKeyDefinition[0];
     }
 
-    private ValueGeneratorFactory getValueGeneratorFactory()
+    private PropertyDefinition getPropertyDefinition( DiscreteGenerator.Bucket[] buckets )
     {
+        ValueGeneratorFactory values = discrete( buckets );
+        return new PropertyDefinition( CreateNonUniqueNodeProperties_type, values );
+    }
+
+    private DiscreteGenerator.Bucket[] getBuckets()
+    {
+        // Store will have five property values, with frequency of 1:10:100
         double[] discreteBucketRatios = new double[]{1, 10, 100};
-        return discreteFor( CreateNonUniqueNodeProperties_type, discreteBucketRatios );
+        return discreteBucketsFor( CreateNonUniqueNodeProperties_type, discreteBucketRatios );
     }
 
     @State( Scope.Thread )
@@ -180,7 +174,7 @@ public class CreateNonUniqueNodeProperties extends AbstractCoreBenchmark
                     threadParams.getThreadCount(),
                     threadParams.getThreadIndex(),
                     NODE_COUNT ).create();
-            values = benchmarkState.getValueGeneratorFactory().create();
+            values = benchmarkState.getPropertyDefinition( benchmarkState.getBuckets() ).value().create();
             keyId = 0;
             nodeId = -1;
             txBatch = new TxBatch( benchmarkState.db(), benchmarkState.CreateNonUniqueNodeProperties_txSize );

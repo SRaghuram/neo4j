@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import java.util.ArrayList;
@@ -15,9 +10,6 @@ import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
 
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
@@ -35,9 +27,6 @@ import static java.util.stream.Collectors.toList;
     European                                    31
     Latin1                                      27
     UTF-8                                       14
-
-    The above inlineability limits are likely wrong. See
-    https://github.com/neo4j/neo4j/blob/cda5a2e56224c56fff916d455db3db47ca71322b/enterprise/runtime/neole/src/main/java/org/neo4j/internal/store/prototype/neole/PropertyCursor.java#L66-L85
 */
 public class StringGenerator
 {
@@ -92,11 +81,6 @@ public class StringGenerator
     public static ValueGeneratorFactory<String> randShortAlphaSymbolical()
     {
         return new RandomStringGeneratorFactory( new AlphaSymbolicChars(), 36 );
-    }
-
-    public static ValueGeneratorFactory<String> randInlinedAlphaNumerical()
-    {
-        return new RandomStringGeneratorFactory( new AlphaNumericalChars(), 11 );
     }
 
     public static ValueGeneratorFactory<String> randShortUtf8()
@@ -229,12 +213,6 @@ public class StringGenerator
             state = inner.next( rng );
             return paddingFun.apply( state );
         }
-
-        @Override
-        public Value nextValue( SplittableRandom rng )
-        {
-            return Values.stringValue( next( rng ) );
-        }
     }
 
     public static IntFunction<String> leftPaddingFunFor( int length )
@@ -270,12 +248,6 @@ public class StringGenerator
             createValueIfNecessary( rng );
             int i = rng.nextInt( POPULATION_SIZE - length );
             return value.substring( i, i + length );
-        }
-
-        @Override
-        public Value nextValue( SplittableRandom rng )
-        {
-            return Values.stringValue( next( rng ) );
         }
 
         private void createValueIfNecessary( SplittableRandom rng )

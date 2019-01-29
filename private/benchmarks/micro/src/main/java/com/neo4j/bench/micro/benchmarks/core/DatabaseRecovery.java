@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -29,18 +24,20 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.impl.core.StartupStatistics;
+import org.neo4j.kernel.impl.transaction.log.LogHeaderCache;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
+import org.neo4j.kernel.impl.transaction.log.LogVersionRepository;
+import org.neo4j.kernel.impl.transaction.log.PhysicalLogFile;
+import org.neo4j.kernel.impl.transaction.log.PhysicalLogFiles;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.entry.CheckPoint;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.files.LogFile;
-import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.lifecycle.Lifespan;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
 
@@ -117,7 +114,15 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     @BenchmarkMode( Mode.SingleShotTime )
     public void recoverDatabase()
     {
-        managedStore.startDb();
+        GraphDatabaseAPI graphDatabaseService = (GraphDatabaseAPI) managedStore.startDb();
+        StartupStatistics startupStatistics = graphDatabaseService
+                .getDependencyResolver()
+                .resolveDependency( StartupStatistics.class );
+        int numberOfRecoveredTransactions = startupStatistics.numberOfRecoveredTransactions();
+        if ( numberOfRecoveredTransactions != expectedNumberOfRecoveredTransactions )
+        {
+            throw new RuntimeException( "Recovered unexpected number of transactions" );
+        }
     }
 
     @Override
@@ -136,36 +141,65 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
         File storeDir = managedStore.store().toFile();
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDir, fileSystem ).build();
+        PhysicalLogFiles logFiles = new PhysicalLogFiles( storeDir, fileSystem );
+        PhysicalFilesBasedLogVersionRepository versionRepository =
+                new PhysicalFilesBasedLogVersionRepository( logFiles );
         LogPosition checkpointPosition = null;
-
-        LogFile logFile = logFiles.getLogFile();
-        VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader();
-        ReadableLogChannel reader =
-                logFile.getReader( LogPosition.start( logFiles.getHighestLogVersion() ) );
-        LogEntry logEntry;
-        int checkPointCount = 0;
-        do
+        try ( Lifespan lifespan = new Lifespan() )
         {
-            logEntry = entryReader.readLogEntry( reader );
-            if ( logEntry instanceof CheckPoint )
+            PhysicalLogFile physicalLogFile = new PhysicalLogFile(
+                    fileSystem,
+                    logFiles,
+                    Long.MAX_VALUE,
+                    () -> Long.MAX_VALUE,
+                    versionRepository,
+                    PhysicalLogFile.NO_MONITOR,
+                    new LogHeaderCache( 100 ) );
+            lifespan.add( physicalLogFile );
+            VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader();
+            ReadableLogChannel reader =
+                    physicalLogFile.getReader( LogPosition.start( logFiles.getHighestLogVersion() ) );
+            LogEntry logEntry;
+            do
             {
-                checkpointPosition = ((CheckPoint) logEntry).getLogPosition();
-                checkPointCount++;
+                logEntry = entryReader.readLogEntry( reader );
+                if ( logEntry instanceof CheckPoint )
+                {
+                    checkpointPosition = ((CheckPoint) logEntry).getLogPosition();
+                }
             }
-        }
-        while ( logEntry != null );
-        if ( checkPointCount != 3 )
-        {
-            throw new RuntimeException( "Expected 3 checkpoint but found " + checkPointCount );
+            while ( logEntry != null );
         }
         if ( checkpointPosition != null )
         {
             File highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
-            try ( StoreChannel storeChannel = fileSystem.open( highestLogFile, OpenMode.READ_WRITE ) )
+            try ( StoreChannel storeChannel = fileSystem.open( highestLogFile, "rw" ) )
             {
                 storeChannel.truncate( checkpointPosition.getByteOffset() );
             }
+        }
+    }
+
+    private class PhysicalFilesBasedLogVersionRepository implements LogVersionRepository
+    {
+        private long version;
+
+        PhysicalFilesBasedLogVersionRepository( PhysicalLogFiles logFiles )
+        {
+            this.version = (logFiles.getHighestLogVersion() == -1) ? 0 : logFiles.getHighestLogVersion();
+        }
+
+        @Override
+        public long getCurrentLogVersion()
+        {
+            return version;
+        }
+
+        @Override
+        public long incrementAndGetVersion()
+        {
+            version++;
+            return version;
         }
     }
 }

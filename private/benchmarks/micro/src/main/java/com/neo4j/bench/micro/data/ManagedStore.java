@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.client.model.Benchmark;
@@ -16,7 +11,6 @@ import java.nio.file.Path;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
@@ -42,8 +36,7 @@ public class ManagedStore
             Benchmark benchmark,
             DataGeneratorConfig benchmarkConfig,
             Neo4jConfig baseNeo4jConfig,
-            Augmenterizer augmenterizer,
-            int threads )
+            Augmenterizer augmenterizer )
     {
         FullBenchmarkName benchmarkName = FullBenchmarkName.from( group, benchmark );
         dataGeneratorConfig = DataGeneratorConfigBuilder
@@ -56,8 +49,7 @@ public class ManagedStore
                 dataGeneratorConfig,
                 group,
                 benchmark,
-                augmenterizer,
-                threads );
+                augmenterizer );
     }
 
     public GraphDatabaseService startDb()
@@ -66,22 +58,10 @@ public class ManagedStore
         {
             throw new RuntimeException( "Can not start an already running database" );
         }
-        return db = newDb( storeAndConfig.store(), storeAndConfig.config() );
-    }
-
-    public static GraphDatabaseService newDb( Path dbPath )
-    {
-        return newDb( dbPath, null );
-    }
-
-    public static GraphDatabaseService newDb( Path dbPath, Path config )
-    {
-        GraphDatabaseBuilder builder = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbPath.toFile() );
-        if ( null != config )
-        {
-            builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
-        }
-        return builder.newGraphDatabase();
+        return db = new EnterpriseGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( storeAndConfig.store().toFile() )
+                .loadPropertiesFromFile( storeAndConfig.config().toFile().getAbsolutePath() )
+                .newGraphDatabase();
     }
 
     public void tearDownDb() throws IOException

@@ -1,3 +1,1 @@
-MATCH (n:PROFILES)
-WHERE n.pets < "i"
-RETURN n.children ORDER BY n.pets ASC
+MATCH (n:PROFILES) WHERE n.pets < "i" RETURN n.children ORDER BY n.pets ASC

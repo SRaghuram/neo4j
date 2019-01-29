@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -29,25 +24,18 @@ import java.util.stream.IntStream;
 
 import org.neo4j.graphdb.RelationshipType;
 
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
@@ -68,7 +56,6 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
-                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
@@ -90,21 +77,21 @@ public class CreateUniqueRelationshipProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of relationship property creation, using different transaction batch sizes.\n" +
-                "Creates unique key:value property pairs.\n" +
-                "Runs in two indexing scenarios: no index, schema index.\n" +
-                "Guarantees unique values in the presence of parallelism:\n" +
-                "- Every relationship has the same type\n" +
-                "- Threads work on relationship ID sequences\n" +
-                "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
-                "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
-                "- When a sequence wraps the thread moves onto the next property key\n" +
-                "- Guarantees that for any property, relationship ID appears in the sequence of exactly one thread\n" +
-                "- Guarantees property(key):relationship(id) uniqueness, so same policy used for property values\n" +
-                "- I.e., value assigned to relationship property is ID of that relationship (in appropriate type)\n" +
-                "Outcome:\n" +
-                "- No two threads will ever create a property on the same relationship (avoids deadlocks)\n" +
-                "- Every relationship will have the same properties\n" +
-                "- No two relationships will have the same value for the same property";
+               "Creates unique key:value property pairs.\n" +
+               "Runs in two indexing scenarios: no index, schema index.\n" +
+               "Guarantees unique values in the presence of parallelism:\n" +
+               "- Every relationship has the same type\n" +
+               "- Threads work on relationship ID sequences\n" +
+               "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
+               "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
+               "- When a sequence wraps the thread moves onto the next property key\n" +
+               "- Guarantees that for any property, relationship ID appears in the sequence of exactly one thread\n" +
+               "- Guarantees property(key):relationship(id) uniqueness, so same policy used for property values\n" +
+               "- I.e., value assigned to relationship property is ID of that relationship (in appropriate type)\n" +
+               "Outcome:\n" +
+               "- No two threads will ever create a property on the same relationship (avoids deadlocks)\n" +
+               "- Every relationship will have the same properties\n" +
+               "- No two relationships will have the same value for the same property";
     }
 
     @Override

@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.core;
 
 import com.neo4j.bench.micro.benchmarks.TxBatch;
@@ -63,10 +58,7 @@ public class CreateNodes extends AbstractCoreBenchmark
     protected DataGeneratorConfig getConfig()
     {
         return new DataGeneratorConfigBuilder()
-                .withNeo4jConfig( Neo4jConfig
-                        .empty()
-                        .withSetting( record_format, CreateNodes_format )
-                        .setTransactionMemory( CreateNodes_txMemory ))
+                .withNeo4jConfig( Neo4jConfig.empty().withSetting( record_format, CreateNodes_format ) )
                 .isReusableStore( false )
                 .build();
     }

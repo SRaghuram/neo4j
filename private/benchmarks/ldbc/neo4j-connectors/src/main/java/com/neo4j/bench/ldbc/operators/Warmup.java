@@ -1,32 +1,48 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2018 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
+ *
+ * This file is part of Neo4j Enterprise Edition. The included source
+ * code can be redistributed and/or modified under the terms of the
+ * GNU AFFERO GENERAL PUBLIC LICENSE Version 3
+ * (http://www.fsf.org/licensing/licenses/agpl-3.0.html) with the
+ * Commons Clause, as found in the associated LICENSE.txt file.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * Neo4j object code can be licensed independently from the source
+ * under separate terms from the AGPL. Inquiries can be directed to:
+ * licensing@neo4j.com
+ *
+ * More information is also available at:
+ * https://neo4j.com/licensing/
+ *
  */
+
 package com.neo4j.bench.ldbc.operators;
 
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.temporal.TemporalUtil;
 
-import org.neo4j.internal.kernel.api.CursorFactory;
-import org.neo4j.internal.kernel.api.Kernel;
-import org.neo4j.internal.kernel.api.NodeCursor;
-import org.neo4j.internal.kernel.api.Read;
-import org.neo4j.internal.kernel.api.RelationshipScanCursor;
-import org.neo4j.internal.kernel.api.Transaction;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.cursor.Cursor;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.kernel.api.ReadOperations;
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.storageengine.api.NodeItem;
+import org.neo4j.storageengine.api.RelationshipItem;
 
 import static java.lang.String.format;
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 
 public class Warmup
 {
@@ -65,18 +81,14 @@ public class Warmup
             long highestNodeKey,
             int nodesPerPage ) throws DbException
     {
-        Kernel kernel = getKernel( db );
-        try ( Transaction tx = startTransaction( kernel ) )
+        try ( Transaction ignore = db.beginTx() )
         {
-            CursorFactory cursors = tx.cursors();
-            Read read = tx.dataRead();
-            try ( NodeCursor nodeCursor = cursors.allocateNodeCursor() )
+            ReadOperations readOperations = getReadOperations( db );
+            for ( int i = 0; i <= highestNodeKey; i = i + nodesPerPage )
             {
-                for ( int i = 0; i <= highestNodeKey; i = i + nodesPerPage )
-                {
-                    read.singleNode( i, nodeCursor );
-                    nodeCursor.next();
-                }
+                Cursor<NodeItem> cursor = readOperations.nodeCursorById( i );
+                cursor.next();
+                cursor.close();
             }
         }
         catch ( Exception e )
@@ -90,18 +102,14 @@ public class Warmup
             long highestRelationshipKey,
             int relationshipsPerPage ) throws DbException
     {
-        Kernel kernel = getKernel( db );
-        try ( Transaction tx = startTransaction( kernel ) )
+        try ( Transaction ignore = db.beginTx() )
         {
-            CursorFactory cursors = tx.cursors();
-            Read read = tx.dataRead();
-            try ( RelationshipScanCursor relationshipCursor = cursors.allocateRelationshipScanCursor() )
+            ReadOperations readOperations = getReadOperations( db );
+            for ( int i = 0; i <= highestRelationshipKey; i = i + relationshipsPerPage )
             {
-                for ( int i = 0; i <= highestRelationshipKey; i = i + relationshipsPerPage )
-                {
-                    read.singleRelationship( i, relationshipCursor );
-                    relationshipCursor.next();
-                }
+                Cursor<RelationshipItem> cursor = readOperations.relationshipCursorById( i );
+                cursor.next();
+                cursor.close();
             }
         }
         catch ( Exception e )
@@ -125,14 +133,13 @@ public class Warmup
         return db.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
     }
 
-    private static Transaction startTransaction( Kernel kernel )
-            throws TransactionFailureException
+    private static ReadOperations getReadOperations( GraphDatabaseAPI db )
     {
-        return kernel.beginTransaction( implicit, SecurityContext.AUTH_DISABLED );
+        return getContextBridge( db ).get().readOperations();
     }
 
-    private static Kernel getKernel( GraphDatabaseAPI db )
+    private static ThreadToStatementContextBridge getContextBridge( GraphDatabaseAPI db )
     {
-        return db.getDependencyResolver().resolveDependency( Kernel.class );
+        return db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
     }
 }

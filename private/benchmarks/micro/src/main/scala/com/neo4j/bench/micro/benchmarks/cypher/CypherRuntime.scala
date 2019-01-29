@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 object CypherRuntime {
@@ -12,7 +7,6 @@ object CypherRuntime {
       case CompiledSourceCode.NAME => CompiledSourceCode
       case Interpreted.NAME => Interpreted
       case EnterpriseInterpreted.NAME => EnterpriseInterpreted
-      case Morsel.NAME => Morsel
       case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntimeString")
     }
 }
@@ -39,9 +33,4 @@ case object CompiledByteCode extends CypherRuntime {
 case object CompiledSourceCode extends CypherRuntime {
   final val NAME = "compiled-sourcecode"
   override val debugOptions: Set[String] = Set("generate_java_source")
-}
-
-case object Morsel extends CypherRuntime {
-  final val NAME = "morsel"
-  override val debugOptions: Set[String] = Set()
 }

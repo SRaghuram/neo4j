@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.codahale.metrics.Histogram;
@@ -33,6 +28,7 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.BATCH;
@@ -70,7 +66,10 @@ public class DataGeneratorTestUtil
         GraphDatabaseService db = null;
         try
         {
-            db = ManagedStore.newDb( storeDir.toPath(), NEO4J_CONFIG );
+            db = new EnterpriseGraphDatabaseFactory()
+                    .newEmbeddedDatabaseBuilder( storeDir )
+                    .loadPropertiesFromFile( NEO4J_CONFIG.toFile().getAbsolutePath() )
+                    .newGraphDatabase();
 
             // check global counts
             assertThat( nodeCount( db ), equalTo( config.nodeCount() ) );
@@ -165,6 +164,7 @@ public class DataGeneratorTestUtil
             {
                 db.shutdown();
             }
+
         }
     }
 
@@ -210,33 +210,33 @@ public class DataGeneratorTestUtil
             double degreeError = outRelationshipsPerNode * percentageTolerance;
 
             assertThat( format( "Expect mean in-degree in range [%s, %s]",
-                                inDegreeHistogram.getSnapshot().getMean() - degreeError,
-                                inDegreeHistogram.getSnapshot().getMean() + degreeError ),
-                        inDegreeHistogram.getSnapshot().getMean(),
-                        closeTo( (double) outRelationshipsPerNode, degreeError ) );
+                    inDegreeHistogram.getSnapshot().getMean() - degreeError,
+                    inDegreeHistogram.getSnapshot().getMean() + degreeError ),
+                    inDegreeHistogram.getSnapshot().getMean(),
+                    closeTo( (double) outRelationshipsPerNode, degreeError ) );
             assertThat( format( "Expect mean out-degree in range [%s, %s]",
-                                outDegreeHistogram.getSnapshot().getMean() - degreeError,
-                                outDegreeHistogram.getSnapshot().getMean() + degreeError ),
-                        outDegreeHistogram.getSnapshot().getMean(),
-                        closeTo( (double) outRelationshipsPerNode, degreeError ) );
+                    outDegreeHistogram.getSnapshot().getMean() - degreeError,
+                    outDegreeHistogram.getSnapshot().getMean() + degreeError ),
+                    outDegreeHistogram.getSnapshot().getMean(),
+                    closeTo( (double) outRelationshipsPerNode, degreeError ) );
             assertThat( format( "Expect mean degree in range [%s, %s]",
-                                degreeHistogram.getSnapshot().getMean() - degreeError,
-                                degreeHistogram.getSnapshot().getMean() + degreeError ),
-                        degreeHistogram.getSnapshot().getMean(),
-                        closeTo( (double) outRelationshipsPerNode * 2, degreeError ) );
+                    degreeHistogram.getSnapshot().getMean() - degreeError,
+                    degreeHistogram.getSnapshot().getMean() + degreeError ),
+                    degreeHistogram.getSnapshot().getMean(),
+                    closeTo( (double) outRelationshipsPerNode * 2, degreeError ) );
 
             assertThat( format( "Expect 95th percentile < 2 x mean: in-degree < %s",
-                                inDegreeHistogram.getSnapshot().getMean() * 2 ),
-                        inDegreeHistogram.getSnapshot().getValue( 0.95 ),
-                        lessThan( inDegreeHistogram.getSnapshot().getMean() * 2 ) );
+                    inDegreeHistogram.getSnapshot().getMean() * 2 ),
+                    inDegreeHistogram.getSnapshot().getValue( 0.95 ),
+                    lessThan( inDegreeHistogram.getSnapshot().getMean() * 2 ) );
             assertThat( format( "Expect 95th percentile < 2 x mean: out-degree < %s",
-                                outDegreeHistogram.getSnapshot().getMean() * 2 ),
-                        outDegreeHistogram.getSnapshot().getValue( 0.95 ),
-                        lessThan( outDegreeHistogram.getSnapshot().getMean() * 2 ) );
+                    outDegreeHistogram.getSnapshot().getMean() * 2 ),
+                    outDegreeHistogram.getSnapshot().getValue( 0.95 ),
+                    lessThan( outDegreeHistogram.getSnapshot().getMean() * 2 ) );
             assertThat( format( "Expect 95th percentile < 2 mean: degree < %s",
-                                degreeHistogram.getSnapshot().getMean() * 2 ),
-                        degreeHistogram.getSnapshot().getValue( 0.95 ),
-                        lessThan( degreeHistogram.getSnapshot().getMean() * 2 ) );
+                    degreeHistogram.getSnapshot().getMean() * 2 ),
+                    degreeHistogram.getSnapshot().getValue( 0.95 ),
+                    lessThan( degreeHistogram.getSnapshot().getMean() * 2 ) );
         }
     }
 
@@ -259,8 +259,8 @@ public class DataGeneratorTestUtil
     private static int propertyCount( Iterable<? extends PropertyContainer> propertyContainers )
     {
         return StreamSupport.stream( propertyContainers.spliterator(), false )
-                            .map( n -> Iterables.count( n.getPropertyKeys() ) )
-                            .reduce( 0, ( acc, nodePropertyCount ) -> acc + nodePropertyCount );
+                .map( n -> Iterables.count( n.getPropertyKeys() ) )
+                .reduce( 0, ( acc, nodePropertyCount ) -> acc + nodePropertyCount );
     }
 
     private static void assertRelationshipsAreCollocatedByStartNode( GraphDatabaseService db )
@@ -272,7 +272,7 @@ public class DataGeneratorTestUtil
             {
                 long currentStartNodeId = relationship.getStartNode().getId();
                 assertThat( currentStartNodeId,
-                            anyOf( equalTo( previousStartNodeId ), equalTo( previousStartNodeId + 1 ) ) );
+                        anyOf( equalTo( previousStartNodeId ), equalTo( previousStartNodeId + 1 ) ) );
                 previousStartNodeId = currentStartNodeId;
             }
         }
@@ -287,7 +287,7 @@ public class DataGeneratorTestUtil
             {
                 long currentStartNodeId = relationship.getStartNode().getId();
                 assertThat( currentStartNodeId,
-                            anyOf( equalTo( previousStartNodeId + 1 ), equalTo( 0L ) ) );
+                        anyOf( equalTo( previousStartNodeId + 1 ), equalTo( 0L ) ) );
                 previousStartNodeId = currentStartNodeId;
             }
         }
@@ -364,11 +364,11 @@ public class DataGeneratorTestUtil
 
         List<ChainPosition> chainPositionList = new ArrayList<>();
         Set<String> keys = keyCountsAtChainPosition.stream().map( Map::keySet ).reduce( new HashSet<>(),
-                                                                                        ( acc, s ) ->
-                                                                                        {
-                                                                                            acc.addAll( s );
-                                                                                            return acc;
-                                                                                        } );
+                ( acc, s ) ->
+                {
+                    acc.addAll( s );
+                    return acc;
+                } );
         int position = 0;
         for ( Map<String,Integer> keyCountMap : keyCountsAtChainPosition )
         {
@@ -385,8 +385,8 @@ public class DataGeneratorTestUtil
             double mean = (double) total / keyCountMap.size();
             double error = (double) (max - min) / 2;
             List<KeyCount> keyCountsList = keyCountMap.entrySet().stream()
-                                                      .map( e -> new KeyCount( e.getKey(), e.getValue() ) )
-                                                      .collect( Collectors.toList() );
+                    .map( e -> new KeyCount( e.getKey(), e.getValue() ) )
+                    .collect( Collectors.toList() );
             chainPositionList.add( new ChainPosition( position, min, max, mean, error, keyCountsList ) );
             position++;
         }
@@ -405,13 +405,14 @@ public class DataGeneratorTestUtil
             double error = tolerancePercentage * stats.mean();
             assertThat( stats.toString(), stats.error(), lessThanOrEqualTo( error ) );
             assertThat( format( "Expected MIN to be in [%s, %s], but was: %s\n%s\n%s",
-                                stats.mean() - error, stats.mean() + error, stats.min(), stats.toString(),
-                                stats.keyCountsString() ),
-                        (double) stats.min(), closeTo( stats.mean(), error ) );
+                    stats.mean() - error, stats.mean() + error, stats.min(), stats.toString(),
+                    stats.keyCountsString() ),
+                    (double) stats.min(), closeTo( stats.mean(), error ) );
             assertThat( format( "Expected MAX to be in [%s, %s], but was: %s\n%s\n%s",
-                                stats.mean() - error, stats.mean() + error, stats.max(), stats.toString(),
-                                stats.keyCountsString() ),
-                        (double) stats.max(), closeTo( stats.mean(), error ) );
+                    stats.mean() - error, stats.mean() + error, stats.max(), stats.toString(),
+                    stats.keyCountsString() ),
+                    (double) stats.max(), closeTo( stats.mean(), error ) );
+
         }
     }
 
@@ -464,8 +465,8 @@ public class DataGeneratorTestUtil
         }
 
         assertThat( "At each position a different key should be dominant: " + dominantKeysPerPosition,
-                    dominantKeysPerPosition.size(),
-                    equalTo( Sets.newHashSet( dominantKeysPerPosition ).size() ) );
+                dominantKeysPerPosition.size(),
+                equalTo( Sets.newHashSet( dominantKeysPerPosition ).size() ) );
     }
 
     private static void printChainStats( List<ChainPosition> chainPositionList, boolean detailed )
@@ -578,8 +579,8 @@ public class DataGeneratorTestUtil
         public String toString()
         {
             return format( "pos[%s] --> [%s, %s], mean: %s, error: %s, %s",
-                           position(), min(), max(), mean(), error(),
-                           keyCounts().stream().map( KeyCount::toString ).collect( Collectors.toList() ).toString() );
+                    position(), min(), max(), mean(), error(),
+                    keyCounts().stream().map( KeyCount::toString ).collect( Collectors.toList() ).toString() );
         }
     }
 }

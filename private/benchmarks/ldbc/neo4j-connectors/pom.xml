@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>ldbc</artifactId>
-        <version>3.5.4-SNAPSHOT</version>
+        <version>3.3.10-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-
     <artifactId>neo4j-connectors</artifactId>
-    <name>Neo4j - LDBC Social Network Benchmarks Implementations</name>
 
     <properties>
         <ldbc-driver-version>0.3.0</ldbc-driver-version>
@@ -21,26 +19,9 @@
         <fastutil.version>7.0.10</fastutil.version>
         <commons-compress.version>1.13</commons-compress.version>
         <uberjar.name>ldbc</uberjar.name>
-        <license-text.header>../../build/license-header.txt</license-text.header>
     </properties>
 
-    <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
-          Copyright (c) 2002-2019 "Neo4j,"
-          Neo4j Sweden AB [http://neo4j.com]
-          This file is part of Neo4j internal tooling.
-        </comments>
-      </license>
-    </licenses>
-
     <dependencies>
-        <dependency>
-            <groupId>org.opencypher</groupId>
-            <artifactId>util-9.0</artifactId>
-            <version>9.0.1</version>
-        </dependency>
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
@@ -51,38 +32,38 @@
         <dependency>
             <groupId>org.neo4j.app</groupId>
             <artifactId>neo4j-server</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.neo4j</groupId>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.neo4j</groupId>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <scope>test</scope>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-params</artifactId>
+          <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-migrationsupport</artifactId>
-            <scope>test</scope>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-migrationsupport</artifactId>
+          <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <scope>test</scope>
+          <groupId>org.junit.vintage</groupId>
+          <artifactId>junit-vintage-engine</artifactId>
+          <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-engine</artifactId>
+          <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -100,7 +81,7 @@
             <artifactId>commons-compress</artifactId>
             <version>${commons-compress.version}</version>
         </dependency>
-        <!--git sub-module libraries -->
+        <!--git sub-module libraries-->
         <dependency>
             <groupId>com.ldbc.driver</groupId>
             <artifactId>jeeves</artifactId>
@@ -138,11 +119,11 @@
                     <finalName>${uberjar.name}</finalName>
                     <transformers>
                         <transformer
-                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                             <mainClass>com.neo4j.bench.ldbc.cli.LdbcCli</mainClass>
                         </transformer>
                         <transformer
-                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                     </transformers>
                     <filters>
                         <filter>

@@ -1,12 +1,6 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import com.neo4j.bench.micro.data.CRS.Cartesian;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 
 import java.util.ArrayList;
@@ -41,26 +35,15 @@ import static com.neo4j.bench.micro.data.NumberGenerator.stridingInt;
 import static com.neo4j.bench.micro.data.NumberGenerator.stridingLong;
 import static com.neo4j.bench.micro.data.NumberGenerator.toDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toFloat;
-import static com.neo4j.bench.micro.data.PointGenerator.diagonal;
-import static com.neo4j.bench.micro.data.PointGenerator.grid;
 import static com.neo4j.bench.micro.data.StringGenerator.BIG_STRING_LENGTH;
 import static com.neo4j.bench.micro.data.StringGenerator.SMALL_STRING_LENGTH;
 import static com.neo4j.bench.micro.data.StringGenerator.intString;
 import static com.neo4j.bench.micro.data.StringGenerator.leftPaddingFunFor;
-import static com.neo4j.bench.micro.data.StringGenerator.randInlinedAlphaNumerical;
 import static com.neo4j.bench.micro.data.StringGenerator.randShortUtf8;
 import static com.neo4j.bench.micro.data.StringGenerator.randUtf8;
-import static com.neo4j.bench.micro.data.TemporalGenerator.date;
-import static com.neo4j.bench.micro.data.TemporalGenerator.dateTime;
-import static com.neo4j.bench.micro.data.TemporalGenerator.duration;
-import static com.neo4j.bench.micro.data.TemporalGenerator.localDatetime;
-import static com.neo4j.bench.micro.data.TemporalGenerator.localTime;
-import static com.neo4j.bench.micro.data.TemporalGenerator.time;
 
 import static java.lang.Math.round;
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.DAYS;
-import static java.util.concurrent.TimeUnit.HOURS;
 
 public class ValueGeneratorUtil
 {
@@ -73,13 +56,6 @@ public class ValueGeneratorUtil
     public static final String STR_INL = "inlined_string";
     public static final String STR_SML = "small_string";
     public static final String STR_BIG = "big_string";
-    public static final String POINT = "point";
-    public static final String DATE_TIME = "date_time";
-    public static final String LOCAL_DATE_TIME = "local_date_time";
-    public static final String TIME = "time";
-    public static final String LOCAL_TIME = "local_time";
-    public static final String DATE = "date";
-    public static final String DURATION = "duration";
     public static final String BYTE_ARR = "byte[]";
     public static final String SHORT_ARR = "short[]";
     public static final String INT_ARR = "int[]";
@@ -88,21 +64,6 @@ public class ValueGeneratorUtil
     public static final String DBL_ARR = "double[]";
     public static final String STR_SML_ARR = "small_string[]";
     public static final String STR_BIG_ARR = "big_string[]";
-
-    /*
-    We create DateTimes from epochSecond
-    The valid Range of years is from -1,000,000,000 BC to 1,000,000,000 AD (exclusive)
-    As epochSecond of 0 means 1970 AD, we need to offset the below calculation by 1970 years to get the right range in seconds
-    */
-    private static final long MAX_ALLOWED_YEARS = 999_999_999;
-    private static final long START_OF_EPOCH = 1970;
-    private static final long DAYS_PER_YEAR = 365;
-    private static final long TIME_RANGE_MIN = 0;
-    private static final long TIME_RANGE_MAX = HOURS.toNanos( 24 ) - 1;
-    private static final long DATE_TIME_RANGE_MIN_SECONDS = DAYS.toSeconds( (-MAX_ALLOWED_YEARS - START_OF_EPOCH) * DAYS_PER_YEAR );
-    private static final long DATE_TIME_RANGE_MAX_SECONDS = DAYS.toSeconds( (MAX_ALLOWED_YEARS - START_OF_EPOCH) * DAYS_PER_YEAR );
-    private static final long DATE_RANGE_MIN_DAYS = (-MAX_ALLOWED_YEARS - START_OF_EPOCH) * DAYS_PER_YEAR;
-    private static final long DATE_RANGE_MAX_DAYS = (MAX_ALLOWED_YEARS - START_OF_EPOCH) * DAYS_PER_YEAR;
 
     /**
      * Calculates default/suggested min and max values, by type, for random number generators
@@ -132,21 +93,6 @@ public class ValueGeneratorUtil
             return new Range( 0, Long.MAX_VALUE );
         case STR_BIG:
             return new Range( 0, Long.MAX_VALUE );
-        case POINT:
-            // TODO revise?
-            return new Range( -1_000_000D, 1_000_000D );
-        case DATE_TIME:
-            return new Range( DATE_TIME_RANGE_MIN_SECONDS, DATE_TIME_RANGE_MAX_SECONDS );
-        case LOCAL_DATE_TIME:
-            return new Range( DATE_TIME_RANGE_MIN_SECONDS, DATE_TIME_RANGE_MAX_SECONDS );
-        case TIME:
-            return new Range( TIME_RANGE_MIN, TIME_RANGE_MAX );
-        case LOCAL_TIME:
-            return new Range( TIME_RANGE_MIN, TIME_RANGE_MAX );
-        case DATE:
-            return new Range( DATE_RANGE_MIN_DAYS, DATE_RANGE_MAX_DAYS );
-        case DURATION:
-            return defaultRangeFor( LNG );
         case BYTE_ARR:
             return defaultRangeFor( BYTE );
         case SHORT_ARR:
@@ -453,33 +399,12 @@ public class ValueGeneratorUtil
         case DBL:
             return integral ? toDouble( randGeneratorFor( LNG, min, max, integral ) )
                               : randDouble( min.doubleValue(), max.doubleValue() );
-        case STR_INL:
-            return randInlinedAlphaNumerical();
         case STR_SML:
             return integral ? intString( randGeneratorFor( INT, min, max, integral ), SMALL_STRING_LENGTH )
                               : randShortUtf8();
         case STR_BIG:
             return integral ? intString( randGeneratorFor( INT, min, max, integral ), BIG_STRING_LENGTH )
                               : randUtf8( BIG_STRING_LENGTH );
-        case POINT:
-            return PointGenerator.random(
-                    min.doubleValue(),
-                    max.doubleValue(),
-                    min.doubleValue(),
-                    max.doubleValue(),
-                    new Cartesian() );
-        case DATE_TIME:
-            return dateTime( randGeneratorFor( LNG, min, max, integral ) );
-        case LOCAL_DATE_TIME:
-            return localDatetime( randGeneratorFor( LNG, min, max, integral ) );
-        case TIME:
-            return time( randGeneratorFor( LNG, min, max, integral ) );
-        case LOCAL_TIME:
-            return localTime( randGeneratorFor( LNG, min, max, integral ) );
-        case DATE:
-            return date( randGeneratorFor( LNG, min, max, integral ) );
-        case DURATION:
-            return duration( randGeneratorFor( LNG, min, max, integral ) );
         case SHORT_ARR:
             return shortArray( randGeneratorFor( SHORT, min, max, integral ), DEFAULT_SIZE );
         case BYTE_ARR:
@@ -526,33 +451,6 @@ public class ValueGeneratorUtil
             return intString( ascInt( initial.intValue() ), SMALL_STRING_LENGTH );
         case STR_BIG:
             return intString( ascInt( initial.intValue() ), BIG_STRING_LENGTH );
-        case POINT:
-            Range range = defaultRangeFor( POINT );
-            if ( range.max().doubleValue() <= initial.doubleValue() )
-            {
-                throw new Kaboom( format( "Range for ascending spatial failed to satisfy that max (%s) > (%s) initial", range.max(), initial ) );
-            }
-            // TODO technically will not ascend forever but 1,000,000,000 is large enough to be practically infinite
-            long count = 1_000_000_000;
-            return grid(
-                    initial.doubleValue(),
-                    range.max().doubleValue(),
-                    initial.doubleValue(),
-                    range.max().doubleValue(),
-                    count,
-                    new Cartesian() );
-        case DATE_TIME:
-            return dateTime( ascLong( initial.longValue() ) );
-        case LOCAL_DATE_TIME:
-            return localDatetime( ascLong( initial.longValue() ) );
-        case TIME:
-            return time( ascLong( initial.intValue() ) );
-        case LOCAL_TIME:
-            return localTime( ascLong( initial.longValue() ) );
-        case DATE:
-            return date( ascLong( initial.longValue() ) );
-        case DURATION:
-            return duration( ascLong( initial.longValue() ) );
         case BYTE_ARR:
             return byteArray( ascByte( initial.byteValue() ), DEFAULT_SIZE );
         case SHORT_ARR:
@@ -628,20 +526,6 @@ public class ValueGeneratorUtil
             return intString( stridingInt( stride, toInt( max ), toInt( offset ), sliding ), SMALL_STRING_LENGTH );
         case STR_BIG:
             return intString( stridingInt( stride, toInt( max ), toInt( offset ), sliding ), BIG_STRING_LENGTH );
-        case POINT:
-            return diagonal( stridingDouble( stride, max, offset, sliding ), new CRS.Cartesian() );
-        case DATE_TIME:
-            return dateTime( stridingLong( stride, max, offset, sliding ) );
-        case LOCAL_DATE_TIME:
-            return localDatetime( stridingLong( stride, max, offset, sliding ) );
-        case TIME:
-            return time( stridingLong( stride, max, offset, sliding ) );
-        case LOCAL_TIME:
-            return localTime( stridingLong( stride, max, offset, sliding ) );
-        case DATE:
-            return date( stridingLong( stride, max, offset, sliding ) );
-        case DURATION:
-            return duration( stridingLong( stride, max, offset, sliding ) );
         case INT_ARR:
             // Note: random rather than striding because striding creates duplicates -- investigate
             // Random should be safe, as duplicates extremely unlikely

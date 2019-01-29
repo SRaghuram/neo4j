@@ -3,8 +3,8 @@
 set -e
 set -u
 
-old_neo4j_version="34"
-new_neo4j_version="35"
+old_neo4j_version="32"
+new_neo4j_version="33"
 
 dbs=(
  "db_sf001_p006_regular_utc_${old_neo4j_version}ce;db_sf001_p006_regular_utc_${new_neo4j_version}ce;neo4j_sf001.conf"

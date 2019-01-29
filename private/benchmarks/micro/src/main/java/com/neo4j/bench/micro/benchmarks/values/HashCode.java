@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.values;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
@@ -15,7 +10,6 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -23,10 +17,10 @@ import org.openjdk.jmh.annotations.State;
 
 import java.util.function.Supplier;
 
-import org.neo4j.internal.kernel.api.IndexQuery;
-import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate;
+import org.neo4j.kernel.api.schema.IndexQuery;
+import org.neo4j.kernel.api.schema.IndexQuery.ExactPredicate;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
-import org.neo4j.values.storable.PointValue;
+import org.neo4j.unsafe.impl.internal.dragons.FeatureToggles;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
@@ -40,7 +34,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.SHORT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.SHORT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
@@ -50,10 +43,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randGeneratorFor;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-
 @BenchmarkEnabled( true )
-@OutputTimeUnit( MICROSECONDS )
 public class HashCode extends AbstractValuesBenchmark
 {
     @Override
@@ -72,9 +62,9 @@ public class HashCode extends AbstractValuesBenchmark
         return false;
     }
 
-    @ParamValues( allowed = {BYTE, SHORT, STR_SML, STR_BIG, INT, LNG, FLT, DBL, POINT, BYTE_ARR,
+    @ParamValues( allowed = {BYTE, SHORT, STR_SML, STR_BIG, INT, LNG, FLT, DBL, BYTE_ARR,
             SHORT_ARR, INT_ARR, LNG_ARR, DBL_ARR, FLT_ARR, STR_BIG_ARR, STR_SML_ARR},
-            base = {STR_SML, STR_BIG, POINT, BYTE_ARR, LNG_ARR, DBL_ARR}
+            base = {STR_SML, STR_BIG, BYTE_ARR, LNG_ARR, DBL_ARR}
     )
     @Param( {} )
     public String HashCode_type;
@@ -133,8 +123,6 @@ public class HashCode extends AbstractValuesBenchmark
                 @SuppressWarnings( "ConstantConditions" )
                 String unhashedString = (String) value;
                 return () -> Values.stringValue( new String( unhashedString ) );
-            case POINT:
-                return () -> (PointValue) value;
             case BYTE_ARR:
                 return () -> Values.byteArray( (byte[]) value );
             case SHORT_ARR:
@@ -207,4 +195,5 @@ public class HashCode extends AbstractValuesBenchmark
                         ARBITRARY_UNIMPORTANT_IMAGINARY_PROPERTY_KEY_ID,
                         threadState.nextValue.get() )} );
     }
+
 }

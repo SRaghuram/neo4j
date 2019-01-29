@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.util.BenchmarkUtil;
@@ -17,10 +12,6 @@ import java.util.Objects;
 import org.neo4j.backup.OnlineBackupSettings;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.tx_state_memory_allocation;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
@@ -91,25 +82,6 @@ public class Neo4jConfig
         HashMap<String,String> newConfig = new HashMap<>( config );
         newConfig.remove( setting.name() );
         return new Neo4jConfig( newConfig );
-    }
-
-    public Neo4jConfig setDense( boolean isDense )
-    {
-        String denseNodeThreshold = isDense
-                                    // dense node threshold set to min --> all nodes are dense
-                                    ? "1"
-                                    // dense node threshold set to max --> no nodes are dense
-                                    : Integer.toString( Integer.MAX_VALUE );
-
-        return withSetting( dense_node_threshold, denseNodeThreshold );
-    }
-
-    public Neo4jConfig setTransactionMemory( String setting )
-    {
-        String translatedValue = setting.equals( "on_heap" )
-                ? GraphDatabaseSettings.TransactionStateMemoryAllocation.ON_HEAP.name()
-                : GraphDatabaseSettings.TransactionStateMemoryAllocation.OFF_HEAP.name();
-        return withSetting( tx_state_memory_allocation, translatedValue );
     }
 
     public Neo4jConfig mergeWith( Neo4jConfig otherNeo4jConfig )

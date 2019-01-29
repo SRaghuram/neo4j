@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.bolt;
 
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
@@ -20,14 +15,12 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.bolt.runtime.BoltConnectionFatality;
-import org.neo4j.bolt.runtime.BoltStateMachine;
-import org.neo4j.bolt.runtime.BoltStateMachineFactory;
-import org.neo4j.bolt.v1.messaging.request.InitMessage;
-import org.neo4j.bolt.v1.messaging.request.PullAllMessage;
-import org.neo4j.bolt.v1.messaging.request.RunMessage;
+import org.neo4j.bolt.v1.runtime.BoltConnectionFatality;
+import org.neo4j.bolt.v1.runtime.BoltFactoryImpl;
+import org.neo4j.bolt.v1.runtime.BoltStateMachine;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -41,7 +34,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
-import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
@@ -56,9 +48,9 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
 {
     @ParamValues(
             allowed = {
-                    INT, LNG, FLT, DBL, STR_SML, STR_BIG, POINT,
+                    INT, LNG, FLT, DBL, STR_SML, STR_BIG,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR, BYTE_ARR},
-            base = {LNG, STR_SML, STR_BIG, POINT, BYTE_ARR} )
+            base = {LNG, STR_SML, STR_BIG, BYTE_ARR} )
     @Param( {} )
     public String BoltPropertySerialization_type;
 
@@ -100,7 +92,7 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
     @State( Scope.Thread )
     public static class BoltMachine
     {
-        private BoltStateMachineFactory boltFactory;
+        private BoltFactoryImpl boltFactory;
         private BoltStateMachine machine;
         private String query;
         private DummyBoltResultHandler handler = new DummyBoltResultHandler();
@@ -109,14 +101,14 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
         public void setup( BoltPropertySerialization state ) throws Throwable
         {
             query = String.format( "CYPHER runtime=%s MATCH (n) RETURN n.prop",
-                                   state.BoltPropertySerialization_runtime );
+                    state.BoltPropertySerialization_runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
-            machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );
-            InitMessage init = new InitMessage( USER_AGENT, map(
+            boltFactory.start();
+            machine = boltFactory.newMachine( BOLT_CHANNEL, Clock.systemUTC() );
+            machine.init( USER_AGENT, map(
                     "scheme", "basic",
                     "principal", "neo4j",
-                    "credentials", "neo4j" ) );
-            machine.process( init, RESPONSE_HANDLER );
+                    "credentials", "neo4j" ), RESPONSE_HANDLER );
         }
 
         @TearDown
@@ -129,6 +121,7 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
             }
             if ( boltFactory != null )
             {
+                boltFactory.stop();
                 boltFactory = null;
             }
         }
@@ -136,8 +129,8 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
         byte[] getPropertyForAllNodes() throws BoltConnectionFatality
         {
             handler.reset();
-            machine.process( new RunMessage( query, VirtualValues.EMPTY_MAP ), handler );
-            machine.process( PullAllMessage.INSTANCE, handler );
+            machine.run( query, VirtualValues.EMPTY_MAP, handler );
+            machine.pullAll( handler );
             return handler.result();
         }
     }

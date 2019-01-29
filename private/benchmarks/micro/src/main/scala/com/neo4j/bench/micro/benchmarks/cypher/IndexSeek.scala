@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
@@ -12,10 +7,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans._
+import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.v3_3.logical.plans._
+import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
+import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -24,14 +19,14 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class IndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var IndexSeek_runtime: String = _
 
   @ParamValues(
     allowed = Array("0.001", "0.01", "0.1"),
-    base = Array("0.001", "0.1"))
+    base = Array("0.001", "0.01", "0.1"))
   @Param(Array[String]())
   var IndexSeek_selectivity: Double = _
 
@@ -70,12 +65,11 @@ class IndexSeek extends AbstractCypherBenchmark {
     val indexSeek = plans.NodeIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
-      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
+      Seq(astPropertyKeyToken(KEY, planContext)),
       seekExpression,
-      Set.empty,
-      IndexOrderNone)(IdGen)
+      Set.empty)(Solved)
     val resultColumns = List(node.name)
-    val produceResults = ProduceResult(indexSeek, resultColumns)(IdGen)
+    val produceResults = ProduceResult(resultColumns, indexSeek)
 
     val table = SemanticTable().addNode(node)
 
@@ -86,7 +80,7 @@ class IndexSeek extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: IndexSeekThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
+    threadState.executionResult(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, visitor)
   }
 }
@@ -94,11 +88,11 @@ class IndexSeek extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class IndexSeekThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
 
   @Setup
   def setUp(benchmarkState: IndexSeek): Unit = {
-    executablePlan = benchmarkState.buildPlan(from(benchmarkState.IndexSeek_runtime))
+    executionResult = benchmarkState.buildPlan(from(benchmarkState.IndexSeek_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 
