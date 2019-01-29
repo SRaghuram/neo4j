@@ -1123,7 +1123,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("in with literal list not containing null") {
     val compiled = compile(in(parameter("a"),
-                              literalList(literalString("a"), literalString("b"), literalString("c"))))
+                              listOf(literalString("a"), literalString("b"), literalString("c"))))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.TRUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("b"))), cursors) should equal(Values.TRUE)
@@ -1134,7 +1134,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("in with literal list containing null") {
     val compiled = compile(in(parameter("a"),
-                              literalList(literalString("a"), nullLiteral, literalString("c"))))
+                              listOf(literalString("a"), nullLiteral, literalString("c"))))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.TRUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("c"))), cursors) should equal(Values.TRUE)
@@ -1143,7 +1143,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("in with empty literal list") {
-    val compiled = compile(in(parameter("a"), literalList()))
+    val compiled = compile(in(parameter("a"), listOf()))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.FALSE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(Values.FALSE)
