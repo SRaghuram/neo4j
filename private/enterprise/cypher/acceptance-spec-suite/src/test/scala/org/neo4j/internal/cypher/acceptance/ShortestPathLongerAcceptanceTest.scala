@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.plan_description.InternalPlanDescription
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.graphalgo.impl.path.ShortestPath
 import org.neo4j.graphalgo.impl.path.ShortestPath.DataMonitor
 import org.neo4j.graphdb.factory.GraphDatabaseSettings

@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption.SingleThreaded
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
-import org.neo4j.cypher.internal.physical_planning.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.physical_planning._
-import org.neo4j.cypher.internal.plan_description.Argument
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}

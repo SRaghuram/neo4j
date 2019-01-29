@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.values.storable.Values
 
 import scala.language.postfixOps

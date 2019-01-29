@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.physical_planning.{ast => runtimeAst}
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.{ast => runtimeAst}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands}
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}

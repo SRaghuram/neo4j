@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import java.util
 import java.util.regex
 
-import org.neo4j.cypher.internal.physical_planning.ast._
-import org.neo4j.cypher.internal.physical_planning.{LongSlot, RefSlot, Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.ast._
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{invoke, load, method, variable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression

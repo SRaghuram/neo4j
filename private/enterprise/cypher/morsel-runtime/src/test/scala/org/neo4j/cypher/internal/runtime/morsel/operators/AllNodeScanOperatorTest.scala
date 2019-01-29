@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.mockito.Mockito._
-import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.internal.kernel.api.NodeCursor

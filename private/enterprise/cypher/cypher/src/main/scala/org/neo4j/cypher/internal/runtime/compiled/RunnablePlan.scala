@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled
 
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.plan_description.Argument
+import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext}
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.values.virtual.MapValue

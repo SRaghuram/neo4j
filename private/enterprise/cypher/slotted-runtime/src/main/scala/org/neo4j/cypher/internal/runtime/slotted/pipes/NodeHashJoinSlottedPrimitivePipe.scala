@@ -10,7 +10,7 @@ import java.util
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
 import org.eclipse.collections.impl.list.mutable.FastList
-import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}

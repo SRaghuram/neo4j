@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.physical_planning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physical_planning._
-import org.neo4j.cypher.internal.physical_planning.ast.{NodeFromSlot, RelationshipFromSlot}
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.ast.{NodeFromSlot, RelationshipFromSlot}
 import org.neo4j.cypher.internal.ir.v4_0.VarPatternLength
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}

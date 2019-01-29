@@ -31,7 +31,7 @@ class EagerizationAcceptanceTest
     with CreateTempFileTestSupport {
 
   val VERBOSE = false
-  val VERBOSE_INCLUDE_PLAN_DESCRIPTION = true
+  val VERBOSE_INCLUDE_plandescription = true
 
   val EagerRegEx: Regex = "Eager(?!(Aggregation))".r
 

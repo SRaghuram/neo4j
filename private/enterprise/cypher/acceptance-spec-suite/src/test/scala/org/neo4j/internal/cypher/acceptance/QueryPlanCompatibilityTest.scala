@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.plan_description.InternalPlanDescription
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 
 class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComparisonSupport {

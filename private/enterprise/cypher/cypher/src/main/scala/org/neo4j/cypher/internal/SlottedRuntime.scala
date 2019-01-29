@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
-import org.neo4j.cypher.internal.physical_planning.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.physical_planning._
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper

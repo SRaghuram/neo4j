@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
 import org.mockito.Mockito.{RETURNS_DEEP_STUBS, when}
-import org.neo4j.cypher.internal.physical_planning.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.interpreted.ImplicitDummyPos
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexMockingHelp

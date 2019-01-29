@@ -7,8 +7,8 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.planner.v4_0.spi.GraphStatistics
-import org.neo4j.cypher.internal.plan_description.Arguments.{DbHits, Rows}
-import org.neo4j.cypher.internal.plan_description.{Argument, InternalPlanDescription}
+import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
+import org.neo4j.cypher.internal.plandescription.{Argument, InternalPlanDescription}
 import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ProfilerStatisticsNotReadyException, TxCounts}
 import org.neo4j.graphdb.QueryExecutionException

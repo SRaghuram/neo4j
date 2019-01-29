@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.physical_planning.{SlotConfiguration, SlotConfigurationUtils}
+import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlotConfigurationUtils}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty

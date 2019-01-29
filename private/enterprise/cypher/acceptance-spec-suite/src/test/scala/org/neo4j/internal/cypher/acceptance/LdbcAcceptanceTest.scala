@@ -6,8 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.plan_description.Arguments.EstimatedRows
-import org.neo4j.cypher.internal.plan_description.InternalPlanDescription
+import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 /**

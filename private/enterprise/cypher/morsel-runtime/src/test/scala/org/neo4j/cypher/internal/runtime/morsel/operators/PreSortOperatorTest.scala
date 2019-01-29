@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.physical_planning.{LongSlot, RefSlot}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.morsel.EmptyQueryState
 import org.neo4j.cypher.internal.runtime.slotted.pipes.Ascending

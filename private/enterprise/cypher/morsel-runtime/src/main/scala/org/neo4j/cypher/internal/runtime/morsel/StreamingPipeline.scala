@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.physical_planning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, Task, WorkIdentity}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
