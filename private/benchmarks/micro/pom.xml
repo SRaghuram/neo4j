@@ -22,19 +22,7 @@
         <mockito.version>1.10.19</mockito.version>
         <scala.maven.plugin.version>3.2.2</scala.maven.plugin.version>
         <jmh.generator>default</jmh.generator>
-        <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
-
-    <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
-          Copyright (c) 2002-2019 "Neo4j,"
-          Neo4j Sweden AB [http://neo4j.com]
-          This file is part of Neo4j internal tooling.
-        </comments>
-      </license>
-    </licenses>
 
     <dependencies>
         <dependency>
@@ -57,17 +45,17 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-bolt</artifactId>
-            <version>${project.version}</version>
+            <version>${neo4j.version}</version>
         </dependency>
 
         <dependency>

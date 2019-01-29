@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
@@ -147,12 +142,6 @@ public class InteractiveRunIT
             ErrorPolicy errorPolicy,
             String... methods ) throws Exception
     {
-
-        // TODO remove, this is solely for TC build debug
-        Jvm jvm = Jvm.defaultJvmOrFail();
-        System.out.println( String.format( "running interactively under VM %s in major version %s and implementor", jvm.jdkPath(),
-                jvm.version().majorVersion(), jvm.version().implementor() ) );
-
         File storesDir = temporaryFolder.newFolder();
         Path profilerRecordingDirectory = temporaryFolder.newFolder().toPath();
         boolean generateStoresInFork = true;
@@ -164,7 +153,7 @@ public class InteractiveRunIT
                 profileTo( profilerRecordingDirectory, Lists.newArrayList( ProfilerType.JFR ) ),
                 new Stores( storesDir.toPath() ),
                 errorPolicy,
-                Paths.get( jvm.launchJava() ),
+                Paths.get( Jvm.defaultJvmOrFail().launchJava() ),
                 methods );
 
         // for each variant/execution of the enabled benchmark one JFR recording file should be created

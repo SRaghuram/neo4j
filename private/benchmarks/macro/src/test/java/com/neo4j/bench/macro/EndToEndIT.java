@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2002-2019 "Neo4j,"
- * Neo4j Sweden AB [http://neo4j.com]
- * This file is part of Neo4j internal tooling.
- */
 package com.neo4j.bench.macro;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -50,7 +45,6 @@ import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
 import static org.hamcrest.io.FileMatchers.anExistingFile;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,7 +56,6 @@ import static java.util.stream.Collectors.toList;
 
 public class EndToEndIT
 {
-    private static final String RUN_REPORT_BENCHMARKS_SH = "run-report-benchmarks.sh";
     @Rule
     public Neo4jRule neo4jBootstrap =
             new EnterpriseNeo4jRule().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
@@ -73,26 +66,13 @@ public class EndToEndIT
     @Tag( "endtoend" )
     public void runReportBenchmarks() throws Exception
     {
-
-        System.out.println("Working Directory = " +
-                System.getProperty("user.dir"));
-
         // fail fast, check if we have proper artifacts in place
-        Path baseDir = Paths.get( System.getProperty( "user.dir" ) ).toAbsolutePath();
-        Path runReportScript = baseDir.resolve( RUN_REPORT_BENCHMARKS_SH );
-
-        // we can be running in forked process (if run from Maven) look for base dir
-        while ( baseDir != null && !Files.isRegularFile( runReportScript ) )
-        {
-            baseDir = baseDir.getParent();
-            runReportScript = baseDir.resolve( RUN_REPORT_BENCHMARKS_SH );
-        }
-
-        assertNotNull( format( "%s is not valid base dir", baseDir ), baseDir );
+        Path runReportScript = Paths.get( "run-report-benchmarks.sh" );
         assertTrue(format( "%s not found, your are running tests from invalid location", runReportScript.getFileName() ),
                     Files.exists( runReportScript ) );
 
-        Path macroJar = baseDir.resolve( "target/macro.jar" );
+        Path basePath = runReportScript.toAbsolutePath().getParent();
+        Path macroJar = basePath.resolve( "target/macro.jar" );
         assertTrue( "macro.jar not found, make sure you have assembly in place, by running mvn package",
                     Files.exists( macroJar ) );
 
@@ -193,7 +173,7 @@ public class EndToEndIT
                 ErrorPolicy.FAIL.name(),
                 // AWS endpoint URL
                 endpointUrl ) )
-                .directory( baseDir.toFile() )
+                .directory( basePath.toFile() )
                 .redirectOutput( Redirect.PIPE )
                 .redirectErrorStream( true );
 
