@@ -3473,66 +3473,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     }
   }
 
-    def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression
-    def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection
-   def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression
+  def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression
 
-  private def add(l: Expression, r: Expression) = expressions.Add(l, r)(pos)
+  def compileProjection(projections: Map[String, Expression],
+                        slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection
 
-  private def unaryAdd(source: Expression) = UnaryAdd(source)(pos)
-
-  private def subtract(l: Expression, r: Expression) = expressions.Subtract(l, r)(pos)
-
-  private def unarySubtract(source: Expression) = UnarySubtract(source)(pos)
-
-  private def multiply(l: Expression, r: Expression) = Multiply(l, r)(pos)
-
-  private def divide(l: Expression, r: Expression) = Divide(l, r)(pos)
-
-  private def modulo(l: Expression, r: Expression) = Modulo(l, r)(pos)
-
-  private def pow(l: Expression, r: Expression) = Pow(l, r)(pos)
-
-  private def parameter(key: String) = Parameter(key, symbols.CTAny)(pos)
-
-  private def nullLiteral = Null()(pos)
-
-  private def trueLiteral = True()(pos)
-
-  private def falseLiteral = False()(pos)
-
-  private def or(l: Expression, r: Expression) = Or(l, r)(pos)
-
-  private def xor(l: Expression, r: Expression) = Xor(l, r)(pos)
-
-  private def ors(es: Expression*) = Ors(es.toSet)(pos)
-
-  private def and(l: Expression, r: Expression) = And(l, r)(pos)
-
-  private def ands(es: Expression*) = Ands(es.toSet)(pos)
-
-  private def not(e: Expression) = expressions.Not(e)(pos)
-
-  private def equals(lhs: Expression, rhs: Expression) = Equals(lhs, rhs)(pos)
-
-  private def notEquals(lhs: Expression, rhs: Expression) = NotEquals(lhs, rhs)(pos)
-
-  private def property(map: Expression, key: String) = Property(map, PropertyKeyName(key)(pos))(pos)
-
-  private def containerIndex(container: Expression, index: Expression) = ContainerIndex(container, index)(pos)
-
-  private def literalString(s: String) = expressions.StringLiteral(s)(pos)
-
-  private def literal(a: Any) = a match {
-    case null => nullLiteral
-    case s: String => literalString(s)
-    case d: Double => literalFloat(d)
-    case d: java.lang.Float => literalFloat(d.doubleValue())
-    case i: Byte => literalInt(i)
-    case i: Short => literalInt(i)
-    case i: Int => literalInt(i)
-    case l: Long => SignedDecimalIntegerLiteral(l.toString)(pos)
-  }
+  def compileGroupingExpression(projections: Map[String, Expression],
+                                slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression
 
   private def coerce(value: AnyValue, ct: CypherType) =
     compile(coerceTo(parameter("a"), ct)).evaluate(ctx, query, map(Array("a"), Array(value)), cursors)
