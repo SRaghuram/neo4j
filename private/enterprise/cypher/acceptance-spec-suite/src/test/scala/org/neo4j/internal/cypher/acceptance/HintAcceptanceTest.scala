@@ -113,6 +113,7 @@ class HintAcceptanceTest
     val query =
       """MATCH (b:Business)<-[:REVIEWS]-(r:Review)
         |USING INDEX b:Business(location)
+        |USING JOIN ON r //to avoid flaky plans
         |WHERE distance(b.location, point({latitude: 33.3288, longitude: -111.977})) < 6500
         |AND date("2017-01-01") <= r.date <= date("2018-01-01")
         |RETURN COUNT(*)""".stripMargin

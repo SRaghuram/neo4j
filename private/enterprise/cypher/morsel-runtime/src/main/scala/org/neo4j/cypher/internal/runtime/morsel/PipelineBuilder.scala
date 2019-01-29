@@ -175,8 +175,11 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
               //we need to make room for storing aggregation value in
               //source slot
               source.slots.newReference(key, currentSlot.nullable, currentSlot.typ)
-              AggregationOffsets(source.slots.getReferenceOffsetFor(key), currentSlot.offset,
-                                 converters.toCommandExpression(id, expression).asInstanceOf[AggregationExpressionOperator])
+              val morselAggExpression = converters.toCommandExpression(id, expression) match {
+                case e:AggregationExpressionOperator => e
+                case _ => throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
+              }
+              AggregationOffsets(source.slots.getReferenceOffsetFor(key), currentSlot.offset, morselAggExpression)
           }.toArray
 
           //add mapper to source
@@ -199,8 +202,11 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
               //we need to make room for storing aggregation value in
               //source slot
               source.slots.newReference(key, currentSlot.nullable, currentSlot.typ)
-              AggregationOffsets(source.slots.getReferenceOffsetFor(key), currentSlot.offset,
-                                 converters.toCommandExpression(id, expression).asInstanceOf[AggregationExpressionOperator])
+              val morselAggExpression = converters.toCommandExpression(id, expression) match {
+                case e:AggregationExpressionOperator => e
+                case _ => throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
+              }
+              AggregationOffsets(source.slots.getReferenceOffsetFor(key), currentSlot.offset, morselAggExpression)
           }.toArray
 
           //add mapper to source

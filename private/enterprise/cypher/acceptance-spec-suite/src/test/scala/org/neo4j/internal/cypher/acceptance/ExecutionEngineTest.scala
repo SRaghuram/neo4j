@@ -298,7 +298,7 @@ return a""")
     val a = createNode("COL1" -> "A", "COL2" -> "A", "num" -> 1).getId
     val b = createNode("COL1" -> "B", "COL2" -> "B", "num" -> 2).getId
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,"""
+    val result = executeWith(Configs.InterpretedAndSlotted,"""
 match (a)
 where id(a) IN [%d, %d]
 return a.COL1, a.COL2, avg(a.num)

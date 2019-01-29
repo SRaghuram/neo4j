@@ -90,17 +90,6 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                         physicalPlan: PhysicalPlan,
                                         converters: ExpressionConverters,
                                         queryIndexes: QueryIndexes): (SlottedPipeMapper, LogicalPlan) = {
-    val slottedConverters = if (context.compileExpressions) {
-      new ExpressionConverters(
-        new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
-        SlottedExpressionConverters(physicalPlan),
-        CommunityExpressionConverter(context.tokenContext))
-    } else {
-      new ExpressionConverters(
-        SlottedExpressionConverters(physicalPlan),
-        CommunityExpressionConverter(context.tokenContext))
-    }
-
     val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
     val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
     val pipeTreeBuilder = PipeTreeBuilder(slottedPipeMapper)
