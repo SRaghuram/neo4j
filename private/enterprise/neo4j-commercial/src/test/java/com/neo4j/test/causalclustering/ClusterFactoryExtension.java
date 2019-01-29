@@ -108,7 +108,7 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         TestDirectory testDirectory = TestDirectory.testDirectory();
         try
         {
-            testDirectory.prepareDirectory( extensionContext.getRequiredTestClass(), "class" );
+            testDirectory.prepareDirectory( extensionContext.getRequiredTestClass(), extensionContext.getUniqueId() );
         }
         catch ( IOException e )
         {
