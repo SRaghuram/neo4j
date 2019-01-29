@@ -1146,7 +1146,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(in(parameter("a"), literalList()))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(Values.FALSE)
   }
 
   test("should compare values using <") {

@@ -970,10 +970,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables :+ local, Set(nullChecks))
       }
 
-    case In(lhs, ListLiteral(expressions)) if expressions.isEmpty =>
-      for (l <- internalCompileExpression(lhs, currentContext)) yield {
-        IntermediateExpression(falseValue, l.fields, l.variables, l.nullCheck)
-      }
+    case In(_, ListLiteral(expressions)) if expressions.isEmpty =>
+      Some(IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty))
 
     case In(lhs, ListLiteral(expressions)) if expressions.forall(e => e.isInstanceOf[Literal]) =>
       //we create the set at compile time here and at runtime we basically only
