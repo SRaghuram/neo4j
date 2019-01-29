@@ -30,9 +30,6 @@ class EagerizationAcceptanceTest
     with CypherComparisonSupport
     with CreateTempFileTestSupport {
 
-  val VERBOSE = false
-  val VERBOSE_INCLUDE_plandescription = true
-
   val EagerRegEx: Regex = "Eager(?!(Aggregation))".r
 
   test("should be eager between node property writes in QG head and reads in horizon") {
