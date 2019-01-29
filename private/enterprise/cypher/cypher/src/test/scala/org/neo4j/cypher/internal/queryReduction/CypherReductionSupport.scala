@@ -198,9 +198,10 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
                                     logicalPlanState.statement().returnColumns.toArray,
                                     logicalPlanState.semanticTable(),
                                     logicalPlanState.planningAttributes.cardinalities,
+                                    logicalPlanState.hasLoadCSV,
                                     logicalPlanState.maybePeriodicCommit.flatMap(_.map(x => PeriodicCommitInfo(x.batchSize))))
 
-    val executionPlan = runtime.compileToExecutable(logicalQuery, runtimeContext, logicalPlanState.hasLoadCSV)
+    val executionPlan = runtime.compileToExecutable(logicalQuery, runtimeContext)
 
     val queryContext = new TransactionBoundQueryContext(txContextWrapper)(CypherReductionSupport.searchMonitor)
 
