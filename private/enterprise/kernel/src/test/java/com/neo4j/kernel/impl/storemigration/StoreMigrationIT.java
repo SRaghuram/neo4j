@@ -87,7 +87,7 @@ public class StoreMigrationIT
             {
                 createDb( fromFormat, databaseLayout.databaseDirectory() );
                 String configuredVersion = storeVersionCheck.configuredVersion();
-                String actualStoreVersion = storeVersionCheck.storeVersion();
+                String actualStoreVersion = storeVersionCheck.storeVersion().orElseThrow( IOException::new );
                 if ( !actualStoreVersion.equals( configuredVersion ) )
                 {
                     StoreVersionCheck.Result result = storeVersionCheck.checkUpgrade( configuredVersion );
