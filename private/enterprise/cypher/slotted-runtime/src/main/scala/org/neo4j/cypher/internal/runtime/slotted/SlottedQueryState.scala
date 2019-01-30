@@ -6,10 +6,10 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.compatibility.v4_0.runtime.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.interpreted.MutableMaps
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{InCheckContainer, SingleThreadedLRUCache}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, MutableMaps, QueryContext}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
