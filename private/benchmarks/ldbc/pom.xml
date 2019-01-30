@@ -13,9 +13,28 @@
     <packaging>pom</packaging>
     <name>Neo4j implementation of LDBC Social Network benchmark</name>
 
+    <properties>
+        <neo4j.version>${project.version}</neo4j.version>
+        <junit.version>5.2.0</junit.version>
+        <junit.platform.version>1.2.0</junit.platform.version>
+        <license-text.header>../build/license-header.txt</license-text.header>
+    </properties>
+
+    <licenses>
+      <license>
+        <name>Neo4j Commercial license</name>
+        <comments>
+          Copyright (c) 2002-2018 "Neo Technology,"
+          Network Engine for Objects in Lund AB [http://neotechnology.com]
+          This file is a commercial add-on to Neo4j Enterprise Edition.
+        </comments>
+      </license>
+    </licenses>
+
     <modules>
         <module>neo4j-connectors</module>
     </modules>
+
     <build>
         <plugins>
             <plugin>
@@ -24,10 +43,6 @@
                 <configuration>
                     <skip>true</skip>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

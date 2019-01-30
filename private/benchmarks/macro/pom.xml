@@ -17,18 +17,31 @@
     <properties>
         <uberjar.name>macro</uberjar.name>
         <hamcrest.version>2.0.0.0</hamcrest.version>
+        <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
+
+    <licenses>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
+          Copyright (c) 2002-2018 "Neo Technology,"
+          Network Engine for Objects in Lund AB [http://neotechnology.com]
+          This file is a commercial add-on to Neo4j Enterprise Edition.
+        </comments>
+        </license>
+    </licenses>
+
 
     <dependencies>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
-            <version>${neo4j.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
-            <version>${neo4j.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
@@ -66,7 +79,7 @@
         <dependency>
             <groupId>org.neo4j.test</groupId>
             <artifactId>neo4j-harness-enterprise</artifactId>
-            <version>${neo4j.version}</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -79,6 +92,19 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.neo4j.build.plugins</groupId>
+                <artifactId>licensing-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-licenses</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
