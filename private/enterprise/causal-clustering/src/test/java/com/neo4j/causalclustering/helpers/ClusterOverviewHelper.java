@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 import org.neo4j.collection.RawIterator;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.Kernel;
+import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -143,8 +144,9 @@ public class ClusterOverviewHelper
         List<MemberInfo> infos = new ArrayList<>();
         try ( Transaction tx = kernel.beginTransaction( Transaction.Type.implicit, AnonymousContext.read() ) )
         {
-            RawIterator<AnyValue[],ProcedureException> itr =
-                    tx.procedures().procedureCallRead( procedureName( "dbms", "cluster", ClusterOverviewProcedure.PROCEDURE_NAME ), null );
+            Procedures procedures = tx.procedures();
+            int procedureId = procedures.procedureGet( procedureName( "dbms", "cluster", ClusterOverviewProcedure.PROCEDURE_NAME ) ).id();
+            RawIterator<AnyValue[],ProcedureException> itr = procedures.procedureCallRead( procedureId, null );
 
             while ( itr.hasNext() )
             {

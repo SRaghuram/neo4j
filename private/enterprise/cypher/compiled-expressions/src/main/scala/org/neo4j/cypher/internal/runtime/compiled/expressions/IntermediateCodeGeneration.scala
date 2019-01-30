@@ -1400,22 +1400,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val allowed = staticConstant[Array[String]](namer.nextVariableName(), signature.allowed)
         val fields = inputArgs.flatMap(_.fields) :+ allowed
         val variables = inputArgs.flatMap(_.variables) :+ local
-        val (ops, maybeField) = signature.id match {
-          case Some(token) =>
-            (oneTime(assign(variableName,
-              invoke(DB_ACCESS, method[DbAccess, AnyValue, Int, Array[AnyValue], Array[String]]("callFunction"),
-                   constant(token), arrayOf[AnyValue](inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), None)
-          case None =>
-            import scala.collection.JavaConverters._
-            val kernelName = new QualifiedName(signature.name.namespace.asJava, signature.name.name)
+        val ops = oneTime(assign(variableName, invoke(
+          DB_ACCESS,
+          method[DbAccess, AnyValue, Int, Array[AnyValue], Array[String]]("callFunction"),
+          constant(signature.id),
+          arrayOf[AnyValue](inputArgs.map(_.ir): _*),
+          getStatic[Array[String]](allowed.name))))
 
-            val name = staticConstant[QualifiedName](namer.nextVariableName(), kernelName)
-            (oneTime(assign(variableName,
-            invoke(DB_ACCESS, method[DbAccess, AnyValue, QualifiedName, Array[AnyValue], Array[String]]("callFunction"),
-                   getStatic[QualifiedName](name.name), arrayOf[AnyValue](inputArgs.map(_.ir):_*), getStatic[Array[String]](allowed.name)))), Some(name))
-        }
-
-        Some(IntermediateExpression(block(ops, load(variableName)), fields ++ maybeField, variables, Set(equal(load(variableName), noValue))))
+        Some(IntermediateExpression(block(ops, load(variableName)), fields, variables, Set(equal(load(variableName), noValue))))
       }
 
 

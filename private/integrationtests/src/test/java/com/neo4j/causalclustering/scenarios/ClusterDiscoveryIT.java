@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.internal.kernel.api.Kernel;
+import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Transaction.Type;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -120,10 +121,9 @@ public class ClusterDiscoveryIT
         try ( Transaction tx = kernel.beginTransaction( Type.implicit, AnonymousContext.read() ) )
         {
             // when
-            List<AnyValue[]> currentMembers =
-                    asList( tx.procedures()
-                            .procedureCallRead( procedureName( GET_SERVERS_V1.fullyQualifiedProcedureName() ),
-                                    new AnyValue[0] ) );
+            Procedures procedures = tx.procedures();
+            int procedureId = procedures.procedureGet( procedureName( GET_SERVERS_V1.fullyQualifiedProcedureName() ) ).id();
+            List<AnyValue[]> currentMembers = asList( procedures.procedureCallRead( procedureId, new AnyValue[0] ) );
 
             ListValue anyValues = (ListValue) currentMembers.get( 0 )[1];
             List<Map<String,Object>> toReturn = new ArrayList<>( anyValues.size() );

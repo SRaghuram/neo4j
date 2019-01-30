@@ -23,6 +23,7 @@ import java.util.StringJoiner;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.internal.kernel.api.Kernel;
+import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -105,8 +106,10 @@ public class InstalledProtocolsProcedureIT
         Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
         try ( Transaction tx = kernel.beginTransaction( Transaction.Type.implicit, AnonymousContext.read() ) )
         {
+            Procedures procedures = tx.procedures();
+            int procedureId = procedures.procedureGet( procedureName( "dbms", "cluster", InstalledProtocolsProcedure.PROCEDURE_NAME ) ).id();
             RawIterator<AnyValue[],ProcedureException> itr =
-                    tx.procedures().procedureCallRead( procedureName( "dbms", "cluster", InstalledProtocolsProcedure.PROCEDURE_NAME ), null );
+                    procedures.procedureCallRead( procedureId, null );
 
             while ( itr.hasNext() )
             {

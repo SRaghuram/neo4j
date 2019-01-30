@@ -2463,7 +2463,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("map projection node from ref slot") {
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
     val offset = 0
-    val nodeId = 11
     val node = nodeValue(propertyMap)
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTNode)), 0, 1)
@@ -2561,7 +2560,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       }
     }
     val id = getUserFunctionHandle("foo").id()
-    val udf = callByName(signature(qualifiedName("foo"), Some(id)), literalString("hello"))
+    val udf = callFunction(signature(qualifiedName("foo"), id), literalString("hello"))
 
     //then
     compile(udf).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("success"))
@@ -2576,37 +2575,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       }
     }
     val id = getUserFunctionHandle("foo").id()
-    val udf = callByName(
-      signature(qualifiedName("foo"), id = Some(id), field = fieldSignature("in", default = Some("I am default"))))
+    val udf = callFunction(
+      signature(qualifiedName("foo"), id = id, field = fieldSignature("in", default = Some("I am default"))))
 
-
-    //then
-    compile(udf).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("success"))
-  }
-
-  test("call function by name") {
-    // given
-    registerUserDefinedFunction("foo") { builder =>
-      builder.out(Neo4jTypes.NTString)
-      new BasicUserFunction(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyValue]): AnyValue = stringValue("success")
-      }
-    }
-    val udf = callByName(signature(qualifiedName("foo")), literalString("hello"))
-
-    //then
-    compile(udf).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("success"))
-  }
-
-  test("call function by name with default argument") {
-    // given
-    registerUserDefinedFunction("foo") { builder =>
-      builder.out(Neo4jTypes.NTString)
-      new BasicUserFunction(builder.build) {
-        override def apply(ctx: Context, input: Array[AnyValue]): AnyValue = stringValue("success")
-      }
-    }
-    val udf = callByName(signature(qualifiedName("foo"), field = fieldSignature("in", default = Some("I am default"))))
 
     //then
     compile(udf).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("success"))
@@ -3541,13 +3512,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   private def coerce(value: AnyValue, ct: CypherType) =
     compile(coerceTo(parameter("a"), ct)).evaluate(ctx, query, map(Array("a"), Array(value)), cursors)
 
-  private def callByName(ufs: UserFunctionSignature, args: Expression*) =
+  private def callFunction(ufs: UserFunctionSignature, args: Expression*) =
     ResolvedFunctionInvocation(ufs.name, Some(ufs), args.toIndexedSeq)(pos)
 
-  private def signature(name: KernelQualifiedName, id: Option[Int] = None, field: FieldSignature = fieldSignature("foo")) =
+  private def signature(name: KernelQualifiedName, id: Int, field: FieldSignature = fieldSignature("foo")) =
     UserFunctionSignature(QualifiedName(Seq.empty, name.name()), IndexedSeq(field), symbols.CTAny, None,
-                          Array.empty, None, isAggregate = false, id= id)
-
+                          Array.empty, None, isAggregate = false, id = id)
 
   private def fieldSignature(name: String, cypherType: CypherType = symbols.CTAny, default: Option[AnyRef] = None) =
     FieldSignature(name, cypherType, default = default.map(CypherValue(_, cypherType)))

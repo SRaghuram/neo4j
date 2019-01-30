@@ -25,6 +25,7 @@ import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
+import org.neo4j.internal.kernel.api.Procedures;
 import org.neo4j.internal.kernel.api.SchemaRead;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.Transaction;
@@ -227,7 +228,9 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     private RawIterator<AnyValue[],ProcedureException> callIndexProcedure( String pattern, String specifiedProvider )
             throws ProcedureException, TransactionFailureException
     {
-        return procsSchema().procedureCallSchema( ProcedureSignature.procedureName( "db", indexProcedureName ),
+        Procedures procedures = procsSchema();
+        int procedureId = procedures.procedureGet( ProcedureSignature.procedureName( "db", indexProcedureName ) ).id();
+        return procedures.procedureCallSchema( procedureId,
                 new AnyValue[]
                         {
                                 stringOrNoValue( pattern ), // index
