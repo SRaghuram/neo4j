@@ -34,6 +34,8 @@ import org.neo4j.values.storable.Values;
 import static com.neo4j.kernel.impl.api.integrationtest.PropertyConstraintValidationIT.NodeKeyConstraintValidationIT;
 import static com.neo4j.kernel.impl.api.integrationtest.PropertyConstraintValidationIT.NodePropertyExistenceConstraintValidationIT;
 import static com.neo4j.kernel.impl.api.integrationtest.PropertyConstraintValidationIT.RelationshipPropertyExistenceConstraintValidationIT;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -83,7 +85,8 @@ public class PropertyConstraintValidationIT
                     transaction.success();
                 }
             }, ConstraintViolationException.class,
-                    "Node(0) with label `multiNodeKeyLabel` must have the properties `property2, property3`" );
+                    anyOf( containsString( "Node(0) with label `multiNodeKeyLabel` must have the properties `property2, property3`" ),
+                            containsString( "Node(0) with label `multiNodeKeyLabel` must have the properties `property3, property4`" ) ) );
 
             assertException( () ->
             {
@@ -96,7 +99,8 @@ public class PropertyConstraintValidationIT
                     transaction.success();
                 }
             }, ConstraintViolationException.class,
-                    "Node(1) with label `multiNodeKeyLabel` must have the properties `property3, property4`" );
+                    anyOf( containsString( "Node(1) with label `multiNodeKeyLabel` must have the properties `property2, property3`" ),
+                            containsString( "Node(1) with label `multiNodeKeyLabel` must have the properties `property3, property4`" ) ) );
         }
     }
 

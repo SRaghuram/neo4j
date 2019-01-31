@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -25,7 +26,9 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.helpers.collection.Visitor;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -37,6 +40,7 @@ import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.TestLabels;
@@ -44,6 +48,7 @@ import org.neo4j.test.rule.OtherThreadRule;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
@@ -221,21 +226,11 @@ public class HalfAppliedConstraintRecoveryIT
             try
             {
                 // Create two nodes that have duplicate property values
-                String value = "v";
-                String value2 = "w";
-                try ( Transaction tx = db.beginTx() )
-                {
-                    for ( int i = 0; i < 2; i++ )
-                    {
-                        Node node = db.createNode( LABEL );
-                        node.setProperty( KEY, value );
-                        node.setProperty( KEY2, value2 );
-                    }
-                    tx.success();
-                }
+                createData( db, "v", "v" );
                 t2.execute( state ->
                 {
-                    apply( db, transactions.subList( 0, transactions.size() - 1 ) );
+                    List<TransactionRepresentation> transactionsButWithoutConstraintCreation = transactions.subList( 0, transactions.size() - 1 );
+                    apply( db, transactionsButWithoutConstraintCreation );
                     return null;
                 } );
                 barrier.await();
@@ -267,6 +262,20 @@ public class HalfAppliedConstraintRecoveryIT
             {
                 db.shutdown();
             }
+        }
+    }
+
+    private static void createData( GraphDatabaseAPI db, String... values )
+    {
+        try ( Transaction tx = db.beginTx() )
+        {
+            for ( String value : values )
+            {
+                Node node = db.createNode( LABEL );
+                node.setProperty( KEY, value );
+                node.setProperty( KEY2, value );
+            }
+            tx.success();
         }
     }
 
@@ -306,13 +315,19 @@ public class HalfAppliedConstraintRecoveryIT
         GraphDatabaseAPI db = (GraphDatabaseAPI) new TestEnterpriseGraphDatabaseFactory().newImpermanentDatabase();
         try
         {
-            createConstraint( db, uniqueConstraintCreator );
             LogicalTransactionStore txStore =
                     db.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
-            List<TransactionRepresentation> transactions = new ArrayList<>();
-            try ( TransactionCursor cursor = txStore.getTransactions( TransactionIdStore.BASE_TX_ID + 1 ) )
+            createData( db, "a", "b" );
+            List<TransactionRepresentation> initialTransactions = extractTransactions( txStore );
+            createConstraint( db, uniqueConstraintCreator );
+            List<TransactionRepresentation> transactions = extractTransactions( txStore );
+            for ( TransactionRepresentation initialTransaction : initialTransactions )
             {
-                cursor.forAll( tx -> transactions.add( tx.getTransactionRepresentation() ) );
+                // Preserve the token create transactions, but remove the node create and property set transactions.
+                if ( initialTransaction.accept( containNodeCommand() ) )
+                {
+                    assertTrue( transactions.remove( initialTransaction ) );
+                }
             }
             return transactions;
         }
@@ -322,11 +337,31 @@ public class HalfAppliedConstraintRecoveryIT
         }
     }
 
+    private static Visitor<StorageCommand,IOException> containNodeCommand()
+    {
+        return element -> element instanceof Command.NodeCommand;
+    }
+
+    private static List<TransactionRepresentation> extractTransactions( LogicalTransactionStore txStore ) throws IOException
+    {
+        List<TransactionRepresentation> transactions = new ArrayList<>();
+        try ( TransactionCursor cursor = txStore.getTransactions( TransactionIdStore.BASE_TX_ID + 1 ) )
+        {
+            cursor.forAll( tx -> transactions.add( tx.getTransactionRepresentation() ) );
+        }
+        return transactions;
+    }
+
     private static void createConstraint( GraphDatabaseAPI db, Consumer<GraphDatabaseAPI> constraintCreator )
     {
         try ( Transaction tx = db.beginTx() )
         {
             constraintCreator.accept( db );
+            tx.success();
+        }
+        try ( Transaction tx = db.beginTx() )
+        {
+            db.schema().awaitIndexesOnline( 1, TimeUnit.HOURS );
             tx.success();
         }
     }

@@ -15,6 +15,7 @@ import org.neo4j.kernel.impl.store.format.StoreVersion;
 import org.neo4j.kernel.impl.store.format.standard.LabelTokenRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.PropertyKeyTokenRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipTypeTokenRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.SchemaRecordFormat;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -23,6 +24,7 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
+import org.neo4j.kernel.impl.store.record.SchemaRecord;
 
 /**
  * Record format with very high limits, 50-bit per ID, while at the same time keeping store size small.
@@ -40,7 +42,7 @@ public class HighLimit extends BaseRecordFormats
     {
         super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_0_0.introductionVersion(), 6, Capability.DENSE_NODES,
                 Capability.RELATIONSHIP_TYPE_3BYTES, Capability.SCHEMA, LuceneCapability.LUCENE_7, Capability.POINT_PROPERTIES, Capability.TEMPORAL_PROPERTIES,
-                Capability.SECONDARY_RECORD_UNITS );
+                Capability.SECONDARY_RECORD_UNITS, Capability.FLEXIBLE_SCHEMA_STORE );
     }
 
     @Override
@@ -95,6 +97,12 @@ public class HighLimit extends BaseRecordFormats
     public FormatFamily getFormatFamily()
     {
         return HighLimitFormatFamily.INSTANCE;
+    }
+
+    @Override
+    public RecordFormat<SchemaRecord> schemaRecord()
+    {
+        return new SchemaRecordFormat();
     }
 
     @Override

@@ -15,6 +15,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.helpers.ArrayUtil;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
@@ -251,8 +252,8 @@ public class UniquenessConstraintCreationIT
 
         // then
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
-        StoreIndexDescriptor indexRule = schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
-                .uniqueForLabel( typeId, propertyKeyId ) );
+        StoreIndexDescriptor indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
+                .uniqueForLabel( typeId, propertyKeyId ) ) );
         ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(
                 ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ) );
         assertEquals( constraintRule.getId(), indexRule.owningConstraintReference() );

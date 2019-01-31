@@ -30,8 +30,8 @@ import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.TokenStore;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
-import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
+import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
 import org.neo4j.kernel.impl.util.HexPrinter;
 import org.neo4j.logging.FormattedLogProvider;
@@ -249,14 +249,12 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         {
             TokenHolders tokenHolders = RecordStorageEngineFactory.readOnlyTokenHolders( neoStores );
             final SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
-            new DumpStore<DynamicRecord,SchemaStore>( System.out )
+            new DumpStore<SchemaRecord,SchemaStore>( System.out )
             {
                 @Override
-                protected Object transform( DynamicRecord record ) throws Exception
+                protected Object transform( SchemaRecord record ) throws Exception
                 {
-                    return record.inUse() && record.isStartRecord()
-                           ? schemaRuleAccess.loadSingleSchemaRule( record.getId() )
-                           : null;
+                    return record.inUse() ? schemaRuleAccess.loadSingleSchemaRule( record.getId() ) : null;
                 }
             }.dump( store, ids );
         }

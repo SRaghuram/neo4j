@@ -14,9 +14,12 @@ import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
@@ -44,6 +47,11 @@ class RecordFormatsGenerationTest
                 HighLimitV3_4_0.RECORD_FORMATS,
                 HighLimit.RECORD_FORMATS
         );
+
+        // Verify that our list above is complete.
+        Set<RecordFormats> allActualFormats = Iterators.asSet( RecordFormatSelector.allFormats().iterator() );
+        Set<RecordFormats> allExpectedFormats = new HashSet<>( recordFormats );
+        assertEquals( allExpectedFormats, allActualFormats );
 
         Map<FormatFamily,List<Integer>> generationsForFamilies = recordFormats
                                                             .stream()

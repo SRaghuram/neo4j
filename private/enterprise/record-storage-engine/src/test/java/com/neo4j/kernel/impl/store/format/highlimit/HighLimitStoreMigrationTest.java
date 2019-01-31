@@ -20,7 +20,12 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreType;
+import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.storemigration.RecordStorageMigrator;
+import org.neo4j.kernel.impl.storemigration.legacy.SchemaStore35;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.format.CapabilityType;
@@ -67,7 +72,7 @@ class HighLimitStoreMigrationTest
             DatabaseLayout databaseLayout = testDirectory.databaseLayout();
             DatabaseLayout migrationLayout = testDirectory.databaseLayout( "migration" );
 
-            prepareNeoStoreFile( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
+            prepareStoreFiles( fileSystem, databaseLayout, HighLimitV3_0_0.STORE_VERSION, pageCache );
 
             ProgressReporter progressMonitor = mock( ProgressReporter.class );
 
@@ -79,12 +84,13 @@ class HighLimitStoreMigrationTest
         }
     }
 
-    private static void prepareNeoStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, String storeVersion, PageCache pageCache )
+    private static void prepareStoreFiles( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, String storeVersion, PageCache pageCache )
             throws IOException
     {
         File neoStoreFile = createNeoStoreFile( fileSystem, databaseLayout );
         long value = MetaDataStore.versionStringToLong( storeVersion );
         MetaDataStore.setRecord( pageCache, neoStoreFile, STORE_VERSION, value );
+        createSchemaStoreFile( fileSystem, databaseLayout, pageCache );
     }
 
     private static File createNeoStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout ) throws IOException
@@ -92,5 +98,20 @@ class HighLimitStoreMigrationTest
         File neoStoreFile = databaseLayout.metadataStore();
         fileSystem.create( neoStoreFile ).close();
         return neoStoreFile;
+    }
+
+    private static void createSchemaStoreFile( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, PageCache pageCache )
+    {
+        File store = databaseLayout.schemaStore();
+        File idFile = databaseLayout.idSchemaStore();
+        DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fileSystem );
+        NullLogProvider logProvider = NullLogProvider.getInstance();
+        RecordFormats recordFormats = HighLimitV3_0_0.RECORD_FORMATS;
+        Config config = Config.defaults();
+        IdType idType = IdType.SCHEMA;
+        try ( SchemaStore35 schemaStore35 = new SchemaStore35( store, idFile, config, idType, idGeneratorFactory, pageCache, logProvider, recordFormats ) )
+        {
+            schemaStore35.checkAndLoadStorage( true );
+        }
     }
 }
