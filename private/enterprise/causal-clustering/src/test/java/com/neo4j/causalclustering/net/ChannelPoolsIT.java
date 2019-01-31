@@ -36,9 +36,9 @@ import java.util.stream.Stream;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.ports.allocation.PortAuthority;
 import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobSchedulerAdapter;
+import org.neo4j.test.ports.PortAuthority;
+import org.neo4j.test.scheduler.JobSchedulerAdapter;
 import org.neo4j.util.concurrent.Futures;
 
 import static co.unruly.matchers.StreamMatchers.empty;
