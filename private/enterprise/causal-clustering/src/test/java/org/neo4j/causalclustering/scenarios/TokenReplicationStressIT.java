@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -27,6 +28,7 @@ import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.discovery.Cluster;
 import org.neo4j.causalclustering.discovery.CoreClusterMember;
 import org.neo4j.causalclustering.net.Server;
+import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -39,6 +41,7 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.api.TokenAccess;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
+import org.neo4j.test.assertion.Assert;
 import org.neo4j.test.causalclustering.ClusterRule;
 
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -53,7 +56,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.leader_election_timeout;
 import static org.neo4j.causalclustering.core.RaftServerModule.RAFT_SERVER_NAME;
-import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class TokenReplicationStressIT
 {
@@ -94,13 +96,39 @@ public class TokenReplicationStressIT
         stop.set( true );
         allOperations.join();
 
-        verifyTokens( cluster );
+        // we need to allow time for the tokens to replicate
+        assertEventually( () -> verifyTokens( cluster ), 15, SECONDS );
 
         // assert number of tokens on every cluster member is the same after a restart
         // restart is needed to make sure tokens are persisted and not only in token caches
         cluster.shutdown();
         cluster.start();
+
         verifyTokens( cluster );
+    }
+
+    void assertEventually( ThrowingAction<?> actual, long timeout, TimeUnit timeUnit ) throws Exception
+    {
+        long endTimeMillis = System.currentTimeMillis() + timeUnit.toMillis( timeout );
+
+        do
+        {
+            try
+            {
+                actual.apply();
+                return;
+            }
+            catch ( AssertionError e )
+            {
+                if ( System.currentTimeMillis() > endTimeMillis )
+                {
+                    throw e;
+                }
+                // swallow and try again
+            }
+
+            Thread.sleep( 10 );
+        } while ( true );
     }
 
     private static void createTokens( Cluster<?> cluster, LongSupplier tokenIdSupplier, AtomicBoolean stop )
@@ -158,7 +186,7 @@ public class TokenReplicationStressIT
 
                 // trigger an election and await until a new leader is elected
                 follower.raft().triggerElection( Clock.systemUTC() );
-                assertEventually( "Leader re-election did not happen", () -> awaitLeader( cluster ), not( equalTo( leader ) ), 1, MINUTES );
+                Assert.assertEventually( "Leader re-election did not happen", () -> awaitLeader( cluster ), not( equalTo( leader ) ), 1, MINUTES );
 
                 // make the previous leader responsive again
                 raftServer.start();
