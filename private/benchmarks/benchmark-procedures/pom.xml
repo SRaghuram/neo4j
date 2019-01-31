@@ -23,9 +23,9 @@
       <license>
         <name>Neo4j Commercial license</name>
         <comments>
-          Copyright (c) 2002-2018 "Neo Technology,"
-          Network Engine for Objects in Lund AB [http://neotechnology.com]
-          This file is a commercial add-on to Neo4j Enterprise Edition.
+          Copyright (c) 2002-2019 "Neo4j,"
+          Neo4j Sweden AB [http://neo4j.com]
+          This file is part of Neo4j internal tooling.
         </comments>
       </license>
     </licenses>
@@ -87,19 +87,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.neo4j.build.plugins</groupId>
-                <artifactId>licensing-maven-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>check-licenses</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
