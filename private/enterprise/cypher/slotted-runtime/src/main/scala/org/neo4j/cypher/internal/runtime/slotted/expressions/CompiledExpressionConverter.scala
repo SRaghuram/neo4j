@@ -34,8 +34,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
     //we don't deal with aggregations
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
 
-     // don't bother with small expressions, not worth it
-    case e if sizeOf(e) > COMPILE_LIMIT => try {
+    case e => try {
       val ir = new IntermediateCodeGeneration(physicalPlan.slotConfigurations(id)).compileExpression(e)
       if (ir.nonEmpty) {
         log.debug(s"Compiling expression: $e")
@@ -51,31 +50,24 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         else log.debug(s"Failed to compile expression: $e", t)
         None
     }
-    case _ => None
   }
 
   import org.neo4j.cypher.internal.v4_0.util.Foldable._
 
-  private def sizeOf(expression: ast.Expression)= expression.treeCount {
-    case _: ast.Expression => true
-  }
-
   override def toCommandProjection(id: Id, projections: Map[String, ast.Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
     try {
-      val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
-      if (totalSize > COMPILE_LIMIT) {
-        val slots = physicalPlan.slotConfigurations(id)
-        val compiler = new IntermediateCodeGeneration(slots)
-        val compiled = for {(k, v) <- projections
-                            c <- compiler.compileExpression(v)} yield slots.get(k).get.offset -> c
-        if (compiled.size < projections.size) None
-        else {
-          log.debug(s" Compiling projection: $projections")
-          Some(CompileWrappingProjection(CodeGeneration.compileProjection(compiler.compileProjection(compiled)),
-                                         projections.isEmpty))
-        }
-      } else None
+
+      val slots = physicalPlan.slotConfigurations(id)
+      val compiler = new IntermediateCodeGeneration(slots)
+      val compiled = for {(k, v) <- projections
+                          c <- compiler.compileExpression(v)} yield slots.get(k).get.offset -> c
+      if (compiled.size < projections.size) None
+      else {
+        log.debug(s" Compiling projection: $projections")
+        Some(CompileWrappingProjection(CodeGeneration.compileProjection(compiler.compileProjection(compiled)),
+                                       projections.isEmpty))
+      }
     }
     catch {
       case t: Throwable =>
@@ -92,19 +84,16 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
                                     projections: Map[String, ast.Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = {
     try {
-      val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
-      if (totalSize > COMPILE_LIMIT) {
-        val slots = physicalPlan.slotConfigurations(id)
-        val compiler = new IntermediateCodeGeneration(slots)
-        val compiled = for {(k, v) <- projections
-                            c <- compiler.compileExpression(v)} yield slots(k) -> c
-        if (compiled.size < projections.size) None
-        else {
-          log.debug(s" Compiling grouping expressions: $projections")
-          Some(CompileWrappingDistinctGroupingExpression(
-            compileGroupingExpression(compiler.compileGroupingExpression(compiled)), projections.isEmpty))
-        }
-      } else None
+      val slots = physicalPlan.slotConfigurations(id)
+      val compiler = new IntermediateCodeGeneration(slots)
+      val compiled = for {(k, v) <- projections
+                          c <- compiler.compileExpression(v)} yield slots(k) -> c
+      if (compiled.size < projections.size) None
+      else {
+        log.debug(s" Compiling grouping expressions: $projections")
+        Some(CompileWrappingDistinctGroupingExpression(
+          compileGroupingExpression(compiler.compileGroupingExpression(compiled)), projections.isEmpty))
+      }
     }
     catch {
       case t: Throwable =>
@@ -118,10 +107,6 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
   }
 
   private def shouldThrow = !neverFail && assertionsEnabled()
-}
-
-object CompiledExpressionConverter {
-  private val COMPILE_LIMIT = 2
 }
 
 case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
