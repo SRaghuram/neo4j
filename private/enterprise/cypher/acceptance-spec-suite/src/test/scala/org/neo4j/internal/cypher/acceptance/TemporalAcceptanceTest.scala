@@ -712,6 +712,125 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
     shouldNotTruncate(Seq("localtime"), "microsecond", Seq("date({year:1984, month: 2, day:11})"), "Cannot get the time of")
   }
 
+  /**
+    *  Truncating with default argument
+    *
+    *  These tests are relying on that the default clock is per statement and are run with
+    *  executeSingle() to safeguard against that different configurations are executed at different instances.
+    */
+
+  test("truncate to millennium without parameter should truncate to current millennium") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('millennium') AS truncated, $temporal.truncate('millennium', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to century without parameter should truncate to current century") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('century') AS truncated, $temporal.truncate('century', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to decade without parameter should truncate to current decade") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('decade') AS truncated, $temporal.truncate('decade', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to year without parameter should truncate to current year") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('year') AS truncated, $temporal.truncate('year', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to weekYear without parameter should truncate to current weekYear") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('weekYear') AS truncated, $temporal.truncate('weekYear', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to quarter without parameter should truncate to current quarter") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('quarter') AS truncated, $temporal.truncate('quarter', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to month without parameter should truncate to current month") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('month') AS truncated, $temporal.truncate('month', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to week without parameter should truncate to current week") {
+    List("datetime", "localdatetime", "date").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('week') AS truncated, $temporal.truncate('week', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to day without parameter should truncate to current day") {
+    List("datetime", "localdatetime", "date", "time", "localtime").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('day') AS truncated, $temporal.truncate('day', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to hour without parameter should truncate to current hour") {
+    List("datetime", "localdatetime", "time", "localtime").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('hour') AS truncated, $temporal.truncate('hour', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to minute without parameter should truncate to current minute") {
+    List("datetime", "localdatetime", "time", "localtime").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('minute') AS truncated, $temporal.truncate('minute', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to second without parameter should truncate to current second") {
+    List("datetime", "localdatetime", "time", "localtime").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('second') AS truncated, $temporal.truncate('second', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to millisecond without parameter should truncate to current millisecond") {
+    List("datetime", "localdatetime", "time", "localtime").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('millisecond') AS truncated, $temporal.truncate('millisecond', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
+  test("truncate to microsecond without parameter should truncate to current microsecond") {
+    List("datetime", "localdatetime", "time", "localtime").foreach { temporal =>
+      val query = s"RETURN $temporal.truncate('microsecond') AS truncated, $temporal.truncate('microsecond', $temporal()) as expected"
+      val resultMap = executeSingle(query).toList.head
+      resultMap("truncated") should equal(resultMap("expected"))
+    }
+  }
+
   // Arithmetic
 
   test("subtracting temporal instants should give meaningful error message") {
