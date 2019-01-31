@@ -15,10 +15,11 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{RelationshipValue, VirtualValues}
+import org.neo4j.values.virtual.{ListValue, RelationshipValue, VirtualValues}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.values.virtual.VirtualValues.EMPTY_LIST
 
 import scala.collection.mutable
 
@@ -54,14 +55,15 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
   // Runtime code
   //===========================================================================
 
+
   private def varLengthExpand(node: LNode,
                               state: QueryState,
-                              row: ExecutionContext): Iterator[(LNode, Seq[RelationshipValue])] = {
-    val stack = new mutable.Stack[(LNode, Seq[RelationshipValue])]
-    stack.push((node, Seq.empty))
+                              row: ExecutionContext): Iterator[(LNode, ListValue)] = {
+    val stack = new mutable.Stack[(LNode, ListValue)]
+    stack.push((node, EMPTY_LIST))
 
-    new Iterator[(LNode, Seq[RelationshipValue])] {
-      override def next(): (LNode, Seq[RelationshipValue]) = {
+    new Iterator[(LNode, ListValue)] {
+      override def next(): (LNode, ListValue) = {
         val (fromNode, rels) = stack.pop()
         if (rels.length < maxDepth.getOrElse(Int.MaxValue)) {
           val relationships: RelationshipIterator = state.query.getRelationshipsForIdsPrimitive(fromNode, dir, types.types(state.query))
@@ -86,7 +88,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
               // Before expanding, check that both the edge and node in question fulfil the predicate
               if (edgePredicate.isTrue(row, state) && nodePredicate.isTrue(row, state)) {
                 // TODO: This call creates an intermediate NodeProxy which should not be necessary
-                stack.push((relationship.otherNodeId(fromNode), rels :+ relationship))
+                stack.push((relationship.otherNodeId(fromNode), rels.append(relationship)))
               }
             }
           }
@@ -126,15 +128,15 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
           inputRow.setLongAt(tempNodeOffset, fromNode)
           if (nodePredicate.isTrue(inputRow, state)) {
 
-            val paths: Iterator[(LNode, Seq[RelationshipValue])] = varLengthExpand(fromNode, state, inputRow)
+            val paths: Iterator[(LNode, ListValue)] = varLengthExpand(fromNode, state, inputRow)
             paths collect {
-              case (toNode: LNode, rels: Seq[RelationshipValue])
+              case (toNode: LNode, rels: ListValue)
                 if rels.length >= min && isToNodeValid(inputRow, toNode) =>
                 val resultRow = SlottedExecutionContext(slots)
                 resultRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
                 if (shouldExpandAll)
                   resultRow.setLongAt(toOffset, toNode)
-                resultRow.setRefAt(relOffset, VirtualValues.list(rels.toArray: _*))
+                resultRow.setRefAt(relOffset, rels)
                 resultRow
             }
           }
@@ -143,7 +145,6 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
         }
     }
   }
-
 
   private def isToNodeValid(row: ExecutionContext, node: LNode): Boolean =
     shouldExpandAll || getToNodeFunction(row) == node
