@@ -45,7 +45,7 @@ public class ChannelPools implements Lifecycle
         this.poolHandler = channelPoolHandler;
     }
 
-    public CompletableFuture<PooledChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
+    public synchronized CompletableFuture<PooledChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
     {
         if ( !running )
         {
@@ -63,15 +63,15 @@ public class ChannelPools implements Lifecycle
     }
 
     @Override
-    public void start()
+    public synchronized void start()
     {
+        running = true;
         eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.RAFT_CLIENT ) );
         baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
-        running = true;
     }
 
     @Override
-    public void stop()
+    public synchronized void stop()
     {
         running = false;
         for ( SimpleChannelPool value : poolMap.values() )
