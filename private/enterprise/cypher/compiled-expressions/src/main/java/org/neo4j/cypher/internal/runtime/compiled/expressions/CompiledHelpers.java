@@ -15,6 +15,7 @@ import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.MapValue;
 
 import static org.neo4j.values.storable.Values.NO_VALUE;
@@ -60,6 +61,19 @@ public final class CompiledHelpers
                 }
             }
             return propertyOrNull;
+        }
+    }
+
+    public static Value cachedPropertyExists( ExecutionContext ctx, DbAccess dbAccess, int nodeOffset, int propertyKey )
+    {
+        long nodeId = ctx.getLongAt( nodeOffset );
+        if ( nodeId == StatementConstants.NO_SUCH_NODE )
+        {
+            return NO_VALUE;
+        }
+        else
+        {
+            return Values.booleanValue( dbAccess.hasTxStatePropertyForCachedNodeProperty( nodeId, propertyKey ) );
         }
     }
 

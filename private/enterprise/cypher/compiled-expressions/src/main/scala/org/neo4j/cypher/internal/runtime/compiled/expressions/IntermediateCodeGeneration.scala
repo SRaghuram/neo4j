@@ -8,16 +8,16 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import java.util
 import java.util.regex
 
+import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{invoke, load, method, variable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
-import org.neo4j.cypher.internal.v4_0.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{ASTCachedNodeProperty, CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
 import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, InternalException}
 import org.neo4j.cypher.operations._
@@ -1636,6 +1636,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                            constant(property.propertyKey.name),
                            in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR ),
             in.fields, in.variables ++ vCURSORS, in.nullCheck))
+
+        case property: ASTCachedNodeProperty => cachedNodeExists(property, currentContext)
         case _: PatternExpression => None//TODO
         case _: NestedPipeExpression => None//TODO?
         case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
@@ -2568,6 +2570,43 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     val set = new util.HashSet[AnyValue]()
     literals.foreach(l => set.add(ValueUtils.of(l.value)))
     set
+  }
+
+  private def cachedNodeExists(property: ASTCachedNodeProperty, currentContext: Option[IntermediateRepresentation]) = property match {
+    case CachedNodeProperty(offset, prop, _) =>
+
+      Some(IntermediateExpression(
+        invokeStatic(
+          method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
+          loadContext(currentContext), DB_ACCESS, constant(offset), constant(prop)), Seq.empty,
+        Seq.empty, Set.empty))
+
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName, invokeStatic(
+        method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
+        loadContext(currentContext), DB_ACCESS, constant(offset), constant(prop))))
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+      Some(IntermediateExpression(ops, Seq.empty, Seq(local), Set(nullChecks)))
+
+    case CachedNodePropertyLate(offset, prop, _) =>
+      val f = field[Int](namer.nextVariableName(), constant(-1))
+      val variableName = namer.nextVariableName()
+      val local = variable[Value](variableName, noValue)
+      val lazySet = oneTime(assign(variableName, block(
+        condition(equal(loadField(f), constant(-1)))(
+          setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(prop)))),
+        invokeStatic(
+          method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
+          loadContext(currentContext), DB_ACCESS, constant(offset), loadField(f)))))
+
+      val ops = block(lazySet, load(variableName))
+      val nullChecks = block(lazySet, equal(load(variableName), noValue))
+
+      Some(IntermediateExpression(ops, Seq(f), Seq(local), Set(nullChecks)))
+
+    case _ => None
   }
 }
 

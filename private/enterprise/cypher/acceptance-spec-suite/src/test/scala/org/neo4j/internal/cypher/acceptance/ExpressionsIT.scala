@@ -3218,8 +3218,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equal(NO_VALUE)
   }
 
-  //TODO add tests for non-late and bug with invalidated caches
-
   test("cached node property access from tx state") {
     //NOTE: we are in an open transaction so everthing we add here will populate the tx state
     val node = createNode("txStateProp" -> "hello from tx state")
@@ -3303,6 +3301,37 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression, slots)
 
     compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from cache"))
+  }
+
+  test("cached node property existence") {
+    val node = createNode("prop" -> "hello")
+
+    val property = plans.CachedNodeProperty("n", PropertyKeyName("prop")(pos))(pos)
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val cachedPropertyOffset = slots.newCachedProperty(property).getCachedNodePropertyOffsetFor(property)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, node.getId)
+    context.setCachedProperty(property, stringValue("hello from cache"))
+    val expression = function("exists", ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset))
+    val compiled = compile(expression, slots)
+
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+  }
+
+  test("late cached node property existence") {
+    val node = createNode("prop" -> "hello")
+
+    val property = plans.CachedNodeProperty("n", PropertyKeyName("prop")(pos))(pos)
+    val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
+    val cachedPropertyOffset = slots.newCachedProperty(property).getCachedNodePropertyOffsetFor(property)
+    val context = SlottedExecutionContext(slots)
+    context.setLongAt(0, node.getId)
+    context.setCachedProperty(property, stringValue("hello from cache"))
+    val expression = function("exists",
+                              CachedNodePropertyLate(0, "prop", cachedPropertyOffset))
+    val compiled = compile(expression, slots)
+
+    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
   }
 
   test("getDegree without type") {
