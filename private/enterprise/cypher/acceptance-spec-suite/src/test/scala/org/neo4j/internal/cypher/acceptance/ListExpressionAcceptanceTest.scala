@@ -386,4 +386,11 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       "oneTrueWithNull" -> null,
       "twoTrueWithNull" -> false))
   }
+
+  test("should handle nested reduce") {
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+                             query = "RETURN reduce(acc=0, s IN [reduce(acc=3, s IN [1,-1,1] | acc + s), 3] | acc + s) AS result")
+
+    result.toList should equal(List(Map("result" -> 7)))
+  }
 }
