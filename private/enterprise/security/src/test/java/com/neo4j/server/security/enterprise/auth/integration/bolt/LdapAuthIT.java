@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
+import com.neo4j.server.security.enterprise.auth.plugin.LdapGroupHasUsersAuthPlugin;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.directory.api.ldap.model.exception.LdapException;
 import org.apache.directory.api.ldap.model.exception.LdapOperationErrorException;
@@ -68,6 +69,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.helpers.collection.MapUtil.map;
 
 interface TimeoutTests
 { /* Category marker */
@@ -596,6 +598,31 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         Logger log = mock( Logger.class );
         new ConfigDiagnostics( config ).dump( log );
         verify( log, atLeastOnce() ).log( "%s=%s", "dbms.security.ldap.authorization.system_password", Secret.OBFUSCATED );
+    }
+
+    @Test
+    public void shouldBeAbleToLoginAndAuthorizeWithLdapGroupHasUsersAuthPlugin() throws Throwable
+    {
+        restartServerWithOverriddenSettings(
+                SecuritySettings.auth_provider.name(), SecuritySettings.PLUGIN_REALM_NAME_PREFIX + new LdapGroupHasUsersAuthPlugin().name()
+        );
+
+        Map<String,Object> parameters = map( "port", ldapServer.getPort() );
+
+        try ( Driver driver = connectDriverWithParameters( "neo", "abc123", parameters ) )
+        {
+            assertRoles( driver, PredefinedRoles.READER );
+        }
+
+        try ( Driver driver = connectDriverWithParameters( "tank", "abc123", parameters ) )
+        {
+            assertRoles( driver, PredefinedRoles.PUBLISHER );
+        }
+
+        try ( Driver driver = connectDriverWithParameters( "smith", "abc123", parameters ) )
+        {
+            assertRoles( driver );
+        }
     }
 
     // ===== Helpers =====
