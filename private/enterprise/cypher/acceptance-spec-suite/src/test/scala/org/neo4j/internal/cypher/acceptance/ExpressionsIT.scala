@@ -2276,6 +2276,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //Given
     val slots = SlotConfiguration(Map("count" -> RefSlot(0, nullable = true, symbols.CTAny),
                                       "bar" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
+    //Note: this is needed for interpreted
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+
     val context = SlottedExecutionContext(slots)
     val count = ReferenceFromSlot(slots("count").offset, "count")
     val bar = ReferenceFromSlot(slots("bar").offset, "bar")
@@ -3449,7 +3452,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n = createLabeledNode("L1", "L2")
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
     val context = SlottedExecutionContext(slots)
-    context.setLongAt(0, n.getId())
+    context.setLongAt(0, n.getId)
 
     compile(hasLabels(NodeFromSlot(0, "n"), "L1"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
     compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
