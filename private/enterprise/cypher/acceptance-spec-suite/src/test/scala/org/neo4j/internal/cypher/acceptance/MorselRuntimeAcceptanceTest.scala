@@ -562,8 +562,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     graph.execute(query).asScala.map(_.get("id(n)").asInstanceOf[Long]).toSet should equal(ids)
   }
 
-  // TODO: flaky test due to fallback to nested plan
-  ignore("don't stall for nested plan expressions") {
+  test("don't stall for nested plan expressions") {
     // Given
     graph.execute( """CREATE (a:A)
                      |CREATE (a)-[:T]->(:B),
