@@ -1352,7 +1352,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("handle list literals") {
-    val literal = literalList(trueLiteral, literalInt(5), nullLiteral, falseLiteral)
+    val literal = listOf(trueLiteral, literalInt(5), nullLiteral, falseLiteral)
 
     val compiled = compile(literal)
 
@@ -1369,7 +1369,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("handle map literals with null") {
-    val literal = literalMap("foo" -> literalInt(1), "bar" -> nullLiteral, "baz" -> literalString("three"))
+    val literal = mapOf("foo" -> literalInt(1), "bar" -> nullLiteral, "baz" -> literalString("three"))
 
     val compiled = compile(literal)
 
@@ -1378,7 +1378,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("handle empty map literals") {
-    val literal = literalMap()
+    val literal = mapOf()
 
     val compiled = compile(literal)
 
@@ -1695,7 +1695,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, single(bar IN [] WHERE bar = 42)
-    val compiled = compile(singleInList("bar", literalList(), equals(literalInt(42), varFor("bar"))))
+    val compiled = compile(singleInList("bar", listOf(), equals(literalInt(42), varFor("bar"))))
 
     //Then
     compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
@@ -1790,7 +1790,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, none(bar IN [] WHERE bar = 42)
-    val compiled = compile(noneInList("bar", literalList(),
+    val compiled = compile(noneInList("bar", listOf(),
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
@@ -1885,7 +1885,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, any(bar IN [] WHERE bar = 42)
-    val compiled = compile(anyInList("bar", literalList(),
+    val compiled = compile(anyInList("bar", listOf(),
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
@@ -1980,7 +1980,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, all(bar IN [] WHERE bar = 42)
-    val compiled = compile(allInList("bar", literalList(),
+    val compiled = compile(allInList("bar", listOf(),
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
@@ -2065,7 +2065,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, filter(bar IN [] WHERE bar = 42)
-    val compiled = compile(filter("bar", literalList(),
+    val compiled = compile(filter("bar", listOf(),
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
@@ -2254,7 +2254,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, extaract(bar IN [] | bar = 42)
-    val compiled = compile(extract("bar", literalList(), literalInt(42)))
+    val compiled = compile(extract("bar", listOf(), literalInt(42)))
 
     //Then
     compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(EMPTY_LIST)
@@ -2349,7 +2349,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, reduce(count = 42, bar IN [] | count + 3)
-    val compiled = compile(reduce(varFor("count"), literalInt(42), varFor("bar"), literalList(),
+    val compiled = compile(reduce(varFor("count"), literalInt(42), varFor("bar"), listOf(),
                                   add(literalInt(3), varFor("count"))))
 
     //Then
