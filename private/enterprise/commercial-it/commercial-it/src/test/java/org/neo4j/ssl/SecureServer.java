@@ -52,9 +52,7 @@ public class SecureServer
                     protected void initChannel( SocketChannel ch ) throws Exception
                     {
                         ChannelPipeline pipeline = ch.pipeline();
-
                         SSLEngine sslEngine = sslContext.newEngine( ch.alloc() );
-                        sslEngine.setNeedClientAuth( true );
                         SslHandler sslHandler = new SslHandler( sslEngine );
                         pipeline.addLast( sslHandler );
 

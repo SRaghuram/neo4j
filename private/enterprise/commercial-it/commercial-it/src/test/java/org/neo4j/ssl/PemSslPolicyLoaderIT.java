@@ -7,13 +7,11 @@ package org.neo4j.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.hamcrest.core.IsCollectionContaining;
+import org.hamcrest.Matchers;
+import org.hamcrest.core.IsIterableContaining;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -34,7 +32,7 @@ import static org.neo4j.ssl.HostnameVerificationHelper.POLICY_NAME;
 import static org.neo4j.ssl.HostnameVerificationHelper.aConfig;
 import static org.neo4j.ssl.HostnameVerificationHelper.trust;
 
-public class SslPolicyLoaderIT
+public class PemSslPolicyLoaderIT
 {
     @Rule
     public TestDirectory testDirectory = TestDirectory.testDirectory();
@@ -42,7 +40,7 @@ public class SslPolicyLoaderIT
     private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
 
     @Test
-    public void certificatesWithInvalidCommonNameAreRejected() throws GeneralSecurityException, IOException, OperatorCreationException, InterruptedException
+    public void certificatesWithInvalidCommonNameAreRejected() throws Exception
     {
         // given server has a certificate that matches an invalid hostname
         Config serverConfig = aConfig( "invalid-not-localhost", testDirectory );
@@ -58,36 +56,14 @@ public class SslPolicyLoaderIT
         SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, LOG_PROVIDER ).getPolicy( POLICY_NAME );
         SecureServer secureServer = new SecureServer( serverPolicy );
         secureServer.start();
-        int port = secureServer.port();
         SecureClient secureClient = new SecureClient( clientPolicy );
 
         // when client connects to server with a non-matching hostname
-        try
-        {
-            secureClient.connect( port );
-
-            // then handshake complete with exception describing hostname mismatch
-            secureClient.sslHandshakeFuture().get( 1, MINUTES );
-        }
-        catch ( ExecutionException e )
-        {
-            String expectedMessage = "No subject alternative DNS name matching localhost found.";
-            assertThat( causes( e ).map( Throwable::getMessage ).collect( Collectors.toList() ),
-                    IsCollectionContaining.hasItem( expectedMessage ) );
-        }
-        catch ( TimeoutException e )
-        {
-            e.printStackTrace();
-        }
-        finally
-        {
-            secureServer.stop();
-        }
+        clientCannotCommunicateWithServer( secureClient, secureServer, "No subject alternative DNS name matching localhost found." );
     }
 
     @Test
-    public void normalBehaviourIfServerCertificateMatchesClientExpectation()
-            throws GeneralSecurityException, IOException, OperatorCreationException, InterruptedException, TimeoutException, ExecutionException
+    public void normalBehaviourIfServerCertificateMatchesClientExpectation() throws Exception
     {
         // given server has valid hostname
         Config serverConfig = aConfig( "localhost", testDirectory );
@@ -110,8 +86,7 @@ public class SslPolicyLoaderIT
     }
 
     @Test
-    public void legacyPolicyDoesNotHaveHostnameVerification()
-            throws GeneralSecurityException, IOException, OperatorCreationException, InterruptedException, TimeoutException, ExecutionException
+    public void legacyPolicyDoesNotHaveHostnameVerification() throws Exception
     {
         // given server has an invalid hostname
         Config serverConfig = aConfig( "invalid-localhost", testDirectory );
@@ -133,7 +108,7 @@ public class SslPolicyLoaderIT
         clientCanCommunicateWithServer( secureClient, secureServer );
     }
 
-    private void clientCanCommunicateWithServer( SecureClient secureClient, SecureServer secureServer )
+    static void clientCanCommunicateWithServer( SecureClient secureClient, SecureServer secureServer )
             throws InterruptedException, TimeoutException, ExecutionException
     {
         int port = secureServer.port();
@@ -149,11 +124,38 @@ public class SslPolicyLoaderIT
         }
         finally
         {
+            secureClient.disconnect();
             secureServer.stop();
         }
     }
 
-    private Stream<Throwable> causes( Throwable throwable )
+    static void clientCannotCommunicateWithServer( SecureClient secureClient, SecureServer secureServer, String expectedMessage ) throws InterruptedException
+    {
+        int port = secureServer.port();
+        try
+        {
+            secureClient.connect( port );
+
+            // then handshake complete with exception describing hostname mismatch
+            secureClient.sslHandshakeFuture().get( 1, MINUTES );
+        }
+        catch ( ExecutionException e )
+        {
+            assertThat( causes( e ).map( Throwable::getMessage ).collect( Collectors.toList() ),
+                    IsIterableContaining.hasItem( Matchers.containsString( expectedMessage ) ) );
+        }
+        catch ( TimeoutException e )
+        {
+            throw new RuntimeException( e );
+        }
+        finally
+        {
+            secureClient.disconnect();
+            secureServer.stop();
+        }
+    }
+
+    private static Stream<Throwable> causes( Throwable throwable )
     {
         Stream<Throwable> thisStream = Stream.of( throwable ).filter( Objects::nonNull );
         if ( throwable != null && throwable.getCause() != null )

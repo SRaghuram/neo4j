@@ -15,13 +15,14 @@ import java.security.GeneralSecurityException;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ssl.SslPolicyConfig;
+import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
+import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.test.rule.TestDirectory;
 
 public class HostnameVerificationHelper
 {
     public static final String POLICY_NAME = "fakePolicy";
-    public static final SslPolicyConfig SSL_POLICY_CONFIG = new SslPolicyConfig( POLICY_NAME );
+    public static final PemSslPolicyConfig SSL_POLICY_CONFIG = new PemSslPolicyConfig( POLICY_NAME );
     private static final PkiUtils PKI_UTILS = new PkiUtils();
 
     public static Config aConfig( String hostname, TestDirectory testDirectory ) throws GeneralSecurityException, IOException, OperatorCreationException
@@ -36,6 +37,7 @@ public class HostnameVerificationHelper
         revoked.mkdirs();
         PKI_UTILS.createSelfSignedCertificate( validCertificatePath, validPrivateKeyPath, hostname ); // Sets Subject Alternative Name(s) to hostname
         return Config.builder()
+                .withSetting( SSL_POLICY_CONFIG.format, BaseSslPolicyConfig.Format.PEM.name() )
                 .withSetting( SSL_POLICY_CONFIG.base_directory, baseDirectory.toString() )
                 .withSetting( SSL_POLICY_CONFIG.trusted_dir, trusted.toString() )
                 .withSetting( SSL_POLICY_CONFIG.revoked_dir, revoked.toString() )
@@ -56,7 +58,7 @@ public class HostnameVerificationHelper
 
     public static void trust( Config target, Config subject ) throws IOException
     {
-        SslPolicyConfig sslPolicyConfig = new SslPolicyConfig( POLICY_NAME );
+        PemSslPolicyConfig sslPolicyConfig = new PemSslPolicyConfig( POLICY_NAME );
         File trustedDirectory = target.get( sslPolicyConfig.trusted_dir );
         File certificate = subject.get( sslPolicyConfig.public_certificate );
         Path trustedCertFilePath = trustedDirectory.toPath().resolve( certificate.getName() );

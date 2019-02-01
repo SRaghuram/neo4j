@@ -43,7 +43,9 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.function.IntSupplier;
 
-import org.neo4j.configuration.ssl.SslPolicyConfig;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
+import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -451,9 +453,10 @@ class EncryptedBackupIT
             File backupPolicyLocation = neo4J_home.toPath().resolve( "certificates" ).resolve( "backup" ).toFile();
             backupPolicyLocation.mkdirs();
             Properties properties = new Properties();
-            SslPolicyConfig backupSslConfigGroup = new SslPolicyConfig( backupPolicyName );
+            BaseSslPolicyConfig backupSslConfigGroup = new PemSslPolicyConfig( backupPolicyName );
             properties.setProperty( OnlineBackupSettings.ssl_policy.name(), backupPolicyName );
             properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
+            properties.setProperty( backupSslConfigGroup.format.name(), BaseSslPolicyConfig.Format.PEM.name() );
             config.getParentFile().mkdirs();
 
             try ( FileWriter fileWriter = new FileWriter( config ) )
@@ -508,32 +511,40 @@ class EncryptedBackupIT
             if ( encryptedTx )
             {
                 configureClusterConfigEncryptedCluster( cluster );
-                setupEntireClusterTrusted( cluster, "cluster", 0 );
+                setupEntireClusterTrusted( cluster, clusterPolicyName, 0 );
             }
             if ( encryptedBackup )
             {
                 configureClusterConfigEncryptedBackup( cluster );
-                setupEntireClusterTrusted( cluster, "backup", 6 );
+                setupEntireClusterTrusted( cluster, backupPolicyName, 6 );
             }
         }
 
         private static void configureClusterConfigEncryptedCluster( Cluster cluster )
         {
+            BaseSslPolicyConfig clusterPolicyConfig = new PemSslPolicyConfig( clusterPolicyName );
+            Config additionalConf = Config.builder()
+                    .withSetting( CausalClusteringSettings.ssl_policy, clusterPolicyName )
+                    .withSetting( clusterPolicyConfig.format, BaseSslPolicyConfig.Format.PEM.name() )
+                    .withSetting( clusterPolicyConfig.base_directory, "certificates/" + clusterPolicyName )
+                    .build();
             for ( ClusterMember clusterMember : allMembers( cluster ) )
             {
-                SslPolicyConfig clusterPolicyConfig = new SslPolicyConfig( clusterPolicyName );
-                clusterMember.config().augment( CausalClusteringSettings.ssl_policy, clusterPolicyName );
-                clusterMember.config().augment( clusterPolicyConfig.base_directory, "certificates/" + clusterPolicyName );
+                clusterMember.config().augment( additionalConf );
             }
         }
 
         private static void configureClusterConfigEncryptedBackup( Cluster cluster )
         {
+            BaseSslPolicyConfig backupPolicyConfig = new PemSslPolicyConfig( backupPolicyName );
+            Config additionalConf = Config.builder()
+                    .withSetting( OnlineBackupSettings.ssl_policy, backupPolicyName )
+                    .withSetting( backupPolicyConfig.format, BaseSslPolicyConfig.Format.PEM.name() )
+                    .withSetting( backupPolicyConfig.base_directory, "certificates/" + backupPolicyName )
+                    .build();
             for ( ClusterMember clusterMember : allMembers( cluster ) )
             {
-                SslPolicyConfig backupPolicyConfig = new SslPolicyConfig( backupPolicyName );
-                clusterMember.config().augment( OnlineBackupSettings.ssl_policy, backupPolicyName );
-                clusterMember.config().augment( backupPolicyConfig.base_directory, "certificates/" + backupPolicyName );
+                clusterMember.config().augment( additionalConf );
             }
         }
 

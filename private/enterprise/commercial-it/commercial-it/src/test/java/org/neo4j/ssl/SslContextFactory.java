@@ -12,7 +12,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ssl.SslPolicyConfig;
+import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
+import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.ssl.config.SslSystemSettings;
@@ -82,11 +83,12 @@ public class SslContextFactory
         Map<String,String> config = new HashMap<>();
         config.put( SslSystemSettings.netty_ssl_provider.name(), sslProvider.name() );
 
-        SslPolicyConfig policyConfig = new SslPolicyConfig( "default" );
+        PemSslPolicyConfig policyConfig = new PemSslPolicyConfig( "default" );
         File baseDirectory = sslResource.privateKey().getParentFile();
         new File( baseDirectory, "trusted" ).mkdirs();
         new File( baseDirectory, "revoked" ).mkdirs();
 
+        config.put( policyConfig.format.name(), BaseSslPolicyConfig.Format.PEM.name() );
         config.put( policyConfig.base_directory.name(), baseDirectory.getPath() );
         config.put( policyConfig.private_key.name(), sslResource.privateKey().getPath() );
         config.put( policyConfig.public_certificate.name(), sslResource.publicCertificate().getPath() );

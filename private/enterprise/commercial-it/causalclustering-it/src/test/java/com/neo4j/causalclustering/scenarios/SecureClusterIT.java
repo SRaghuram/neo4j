@@ -22,7 +22,8 @@ import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
-import org.neo4j.configuration.ssl.SslPolicyConfig;
+import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
+import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.graphdb.Node;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -62,7 +63,7 @@ class SecureClusterIT
     {
         // given
         String sslPolicyName = "cluster";
-        SslPolicyConfig policyConfig = new SslPolicyConfig( sslPolicyName );
+        BaseSslPolicyConfig policyConfig = new PemSslPolicyConfig( sslPolicyName );
 
         Map<String,String> coreParams = MapUtil.stringMap(
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
@@ -70,13 +71,15 @@ class SecureClusterIT
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes cores run secure communication
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
                 SecuritySettings.auth_provider.name(), SYSTEM_GRAPH_REALM_NAME,
-                policyConfig.base_directory.name(), "certificates/cluster"
+                policyConfig.base_directory.name(), "certificates/cluster",
+                policyConfig.format.name(), BaseSslPolicyConfig.Format.PEM.name()
         );
         Map<String,String> readReplicaParams = MapUtil.stringMap(
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
                 CausalClusteringSettings.middleware_logging_level.name(), "0",
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes read replicas run secure communication
-                policyConfig.base_directory.name(), "certificates/cluster"
+                policyConfig.base_directory.name(), "certificates/cluster",
+                policyConfig.format.name(), BaseSslPolicyConfig.Format.PEM.name()
         );
 
         int noOfCoreMembers = 3;

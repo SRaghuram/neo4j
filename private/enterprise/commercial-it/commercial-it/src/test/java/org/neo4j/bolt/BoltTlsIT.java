@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.ssl.SslPolicyConfig;
+import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
+import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -44,7 +45,7 @@ public class BoltTlsIT
     public final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
-    private SslPolicyConfig sslPolicy = new SslPolicyConfig( "bolt" );
+    private PemSslPolicyConfig sslPolicy = new PemSslPolicyConfig( "bolt" );
 
     private GraphDatabaseAPI db;
     private SslResource sslResource;
@@ -113,6 +114,7 @@ public class BoltTlsIT
                 .setConfig( bolt.enabled, "true" )
                 .setConfig( bolt.listen_address, "localhost:0" )
                 .setConfig( GraphDatabaseSettings.bolt_ssl_policy, "bolt" )
+                .setConfig( sslPolicy.format, BaseSslPolicyConfig.Format.PEM.name() )
                 .setConfig( sslPolicy.allow_key_generation, "true" )
                 .setConfig( sslPolicy.base_directory, "certificates" )
                 .setConfig( sslPolicy.tls_versions, setup.boltTlsVersions )
