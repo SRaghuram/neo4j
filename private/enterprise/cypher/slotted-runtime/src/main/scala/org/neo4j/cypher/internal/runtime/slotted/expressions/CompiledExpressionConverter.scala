@@ -14,7 +14,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{Community
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
-import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter.COMPILE_LIMIT
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -51,8 +50,6 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
         None
     }
   }
-
-  import org.neo4j.cypher.internal.v4_0.util.Foldable._
 
   override def toCommandProjection(id: Id, projections: Map[String, ast.Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
