@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
@@ -13,7 +14,7 @@ import java.util.Set;
 
 import org.neo4j.causalclustering.scenarios.BaseMultiClusteringIT;
 
-import static com.neo4j.causalclustering.scenarios.CommercialDiscoveryServiceType.AKKA;
+import static com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType.AKKA;
 
 public class CommercialMultiClusteringIT extends BaseMultiClusteringIT
 {

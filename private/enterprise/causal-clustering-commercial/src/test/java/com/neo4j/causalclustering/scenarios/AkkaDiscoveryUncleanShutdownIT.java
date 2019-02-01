@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType;
 import org.hamcrest.Matcher;
 import org.junit.Rule;
 import org.junit.Test;

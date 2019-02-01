@@ -17,11 +17,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
 import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.EnterpriseCluster;
+import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import org.neo4j.causalclustering.scenarios.DiscoveryServiceType;
@@ -40,22 +42,29 @@ import static org.neo4j.helpers.collection.MapUtil.stringMap;
  */
 public class ClusterRule extends ExternalResource
 {
-    private final TestDirectory testDirectory = TestDirectory.testDirectory();
-    private File clusterDirectory;
-    private Cluster<?> cluster;
+    public interface TestClusterFactory<T extends DiscoveryServiceFactory>
+    {
+        Cluster<T> create( File parentDir, int numCores, int numRRs, T discoveryServiceFactory, Map<String,String> coreParams,
+                Map<String,IntFunction<String>> instanceCoreParams, Map<String,String> rrParams, Map<String,IntFunction<String>> instanceRRParams,
+                String recordFormat, IpFamily ipFamily, boolean useWildCard, Set<String> dbNames );
+    }
 
-    private int noCoreMembers = 3;
-    private int noReadReplicas = 3;
-    private DiscoveryServiceType discoveryServiceType = EnterpriseDiscoveryServiceType.SHARED;
-    private Map<String,String> coreParams = stringMap();
-    private Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
-    private Map<String,String> readReplicaParams = stringMap();
-    private Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
-    private String recordFormat = Standard.LATEST_NAME;
-    private IpFamily ipFamily = IPV4;
-    private boolean useWildcard;
-    private VerboseTimeout.VerboseTimeoutBuilder timeoutBuilder = new VerboseTimeout.VerboseTimeoutBuilder().withTimeout( 15, TimeUnit.MINUTES );
-    private Set<String> dbNames = Collections.singleton( CausalClusteringSettings.database.getDefaultValue() );
+    protected final TestDirectory testDirectory = TestDirectory.testDirectory();
+    protected File clusterDirectory;
+    protected Cluster<?> cluster;
+
+    protected int noCoreMembers = 3;
+    protected int noReadReplicas = 3;
+    protected DiscoveryServiceType discoveryServiceType = EnterpriseDiscoveryServiceType.SHARED;
+    protected Map<String,String> coreParams = stringMap();
+    protected Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
+    protected Map<String,String> readReplicaParams = stringMap();
+    protected Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
+    protected String recordFormat = Standard.LATEST_NAME;
+    protected IpFamily ipFamily = IPV4;
+    protected boolean useWildcard;
+    protected VerboseTimeout.VerboseTimeoutBuilder timeoutBuilder = new VerboseTimeout.VerboseTimeoutBuilder().withTimeout( 15, TimeUnit.MINUTES );
+    protected Set<String> dbNames = Collections.singleton( CausalClusteringSettings.database.getDefaultValue() );
 
     public ClusterRule()
     {
@@ -108,7 +117,12 @@ public class ClusterRule extends ExternalResource
      */
     public Cluster<?> startCluster() throws Exception
     {
-        createCluster();
+        return startCluster( discoveryServiceType::createFactory, EnterpriseCluster::new );
+    }
+
+    protected <T extends DiscoveryServiceFactory> Cluster<?> startCluster( Supplier<T> discoveryServiceFactory, TestClusterFactory<T> factory ) throws Exception
+    {
+        createCluster( discoveryServiceFactory, factory );
         cluster.start();
         for ( String dbName : dbNames )
         {
@@ -117,15 +131,19 @@ public class ClusterRule extends ExternalResource
         return cluster;
     }
 
-    public Cluster<?> createCluster()
+    private  <T extends DiscoveryServiceFactory> Cluster<?> createCluster( Supplier<T> discoveryServiceFactory, TestClusterFactory<T> factory )
     {
         if ( cluster == null )
         {
-            cluster = new EnterpriseCluster( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceType.createFactory(), coreParams,
-                    instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, dbNames );
+            cluster = factory.create( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceFactory.get(), coreParams, instanceCoreParams,
+                    readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, dbNames );
         }
-
         return cluster;
+    }
+
+    public Cluster<?> createCluster()
+    {
+        return createCluster( discoveryServiceType::createFactory, EnterpriseCluster::new );
     }
 
     public TestDirectory testDirectory()

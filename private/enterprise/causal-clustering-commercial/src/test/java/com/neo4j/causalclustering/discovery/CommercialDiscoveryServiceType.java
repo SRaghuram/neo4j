@@ -3,32 +3,30 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.scenarios;
+package com.neo4j.causalclustering.discovery;
 
-import com.neo4j.causalclustering.discovery.AkkaUncleanShutdownDiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.akka.CommercialAkkaDiscoveryServiceFactory;
 
 import java.util.function.Supplier;
 
-import org.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import org.neo4j.causalclustering.scenarios.DiscoveryServiceType;
 
 public enum CommercialDiscoveryServiceType implements DiscoveryServiceType
 {
     AKKA( CommercialAkkaDiscoveryServiceFactory::new ),
     AKKA_UNCLEAN_SHUTDOWN( AkkaUncleanShutdownDiscoveryServiceFactory::new ),
-    HAZELCAST( SslHazelcastDiscoveryServiceFactory::new );
+    HAZELCAST( SslHazelcastDiscoveryServiceFactory::new ),
+    SHARED( SslSharedDiscoveryServiceFactory::new );
 
-    private final Supplier<DiscoveryServiceFactory> supplier;
+    private final Supplier<SslDiscoveryServiceFactory> supplier;
 
-    CommercialDiscoveryServiceType( Supplier<DiscoveryServiceFactory> supplier )
+    CommercialDiscoveryServiceType( Supplier<SslDiscoveryServiceFactory> supplier )
     {
         this.supplier = supplier;
     }
 
     @Override
-    public DiscoveryServiceFactory createFactory()
+    public SslDiscoveryServiceFactory createFactory()
     {
         return supplier.get();
     }

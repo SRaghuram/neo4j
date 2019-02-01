@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;

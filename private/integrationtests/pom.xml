@@ -109,6 +109,13 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-commercial</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-ha</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
@@ -277,6 +284,13 @@
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-causal-clustering-commercial</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-causal-clustering-commercial</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>

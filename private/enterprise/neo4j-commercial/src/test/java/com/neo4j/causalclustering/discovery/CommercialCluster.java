@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.IntFunction;
 
 import org.neo4j.causalclustering.common.Cluster;
@@ -28,6 +29,16 @@ public class CommercialCluster extends Cluster<SslDiscoveryServiceFactory>
     {
         super( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams,
                 readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard );
+    }
+
+    public CommercialCluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas,
+            SslDiscoveryServiceFactory discoveryServiceFactory,
+            Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams,
+            Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
+            String recordFormat, IpFamily ipFamily, boolean useWildcard, Set<String> dbNames )
+    {
+        super( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams,
+                readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, dbNames );
     }
 
     @Override

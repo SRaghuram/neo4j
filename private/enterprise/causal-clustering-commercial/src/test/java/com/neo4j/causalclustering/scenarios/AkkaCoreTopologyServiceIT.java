@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.causalclustering.discovery.CommercialDiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import org.junit.Test;
 

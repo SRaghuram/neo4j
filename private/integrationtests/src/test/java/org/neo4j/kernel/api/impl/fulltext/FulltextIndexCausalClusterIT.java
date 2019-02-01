@@ -5,11 +5,14 @@
  */
 package org.neo4j.kernel.api.impl.fulltext;
 
+import com.neo4j.test.causalclustering.CommercialClusterRule;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,6 +27,7 @@ import org.neo4j.causalclustering.common.Cluster;
 import org.neo4j.causalclustering.common.ClusterMember;
 import org.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.causalclustering.readreplica.ReadReplica;
+import org.neo4j.function.ThrowingFunction;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.Entity;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -37,7 +41,6 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.causalclustering.ClusterRule;
 
 import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
@@ -51,8 +54,18 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATION
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextProceduresTest.array;
 
+@RunWith( Parameterized.class )
 public class FulltextIndexCausalClusterIT
 {
+
+    @Parameterized.Parameters( name = "{0}" )
+    public static List<Object[]> data()
+    {
+        return Arrays.asList(
+                new Object[]{"[Enterprise CC]", Params.of( CommercialClusterRule::startEnterpriseCluster ) },
+                new Object[]{"[Commercial CC]", Params.of( CommercialClusterRule::startCommercialCluster ) } );
+    }
+
     private static final Label LABEL = Label.label( "LABEL" );
     private static final String PROP = "prop";
     private static final String PROP2 = "otherprop";
@@ -66,21 +79,27 @@ public class FulltextIndexCausalClusterIT
     private static final String EVENTUALLY_CONSISTENT_SETTING = ", {" + FulltextIndexSettings.INDEX_CONFIG_EVENTUALLY_CONSISTENT + ": 'true'}";
 
     @Rule
-    public ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 );
+    public CommercialClusterRule clusterRule = new CommercialClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 );
 
     private Cluster<?> cluster;
+    private final ThrowingFunction<CommercialClusterRule,Cluster<?>,Exception> clusterStarter;
     private long nodeId1;
     private long nodeId2;
     private long relId1;
 
+    public FulltextIndexCausalClusterIT( String ignoredName, Params params )
+    {
+        this.clusterStarter = params.clusterStarter;
+    }
+
     @Before
     public void setUp() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterStarter.apply( clusterRule );
     }
 
     @Test
-    public void fulltextIndexContentsMustBeReplicatedWhenPopulaing() throws Exception
+    public void fulltextIndexContentsMustBeReplicatedWhenPopulating() throws Exception
     {
         cluster.coreTx( ( db, tx ) ->
         {
@@ -251,4 +270,21 @@ public class FulltextIndexCausalClusterIT
     {
         return format( "Query results differ from expected, expected %s but got %s", expected, actual );
     }
+
+    //Because Java's type inference needs a lot of help
+    static class Params
+    {
+        private final ThrowingFunction<CommercialClusterRule,Cluster<?>,Exception> clusterStarter;
+
+        private Params( ThrowingFunction<CommercialClusterRule,Cluster<?>,Exception> clusterStarter )
+        {
+            this.clusterStarter = clusterStarter;
+        }
+
+        public static Params of( ThrowingFunction<CommercialClusterRule,Cluster<?>,Exception> clusterStarter )
+        {
+            return new Params( clusterStarter );
+        }
+    }
+
 }
