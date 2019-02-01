@@ -256,7 +256,7 @@ public class UniquenessConstraintCreationIT
         ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(
                 ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ) );
         assertEquals( constraintRule.getId(), indexRule.owningConstraintReference() );
-        assertEquals( indexRule.getId(), constraintRule.getOwnedIndex() );
+        assertEquals( indexRule.getId(), constraintRule.ownedIndexReference() );
     }
 
     @Test
