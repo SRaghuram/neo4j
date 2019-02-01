@@ -123,22 +123,19 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Integer> expected_core_cluster_size =
             setting( "causal_clustering.expected_core_cluster_size", INTEGER, "3" );
 
-    @Description( "Minimum number of Core machines in the cluster at formation. The expected_core_cluster size setting is used when bootstrapping the " +
-            "cluster on first formation. A cluster will not form without the configured amount of cores and this should in general be configured to the" +
-            " full and fixed amount. When using multi-clustering (configuring multiple distinct database names across core hosts), this setting is used " +
-            "to define the minimum size of *each* sub-cluster at formation." )
+    @Description( "Minimum number of Core machines initially required to form a cluster. " +
+                  "The cluster will form when at least this many Core members have discovered each other." )
     public static final Setting<Integer> minimum_core_cluster_size_at_formation =
             buildSetting( "causal_clustering.minimum_core_cluster_size_at_formation", INTEGER, expected_core_cluster_size.getDefaultValue() )
                     .constraint( min( 2 ) ).build();
 
-    @Description( "Minimum number of Core machines required to be available at runtime. The consensus group size (core machines successfully voted into the " +
-            "Raft) can shrink and grow dynamically but bounded on the lower end at this number. The intention is in almost all cases for users to leave this " +
-            "setting alone. If you have 5 machines then you can survive failures down to 3 remaining, e.g. with 2 dead members. The three remaining can " +
-            "still vote another replacement member in successfully up to a total of 6 (2 of which are still dead) and then after this, one of the " +
-            "superfluous dead members will be immediately and automatically voted out (so you are left with 5 members in the consensus group, 1 of which " +
-            "is currently dead). Operationally you can now bring the last machine up by bringing in another replacement or repairing the dead one. " +
-            "When using multi-clustering (configuring multiple distinct database names across core hosts), this setting is used to define the minimum size " +
-            "of *each* sub-cluster at runtime." )
+    @Description( "The minimum size of the dynamically adjusted voting set (which only core members may be a part of). " +
+                  "Adjustments to the voting set happen automatically as the availability of core members changes, " +
+                  "due to explicit operations such as starting or stopping a member, " +
+                  "or unintended issues such as network partitions. " +
+                  "Note that this dynamic scaling of the voting set is generally desirable as under some circumstances " +
+                  "it can increase the number of instance failures which may be tolerated. " +
+                  "A majority of the voting set must be available before voting in or out members." )
     public static final Setting<Integer> minimum_core_cluster_size_at_runtime =
             buildSetting( "causal_clustering.minimum_core_cluster_size_at_runtime", INTEGER, "3" ).constraint( min( 2 ) ).build();
 
