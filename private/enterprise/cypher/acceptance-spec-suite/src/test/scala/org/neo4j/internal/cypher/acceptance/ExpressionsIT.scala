@@ -1360,7 +1360,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("handle map literals") {
-    val literal = literalIntMap("foo" -> 1, "bar" -> 2, "baz" -> 3)
+    val literal = mapOfInt("foo" -> 1, "bar" -> 2, "baz" -> 3)
 
     val compiled = compile(literal)
 
