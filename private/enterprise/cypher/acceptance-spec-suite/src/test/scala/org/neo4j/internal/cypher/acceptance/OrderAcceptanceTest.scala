@@ -479,7 +479,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("ORDER BY previously unprojected AGGREGATING column in WITH and project and return it") {
     // sum is not supported in compiled
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       """
       MATCH (a:A)
       WITH a.name AS name, sum(a.age) AS age
@@ -508,7 +508,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("ORDER BY previously unprojected GROUPING column in WITH and project and return it") {
     // sum is not supported in compiled
-    val result = executeWith(Configs.InterpretedAndSlotted,
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       """
       MATCH (a:A)
       WITH a.name AS name, sum(a.age) AS age
@@ -537,7 +537,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("ORDER BY column that isn't referenced in WITH GROUP BY") {
     // sum is not supported in compiled
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (a:A) WITH a.name AS name, a, sum(a.age) AS age ORDER BY a.foo RETURN name, age")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:A) WITH a.name AS name, a, sum(a.age) AS age ORDER BY a.foo RETURN name, age")
 
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")

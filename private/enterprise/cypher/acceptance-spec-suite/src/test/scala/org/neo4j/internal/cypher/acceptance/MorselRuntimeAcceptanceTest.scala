@@ -14,6 +14,7 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.{Node, Result}
 import org.neo4j.internal.cypher.acceptance.MorselRuntimeAcceptanceTest.MORSEL_SIZE
+import org.scalactic.{Equality, TolerantNumerics}
 
 import scala.collection.JavaConverters._
 import scala.collection.Map
@@ -114,8 +115,7 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
   }
 
-  // TODO re-enable later
-  ignore("should support average") {
+  test("should support average") {
     //Given
     10 to 100 by 10 foreach(i => createNode("prop" -> i))
 
@@ -123,12 +123,13 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN avg(n.prop)")
 
     //Then
-    asScalaResult(result).toSet should equal(Set(Map("avg(n.prop)" -> 55.0)))
+    implicit val dblEquality: Equality[Double] = TolerantNumerics.tolerantDoubleEquality(0.0001)
+    val singleMap = asScalaResult(result).toSet.head
+    assert(singleMap("avg(n.prop)") === 55.0)
     result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
   }
 
-  // TODO re-enable later
-  ignore("should support average with grouping") {
+  test("should support average with grouping") {
     //Given
     10 to 100 by 10 foreach(i => createNode("prop" -> i, "group" -> (if (i > 50) "FOO" else "BAR")))
 
@@ -136,10 +137,17 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN n.group, avg(n.prop)")
 
     //Then
-    asScalaResult(result).toSet should equal(Set(
-      Map("n.group" -> "FOO", "avg(n.prop)" -> 80.0),
-      Map("n.group" -> "BAR", "avg(n.prop)" -> 30.0)
-    ))
+    implicit val dblEquality: Equality[Double] = TolerantNumerics.tolerantDoubleEquality(0.0001)
+    val setResult = asScalaResult(result).toSet
+    setResult.foreach { map =>
+      if (map("n.group") == "FOO") {
+        assert(map("avg(n.prop)") === 80.0)
+      } else if (map("n.group") == "BAR") {
+        assert(map("avg(n.prop)") === 30.0)
+      } else {
+        fail(s"Unexpected grouping column: ${map("n.group")}")
+      }
+    }
     result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
   }
 

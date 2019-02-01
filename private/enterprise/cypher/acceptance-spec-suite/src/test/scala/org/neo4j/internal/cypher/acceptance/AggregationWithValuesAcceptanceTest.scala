@@ -41,8 +41,8 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
          List(
            (0, "min", "n.prop3", "n.prop3", false, true, true),
            (1, "max", "n.prop3", "n.prop3", false, true, true),
-           (2, "sum", "n.prop2", "n.prop2", false, false, true),
-           (3, "avg", "n.prop2", "n.prop2", false, false, true),
+           (2, "sum", "n.prop2", "n.prop2", false, true, true),
+           (3, "avg", "n.prop2", "n.prop2", false, true, true),
            (4, "stDev", "n.prop2", "n.prop2", false, false, true),
            (5, "stDevP", "n.prop2", "n.prop2", false, false, true),
            (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, false, true),
@@ -242,7 +242,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values for multiple aggregations on same property") {
     val query = "MATCH (n: Awesome) RETURN min(n.prop1) AS min, max(n.prop1) AS max, avg(n.prop1) AS avg"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").withExactVariables("n", s"cached[n.prop1]")
@@ -379,7 +379,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count, avg(m.prop1) AS avg"
-    val result = executeWith(Configs.InterpretedAndSlotted, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")

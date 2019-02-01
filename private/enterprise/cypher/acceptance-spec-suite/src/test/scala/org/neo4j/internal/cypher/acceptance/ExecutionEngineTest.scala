@@ -298,7 +298,7 @@ return a""")
     val a = createNode("COL1" -> "A", "COL2" -> "A", "num" -> 1).getId
     val b = createNode("COL1" -> "B", "COL2" -> "B", "num" -> 2).getId
 
-    val result = executeWith(Configs.InterpretedAndSlotted,"""
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,"""
 match (a)
 where id(a) IN [%d, %d]
 return a.COL1, a.COL2, avg(a.num)
@@ -512,7 +512,7 @@ order by a.COL1""".format(a, b))
 
   test("can alias and aggregate") {
     val a = createNode()
-    val result = executeWith(Configs.InterpretedAndSlotted, "match (n) where id(n) = 0 return sum(ID(n)), n as m")
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where id(n) = 0 return sum(ID(n)), n as m")
 
     result.toList should equal(List(Map("sum(ID(n))"->0, "m"->a)))
   }
