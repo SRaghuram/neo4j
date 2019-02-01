@@ -2277,8 +2277,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val slots = SlotConfiguration(Map("count" -> RefSlot(0, nullable = true, symbols.CTAny),
                                       "bar" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
     val context = SlottedExecutionContext(slots)
-    //TODO this is needed because we still use copyWith, we should fix that
-    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
     val count = ReferenceFromSlot(slots("count").offset, "count")
     val bar = ReferenceFromSlot(slots("bar").offset, "bar")
 
