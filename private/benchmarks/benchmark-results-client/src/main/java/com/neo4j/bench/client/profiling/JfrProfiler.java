@@ -63,7 +63,9 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                 "-XX:+PreserveFramePointer",
                 "-XX:FlightRecorderOptions=stackdepth=256" );
         List<String> jvmArgs = Lists.newArrayList();
-        if ( jvmVersion.majorVersion() < 11 )
+        if ( jvmVersion.majorVersion() < 11 &&
+             /* TODO this should replaced by check of jvm.runtime.name for OpenJDK builds */
+             jvmVersion.implementor().orElse( "" ).contains( "Oracle Corporation" ) )
         {
             jvmArgs = Lists.newArrayList( "-XX:+UnlockCommercialFeatures" );
         }
