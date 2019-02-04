@@ -124,7 +124,9 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
     //Then
     implicit val dblEquality: Equality[Double] = TolerantNumerics.tolerantDoubleEquality(0.0001)
-    val singleMap = asScalaResult(result).toSet.head
+    val resultSet = asScalaResult(result).toSet
+    resultSet should have size 1
+    val singleMap = resultSet.head
     assert(singleMap("avg(n.prop)") === 55.0)
     result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
   }

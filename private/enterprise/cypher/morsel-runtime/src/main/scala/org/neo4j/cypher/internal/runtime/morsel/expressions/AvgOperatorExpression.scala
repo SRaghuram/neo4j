@@ -46,7 +46,11 @@ class AvgReducer(expression: Expression) extends AggregationFunction {
     case l: ListValue =>
       val weightOfMorsel = l.value(0).asInstanceOf[LongValue].longValue()
       val avgOfMorsel = l.value(1)
-      for (_ <- 1L to weightOfMorsel) { func.applyValueDirectly(avgOfMorsel) }
+      var i = 0L
+      while (i < weightOfMorsel) {
+        func.applyValueDirectly(avgOfMorsel)
+        i += 1
+      }
     case x =>
       throw new IllegalStateException(s"Unexpected value in avg reducer: $x")
   }
