@@ -99,6 +99,19 @@
                             </execution>
                         </executions>
                     </plugin>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>false</skipTests>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                            <configuration>
+                                <skipTests>false</skipTests>
+                                <skipITs>false</skipITs>
+                            </configuration>
+                    </plugin>
                 </plugins>
             </build>
             <id>CI</id>
@@ -119,6 +132,19 @@
                         <phase>none</phase>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <skipTests>true</skipTests>
+                        <skipITs>true</skipITs>
+                    </configuration>
             </plugin>
         </plugins>
     </build>
