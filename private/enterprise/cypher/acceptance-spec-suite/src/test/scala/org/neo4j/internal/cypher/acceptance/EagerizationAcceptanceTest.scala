@@ -14,9 +14,9 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
 import org.neo4j.internal.kernel.api.procs
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature}
+import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.proc.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.proc.Context
-import org.neo4j.kernel.api.{ResourceTracker, proc}
 import org.neo4j.procedure.Mode
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -182,7 +182,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
+          val transaction = ctx.kernelTransaction()
           val statement = transaction.acquireStatement()
           try {
             val relType = transaction.tokenWrite().relationshipTypeGetOrCreateForName("KNOWS")
@@ -224,7 +224,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
+          val transaction = ctx.kernelTransaction()
           val statement = transaction.acquireStatement()
           try {
             val relType = transaction.tokenWrite().relationshipTypeGetOrCreateForName("KNOWS")
@@ -264,7 +264,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
+          val transaction = ctx.kernelTransaction()
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor()
           var relCursor: RelationshipSelectionCursor = null
@@ -318,7 +318,7 @@ class EagerizationAcceptanceTest
       new BasicProcedure(builder.build) {
         override def apply(ctx: Context, input: Array[AnyValue],
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-          val transaction = ctx.get(proc.Context.KERNEL_TRANSACTION)
+          val transaction = ctx.kernelTransaction()
           val cursors = transaction.cursors()
           val nodeCursor = cursors.allocateNodeCursor()
           var relCursor: RelationshipSelectionCursor = null

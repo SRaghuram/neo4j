@@ -81,7 +81,6 @@ import org.neo4j.time.Clocks;
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.COMMERCIAL_SECURITY_MODULE_ID;
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.kernel.api.proc.Context.SECURITY_CONTEXT;
 
 @Service.Implementation( SecurityModule.class )
 public class CommercialSecurityModule extends SecurityModule
@@ -151,12 +150,12 @@ public class CommercialSecurityModule extends SecurityModule
         globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
         globalProcedures.registerComponent( EnterpriseAuthManager.class, ctx -> authManager, false );
         globalProcedures.registerComponent( EnterpriseSecurityContext.class,
-                ctx -> asEnterprise( ctx.get( SECURITY_CONTEXT ) ), true );
+                ctx -> asEnterprise( ctx.securityContext() ), true );
 
         if ( securityConfig.nativeAuthEnabled )
         {
             globalProcedures.registerComponent( EnterpriseUserManager.class,
-                    ctx -> authManager.getUserManager( ctx.get( SECURITY_CONTEXT ).subject(), ctx.get( SECURITY_CONTEXT ).isAdmin() ), true );
+                    ctx -> authManager.getUserManager( ctx.securityContext().subject(), ctx.securityContext().isAdmin() ), true );
             if ( config.get( SecuritySettings.auth_providers ).size() > 1 )
             {
                 globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users."  );

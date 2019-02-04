@@ -18,7 +18,6 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs.{FieldSignature, Neo4jTypes, ProcedureSignature, QualifiedName}
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.ResourceTracker
-import org.neo4j.kernel.api.proc.Context.KERNEL_TRANSACTION
 import org.neo4j.kernel.api.proc._
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.proc.GlobalProcedures
@@ -491,7 +490,7 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
     override def apply(context: Context,
                        objects: Array[AnyValue],
                        resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
-      val ktx = context.get(KERNEL_TRANSACTION)
+      val ktx = context.kernelTransaction()
       val nodeBuffer = new ArrayBuffer[Long]()
       val cursor = ktx.cursors().allocateNodeCursor()
       ktx.dataRead().allNodesScan(cursor)
