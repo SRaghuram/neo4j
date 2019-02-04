@@ -526,6 +526,12 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications shouldBe empty
   }
 
+  test("should not warn on timestamp function") {
+    val result = executeSingle("EXPLAIN WITH timestamp() as ts RETURN ts")
+
+    result.notifications shouldBe empty
+  }
+
   test("should warn about unbounded shortest path") {
     val res = executeSingle("EXPLAIN MATCH p = shortestPath((n)-[*]->(m)) RETURN m", Map.empty)
 
