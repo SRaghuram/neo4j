@@ -19,6 +19,7 @@
     <properties>
         <junit.version>5.2.0</junit.version>
         <junit.platform.version>1.2.0</junit.platform.version>
+        <neo4j-java-driver.version>1.4.4</neo4j-java-driver.version>
         <license-text.header>build/license-header.txt</license-text.header>
     </properties>
 
