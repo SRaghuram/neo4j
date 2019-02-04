@@ -172,11 +172,11 @@ public class EnterpriseBuiltInDbmsProcedures
         securityContext.assertCredentialsNotExpired();
         DependencyResolver resolver = graph.getDependencyResolver();
         QueryExecutionEngine queryExecutionEngine = resolver.resolveDependency( QueryExecutionEngine.class );
-        List<FunctionInformation> providedCypherFunctions = queryExecutionEngine.getProvidedCypherFunctions();
+        List<FunctionInformation> providedLanguageFunctions = queryExecutionEngine.getProvidedLanguageFunctions();
 
-        // gets you all functions provided by cypher
-        Stream<FunctionResult> cypherFunctions =
-                providedCypherFunctions.stream().map( FunctionResult::new );
+        // gets you all functions provided by the query language
+        Stream<FunctionResult> languageFunctions =
+                providedLanguageFunctions.stream().map( FunctionResult::new );
 
         // gets you all non-aggregating functions that are registered in the db (incl. those from libs like apoc)
         Stream<FunctionResult> loadedFunctions = resolver.resolveDependency( GlobalProcedures.class ).getAllFunctions()
@@ -186,7 +186,7 @@ public class EnterpriseBuiltInDbmsProcedures
         Stream<FunctionResult> loadedAggregationFunctions = resolver.resolveDependency( GlobalProcedures.class ).getAllAggregatingFunctions()
                 .map( f -> new FunctionResult( f, true ) );
 
-        return Stream.concat( Stream.concat( cypherFunctions, loadedFunctions ), loadedAggregationFunctions )
+        return Stream.concat( Stream.concat( languageFunctions, loadedFunctions ), loadedAggregationFunctions )
                 .sorted( Comparator.comparing( a -> a.name ) );
     }
 
@@ -195,7 +195,7 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String name;
         public final String signature;
         public final String description;
-        public final boolean isAggregationFunction;
+        public final boolean aggregating;
         public final List<String> roles;
 
         private FunctionResult( UserFunctionSignature signature, boolean isAggregation )
@@ -205,7 +205,7 @@ public class EnterpriseBuiltInDbmsProcedures
             this.description = signature.description().orElse( "" );
             roles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
             roles.addAll( Arrays.asList( signature.allowed() ) );
-            this.isAggregationFunction = isAggregation;
+            this.aggregating = isAggregation;
         }
 
         private FunctionResult( FunctionInformation info )
@@ -213,7 +213,7 @@ public class EnterpriseBuiltInDbmsProcedures
             this.name = info.getFunctionName();
             this.signature = info.getSignature();
             this.description = info.getDescription();
-            this.isAggregationFunction = info.isAggregationFunction();
+            this.aggregating = info.isAggregationFunction();
             roles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
         }
     }

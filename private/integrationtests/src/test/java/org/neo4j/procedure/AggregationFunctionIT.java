@@ -607,7 +607,7 @@ class AggregationFunctionIT
             private final List<Long> ids = new ArrayList<>();
             private final GraphDatabaseService gds;
 
-            public NodeFromIdAggregator( GraphDatabaseService gds )
+            NodeFromIdAggregator( GraphDatabaseService gds )
             {
                 this.gds = gds;
             }
