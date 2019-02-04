@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.compiled_runtime.v3_5.codegen.expressions
+package org.neo4j.cypher.internal.spi.codegen.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
@@ -14,6 +14,7 @@ class CodeGenExpressionTypesTest extends CypherFunSuite {
 
   val int = Literal(1: java.lang.Integer)
   val double = Literal(1.1: java.lang.Double)
+  val long = Literal(1234567890L: java.lang.Long)
   val string = Literal("apa")
   val node = NodeProjection(Variable("a", CypherCodeGenType(CTNode, ReferenceType)))
   val rel = RelationshipProjection(Variable("a", CypherCodeGenType(CTRelationship, ReferenceType)))
@@ -45,5 +46,33 @@ class CodeGenExpressionTypesTest extends CypherFunSuite {
     Addition(doubleCollection, intCollection).codeGenType should equal(CypherCodeGenType(CTList(CTNumber), ReferenceType))
     Addition(stringCollection, string).codeGenType should equal(CypherCodeGenType(CTList(CTString), ReferenceType))
     Addition(string, stringCollection).codeGenType should equal(CypherCodeGenType(CTList(CTString), ReferenceType))
+  }
+
+  test("division") {
+    implicit val context: CodeGenContext = null
+    Division(int, int).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+    Division(int, long).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+    Division(long, int).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+    Division(long, long).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+
+    Division(double, double).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Division(int, double).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Division(double, int).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Division(double, long).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Division(long, double).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+  }
+
+  test("modulo") {
+    implicit val context: CodeGenContext = null
+    Modulo(int, int).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+    Modulo(int, long).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+    Modulo(long, int).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+    Modulo(long, long).codeGenType should equal(CypherCodeGenType(CTInteger, ReferenceType))
+
+    Modulo(double, double).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Modulo(int, double).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Modulo(double, int).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Modulo(double, long).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
+    Modulo(long, double).codeGenType should equal(CypherCodeGenType(CTFloat, ReferenceType))
   }
 }
