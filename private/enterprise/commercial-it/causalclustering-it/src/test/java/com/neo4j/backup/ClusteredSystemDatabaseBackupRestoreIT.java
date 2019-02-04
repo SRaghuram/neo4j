@@ -7,6 +7,7 @@ package com.neo4j.backup;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -188,12 +189,13 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private static GraphDatabaseService getSystemDatabase( Cluster cluster ) throws Exception
     {
-        DatabaseManager databaseManager = cluster.awaitLeader().database()
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<CoreDatabaseContext> databaseManager = cluster.awaitLeader().database()
                 .getDependencyResolver()
                 .resolveDependency( DatabaseManager.class, DependencyResolver.SelectionStrategy.FIRST );
 
         return databaseManager.getDatabaseContext( GraphDatabaseSettings.SYSTEM_DATABASE_NAME )
-                .map( DatabaseContext::getDatabaseFacade ).orElseThrow( IllegalStateException::new );
+                .map( DatabaseContext::databaseFacade ).orElseThrow( IllegalStateException::new );
     }
 
     private static Map<String,String> getConfigMap()

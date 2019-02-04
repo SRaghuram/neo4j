@@ -5,12 +5,13 @@
  */
 package com.neo4j.causalclustering.core.server;
 
-import com.neo4j.causalclustering.ReplicationModule;
+import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServersModule;
-import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.IdentityModule;
 import com.neo4j.causalclustering.core.consensus.ConsensusModule;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -35,7 +36,6 @@ import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -53,7 +53,8 @@ public class CoreServerModule extends CatchupServersModule
     private final IdentityModule identityModule;
     private final ConsensusModule consensusModule;
     private final ClusteringModule clusteringModule;
-    private final Supplier<DatabaseHealth> dbHealthSupplier;
+    private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
+    private final DatabaseHealth kernelDatabaseHealth;
     private final CommandApplicationProcess commandApplicationProcess;
     private final CoreSnapshotService snapshotService;
     private final CoreDownloaderService downloadService;
@@ -61,15 +62,16 @@ public class CoreServerModule extends CatchupServersModule
     private final GlobalModule globalModule;
 
     public CoreServerModule( IdentityModule identityModule, final GlobalModule globalModule, ConsensusModule consensusModule,
-            CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule, DatabaseService databaseService,
-            Supplier<DatabaseHealth> dbHealthSupplier, PipelineBuilders pipelineBuilders, InstalledProtocolHandler installedProtocolsHandler,
-            CatchupHandlerFactory handlerFactory, String databaseName, Panicker panicker )
+            CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule,
+            ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, DatabaseHealth kernelDatabaseHealth, PipelineBuilders pipelineBuilders,
+            InstalledProtocolHandler installedProtocolsHandler, CatchupHandlerFactory handlerFactory, String databaseName, Panicker panicker )
     {
-        super( databaseService, pipelineBuilders, globalModule, databaseName );
+        super( databaseManager, pipelineBuilders, globalModule, databaseName );
+        this.databaseManager = databaseManager;
         this.identityModule = identityModule;
         this.consensusModule = consensusModule;
         this.clusteringModule = clusteringModule;
-        this.dbHealthSupplier = dbHealthSupplier;
+        this.kernelDatabaseHealth = kernelDatabaseHealth;
         this.globalModule = globalModule;
 
         this.jobScheduler = globalModule.getJobScheduler();
@@ -98,7 +100,7 @@ public class CoreServerModule extends CatchupServersModule
         CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader, logProvider );
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
-        this.downloadService = new CoreDownloaderService( jobScheduler, downloader, snapshotService, suspendOnStoreCopy, databaseService,
+        this.downloadService = new CoreDownloaderService( jobScheduler, downloader, snapshotService, suspendOnStoreCopy, databaseManager,
                 commandApplicationProcess, logProvider, backoffStrategy, panicker, globalMonitors );
 
         this.membershipWaiterLifecycle = createMembershipWaiterLifecycle();
@@ -120,8 +122,8 @@ public class CoreServerModule extends CatchupServersModule
     private MembershipWaiterLifecycle createMembershipWaiterLifecycle()
     {
         long electionTimeout = globalConfig.get( CausalClusteringSettings.leader_election_timeout ).toMillis();
-        MembershipWaiter membershipWaiter = new MembershipWaiter( identityModule.myself(), jobScheduler,
-                dbHealthSupplier, electionTimeout * 4, logProvider, globalModule.getGlobalMonitors() );
+        MembershipWaiter membershipWaiter = new MembershipWaiter( identityModule.myself(), jobScheduler, kernelDatabaseHealth,
+                electionTimeout * 4, logProvider, globalModule.getGlobalMonitors() );
         long joinCatchupTimeout = globalConfig.get( CausalClusteringSettings.join_catch_up_timeout ).toMillis();
         return new MembershipWaiterLifecycle( membershipWaiter, joinCatchupTimeout, consensusModule.raftMachine(), logProvider );
     }
@@ -139,7 +141,7 @@ public class CoreServerModule extends CatchupServersModule
     public CoreLife createCoreLife( LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler, LogProvider logProvider,
             RecoveryFacade recoveryFacade )
     {
-        return new CoreLife( consensusModule.raftMachine(), databaseService, clusteringModule.clusterBinder(),
+        return new CoreLife( consensusModule.raftMachine(), databaseManager, clusteringModule.clusterBinder(),
                 commandApplicationProcess, handler, snapshotService, downloadService, logProvider, recoveryFacade );
     }
 

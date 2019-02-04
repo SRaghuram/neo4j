@@ -13,7 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -54,13 +56,14 @@ class MultiDatabaseDiagnosticsLoggingIT
     }
 
     @Test
-    void dumpDbInformationOnCreation()
+    void dumpDbInformationOnCreation() throws DatabaseExistsException
     {
         DependencyResolver resolver = ((GraphDatabaseAPI) database).getDependencyResolver();
         provider.clear();
         provider.assertNoLoggingOccurred();
 
-        DatabaseManager databaseManager = resolver.resolveDependency( DatabaseManager.class );
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = resolver.resolveDependency( DatabaseManager.class );
         DatabaseContext databaseContext = databaseManager.createDatabase( "NewDatabase" );
         provider.assertContainsMessageContaining( "Database: NewDatabase" );
         provider.assertContainsMessageContaining( "Version" );

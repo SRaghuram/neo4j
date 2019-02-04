@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +37,7 @@ class CoreDownloaderTest
     private final StoreDownloader storeDownloader = mock( StoreDownloader.class );
 
     private final CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader, logProvider );
-    private final LocalDatabase database = mock( LocalDatabase.class );
+    private ClusteredDatabaseContext database = mock( ClusteredDatabaseContext.class );
 
     @BeforeEach
     void setUp()

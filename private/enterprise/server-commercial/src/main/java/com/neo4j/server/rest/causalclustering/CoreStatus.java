@@ -24,6 +24,7 @@ import java.util.Objects;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -51,7 +52,7 @@ class CoreStatus extends BaseStatus
 
         DependencyResolver dependencyResolver = db.getDependencyResolver();
         this.raftMembershipManager = dependencyResolver.resolveDependency( RaftMembershipManager.class );
-        this.databaseHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
+        this.databaseHealth = dependencyResolver.resolveDependency( SingleDatabaseHealth.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.raftMachine = dependencyResolver.resolveDependency( RaftMachine.class );
         this.raftMessageTimerResetMonitor = dependencyResolver.resolveDependency( DurationSinceLastMessageMonitor.class );

@@ -5,12 +5,14 @@
  */
 package org.neo4j.multidatabase.stresstest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
@@ -29,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class CommandExecutor implements Runnable
 {
     private static final AtomicInteger dbCounter = new AtomicInteger();
-    private final DatabaseManager databaseManager;
+    private final DatabaseManager<StandaloneDatabaseContext> databaseManager;
     private final CountDownLatch executionLatch;
     private final long finishTimeMillis;
     private final ThreadLocalRandom random;
@@ -40,7 +42,7 @@ class CommandExecutor implements Runnable
     private int stopStartCommands;
     private int dropCommands;
 
-    CommandExecutor( DatabaseManager databaseManager, CountDownLatch executionLatch, long finishTimeMillis )
+    CommandExecutor( DatabaseManager<StandaloneDatabaseContext> databaseManager, CountDownLatch executionLatch, long finishTimeMillis )
     {
         this.databaseManager = databaseManager;
         this.executionLatch = executionLatch;
@@ -55,7 +57,7 @@ class CommandExecutor implements Runnable
         {
             try
             {
-                List<String> databases = databaseManager.listDatabases();
+                List<String> databases = new ArrayList<>( databaseManager.registeredDatabases().keySet() );
                 DatabaseManagerCommand command;
 
                 if ( databases.isEmpty() )
@@ -91,7 +93,9 @@ class CommandExecutor implements Runnable
                 command.execute();
                 commandCounter.incrementAndGet();
             }
-            catch ( TransientTransactionFailureException | TransactionFailureException | IllegalStateException | DatabaseShutdownException e )
+            catch ( TransientTransactionFailureException |
+                    TransactionFailureException |
+                    IllegalStateException e )
             {
                 // ignore
             }

@@ -16,8 +16,9 @@ import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV3;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.common.LocalDatabase;
-import com.neo4j.causalclustering.common.StubLocalDatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
+import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
@@ -62,10 +63,11 @@ public class CatchupPollingProcessTest
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
     private final Executor executor = new FakeExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
-    private final LocalDatabase localDatabase = mock( LocalDatabase.class );
+    private final ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
+    private final TopologyService topologyService = mock( TopologyService.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
     private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
-    private final StubLocalDatabaseService databaseService = spy( new StubLocalDatabaseService() );
+    private final StubClusteredDatabaseManager databaseService = spy( new StubClusteredDatabaseManager() );
     private final String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
     private final StoreId storeId = new StoreId( 1, 2, 3, 4 );
     private final AdvertisedSocketAddress coreMemberAddress = new AdvertisedSocketAddress( "hostname", 1234 );
@@ -83,9 +85,9 @@ public class CatchupPollingProcessTest
     @Before
     public void before() throws Throwable
     {
-        databaseService.registerDatabase( databaseName, localDatabase );
+        databaseService.registerDatabase( databaseName, clusteredDatabaseContext );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
-        when( localDatabase.storeId() ).thenReturn( storeId );
+        when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
         when( catchupAddressProvider.primary() ).thenReturn( coreMemberAddress );
         when( catchupAddressProvider.secondary() ).thenReturn( coreMemberAddress );
 

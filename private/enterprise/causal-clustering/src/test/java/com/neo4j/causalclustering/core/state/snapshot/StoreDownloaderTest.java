@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,13 +47,13 @@ public class StoreDownloaderTest
     private final StubCatchupComponentsRepository components = new StubCatchupComponentsRepository();
     private final StoreDownloader downloader = new StoreDownloader( components, NullLogProvider.getInstance() );
 
-    private LocalDatabase mockLocalDatabase( String databaseName, boolean isEmpty, StoreId storeId ) throws IOException
+    private ClusteredDatabaseContext mockLocalDatabase( String databaseName, boolean isEmpty, StoreId storeId ) throws IOException
     {
-        LocalDatabase localDatabase = mock( LocalDatabase.class );
-        when( localDatabase.isEmpty() ).thenReturn( isEmpty );
-        when( localDatabase.storeId() ).thenReturn( storeId );
-        when( localDatabase.databaseName() ).thenReturn( databaseName );
-        return localDatabase;
+        ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
+        when( clusteredDatabaseContext.isEmpty() ).thenReturn( isEmpty );
+        when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
+        when( clusteredDatabaseContext.databaseName() ).thenReturn( databaseName );
+        return clusteredDatabaseContext;
     }
 
     @Before
@@ -76,7 +76,7 @@ public class StoreDownloaderTest
     public void shouldReplaceMismatchedStoreIfEmpty() throws Exception
     {
         // given
-        LocalDatabase database = mockLocalDatabase( databaseName, true, storeId );
+        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, true, storeId );
 
         RemoteStore remoteStore = components.getOrCreate( "target" ).remoteStore();
         StoreId mismatchedStoreId = randomStoreId();
@@ -96,7 +96,7 @@ public class StoreDownloaderTest
     public void shouldNotReplaceMismatchedNonEmptyStore() throws Exception
     {
         // given
-        LocalDatabase database = mockLocalDatabase( databaseName, false, storeId );
+        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, false, storeId );
 
         RemoteStore remoteStore = components.getOrCreate( databaseName ).remoteStore();
         StoreId mismatchedStoreId = randomStoreId();
@@ -116,7 +116,7 @@ public class StoreDownloaderTest
     public void shouldOnlyCatchupIfPossible() throws Exception
     {
         // given
-        LocalDatabase database = mockLocalDatabase( databaseName, false, storeId );
+        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, false, storeId );
         RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseName, storeId );
 
         // when
@@ -133,7 +133,7 @@ public class StoreDownloaderTest
     public void shouldDownloadWholeStoreIfCannotCatchup() throws Exception
     {
         // given
-        LocalDatabase database = mockLocalDatabase( databaseName, false, storeId );
+        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, false, storeId );
         RemoteStore remoteStore = mockRemoteUnsuccessfulStore( databaseName, storeId );
         StoreCopyProcess storeCopyProcess = components.getOrCreate( databaseName ).storeCopyProcess();
 
@@ -151,7 +151,7 @@ public class StoreDownloaderTest
     public void shouldThrowIfComponentsDoNotExist() throws Exception
     {
         // given
-        LocalDatabase database = mockLocalDatabase( "wrong", true, storeId );
+        ClusteredDatabaseContext database = mockLocalDatabase( "wrong", true, storeId );
 
         // when
         try
@@ -184,16 +184,16 @@ public class StoreDownloaderTest
 
     private static class StubCatchupComponentsRepository implements CatchupComponentsRepository
     {
-        private final Map<String,PerDatabaseCatchupComponents> componentsMap = new HashMap<>();
+        private final Map<String,DatabaseCatchupComponents> componentsMap = new HashMap<>();
 
-        private PerDatabaseCatchupComponents getOrCreate( String databaseName )
+        private DatabaseCatchupComponents getOrCreate( String databaseName )
         {
             return componentsMap.computeIfAbsent( databaseName,
-                    ignored -> new PerDatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) );
+                    ignored -> new DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) );
         }
 
         @Override
-        public Optional<PerDatabaseCatchupComponents> componentsFor( String databaseName )
+        public Optional<DatabaseCatchupComponents> componentsFor( String databaseName )
         {
             return Optional.ofNullable( componentsMap.get( databaseName ) );
         }

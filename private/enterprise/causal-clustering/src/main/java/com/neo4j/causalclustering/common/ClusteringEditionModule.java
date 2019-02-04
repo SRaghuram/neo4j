@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.core.state.CoreLife;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
+import com.neo4j.kernel.internal.CompositeDatabaseHealth;
 
 import java.io.File;
 import java.util.function.Predicate;
@@ -17,7 +17,6 @@ import java.util.function.Predicate;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -26,12 +25,16 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.Log;
+import org.neo4j.monitoring.DatabasePanicEventGenerator;
 
 public abstract class ClusteringEditionModule extends AbstractEditionModule
 {
+    private final CompositeDatabaseHealth globalDatabaseHealth = new CompositeDatabaseHealth();
 
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies, Config config, LifeSupport life )
     {
@@ -73,15 +76,13 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 
-    /**
-     * Returns {@code true} because {@link DatabaseManager}'s lifecycle is managed by {@link DatabaseService} via {@link CoreLife} and
-     * read replica startup process. So {@link DatabaseManager} does not need to be included in the global lifecycle.
-     *
-     * @return always {@code true}.
-     */
-    @Override
-    public final boolean handlesDatabaseManagerLifecycle()
+    protected CompositeDatabaseHealth getGlobalDatabaseHealth()
     {
-        return true;
+        return globalDatabaseHealth;
+    }
+
+    public SingleDatabaseHealth createDatabaseHealth( String databaseName, DatabasePanicEventGenerator dbpe, Log log )
+    {
+        return globalDatabaseHealth.createDatabaseHealth( databaseName, dbpe, log );
     }
 }

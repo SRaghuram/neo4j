@@ -27,6 +27,8 @@ import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
@@ -95,8 +97,12 @@ class CatchupServerIT
         createPropertyIndex();
         addData( db );
 
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<? extends DatabaseContext> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fs );
+
         executor = Executors.newCachedThreadPool();
-        catchupServer = new TestCatchupServer( fs, db, LOG_PROVIDER, executor );
+        catchupServer = new TestCatchupServer( catchupServerHandler, LOG_PROVIDER, executor );
         catchupServer.start();
         catchupClient = CausalClusteringTestHelpers.getCatchupClient( LOG_PROVIDER, new ThreadPoolJobScheduler( executor ) );
         catchupClient.start();

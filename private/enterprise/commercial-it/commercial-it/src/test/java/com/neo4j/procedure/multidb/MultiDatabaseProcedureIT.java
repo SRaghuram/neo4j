@@ -16,7 +16,9 @@ import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -49,7 +51,7 @@ class MultiDatabaseProcedureIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseAPI database;
-    private DatabaseManager databaseManager;
+    private DatabaseManager<StandaloneDatabaseContext> databaseManager;
 
     @BeforeEach
     void setUp()
@@ -65,7 +67,7 @@ class MultiDatabaseProcedureIT
     }
 
     @Test
-    void proceduresOperatesIncorrectDatabaseScope()
+    void proceduresOperatesIncorrectDatabaseScope() throws DatabaseExistsException
     {
         String firstName = "first";
         String secondName = "second";
@@ -73,8 +75,8 @@ class MultiDatabaseProcedureIT
         DatabaseContext firstDatabase = databaseManager.createDatabase( firstName );
         DatabaseContext secondDatabase = databaseManager.createDatabase( secondName );
 
-        GraphDatabaseFacade firstFacade = firstDatabase.getDatabaseFacade();
-        GraphDatabaseFacade secondFacade = secondDatabase.getDatabaseFacade();
+        GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
+        GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();
 
         createLabel( firstFacade, firstName );
         createLabel( secondFacade, secondName );
@@ -87,7 +89,7 @@ class MultiDatabaseProcedureIT
     }
 
     @Test
-    void proceduresUseDatabaseLocalValueMapper() throws KernelException
+    void proceduresUseDatabaseLocalValueMapper() throws KernelException, DatabaseExistsException
     {
         GlobalProcedures globalProcedures = database.getDependencyResolver().resolveDependency( GlobalProcedures.class );
         globalProcedures.registerProcedure( MappingProcedure.class );
@@ -98,8 +100,8 @@ class MultiDatabaseProcedureIT
         DatabaseContext firstDatabase = databaseManager.createDatabase( firstName );
         DatabaseContext secondDatabase = databaseManager.createDatabase( secondName );
 
-        GraphDatabaseFacade firstFacade = firstDatabase.getDatabaseFacade();
-        GraphDatabaseFacade secondFacade = secondDatabase.getDatabaseFacade();
+        GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
+        GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();
 
         createMarkerNode( firstFacade );
         createMarkerNode( secondFacade );
@@ -146,7 +148,8 @@ class MultiDatabaseProcedureIT
         }
     }
 
-    private DatabaseManager getDatabaseManager()
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
     {
         return database.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,7 +13,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 import org.neo4j.dbms.database.DatabaseContext;
@@ -23,8 +23,6 @@ import org.neo4j.logging.NullLogProvider;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class MultiplexingCatchupRequestHandlerTest
 {
@@ -76,14 +74,12 @@ class MultiplexingCatchupRequestHandlerTest
         assertEquals( SUCCESS_RESPONSE, channel.readOutbound() );
     }
 
-    private static DatabaseManager newDbManager()
+    private static DatabaseManager<? extends DatabaseContext> newDbManager()
     {
-        DatabaseManager dbManager = mock( DatabaseManager.class );
-        DatabaseContext dbContext = mock( DatabaseContext.class );
-        Database db = mock( Database.class );
-        when( db.getDatabaseName() ).thenReturn( EXISTING_DB_NAME );
-        when( dbContext.getDatabase() ).thenReturn( db );
-        when( dbManager.getDatabaseContext( EXISTING_DB_NAME ) ).thenReturn( Optional.of( dbContext ) );
+        StubClusteredDatabaseManager dbManager = new StubClusteredDatabaseManager();
+        dbManager.givenDatabaseWithConfig()
+                .withDatabaseName( EXISTING_DB_NAME )
+                .register();
         return dbManager;
     }
 
@@ -95,7 +91,7 @@ class MultiplexingCatchupRequestHandlerTest
     private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler(
             Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory )
     {
-        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), MultiplexingCatchupRequestHandlerTest::newDbManager, handlerFactory,
+        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), newDbManager(), handlerFactory,
                 CatchupProtocolMessage.class, NullLogProvider.getInstance() );
     }
 

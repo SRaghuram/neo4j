@@ -3,10 +3,10 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering;
+package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.SessionTracker;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.replication.ProgressTrackerImpl;
@@ -26,7 +26,7 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.logging.LogProvider;
 
 public class ReplicationModule
@@ -35,9 +35,10 @@ public class ReplicationModule
     private final ProgressTrackerImpl progressTracker;
     private final SessionTracker sessionTracker;
 
-    public ReplicationModule( RaftMachine raftMachine, MemberId myself, GlobalModule globalModule, Config config,
+    ReplicationModule( RaftMachine raftMachine, MemberId myself, GlobalModule globalModule, Config config,
             Outbound<MemberId,RaftMessages.RaftMessage> outbound, CoreStateStorageFactory storageFactory, LogProvider logProvider,
-            AvailabilityGuard globalAvailabilityGuard, DatabaseService localDatabases, String defaultDatabaseName )
+            CompositeDatabaseAvailabilityGuard globalAvailabilityGuard, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager,
+            String defaultDatabaseName )
     {
         StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( defaultDatabaseName,
                 globalModule.getGlobalLife() );
@@ -59,7 +60,7 @@ public class ReplicationModule
                 outbound,
                 sessionPool,
                 progressTracker, progressRetryStrategy, availabilityTimeoutMillis,
-                globalAvailabilityGuard, logProvider, localDatabases,
+                globalAvailabilityGuard, logProvider, databaseManager,
                 globalModule.getGlobalMonitors() );
     }
 

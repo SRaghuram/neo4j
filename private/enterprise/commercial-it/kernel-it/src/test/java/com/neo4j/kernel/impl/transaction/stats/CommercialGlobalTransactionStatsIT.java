@@ -15,7 +15,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -49,12 +51,12 @@ class CommercialGlobalTransactionStatsIT
     }
 
     @Test
-    void useAggregatedTransactionMonitorForMultidatabase() throws InterruptedException
+    void useAggregatedTransactionMonitorForMultidatabase() throws InterruptedException, DatabaseExistsException
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
-        String secondDb = "second";
-        DatabaseManager databaseManager = getDatabaseManager();
-        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( secondDb ).getDatabaseFacade();
+        String secondDb = "second.db";
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
+        GraphDatabaseFacade secondFacade = databaseManager.createDatabase( secondDb ).databaseFacade();
 
         GlobalTransactionStats globalTransactionStats = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( GlobalTransactionStats.class );
         assertEquals( 0, globalTransactionStats.getNumberOfActiveTransactions() );
@@ -82,7 +84,8 @@ class CommercialGlobalTransactionStatsIT
         }
     }
 
-    private DatabaseManager getDatabaseManager()
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

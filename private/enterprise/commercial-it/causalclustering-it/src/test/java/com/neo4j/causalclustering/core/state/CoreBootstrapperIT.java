@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.core.state;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
-import com.neo4j.causalclustering.common.LocalDatabase;
-import com.neo4j.causalclustering.common.StubLocalDatabaseService;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CommercialTemporaryDatabaseFactory;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
@@ -74,7 +74,7 @@ class CoreBootstrapperIT
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
 
-    private final StubLocalDatabaseService databaseService = new StubLocalDatabaseService();
+    private final StubClusteredDatabaseManager databaseService = new StubClusteredDatabaseManager();
 
     private final Function<String,DatabaseInitializer> databaseInitializers = databaseName -> DatabaseInitializer.NO_INITIALIZATION;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -310,7 +310,7 @@ class CoreBootstrapperIT
         /* The session state is initially empty. */
         assertEquals( new GlobalSessionTrackerState(), snapshot.get( CoreStateFiles.SESSION_TRACKER ) );
 
-        for ( Map.Entry<String,LocalDatabase> databaseEntry : databaseService.registeredDatabases().entrySet() )
+        for ( Map.Entry<String,ClusteredDatabaseContext> databaseEntry : databaseService.registeredDatabases().entrySet() )
         {
             verifyDatabaseSpecificState( snapshot::get, nodeCount );
             if ( databaseEntry.getKey().equals( SYSTEM_DATABASE_NAME ) )

@@ -17,6 +17,7 @@ import java.util.Collection;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -41,9 +42,8 @@ class ReadReplicaStatus extends BaseStatus
         DependencyResolver dependencyResolver = db.getDependencyResolver();
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
-        this.dbHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
-
-        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
+        this.dbHealth = dependencyResolver.resolveDependency( SingleDatabaseHealth.class );
+        this.throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
     }
 
     @Override

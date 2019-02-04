@@ -6,16 +6,18 @@
 package org.neo4j.multidatabase.stresstest.commands;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 
 public class DropManagerCommand extends DatabaseManagerCommand
 {
-    public DropManagerCommand( DatabaseManager manager, String databaseName )
+    public DropManagerCommand( DatabaseManager<StandaloneDatabaseContext> manager, String databaseName )
     {
         super( manager, databaseName );
     }
 
     @Override
-    void execute( DatabaseManager manager, String databaseName )
+    void execute( DatabaseManager<StandaloneDatabaseContext> manager, String databaseName ) throws DatabaseNotFoundException
     {
         manager.dropDatabase( databaseName );
     }

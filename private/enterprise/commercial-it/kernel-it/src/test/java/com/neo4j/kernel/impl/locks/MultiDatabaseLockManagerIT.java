@@ -16,7 +16,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.core.NodeProxy;
@@ -58,7 +60,7 @@ class MultiDatabaseLockManagerIT
     }
 
     @Test
-    void databasesHaveDifferentLockManagers()
+    void databasesHaveDifferentLockManagers() throws DatabaseExistsException
     {
         GraphDatabaseFacade secondFacade = startSecondDatabase();
         Locks firstDbLocks = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( Locks.class );
@@ -66,7 +68,7 @@ class MultiDatabaseLockManagerIT
         assertNotSame( firstDbLocks, secondDbLocks );
     }
 
-    private void acquireLockIn2DifferentDatabases() throws InterruptedException
+    private void acquireLockIn2DifferentDatabases() throws InterruptedException, DatabaseExistsException
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
         try
@@ -89,11 +91,11 @@ class MultiDatabaseLockManagerIT
         }
     }
 
-    private GraphDatabaseFacade startSecondDatabase()
+    private GraphDatabaseFacade startSecondDatabase() throws DatabaseExistsException
     {
         String secondDb = "second";
         DatabaseManager databaseManager = getDatabaseManager();
-        return databaseManager.createDatabase( secondDb ).getDatabaseFacade();
+        return databaseManager.createDatabase( secondDb ).databaseFacade();
     }
 
     private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseFacade facade, CountDownLatch latch )
@@ -108,7 +110,8 @@ class MultiDatabaseLockManagerIT
         } );
     }
 
-    private DatabaseManager getDatabaseManager()
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

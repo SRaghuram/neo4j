@@ -5,8 +5,9 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -45,9 +46,8 @@ public class ClusteringModule
     private final ClusterBinder clusterBinder;
 
     public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, GlobalModule globalModule,
-            CoreStateStorageFactory storageFactory, DatabaseService databaseService, TemporaryDatabaseFactory temporaryDatabaseFactory,
-            SslPolicyLoader sslPolicyLoader,
-            Function<String,DatabaseInitializer> databaseInitializers )
+            CoreStateStorageFactory storageFactory, ClusteredDatabaseManager<CoreDatabaseContext> clusteredDatabaseManager,
+            TemporaryDatabaseFactory temporaryDatabaseFactory, SslPolicyLoader sslPolicyLoader, Function<String,DatabaseInitializer> databaseInitializers )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
         Config globalConfig = globalModule.getGlobalConfig();
@@ -68,7 +68,7 @@ public class ClusteringModule
         globalDependencies.satisfyDependency( topologyService ); // for tests
 
         PageCache pageCache = globalModule.getPageCache();
-        CoreBootstrapper coreBootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers, fileSystem,
+        CoreBootstrapper coreBootstrapper = new CoreBootstrapper( clusteredDatabaseManager, temporaryDatabaseFactory, databaseInitializers, fileSystem,
                 globalConfig, logProvider, pageCache, globalModule.getStorageEngineFactory() );
 
         SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();

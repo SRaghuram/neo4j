@@ -5,8 +5,9 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
@@ -25,7 +26,7 @@ import org.neo4j.scheduler.JobHandle;
 public class CoreLife extends SafeLifecycle
 {
     private final RaftMachine raftMachine;
-    private final DatabaseService databaseService;
+    private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
     private final ClusterBinder clusterBinder;
 
     private final CommandApplicationProcess applicationProcess;
@@ -34,13 +35,13 @@ public class CoreLife extends SafeLifecycle
     private final CoreDownloaderService downloadService;
     private final RecoveryFacade recoveryFacade;
 
-    public CoreLife( RaftMachine raftMachine, DatabaseService databaseService, ClusterBinder clusterBinder,
+    public CoreLife( RaftMachine raftMachine, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, ClusterBinder clusterBinder,
             CommandApplicationProcess commandApplicationProcess, LifecycleMessageHandler<?> raftMessageHandler,
             CoreSnapshotService snapshotService, CoreDownloaderService downloadService, LogProvider logProvider,
             RecoveryFacade recoveryFacade )
     {
         this.raftMachine = raftMachine;
-        this.databaseService = databaseService;
+        this.databaseManager = databaseManager;
         this.clusterBinder = clusterBinder;
         this.applicationProcess = commandApplicationProcess;
         this.raftMessageHandler = raftMessageHandler;
@@ -52,7 +53,7 @@ public class CoreLife extends SafeLifecycle
     @Override
     public void init0() throws Exception
     {
-        databaseService.init();
+        databaseManager.init();
     }
 
     @Override
@@ -85,7 +86,7 @@ public class CoreLife extends SafeLifecycle
 
         if ( !startedByDownloader )
         {
-            databaseService.start();
+            databaseManager.start();
         }
         applicationProcess.start();
         raftMachine.postRecoveryActions();
@@ -93,7 +94,7 @@ public class CoreLife extends SafeLifecycle
 
     private void ensureRecovered() throws Exception
     {
-        for ( LocalDatabase db : databaseService.registeredDatabases().values() )
+        for ( ClusteredDatabaseContext db : databaseManager.registeredDatabases().values() )
         {
             recoveryFacade.recovery( db.databaseLayout() );
         }
@@ -105,12 +106,12 @@ public class CoreLife extends SafeLifecycle
         raftMachine.stopTimers();
         raftMessageHandler.stop();
         applicationProcess.stop();
-        databaseService.stop();
+        databaseManager.stop();
     }
 
     @Override
     public void shutdown0() throws Exception
     {
-        databaseService.shutdown();
+        databaseManager.shutdown();
     }
 }

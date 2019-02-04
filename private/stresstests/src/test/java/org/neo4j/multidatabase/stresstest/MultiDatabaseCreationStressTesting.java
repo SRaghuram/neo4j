@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
@@ -48,7 +49,7 @@ class MultiDatabaseCreationStressTesting
         ensureExistsAndEmpty( storeDirectory );
 
         GraphDatabaseService databaseService = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( storeDirectory );
-        DatabaseManager databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
         assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );
 
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );
@@ -63,8 +64,8 @@ class MultiDatabaseCreationStressTesting
         }
     }
 
-    private void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManager databaseManager, ExecutorService executorPool )
-            throws InterruptedException
+    private void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManager<StandaloneDatabaseContext> databaseManager,
+            ExecutorService executorPool ) throws InterruptedException
     {
         long finishTimeMillis = System.currentTimeMillis() + MINUTES.toMillis( durationInMinutes );
         CountDownLatch executorLatch = new CountDownLatch( threads );
@@ -82,7 +83,8 @@ class MultiDatabaseCreationStressTesting
         }
     }
 
-    private DatabaseManager getDatabaseManager( GraphDatabaseAPI databaseService )
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager( GraphDatabaseAPI databaseService )
     {
         return databaseService.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

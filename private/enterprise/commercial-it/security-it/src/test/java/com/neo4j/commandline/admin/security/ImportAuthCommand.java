@@ -28,6 +28,7 @@ import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -208,7 +209,7 @@ public class ImportAuthCommand implements AdminCommand
 
         SecurityLog securityLog = new SecurityLog( config, outsideWorld.fileSystem(), Runnable::run );
 
-        DatabaseManager databaseManager = getDatabaseManager( db );
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager( db );
         return CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
                 config,
                 securityLog,
@@ -217,7 +218,8 @@ public class ImportAuthCommand implements AdminCommand
                 shouldResetSystemGraphAuthBeforeImport );
     }
 
-    private DatabaseManager getDatabaseManager( GraphDatabaseService db )
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager( GraphDatabaseService db )
     {
         return ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

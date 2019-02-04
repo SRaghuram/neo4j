@@ -50,7 +50,9 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -92,7 +94,7 @@ public class CommercialSecurityModule extends SecurityModule
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
-    private DatabaseManager databaseManager;
+    private DatabaseManager<? extends DatabaseContext> databaseManager;
     private boolean initSystemGraphOnStart;
     private Config config;
     private LogProvider logProvider;
@@ -663,7 +665,7 @@ public class CommercialSecurityModule extends SecurityModule
     // This is used by ImportAuthCommand for offline import of auth information
     public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config,
             SecurityLog securityLog,
-            DatabaseManager databaseManager,
+            DatabaseManager<StandaloneDatabaseContext> databaseManager,
             UserRepository importUserRepository, RoleRepository importRoleRepository,
             boolean shouldResetSystemGraphAuthBeforeImport )
     {

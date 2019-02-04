@@ -37,6 +37,7 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -88,7 +89,7 @@ public class CoreStatusTest
         raftMembershipManager = dependencyResolver.satisfyDependency( fakeRaftMembershipManager( new HashSet<>( Arrays.asList( myself, core2, core3 ) ) ) );
 
         databaseHealth = dependencyResolver.satisfyDependency(
-                new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
+                new SingleDatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( SingleDatabaseHealth.class ) ) );
 
         topologyService = dependencyResolver.satisfyDependency(
                 new FakeTopologyService( Arrays.asList( core2, core3 ), Collections.singleton( replica ), myself, RoleInfo.FOLLOWER ) );

@@ -11,9 +11,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGenerator;
@@ -43,10 +45,10 @@ class MultiDatabaseIdGeneratorIT
     private IdGeneratorFactory secondIdGeneratorFactory;
 
     @BeforeEach
-    void setUp()
+    void setUp() throws DatabaseExistsException
     {
         database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
-        DatabaseManager databaseManager = getDatabaseManager();
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
         firstDatabase = getDefaultDatabase( databaseManager );
         secondDatabase = startSecondDatabase( databaseManager );
         firstIdGeneratorFactory = getIdGeneratorFactory( firstDatabase );
@@ -111,16 +113,16 @@ class MultiDatabaseIdGeneratorIT
         return firstDatabase.getDependencyResolver().resolveDependency( IdController.class );
     }
 
-    private static GraphDatabaseFacade startSecondDatabase( DatabaseManager databaseManager )
+    private static GraphDatabaseFacade startSecondDatabase( DatabaseManager<StandaloneDatabaseContext> databaseManager ) throws DatabaseExistsException
     {
-        return databaseManager.createDatabase( "second" ).getDatabaseFacade();
+        return databaseManager.createDatabase( "second" ).databaseFacade();
     }
 
-    private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager databaseManager )
+    private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager<StandaloneDatabaseContext> databaseManager )
     {
         return databaseManager.getDatabaseContext( Config.defaults().get( GraphDatabaseSettings.default_database ) )
                 .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
-                .getDatabaseFacade();
+                .databaseFacade();
     }
 
     private static IdGeneratorFactory getIdGeneratorFactory( GraphDatabaseFacade database )
@@ -128,7 +130,8 @@ class MultiDatabaseIdGeneratorIT
         return database.getDependencyResolver().resolveDependency( IdGeneratorFactory.class );
     }
 
-    private DatabaseManager getDatabaseManager()
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

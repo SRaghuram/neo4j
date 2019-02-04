@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
+import org.neo4j.graphdb.factory.module.edition.context.DatabaseComponents;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
@@ -27,12 +27,15 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
+import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.ReadOnlyTokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
+import org.neo4j.monitoring.SingleDatabaseHealth;
+import org.neo4j.logging.Log;
 
-public class ReadReplicaDatabaseContext implements EditionDatabaseContext
+public class ReadReplicaDatabaseComponents implements DatabaseComponents
 {
     private final String databaseName;
     private final Locks locksManager;
@@ -43,7 +46,7 @@ public class ReadReplicaDatabaseContext implements EditionDatabaseContext
     private final DatabaseTransactionStats transactionMonitor;
     private final ReadReplicaEditionModule editionModule;
 
-    public ReadReplicaDatabaseContext( GlobalModule globalModule, ReadReplicaEditionModule editionModule, String databaseName )
+    public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, String databaseName )
     {
         this.editionModule = editionModule;
         this.databaseName = databaseName;
@@ -137,4 +140,9 @@ public class ReadReplicaDatabaseContext implements EditionDatabaseContext
         return transactionMonitor;
     }
 
+    @Override
+    public SingleDatabaseHealth createDatabaseHealth( DatabasePanicEventGenerator dbpe, Log log )
+    {
+        return editionModule.createDatabaseHealth( databaseName, dbpe, log );
+    }
 }

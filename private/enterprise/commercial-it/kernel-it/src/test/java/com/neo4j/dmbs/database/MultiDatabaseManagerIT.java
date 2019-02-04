@@ -11,11 +11,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -26,7 +30,6 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +49,7 @@ class MultiDatabaseManagerIT
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
     private AssertableLogProvider logProvider;
-    private DatabaseManager databaseManager;
+    private DatabaseManager<StandaloneDatabaseContext> databaseManager;
 
     @BeforeEach
     void setUp()
@@ -64,17 +67,17 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void createDatabase()
+    void createDatabase() throws DatabaseExistsException
     {
         String databaseName = "testDatabase";
-        GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseName ).getDatabaseFacade();
+        GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseName ).databaseFacade();
 
         assertNotNull( database1 );
         assertEquals( databaseName, database1.databaseLayout().getDatabaseName() );
     }
 
     @Test
-    void failToCreateDatabasesWithSameName()
+    void failToCreateDatabasesWithSameName() throws DatabaseExistsException
     {
         String uniqueDatabaseName = "uniqueDatabaseName";
         databaseManager.createDatabase( uniqueDatabaseName );
@@ -93,7 +96,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void failToStartDroppedDatabase()
+    void failToStartDroppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String databaseToDrop = "databaseToDrop";
         databaseManager.createDatabase( databaseToDrop );
@@ -103,7 +106,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void startStartedDatabase()
+    void startStartedDatabase() throws DatabaseExistsException
     {
         String multiStartDatabase = "multiStartDatabase";
         databaseManager.createDatabase( multiStartDatabase );
@@ -115,7 +118,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void stopStartDatabase()
+    void stopStartDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String startStopDatabase = "startStopDatabase";
         databaseManager.createDatabase( startStopDatabase );
@@ -128,7 +131,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void failToCreateDatabaseWithStoppedDatabaseName()
+    void failToCreateDatabaseWithStoppedDatabaseName() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String stoppedDatabase = "stoppedDatabase";
         databaseManager.createDatabase( stoppedDatabase );
@@ -139,7 +142,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void stopStoppedDatabaseIsFine()
+    void stopStoppedDatabaseIsFine() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String stoppedDatabase = "stoppedDatabase";
 
@@ -150,7 +153,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void recreateDatabaseWithSameName()
+    void recreateDatabaseWithSameName() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String databaseToRecreate = "databaseToRecreate";
 
@@ -164,7 +167,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void dropStartedDatabase()
+    void dropStartedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String startedDatabase = "startedDatabase";
 
@@ -174,7 +177,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void dropStoppedDatabase()
+    void dropStoppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String stoppedDatabase = "stoppedDatabase";
 
@@ -186,12 +189,12 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void dropRemovesDatabaseFiles()
+    void dropRemovesDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String databaseToDrop = "databaseToDrop";
         DatabaseContext database = databaseManager.createDatabase( databaseToDrop );
 
-        DatabaseLayout databaseLayout = database.getDatabase().getDatabaseLayout();
+        DatabaseLayout databaseLayout = database.database().getDatabaseLayout();
         assertNotEquals( databaseLayout.databaseDirectory(), databaseLayout.getTransactionLogsDirectory() );
         assertTrue( databaseLayout.databaseDirectory().exists() );
         assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
@@ -202,12 +205,12 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void stopDoesNotRemovesDatabaseFiles()
+    void stopDoesNotRemovesDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String databaseToStop = "databaseToStop";
         DatabaseContext database = databaseManager.createDatabase( databaseToStop );
 
-        DatabaseLayout databaseLayout = database.getDatabase().getDatabaseLayout();
+        DatabaseLayout databaseLayout = database.database().getDatabaseLayout();
         assertTrue( databaseLayout.getTransactionLogsDirectory().exists() );
         assertTrue( databaseLayout.databaseDirectory().exists() );
 
@@ -231,7 +234,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void failToStopDroppedDatabase()
+    void failToStopDroppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String testDatabase = "testDatabase";
         databaseManager.createDatabase( testDatabase );
@@ -242,24 +245,24 @@ class MultiDatabaseManagerIT
     @Test
     void lookupNotExistingDatabase()
     {
-        Optional<DatabaseContext> database = databaseManager.getDatabaseContext( "testDatabase" );
+        Optional<StandaloneDatabaseContext> database = databaseManager.getDatabaseContext( "testDatabase" );
         assertFalse( database.isPresent() );
     }
 
     @Test
     void lookupExistingDatabase()
     {
-        Optional<DatabaseContext> database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_NAME );
+        Optional<StandaloneDatabaseContext> database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_NAME );
         assertTrue( database.isPresent() );
     }
 
     @Test
-    void createAndStopDatabase()
+    void createAndStopDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String databaseName = "databaseToShutdown";
         DatabaseContext context = databaseManager.createDatabase( databaseName );
 
-        Optional<DatabaseContext> databaseLookup = databaseManager.getDatabaseContext( databaseName );
+        Optional<StandaloneDatabaseContext> databaseLookup = databaseManager.getDatabaseContext( databaseName );
         assertTrue( databaseLookup.isPresent() );
         assertEquals( context, databaseLookup.get() );
 
@@ -268,7 +271,7 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void logAboutDatabaseCreationAndStop()
+    void logAboutDatabaseCreationAndStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
         String logTestDb = "logTestDb";
         databaseManager.createDatabase( logTestDb );
@@ -278,17 +281,19 @@ class MultiDatabaseManagerIT
     }
 
     @Test
-    void listAvailableDatabases()
+    void listAvailableDatabases() throws DatabaseExistsException
     {
-        List<String> initialDatabases = databaseManager.listDatabases();
-        assertThat( initialDatabases, hasSize( 2 ) );
-        assertEquals( CUSTOM_DATABASE_NAME, initialDatabases.get( 0 ) );
+        Map<String,StandaloneDatabaseContext> initialDatabases = databaseManager.registeredDatabases();
+        assertEquals( 2, initialDatabases.size() );
+        assertTrue( initialDatabases.containsKey( CUSTOM_DATABASE_NAME ) );
         String myAnotherDatabase = "myAnotherDatabase";
         String aMyAnotherDatabase = "aMyAnotherDatabase";
         databaseManager.createDatabase( myAnotherDatabase );
         databaseManager.createDatabase( aMyAnotherDatabase );
-        List<String> postCreationDatabasesNames = databaseManager.listDatabases();
-        assertThat( postCreationDatabasesNames, hasSize( 4 ) );
+        Map<String,StandaloneDatabaseContext> postCreationDatabases = databaseManager.registeredDatabases();
+        assertEquals( 4, postCreationDatabases.size() );
+
+        ArrayList<String> postCreationDatabasesNames = new ArrayList<>( postCreationDatabases.keySet() );
         assertEquals( aMyAnotherDatabase, postCreationDatabasesNames.get( 0 ) );
         assertEquals( CUSTOM_DATABASE_NAME, postCreationDatabasesNames.get( 1 ) );
         assertEquals( myAnotherDatabase, postCreationDatabasesNames.get( 2 ) );
@@ -300,11 +305,12 @@ class MultiDatabaseManagerIT
     {
         databaseManager.stop();
         databaseManager.shutdown();
-        List<String> databases = databaseManager.listDatabases();
-        assertThat( databases, empty() );
+        Map<String,StandaloneDatabaseContext> databases = databaseManager.registeredDatabases();
+        assertTrue( databases.isEmpty() );
     }
 
-    private DatabaseManager getDatabaseManager()
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.TransactionBackupServiceProvider;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
-import com.neo4j.dbms.database.MultiDatabaseManager;
+import com.neo4j.dbms.database.CommercialMultiDatabaseManager;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
@@ -30,7 +30,9 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -65,11 +67,13 @@ import static org.neo4j.function.Predicates.any;
 
 public class CommercialEditionModule extends CommunityEditionModule
 {
+    private final GlobalModule globalModule;
+
     public CommercialEditionModule( GlobalModule globalModule )
     {
         super( globalModule );
+        this.globalModule = globalModule;
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
-        initBackupIfNeeded( globalModule, globalModule.getGlobalConfig() );
     }
 
     @Override
@@ -118,12 +122,13 @@ public class CommercialEditionModule extends CommunityEditionModule
     {
         Config globalConfig = platform.getGlobalConfig();
         return databaseName -> {
-            DatabaseManager databaseManager = platform.getGlobalDependencies().resolveDependency( DatabaseManager.class );
+            @SuppressWarnings( "unchecked" )
+            DatabaseManager<StandaloneDatabaseContext> databaseManager = platform.getGlobalDependencies().resolveDependency( DatabaseManager.class );
             Supplier<Kernel> kernelSupplier = () ->
             {
                 DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseName )
                         .orElseThrow( () -> new IllegalStateException( format( "Database %s not found.", databaseName ) ) );
-                return databaseContext.getDependencies().resolveDependency( Kernel.class );
+                return databaseContext.dependencies().resolveDependency( Kernel.class );
             };
             return new TokenHolders(
                     new DelegatingTokenHolder( createPropertyKeyCreator( globalConfig, kernelSupplier ), TokenHolder.TYPE_PROPERTY_KEY ),
@@ -133,31 +138,38 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule platform, AbstractEditionModule edition,
-            GlobalProcedures globalProcedures, Logger msgLog )
+    public DatabaseManager<? extends DatabaseContext> createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule globalModule, Logger msgLog )
     {
-        return new MultiDatabaseManager( platform, edition, globalProcedures, msgLog, graphDatabaseFacade );
+        CommercialMultiDatabaseManager databaseManager = new CommercialMultiDatabaseManager( globalModule, this, msgLog, graphDatabaseFacade );
+        createDatabaseManagerDependentModules( databaseManager );
+        return databaseManager;
+    }
+
+    private void createDatabaseManagerDependentModules( DatabaseManager<StandaloneDatabaseContext> databaseManager )
+    {
+        initBackupIfNeeded( globalModule, globalModule.getGlobalConfig(), databaseManager );
     }
 
     @Override
-    public void createDatabases( DatabaseManager databaseManager, Config config )
+    public void createDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
     {
         createCommercialEditionDatabases( databaseManager, config );
     }
 
-    private static void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
+    private static void createCommercialEditionDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config )
+            throws DatabaseExistsException
     {
         databaseManager.createDatabase( SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 
-    private static void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
+    private static void createConfiguredDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.default_database ) );
     }
 
     @Override
-    public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
+    public void createSecurityModule( GlobalModule globalModule )
     {
         createCommercialSecurityModule( this, globalModule, globalProcedures );
     }
@@ -179,10 +191,9 @@ public class CommercialEditionModule extends CommunityEditionModule
         editionModule.setSecurityProvider( securityProvider );
     }
 
-    private void initBackupIfNeeded( GlobalModule globalModule, Config config )
+    private void initBackupIfNeeded( GlobalModule globalModule, Config config, DatabaseManager<StandaloneDatabaseContext> databaseManager )
     {
         Dependencies globalDependencies = globalModule.getGlobalDependencies();
-        Supplier<DatabaseManager> databaseManagerSupplier = globalDependencies.provideDependency( DatabaseManager.class );
         FileSystemAbstraction fs = globalModule.getFileSystem();
         JobScheduler jobScheduler = globalModule.getJobScheduler();
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
@@ -196,7 +207,7 @@ public class CommercialEditionModule extends CommunityEditionModule
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),
                 supportedProtocolCreator.createSupportedModifierProtocols(),
                 pipelineBuilders.backupServer(),
-                new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, internalLogProvider, fs ),
+                new MultiDatabaseCatchupServerHandler( databaseManager, internalLogProvider, fs ),
                 new InstalledProtocolHandler(),
                 jobScheduler,
                 portRegister

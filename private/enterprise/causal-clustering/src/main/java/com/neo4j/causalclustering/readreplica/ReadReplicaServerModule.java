@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.readreplica;
 
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServersModule;
-import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
@@ -19,10 +19,10 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 
 public class ReadReplicaServerModule extends CatchupServersModule
 {
-    ReadReplicaServerModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, CatchupHandlerFactory handlerFactory,
-            GlobalModule globalModule, String databaseName )
+    ReadReplicaServerModule( ClusteredDatabaseManager<ReadReplicaDatabaseContext> clusteredDatabaseManager, PipelineBuilders pipelineBuilders,
+            CatchupHandlerFactory handlerFactory, GlobalModule globalModule, String databaseName )
     {
-        super( databaseService, pipelineBuilders, globalModule, databaseName );
+        super( clusteredDatabaseManager, pipelineBuilders, globalModule, databaseName );
 
         CatchupServerHandler catchupServerHandler = handlerFactory.create( null );
         InstalledProtocolHandler installedProtocolsHandler = new InstalledProtocolHandler();

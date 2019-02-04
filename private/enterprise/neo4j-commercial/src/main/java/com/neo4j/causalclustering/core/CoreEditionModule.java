@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.ReplicationModule;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.causalclustering.common.DefaultDatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.consensus.ConsensusModule;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.core.server.CoreServerModule;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusteringModule;
+import com.neo4j.causalclustering.core.state.CoreLife;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.CoreStateService;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
@@ -70,7 +71,6 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
-import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
@@ -89,18 +89,18 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
+import org.neo4j.graphdb.factory.module.edition.context.DatabaseComponents;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
-import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -120,23 +120,39 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
 /**
- * This implementation of {@link AbstractEditionModule} creates the implementations of services
- * that are specific to the Enterprise Core edition that provides a core cluster.
+ * This implementation of {@link AbstractEditionModule} creates the service instances
+ * which are specific to the Core members of a causal cluster.
  */
 public class CoreEditionModule extends AbstractCoreEditionModule
 {
-    private final ConsensusModule consensusModule;
-    private final ReplicationModule replicationModule;
-    private final CoreTopologyService topologyService;
-    protected final LogProvider logProvider;
-    protected final Config globalConfig;
+    private final IdentityModule identityModule;
+    private final SslPolicyLoader sslPolicyLoader;
+    private final RaftSender raftSender;
+    private final RaftChannelPoolService raftChannelPoolService;
+    private final CoreStateStorageFactory storageFactory;
+    private final ClusterStateLayout clusterStateLayout;
+    private ConsensusModule consensusModule;
+    private ReplicationModule replicationModule;
+    private CoreServerModule coreServerModule;
+    private CoreTopologyService topologyService;
+    private final DiscoveryServiceFactory discoveryServiceFactory;
+    private final PanicService panicService;
+
+    private CoreStateService coreStateService;
+    private final StartupCoreStateCheck startupCoreStateCheck;
+
+    private final PipelineBuilders pipelineBuilders;
     private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> clientInstalledProtocols;
     private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> serverInstalledProtocols;
-    private final CoreServerModule coreServerModule;
-    private final CoreStateService coreStateService;
-    private final DefaultDatabaseService<CoreLocalDatabase> databaseService;
+    private final ApplicationSupportedProtocols supportedRaftProtocols;
+    private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
+    private final InstalledProtocolHandler serverInstalledProtocolHandler;
+
     private final Map<String,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
-    //TODO: Find a way to be more generic about this to help with 4.0 plans
+    private final CompositeDatabaseAvailabilityGuard globalGuard;
+    private final LogProvider logProvider;
+    private final Config globalConfig;
+    //TODO: remove as soon as independent lifecycle is in place
     private final String defaultDatabaseName;
     private final GlobalModule globalModule;
 
@@ -148,6 +164,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         this.globalModule = globalModule;
         this.globalConfig = globalModule.getGlobalConfig();
+        this.globalGuard = globalModule.getGlobalAvailabilityGuard();
         this.logProvider = logService.getInternalLogProvider();
 
         CoreMonitor.register( logProvider, logService.getUserLogProvider(), globalModule.getGlobalMonitors() );
@@ -156,52 +173,31 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         this.defaultDatabaseName = globalConfig.get( GraphDatabaseSettings.default_database );
 
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
-        ClusterStateLayout clusterStateLayout = ClusterStateLayout.of( dataDir );
+        clusterStateLayout = ClusterStateLayout.of( dataDir );
         globalDependencies.satisfyDependency( clusterStateLayout );
-        CoreStateStorageFactory storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
+        storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
 
-        CoreStartupState coreStartupState =
-                new CoreStartupState( fileSystem, clusterStateLayout ); // must be constructed before storage is touched by other modules
-        globalLife.add( new IdFilesSanitationModule( coreStartupState, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem,
-                logProvider ) );
+        startupCoreStateCheck = new StartupCoreStateCheck( fileSystem, clusterStateLayout ); // must be constructed before storage is touched by other modules
 
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
 
-        final PanicService panicService = new PanicService( logService.getUserLogProvider() );
-        // used by test
-        globalDependencies.satisfyDependencies( panicService );
+        panicService = new PanicService( logService.getUserLogProvider() );
+        globalDependencies.satisfyDependencies( panicService ); // used by test
 
         watcherServiceFactory = layout ->
                 createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        IdentityModule identityModule = new IdentityModule( globalModule, storageFactory );
+        identityModule = new IdentityModule( globalModule, storageFactory );
+        this.discoveryServiceFactory = discoveryServiceFactory;
 
-        //Build local databases object
-        final Supplier<DatabaseManager> databaseManagerSupplier = () -> globalDependencies.resolveDependency( DatabaseManager.class );
-        final Supplier<DatabaseHealth> databaseHealthSupplier =
-                () -> databaseManagerSupplier.get().getDatabaseContext( globalConfig.get( GraphDatabaseSettings.default_database ) )
-                        .map( DatabaseContext::getDependencies )
-                        .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
-                        .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
-
-        CompositeDatabaseAvailabilityGuard globalGuard = globalModule.getGlobalAvailabilityGuard();
-        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalGuard, globalModule,
-                databaseManagerSupplier, logProvider, globalConfig );
-
-        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
+        sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
-        ClusteringModule clusteringModule = getClusteringModule( globalModule, discoveryServiceFactory, storageFactory, identityModule, sslPolicyLoader );
-
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globalConfig, sslPolicyLoader );
-
-        topologyService = clusteringModule.topologyService();
-
-        long logThresholdMillis = globalConfig.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
+        pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globalConfig, sslPolicyLoader );
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( globalConfig, logProvider );
-        ApplicationSupportedProtocols supportedRaftProtocols = supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
-        Collection<ModifierSupportedProtocols> supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
+        supportedRaftProtocols = supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
+        supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
 
         ApplicationProtocolRepository applicationProtocolRepository =
                 new ApplicationProtocolRepository( Protocol.ApplicationProtocols.values(), supportedRaftProtocols );
@@ -216,74 +212,15 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         Duration handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );
         HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, logService.getUserLogProvider() );
-        RaftChannelPoolService raftChannelPoolService =
-                new RaftChannelPoolService( BootstrapConfiguration.clientConfig( globalConfig ), globalModule.getJobScheduler(), logProvider,
+        raftChannelPoolService = new RaftChannelPoolService( BootstrapConfiguration.clientConfig( globalConfig ), globalModule.getJobScheduler(), logProvider,
                         channelInitializer );
         globalLife.add( raftChannelPoolService );
+        raftSender = new RaftSender( logProvider, raftChannelPoolService );
         this.clientInstalledProtocols = raftChannelPoolService::installedProtocols;
-
-        final MessageLogger<MemberId> messageLogger = createMessageLogger( globalConfig, globalLife, identityModule.myself() );
-
-        RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
-        RaftSender raftSender = new RaftSender( logProvider, raftChannelPoolService );
-        RaftOutbound raftOutbound = new RaftOutbound( topologyService, raftSender, raftMessageDispatcher,
-                clusteringModule.clusterIdentity(), logProvider, logThresholdMillis, identityModule.myself(), globalModule.getGlobalClock() );
-        Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
-
-        consensusModule = new ConsensusModule( identityModule.myself(), globalModule,
-                loggingOutbound, clusterStateLayout, topologyService, storageFactory, defaultDatabaseName );
-
-        globalDependencies.satisfyDependency( consensusModule.raftMachine() );
-        replicationModule = new ReplicationModule( consensusModule.raftMachine(), identityModule.myself(), globalModule, globalConfig,
-                loggingOutbound, storageFactory, logProvider, globalGuard, databaseService, defaultDatabaseName );
-
-        StateStorage<Long> lastFlushedStorage = storageFactory.createLastFlushedStorage( defaultDatabaseName, globalLife );
-
-        consensusModule.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStorage::getInitialState );
-
-        coreStateService = new CoreStateService( identityModule.myself(), globalModule, storageFactory, globalConfig,
-                consensusModule.raftMachine(), databaseService, replicationModule, lastFlushedStorage, panicService );
-
-        this.accessCapability = new LeaderCanWrite( consensusModule.raftMachine() );
-
-        InstalledProtocolHandler serverInstalledProtocolHandler = new InstalledProtocolHandler();
-
-        CatchupHandlerFactory handlerFactory = snapshotService -> getHandlerFactory( globalModule, fileSystem, snapshotService );
-
-        this.coreServerModule = new CoreServerModule( identityModule, globalModule, consensusModule, coreStateService, clusteringModule,
-                replicationModule, databaseService, databaseHealthSupplier, pipelineBuilders, serverInstalledProtocolHandler,
-                handlerFactory, defaultDatabaseName, panicService );
-
-        addPanicEventHandlers( globalLife, panicService, databaseHealthSupplier );
-
-        TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
-        defaultStrategy.inject( topologyService, globalConfig, logProvider, identityModule.myself() );
-        UpstreamDatabaseStrategySelector catchupStrategySelector =
-                createUpstreamDatabaseStrategySelector( identityModule.myself(), globalConfig, logProvider, topologyService, defaultStrategy );
-
-        CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider =
-                new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
-                        catchupStrategySelector );
-
-        RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( globalModule, raftMessageDispatcher,
-                catchupAddressProvider, panicService );
-        LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain =
-                raftMessageHandlerChainFactory.createMessageHandlerChain( consensusModule, coreServerModule );
-
-        RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), messageLogger,
-                supportedRaftProtocols, supportedModifierProtocols );
-        Server raftServer = raftServerFactory.createRaftServer( raftMessageDispatcher, serverInstalledProtocolHandler );
-        globalDependencies.satisfyDependencies( raftServer ); // resolved in tests
-        globalLife.add( raftServer );
-
-        // needs to be after Raft server in the lifecycle
-        addCoreServerComponentsToLifecycle( coreServerModule, raftMessageHandlerChain, globalLife );
-
+        serverInstalledProtocolHandler = new InstalledProtocolHandler();
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
-
-        globalLife.add( coreServerModule.membershipWaiterLifecycle );
     }
 
     private void addCoreServerComponentsToLifecycle( CoreServerModule coreServerModule,
@@ -318,11 +255,11 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
     }
 
-    private void addPanicEventHandlers( LifeSupport life, PanicService panicService, Supplier<DatabaseHealth> databaseHealthSupplier )
+    private void addPanicEventHandlers( LifeSupport life, PanicService panicService )
     {
         // order matters
         panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
-        panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( databaseHealthSupplier ) );
+        panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( getGlobalDatabaseHealth() ) );
         panicService.addPanicEventHandler( coreServerModule.commandApplicationProcess() );
         panicService.addPanicEventHandler( consensusModule.raftMachine() );
         panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( coreServerModule.catchupServer() ) );
@@ -353,19 +290,23 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         return consensusModule.raftMachine().currentRole() == Role.LEADER;
     }
 
-    /* Component Factories */
+    /**
+     * Returns {@code true} because {@link DatabaseManager}'s lifecycle is managed by {@link ClusteredDatabaseManager} via {@link CoreLife}.
+     * So {@link DatabaseManager} does not need to be included in the global lifecycle.
+     *
+     * @return always {@code true}.
+     */
     @Override
-    public EditionDatabaseContext createDatabaseContext( String databaseName )
+    public boolean handlesDatabaseManagerLifecycle()
     {
-        return new CoreDatabaseContext( globalModule, this, databaseName );
+        return true;
     }
 
-    private DefaultDatabaseService<CoreLocalDatabase> createDatabasesService( Supplier<DatabaseHealth> databaseHealthSupplier,
-            FileSystemAbstraction fileSystem, AvailabilityGuard availabilityGuard, GlobalModule globalModule,
-            Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, Config config )
+    /* Component Factories */
+    @Override
+    public DatabaseComponents createDatabaseComponents( String databaseName )
     {
-        return new DefaultDatabaseService<>( CoreLocalDatabase::new, databaseManagerSupplier, globalModule.getStoreLayout(),
-                availabilityGuard, databaseHealthSupplier, fileSystem, globalModule.getPageCache(), logProvider, config );
+        return new CoreDatabaseComponents( globalModule, this, databaseName );
     }
 
     private static MessageLogger<MemberId> createMessageLogger( Config config, LifeSupport life, MemberId myself )
@@ -414,59 +355,134 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         return new UpstreamDatabaseStrategySelector( defaultStrategy, loader, logProvider );
     }
 
-    protected CatchupServerHandler getHandlerFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem, CoreSnapshotService snapshotService )
+    private CatchupServerHandler getHandlerFactory( FileSystemAbstraction fileSystem,
+            CoreSnapshotService snapshotService, DatabaseManager<CoreDatabaseContext> databaseManager )
     {
-        Supplier<DatabaseManager> databaseManagerSupplier = globalModule.getGlobalDependencies().provideDependency( DatabaseManager.class );
-        return new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem, snapshotService );
+        return new MultiDatabaseCatchupServerHandler( databaseManager, logProvider, fileSystem, snapshotService );
     }
 
-    protected ClusteringModule getClusteringModule( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageFactory storageFactory, IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
+    private ClusteringModule getClusteringModule( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory,
+            CoreStateStorageFactory storageFactory, ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager,
+            IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
     {
         TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory();
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storageFactory, databaseService,
-                temporaryDatabaseFactory, sslPolicyLoader,
-                dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storageFactory, databaseManager, temporaryDatabaseFactory,
+                sslPolicyLoader, dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
     }
 
-    @Override
-    public DatabaseManager createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule platform, AbstractEditionModule edition,
-            GlobalProcedures globalProcedures, Logger msgLog )
+    private void createDatabaseManagerDependentModules( final ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager )
     {
-        return new MultiDatabaseManager( platform, edition, globalProcedures, msgLog, graphDatabaseFacade );
+        final LifeSupport globalLife = globalModule.getGlobalLife();
+        final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
+
+        globalLife.add( new IdFilesSanitationModule( startupCoreStateCheck, databaseManager, fileSystem, logProvider ) );
+
+        ClusteringModule clusteringModule = getClusteringModule( globalModule, discoveryServiceFactory, storageFactory, databaseManager,
+                identityModule, sslPolicyLoader );
+
+        topologyService = clusteringModule.topologyService();
+
+        long logThresholdMillis = globalConfig.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
+
+        final MessageLogger<MemberId> messageLogger = createMessageLogger( globalConfig, globalLife, identityModule.myself() );
+
+        RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
+        RaftSender raftSender = new RaftSender( logProvider, raftChannelPoolService );
+        RaftOutbound raftOutbound = new RaftOutbound( topologyService, raftSender, raftMessageDispatcher,
+                clusteringModule.clusterIdentity(), logProvider, logThresholdMillis, identityModule.myself(), globalModule.getGlobalClock() );
+        Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
+
+        consensusModule = new ConsensusModule( identityModule.myself(), globalModule, loggingOutbound, clusterStateLayout, topologyService,
+                storageFactory, defaultDatabaseName );
+
+        replicationModule = new ReplicationModule( consensusModule.raftMachine(), identityModule.myself(), globalModule, globalConfig,
+                loggingOutbound, storageFactory, logProvider, globalGuard, databaseManager, defaultDatabaseName );
+
+        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( defaultDatabaseName, globalLife );
+
+        coreStateService = new CoreStateService( identityModule.myself(), globalModule, storageFactory, globalConfig,
+                consensusModule.raftMachine(), databaseManager, replicationModule, lastFlushedStateStorage, panicService );
+
+        CatchupHandlerFactory handlerFactory = snapshotService -> getHandlerFactory( fileSystem, snapshotService, databaseManager );
+
+        //TODO:
+        //  - Implement start stop etc... for databases and make sure storecopy catchup machinery uses it
+        //  - plan how to test independent lifecycle
+        coreServerModule = new CoreServerModule( identityModule, globalModule, consensusModule, coreStateService, clusteringModule,
+                replicationModule, databaseManager, getGlobalDatabaseHealth(), pipelineBuilders, serverInstalledProtocolHandler, handlerFactory,
+                defaultDatabaseName, panicService );
+
+        TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
+        defaultStrategy.inject( topologyService, globalConfig, logProvider, identityModule.myself() );
+
+        UpstreamDatabaseStrategySelector catchupStrategySelector =
+                createUpstreamDatabaseStrategySelector( identityModule.myself(), globalConfig, logProvider, topologyService, defaultStrategy );
+
+        CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider =
+                new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
+                        catchupStrategySelector );
+
+        globalModule.getGlobalDependencies().satisfyDependency( consensusModule.raftMachine() );
+
+        consensusModule.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStateStorage::getInitialState );
+        accessCapability = new LeaderCanWrite( consensusModule.raftMachine() );
+
+        RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( globalModule, raftMessageDispatcher,
+                catchupAddressProvider, panicService );
+        LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain =
+                raftMessageHandlerChainFactory.createMessageHandlerChain( consensusModule, coreServerModule );
+
+        RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), messageLogger,
+                supportedRaftProtocols, supportedModifierProtocols );
+        Server raftServer = raftServerFactory.createRaftServer( raftMessageDispatcher, serverInstalledProtocolHandler );
+        globalModule.getGlobalDependencies().satisfyDependencies( raftServer ); // resolved in tests
+        globalLife.add( raftServer );
+
+        // needs to be after Raft server in the lifecycle
+        addCoreServerComponentsToLifecycle( coreServerModule, raftMessageHandlerChain, globalLife );
+
+        addPanicEventHandlers( globalLife, panicService );
+        globalLife.add( coreServerModule.membershipWaiterLifecycle );
+    }
+
+    public DatabaseManager<CoreDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Logger log )
+    {
+        ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager = new CoreDatabaseManager( platform, this, log, facade,
+                this::coreStateComponents, globalModule.getGlobalAvailabilityGuard(), platform.getFileSystem(), platform.getPageCache(),
+                logProvider, platform.getGlobalConfig(), getGlobalDatabaseHealth() );
+        createDatabaseManagerDependentModules( databaseManager );
+        return databaseManager;
     }
 
     @Override
-    public void createDatabases( DatabaseManager databaseManager, Config config )
+    public void createDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
     {
         createCommercialEditionDatabases( databaseManager, config );
     }
 
-    private void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
+    private void createCommercialEditionDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
     {
         createDatabase( databaseManager, SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 
-    private void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
+    private void createConfiguredDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
     {
         createDatabase( databaseManager, config.get( GraphDatabaseSettings.default_database ) );
     }
 
-    protected void createDatabase( DatabaseManager databaseManager, String databaseName )
+    private void createDatabase( DatabaseManager<? extends DatabaseContext> databaseManager, String databaseName ) throws DatabaseExistsException
     {
-        CoreLocalDatabase db = databaseService.registerDatabase( databaseName );
-        coreStateService.create( db );
         databaseManager.createDatabase( databaseName );
     }
 
-    protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
+    private DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
         return new SecurePipelineFactory();
     }
 
     @Override
-    public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
+    public void createSecurityModule( GlobalModule globalModule )
     {
         SecurityProvider securityProvider;
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )

@@ -11,43 +11,44 @@ import com.neo4j.causalclustering.identity.StoreId;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 
 /**
- * StubLocalDatabase for testing.
+ * StubClusteredDatabaseContext for testing.
  */
-public class StubLocalDatabase extends AbstractLocalDatabase
+public class StubClusteredDatabaseContext extends LifecycleAdapter implements ClusteredDatabaseContext
 {
+    private final Database database;
+    private final GraphDatabaseFacade facade;
+    private final LogProvider logProvider;
+    private final BooleanSupplier isAvailable;
     private boolean isEmpty;
     private StoreId storeId;
     private final Monitors monitors;
 
-    /* This constructor is provided so that StubLocalDatabase can still conform to the LocalDatabaseFactory interface */
-    StubLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles ignoredTxLogs,
+    /* This constructor is provided so that StubClusteredDatabaseContext can still conform to the ClusteredDatabaseContextFactory interface */
+    StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles ignoredTxLogs,
             StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable )
     {
-        this( databaseName, databaseManagerSupplier, databaseLayout, logProvider, isAvailable, null );
+        this( database, facade, logProvider, isAvailable, null );
     }
 
-    StubLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogProvider logProvider,
-            BooleanSupplier isAvailable, Monitors monitors )
+    StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogProvider logProvider, BooleanSupplier isAvailable, Monitors monitors )
     {
-        super( databaseName, databaseManagerSupplier, databaseLayout, null, null, logProvider, isAvailable );
-
+        this.database = database;
+        this.facade = facade;
+        this.logProvider = logProvider;
+        this.isAvailable = isAvailable;
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextInt(), rng.nextInt(), rng.nextInt(), rng.nextInt() );
         this.monitors = monitors;
-    }
-
-    @Override
-    public void start0()
-    { //no-op
     }
 
     @Override
@@ -63,7 +64,7 @@ public class StubLocalDatabase extends AbstractLocalDatabase
     @Override
     public Monitors monitors()
     {
-        return monitors == null ? super.monitors() : monitors;
+        return monitors;
     }
 
     @Override
@@ -88,4 +89,27 @@ public class StubLocalDatabase extends AbstractLocalDatabase
         this.storeId = storeId;
     }
 
+    @Override
+    public DatabaseLayout databaseLayout()
+    {
+        return database.getDatabaseLayout();
+    }
+
+    @Override
+    public String databaseName()
+    {
+        return database.getDatabaseName();
+    }
+
+    @Override
+    public Database database()
+    {
+        return database;
+    }
+
+    @Override
+    public GraphDatabaseFacade databaseFacade()
+    {
+        return facade;
+    }
 }

@@ -10,7 +10,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -25,12 +24,12 @@ import org.neo4j.logging.LogProvider;
 class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
 {
     private final Class<T> messageType;
-    private final Supplier<DatabaseManager> databaseManagerSupplier;
+    private final DatabaseManager<? extends DatabaseContext> databaseManagerSupplier;
     private final Function<Database,SimpleChannelInboundHandler<T>> handlerFactory;
     private final CatchupServerProtocol protocol;
     private final LogProvider logProvider;
 
-    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, Supplier<DatabaseManager> databaseManagerSupplier,
+    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, DatabaseManager<? extends DatabaseContext> databaseManagerSupplier,
             Function<Database,SimpleChannelInboundHandler<T>> handlerFactory, Class<T> messageType, LogProvider logProvider )
     {
         super( messageType );
@@ -46,9 +45,9 @@ class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extend
     {
         String databaseName = request.databaseName();
 
-        SimpleChannelInboundHandler<T> handler = databaseManagerSupplier.get()
+        SimpleChannelInboundHandler<T> handler = databaseManagerSupplier
                 .getDatabaseContext( databaseName )
-                .map( DatabaseContext::getDatabase )
+                .map( DatabaseContext::database )
                 .map( handlerFactory )
                 .orElseGet( () -> new UnknownDatabaseHandler<>( messageType, protocol, logProvider ) );
 

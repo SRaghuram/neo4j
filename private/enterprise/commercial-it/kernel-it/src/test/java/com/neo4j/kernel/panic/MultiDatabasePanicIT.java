@@ -11,12 +11,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.DatabaseEventHandlerAdapter;
 import org.neo4j.graphdb.event.ErrorState;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -45,11 +48,11 @@ class MultiDatabasePanicIT
     }
 
     @Test
-    void databasesPanicSeparately()
+    void databasesPanicSeparately() throws DatabaseExistsException
     {
-        DatabaseManager databaseManager = getDatabaseManager();
-        GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( "first" ).getDatabaseFacade();
-        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" ).getDatabaseFacade();
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
+        GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( "first" ).databaseFacade();
+        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" ).databaseFacade();
         PanicDatabaseEventListener firstPanicListener = new PanicDatabaseEventListener();
         PanicDatabaseEventListener secondPanicListener = new PanicDatabaseEventListener();
         firstDatabase.registerDatabaseEventHandler( firstPanicListener );
@@ -69,10 +72,11 @@ class MultiDatabasePanicIT
 
     private DatabaseHealth getDatabaseHealth( GraphDatabaseFacade facade )
     {
-        return facade.getDependencyResolver().resolveDependency( DatabaseHealth.class );
+        return facade.getDependencyResolver().resolveDependency( SingleDatabaseHealth.class );
     }
 
-    private DatabaseManager getDatabaseManager()
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -43,6 +44,8 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -62,14 +65,14 @@ class RaftReplicatorTest
     private LocalSessionPool sessionPool = new LocalSessionPool( session );
     private TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
     private DatabaseAvailabilityGuard availabilityGuard;
-    private DatabaseService databaseService;
+    private ClusteredDatabaseManager<CoreDatabaseContext> clusteredDatabaseManager;
 
     @BeforeEach
     void setUp()
     {
         availabilityGuard = new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clocks.systemClock(), NullLog.getInstance(),
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
-        databaseService = mock( DatabaseService.class );
+        clusteredDatabaseManager = mock( ClusteredDatabaseManager.class );
     }
 
     @Test
@@ -221,7 +224,7 @@ class RaftReplicatorTest
     {
         CapturingProgressTracker capturedProgress = new CapturingProgressTracker();
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
-        doThrow( new ReplicationFailureException( "" ) ).when( databaseService ).assertHealthy( IllegalStateException.class );
+        doThrow( new ReplicationFailureException( "" ) ).when( clusteredDatabaseManager ).assertHealthy( anyString(), eq( IllegalStateException.class ) );
 
         RaftReplicator replicator = getReplicator( outbound, capturedProgress, new Monitors() );
         replicator.onLeaderSwitch( leaderInfo );
@@ -302,7 +305,7 @@ class RaftReplicatorTest
     private RaftReplicator getReplicator( CapturingOutbound<RaftMessages.RaftMessage> outbound, ProgressTracker progressTracker, Monitors monitors )
     {
         return new RaftReplicator( leaderLocator, myself, outbound, sessionPool, progressTracker, noWaitTimeoutStrategy, 10, availabilityGuard,
-                NullLogProvider.getInstance(), databaseService, monitors );
+                NullLogProvider.getInstance(), clusteredDatabaseManager, monitors );
     }
 
     private ReplicatingThread replicatingThread( RaftReplicator replicator, ReplicatedInteger content )

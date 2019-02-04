@@ -31,6 +31,7 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -75,7 +76,7 @@ public class ReadReplicaStatusTest
 
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         databaseHealth = dependencyResolver.satisfyDependency(
-                new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
+                new SingleDatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( SingleDatabaseHealth.class ) ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         dependencyResolver.satisfyDependency(
                 new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );

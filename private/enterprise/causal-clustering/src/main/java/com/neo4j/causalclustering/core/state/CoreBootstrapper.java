@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
@@ -29,8 +29,8 @@ import java.util.function.Function;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGenerator;
@@ -102,7 +102,7 @@ public class CoreBootstrapper
     private static final long FIRST_INDEX = 0L;
     private static final long FIRST_TERM = 0L;
 
-    private final DatabaseService databaseService;
+    private final ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
     private final Function<String,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
@@ -111,10 +111,11 @@ public class CoreBootstrapper
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
 
-    CoreBootstrapper( DatabaseService databaseService, TemporaryDatabaseFactory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
-            FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache, StorageEngineFactory storageEngineFactory )
+    CoreBootstrapper( ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager, TemporaryDatabaseFactory tempDatabaseFactory,
+            Function<String,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache,
+            StorageEngineFactory storageEngineFactory )
     {
-        this.databaseService = databaseService;
+        this.clusteredDatabaseManager = clusteredDatabaseManager;
         this.tempDatabaseFactory = tempDatabaseFactory;
         this.databaseInitializers = databaseInitializers;
         this.fs = fs;
@@ -126,6 +127,8 @@ public class CoreBootstrapper
 
     /**
      * Bootstraps the cluster using the supplied set of members.
+     *
+     * TODO: Completely overhaul. Could maybe take a database context object?
      *
      * @param members the members to bootstrap with (this comes from the discovery service).
      * @return a snapshot which represents the initial state.
@@ -141,7 +144,7 @@ public class CoreBootstrapper
 
     private void prepareForBootstrapping() throws Exception
     {
-        for ( LocalDatabase db : databaseService.registeredDatabases().values() )
+        for ( ClusteredDatabaseContext db : clusteredDatabaseManager.registeredDatabases().values() )
         {
             DatabaseLayout layout = db.databaseLayout();
             Config config = createTemporaryConfig( db );
@@ -157,13 +160,13 @@ public class CoreBootstrapper
 
     private void initializeSystemDatabaseIfNeeded()
     {
-        boolean systemDbStoreExists = databaseService.get( SYSTEM_DATABASE_NAME )
+        boolean systemDbStoreExists = clusteredDatabaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME )
                 .map( this::isStorePresent )
                 .orElse( false );
 
         // find some non-system db and use it to start a temporary database
         // this code and starting a temp db should go away when we have a migration step that introduces a system db
-        LocalDatabase defaultDb = databaseService.registeredDatabases()
+        ClusteredDatabaseContext defaultDb = clusteredDatabaseManager.registeredDatabases()
                 .values()
                 .stream()
                 .filter( db -> !db.databaseName().equals( SYSTEM_DATABASE_NAME ) )
@@ -178,12 +181,15 @@ public class CoreBootstrapper
             if ( !systemDbStoreExists )
             {
                 DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
-                DatabaseManager databaseManager =
+                //TODO This all needs to be overhauled
+                @SuppressWarnings( "unchecked" )
+                //StandaloneDatabaseContext because this database manager belongs to a standalone temporary instance
+                DatabaseManager<StandaloneDatabaseContext> databaseManager =
                         ((GraphDatabaseAPI) temporaryDatabase.graphDatabaseService()).getDependencyResolver().resolveDependency( DatabaseManager.class );
-                Optional<DatabaseContext> systemContext = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME );
+                Optional<StandaloneDatabaseContext> systemContext = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME );
                 GraphDatabaseFacade systemDatabaseFacade = systemContext
                         .orElseThrow( () -> new IllegalStateException( SYSTEM_DATABASE_NAME + " database should exist." ) )
-                        .getDatabaseFacade();
+                        .databaseFacade();
                 systemDatabaseInitializer.initialize( systemDatabaseFacade );
             }
         }
@@ -191,7 +197,7 @@ public class CoreBootstrapper
 
     private void appendDummyTransactions() throws IOException
     {
-        for ( LocalDatabase db : databaseService.registeredDatabases().values() )
+        for ( ClusteredDatabaseContext db : clusteredDatabaseManager.registeredDatabases().values() )
         {
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( db.databaseLayout(), createTemporaryConfig( db ) );
         }
@@ -204,7 +210,7 @@ public class CoreBootstrapper
         RaftCoreState raftCoreState = new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) );
         GlobalSessionTrackerState sessionTrackerState = new GlobalSessionTrackerState();
 
-        for ( LocalDatabase db : databaseService.registeredDatabases().values() )
+        for ( ClusteredDatabaseContext db : clusteredDatabaseManager.registeredDatabases().values() )
         {
             CoreSnapshot coreSnapshot = createCoreSnapshot( db, raftCoreState, sessionTrackerState );
             snapshots.put( db.databaseName(), coreSnapshot );
@@ -213,7 +219,7 @@ public class CoreBootstrapper
         return snapshots;
     }
 
-    private CoreSnapshot createCoreSnapshot( LocalDatabase db, RaftCoreState raftCoreState, GlobalSessionTrackerState sessionTrackerState )
+    private CoreSnapshot createCoreSnapshot( ClusteredDatabaseContext db, RaftCoreState raftCoreState, GlobalSessionTrackerState sessionTrackerState )
     {
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftCoreState );
@@ -224,7 +230,7 @@ public class CoreBootstrapper
         return coreSnapshot;
     }
 
-    private Config createTemporaryConfig( LocalDatabase db )
+    private Config createTemporaryConfig( ClusteredDatabaseContext db )
     {
         String dbName = db.databaseName();
 
@@ -243,7 +249,7 @@ public class CoreBootstrapper
         return Config.defaults( params );
     }
 
-    private boolean isStorePresent( LocalDatabase db )
+    private boolean isStorePresent( ClusteredDatabaseContext db )
     {
         return storageEngineFactory.storageExists( fs, pageCache, db.databaseLayout() );
     }

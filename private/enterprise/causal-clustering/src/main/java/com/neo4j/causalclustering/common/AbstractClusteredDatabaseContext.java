@@ -11,57 +11,81 @@ import com.neo4j.causalclustering.identity.StoreId;
 import java.io.File;
 import java.io.IOException;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.lifecycle.SafeLifecycle;
+import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 
-import static java.lang.String.format;
-
-public abstract class AbstractLocalDatabase extends SafeLifecycle implements LocalDatabase
+/**
+ * Instances extending this class represent individual clustered databases in Neo4j.
+ *
+ * Instances are responsible for exposing per database dependency management, monitoring and io operations.
+ *
+ * Collections of these instances should be managed by a {@link ClusteredDatabaseManager}
+ */
+public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter implements ClusteredDatabaseContext, Lifecycle
 {
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
     private final Log log;
-    private final Supplier<DatabaseManager> databaseManagerSupplier;
     private final String databaseName;
     private final BooleanSupplier isAvailable;
     private final LogFiles txLogs;
+    private final Database database;
+    private final GraphDatabaseFacade facade;
 
+    private volatile boolean initialized;
     private volatile StoreId storeId;
 
-    public AbstractLocalDatabase( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles txLogs,
-            StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable )
+    public AbstractClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
+            BooleanSupplier isAvailable )
     {
-        this.databaseLayout = databaseLayout;
+        this.database = database;
+        this.facade = facade;
+        this.databaseLayout = database.getDatabaseLayout();
         this.storeFiles = storeFiles;
         this.txLogs = txLogs;
-        this.databaseManagerSupplier = databaseManagerSupplier;
-        this.databaseName = databaseName;
+        this.databaseName = database.getDatabaseName();
         this.isAvailable = isAvailable;
         this.log = logProvider.getLog( getClass() );
+        this.initialized = false;
     }
 
-    public void init0()
+    @Override
+    public final void start() throws Exception
     {
         if ( isAvailable.getAsBoolean() )
         {
             return;
         }
         storeId = storeId();
-        log.info( "Initialising LocalDatabase with storeId: " + storeId );
+        log.info( "Initialising ClusteredDatabaseContext with storeId: " + storeId );
+        start0();
     }
 
-    @Override
-    public abstract void start0();
+    protected abstract void start0() throws Exception;
 
+    @Override
+    public final void stop() throws Exception
+    {
+        stop0();
+    }
+
+    protected abstract void stop0() throws Exception;
+
+    /**
+     * Reads metadata about this database from disk and calculates a uniquely {@link StoreId}.
+     * The store id should be cached so that future calls do not require IO.
+     * @return store id for this database
+     */
     @Override
     public synchronized StoreId storeId()
     {
@@ -88,6 +112,10 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
         }
     }
 
+    /**
+     * Returns per-database {@link Monitors}
+     * @return monitors for this database
+     */
     @Override
     public Monitors monitors()
     {
@@ -100,24 +128,39 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
         return database().getDependencyResolver();
     }
 
+    /**
+     * Delete the store files for this database
+     * @throws IOException
+     */
     @Override
     public void delete() throws IOException
     {
         storeFiles.delete( databaseLayout, txLogs );
     }
 
+    /**
+     * @return Whether or not the store files for this database are empty/non-existent.
+     */
     @Override
     public boolean isEmpty()
     {
         return storeFiles.isEmpty( databaseLayout );
     }
 
+    /**
+     * @return A listing of all store files which comprise this database
+     */
     @Override
     public DatabaseLayout databaseLayout()
     {
         return databaseLayout;
     }
 
+    /**
+     * Replace the store files for this database
+     * @param sourceDir the store files to replace this databases's current files with
+     * @throws IOException
+     */
     @Override
     public void replaceWith( File sourceDir ) throws IOException
     {
@@ -128,13 +171,18 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public Database database()
     {
-        return databaseManagerSupplier
-                .get()
-                .getDatabaseContext( databaseName )
-                .orElseThrow( () -> new IllegalStateException( format( "No database with name '%s' registered", databaseName ) ) )
-                .getDatabase();
+        return database;
     }
 
+    @Override
+    public GraphDatabaseFacade databaseFacade()
+    {
+        return facade;
+    }
+
+    /**
+     * @return the name of this database
+     */
     @Override
     public String databaseName()
     {

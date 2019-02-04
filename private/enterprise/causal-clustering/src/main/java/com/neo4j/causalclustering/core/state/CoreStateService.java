@@ -5,10 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.ReplicationModule;
+import com.neo4j.causalclustering.core.CommitProcessInstaller;
+import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.SessionTracker;
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.core.CoreLocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.replication.Replicator;
@@ -93,14 +94,14 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.string_bl
 import static java.lang.Long.max;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 
-public class CoreStateService implements CoreStateRepository, CoreStateFactory<CoreLocalDatabase>
+public class CoreStateService implements CoreStateRepository, CoreStateFactory
 {
     private final IdTypeConfigurationProvider idTypeConfigurationProvider;
     private final SessionTracker sessionTracker;
     private final StateStorage<Long> lastFlushedStorage;
     private final BooleanSupplier idReuse;
     private final IdContextFactory idContextFactory;
-    private final Map<String,PerDatabaseCoreStateComponents> dbStateMap;
+    private final Map<String,DatabaseCoreStateComponents> dbStateMap;
     private final Replicator replicator;
     private final CoreStateStorageFactory storageFactory;
     private final MemberId myself;
@@ -118,8 +119,8 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     private final AggregateStateMachinesCommandDispatcher dispatchers;
 
     public CoreStateService( MemberId myself, GlobalModule globalModule, CoreStateStorageFactory storageFactory, Config config,
-            RaftMachine raftMachine, DatabaseService databaseService, ReplicationModule replicationModule, StateStorage<Long> lastFlushedStorage,
-            Panicker panicker )
+            RaftMachine raftMachine, ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, ReplicationModule replicationModule,
+            StateStorage<Long> lastFlushedStorage, Panicker panicker )
     {
         this.logging = globalModule.getLogService();
         this.panicker = panicker;
@@ -142,7 +143,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
 
         dbStateMap = new CopyOnWriteHashMap<>();
-        dispatchers = new AggregateStateMachinesCommandDispatcher( databaseService, this );
+        dispatchers = new AggregateStateMachinesCommandDispatcher( databaseManager, this );
 
         idTypeConfigurationProvider = new CommercialIdTypeConfigurationProvider( config );
         idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myself );
@@ -153,12 +154,12 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
                 .withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) ).build();
     }
 
-    public PerDatabaseCoreStateComponents create( CoreLocalDatabase localDatabase )
+    public DatabaseCoreStateComponents create( String databaseName,  DatabaseCoreStateComponents.LifecycleDependencies dependencies,
+            CommitProcessInstaller installer )
     {
-        String databaseName = localDatabase.databaseName();
         ReplicatedIdAllocationStateMachine idAllocationStateMachine = createIdAllocationStateMachine( databaseName );
 
-        Supplier<StorageEngine> storageEngineSupplier = () -> localDatabase.database().getDependencyResolver().resolveDependency( StorageEngine.class );
+        Supplier<StorageEngine> storageEngineSupplier = dependencies::storageEngine;
 
         ReplicatedIdRangeAcquirer idRangeAcquirer = new ReplicatedIdRangeAcquirer( databaseName, replicator, idAllocationStateMachine, allocationSizes,
                 myself, logProvider );
@@ -194,18 +195,18 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         Locks lockManager = createLockManager( config, globalModule.getGlobalClock(), logging, replicator, myself, raftMachine,
                 replicatedLockTokenStateMachine, databaseName );
 
-        RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( localDatabase, logProvider );
+        RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( dependencies::txIdStore, dependencies::txStore, logProvider );
 
         CoreStateMachines coreStateMachines = new CoreStateMachines( replicatedTxStateMachine, labelTokenStateMachine, relationshipTypeTokenStateMachine,
                 propertyKeyTokenStateMachine, replicatedLockTokenStateMachine, idAllocationStateMachine, new DummyMachine(), consensusLogIndexRecovery );
 
         TokenHolders tokenHolders = new TokenHolders( propertyKeyTokenHolder, labelTokenHolder, relationshipTypeTokenHolder );
 
-        CommitProcessFactory commitProcessFactory = ( appender, applier, ignored ) -> createCommitProcess( appender, applier, localDatabase, panicker );
+        CommitProcessFactory commitProcessFactory = ( appender, applier, ignored ) -> createCommitProcess( appender, applier, databaseName,
+                installer, panicker );
 
-        PerDatabaseCoreStateComponents dbState = new PerDatabaseCoreStateComponents( commitProcessFactory, coreStateMachines, tokenHolders,
+        DatabaseCoreStateComponents dbState = new DatabaseCoreStateComponents( commitProcessFactory, coreStateMachines, tokenHolders,
                 idRangeAcquirer, lockManager, idContext );
-        localDatabase.setCoreStateComponents( dbState );
         dbStateMap.put( databaseName, dbState );
         return dbState;
     }
@@ -222,11 +223,16 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         return new ReplicatedLockTokenStateMachine( lockTokenStorage );
     }
 
-    private TransactionCommitProcess createCommitProcess( TransactionAppender appender, StorageEngine storageEngine, CoreLocalDatabase localDatabase,
-            Panicker panicker )
+    private TransactionCommitProcess createCommitProcess( TransactionAppender appender, StorageEngine storageEngine, String databaseName,
+            CommitProcessInstaller installer, Panicker panicker )
     {
-        localDatabase.setCommitProcessDependencies( appender, storageEngine );
-        return new ReplicatedTransactionCommitProcess( replicator, localDatabase.databaseName(), panicker );
+        installer.install( appender, storageEngine );
+        return new ReplicatedTransactionCommitProcess( replicator, databaseName, panicker );
+    }
+
+    public void remove( String databaseName )
+    {
+        dbStateMap.remove( databaseName );
     }
 
     private Map<IdType,Integer> getIdTypeAllocationSizeFromConfig( Config config )
@@ -255,7 +261,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     {
         Function<String,ReplicatedIdRangeAcquirer> rangeAcquirerFn =
                 dbName -> getDatabaseState( dbName )
-                        .map( PerDatabaseCoreStateComponents::rangeAcquirer )
+                        .map( DatabaseCoreStateComponents::rangeAcquirer )
                         .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseName ) ) );
 
         return new ReplicatedIdGeneratorFactory( fileSystem, rangeAcquirerFn, logProvider, idTypeConfigurationProvider, databaseName, panicker );
@@ -296,7 +302,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     @Override
     public void flush( long lastApplied ) throws IOException
     {
-        for ( PerDatabaseCoreStateComponents db : dbStateMap.values() )
+        for ( DatabaseCoreStateComponents db : dbStateMap.values() )
         {
             db.stateMachines().flush();
         }
@@ -321,13 +327,13 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     }
 
     @Override
-    public Map<String,PerDatabaseCoreStateComponents> getAllDatabaseStates()
+    public Map<String,DatabaseCoreStateComponents> getAllDatabaseStates()
     {
         return dbStateMap;
     }
 
     @Override
-    public Optional<PerDatabaseCoreStateComponents> getDatabaseState( String databaseName )
+    public Optional<DatabaseCoreStateComponents> getDatabaseState( String databaseName )
     {
         return Optional.ofNullable( dbStateMap.get( databaseName ) );
     }

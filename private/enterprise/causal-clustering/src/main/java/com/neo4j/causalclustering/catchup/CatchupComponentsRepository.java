@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 
 import java.util.Optional;
 
@@ -16,24 +16,24 @@ import org.neo4j.io.layout.DatabaseLayout;
 /**
  * The components needed to perform store copy and catchup operations for databases in Neo4j.
  *
- * For each database on this machine, there is a {@link LocalDatabase}, a {@link RemoteStore}
+ * For each database on this machine, there is a {@link ClusteredDatabaseContext}, a {@link RemoteStore}
  * and a {@link StoreCopyProcess}.
  *
- * The {@link LocalDatabase} instance may be used to start/stop a database, as well as perform file system operations via {@link DatabaseLayout}.
+ * The {@link ClusteredDatabaseContext} instance may be used to start/stop a database, as well as perform file system operations via {@link DatabaseLayout}.
  * The {@link RemoteStore} instance may be used to catchup, via transaction pulling, to a remote machine.
  * The {@link StoreCopyProcess} instance may be used to catchup, via store copying, to a remote machine.
  */
 public interface CatchupComponentsRepository
 {
-    Optional<PerDatabaseCatchupComponents> componentsFor( String databaseName );
+    Optional<DatabaseCatchupComponents> componentsFor( String databaseName );
 
     /** Simple struct to make working with various per database catchup components a bit easier */
-    class PerDatabaseCatchupComponents
+    class DatabaseCatchupComponents
     {
         final RemoteStore remoteStore;
         final StoreCopyProcess storeCopy;
 
-        public PerDatabaseCatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy )
+        public DatabaseCatchupComponents( RemoteStore remoteStore, StoreCopyProcess storeCopy )
         {
             this.remoteStore = remoteStore;
             this.storeCopy = storeCopy;

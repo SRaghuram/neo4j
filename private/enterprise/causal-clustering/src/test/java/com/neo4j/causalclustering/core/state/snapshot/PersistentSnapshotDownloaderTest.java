@@ -5,10 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
+
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.LocalDatabase;
-import com.neo4j.causalclustering.common.StubLocalDatabaseService;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -52,19 +53,19 @@ class PersistentSnapshotDownloaderTest
     private CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
 
-    private final StubLocalDatabaseService databaseService = spy( new StubLocalDatabaseService() );
+    private final StubClusteredDatabaseManager clusteredDatabaseManager = spy( new StubClusteredDatabaseManager() );
     private final Suspendable auxiliaryServices = mock( Suspendable.class );
 
     private PersistentSnapshotDownloader createDownloader()
     {
-        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, auxiliaryServices, databaseService,
+        return new PersistentSnapshotDownloader( catchupAddressProvider, applicationProcess, auxiliaryServices, clusteredDatabaseManager,
                 coreDownloader, snapshotService, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
     }
 
     @BeforeEach
     void setUp()
     {
-        databaseService.givenDatabaseWithConfig()
+        clusteredDatabaseManager.givenDatabaseWithConfig()
                 .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .register();
     }
@@ -80,15 +81,15 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        InOrder inOrder = inOrder( applicationProcess, databaseService, auxiliaryServices, coreDownloader );
+        InOrder inOrder = inOrder( applicationProcess, clusteredDatabaseManager, auxiliaryServices, coreDownloader );
 
         inOrder.verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         inOrder.verify( auxiliaryServices ).disable();
-        inOrder.verify( databaseService ).stopForStoreCopy();
+        inOrder.verify( clusteredDatabaseManager ).stopForStoreCopy();
 
         inOrder.verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
 
-        inOrder.verify( databaseService ).start();
+        inOrder.verify( clusteredDatabaseManager ).start();
         inOrder.verify( auxiliaryServices ).enable();
         inOrder.verify( applicationProcess ).resumeApplier( OPERATION_NAME );
 
@@ -156,7 +157,7 @@ class PersistentSnapshotDownloaderTest
     void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
     {
         // given
-        LocalDatabase defaultDatabase = databaseService.get( DEFAULT_DATABASE_NAME ).get();
+        ClusteredDatabaseContext defaultDatabase = clusteredDatabaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
@@ -218,8 +219,8 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.stop();
         thread.join();
 
-        verify( databaseService ).stopForStoreCopy();
-        verify( databaseService, never() ).start();
+        verify( clusteredDatabaseManager ).stopForStoreCopy();
+        verify( clusteredDatabaseManager, never() ).start();
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException
@@ -238,7 +239,7 @@ class PersistentSnapshotDownloaderTest
         }
 
         @Override
-        Optional<CoreSnapshot> downloadSnapshotAndStore( LocalDatabase db, CatchupAddressProvider addressProvider )
+        Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
         {
             return after-- <= 0 ? Optional.of( snapshot ) : Optional.empty();
         }

@@ -46,7 +46,7 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
-class CoreReplicationIT
+public class CoreReplicationIT
 {
     @Inject
     private ClusterFactory clusterFactory;

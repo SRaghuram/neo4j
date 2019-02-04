@@ -15,16 +15,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.UserManager;
@@ -38,7 +39,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
@@ -368,7 +368,7 @@ class SystemGraphRealmIT
         realm.shutdown();
     }
 
-    private class TestDatabaseManager extends LifecycleAdapter implements DatabaseManager
+    private class TestDatabaseManager extends LifecycleAdapter implements DatabaseManager<StandaloneDatabaseContext>
     {
         GraphDatabaseFacade testSystemDb;
 
@@ -381,19 +381,19 @@ class SystemGraphRealmIT
         }
 
         @Override
-        public Optional<DatabaseContext> getDatabaseContext( String name )
+        public Optional<StandaloneDatabaseContext> getDatabaseContext( String name )
         {
             if ( SYSTEM_DATABASE_NAME.equals( name ) )
             {
                 DependencyResolver dependencyResolver = testSystemDb.getDependencyResolver();
                 Database database = dependencyResolver.resolveDependency( Database.class );
-                return Optional.of( new DatabaseContext( database, testSystemDb ) );
+                return Optional.of( new StandaloneDatabaseContext( database, testSystemDb ) );
             }
             return Optional.empty();
         }
 
         @Override
-        public DatabaseContext createDatabase( String databaseName )
+        public StandaloneDatabaseContext createDatabase( String databaseName )
         {
             throw new UnsupportedOperationException( "Call to createDatabase not expected" );
         }
@@ -414,9 +414,9 @@ class SystemGraphRealmIT
         }
 
         @Override
-        public List<String> listDatabases()
+        public SortedMap<String,StandaloneDatabaseContext> registeredDatabases()
         {
-            return emptyList();
+            return Collections.emptySortedMap();
         }
     }
 

@@ -5,17 +5,19 @@
  */
 package org.neo4j.multidatabase.stresstest.commands;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 
 public class CreateManagerCommand extends DatabaseManagerCommand
 {
-    public CreateManagerCommand( DatabaseManager manager, String databaseName )
+    public CreateManagerCommand( DatabaseManager<StandaloneDatabaseContext> manager, String databaseName )
     {
         super( manager, databaseName );
     }
 
     @Override
-    void execute( DatabaseManager manager, String databaseName )
+    void execute( DatabaseManager<StandaloneDatabaseContext> manager, String databaseName ) throws DatabaseExistsException
     {
         manager.createDatabase( databaseName );
     }

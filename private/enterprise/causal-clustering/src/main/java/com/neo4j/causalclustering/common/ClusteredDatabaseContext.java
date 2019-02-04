@@ -10,9 +10,8 @@ import com.neo4j.causalclustering.identity.StoreId;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.collection.Dependencies;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.monitoring.Monitors;
 
@@ -22,9 +21,12 @@ import org.neo4j.monitoring.Monitors;
  * Instances are responsible for the lifecycle management of per-database components, as well as exposing
  * per database dependency management, monitoring and io operations.
  *
- * Collections of these instances should be managed by a {@link DatabaseService}
+ * TODO: Stop ClusteredDatabaseContext from being lifecycle and just manage the parts which need it in the database manager. Probably requires
+ *  a Core and RR DatabaseManager, which is frustrating, but most of the implementation will be in the abstract version
+ *
+ * Collections of these instances should be managed by a {@link ClusteredDatabaseManager}
  */
-public interface LocalDatabase extends Lifecycle
+public interface ClusteredDatabaseContext extends Lifecycle, DatabaseContext
 {
     /**
      * Reads metadata about this database from disk and calculates a uniquely {@link StoreId}.
@@ -38,17 +40,6 @@ public interface LocalDatabase extends Lifecycle
      * @return monitors for this database
      */
     Monitors monitors();
-
-    /**
-     * Returns a per-database {@link Dependencies} object.
-     * These per-database dependencies sit in a tree underneath the parent, global dependencies.
-     * If you `satisfy` an instance of a type on this object then you may only `resolve` it on this object.
-     * However, if you `resolve` a type which is satisfied on the global dependencies but not here, that
-     * will work fine. You will receive the global instance.
-     *
-     * @return dependencies service for this database
-     */
-    Dependencies dependencies();
 
     /**
      * Delete the store files for this database
@@ -72,12 +63,6 @@ public interface LocalDatabase extends Lifecycle
      * @throws IOException
      */
     void replaceWith( File sourceDir ) throws IOException;
-
-    /**
-     * Returns the {@link Database} which actually underpins this datasource. Exposes all sorts of kernel level machinery.
-     * @return the underlying datasource for this database
-     */
-    Database database();
 
     /**
      * @return the name of this database

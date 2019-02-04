@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -44,22 +45,20 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 class TestCatchupServer extends Server
 {
-    TestCatchupServer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider, ExecutorService executor )
+    TestCatchupServer( CatchupServerHandler catchupServerHandler, LogProvider logProvider, ExecutorService executor )
     {
-        super( childInitializer( fileSystem, graphDb, logProvider ), logProvider, logProvider, new ListenSocketAddress( "localhost", 0 ), "fake-catchup-server",
-                executor, BootstrapConfiguration.serverConfig( Config.defaults() ) );
+        super( childInitializer( catchupServerHandler, logProvider ), logProvider, logProvider,
+                new ListenSocketAddress( "localhost", 0 ), "fake-catchup-server", executor,
+                BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
-    private static ChildInitializer childInitializer( FileSystemAbstraction fileSystem, GraphDatabaseAPI graphDb, LogProvider logProvider )
+    private static ChildInitializer childInitializer( CatchupServerHandler catchupServerHandler, LogProvider logProvider )
     {
         ApplicationSupportedProtocols catchupProtocols = new ApplicationSupportedProtocols( CATCHUP, emptyList() );
         ModifierSupportedProtocols modifierProtocols = new ModifierSupportedProtocols( COMPRESSION, emptyList() );
 
         ApplicationProtocolRepository catchupRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
         ModifierProtocolRepository modifierRepository = new ModifierProtocolRepository( ModifierProtocols.values(), singletonList( modifierProtocols ) );
-
-        Supplier<DatabaseManager> databaseManagerSupplier = graphDb.getDependencyResolver().provideDependency( DatabaseManager.class );
-        MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem );
 
         NettyPipelineBuilderFactory pipelineBuilder = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
 

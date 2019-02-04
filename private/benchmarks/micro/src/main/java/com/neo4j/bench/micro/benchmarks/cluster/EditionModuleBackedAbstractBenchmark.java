@@ -110,7 +110,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         }
 
         @Override
-        public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
+        public void createSecurityModule( GlobalModule globalModule )
         {
             securityProvider = NoAuthSecurityProvider.INSTANCE;
         }

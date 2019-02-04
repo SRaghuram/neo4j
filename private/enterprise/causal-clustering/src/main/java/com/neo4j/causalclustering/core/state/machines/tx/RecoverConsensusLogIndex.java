@@ -5,9 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state.machines.tx;
 
-import com.neo4j.causalclustering.common.LocalDatabase;
+import java.util.function.Supplier;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -18,22 +17,19 @@ import org.neo4j.storageengine.api.TransactionIdStore;
  */
 public class RecoverConsensusLogIndex
 {
-    private final LocalDatabase localDatabase;
     private final LogProvider logProvider;
+    private final Supplier<TransactionIdStore> txIdStore;
+    private final Supplier<LogicalTransactionStore> txStore;
 
-    public RecoverConsensusLogIndex( LocalDatabase localDatabase, LogProvider logProvider )
+    public RecoverConsensusLogIndex( Supplier<TransactionIdStore> txIdStore, Supplier<LogicalTransactionStore> txStore, LogProvider logProvider )
     {
-        this.localDatabase = localDatabase;
+        this.txIdStore = txIdStore;
+        this.txStore = txStore;
         this.logProvider = logProvider;
     }
 
     public long findLastAppliedIndex()
     {
-        DependencyResolver dependencies = localDatabase.database().getDependencyResolver();
-        TransactionIdStore transactionIdStore = dependencies.resolveDependency( TransactionIdStore.class );
-        LogicalTransactionStore transactionStore = dependencies.resolveDependency( LogicalTransactionStore.class );
-
-        return new LastCommittedIndexFinder( transactionIdStore, transactionStore, logProvider )
-                .getLastCommittedIndex();
+        return new LastCommittedIndexFinder( txIdStore.get(), txStore.get(), logProvider ).getLastCommittedIndex();
     }
 }

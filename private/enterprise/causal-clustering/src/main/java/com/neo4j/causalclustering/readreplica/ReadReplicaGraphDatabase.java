@@ -43,4 +43,5 @@ public class ReadReplicaGraphDatabase extends GraphDatabaseFacade
         new GraphDatabaseFacadeFactory( DatabaseInfo.READ_REPLICA, factory ).initFacade( storeDir, config,
                 dependencies, this );
     }
+
 }

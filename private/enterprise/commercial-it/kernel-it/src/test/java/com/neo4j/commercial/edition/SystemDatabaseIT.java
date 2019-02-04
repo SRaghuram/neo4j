@@ -18,6 +18,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -55,7 +56,7 @@ class SystemDatabaseIT
     @Inject
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
-    private DatabaseManager databaseManager;
+    private DatabaseManager<StandaloneDatabaseContext> databaseManager;
     private GraphDatabaseFacade defaultDb;
     private GraphDatabaseFacade systemDb;
 
@@ -183,7 +184,7 @@ class SystemDatabaseIT
         {
             File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
             databaseWithSystemDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
-            DatabaseManager databaseManager = getDatabaseManager( databaseWithSystemDb );
+            DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager( databaseWithSystemDb );
             assertTrue( databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME ).isPresent() );
         }
         finally
@@ -216,12 +217,13 @@ class SystemDatabaseIT
         }
     }
 
-    private static GraphDatabaseFacade getDatabaseByName( DatabaseManager databaseManager, String dbName )
+    private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<StandaloneDatabaseContext> databaseManager, String dbName )
     {
-        return databaseManager.getDatabaseContext( dbName ).orElseThrow( IllegalStateException::new ).getDatabaseFacade();
+        return databaseManager.getDatabaseContext( dbName ).orElseThrow( IllegalStateException::new ).databaseFacade();
     }
 
-    private DatabaseManager getDatabaseManager( GraphDatabaseService database )
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager( GraphDatabaseService database )
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

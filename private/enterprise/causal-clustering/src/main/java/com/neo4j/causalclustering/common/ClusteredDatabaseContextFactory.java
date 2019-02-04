@@ -8,16 +8,14 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
 
 @FunctionalInterface
-public interface LocalDatabaseFactory<DB extends LocalDatabase>
+public interface ClusteredDatabaseContextFactory<DB extends ClusteredDatabaseContext>
 {
-     DB create( String databaseName, Supplier<DatabaseManager> databaseManagerSupplier, DatabaseLayout databaseLayout, LogFiles txLogs,
-             StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable );
+     DB create( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable );
 }

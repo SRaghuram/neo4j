@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.database.Database;
@@ -42,9 +43,9 @@ public class IndexSamplingManagerBeanTest
     public void setup()
     {
         Dependencies dependencies = mock( Dependencies.class );
-        DatabaseContext databaseContext = mock( DatabaseContext.class );
+        DatabaseContext databaseContext = mock( StandaloneDatabaseContext.class );
         database = mock( Database.class );
-        when( databaseContext.getDependencies() ).thenReturn( dependencies );
+        when( databaseContext.dependencies() ).thenReturn( dependencies );
         when( dependencies.resolveDependency( Database.class ) ).thenReturn( database );
         StorageEngine storageEngine = mock( StorageEngine.class );
         StorageReader storageReader = mock( StorageReader.class );

@@ -25,7 +25,7 @@ public interface CoreStateRepository
 
     long getLastFlushed();
 
-    Map<String,PerDatabaseCoreStateComponents> getAllDatabaseStates();
+    Map<String,DatabaseCoreStateComponents> getAllDatabaseStates();
 
-    Optional<PerDatabaseCoreStateComponents> getDatabaseState( String databaseName );
+    Optional<DatabaseCoreStateComponents> getDatabaseState( String databaseName );
 }

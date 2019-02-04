@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -52,18 +51,18 @@ public class MembershipWaiter
 
     private final MemberId myself;
     private final JobScheduler jobScheduler;
-    private final Supplier<DatabaseHealth> dbHealthSupplier;
+    private final DatabaseHealth internalDatabasesHealth;
     private final long maxCatchupLag;
     private long currentCatchupDelayInMs;
     private final Log log;
     private final Monitor monitor;
 
-    public MembershipWaiter( MemberId myself, JobScheduler jobScheduler, Supplier<DatabaseHealth> dbHealthSupplier,
+    public MembershipWaiter( MemberId myself, JobScheduler jobScheduler, DatabaseHealth internalDatabasesHealth,
             long maxCatchupLag, LogProvider logProvider, Monitors monitors )
     {
         this.myself = myself;
         this.jobScheduler = jobScheduler;
-        this.dbHealthSupplier = dbHealthSupplier;
+        this.internalDatabasesHealth = internalDatabasesHealth;
         this.maxCatchupLag = maxCatchupLag;
         this.currentCatchupDelayInMs = maxCatchupLag;
         this.log = logProvider.getLog( getClass() );
@@ -74,7 +73,7 @@ public class MembershipWaiter
     {
         CompletableFuture<Boolean> catchUpFuture = new CompletableFuture<>();
 
-        Evaluator evaluator = new Evaluator( raft, catchUpFuture, dbHealthSupplier );
+        Evaluator evaluator = new Evaluator( raft, catchUpFuture, internalDatabasesHealth );
 
         JobHandle jobHandle = jobScheduler.schedule( Group.MEMBERSHIP_WAITER,
                 evaluator, currentCatchupDelayInMs, MILLISECONDS );
@@ -90,23 +89,22 @@ public class MembershipWaiter
         private final CompletableFuture<Boolean> catchUpFuture;
 
         private long lastLeaderCommit;
-        private final Supplier<DatabaseHealth> dbHealthSupplier;
+        private final DatabaseHealth kernelDatabaseHealth;
 
-        private Evaluator( RaftMachine raft, CompletableFuture<Boolean> catchUpFuture,
-                Supplier<DatabaseHealth> dbHealthSupplier )
+        private Evaluator( RaftMachine raft, CompletableFuture<Boolean> catchUpFuture, DatabaseHealth kernelDatabaseHealth )
         {
             this.raft = raft;
             this.catchUpFuture = catchUpFuture;
             this.lastLeaderCommit = raft.state().leaderCommit();
-            this.dbHealthSupplier = dbHealthSupplier;
+            this.kernelDatabaseHealth = kernelDatabaseHealth;
         }
 
         @Override
         public void run()
         {
-            if ( !dbHealthSupplier.get().isHealthy() )
+            if ( !kernelDatabaseHealth.isHealthy() )
             {
-                catchUpFuture.completeExceptionally( dbHealthSupplier.get().cause() );
+                catchUpFuture.completeExceptionally( kernelDatabaseHealth.cause() );
             }
             else if ( iAmAVotingMember() && caughtUpWithLeader() )
             {

@@ -14,11 +14,11 @@ import org.neo4j.io.fs.FileSystemAbstraction;
  * check is performed on startup in the constructor, it is important to construct this
  * class before the cluster-state is touched by other modules.
  */
-class CoreStartupState
+class StartupCoreStateCheck
 {
     private final boolean wasUnboundOnStartup;
 
-    CoreStartupState( FileSystemAbstraction fs, ClusterStateLayout layout )
+    StartupCoreStateCheck( FileSystemAbstraction fs, ClusterStateLayout layout )
     {
         /* This check is extremely simple and only considers a single file of the cluster state. It is
            good enough, but it could be improved together with more strict handling of cluster-state. */

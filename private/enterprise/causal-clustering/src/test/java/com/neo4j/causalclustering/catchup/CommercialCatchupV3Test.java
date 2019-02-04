@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 
 class CommercialCatchupV3Test extends CommercialCatchupTest
@@ -23,12 +24,12 @@ class CommercialCatchupV3Test extends CommercialCatchupTest
 
     @ParameterizedTest
     @MethodSource( "v3Tests" )
-    void runTests( Function<DatabaseManager,RequestResponse> scenario ) throws Exception
+    void runTests( Function<DatabaseManager<? extends DatabaseContext>,RequestResponse> scenario ) throws Exception
     {
         executeTestScenario( scenario );
     }
 
-    private static Stream<Function<DatabaseManager,RequestResponse>> v3Tests()
+    private static Stream<Function<DatabaseManager<? extends DatabaseContext>,RequestResponse>> v3Tests()
     {
         return Stream.of( storeId(), wrongDb() );
     }

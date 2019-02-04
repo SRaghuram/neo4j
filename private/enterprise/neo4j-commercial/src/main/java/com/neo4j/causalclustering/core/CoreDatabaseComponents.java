@@ -6,12 +6,12 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.state.CoreStateService;
-import com.neo4j.causalclustering.core.state.PerDatabaseCoreStateComponents;
+import com.neo4j.causalclustering.core.state.DatabaseCoreStateComponents;
 
 import java.util.function.Function;
 
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
+import org.neo4j.graphdb.factory.module.edition.context.DatabaseComponents;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -24,17 +24,20 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
+import org.neo4j.monitoring.SingleDatabaseHealth;
+import org.neo4j.logging.Log;
+import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.token.TokenHolders;
 
-public class CoreDatabaseContext implements EditionDatabaseContext
+public class CoreDatabaseComponents implements DatabaseComponents
 {
     private final CoreEditionModule editionModule;
-    private final PerDatabaseCoreStateComponents databaseState;
+    private final DatabaseCoreStateComponents databaseState;
     private final StatementLocksFactory statementLocksFactory;
     private final DatabaseTransactionStats transactionMonitor;
     private final String databaseName;
 
-    public CoreDatabaseContext( GlobalModule globalModule, CoreEditionModule editionModule, String databaseName )
+    CoreDatabaseComponents( GlobalModule globalModule, CoreEditionModule editionModule, String databaseName )
     {
         this.databaseName =  databaseName;
         this.editionModule = editionModule;
@@ -118,4 +121,9 @@ public class CoreDatabaseContext implements EditionDatabaseContext
         return transactionMonitor;
     }
 
+    @Override
+    public SingleDatabaseHealth createDatabaseHealth( DatabasePanicEventGenerator dbpe, Log log )
+    {
+        return editionModule.createDatabaseHealth( databaseName, dbpe, log );
+    }
 }

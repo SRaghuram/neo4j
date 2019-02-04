@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandler;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.database.Database;
@@ -34,20 +35,20 @@ import org.neo4j.logging.LogProvider;
  */
 public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 {
-    private final Supplier<DatabaseManager> databaseManagerSupplier;
+    private final DatabaseManager<? extends DatabaseContext> databaseManager;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final CoreSnapshotService snapshotService;
 
-    public MultiDatabaseCatchupServerHandler( Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, FileSystemAbstraction fs )
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<? extends DatabaseContext> databaseManager, LogProvider logProvider, FileSystemAbstraction fs )
     {
-        this( databaseManagerSupplier, logProvider, fs, null );
+        this( databaseManager, logProvider, fs, null );
     }
 
-    public MultiDatabaseCatchupServerHandler( Supplier<DatabaseManager> databaseManagerSupplier, LogProvider logProvider, FileSystemAbstraction fs,
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<? extends DatabaseContext> databaseManager, LogProvider logProvider, FileSystemAbstraction fs,
             CoreSnapshotService snapshotService )
     {
-        this.databaseManagerSupplier = databaseManagerSupplier;
+        this.databaseManager = databaseManager;
         this.logProvider = logProvider;
         this.fs = fs;
         this.snapshotService = snapshotService;
@@ -56,35 +57,35 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
     @Override
     public ChannelHandler txPullRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildTxPullRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildTxPullRequestHandler( db, protocol ),
                 TxPullRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getStoreIdRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreIdRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildStoreIdRequestHandler( db, protocol ),
                 GetStoreIdRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler storeListingRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreListingRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildStoreListingRequestHandler( db, protocol ),
                 PrepareStoreCopyRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildStoreFileRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildStoreFileRequestHandler( db, protocol ),
                 GetStoreFileRequest.class, logProvider );
     }
 
     @Override
     public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol protocol )
     {
-        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManagerSupplier, db -> buildIndexSnapshotRequestHandler( db, protocol ),
+        return new MultiplexingCatchupRequestHandler<>( protocol, databaseManager, db -> buildIndexSnapshotRequestHandler( db, protocol ),
                 GetIndexFilesRequest.class, logProvider );
     }
 

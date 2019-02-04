@@ -17,8 +17,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseNotFoundException;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -175,9 +178,10 @@ public class DatabaseMetricsExtensionIT
     }
 
     @Test
-    public void registerDatabaseMetricsOnDatabaseStart()
+    public void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
     {
-        DatabaseManager databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
@@ -188,9 +192,10 @@ public class DatabaseMetricsExtensionIT
     }
 
     @Test
-    public void removeDatabaseMetricsOnDatabaseStop()
+    public void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        DatabaseManager databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        @SuppressWarnings( "unchecked" )
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
         String testDbName = "testdb";

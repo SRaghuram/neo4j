@@ -11,11 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -132,8 +133,8 @@ class DefaultDatabaseSelectionIT
 
     private void checkDatabaseNames( GraphDatabaseService database, String defaultDatabaseName )
     {
-        DatabaseManager databaseManager = getDatabaseManager( database );
-        List<String> databases = databaseManager.listDatabases();
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager( database );
+        Set<String> databases = databaseManager.registeredDatabases().keySet();
         assertThat( databases, containsInAnyOrder( defaultDatabaseName, "system" ) );
     }
 
@@ -168,7 +169,8 @@ class DefaultDatabaseSelectionIT
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 
-    private DatabaseManager getDatabaseManager( GraphDatabaseService database )
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager( GraphDatabaseService database )
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

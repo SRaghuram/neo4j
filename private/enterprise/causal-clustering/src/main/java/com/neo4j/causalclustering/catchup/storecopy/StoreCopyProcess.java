@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
@@ -21,19 +21,19 @@ public class StoreCopyProcess
 {
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
-    private final LocalDatabase localDatabase;
+    private final ClusteredDatabaseContext clusteredDatabaseContext;
     private final Config config;
     private final CopiedStoreRecovery copiedStoreRecovery;
     private final Log log;
     private final RemoteStore remoteStore;
 
-    public StoreCopyProcess( FileSystemAbstraction fs, PageCache pageCache, LocalDatabase localDatabase,
+    public StoreCopyProcess( FileSystemAbstraction fs, PageCache pageCache, ClusteredDatabaseContext clusteredDatabaseContext,
             CopiedStoreRecovery copiedStoreRecovery, RemoteStore remoteStore, LogProvider logProvider )
     {
         this.fs = fs;
         this.pageCache = pageCache;
-        this.localDatabase = localDatabase;
-        this.config = localDatabase.database().getConfig();
+        this.clusteredDatabaseContext = clusteredDatabaseContext;
+        this.config = clusteredDatabaseContext.database().getConfig();
         this.copiedStoreRecovery = copiedStoreRecovery;
         this.remoteStore = remoteStore;
         this.log = logProvider.getLog( getClass() );
@@ -42,7 +42,7 @@ public class StoreCopyProcess
     public void replaceWithStoreFrom( CatchupAddressProvider addressProvider, StoreId expectedStoreId )
             throws IOException, StoreCopyFailedException, DatabaseShutdownException
     {
-        try ( TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, localDatabase.databaseLayout() ) )
+        try ( TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, clusteredDatabaseContext.databaseLayout() ) )
         {
             remoteStore.copy( addressProvider, expectedStoreId, tempStore.databaseLayout(), false );
             try
@@ -58,7 +58,7 @@ public class StoreCopyProcess
                 tempStore.keepStore();
                 throw e;
             }
-            localDatabase.replaceWith( tempStore.databaseLayout().databaseDirectory() );
+            clusteredDatabaseContext.replaceWith( tempStore.databaseLayout().databaseDirectory() );
         }
         log.info( "Replaced store successfully" );
     }

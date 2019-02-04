@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.core.CoreDatabaseContext;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -57,7 +59,8 @@ public class CoreDownloader
      * @throws IOException An issue with I/O.
      * @throws DatabaseShutdownException The database is shutting down.
      */
-    Optional<CoreSnapshot> downloadSnapshotAndStore( LocalDatabase db, CatchupAddressProvider addressProvider ) throws IOException, DatabaseShutdownException
+    Optional<CoreSnapshot> downloadSnapshotAndStore( ClusteredDatabaseContext db, CatchupAddressProvider addressProvider )
+            throws IOException, DatabaseShutdownException
     {
         Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( addressProvider );
         if ( !primaryOpt.isPresent() )

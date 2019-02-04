@@ -7,13 +7,13 @@ package com.neo4j.causalclustering.core.state.snapshot;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.DatabaseCatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
@@ -39,10 +39,10 @@ public class StoreDownloader
      *
      * @return true if successful.
      */
-    boolean bringUpToDate( LocalDatabase database, AdvertisedSocketAddress primaryAddress, CatchupAddressProvider addressProvider )
+    boolean bringUpToDate( ClusteredDatabaseContext database, AdvertisedSocketAddress primaryAddress, CatchupAddressProvider addressProvider )
             throws IOException, DatabaseShutdownException
     {
-        PerDatabaseCatchupComponents components = getCatchupComponents( database.databaseName() );
+        DatabaseCatchupComponents components = getCatchupComponents( database.databaseName() );
         Optional<StoreId> validStoreId = validateStoreId( database, components.remoteStore(), primaryAddress );
 
         if ( !validStoreId.isPresent() )
@@ -70,7 +70,8 @@ public class StoreDownloader
      * is valid either because it matches between the local and the upstream or because the local database
      * is empty anyway so it should be overridden by the remote store ID when the remote database is copied.
      */
-    private Optional<StoreId> validateStoreId( LocalDatabase localDatabase, RemoteStore remoteStore, AdvertisedSocketAddress address ) throws IOException
+    private Optional<StoreId> validateStoreId( ClusteredDatabaseContext clusteredDatabaseContext, RemoteStore remoteStore,
+            AdvertisedSocketAddress address ) throws IOException
     {
         StoreId remoteStoreId;
         try
@@ -83,7 +84,7 @@ public class StoreDownloader
             return Optional.empty();
         }
 
-        if ( !localDatabase.isEmpty() && !remoteStoreId.equals( localDatabase.storeId() ) )
+        if ( !clusteredDatabaseContext.isEmpty() && !remoteStoreId.equals( clusteredDatabaseContext.storeId() ) )
         {
             log.error( "Store copy failed due to store ID mismatch" );
             return Optional.empty();
@@ -94,7 +95,7 @@ public class StoreDownloader
     /**
      * @return true if catchup was successful.
      */
-    private boolean tryCatchup( LocalDatabase database, CatchupAddressProvider addressProvider, RemoteStore remoteStore ) throws IOException
+    private boolean tryCatchup( ClusteredDatabaseContext database, CatchupAddressProvider addressProvider, RemoteStore remoteStore ) throws IOException
     {
         try
         {
@@ -123,7 +124,7 @@ public class StoreDownloader
         return true;
     }
 
-    private PerDatabaseCatchupComponents getCatchupComponents( String databaseName )
+    private DatabaseCatchupComponents getCatchupComponents( String databaseName )
     {
         return componentsRepo.componentsFor( databaseName ).orElseThrow(
                 () -> new IllegalStateException( String.format( "There are no catchup components for the database %s.", databaseName ) ) );

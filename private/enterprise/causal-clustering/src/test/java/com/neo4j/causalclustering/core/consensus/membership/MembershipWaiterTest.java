@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.when;
 
 public class MembershipWaiterTest
 {
-    private DatabaseHealth dbHealth = mock( DatabaseHealth.class );
+    private DatabaseHealth dbHealth = mock( SingleDatabaseHealth.class );
 
     @Before
     public void mocking()
@@ -44,7 +45,7 @@ public class MembershipWaiterTest
     public void shouldReturnImmediatelyIfMemberAndCaughtUp() throws Exception
     {
         OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler();
-        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, () -> dbHealth, 500,
+        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, dbHealth, 500,
                 NullLogProvider.getInstance(), new Monitors() );
 
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
@@ -70,7 +71,7 @@ public class MembershipWaiterTest
     public void shouldWaitUntilLeaderCommitIsAvailable() throws Exception
     {
         OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler();
-        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, () -> dbHealth, 500,
+        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, dbHealth, 500,
                 NullLogProvider.getInstance(), new Monitors() );
 
         InMemoryRaftLog raftLog = new InMemoryRaftLog();
@@ -95,7 +96,7 @@ public class MembershipWaiterTest
     public void shouldTimeoutIfCaughtUpButNotMember() throws Exception
     {
         OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler();
-        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, () -> dbHealth, 1,
+        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, dbHealth, 1,
                 NullLogProvider.getInstance(), new Monitors() );
 
         ExposedRaftState raftState = RaftStateBuilder.raftState()
@@ -125,7 +126,7 @@ public class MembershipWaiterTest
     public void shouldTimeoutIfMemberButNotCaughtUp() throws Exception
     {
         OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler();
-        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, () -> dbHealth, 1,
+        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, dbHealth, 1,
                 NullLogProvider.getInstance(), new Monitors() );
 
         ExposedRaftState raftState = RaftStateBuilder.raftState()
@@ -155,7 +156,7 @@ public class MembershipWaiterTest
     public void shouldTimeoutIfLeaderCommitIsNeverKnown() throws Exception
     {
         OnDemandJobScheduler jobScheduler = new OnDemandJobScheduler();
-        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, () -> dbHealth, 1,
+        MembershipWaiter waiter = new MembershipWaiter( member( 0 ), jobScheduler, dbHealth, 1,
                 NullLogProvider.getInstance(), new Monitors() );
 
         ExposedRaftState raftState = RaftStateBuilder.raftState()

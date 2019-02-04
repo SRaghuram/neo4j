@@ -24,6 +24,7 @@ import org.mockito.Mockito;
 import java.io.File;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -60,7 +61,7 @@ class SystemGraphInternalsTest
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         database = builder.newGraphDatabase();
         String activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
-        DatabaseManager databaseManager = getDatabaseManager();
+        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
         systemGraphExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, activeDbName );
         setupSystemGraphRealm();
 
@@ -103,7 +104,8 @@ class SystemGraphInternalsTest
         }
     }
 
-    private DatabaseManager getDatabaseManager()
+    @SuppressWarnings( "unchecked" )
+    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -62,8 +62,8 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.lock.AcquireLockTimeoutException;
-import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ports.PortAuthority;
@@ -146,7 +146,7 @@ public class Cluster
     public Set<CoreClusterMember> healthyCoreMembers()
     {
         return coreMembers.values().stream()
-                .filter( db -> db.database().getDependencyResolver().resolveDependency( DatabaseHealth.class ).isHealthy() )
+                .filter( db -> db.database().getDependencyResolver().resolveDependency( SingleDatabaseHealth.class ).isHealthy() )
                 .collect( Collectors.toSet() );
     }
 

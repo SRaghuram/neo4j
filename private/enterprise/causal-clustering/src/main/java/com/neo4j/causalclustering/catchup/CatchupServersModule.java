@@ -6,7 +6,8 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
-import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
@@ -41,7 +42,6 @@ public abstract class CatchupServersModule
     protected Optional<Server> backupServer;
 
     protected final CatchupClientFactory catchupClientFactory;
-    protected final DatabaseService databaseService;
     protected final LogProvider logProvider;
     protected final Config globalConfig;
     protected final LifeSupport globalLife;
@@ -54,9 +54,9 @@ public abstract class CatchupServersModule
     private final LogProvider userLogProvider;
     private final ConnectorPortRegister portRegister;
 
-    public CatchupServersModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, GlobalModule globalModule, String databaseName )
+    public CatchupServersModule( ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager, PipelineBuilders pipelineBuilders,
+            GlobalModule globalModule, String databaseName )
     {
-        this.databaseService = databaseService;
         this.pipelineBuilders = pipelineBuilders;
 
         LogService logService = globalModule.getLogService();
@@ -76,7 +76,7 @@ public abstract class CatchupServersModule
         FileSystemAbstraction fileSystem = globalModule.getFileSystem();
         PageCache pageCache = globalModule.getPageCache();
         CopiedStoreRecovery copiedStoreRecovery = globalLife.add( new CopiedStoreRecovery( pageCache, fileSystem, globalModule.getStorageEngineFactory() ) );
-        this.databaseComponents = new CatchupComponentsService( databaseService, catchupClientFactory, copiedStoreRecovery, fileSystem,
+        this.databaseComponents = new CatchupComponentsService( clusteredDatabaseManager, catchupClientFactory, copiedStoreRecovery, fileSystem,
                 pageCache, globalConfig, logProvider, globalModule.getGlobalMonitors(), globalModule.getStorageEngineFactory() );
     }
 
