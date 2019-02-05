@@ -221,8 +221,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       val result = executeWith(Configs.InterpretedAndSlotted, query)
 
       val order = cypherToken match {
-        case "ASC" => ProvidedOrder.asc("n.prop2").asc("n.prop1")
-        case "DESC" => ProvidedOrder.desc("n.prop2").desc("n.prop1")
+        case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1"))
+        case "DESC" => ProvidedOrder.desc(varFor("n.prop2")).desc(varFor("n.prop1"))
       }
 
       result.executionPlanDescription() should includeSomewhere
@@ -248,8 +248,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       val result = executeWith(Configs.InterpretedAndSlotted, query)
 
       val order = cypherToken match {
-        case "ASC" => ProvidedOrder.asc("n.prop2").asc("n.prop1")
-        case "DESC" => ProvidedOrder.desc("n.prop2").desc("n.prop1")
+        case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1"))
+        case "DESC" => ProvidedOrder.desc(varFor("n.prop2")).desc(varFor("n.prop1"))
       }
 
       result.executionPlanDescription() should includeSomewhere
@@ -275,8 +275,8 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       val result = executeWith(Configs.InterpretedAndSlotted, query)
 
       val order = cypherToken match {
-        case "ASC" => ProvidedOrder.asc("n.prop2").asc("n.prop1")
-        case "DESC" => ProvidedOrder.desc("n.prop2").desc("n.prop1")
+        case "ASC" => ProvidedOrder.asc(varFor("n.prop2")).asc(varFor("n.prop1"))
+        case "DESC" => ProvidedOrder.desc(varFor("n.prop2")).desc(varFor("n.prop1"))
       }
 
       result.executionPlanDescription() should includeSomewhere

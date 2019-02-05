@@ -64,7 +64,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialSort")
-      .withOrder(ProvidedOrder.asc("gender").asc("a.name"))
+      .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")))
       .containingArgument("gender", "a.name")
 
     result.toList should equal(List(
@@ -84,7 +84,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Skip")
       .containingArgument("$`  AUTOINT0`")
       .onTopOf(aPlan("Top")
-        .withOrder(ProvidedOrder.asc("a.name"))
+        .withOrder(ProvidedOrder.asc(varFor("a.name")))
         .containingArgument("a.name", "3 + $`  AUTOINT0`")
       )
 
@@ -100,7 +100,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialTop")
-      .withOrder(ProvidedOrder.asc("gender").asc("a.name"))
+      .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")))
       .containingArgument("gender", "a.name")
 
     result.toList should equal(List(
@@ -115,7 +115,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("PartialTop")
-      .withOrder(ProvidedOrder.asc("gender").asc("a.name"))
+      .withOrder(ProvidedOrder.asc(varFor("gender")).asc(varFor("a.name")))
       .containingArgument("gender", "a.name")
 
     result.toList should equal(List(
