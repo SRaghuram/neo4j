@@ -5,9 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
-import org.neo4j.cypher.internal.MorselRuntime
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_EDITION.HasEvidenceOfParallelism
+import org.neo4j.cypher.internal.{LogicalQuery, MorselRuntime}
 import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, InputTestBase}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_EDITION, LogicalQueryBuilder}
+import org.neo4j.cypher.result.RuntimeResult
 
 class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_EDITION, MorselRuntime) {
 
@@ -39,11 +41,10 @@ class MorselInputTest extends InputTestBase(ENTERPRISE_EDITION, MorselRuntime) {
 
     val input = inputSingleColumn(nBatches = 10000, batchSize = 2, rowNumber => rowNumber)
 
-    val (result, context) = executeAndContext(logicalQuery, runtime, input)
+    val result = executeUntil(logicalQuery, input, HasEvidenceOfParallelism)
 
     // then
     result should beColumns("x").withRows(input.flatten)
-    ENTERPRISE_EDITION.hasEvidenceOfParallelism(context) should be(true)
   }
 }
 
