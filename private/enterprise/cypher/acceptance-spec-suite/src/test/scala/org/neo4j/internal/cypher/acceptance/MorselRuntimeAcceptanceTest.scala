@@ -26,6 +26,8 @@ object MorselRuntimeAcceptanceTest {
 
 abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
 
+  implicit val dblEquality: Equality[Double] = TolerantNumerics.tolerantDoubleEquality(0.0001)
+
   test("should not use morsel by default") {
     //Given
     val result = graph.execute("MATCH (n) RETURN n")
@@ -123,11 +125,10 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN avg(n.prop)")
 
     //Then
-    implicit val dblEquality: Equality[Double] = TolerantNumerics.tolerantDoubleEquality(0.0001)
     val resultSet = asScalaResult(result).toSet
     resultSet should have size 1
     val singleMap = resultSet.head
-    assert(singleMap("avg(n.prop)") === 55.0)
+    assert(55.0000001 === singleMap("avg(n.prop)"))
     result.getExecutionPlanDescription.getArguments.get("runtime") should equal("MORSEL")
   }
 
@@ -139,13 +140,12 @@ abstract class MorselRuntimeAcceptanceTest extends ExecutionEngineFunSuite {
     val result = graph.execute("CYPHER runtime=morsel MATCH (n) RETURN n.group, avg(n.prop)")
 
     //Then
-    implicit val dblEquality: Equality[Double] = TolerantNumerics.tolerantDoubleEquality(0.0001)
     val setResult = asScalaResult(result).toSet
     setResult.foreach { map =>
       if (map("n.group") == "FOO") {
-        assert(map("avg(n.prop)") === 80.0)
+        assert(80.0000001 === map("avg(n.prop)"))
       } else if (map("n.group") == "BAR") {
-        assert(map("avg(n.prop)") === 30.0)
+        assert(30.0000001 === map("avg(n.prop)"))
       } else {
         fail(s"Unexpected grouping column: ${map("n.group")}")
       }
