@@ -114,4 +114,34 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     failWithError(config, query,
       List("Unknown function 'NOT'. If you intended to use the negation expression, surround it with parentheses."))
   }
+
+  test("should be able to divide long property") {
+    createNode(Map("prop" -> 7909446955L))
+
+    val query = "MATCH (n) RETURN (n.prop / 5) AS div"
+
+    val result = executeWith(Configs.All, query)
+
+    result.toList should equal(List(Map("div" -> 1581889391)))
+  }
+
+  test("should be able to calculate modulo of long property") {
+    createNode(Map("prop" -> 7909446955L))
+
+    val query = "MATCH (n) RETURN (n.prop % 4) AS modulo"
+
+    val result = executeWith(Configs.All, query)
+
+    result.toList should equal(List(Map("modulo" -> 3)))
+  }
+
+  test("should be able to calculate long property modulo float") {
+    createNode(Map("prop" -> 7909446955L))
+
+    val query = "MATCH (n) RETURN (n.prop % 3.5) AS modulo"
+
+    val result = executeWith(Configs.All, query)
+
+    result.toList should equal(List(Map("modulo" -> 0.5)))
+  }
 }
