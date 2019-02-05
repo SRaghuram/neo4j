@@ -566,7 +566,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                        "nodeGetRelationships",  typeRef[Read], typeRef[CursorFactory],
                                        typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[Array[Int]]),
                        dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction),
-                       newArray(typeRef[Int], typeVars.map(generator.load): _*)) )
+                       newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*)) )
     _finalizers.append((_: Boolean) => (block) =>
       block.expression(
         invoke(block.load(iterVar), method[RelationshipSelectionCursor, Unit]("close"))))
@@ -589,8 +589,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       generator.assign(typeRef[RelationshipSelectionCursor], iterVar, invoke(Methods.connectingRelationships,
                                                                              dataRead, cursors, nodeCursor,
                                                                              forceLong(fromNode, fromNodeType),
-                                                                             dir(direction),  forceLong(toNode, toNodeType),
-                                                                             newArray(typeRef[Int], typeVars.map(generator.load): _*)))
+                                                                             dir(direction), forceLong(toNode, toNodeType),
+                                                                             newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*)))
     _finalizers.append((_: Boolean) => (block) =>
       block.expression(
         invoke(block.load(iterVar), method[RelationshipSelectionCursor, Unit]("close"))))
@@ -871,9 +871,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       generator.put(generator.load(varName), FieldReference.field(typ, typeRef[Int], "hashCode"),
         invoke(method[CompiledEquivalenceUtils, Int]("hashCode", TypeReference.arrayOf(elementType)),
           if (elementType.isPrimitive)
-            newArray(elementType, structure.values.map(_._2).toSeq: _*)
+            newInitializedArray(elementType, structure.values.map(_._2).toSeq: _*)
           else
-            newArray(elementType, structure.values.map(e => Expression.box(e._2)).toSeq: _*)
+            newInitializedArray(elementType, structure.values.map(e => Expression.box(e._2)).toSeq: _*)
         ))
     }
   }
@@ -1112,8 +1112,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def asMap(map: Map[String, Expression]) = {
     val (keys: Seq[String], values: Seq[Expression]) = map.toSeq.unzip
     invoke(method[VirtualValues, MapValue]("map", typeRef[Array[String]], typeRef[Array[AnyValue]]),
-           newArray(typeRef[String], keys.map(constant): _*),
-           newArray(typeRef[AnyValue], values: _*))
+           newInitializedArray(typeRef[String], keys.map(constant): _*),
+           newInitializedArray(typeRef[AnyValue], values: _*))
   }
 
   override def invokeMethod(resultType: JoinTableType, resultVar: String, methodName: String)
@@ -1172,7 +1172,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       val keyName = context.namer.newVarName()
       generator.assign(typeRef[CompositeKey], keyName,
                        invoke(compositeKey,
-                              newArray(typeRef[Long], keyVars.map(generator.load): _*)))
+                              newInitializedArray(typeRef[Long], keyVars.map(generator.load): _*)))
       generator.assign(typeRef[java.lang.Integer], countName,
                        cast(typeRef[java.lang.Integer],
                             invoke(generator.load(tableVar), countingTableCompositeKeyGet,
@@ -1205,8 +1205,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                             invoke(generator.load(tableVar),
                                    countingTableCompositeKeyGet,
                                    invoke(compositeKey,
-                                          newArray(typeRef[Long],
-                                                   keyVars.map(generator.load): _*)))))
+                                          newInitializedArray(typeRef[Long],
+                                                              keyVars.map(generator.load): _*)))))
       generator.assign(times,
                        ternary(
                          Expression.isNull(intermediate),
@@ -1248,8 +1248,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                        cast(hashTable.listType,
                             invoke(generator.load(tableVar), hashTable.get,
                                    invoke(compositeKey,
-                                          newArray(typeRef[Long],
-                                                   keyVars.map(generator.load): _*))
+                                          newInitializedArray(typeRef[Long],
+                                                              keyVars.map(generator.load): _*))
                             )))
       using(generator.ifStatement(Expression.notNull(list))) { onTrue =>
         using(onTrue.forEach(Parameter.param(hashTable.valueType, elementName), list)) { forEach =>
@@ -1311,7 +1311,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       val list = generator.declare(hashTable.listType, listName) // ProbeTable list;
       generator.assign(typeRef[CompositeKey], keyName,
                        invoke(compositeKey,
-                              newArray(typeRef[Long], keyVars.map(generator.load): _*)))
+                              newInitializedArray(typeRef[Long], keyVars.map(generator.load): _*)))
       // list = tableVar.get(keyVar);
       generator.assign(list,
                        cast(hashTable.listType,
@@ -1498,7 +1498,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     generator.assign(typeRef[Int], propIdVar, invoke(tokenRead, propertyKeyGetForName, constant(propName)))
 
   override def newIndexReference(referenceVar: String, labelVar: String, propKeyVar: String) = {
-    val propertyIdsExpr = Expression.newArray(typeRef[Int], generator.load(propKeyVar))
+    val propertyIdsExpr = Expression.newInitializedArray(typeRef[Int], generator.load(propKeyVar))
 
     generator.assign(typeRef[IndexReference], referenceVar,
                      invoke(schemaRead,

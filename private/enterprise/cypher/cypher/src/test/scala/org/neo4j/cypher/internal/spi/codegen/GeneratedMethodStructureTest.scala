@@ -179,7 +179,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
                                                   m.generator.load("from"),
                                                   Templates.outgoing,
                                                   m.generator.load("to"),
-                                             Expression.newArray(typeRef[Int], Expression.constant(1))))
+                                             Expression.newInitializedArray(typeRef[Int], Expression.constant(1))))
     }),
     Operation("expand from all node", (m) => {
       m.allNodesScan("nodeIter")

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.spi.codegen
 import java.lang.reflect.Modifier
 import java.util.stream.{DoubleStream, IntStream, LongStream}
 
-import org.neo4j.codegen.Expression.{constant, invoke, newArray, newInstance}
+import org.neo4j.codegen.Expression.{constant, invoke, newInitializedArray, newInstance}
 import org.neo4j.codegen.MethodReference.{constructorReference, methodReference}
 import org.neo4j.codegen.TypeReference._
 import org.neo4j.codegen.bytecode.ByteCode.{BYTECODE, VERIFY_GENERATED_BYTECODE}
@@ -168,7 +168,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
 
   private def createFields(columns: Seq[String], clazz: ClassGenerator) = {
     clazz.privateStaticFinalField(TypeReference.typeReference(classOf[Array[String]]),
-                                  "COLUMNS", newArray(typeRef[String], columns.map(key => constant(key)):_*))
+                                  "COLUMNS", newInitializedArray(typeRef[String], columns.map(key => constant(key)):_*))
 
     Fields(
       entityAccessor = clazz.field(typeRef[EmbeddedProxySPI], "proxySpi"),

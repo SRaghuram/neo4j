@@ -9,7 +9,7 @@ import java.util.function.Consumer
 
 import org.neo4j.codegen
 import org.neo4j.codegen.CodeGenerator.generateCode
-import org.neo4j.codegen.Expression.{constant, getStatic, invoke, invokeSuper, newArray}
+import org.neo4j.codegen.Expression.{constant, getStatic, invoke, invokeSuper, newInitializedArray}
 import org.neo4j.codegen.FieldReference.{field, staticField}
 import org.neo4j.codegen.MethodDeclaration.method
 import org.neo4j.codegen.MethodReference.methodReference
@@ -215,7 +215,7 @@ object CodeGeneration {
     case Constant(value) => constant(value)
 
     //new ArrayValue[]{p1, p2,...}
-    case ArrayLiteral(typ, values) => newArray(typ, values.map(v => compileExpression(v, block)): _*)
+    case ArrayLiteral(typ, values) => newInitializedArray(typ, values.map(v => compileExpression(v, block)): _*)
 
     //Foo.BAR
     case GetStatic(owner, typ, name) => getStatic(staticField(owner.getOrElse(block.owner()), typ, name))

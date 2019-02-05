@@ -67,31 +67,31 @@ object Templates {
 
   def asList[T](values: Seq[Expression])(implicit manifest: Manifest[T]): Expression = Expression.invoke(
     methodReference(typeRef[util.Arrays], typeRef[util.List[T]], "asList", typeRef[Array[Object]]),
-    Expression.newArray(typeRef[T], values: _*))
+    Expression.newInitializedArray(typeRef[T], values: _*))
 
   def asAnyValueList(values: Seq[Expression]): Expression = Expression.invoke(
     methodReference(typeRef[VirtualValues], typeRef[ListValue], "list", typeRef[Array[AnyValue]]),
-    Expression.newArray(typeRef[AnyValue], values: _*))
+    Expression.newInitializedArray(typeRef[AnyValue], values: _*))
 
   def asPrimitiveNodeStream(values: Seq[Expression]): Expression = Expression.invoke(
     methodReference(typeRef[PrimitiveNodeStream], typeRef[PrimitiveNodeStream], "of", typeRef[Array[Long]]),
-    Expression.newArray(typeRef[Long], values: _*))
+    Expression.newInitializedArray(typeRef[Long], values: _*))
 
   def asPrimitiveRelationshipStream(values: Seq[Expression]): Expression = Expression.invoke(
     methodReference(typeRef[PrimitiveRelationshipStream], typeRef[PrimitiveRelationshipStream], "of", typeRef[Array[Long]]),
-    Expression.newArray(typeRef[Long], values: _*))
+    Expression.newInitializedArray(typeRef[Long], values: _*))
 
   def asLongStream(values: Seq[Expression]): Expression = Expression.invoke(
     methodReference(typeRef[LongStream], typeRef[LongStream], "of", typeRef[Array[Long]]),
-    Expression.newArray(typeRef[Long], values: _*))
+    Expression.newInitializedArray(typeRef[Long], values: _*))
 
   def asDoubleStream(values: Seq[Expression]): Expression = Expression.invoke(
     methodReference(typeRef[DoubleStream], typeRef[DoubleStream], "of", typeRef[Array[Double]]),
-    Expression.newArray(typeRef[Double], values: _*))
+    Expression.newInitializedArray(typeRef[Double], values: _*))
 
   def asIntStream(values: Seq[Expression]): Expression = Expression.invoke(
     methodReference(typeRef[IntStream], typeRef[IntStream], "of", typeRef[Array[Int]]),
-    Expression.newArray(typeRef[Int], values: _*))
+    Expression.newInitializedArray(typeRef[Int], values: _*))
 
   def handleEntityNotFound[V](generate: CodeBlock, fields: Fields, finalizers: Seq[Boolean => CodeBlock => Unit], namer: Namer)
                              (happyPath: CodeBlock => V)(onFailure: CodeBlock => V): V = {
