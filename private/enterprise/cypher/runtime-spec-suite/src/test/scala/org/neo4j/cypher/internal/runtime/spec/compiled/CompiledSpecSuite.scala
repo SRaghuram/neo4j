@@ -24,7 +24,7 @@ class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE_EDITION, Compi
     }, "Honey")
 
     // when
-    val logicalQuery = new LogicalQueryBuilder(graphDb)
+    val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("c")
       .aggregation(Map.empty, Map("c" -> count(prop("x", "num"))))
       .allNodeScan("x")

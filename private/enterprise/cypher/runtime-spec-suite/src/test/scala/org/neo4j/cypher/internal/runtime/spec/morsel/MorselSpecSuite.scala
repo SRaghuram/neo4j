@@ -27,7 +27,7 @@ class MorselInputTest extends InputTestBase(ENTERPRISE_EDITION, MorselRuntime, S
 
   test("should process input batches in parallel") {
     // when
-    val logicalQuery = new LogicalQueryBuilder(graphDb)
+    val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
       .input("x")
       .build()
