@@ -68,12 +68,12 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgument("gender", "a.name")
 
     result.toList should equal(List(
-      Map("a.name" -> "A", "gender" -> "female"),
-      Map("a.name" -> "D", "gender" -> "female"),
-      Map("a.name" -> "E", "gender" -> "female"),
-      Map("a.name" -> "B", "gender" -> "male"),
-      Map("a.name" -> "C", "gender" -> "male"),
-      Map("a.name" -> "F", "gender" -> "male")
+      Map("gender" -> "female", "a.name" -> "A"),
+      Map("gender" -> "female", "a.name" -> "D"),
+      Map("gender" -> "female", "a.name" -> "E"),
+      Map("gender" -> "male", "a.name" -> "B"),
+      Map("gender" -> "male", "a.name" -> "C"),
+      Map("gender" -> "male", "a.name" -> "F")
     ))
   }
 
