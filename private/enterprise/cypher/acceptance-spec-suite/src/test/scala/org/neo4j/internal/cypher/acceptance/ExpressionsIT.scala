@@ -1051,7 +1051,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     compile(equals(nullLiteral, literalInt(43))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
     compile(equals(literalInt(42), nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
     compile(equals(nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(equals(TRUE, equals(TRUE, equals(TRUE, nullLiteral)))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(equals(trueLiteral, equals(trueLiteral, equals(trueLiteral, nullLiteral)))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("NOT EQUALS") {
@@ -1060,7 +1060,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     compile(notEquals(nullLiteral, literalInt(43))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
     compile(notEquals(literalInt(42), nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
     compile(notEquals(nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(notEquals(TRUE, notEquals(TRUE, notEquals(TRUE, nullLiteral)))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    compile(notEquals(trueLiteral, notEquals(trueLiteral, notEquals(trueLiteral, nullLiteral)))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
   }
 
   test("regex match on literal pattern") {
