@@ -87,6 +87,7 @@
         	<groupId>com.github.chewiebug</groupId>
         	<artifactId>gcviewer</artifactId>
         	<version>1.36-SNAPSHOT</version>
+            <classifier>benchmarking</classifier>
         </dependency>
 
         <dependency>
@@ -195,16 +196,5 @@
             </plugin>
         </plugins>
     </build>
-
-	<repositories>
-		<repository>
-			<id>local-maven-repo</id>
-			<name>Local Maven Repo</name>
-			<url>file://${project.basedir}/local-maven-repo</url>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
 
 </project>
