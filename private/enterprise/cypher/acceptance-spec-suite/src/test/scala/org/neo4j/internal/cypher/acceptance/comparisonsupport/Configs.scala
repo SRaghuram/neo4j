@@ -59,7 +59,7 @@ object Configs {
 
   def Empty: TestConfiguration = TestConfiguration.empty
 
-  def runOnlySafeScenarios: Boolean ={
+  def runOnlySafeScenarios: Boolean = {
     val runExperimental = System.getenv().containsKey("RUN_EXPERIMENTAL")
     !runExperimental
   }

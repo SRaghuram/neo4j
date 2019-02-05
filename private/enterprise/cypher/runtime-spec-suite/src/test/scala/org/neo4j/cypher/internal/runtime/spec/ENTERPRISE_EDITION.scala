@@ -36,7 +36,10 @@ object ENTERPRISE_EDITION extends Edition[EnterpriseRuntimeContext](
 
   val HasEvidenceOfParallelism: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](
-      context => context.runtimeEnvironment.tracer.asInstanceOf[ParallelismTracer].hasEvidenceOfParallelism,
+      context =>
+        if (System.getenv().containsKey("RUN_EXPERIMENTAL"))
+          context.runtimeEnvironment.tracer.asInstanceOf[ParallelismTracer].hasEvidenceOfParallelism
+        else true,
       "Evidence of parallelism could not be found"
     )
 }
