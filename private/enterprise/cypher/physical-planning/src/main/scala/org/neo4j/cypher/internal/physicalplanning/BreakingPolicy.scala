@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.v4_0.logical.plans.{Aggregation, Distinct, LogicalPlan}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{Aggregation, Distinct, LogicalLeafPlan, LogicalPlan}
 
 /**
   * Policy that determines what parts of an operator tree belong together.
@@ -38,8 +38,15 @@ trait BreakingPolicy {
 
 }
 
-object I_BREAK_FOR_NOONE extends BreakingPolicy {
-  override def breakOn(lp: LogicalPlan): Boolean = false
+object I_BREAK_FOR_LEAFS extends BreakingPolicy {
+  override def breakOn(lp: LogicalPlan): Boolean = lp.isInstanceOf[LogicalLeafPlan]
   override def breakOnNestedPlan: Boolean = false
 }
 
+object BreakingPolicy {
+  def breakFor(logicalPlans: LogicalPlan*): BreakingPolicy =
+    new BreakingPolicy {
+      override def breakOn(lp: LogicalPlan): Boolean = logicalPlans.contains(lp)
+      override def breakOnNestedPlan: Boolean = false
+    }
+}
