@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -14,20 +14,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
 
+import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
+
 import static com.neo4j.bench.micro.data.ConstantGenerator.constant;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_INL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -50,7 +60,14 @@ public class DiscreteGeneratorTest
             FLT_ARR,
             DBL_ARR,
             STR_SML_ARR,
-            STR_BIG_ARR );
+            STR_BIG_ARR,
+            DATE_TIME,
+            LOCAL_DATE_TIME,
+            TIME,
+            LOCAL_TIME,
+            DATE,
+            DURATION,
+            POINT );
 
     @Test
     public void bucketsShouldBeEqualWhenTheirKeyAndValueAreEqual()
@@ -107,8 +124,14 @@ public class DiscreteGeneratorTest
         doShouldCreateExpectedDiscreteBucketSequence( STR_SML, 1, 2, 1337, "1", "2", "1337" );
     }
 
-    private <T> void doShouldCreateExpectedDiscreteBucketSequence( String type, Number value1, Number value2, Number value3,
-            T expected1, T expected2, T expected3 )
+    private <T> void doShouldCreateExpectedDiscreteBucketSequence(
+            String type,
+            Number value1,
+            Number value2,
+            Number value3,
+            T expected1,
+            T expected2,
+            T expected3 )
     {
         int iterations = 1_000_000;
         double offsetConstant = 42;
@@ -116,11 +139,13 @@ public class DiscreteGeneratorTest
         double value2Percentage = 0.2;
         double value3Percentage = 0.7;
 
-        SplittableRandom rng = new SplittableRandom( 42L );
+        SplittableRandom objectRng = new SplittableRandom( 42L );
+        SplittableRandom valueRng = new SplittableRandom( 42L );
         Bucket bucket1 = new Bucket( value1Percentage * offsetConstant, constant( type, value1 ) );
         Bucket bucket2 = new Bucket( value2Percentage * offsetConstant, constant( type, value2 ) );
         Bucket bucket3 = new Bucket( value3Percentage * offsetConstant, constant( type, value3 ) );
-        ValueGeneratorFun values = DiscreteGenerator.discrete( bucket1, bucket2, bucket3 ).create();
+        ValueGeneratorFun objectValues = DiscreteGenerator.discrete( bucket1, bucket2, bucket3 ).create();
+        ValueGeneratorFun valueValues = DiscreteGenerator.discrete( bucket1, bucket2, bucket3 ).create();
 
         Map<Object,Integer> valueCounts = new HashMap<>();
         valueCounts.put( expected1, 0 );
@@ -128,8 +153,10 @@ public class DiscreteGeneratorTest
         valueCounts.put( expected3, 0 );
         for ( int i = 0; i < iterations; i++ )
         {
-            Object value = values.next( rng );
-            valueCounts.put( value, valueCounts.get( value ) + 1 );
+            Object objectValue = objectValues.next( objectRng );
+            Value valueValue = valueValues.nextValue( valueRng );
+            assertThat( valueValue, equalTo( Values.of( objectValue ) ) );
+            valueCounts.put( objectValue, valueCounts.get( objectValue ) + 1 );
         }
 
         double totalValueCounts = valueCounts.values().stream().mapToInt( Integer::intValue ).sum();

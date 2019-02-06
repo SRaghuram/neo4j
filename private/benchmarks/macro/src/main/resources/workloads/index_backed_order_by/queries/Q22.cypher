@@ -1,0 +1,2 @@
+MATCH (n:PROFILES)-[:PERFECT_MATCH]->(m:PROFILES)
+RETURN min(n.eye_color)

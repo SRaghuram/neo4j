@@ -1,1 +1,3 @@
-MATCH (n:PROFILES) WHERE n.pets < "m" RETURN n.pets
+MATCH (n:PROFILES)
+WHERE n.pets < "m"
+RETURN n.pets

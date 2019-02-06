@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -37,7 +37,7 @@ public enum Repository
                 "^\\d\\.\\d$",
                 "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     IMPORT_BENCH( "import-benchmarks",
-                  "import-benchmarks",
+                  "benchmarks",
                   "neo-technology",
                   "^\\d\\.\\d$",
                   "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),

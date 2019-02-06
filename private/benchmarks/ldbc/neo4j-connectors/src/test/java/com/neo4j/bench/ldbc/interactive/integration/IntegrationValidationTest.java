@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
-
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -220,17 +219,11 @@ public class IntegrationValidationTest
     @Test
     public void shouldValidateAgainstPublicNeo4jValidationSetApiDense1() throws Exception
     {
-        // TODO uncomment if/when parallel dense importer is fixed to prevent current issue
-//        doShouldValidateAgainstPublicValidationSet(
-//                Scenario.randomInteractiveFor( CsvSchema.CSV_MERGE, Neo4jSchema.NEO4J_DENSE_1 )
-//        );
         doShouldValidateAgainstPublicValidationSet(
-                Scenario.randomInteractiveFor( CsvSchema.CSV_MERGE, Neo4jSchema.NEO4J_DENSE_1, Neo4jImporter.BATCH )
+                Scenario.randomInteractiveFor( CsvSchema.CSV_MERGE, Neo4jSchema.NEO4J_DENSE_1 )
         );
     }
 
-    // TODO un-ignore Cypher validation test. currently disabled to speed up LDBC automation development.
-    @Ignore
     @Test
     public void shouldValidateAgainstPublicNeo4jValidationSetCypherDefault() throws Exception
     {

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,6 +9,8 @@ import java.io.IOException;
 
 import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.Mark;
+import org.neo4j.unsafe.impl.batchimport.input.Groups;
+import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 
@@ -23,8 +25,7 @@ public class LdbcHeaderFactory implements Header.Factory
     }
 
     @Override
-    public Header create( CharSeeker dataSeeker, org.neo4j.unsafe.impl.batchimport.input.csv.Configuration
-            configuration, IdType idType )
+    public Header create( CharSeeker dataSeeker, Configuration configuration, IdType idType, Groups groups )
     {
         Mark mark = new Mark();
         int columnDelimiter = '|';
@@ -39,11 +40,17 @@ public class LdbcHeaderFactory implements Header.Factory
                 throw new RuntimeException( "Unable to advance parameters file beyond headers", e );
             }
         }
-        while ( false == mark.isEndOfLine() );
+        while ( !mark.isEndOfLine() );
 
         Header header = headers[headersIndex % headers.length];
 
         headersIndex++;
         return header;
+    }
+
+    @Override
+    public boolean isDefined()
+    {
+        return false;
     }
 }

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -12,9 +12,9 @@ import com.neo4j.bench.client.model.Neo4j;
 import com.neo4j.bench.client.model.Repository;
 import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.micro.profile.ProfileDescriptor;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;

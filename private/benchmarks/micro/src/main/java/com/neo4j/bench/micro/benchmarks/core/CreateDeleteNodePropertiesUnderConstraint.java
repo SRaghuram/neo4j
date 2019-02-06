@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,13 +10,13 @@ import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.IndexType;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -36,18 +36,25 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 
@@ -84,6 +91,7 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
+                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {STR_SML} )
     @Param( {} )
@@ -108,12 +116,12 @@ public class CreateDeleteNodePropertiesUnderConstraint extends AbstractCoreBench
     public String description()
     {
         return "Tests performance of creating and deleting properties via " +
-               "GraphDatabaseService::removeProperty/setProperty.\n" +
-               "Benchmark invariants:\n" +
-               "- All nodes have the same number of properties\n" +
-               "- Number of properties on each node is stable throughout the experiment\n" +
-               "- The set of properties between any two nodes may differ by at most two\n" +
-               "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
+                "GraphDatabaseService::removeProperty/setProperty.\n" +
+                "Benchmark invariants:\n" +
+                "- All nodes have the same number of properties\n" +
+                "- Number of properties on each node is stable throughout the experiment\n" +
+                "- The set of properties between any two nodes may differ by at most two\n" +
+                "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
     }
 
     @Override

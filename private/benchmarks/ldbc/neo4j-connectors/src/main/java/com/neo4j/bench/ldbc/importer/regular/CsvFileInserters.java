@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -21,7 +21,7 @@ import com.neo4j.bench.ldbc.Domain.Tag;
 import com.neo4j.bench.ldbc.Domain.TagClass;
 import com.neo4j.bench.ldbc.Domain.WorksAt;
 import com.neo4j.bench.ldbc.connection.ImportDateUtil;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.importer.CsvFileInserter;
 import com.neo4j.bench.ldbc.importer.CsvFiles;
 import com.neo4j.bench.ldbc.importer.CsvLineInserter;
@@ -48,7 +48,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 
 import static com.neo4j.bench.ldbc.cli.LdbcCli.EMPTY_MAP;
-
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
@@ -101,7 +100,7 @@ class CsvFileInserters
             File csvDataDir,
             ImportDateUtil importDateUtil ) throws IOException
     {
-        final Calendar calendar = LdbcDateCodec.newCalendar();
+        final Calendar calendar = LdbcDateCodecUtil.newCalendar();
 
         /*
          * Temp Node ID Indexes

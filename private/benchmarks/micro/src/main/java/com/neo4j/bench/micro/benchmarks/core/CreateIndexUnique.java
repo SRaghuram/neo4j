@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -22,18 +22,25 @@ import static com.neo4j.bench.micro.data.DataGenerator.createSchemaIndex;
 import static com.neo4j.bench.micro.data.DataGenerator.dropMandatoryNodeConstraint;
 import static com.neo4j.bench.micro.data.DataGenerator.dropSchemaIndex;
 import static com.neo4j.bench.micro.data.DataGenerator.waitForSchemaIndexes;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 
@@ -49,8 +56,9 @@ public class CreateIndexUnique extends AbstractCreateIndex
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
+                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
-            base = {LNG, STR_SML} )
+            base = {LNG, STR_SML, DATE_TIME, POINT} )
     @Param( {} )
     public String CreateIndexUnique_type;
 
@@ -77,8 +85,8 @@ public class CreateIndexUnique extends AbstractCreateIndex
     public String description()
     {
         return "Tests performance of schema index creation.\n" +
-               "Benchmark generates a store with nodes and properties.\n" +
-               "Each node has exactly one property and property values are unique.";
+                "Benchmark generates a store with nodes and properties.\n" +
+                "Each node has exactly one property and property values are unique.";
     }
 
     @TearDown( Level.Iteration )

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -146,7 +146,7 @@ public class RunCommand implements Runnable
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_RUNTIME},
             description = "Cypher Runtime",
-            title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED",
+            title = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED",
             required = false )
     private RuntimeType runtime = RuntimeType.DEFAULT;
 

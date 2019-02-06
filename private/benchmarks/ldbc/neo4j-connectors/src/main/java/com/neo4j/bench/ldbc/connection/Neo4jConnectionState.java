@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -69,8 +69,9 @@ public class Neo4jConnectionState extends DbConnectionState
         this.seenOperationTypes = new IntOpenHashSet();
         this.planMap = new Int2ObjectOpenHashMap<>();
         this.planMetaMap = new Int2ObjectOpenHashMap<>();
-        this.dateUtilThreadLocal = withInitial( () -> QueryDateUtil.createFor( dateFormat, timestampResolution ) );
-        this.calendarThreadLocal = withInitial( LdbcDateCodec::newCalendar );
+        this.dateUtilThreadLocal = withInitial( () ->
+                QueryDateUtil.createFor( dateFormat, timestampResolution, new LdbcDateCodecUtil() ) );
+        this.calendarThreadLocal = withInitial( LdbcDateCodecUtil::newCalendar );
     }
 
     public GraphDatabaseService db()

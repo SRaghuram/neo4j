@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,10 +10,10 @@ import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans.{astLiteralFor, _}
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML}
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.v3_3.logical.plans.{DoNotIncludeTies, LogicalPlan}
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans.{DoNotIncludeTies, LogicalPlan}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -28,7 +28,7 @@ class Eager extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("0", "4"),
-    base = Array("0", "4"))
+    base = Array("4"))
   @Param(Array[String]())
   var Eager_referenceColumns: Int = _
 
@@ -40,7 +40,7 @@ class Eager extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
-    base = Array(LNG, STR_SML))
+    base = Array(STR_SML))
   @Param(Array[String]())
   var Eager_refType: String = _
 
@@ -57,18 +57,18 @@ class Eager extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val nodeName = s"n$Eager_primitiveColumns"
-    val leftAllNodesScan = plans.AllNodesScan(nodeName, Set.empty)(Solved)
+    val leftAllNodesScan = plans.AllNodesScan(nodeName, Set.empty)(IdGen)
     val (cartesianProducts, table, nodeNames) = buildCartesianProducts(
       Eager_primitiveColumns - 1,
       leftAllNodesScan,
       SemanticTable().addNode(astVariable(nodeName)),
       List(nodeName))
-    val limit = plans.Limit(cartesianProducts, astLiteralFor(NODE_COUNT, LNG), DoNotIncludeTies)(Solved)
+    val limit = plans.Limit(cartesianProducts, astLiteralFor(NODE_COUNT, LNG), DoNotIncludeTies)(IdGen)
     val projectColumns = Range(0, Eager_referenceColumns).map(i => (s"r$i", astLiteralFor(i, Eager_refType))).toMap
-    val projection = plans.Projection(limit, projectColumns)(Solved)
-    val eager = plans.Eager(projection)(Solved)
+    val projection = plans.Projection(limit, projectColumns)(IdGen)
+    val eager = plans.Eager(projection)(IdGen)
     val resultColumns = nodeNames ++ projectColumns.keys.toList
-    val produceResult = plans.ProduceResult(columns = resultColumns, eager)
+    val produceResult = plans.ProduceResult(eager, columns = resultColumns)(IdGen)
     (produceResult, table, resultColumns)
   }
 
@@ -77,10 +77,10 @@ class Eager extends AbstractCypherBenchmark {
       (left, table, nodeNames)
     else {
       val nodeName = s"n$count"
-      val allNodesScan = plans.AllNodesScan(nodeName, Set.empty)(Solved)
+      val allNodesScan = plans.AllNodesScan(nodeName, Set.empty)(IdGen)
       buildCartesianProducts(
         count - 1,
-        plans.CartesianProduct(left, allNodesScan)(Solved),
+        plans.CartesianProduct(left, allNodesScan)(IdGen),
         table.addNode(astVariable(nodeName)),
         nodeNames :+ nodeName)
     }

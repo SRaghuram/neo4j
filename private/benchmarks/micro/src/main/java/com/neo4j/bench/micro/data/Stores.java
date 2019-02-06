@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -108,7 +108,8 @@ public class Stores
             DataGeneratorConfig config,
             BenchmarkGroup group,
             Benchmark benchmark,
-            Augmenterizer augmenterizer )
+            Augmenterizer augmenterizer,
+            int threads )
     {
         List<Path> topLevelDirs = findAllStoresMatchingConfig( config, storesDir );
         FullBenchmarkName benchmarkName = FullBenchmarkName.from( group, benchmark );
@@ -118,7 +119,8 @@ public class Stores
             StoreAndConfig initialStoreAndConfig = generateDb(
                     config,
                     augmenterizer,
-                    benchmarkName );
+                    benchmarkName,
+                    threads );
             if ( config.isReusable() )
             {
                 return initialStoreAndConfig;
@@ -193,7 +195,8 @@ public class Stores
     private StoreAndConfig generateDb(
             DataGeneratorConfig config,
             Augmenterizer augmenterizer,
-            FullBenchmarkName benchmarkName )
+            FullBenchmarkName benchmarkName,
+            int threads )
     {
         Path topLevelStoreDir = randomTopLevelStoreDir();
         Path db = topLevelStoreDir.resolve( DB_DIR_NAME );
@@ -226,7 +229,7 @@ public class Stores
 
         System.out.println( "Executing store augmentation step..." );
         Instant augmentStart = Instant.now();
-        augmenterizer.augment( storeAndConfig );
+        augmenterizer.augment( threads, storeAndConfig );
         Duration augmentDuration = Duration.between( augmentStart, Instant.now() );
         System.out.println( "Store augmentation step took: " + durationToString( augmentDuration ) );
 

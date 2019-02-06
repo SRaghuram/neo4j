@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,11 +10,11 @@ import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.Augmenterizer;
-import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.Stores;
+import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -28,6 +28,9 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.internal.kernel.api.NodeCursor;
+import org.neo4j.internal.kernel.api.NodeIndexCursor;
+import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 
 /**
  * Benchmark classes that extend this class will operate with the following life-cycle:
@@ -85,7 +88,7 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
 
         Augmenterizer augmenterizer = augmentDataGeneration();
         managedStore = new ManagedStore( stores );
-        managedStore.prepareDb( group, benchmark, getConfig(), neo4jConfig, augmenterizer );
+        managedStore.prepareDb( group, benchmark, getConfig(), neo4jConfig, augmenterizer, params.getThreads() );
         if ( afterDataGeneration().equals( StartDatabaseInstruction.START_DB ) )
         {
             managedStore.startDb();
@@ -148,6 +151,72 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
     // -----------------------------------------------------------------------------------------------------------------
     // --------------------------------------- Convenience Assert Result Methods ---------------------------------------
     // -----------------------------------------------------------------------------------------------------------------
+
+    protected long assertCursorNotNull( NodeIndexCursor cursor )
+    {
+        if ( !cursor.next() )
+        {
+            throw new RuntimeException( "Node was null" );
+        }
+        return cursor.nodeReference();
+    }
+
+    protected void assertCount( NodeIndexCursor cursor, long expectedCount, Blackhole bh )
+    {
+        assertCount( cursor, expectedCount, expectedCount, bh );
+    }
+
+    protected void assertCount( NodeIndexCursor cursor, long minCount, long maxCount, Blackhole bh )
+    {
+        long count = 0;
+        while ( cursor.next() )
+        {
+            bh.consume( cursor.nodeReference() );
+            count++;
+        }
+        if ( count < minCount || count > maxCount )
+        {
+            throw new RuntimeException( "Expected " + minCount + " <= count <= " + maxCount + ") but found " + count );
+        }
+    }
+
+    protected void assertCount( RelationshipScanCursor cursor, long expectedCount, Blackhole bh )
+    {
+        assertCount( cursor, expectedCount, expectedCount, bh );
+    }
+
+    protected void assertCount( RelationshipScanCursor cursor, long minCount, long maxCount, Blackhole bh )
+    {
+        long count = 0;
+        while ( cursor.next() )
+        {
+            bh.consume( cursor.relationshipReference() );
+            count++;
+        }
+        if ( count < minCount || count > maxCount )
+        {
+            throw new RuntimeException( "Expected " + minCount + " <= count <= " + maxCount + ") but found " + count );
+        }
+    }
+
+    protected void assertCount( NodeCursor cursor, long expectedCount, Blackhole bh )
+    {
+        assertCount( cursor, expectedCount, expectedCount, bh );
+    }
+
+    protected void assertCount( NodeCursor cursor, long minCount, long maxCount, Blackhole bh )
+    {
+        long count = 0;
+        while ( cursor.next() )
+        {
+            bh.consume( cursor.nodeReference() );
+            count++;
+        }
+        if ( count < minCount || count > maxCount )
+        {
+            throw new RuntimeException( "Expected " + minCount + " <= count <= " + maxCount + ") but found " + count );
+        }
+    }
 
     protected void assertNotNull( Object entity, Blackhole bh )
     {

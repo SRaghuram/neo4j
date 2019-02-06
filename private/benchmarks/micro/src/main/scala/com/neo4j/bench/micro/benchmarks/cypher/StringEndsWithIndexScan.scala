@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -15,10 +15,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{calculateCumulativeSelectivities, prefixPad, stringLengthFor}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
-import org.neo4j.cypher.internal.frontend.v3_3.ast.StringLiteral
-import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.expressions.StringLiteral
+import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -30,7 +30,7 @@ import scala.collection.JavaConverters._
 class StringEndsWithIndexScan extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
-    base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
+    base = Array(Interpreted.NAME))
   @Param(Array[String]())
   var StringEndsWithIndexScan_runtime: String = _
 
@@ -101,10 +101,10 @@ class StringEndsWithIndexScan extends AbstractCypherBenchmark {
       astLabelToken(LABEL, planContext),
       astPropertyKeyToken(KEY, planContext),
       literal,
-      Set.empty)(Solved)
+      Set.empty)(IdGen)
 
     val resultColumn = List(node.name)
-    val produceResults = plans.ProduceResult(resultColumn, indexSeek)
+    val produceResults = plans.ProduceResult(indexSeek, resultColumn)(IdGen)
 
     val table = SemanticTable().addNode(node)
 

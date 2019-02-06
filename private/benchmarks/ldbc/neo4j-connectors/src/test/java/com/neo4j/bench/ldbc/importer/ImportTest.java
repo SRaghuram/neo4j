@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -12,21 +12,30 @@ import com.neo4j.bench.ldbc.cli.ImportCommand;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.connection.QueryDateUtil;
 import com.neo4j.bench.ldbc.utils.Utils;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Date;
 import java.util.Random;
 
+import org.neo4j.consistency.ConsistencyCheckService;
+import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.kernel.configuration.Config;
+import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class ImportTest
 {
@@ -100,6 +109,8 @@ public class ImportTest
                 scenario.neo4jSchema(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution() );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test( expected = RuntimeException.class )
@@ -219,6 +230,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -258,6 +271,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -297,6 +312,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -336,6 +353,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -377,6 +396,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -418,6 +439,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -459,6 +482,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -500,6 +525,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -536,6 +563,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -572,6 +601,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -608,6 +639,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
     @Test
@@ -644,9 +677,10 @@ public class ImportTest
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
+
+        assertConsistentStore( dbDir );
     }
 
-    @Ignore
     @Test
     public void shouldImportUsingParallelForDense1WithCsvStringDateNeo4jUtcDate() throws Exception
     {
@@ -683,9 +717,10 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
-    @Ignore
     @Test
     public void shouldImportUsingParallelForDense1WithCsvStringDateNeo4jEncodedDate() throws Exception
     {
@@ -722,9 +757,10 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
-    @Ignore
     @Test
     public void shouldImportUsingParallelForDense1WithCsvUtcDateNeo4jUtcDate() throws Exception
     {
@@ -761,9 +797,10 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
-    @Ignore
     @Test
     public void shouldImportUsingParallelForDense1WithCsvUtcDateNeo4jNumEncodedDate() throws Exception
     {
@@ -800,6 +837,8 @@ public class ImportTest
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 timestampResolution );
+
+        assertConsistentStore( dbDir );
     }
 
     private void assertGraphMetadataIsAsExpected(
@@ -810,7 +849,7 @@ public class ImportTest
     {
         GraphDatabaseService db = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
-        QueryDateUtil dateUtil = QueryDateUtil.createFor( neo4jFormat, timestampResolution );
+        QueryDateUtil dateUtil = QueryDateUtil.createFor( neo4jFormat, timestampResolution, new LdbcDateCodecUtil() );
 
         if ( metadata.hasCommentHasCreatorMinDateAtResolution() )
         {
@@ -864,5 +903,20 @@ public class ImportTest
         assertThat(
                 metadata.neo4jSchema(),
                 equalTo( neo4jSchema ) );
+
+        db.shutdown();
+    }
+
+    private void assertConsistentStore( File dbDir ) throws ConsistencyCheckIncompleteException, IOException
+    {
+        ConsistencyCheckService.Result result = new ConsistencyCheckService( new Date() )
+                .runFullConsistencyCheck(
+                        dbDir,
+                        Config.defaults(),
+                        ProgressMonitorFactory.NONE,
+                        NullLogProvider.getInstance(),
+                        false,
+                        new ConsistencyFlags( true, false, true, true ) );
+        assertTrue( result.isSuccessful() );
     }
 }
