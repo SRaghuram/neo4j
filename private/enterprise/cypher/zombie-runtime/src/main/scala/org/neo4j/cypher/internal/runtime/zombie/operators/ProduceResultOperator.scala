@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.morsel.{ContinuableOperatorTask, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ArrayResultExecutionContextFactory
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -26,10 +26,12 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                             slots: SlotConfiguration,
                             columns: Seq[(String, Expression)]) extends StreamingOperator with ContinuableOperator {
 
+  override def toString: String = "ProduceResult"
+
   override def init(context: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] =
+                    resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
     Array(new InputOTask(inputMorsel))
 
   override def init(context: QueryContext,
@@ -37,7 +39,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                     resources: QueryResources): ContinuableOperatorTask =
     new OutputOTask()
 
-  class InputOTask(inputMorsel: MorselExecutionContext) extends OTask() {
+  class InputOTask(val inputMorsel: MorselExecutionContext) extends OTask() with ContinuableInputOperatorTask {
 
     override def canContinue: Boolean = false // will be true sometimes for reactive results
 
@@ -62,6 +64,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   }
 
   abstract class OTask() extends ContinuableOperatorTask {
+
+    override def toString: String = "ProduceResultTask"
 
     override def canContinue: Boolean = false // will be true sometimes for reactive results
 

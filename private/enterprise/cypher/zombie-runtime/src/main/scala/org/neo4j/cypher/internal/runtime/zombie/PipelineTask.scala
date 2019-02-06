@@ -5,39 +5,48 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.morsel.{PipelineTask => _, _}
+import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
+import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableInputOperatorTask, ContinuableOperatorTask, StatelessOperator}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 
 /**
   * The [[Task]] of executing a [[ExecutablePipeline]] once.
   *
   * @param start  task for executing the start operator
-  * @param slots  the slotConfiguration of this Pipeline
   * @param state  the current QueryState
   */
-case class PipelineTask(start: ContinuableOperatorTask,
+case class PipelineTask(start: ContinuableInputOperatorTask,
+                        middleOperators: Seq[StatelessOperator],
                         produceResult: ContinuableOperatorTask,
-                        slots: SlotConfiguration,
                         queryContext: QueryContext,
                         state: QueryState,
                         pipeline: ExecutablePipeline)
   extends Task[QueryResources] {
 
   override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): Unit = {
+    debug("START OF: "+pipeline)
     try {
       state.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
       doExecuteWorkUnit(resources, output)
     } finally {
       state.transactionBinder.unbindFromThread()
     }
+    debug("END OF: "+pipeline)
   }
 
   private def doExecuteWorkUnit(resources: QueryResources,
-                                 output: MorselExecutionContext): Unit = {
+                                output: MorselExecutionContext): Unit = {
+    debug("  operate "+start)
     start.operate(output, queryContext, state, resources)
+    for (op <- middleOperators) {
+      output.resetToFirstRow()
+      debug("  operate "+op+", rows: "+output.getValidRows)
+      op.operate(output, queryContext, state, resources)
+    }
     if (produceResult != null) {
       output.resetToFirstRow()
+      debug("  operate "+produceResult+", rows: "+output.getValidRows)
       produceResult.operate(output, queryContext, state, resources)
     }
   }
@@ -46,5 +55,5 @@ case class PipelineTask(start: ContinuableOperatorTask,
 
   override def workDescription: String = "not implemented"
 
-  override def canContinue: Boolean = start.canContinue || produceResult.canContinue
+  override def canContinue: Boolean = start.canContinue || (produceResult != null && produceResult.canContinue)
 }

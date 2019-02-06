@@ -15,10 +15,12 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
                           offset: Int,
                           argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
+  override def toString: String = "AllNodeScan"
+
   override def init(queryContext: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
+                    resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] = {
 
     if (state.singeThreaded) {
       // Single threaded scan
@@ -26,7 +28,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     } else {
       // Parallel scan
       val scan = queryContext.transactionalContext.dataRead.allNodesScan()
-      val tasks = new Array[ContinuableOperatorTask](state.numberOfWorkers)
+      val tasks = new Array[ContinuableInputOperatorTask](state.numberOfWorkers)
       for (i <- 0 until state.numberOfWorkers) {
         // Each task gets its own cursor which is reuses until it's done.
         val cursor = resources.cursorPools.nodeCursorPool.allocate()
@@ -40,9 +42,12 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
   /**
     * A [[SingleThreadedScanTask]] will iterate over all inputRows and do a full scan for each of them.
     *
-    * @param inputRow the input row, pointing to the beginning of the input morsel
+    * @param inputMorsel the input row, pointing to the beginning of the input morsel
     */
-  class SingleThreadedScanTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
+  class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+
+    override def toString: String = "AllNodeScanSerialTask"
+
     private var cursor: NodeCursor = _
 
     override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
@@ -53,7 +58,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
       while (outputRow.isValidRow && cursor.next()) {
-        outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
         outputRow.moveToNextRow()
       }
@@ -71,10 +76,12 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     *
     * For each batch, it process all the nodes and combines them with each input row.
     */
-  class ParallelScanTask(val inputRow: MorselExecutionContext,
+  class ParallelScanTask(val inputMorsel: MorselExecutionContext,
                          scan: Scan[NodeCursor],
                          val cursor: NodeCursor,
-                         val batchSizeHint: Int) extends ContinuableOperatorTask {
+                         val batchSizeHint: Int) extends ContinuableInputOperatorTask {
+
+    override def toString: String = "AllNodeScanParallelTask"
 
     private var _canContinue: Boolean = true
     private var deferredRow: Boolean = false
@@ -83,11 +90,11 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       * These 2 lines make sure that the first call to [[next]] is correct.
       */
     scan.reserveBatch(cursor, batchSizeHint)
-    inputRow.setToAfterLastRow()
+    inputMorsel.setToAfterLastRow()
 
     override def operate(outputRow: MorselExecutionContext, context: QueryContext, queryState: QueryState, resources: QueryResources): Unit = {
       while (next(queryState) && outputRow.isValidRow) {
-        outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
         outputRow.moveToNextRow()
       }
@@ -105,11 +112,11 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
         if (deferredRow) {
           deferredRow = false
           return true
-        } else if (inputRow.hasNextRow) {
-          inputRow.moveToNextRow()
+        } else if (inputMorsel.hasNextRow) {
+          inputMorsel.moveToNextRow()
           return true
         } else if (cursor.next()) {
-          inputRow.resetToBeforeFirstRow()
+          inputMorsel.resetToBeforeFirstRow()
         } else if (scan.reserveBatch(cursor, batchSizeHint)) {
           // Do nothing
         } else {

@@ -1,7 +1,7 @@
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.{Rows, Sink}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, NoInput, QueryContext}
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.result.QueryResult
@@ -24,7 +24,7 @@ trait QueryExecutor {
 
 class SingleThreadedQueryExecutor(transactionBinder: TransactionBinder) extends QueryExecutor {
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
-                                       newQueryState: ExecutionState,
+                                       executionState: ExecutionState,
                                        inputDataStream: InputDataStream,
                                        queryContext: QueryContext,
                                        params: MapValue,
@@ -35,16 +35,16 @@ class SingleThreadedQueryExecutor(transactionBinder: TransactionBinder) extends 
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
     val state = QueryState(params,
                            visitor,
-                           1000,
+                           4,
                            queryIndexes,
                            transactionBinder,
                            1,
                            inputDataStream)
 
-    newQueryState.initialize()
+    executionState.initialize()
 
     val reversedPipelines = executablePipelines.reverse
-    while (executeNextWorkUnit(reversedPipelines, newQueryState, queryContext, resources, state)) {}
+    while (executeNextWorkUnit(reversedPipelines, executionState, queryContext, resources, state)) {}
   }
 
   private def executeNextWorkUnit(executablePipelines: IndexedSeq[ExecutablePipeline],
@@ -67,24 +67,29 @@ class SingleThreadedQueryExecutor(transactionBinder: TransactionBinder) extends 
                                               slots)
 
       task.executeWorkUnit(resources, output)
-      pipeline.output match {
-        case Rows(outputId, _) =>
-          output.resetToFirstRow()
-          executionState.produceStreamingRows(outputId, output)
-        case Sink =>
+
+      if (pipeline.output != null ) {
+        output.resetToFirstRow()
+        executionState.produceMorsel(pipeline.output.id, output)
       }
+
       if (task.canContinue) {
         executionState.addContinuation(task)
+      } else {
+        executionState.closeMorsel(pipeline.inputRowBuffer.id, task.start.inputMorsel)
       }
       true
     } else false
   }
 
-    private def findNextTask(executablePipelines: IndexedSeq[ExecutablePipeline],
-                             executionState: ExecutionState,
-                             queryContext: QueryContext,
-                             resources: QueryResources,
-                             state: QueryState): PipelineTask = {
+  /**
+    * Find the next task to execute. This will eventually be abstracted into a scheduling policy.
+    */
+  private def findNextTask(executablePipelines: IndexedSeq[ExecutablePipeline],
+                           executionState: ExecutionState,
+                           queryContext: QueryContext,
+                           resources: QueryResources,
+                           state: QueryState): PipelineTask = {
 
     for (p <- executablePipelines) {
       val task = executionState.continue(p)
@@ -92,9 +97,10 @@ class SingleThreadedQueryExecutor(transactionBinder: TransactionBinder) extends 
         return task
       }
 
-      val input = executionState.consumeStreamingRows(p.lhsRows.id)
+      val input = executionState.consumeMorsel(p.inputRowBuffer.id)
       if (input != null) {
-        val tasks = p.init(input, queryContext, state, resources)
+        val pipelineState = executionState.pipelineState(p.id)
+        val tasks = pipelineState.init(input, queryContext, state, resources)
         for (task <- tasks.tail)
           executionState.addContinuation(task)
         return tasks.head

@@ -5,25 +5,37 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.{Dependency, Rows, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.{RowBufferDefinition, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.zombie.operators.{ProduceResultOperator, StreamingOperator}
-import org.neo4j.cypher.internal.runtime.morsel.{PipelineTask => _, _}
+import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, StatelessOperator}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 
 case class ExecutablePipeline(id: Int,
-                              start: StreamingOperator,
+                              start: Operator,
+                              middleOperators: Seq[StatelessOperator],
                               produceResult: Option[ProduceResultOperator],
                               slots: SlotConfiguration,
-                              lhsRows: Rows,
-                              output: Dependency) {
+                              inputRowBuffer: RowBufferDefinition,
+                              output: RowBufferDefinition) {
+
+  def createState(argumentStateCreator: ArgumentStateCreator): PipelineState =
+    new PipelineState(this, start.createState(argumentStateCreator))
+
+  override def toString: String = {
+    val opStrings = (start.toString +: middleOperators.map(_.toString)) ++ produceResult.map(_.toString)
+    s"Pipeline(${opStrings.mkString("-")})"
+  }
+}
+
+class PipelineState(pipeline: ExecutablePipeline, startState: OperatorState) {
 
   def init(inputMorsel: MorselExecutionContext,
            context: QueryContext,
            state: QueryState,
            resources: QueryResources): IndexedSeq[PipelineTask] = {
 
-    val streamTasks = start.init(context, state, inputMorsel, resources)
-    val produceResultsTask = produceResult.map(_.init(context, state, resources)).orNull
-    streamTasks.map(startTask => PipelineTask(startTask, produceResultsTask, slots, context, state, this))
+    val streamTasks = startState.init(context, state, inputMorsel, resources)
+    val produceResultsTask = pipeline.produceResult.map(_.init(context, state, resources)).orNull
+    streamTasks.map(startTask => PipelineTask(startTask, pipeline.middleOperators, produceResultsTask, context, state, pipeline))
   }
 }

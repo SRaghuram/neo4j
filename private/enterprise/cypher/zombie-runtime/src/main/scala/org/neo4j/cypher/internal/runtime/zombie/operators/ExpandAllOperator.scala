@@ -23,13 +23,17 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         dir: SemanticDirection,
                         types: LazyTypes) extends StreamingOperator {
 
+  override def toString: String = "ExpandAll"
+
   override def init(queryContext: QueryContext,
                     state: QueryState,
                     inputMorsel: MorselExecutionContext,
-                    resources: QueryResources): IndexedSeq[ContinuableOperatorTask] =
+                    resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
     IndexedSeq(new OTask(inputMorsel))
 
-  class OTask(val inputRow: MorselExecutionContext) extends StreamingContinuableOperatorTask {
+  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+
+    override def toString: String = "ExpandAllTask"
 
     /*
     This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
@@ -42,7 +46,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
     private var relationships: RelationshipSelectionCursor = _
 
     protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
-      val fromNode = inputRow.getLongAt(fromOffset)
+      val fromNode = inputMorsel.getLongAt(fromOffset)
       if (entityIsNull(fromNode))
         false
       else {
@@ -63,7 +67,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
         val otherSide = relationships.otherNodeReference()
 
         // Now we have everything needed to create a row.
-        outputRow.copyFrom(inputRow)
+        outputRow.copyFrom(inputMorsel)
         outputRow.setLongAt(relOffset, relId)
         outputRow.setLongAt(toOffset, otherSide)
         outputRow.moveToNextRow()

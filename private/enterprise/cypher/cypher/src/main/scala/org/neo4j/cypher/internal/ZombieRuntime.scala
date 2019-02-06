@@ -6,47 +6,71 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
-import org.neo4j.cypher.internal.physicalplanning.{PipelineBuilder, SlotAllocation, StateDefinition}
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.{PipelineBuilder, SlotAllocation, SlottedRewriter, StateDefinition}
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics}
 import org.neo4j.cypher.internal.runtime.zombie._
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.zombie.state.SingleThreadedStateBuilder
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.NO_TRANSACTION_BINDER
+import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
+import org.neo4j.cypher.internal.runtime.zombie._
+import org.neo4j.cypher.internal.runtime.zombie.state.SingleThreadedStateBuilder
+import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics}
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
-import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
+import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
 
-object ZombieRuntime {
-  def compileToExecutable(logicalQuery: LogicalQuery,
-                          context: EnterpriseRuntimeContext,
-                          logicalPlan: LogicalPlan,
-                          physicalPlan: SlotAllocation.PhysicalPlan,
-                          converters: ExpressionConverters,
-                          queryIndexes: QueryIndexes): ExecutionPlan = {
+object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
+  override def name: String = "zombie"
 
-    val stateDefinition = new StateDefinition
-    val pipelineBuilder = new PipelineBuilder(SlottedPipelineBreakingPolicy, stateDefinition)
+  val ENABLED = false
 
-    pipelineBuilder.create(logicalPlan)
+  override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
+    val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
+
+    val converters: ExpressionConverters = if (context.compileExpressions) {
+      new ExpressionConverters(
+        new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
+        MorselExpressionConverters,
+        SlottedExpressionConverters(physicalPlan),
+        CommunityExpressionConverter(context.tokenContext))
+    } else {
+      new ExpressionConverters(
+        MorselExpressionConverters,
+        SlottedExpressionConverters(physicalPlan),
+        CommunityExpressionConverter(context.tokenContext))
+    }
+
+    val queryIndexes = new QueryIndexes(context.schemaRead)
+
+    val stateDefinition = new StateDefinition(physicalPlan)
+    val pipelineBuilder = new PipelineBuilder(ZombiePipelineBreakingPolicy, stateDefinition, physicalPlan.slotConfigurations)
+
+    pipelineBuilder.build(logicalPlan)
     val operatorFactory = new OperatorFactory(physicalPlan, converters, true, queryIndexes)
 
     val executablePipelines =
       for (p <- pipelineBuilder.pipelines) yield {
         val headOperator = operatorFactory.create(p.headPlan)
+        val middleOperators = p.middlePlans.flatMap(operatorFactory.createMiddle)
         val produceResultOperator = p.produceResults.map(operatorFactory.createProduceResults)
 
         ExecutablePipeline(p.id,
                            headOperator,
+                           middleOperators,
                            produceResultOperator,
                            physicalPlan.slotConfigurations(p.headPlan.id),
-                           p.lhsRows,
+                           p.lhsRowBuffer,
                            p.output)
       }
 
@@ -54,9 +78,18 @@ object ZombieRuntime {
                         stateDefinition,
                         queryIndexes,
                         logicalPlan,
-                        logicalQuery.resultColumns,
+                        query.resultColumns,
                         new SingleThreadedQueryExecutor(NO_TRANSACTION_BINDER),
                         null)
+  }
+
+  private def rewritePlan(context: EnterpriseRuntimeContext,
+                          beforeRewrite: LogicalPlan,
+                          semanticTable: SemanticTable) = {
+    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, ZombiePipelineBreakingPolicy, allocateArgumentSlots = true)
+    val slottedRewriter = new SlottedRewriter(context.tokenContext)
+    val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
+    (logicalPlan, physicalPlan)
   }
 
   case class ZombieExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],

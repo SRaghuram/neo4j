@@ -8,114 +8,18 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.v4_0.logical.plans.{CachedNodeProperty, LogicalPlan}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
 import org.neo4j.values.AnyValue
 
 import scala.collection.{immutable, mutable}
 
 object SlotConfiguration {
-  def empty = new SlotConfiguration(mutable.Map.empty, mutable.Map.empty, 0, 0)
+  def empty = new SlotConfiguration(mutable.Map.empty, mutable.Map.empty, mutable.Map.empty, 0, 0)
 
   def apply(slots: Map[String, Slot], numberOfLongs: Int, numberOfReferences: Int): SlotConfiguration = {
     val stringToSlot = mutable.Map(slots.toSeq: _*)
-    new SlotConfiguration(stringToSlot, mutable.Map.empty, numberOfLongs, numberOfReferences)
-  }
-
-  def toString(startFrom: LogicalPlan, m: Map[LogicalPlan, SlotConfiguration]): String = {
-    var lastSeen = 0
-
-    def ordinal(): Int = {
-      val result = lastSeen
-      lastSeen += 1
-      result
-    }
-
-    class Pipeline(val order: Int, val info: SlotConfiguration, var plans: Seq[LogicalPlan], var dependsOn: Seq[Pipeline]) {
-      def addDependencyTo(toP: Pipeline): Unit = dependsOn = dependsOn :+ toP
-
-      def addPlan(p: LogicalPlan): Unit = plans = plans :+ p
-    }
-
-    class PipelineBuilder(var buffer: Map[SlotConfiguration, Pipeline] = Map.empty[SlotConfiguration, Pipeline] ) {
-      def addPlanAndPipelineInformation(lp: LogicalPlan, pipelineInformation: SlotConfiguration): PipelineBuilder = {
-        val p = getOrCreatePipeline(pipelineInformation)
-        p.addPlan(lp)
-        this
-      }
-
-      def getOrCreatePipeline(key: SlotConfiguration): Pipeline = {
-        buffer.getOrElse(key, {
-          val pipeline = new Pipeline(ordinal(), key, Seq.empty, Seq.empty)
-          buffer = buffer + (key -> pipeline)
-          pipeline
-        })
-      }
-
-      def addDependencyBetween(from: SlotConfiguration, to: SlotConfiguration): PipelineBuilder = {
-        val fromP = getOrCreatePipeline(from)
-        val toP = getOrCreatePipeline(to)
-        if (fromP != toP) {
-          fromP.addDependencyTo(toP)
-        }
-        this
-      }
-    }
-
-    val acc = new PipelineBuilder()
-    m.foreach {
-      case (lp, pipelineInformation) =>
-        acc.addPlanAndPipelineInformation(lp, pipelineInformation)
-
-        lp.lhs.foreach {
-          plan =>
-            val incomingPipeline = m(plan)
-            acc.addDependencyBetween(pipelineInformation, incomingPipeline)
-        }
-
-        lp.rhs.foreach {
-          plan =>
-            val incomingPipeline = m(plan)
-            acc.addDependencyBetween(pipelineInformation, incomingPipeline)
-        }
-    }
-
-    val result = new mutable.StringBuilder()
-
-    def addToString(pipeline: Pipeline): Unit = {
-      result.append(s"Pipeline ${pipeline.order}:\n")
-
-      //Plans
-      result.append(s"  -> ${pipeline.plans.head.getClass.getSimpleName}")
-      pipeline.plans.tail.foreach {
-        plan => result.append(", ").append(plan.getClass.getSimpleName)
-      }
-      result.append("\n")
-
-      //Slots
-      result.append("Slots:\n")
-      pipeline.info.slots.foreach {
-        case (key, slot) =>
-          val s = if (slot.isInstanceOf[LongSlot]) "L" else "V"
-          val r = if (slot.nullable) "T" else "F"
-
-          result.append(s"[$s $r ${slot.offset} ${slot.typ}] -> $key\n")
-      }
-
-      result.append("\n")
-
-      // Dependencies:
-      result.append("Depends on: ")
-      pipeline.dependsOn.foreach(p => result.append("#").append(p.order))
-
-      result.append("\n")
-      result.append("*-+*-+*-+*-+*-+*-+*-+*-+*-+*-+*-+*-+*-+\n")
-
-      pipeline.dependsOn.foreach(addToString)
-    }
-
-    addToString(acc.buffer(m(startFrom)))
-
-    result.toString()
+    new SlotConfiguration(stringToSlot, mutable.Map.empty, mutable.Map.empty, numberOfLongs, numberOfReferences)
   }
 
   def isLongSlot(slot: Slot): Boolean = slot match {
@@ -139,9 +43,9 @@ object SlotConfiguration {
   */
 class SlotConfiguration(private val slots: mutable.Map[String, Slot],
                         private val cachedProperties: mutable.Map[CachedNodeProperty, RefSlot],
+                        private val applyPlans: mutable.Map[Id, Int],
                         var numberOfLongs: Int,
                         var numberOfReferences: Int) {
-
 
   private val aliases: mutable.Set[String] = mutable.Set()
   private val slotAliases = new mutable.HashMap[Slot, mutable.Set[String]] with mutable.MultiMap[Slot, String]
@@ -153,6 +57,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   def addCachedPropertiesOf(other: SlotConfiguration): Unit = {
     other.cachedProperties.foreach { case (key, _) => this.newCachedProperty(key) }
+    other.applyPlans.foreach { case (id, slotOffset) => applyPlans.put(id, slotOffset) }
   }
 
   def size() = SlotConfiguration.Size(numberOfLongs, numberOfReferences)
@@ -188,6 +93,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   def copy(): SlotConfiguration = {
     val newPipeline = new SlotConfiguration(this.slots.clone(),
                                             this.cachedProperties.clone(),
+                                            this.applyPlans.clone(),
                                             numberOfLongs,
                                             numberOfReferences)
     newPipeline.aliases ++= aliases
@@ -232,7 +138,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     slots.get(key) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
-          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: ${existingSlot})")
+          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: $existingSlot)")
         }
         // Reuse the existing (compatible) slot
         unifyTypeAndNullability(key, existingSlot, slot)
@@ -245,12 +151,20 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     this
   }
 
+  def newArgument(applyPlanId: Id): SlotConfiguration = {
+    if (applyPlans.contains(applyPlanId))
+      throw new IllegalStateException(s"Should only add argument once per plan, got plan with $applyPlanId twice")
+    applyPlans.put(applyPlanId, numberOfLongs)
+    numberOfLongs = numberOfLongs + 1
+    this
+  }
+
   def newReference(key: String, nullable: Boolean, typ: CypherType): SlotConfiguration = {
     val slot = RefSlot(numberOfReferences, nullable, typ)
     slots.get(key) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
-          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: ${existingSlot})")
+          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: $existingSlot)")
         }
         // Reuse the existing (compatible) slot
         unifyTypeAndNullability(key, existingSlot, slot)
@@ -295,6 +209,11 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     case Some(s: LongSlot) => s.offset
     case Some(s) => throw new InternalException(s"Uh oh... There was no long slot for `$name`. It was a $s")
     case _ => throw new InternalException(s"Uh oh... There was no slot for `$name`")
+  }
+
+  def getArgumentLongOffsetFor(applyPlanId: Id): Int = {
+    applyPlans.getOrElse(applyPlanId,
+                         throw new InternalException(s"No argument slot allocated for plan with $applyPlanId"))
   }
 
   def getCachedNodePropertyOffsetFor(key: CachedNodeProperty): Int = cachedProperties(key).offset

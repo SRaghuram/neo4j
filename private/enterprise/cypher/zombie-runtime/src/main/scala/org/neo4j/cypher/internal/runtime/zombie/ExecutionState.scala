@@ -5,27 +5,52 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
-import scala.collection.mutable.ArrayBuffer
+/**
+  * Creator of [[ArgumentStateMap]].
+  */
+trait ArgumentStateCreator {
+
+  /**
+    * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `reducePlanId`.
+    */
+  def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
+                                                     constructor: () => T
+                                                    ): ArgumentStateMap[T]
+}
 
 /**
   * The execution state of a single executing query.
   */
-trait ExecutionState {
+trait ExecutionState extends ArgumentStateCreator {
 
   /**
-    * Produce a new morsel into the row buffer with id `outputId`.
+    * Get the [[PipelineState]] of this query execution for the given `pipelineId`.
     */
-  def produceStreamingRows(outputId: Int, morsel: MorselExecutionContext): Unit
+  def pipelineState(pipelineId: Int): PipelineState
 
   /**
-    * Consume a morsel from the row buffer with id `outputId`.
+    * Produce a morsel into the row buffer with id `bufferId`.
+    */
+  def produceMorsel(bufferId: Int, morsel: MorselExecutionContext): Unit
+
+  /**
+    * Consume a morsel from the row buffer with id `bufferId`.
     *
     * @return the morsel to consume, or `null` if no morsel was available
     */
-  def consumeStreamingRows(id: Int): MorselExecutionContext
+  def consumeMorsel(bufferId: Int): MorselExecutionContext
+
+  /**
+    * Close this morsel, meaning that we are done consuming it.
+    *
+    * @param rowBufferId buffer from which this morsel was consumed
+    * @param inputMorsel morsel to close
+    */
+  def closeMorsel(rowBufferId: Int,
+                  inputMorsel: MorselExecutionContext): Unit
 
   /**
     * Continue executing pipeline `p`.
@@ -43,37 +68,4 @@ trait ExecutionState {
     * Adds an empty row to the initBuffer.
     */
   def initialize(): Unit
-}
-
-object SingleThreadedStateBuilder {
-
-  def build(stateDefinition: StateDefinition,
-            executablePipelines: IndexedSeq[ExecutablePipeline]): ExecutionState = new SingleThreadedState(stateDefinition.bufferCount, executablePipelines.size)
-}
-
-class SingleThreadedState(bufferCount: Int, pipelineCount: Int) extends ExecutionState {
-
-  private val buffers = new Array[ArrayBuffer[MorselExecutionContext]](bufferCount).map(i => new ArrayBuffer[MorselExecutionContext]())
-  private val continuations = new Array[ArrayBuffer[PipelineTask]](bufferCount).map(i => new ArrayBuffer[PipelineTask]())
-
-  override def produceStreamingRows(outputId: Int,
-                                    output: MorselExecutionContext): Unit =
-    buffers(outputId).append(output)
-
-  override def consumeStreamingRows(id: Int): MorselExecutionContext = {
-    if (buffers(id).isEmpty) null
-    else buffers(id).remove(0)
-  }
-
-  override def addContinuation(task: PipelineTask): Unit =
-    continuations(task.pipeline.id).append(task)
-
-  override def continue(p: ExecutablePipeline): PipelineTask = {
-    if (continuations(p.id).isEmpty) null
-    else continuations(p.id).remove(0)
-  }
-
-  override def initialize(): Unit = {
-    buffers.head += MorselExecutionContext.createSingleRow()
-  }
 }

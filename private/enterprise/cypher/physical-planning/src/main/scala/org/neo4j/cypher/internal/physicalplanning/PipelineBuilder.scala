@@ -6,111 +6,139 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, SlotConfigurations}
+import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder.NO_PRODUCING_PIPELINE
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
 
-sealed trait Dependency
-case class Rows(id: Int, all: Boolean) extends Dependency
-case class ContinueRows(id: Int) extends Dependency
-case class HashTable(id: Int) extends Dependency
-case object Sink extends Dependency
+// TODO: refactor this file into a proper builder pattern, where the result of
+//  building is immutable definitions, and mutability is visible inside the builder only
 
-class Pipeline(val id: Int,
-               val headPlan: LogicalPlan,
-               val serial: Boolean,
-               needsArgumentCount: Boolean) {
-  var output: Dependency = _
-  val middlePlans = new ArrayBuffer[LogicalPlan]
-  var produceResults: Option[ProduceResult] = None
-  var lhsRows: Rows = _
-  val rhsRows: Option[Rows] = None
-  val dependencies = new ArrayBuffer[Dependency]
+class RowBufferDefinition(val id: Int,
+                          val producingPipelineId: Int) {
+  val counters = new ArrayBuffer[CounterDefinition]
 }
 
-case class Buffer(id: Int)
+class ArgumentBufferDefinition(id: Int,
+                               producingPipelineId: Int,
+                               applyPlanId: Id,
+                               val argumentSlotOffset: Int) extends RowBufferDefinition(id, producingPipelineId)
 
-class StateDefinition {
+case class CounterDefinition(reducingPlanId: Id, argumentSlotOffset: Int)
 
-  var bufferCount = 0
-  var hashTableCount = 0
+class Pipeline(val id: Int,
+               val headPlan: LogicalPlan) {
+  var output: RowBufferDefinition = _
+  val middlePlans = new ArrayBuffer[LogicalPlan]
+  var produceResults: Option[ProduceResult] = None
+  var lhsRowBuffer: RowBufferDefinition = _
+}
 
-  def newStreamingBuffer(): Rows = {
-    val x = bufferCount
-    bufferCount += 1
-    Rows(x, false)
+class StateDefinition(val physicalPlan: PhysicalPlan) {
+
+  val counters = new ArrayBuffer[CounterDefinition]
+  val rowBuffers = new ArrayBuffer[RowBufferDefinition]
+
+  def newStreamingBuffer(producingPipelineId: Int): RowBufferDefinition = {
+    val x = rowBuffers.size
+    val rows = new RowBufferDefinition(x, producingPipelineId)
+    rowBuffers += rows
+    rows
   }
 
-  def newHashTable(): HashTable = {
-    val x = hashTableCount
-    hashTableCount += 1
-    HashTable(x)
+  def newArgumentBuffer(producingPipelineId: Int,
+                        applyPlanId: Id,
+                        argumentSlotOffset: Int): ArgumentBufferDefinition = {
+    val x = rowBuffers.size
+    val rows = new ArgumentBufferDefinition(x, producingPipelineId, applyPlanId, argumentSlotOffset)
+    rowBuffers += rows
+    rows
   }
 
-  val initBuffer: Rows = newStreamingBuffer()
+  def newCounter(reducingPlanId: Id, argumentSlotOffset: Int): CounterDefinition = {
+    val x = CounterDefinition(reducingPlanId, argumentSlotOffset)
+    counters += x
+    x
+  }
+
+  var initBuffer: ArgumentBufferDefinition = _
+}
+
+object PipelineBuilder {
+  val NO_PRODUCING_PIPELINE: Int = -1
 }
 
 class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
-                      stateDefinition: StateDefinition)
-  extends TreeBuilder[Pipeline] {
+                      stateDefinition: StateDefinition,
+                      slotConfigurations: SlotConfigurations)
+  extends TreeBuilder2[Pipeline, ArgumentBufferDefinition] {
 
   val pipelines = new ArrayBuffer[Pipeline]
 
-  private def openPipeline(plan: LogicalPlan, serial: Boolean, needsArgumentCount: Boolean): Pipeline = {
-    val pipeline = new Pipeline(pipelines.size, plan, serial, needsArgumentCount)
+  private def newPipeline(plan: LogicalPlan) = {
+    val pipeline = new Pipeline(pipelines.size, plan)
     pipelines += pipeline
     pipeline
   }
 
-  private def closePipeline[T <: Dependency](pipeline: Pipeline, output: T): T = {
+  private def outputToBuffer(pipeline: Pipeline): RowBufferDefinition = {
+    val output = stateDefinition.newStreamingBuffer(pipeline.id)
     pipeline.output = output
     output
   }
 
-  override protected def onLeaf(plan: LogicalPlan, sourceOpt: Option[Pipeline]): Pipeline = {
-    val pipeline = openPipeline(plan, false, false)
-    sourceOpt match {
-      case None => pipeline.lhsRows = stateDefinition.initBuffer
-      case Some(source) =>
-        source.output match {
-          case rows: Rows => pipeline.lhsRows = rows
-          case _ => ???
-        }
-    }
-    pipeline
+  private def outputToArgumentBuffer(pipeline: Pipeline, applyPlanId: Id, argumentSlotOffset: Int): ArgumentBufferDefinition = {
+    val output = stateDefinition.newArgumentBuffer(pipeline.id, applyPlanId, argumentSlotOffset)
+    pipeline.output = output
+    output
   }
 
-  override protected def onOneChildPlan(plan: LogicalPlan, source: Pipeline): Pipeline = {
-    val id = plan.id
+  override protected def initialArgument(leftLeaf: LogicalPlan): ArgumentBufferDefinition = {
+    val initialArgumentSlotOffset = slotConfigurations(leftLeaf.id).getArgumentLongOffsetFor(Id.INVALID_ID)
+    stateDefinition.initBuffer = stateDefinition.newArgumentBuffer(NO_PRODUCING_PIPELINE, Id.INVALID_ID, initialArgumentSlotOffset)
+    stateDefinition.initBuffer
+  }
 
+  override protected def onLeaf(plan: LogicalPlan,
+                                argument: ArgumentBufferDefinition): Pipeline = {
+
+    if (breakingPolicy.breakOn(plan)) {
+      val pipeline = newPipeline(plan)
+      pipeline.lhsRowBuffer = argument
+      pipeline
+    } else
+      throw new UnsupportedOperationException("not implemented")
+  }
+
+  override protected def onOneChildPlan(plan: LogicalPlan,
+                                        source: Pipeline,
+                                        argument: ArgumentBufferDefinition): Pipeline = {
     plan match {
       case produceResult: ProduceResult =>
         if (breakingPolicy.breakOn(plan)) {
-          val pipeline = openPipeline(plan, true, false)
-          pipeline.lhsRows = closePipeline(source, stateDefinition.newStreamingBuffer())
+          val pipeline = newPipeline(plan)
+          pipeline.lhsRowBuffer = outputToBuffer(source)
           pipeline.produceResults = Some(produceResult)
-          pipeline.output = Sink
           pipeline
         } else {
           source.produceResults = Some(produceResult)
-          source.output = Sink
           source
         }
 
-      case _: Aggregation =>
-        val pipeline = openPipeline(plan, false, true)
-        pipeline.lhsRows = closePipeline(source, stateDefinition.newStreamingBuffer())
-        pipeline
+      case _: Sort =>
+        if (breakingPolicy.breakOn(plan)) {
+          source.middlePlans += plan
 
-      case _: Sort if breakingPolicy.breakOn(plan) =>
-        val buffer = stateDefinition.newStreamingBuffer()
-        closePipeline(source, buffer)
-        val pipeline = openPipeline(plan, false, true)
-        // TODO: AllRows is probably not a good model because what happens on rhs?
-        // TODO: Better to model like Aggr. and others like a in-operator group by argument
-        pipeline.lhsRows = Rows(buffer.id, true)
-        pipeline
+          val counter = stateDefinition.newCounter(plan.id, argument.argumentSlotOffset)
+          val pipeline = newPipeline(plan)
+          pipeline.lhsRowBuffer = outputToBuffer(source)
+          forBuffersUntil(pipeline.lhsRowBuffer, argument, b => b.counters += counter)
+          pipeline
+        } else throw new UnsupportedOperationException("not implemented")
 
       case _: Expand |
            _: PruningVarExpand |
@@ -120,8 +148,8 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: UnwindCollection |
            _: VarExpand =>
         if (breakingPolicy.breakOn(plan)) {
-          val pipeline = openPipeline(plan, false, false)
-          pipeline.lhsRows = closePipeline(source, stateDefinition.newStreamingBuffer())
+          val pipeline = newPipeline(plan)
+          pipeline.lhsRowBuffer = outputToBuffer(source)
           pipeline
         } else {
           source.middlePlans += plan
@@ -134,48 +162,41 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     }
   }
 
-  override protected def onTwoChildPlanComingFromLeft(plan: LogicalPlan, lhs: Pipeline): Option[Pipeline] =
+  override protected def onTwoChildPlanComingFromLeft(plan: LogicalPlan,
+                                                      lhs: Pipeline,
+                                                      argument: ArgumentBufferDefinition): ArgumentBufferDefinition =
   {
     plan match {
       case _: plans.Apply =>
-        lhs.output = stateDefinition.newStreamingBuffer()
-        Some(lhs)
-
-      case _: plans.AbstractSemiApply =>
-        lhs.output = stateDefinition.newStreamingBuffer()
-        Some(lhs)
+        val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
+        outputToArgumentBuffer(lhs, plan.id, argumentSlotOffset)
 
       case _ =>
-        None
+        argument
     }
   }
 
   override protected def onTwoChildPlanComingFromRight(plan: LogicalPlan, lhs: Pipeline, rhs: Pipeline): Pipeline = {
 
     plan match {
-      case _: NodeHashJoin =>
-        lhs.output = stateDefinition.newHashTable()
-        val x =
-          if (breakingPolicy.breakOn(plan)) {
-            val pipeline = openPipeline(plan, false, false)
-            pipeline.lhsRows = closePipeline(rhs, stateDefinition.newStreamingBuffer())
-            pipeline
-          } else
-            rhs
-
-        x.dependencies += lhs.output
-        x
-
       case _: plans.Apply =>
         rhs
-
-      case _: plans.AbstractSemiApply =>
-        val pipeline = openPipeline(plan, false, false)
-        pipeline.lhsRows = closePipeline(rhs, stateDefinition.newStreamingBuffer())
-        pipeline
 
       case p =>
         throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
     }
+  }
+
+  // HELPERS
+
+  private def forBuffersUntil(startBuffer: RowBufferDefinition,
+                              endBuffer: RowBufferDefinition,
+                              function: RowBufferDefinition => Unit): Unit = {
+    var b = startBuffer
+    while (b != endBuffer) {
+      function(b)
+      b = pipelines(b.producingPipelineId).lhsRowBuffer
+    }
+    function(b)
   }
 }

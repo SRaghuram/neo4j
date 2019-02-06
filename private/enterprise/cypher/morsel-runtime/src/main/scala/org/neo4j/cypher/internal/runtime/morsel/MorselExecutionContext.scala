@@ -5,14 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
+
+import scala.collection.mutable
 
 object MorselExecutionContext {
   def apply(morsel: Morsel, pipeline: Pipeline) = new MorselExecutionContext(morsel,
@@ -21,10 +24,16 @@ object MorselExecutionContext {
     numberOfLongs, numberOfReferences, 0, 0, SlotConfiguration.empty)
   def apply(morsel: Morsel, numberOfLongs: Int, numberOfReferences: Int, validRows: Int) = new MorselExecutionContext(morsel,
     numberOfLongs, numberOfReferences, validRows, 0, SlotConfiguration.empty)
-  private val EMPTY_SINGLE_ROW = new MorselExecutionContext(Morsel.create(SlotConfiguration.empty, 1), 0, 0, 1, 0, SlotConfiguration.empty)
 
-  def createSingleRow(): MorselExecutionContext =
-    EMPTY_SINGLE_ROW.shallowCopy()
+  private val EMPTY_SINGLE_ROW =
+    new MorselExecutionContext(
+      Morsel.create(SlotConfiguration.empty, 1), 0, 0, 1, 0, SlotConfiguration.empty)
+  def createSingleRow(): MorselExecutionContext = EMPTY_SINGLE_ROW.shallowCopy()
+
+  private val INITIAL_ROW =
+    new MorselExecutionContext(
+      Morsel.create(SlotAllocation.INITIAL_SLOT_CONFIGURATION, 1), 1, 0, 1, 0, SlotAllocation.INITIAL_SLOT_CONFIGURATION)
+  def createInitialRow(): MorselExecutionContext = INITIAL_ROW.shallowCopy()
 }
 
 class MorselExecutionContext(private val morsel: Morsel,
@@ -33,6 +42,37 @@ class MorselExecutionContext(private val morsel: Morsel,
                              private var validRows: Int,
                              private var currentRow: Int,
                              val slots: SlotConfiguration) extends ExecutionContext with SlottedCompatible {
+
+  // BOOK KEEPING FOR REFERENCE COUNTING
+
+  private var counters = new mutable.HashSet[Id]()
+
+  def setCounters(ids: Seq[Id]): Unit = counters ++= ids
+  def removeCounter(id: Id): Unit = counters -= id
+  def getAndClearCounters(): Seq[Id] = {
+    val x = counters.toSeq
+    counters.clear()
+    x
+  }
+
+  // ARGUMENT COLUMNS
+
+  def allArgumentRowIdsFor(offset: Int): Seq[Long] = {
+    var i = 0
+    val res = new mutable.ArrayBuffer[Long]()
+    var lastId = -1L
+    while (i < validRows) {
+      val currentId = morsel.longs(i * longsPerRow + offset)
+      if (currentId != lastId) {
+        res += currentId
+        lastId = currentId
+      }
+      i += 1
+    }
+    res
+  }
+
+  private var firstRow: Int = 0
 
   def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
 
@@ -50,11 +90,11 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   def moveToRow(row: Int): Unit = currentRow = row
 
-  def resetToFirstRow(): Unit = currentRow = 0
-  def resetToBeforeFirstRow(): Unit = currentRow = -1
+  def resetToFirstRow(): Unit = currentRow = firstRow
+  def resetToBeforeFirstRow(): Unit = currentRow = firstRow - 1
   def setToAfterLastRow(): Unit = currentRow = validRows
 
-  def isValidRow: Boolean = currentRow < validRows
+  def isValidRow: Boolean = currentRow < validRows && currentRow >= firstRow
   def hasNextRow: Boolean = currentRow + 1 < validRows
 
   def numberOfRows: Int = validRows
@@ -62,7 +102,7 @@ class MorselExecutionContext(private val morsel: Morsel,
   /**
     * Check so that there is at least one valid row of data
     */
-  def hasData: Boolean = validRows > 0
+  def hasData: Boolean = validRows > firstRow
 
   /**
     * Set the valid rows of the morsel to the current position, which usually
@@ -78,6 +118,14 @@ class MorselExecutionContext(private val morsel: Morsel,
   def createViewOfCurrentRow(): MorselExecutionContext = {
     val view = shallowCopy()
     view.limitToCurrentRow()
+    view
+  }
+
+  def view(start: Int, end: Int): MorselExecutionContext = {
+    val view = shallowCopy()
+    view.firstRow = start
+    view.currentRow = start
+    view.validRows = end
     view
   }
 
