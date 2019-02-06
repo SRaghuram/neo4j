@@ -29,7 +29,7 @@ import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CypherType, ListType}
+import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
 import org.neo4j.function.ThrowingBiConsumer
 import org.neo4j.graphdb.Relationship
 import org.neo4j.internal.kernel.api.Transaction.Type
@@ -3508,6 +3508,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   def compileGroupingExpression(projections: Map[String, Expression],
                                 slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression
+
+  private def parameter(key: String): Parameter = parameter(key, CTAny)
 
   private def coerce(value: AnyValue, ct: CypherType) =
     compile(coerceTo(parameter("a"), ct)).evaluate(ctx, query, map(Array("a"), Array(value)), cursors)
