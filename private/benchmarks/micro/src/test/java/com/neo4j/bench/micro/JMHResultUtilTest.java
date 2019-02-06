@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -27,7 +27,7 @@ import static com.neo4j.bench.micro.JMHResultUtil.toNameSuffix;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static junit.framework.TestCase.assertFalse;
+import static org.junit.Assert.assertFalse;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;

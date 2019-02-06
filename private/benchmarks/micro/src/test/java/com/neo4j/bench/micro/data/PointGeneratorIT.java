@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -27,8 +27,8 @@ import static com.neo4j.bench.micro.data.PointGenerator.yFor;
 import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
 
 import static java.lang.Math.round;
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
