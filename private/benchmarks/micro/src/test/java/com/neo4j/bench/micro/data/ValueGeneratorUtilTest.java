@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -20,7 +20,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.prefixPad;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.suffixPad;
 
 import static java.util.stream.Collectors.toList;
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isOneOf;
