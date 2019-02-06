@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -93,6 +93,9 @@ public class AnnotatedQuery
             break;
         case COMPILED:
             cypherTypePrefix += "runtime=compiled ";
+            break;
+        case SLOTTED:
+            cypherTypePrefix += "runtime=slotted ";
             break;
         default:
             throw new RuntimeException( "Expected known runtime but got " + runtimeType );

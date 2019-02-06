@@ -96,6 +96,31 @@
       "name": "Q19",
       "description": "Wanted Improvement: Index range scan followed by index backed DESC order",
       "queryFile": "queries/Q19.cypher"
+    },
+    {
+      "name": "Q20",
+      "description": "Wanted Improvement: Index backed property values for single aggregation",
+      "queryFile": "queries/Q20.cypher"
+    },
+    {
+      "name": "Q21",
+      "description": "Wanted Improvement: Index backed property values for multiple aggregations",
+      "queryFile": "queries/Q21.cypher"
+    },
+    {
+      "name": "Q22",
+      "description": "Wanted Improvement: Index backed property values for single aggregation with multiple variables",
+      "queryFile": "queries/Q22.cypher"
+    },
+    {
+      "name": "Q23",
+      "description": "Wanted Improvement: Index backed order by for min/max (projection + limit 1 + optional instead of aggregation)",
+      "queryFile": "queries/Q23.cypher"
+    },
+    {
+      "name": "Q24",
+      "description": "Wanted Improvement: Index backed property values with union",
+      "queryFile": "queries/Q24.cypher"
     }
   ]
 }

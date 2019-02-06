@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -22,7 +22,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertUtcAndYearTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -35,7 +35,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Resolution.YEAR );
+                LdbcDateCodec.Resolution.YEAR,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( utcDateTime ) );
@@ -50,7 +51,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertUtcAndMonthTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -63,7 +64,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( utcDateTime ) );
@@ -78,7 +80,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertUtcAndDayTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -91,7 +93,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Resolution.DAY );
+                LdbcDateCodec.Resolution.DAY,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( utcDateTime ) );
@@ -106,7 +109,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertUtcAndHourTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -119,7 +122,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( utcDateTime ) );
@@ -134,7 +138,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertUtcAndMinuteTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -147,7 +151,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Resolution.MINUTE );
+                LdbcDateCodec.Resolution.MINUTE,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( utcDateTime ) );
@@ -162,7 +167,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertUtcAndSecondTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -175,7 +180,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Resolution.SECOND );
+                LdbcDateCodec.Resolution.SECOND,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( utcDateTime ) );
@@ -190,7 +196,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertUtcAndMilliSecondTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -203,7 +209,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Resolution.MILLISECOND );
+                LdbcDateCodec.Resolution.MILLISECOND,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( utcDateTime ) );
@@ -222,7 +229,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertEncodedLongAndYearTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -236,7 +243,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.YEAR );
+                LdbcDateCodec.Resolution.YEAR,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( 19820123010203004L ) );
@@ -251,7 +259,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertEncodedLongAndMonthTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -265,7 +273,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( 19820123010203004L ) );
@@ -280,7 +289,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertEncodedLongAndDayTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -294,7 +303,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.DAY );
+                LdbcDateCodec.Resolution.DAY,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( 19820123010203004L ) );
@@ -309,7 +319,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertEncodedLongAndHourTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -323,7 +333,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( 19820123010203004L ) );
@@ -338,7 +349,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertEncodedLongAndMinuteTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -352,7 +363,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MINUTE );
+                LdbcDateCodec.Resolution.MINUTE,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( 19820123010203004L ) );
@@ -367,7 +379,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertEncodedLongAndSecondTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -381,7 +393,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.SECOND );
+                LdbcDateCodec.Resolution.SECOND,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( 19820123010203004L ) );
@@ -396,7 +409,7 @@ public class QueryDateUtilTest
     @Test
     public void shouldCorrectlyConvertEncodedLongAndMilliSecondTimestamp() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -410,7 +423,8 @@ public class QueryDateUtilTest
 
         QueryDateUtil queryDateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MILLISECOND );
+                LdbcDateCodec.Resolution.MILLISECOND,
+                new LdbcDateCodecUtil() );
 
         assertThat( queryDateUtil.dateFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( queryDateUtil.utcToFormat( utcDateTime ), equalTo( 19820123010203004L ) );

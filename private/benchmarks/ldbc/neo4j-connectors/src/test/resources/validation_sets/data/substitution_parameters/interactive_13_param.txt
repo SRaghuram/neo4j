@@ -1,3 +1,9 @@
+====
+    Copyright (c) 2002-2019 "Neo4j,"
+    Neo4j Sweden AB [http://neo4j.com]
+    This file is part of Neo4j internal tooling.
+====
+
 Person1|Person2
 2199023255738|1674
 10995116279050|2199023257991

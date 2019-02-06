@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -30,7 +30,6 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
-import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
@@ -143,7 +142,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 }
             }
         }
-        gbpTree.checkpoint( IOLimiter.UNLIMITED );
+        gbpTree.checkpoint( IOLimiter.unlimited() );
     }
 
     static Random randomSequence( long pos )
@@ -170,15 +169,14 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 tracer,
                 tracerSupplier,
                 log,
-                EmptyVersionContextSupplier.EMPTY,
-                JobSchedulerFactory.createInitialisedScheduler() );
+                EmptyVersionContextSupplier.EMPTY );
         return factory.getOrCreatePageCache();
     }
 
     private static GBPTree<AdaptableKey,AdaptableValue> createGBPTree(
             PageCache pageCache,
             File indexFile,
-            AdaptableLayout layout )
+            AdaptableLayout layout ) throws IOException
     {
         return new GBPTree<>(
                 pageCache,

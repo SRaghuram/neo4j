@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -13,12 +13,12 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.PointGenerator.{ClusterGridDefinition, circleGrid}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.expressions.LessThanOrEqual
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans._
-import org.neo4j.cypher.internal.v3_5.util.symbols
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.util.v3_4.symbols
+import org.neo4j.cypher.internal.v3_4.expressions.LessThanOrEqual
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans._
 import org.neo4j.graphdb.spatial.Point
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.{space_filling_curve_bottom_threshold, space_filling_curve_extra_levels, space_filling_curve_max_bits, space_filling_curve_top_threshold}
@@ -209,10 +209,9 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     val indexSeek = plans.NodeIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
-      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
+      Seq(astPropertyKeyToken(KEY, planContext)),
       seekExpression,
-      Set.empty,
-      IndexOrderNone)(IdGen)
+      Set.empty)(IdGen)
     val resultColumns = List(node.name)
 
     val produceResults = if (CircleDistancePointIndexSeek_filtered) {
@@ -236,7 +235,7 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
     val point = threadState.randomPoint(rngState)
     val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("point" -> point).asJava)
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, tx = threadState.tx).accept(visitor)
+    threadState.executionResult(params, tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(threadState.expectedRowCount, visitor)
   }
 }
@@ -244,13 +243,13 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
 @State(Scope.Thread)
 class CircleDistancePointIndexSeekThreadState {
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
   var points: List[Point] = _
   var expectedRowCount: Int = _
 
   @Setup
   def setUp(benchmark: CircleDistancePointIndexSeek): Unit = {
-    executablePlan = benchmark.buildPlan(from(benchmark.CircleDistancePointIndexSeek_runtime))
+    executionResult = benchmark.buildPlan(from(benchmark.CircleDistancePointIndexSeek_runtime))
 
     // collection of points to use as query params. contains the middle of every cluster.
     val pointsFun: ValueGeneratorFun[Point] = benchmark.clustersDefinition.clusterCenters()

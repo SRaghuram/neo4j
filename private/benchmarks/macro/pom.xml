@@ -6,13 +6,12 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark</artifactId>
-        <version>3.3.10-SNAPSHOT</version>
+        <version>3.4.13-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <name>Neo4j Macro Benchmarks</name>
-
     <artifactId>macro</artifactId>
+    <name>Neo4j - Macro Benchmarks</name>
 
     <properties>
         <uberjar.name>macro</uberjar.name>

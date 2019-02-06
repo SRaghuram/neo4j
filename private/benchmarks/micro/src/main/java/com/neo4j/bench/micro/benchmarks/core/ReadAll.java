@@ -1,15 +1,10 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.RelationshipDefinition;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -20,6 +15,13 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
+
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.RelationshipDefinition;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
@@ -35,10 +37,10 @@ public class ReadAll extends AbstractCoreBenchmark
 {
     private static final int RELATIONSHIPS_PER_NODE = 1;
     public static final int NODE_COUNT = 10_000_000;
-    private static final int RELATIONSHIP_COUNT = NODE_COUNT * RELATIONSHIPS_PER_NODE;
+    public static final int RELATIONSHIP_COUNT = NODE_COUNT * RELATIONSHIPS_PER_NODE;
     public static final RelationshipDefinition RELATIONSHIP_DEFINITION =
             new RelationshipDefinition( RelationshipType.withName( "REL" ), RELATIONSHIPS_PER_NODE );
-    private static final Label LABEL = Label.label( "Label" );
+    public static final Label LABEL = Label.label( "Label" );
 
     @ParamValues(
             allowed = {"standard", "high_limit"},
@@ -72,6 +74,7 @@ public class ReadAll extends AbstractCoreBenchmark
                 .withLabels( LABEL )
                 .withOutRelationships( RELATIONSHIP_DEFINITION )
                 .isReusableStore( true )
+                .withNeo4jConfig( Neo4jConfig.empty().setTransactionMemory( ReadAll_txMemory ) )
                 .build();
     }
 

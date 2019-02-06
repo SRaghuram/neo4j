@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -6,33 +6,23 @@
 package com.neo4j.bench.ldbc.importer;
 
 import com.neo4j.bench.ldbc.connection.ImportDateUtil;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 
-import java.text.ParseException;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
-import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
-import org.neo4j.unsafe.impl.batchimport.input.InputNode;
-import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
+import org.neo4j.unsafe.impl.batchimport.input.InputEntityVisitor;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
 
-public class DateTimeDecorator<T extends InputEntity> implements Decorator<T>
+public class DateTimeDecorator implements Decorator
 {
-    private final ImportDateUtil importDateUtil;
+    private final Supplier<ImportDateUtil> importDateUtilSupplier;
     private final String propertyKey;
-    private final ThreadLocal<Calendar> calendarThreadLocal = new ThreadLocal<Calendar>()
-    {
-        @Override
-        protected Calendar initialValue()
-        {
-            return LdbcDateCodec.newCalendar();
-        }
-    };
 
-    public DateTimeDecorator( String propertyKey, ImportDateUtil importDateUtil )
+    public DateTimeDecorator( String propertyKey, Supplier<ImportDateUtil> importDateUtilSupplier )
     {
         this.propertyKey = propertyKey;
-        this.importDateUtil = importDateUtil;
+        this.importDateUtilSupplier = importDateUtilSupplier;
     }
 
     @Override
@@ -42,86 +32,36 @@ public class DateTimeDecorator<T extends InputEntity> implements Decorator<T>
     }
 
     @Override
-    public InputEntity apply( InputEntity inputEntity ) throws RuntimeException
+    public InputEntityVisitor apply( InputEntityVisitor inputEntityVisitor )
     {
-        Calendar calendar = calendarThreadLocal.get();
-        Object[] newProperties = inputEntity.properties();
-        boolean propertyFound = false;
-        for ( int i = 0; i < newProperties.length; i++ )
+        return new InputEntityVisitor.Delegate( inputEntityVisitor )
         {
-            if ( newProperties[i].equals( propertyKey ) )
+            private final Calendar calendar = LdbcDateCodecUtil.newCalendar();
+            private final ImportDateUtil importDateUtil = importDateUtilSupplier.get();
+
+            @Override
+            public boolean property( String key, Object value )
             {
-                String dateTimeString = (String) newProperties[i + 1];
-                try
+                if ( key.equals( propertyKey ) )
                 {
-                    newProperties[i + 1] = importDateUtil.csvDateTimeToFormat( dateTimeString, calendar );
+                    try
+                    {
+                        return super.property(
+                                key,
+                                importDateUtil.csvDateTimeToFormat( (String) value, calendar ) );
+                    }
+                    catch ( Exception e )
+                    {
+                        throw new RuntimeException( "Error decorating date:\n" +
+                                                    "Key = '" + key + "'\n" +
+                                                    "Value = '" + value + "'", e );
+                    }
                 }
-                catch ( ParseException e )
+                else
                 {
-                    throw new RuntimeException( "Error while parsing date string: " + dateTimeString, e );
+                    return super.property( key, value );
                 }
-                propertyFound = true;
-                break;
             }
-        }
-        if ( !propertyFound )
-        {
-            throw new RuntimeException( "Could not find property: " + propertyKey );
-        }
-
-        Long newFirstPropertyId;
-        try
-        {
-            newFirstPropertyId = inputEntity.firstPropertyId();
-        }
-        catch ( NullPointerException e )
-        {
-            newFirstPropertyId = null;
-        }
-
-        if ( inputEntity.getClass().equals( InputNode.class ) )
-        {
-            return new InputNode(
-                    inputEntity.sourceDescription(),
-                    inputEntity.lineNumber(),
-                    inputEntity.position(),
-                    ((InputNode) inputEntity).group(),
-                    ((InputNode) inputEntity).id(),
-                    newProperties,
-                    newFirstPropertyId,
-                    ((InputNode) inputEntity).labels(),
-                    ((InputNode) inputEntity).labelField()
-            );
-        }
-        else if ( inputEntity.getClass().equals( InputRelationship.class ) )
-        {
-            Integer newTypeId;
-            try
-            {
-                newTypeId = ((InputRelationship) inputEntity).typeId();
-            }
-            catch ( NullPointerException e )
-            {
-                newTypeId = null;
-            }
-
-            return new InputRelationship(
-                    inputEntity.sourceDescription(),
-                    inputEntity.lineNumber(),
-                    inputEntity.position(),
-                    newProperties,
-                    newFirstPropertyId,
-                    ((InputRelationship) inputEntity).startNodeGroup(),
-                    ((InputRelationship) inputEntity).startNode(),
-                    ((InputRelationship) inputEntity).endNodeGroup(),
-                    ((InputRelationship) inputEntity).endNode(),
-                    ((InputRelationship) inputEntity).type(),
-                    newTypeId
-            );
-        }
-        else
-        {
-            throw new RuntimeException( "Unrecognized InputEntity subclass: " + inputEntity.getClass().getName() );
-        }
+        };
     }
 }

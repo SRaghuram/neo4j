@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -12,9 +12,9 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
-import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -23,7 +23,7 @@ import org.openjdk.jmh.infra.Blackhole
 class Selection extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
-    base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
+    base = Array(EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var Selection_runtime: String = _
 
@@ -61,13 +61,13 @@ class Selection extends AbstractCypherBenchmark {
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val node = astVariable("n")
     val nodeIdName = node.name
-    val allNodeScan = plans.AllNodesScan(nodeIdName, Set.empty)(Solved)
+    val allNodeScan = plans.AllNodesScan(nodeIdName, Set.empty)(IdGen)
     val property = astProperty(node, KEY)
     val literalValue = astLiteralFor(buckets(0), Selection_type)
     val predicate = astEquals(property, literalValue)
-    val selection = plans.Selection(Seq(predicate), allNodeScan)(Solved)
+    val selection = plans.Selection(Seq(predicate), allNodeScan)(IdGen)
     val resultColumns = List(nodeIdName)
-    val produceResults = plans.ProduceResult(resultColumns, selection)
+    val produceResults = plans.ProduceResult(selection, resultColumns)(IdGen)
 
     val table = SemanticTable().addNode(node)
 

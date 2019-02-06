@@ -1,38 +1,41 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
 package com.neo4j.bench.micro.data
 
-
-import com.neo4j.bench.micro.data.TypeParamValues.{DBL, LNG, STR_BIG, STR_SML}
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 
-import org.neo4j.cypher.internal.compiler.v3_3._
-import org.neo4j.cypher.internal.compiler.v3_3.ast.{InequalitySeekRangeWrapper, PrefixSeekRangeWrapper}
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.ast.{PropertyKeyToken, _}
-import org.neo4j.cypher.internal.frontend.v3_3.helpers.NonEmptyList
-import org.neo4j.cypher.internal.frontend.v3_3.symbols.CypherType
-import org.neo4j.cypher.internal.frontend.v3_3.{Bound, Bounds, ExclusiveBound, InclusiveBound, InputPosition, LabelId, PropertyKeyId, ast, symbols}
-import org.neo4j.cypher.internal.ir.v3_3.{Cardinality, CardinalityEstimation, PlannerQuery, RegularPlannerQuery}
-import org.neo4j.cypher.internal.v3_3.logical.plans.{QueryExpression, RangeQueryExpression}
+import com.neo4j.bench.micro.data.TypeParamValues._
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.util.v3_4._
+import org.neo4j.cypher.internal.util.v3_4.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.util.v3_4.symbols.CypherType
+import org.neo4j.cypher.internal.v3_4.expressions._
+import org.neo4j.cypher.internal.v3_4.logical.plans._
 import org.neo4j.graphdb.{Label, RelationshipType}
 
 object Plans {
+  val IdGen = new SequentialIdGen()
   val Pos: InputPosition = InputPosition.NONE
-  val Solved: RegularPlannerQuery with CardinalityEstimation = CardinalityEstimation.lift(PlannerQuery.empty, Cardinality(0))
 
   def cypherTypeFor(aType: String): CypherType = aType match {
     case LNG => symbols.CTInteger
     case DBL => symbols.CTFloat
     case STR_SML => symbols.CTString
+    case DATE_TIME => symbols.CTDateTime
+    case LOCAL_DATE_TIME => symbols.CTLocalDateTime
+    case TIME => symbols.CTTime
+    case DATE => symbols.CTDate
+    case LOCAL_TIME => symbols.CTLocalTime
+    case DURATION => symbols.CTDuration
+    case POINT => symbols.CTPoint
     case _ => throw new IllegalArgumentException(s"Unsupported type: $aType")
   }
 
   def astRelTypeName(relType: RelationshipType): RelTypeName =
-    ast.RelTypeName(relType.name)(Pos)
+    RelTypeName(relType.name)(Pos)
 
   def astPropertyKeyToken(key: String, planContext: PlanContext): PropertyKeyToken =
     PropertyKeyToken(key, astPropertyKeyId(key, planContext))
@@ -73,6 +76,20 @@ object Plans {
   def astLiteralFor(bucket: Bucket, valueType: String): Literal =
     astLiteralFor(bucket.value(), valueType)
 
+  def astPointFunctionFor(xKey: String, xValue: Double, yKey: String, yValue: Double): FunctionInvocation =
+    astPointFunctionFor(xKey, astLiteralFor(xValue, DBL), yKey, astLiteralFor(yValue, DBL))
+
+  def astPointFunctionFor(xKey: String, xValue: Expression, yKey: String, yValue: Expression): FunctionInvocation = {
+    val xKeyName = PropertyKeyName(xKey)(Pos)
+    val yKeyName = PropertyKeyName(yKey)(Pos)
+    val points = MapExpression(List((xKeyName, xValue), (yKeyName, yValue)))(Pos)
+    FunctionInvocation(
+      Namespace(List())(Pos),
+      FunctionName("point")(Pos),
+      distinct = false,
+      IndexedSeq(points))(Pos)
+  }
+
   def astStringPrefixQueryExpression(prefix: StringLiteral): QueryExpression[Expression] = {
     val range: PrefixRange[Expression] = PrefixRange(prefix)
     val rangeWrapper: PrefixSeekRangeWrapper = PrefixSeekRangeWrapper(range)(Pos)
@@ -102,6 +119,20 @@ object Plans {
     val rangeQuery: RangeQueryExpression[InequalitySeekRangeWrapper] = RangeQueryExpression(rangeWrapper)
     rangeQuery
   }
+
+  def astRangeBetweenPointsQueryExpression(point: Expression, distance: Literal): QueryExpression[Expression] = {
+    val pointDistanceRange = PointDistanceRange[Expression](point, distance, inclusive = true)
+    val rangeWrapper = PointDistanceSeekRangeWrapper(pointDistanceRange)(Pos)
+    val rangeQuery = RangeQueryExpression(rangeWrapper)
+    rangeQuery
+  }
+
+  def distanceFunction(point1: Expression, point2: Expression) =
+    FunctionInvocation(
+      Namespace(List())(Pos),
+      FunctionName("distance")(Pos),
+      distinct = false,
+      IndexedSeq(point1, point2))(Pos)
 
   private def astRangeLessThan(upper: Literal, inclusive: Boolean): RangeLessThan[Literal] =
     RangeLessThan(astBounds(upper, true))

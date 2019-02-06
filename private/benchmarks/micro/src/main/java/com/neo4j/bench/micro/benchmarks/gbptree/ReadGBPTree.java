@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -23,8 +23,6 @@ import java.util.Random;
 import org.neo4j.cursor.RawCursor;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Hit;
-
-import static com.neo4j.bench.micro.Main.run;
 
 public class ReadGBPTree extends AbstractGBPTreeBenchmark
 {
@@ -174,10 +172,5 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
             }
         }
         return assertCount( count, ReadGBPTree_initialTreeSize );
-    }
-
-    public static void main( String... methods ) throws Exception
-    {
-        run( ReadGBPTree.class, methods );
     }
 }

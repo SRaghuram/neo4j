@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,12 +9,14 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML, mapValuesOfList}
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.ast._
-import org.neo4j.cypher.internal.frontend.v3_3.symbols.ListType
-import org.neo4j.cypher.internal.frontend.v3_3.{ExpressionTypeInfo, SemanticTable, symbols}
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.v3_3.logical.plans.{Ascending, ColumnOrder, Descending}
+import org.neo4j.cypher.internal.util.v3_4.symbols
+import org.neo4j.cypher.internal.util.v3_4.symbols.ListType
+import org.neo4j.cypher.internal.frontend.v3_4.ast._
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.expressions.Expression
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans.{Ascending, ColumnOrder, Descending}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
@@ -33,13 +35,13 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array(LNG, STR_SML),
-    base = Array(LNG, STR_SML))
+    base = Array(STR_SML))
   @Param(Array[String]())
   var MultiColumnOrderBy_type: String = _
 
   @ParamValues(
     allowed = Array("1", "10", "100"),
-    base = Array("1", "100"))
+    base = Array("100"))
   @Param(Array[String]())
   var MultiColumnOrderBy_columns: Int = _
 
@@ -69,19 +71,19 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
-    val leaf = plans.UnwindCollection(plans.SingleRow()(Solved), unwindVariable.name, parameter)(Solved)
+    val leaf = plans.UnwindCollection(plans.Argument()(IdGen), unwindVariable.name, parameter)(IdGen)
     val expressionsAndSortItems: Map[String, (Expression, ColumnOrder)] = columnNames()
       .map(keyName => "c" + keyName -> (astProperty(unwindVariable, keyName), sortItemFor(keyName)))
       .toMap[String, (Expression, ColumnOrder)]
     val expressions = expressionsAndSortItems.map {
       case (key: String, value: (Expression, ColumnOrder)) => key -> value._1
     }
-    val projection = plans.Projection(leaf, expressions)(Solved)
+    val projection = plans.Projection(leaf, expressions)(IdGen)
     // TODO randomize Ascending/Descending?
     val sortItems: Seq[ColumnOrder] = expressionsAndSortItems.keys.map(key => Ascending(key)).toSeq
-    val orderBy = plans.Sort(projection, sortItems)(Solved)
+    val orderBy = plans.Sort(projection, sortItems)(IdGen)
     val resultColumns = expressionsAndSortItems.keys.toList
-    val produceResults = plans.ProduceResult(resultColumns, orderBy)
+    val produceResults = plans.ProduceResult(orderBy, resultColumns)(IdGen)
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 

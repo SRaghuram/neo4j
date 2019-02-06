@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,10 +9,10 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, RelationshipDefinition}
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection.{INCOMING, OUTGOING}
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.expressions.SemanticDirection.{INCOMING, OUTGOING}
+import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -39,18 +39,18 @@ class ExpandInto extends AbstractCypherBenchmark {
       .build()
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val allNodesScan = plans.AllNodesScan("a", Set.empty)(Solved)
-    val expand = plans.Expand(allNodesScan, "a", OUTGOING, Seq.empty, "b", "r1", plans.ExpandAll)(Solved)
-    val expandInto = plans.Expand(expand, "b", INCOMING, Seq.empty, "a", "r2", plans.ExpandInto)(Solved)
+    val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
+    val expand = plans.Expand(allNodesScan, "a", OUTGOING, Seq.empty, "b", "r1", plans.ExpandAll)(IdGen)
+    val expandInto = plans.Expand(expand, "b", INCOMING, Seq.empty, "a", "r2", plans.ExpandInto)(IdGen)
     val resultColumns = List("a", "b")
-    val produceResults = plans.ProduceResult(columns = resultColumns, expandInto)
-
     val table = SemanticTable().
       addNode(astVariable("a")).
       addNode(astVariable("b")).
       addRelationship(astVariable("r1")).
       addRelationship(astVariable("r2"))
 
+
+    val produceResults = plans.ProduceResult(expandInto, columns = resultColumns)(IdGen)
     (produceResults, table, resultColumns)
   }
 

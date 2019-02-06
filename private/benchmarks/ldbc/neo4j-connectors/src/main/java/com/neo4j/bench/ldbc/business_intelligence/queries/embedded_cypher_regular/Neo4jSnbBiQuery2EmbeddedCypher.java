@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,7 +10,6 @@ import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery2TopTags;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiQuery2TopTagsResult;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiEmbeddedCypherRegularCommands;
 import com.neo4j.bench.ldbc.business_intelligence.queries.Neo4jSnbBiQuery2;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jConnectionState;
 
 import java.util.ArrayList;
@@ -34,10 +33,14 @@ public class Neo4jSnbBiQuery2EmbeddedCypher extends Neo4jSnbBiQuery2<Neo4jConnec
         Map<String,Object> params = new HashMap<>( operation.parameterMap() );
         params.put(
                 START_DATE,
-                LdbcDateCodec.utcToEncodedLongDateTime( operation.startDate(), connection.calendar() ) );
+                connection.dateUtil().ldbcDateCodecUtil().utcToEncodedLongDateTime(
+                        operation.startDate(),
+                        connection.calendar() ) );
         params.put(
                 END_DATE,
-                LdbcDateCodec.utcToEncodedLongDateTime( operation.endDate(), connection.calendar() ) );
+                connection.dateUtil().ldbcDateCodecUtil().utcToEncodedLongDateTime(
+                        operation.endDate(),
+                        connection.calendar() ) );
 
         return SnbBiEmbeddedCypherRegularCommands.execute(
                 connection,

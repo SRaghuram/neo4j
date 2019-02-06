@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -28,18 +28,25 @@ import java.util.SplittableRandom;
 
 import org.neo4j.graphdb.Label;
 
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
@@ -65,6 +72,7 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
+                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
@@ -99,7 +107,10 @@ public class CreateNodesWithLabelAndProperty extends AbstractCoreBenchmark
     {
         return new DataGeneratorConfigBuilder()
                 .withSchemaIndexes( schemaIndexes() )
-                .withNeo4jConfig( Neo4jConfig.empty().withSetting( record_format, CreateNodesWithLabelAndProperty_format ) )
+                .withNeo4jConfig( Neo4jConfig
+                                          .empty()
+                                          .withSetting( record_format, CreateNodesWithLabelAndProperty_format )
+                                          .setTransactionMemory( CreateNodesWithLabelAndProperty_txMemory ) )
                 .isReusableStore( false )
                 .build();
     }

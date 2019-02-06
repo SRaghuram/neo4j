@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -7,23 +7,6 @@ package com.neo4j.bench.imports;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.client.QueryRetrier;
-import com.neo4j.bench.client.StoreClient;
-import com.neo4j.bench.client.model.Benchmark;
-import com.neo4j.bench.client.model.BenchmarkConfig;
-import com.neo4j.bench.client.model.BenchmarkGroup;
-import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
-import com.neo4j.bench.client.model.BenchmarkTool;
-import com.neo4j.bench.client.model.BranchAndVersion;
-import com.neo4j.bench.client.model.Edition;
-import com.neo4j.bench.client.model.Environment;
-import com.neo4j.bench.client.model.Java;
-import com.neo4j.bench.client.model.Metrics;
-import com.neo4j.bench.client.model.Neo4j;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.model.TestRun;
-import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.queries.SubmitTestRun;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
@@ -44,12 +27,29 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.neo4j.test.proc.ProcessUtil;
+import com.neo4j.bench.client.QueryRetrier;
+import com.neo4j.bench.client.StoreClient;
+import com.neo4j.bench.client.model.Benchmark;
+import com.neo4j.bench.client.model.BenchmarkConfig;
+import com.neo4j.bench.client.model.BenchmarkGroup;
+import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.client.model.BenchmarkTool;
+import com.neo4j.bench.client.model.BranchAndVersion;
+import com.neo4j.bench.client.model.Edition;
+import com.neo4j.bench.client.model.Environment;
+import com.neo4j.bench.client.model.Java;
+import com.neo4j.bench.client.model.Metrics;
+import com.neo4j.bench.client.model.Neo4j;
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.client.model.TestRun;
+import com.neo4j.bench.client.model.TestRunReport;
+import com.neo4j.bench.client.queries.SubmitTestRun;
+import org.neo4j.io.proc.ProcessUtil;
 import org.neo4j.tooling.ImportTool;
 
+import static java.util.stream.Collectors.joining;
 import static com.neo4j.bench.client.model.Repository.IMPORT_BENCH;
 import static com.neo4j.bench.client.model.Repository.NEO4J;
-import static java.util.stream.Collectors.joining;
 
 @Command( name = "import-benchmarks", description = "benchamrks for import performance" )
 public class Main

@@ -5,7 +5,7 @@
     <parent>
       <groupId>com.neo4j</groupId>
       <artifactId>commercial-parent</artifactId>
-      <version>3.3.10-SNAPSHOT</version>
+      <version>3.4.13-SNAPSHOT</version>
       <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -75,6 +75,7 @@
         <module>ldbc</module>
         <module>micro</module>
         <module>macro</module>
+        <module>import</module>
     </modules>
 
     <profiles>

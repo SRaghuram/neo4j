@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -22,7 +22,7 @@ import com.neo4j.bench.ldbc.Domain.TagClass;
 import com.neo4j.bench.ldbc.Domain.WorksAt;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.connection.ImportDateUtil;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.connection.TimeStampedRelationshipTypesCache;
 import com.neo4j.bench.ldbc.importer.CsvFileInserter;
 import com.neo4j.bench.ldbc.importer.CsvFilesForMerge;
@@ -102,7 +102,7 @@ class CsvFileInserters
             File csvDataDir,
             ImportDateUtil importDateUtil ) throws IOException
     {
-        final Calendar calendar = LdbcDateCodec.newCalendar();
+        final Calendar calendar = LdbcDateCodecUtil.newCalendar();
         final TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache =
                 new TimeStampedRelationshipTypesCache();
 

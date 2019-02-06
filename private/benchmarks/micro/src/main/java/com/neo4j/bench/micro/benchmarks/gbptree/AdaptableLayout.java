@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,17 +10,19 @@ import org.neo4j.io.pagecache.PageCursor;
 
 abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
 {
-    final int keySize;
+    private final int keySize;
     private final int valueSize;
+    private final int keyPadding;
 
     AdaptableLayout( int keySize, int valueSize )
     {
-        if ( keySize < AdaptableKey.DATA_SIZE )
+        if ( keySize < AdaptableKey.SIZE )
         {
-            throw new IllegalArgumentException( "Key size need to be at least " + AdaptableKey.DATA_SIZE + ", was " + keySize );
+            throw new IllegalArgumentException( "Key size need to be at least " + AdaptableKey.SIZE + ", was " + keySize );
         }
         this.keySize = keySize;
         this.valueSize = valueSize;
+        this.keyPadding = keySize - AdaptableKey.SIZE;
     }
 
     @Override
@@ -37,18 +39,13 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     @Override
     public AdaptableKey newKey()
     {
-        return new AdaptableKey( keySize );
+        return new AdaptableKey();
     }
 
     @Override
     public AdaptableKey copyKey( AdaptableKey adaptableKey, AdaptableKey into )
     {
-        return copyKey( adaptableKey, into, adaptableKey.totalSize );
-    }
-
-    AdaptableKey copyKey( AdaptableKey right, AdaptableKey into, int targetLength )
-    {
-        into.copyFrom( right, targetLength );
+        into.value = adaptableKey.value;
         return into;
     }
 
@@ -56,6 +53,12 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     public AdaptableValue newValue()
     {
         return new AdaptableValue();
+    }
+
+    @Override
+    public int keySize( AdaptableKey adaptableKey )
+    {
+        return keySize;
     }
 
     @Override
@@ -68,7 +71,7 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     public void writeKey( PageCursor cursor, AdaptableKey adaptableKey )
     {
         cursor.putLong( adaptableKey.value );
-        writePadding( cursor, adaptableKey.padding() );
+        writePadding( cursor, keyPadding );
     }
 
     @Override
@@ -90,8 +93,7 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     public void readKey( PageCursor cursor, AdaptableKey into, int keySize )
     {
         into.value = cursor.getLong();
-        into.totalSize = keySize;
-        readPadding( cursor, into.padding() );
+        readPadding( cursor, keyPadding );
     }
 
     @Override
@@ -113,7 +115,6 @@ abstract class AdaptableLayout extends TestLayout<AdaptableKey,AdaptableValue>
     public AdaptableKey keyWithSeed( AdaptableKey adaptableKey, long seed )
     {
         adaptableKey.value = seed;
-        adaptableKey.totalSize = keySize;
         return adaptableKey;
     }
 
