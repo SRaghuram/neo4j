@@ -448,6 +448,15 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should equal(List(Map("n" -> node1), Map("n" -> node2)))
   }
 
+  test("index seek with expression that needs to access slots") {
+    createLabeledNode(Map("Name" -> "Piece of Mind", "lc_name" -> "piece of mind"), "Album")
+    createLabeledNode(Map("Name" -> "Somewhere in Time", "lc_name" -> "somewhere in time"), "Album")
+    graph.createIndex("Album", "lc_name")
+    // Not using executeWith single the order of collect is not deterministic
+    val result = executeSingle( "CYPHER runtime=slotted MATCH (a:Album) WHERE a.lc_name IN [ id IN ['Somewhere in Time','Piece of Mind','Killers'] | toLower(id) ] WITH a {ref: a.Name,id:a.lc_name} RETURN COLLECT(a) AS Map")
+    result.toList should not be empty // Slotted used to crash here
+  }
+
   private def setUpDatabaseForTests() {
     executeWith(Configs.InterpretedAndSlotted,
       """CREATE (architect:Matrix { name:'The Architect' }),

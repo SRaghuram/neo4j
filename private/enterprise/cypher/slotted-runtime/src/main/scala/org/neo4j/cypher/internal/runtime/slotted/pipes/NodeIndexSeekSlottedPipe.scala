@@ -37,8 +37,9 @@ case class NodeIndexSeekSlottedPipe(ident: String,
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
     val index = state.queryIndexes(queryIndexId)
-    val contextForIndexExpression = state.initialContext.getOrElse(SlottedExecutionContext.empty)
-    indexSeek(state, index, needsValues, indexOrder, contextForIndexExpression).flatMap(
+    val context = SlottedExecutionContext(slots)
+    state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
+    indexSeek(state, index, needsValues, indexOrder, context).flatMap(
       cursor => new SlottedIndexIterator(state, slots, cursor)
     )
   }
