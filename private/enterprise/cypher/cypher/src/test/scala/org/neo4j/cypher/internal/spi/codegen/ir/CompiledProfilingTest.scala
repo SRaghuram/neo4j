@@ -24,7 +24,6 @@ import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, NodeProxy}
 import org.neo4j.test.TestGraphDatabaseFactory
-import org.neo4j.cypher.internal.v4_0.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
@@ -80,7 +79,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
       val lhs = AllNodesScan("a", Set.empty)
       val rhs = AllNodesScan("a", Set.empty)
       val join = NodeHashJoin(Set("a"), lhs, rhs)
-      val projection = plans.Projection(join, Map("foo" -> SignedDecimalIntegerLiteral("1")(null)))
+      val projection = plans.Projection(join, Map("foo" -> literalInt(1)))
       val plan = plans.ProduceResult(projection, List("foo"))
 
       // when
