@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,12 +10,13 @@ import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.ConstantGenerator.constant
 import com.neo4j.bench.micro.data.DiscreteGenerator.{Bucket, discrete}
 import com.neo4j.bench.micro.data.Plans._
+import com.neo4j.bench.micro.data.ValueGeneratorUtil.{INT, LNG}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.v3_3.logical.plans._
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
-import org.neo4j.cypher.internal.frontend.v3_3.ast._
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.expressions.SignedDecimalIntegerLiteral
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans._
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -31,7 +32,7 @@ class NodeHashJoin extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("0.001", "0.01", "0.1"),
-    base = Array("0.001", "0.01", "0.1"))
+    base = Array("0.01"))
   @Param(Array[String]())
   var NodeHashJoin_selectivity: Double = _
 
@@ -48,10 +49,9 @@ class NodeHashJoin extends AbstractCypherBenchmark {
 
   override protected def getConfig: DataGeneratorConfig = {
     val buckets = List(
-      new Bucket(NodeHashJoin_selectivity, constant(com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG, VALUE)),
-      new Bucket(1 - NodeHashJoin_selectivity, constant(com.neo4j.bench.micro.data.ValueGeneratorUtil.INT, 1)))
+      new Bucket(NodeHashJoin_selectivity, constant(LNG, VALUE)),
+      new Bucket(1 - NodeHashJoin_selectivity, constant(INT, 1)))
     val property = new PropertyDefinition(KEY, discrete(buckets: _*))
-
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
@@ -70,11 +70,11 @@ class NodeHashJoin extends AbstractCypherBenchmark {
       astLabelToken(LABEL, planContext),
       List(astPropertyKeyToken(KEY, planContext)),
       queryExpression,
-      Set.empty)(Solved)
-    val rhs = plans.AllNodesScan(nodeIdName, Set.empty)(Solved)
-    val join = NodeHashJoin(Set(nodeIdName), lhs, rhs)(Solved)
+      Set.empty)(IdGen)
+    val rhs = plans.AllNodesScan(nodeIdName, Set.empty)(IdGen)
+    val join = NodeHashJoin(Set(nodeIdName), lhs, rhs)(IdGen)
     val resultColumns = List(node.name)
-    val produceResults = ProduceResult(resultColumns, join)
+    val produceResults = ProduceResult(join, resultColumns)(IdGen)
 
     val table = SemanticTable().addNode(node)
 

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -7,7 +7,7 @@ package com.neo4j.bench.ldbc;
 
 import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.util.Tuple2;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcIndexer;
 
@@ -132,7 +132,7 @@ public abstract class QueryGraphMaker
             int year,
             int month )
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         return date(
                 year,
                 month,
@@ -145,7 +145,7 @@ public abstract class QueryGraphMaker
             int month,
             int day )
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         return date(
                 year,
                 month,
@@ -160,7 +160,7 @@ public abstract class QueryGraphMaker
             int year,
             int month, int day, int hour, int minute, int second )
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         return date(
                 year,
                 month,
@@ -179,7 +179,7 @@ public abstract class QueryGraphMaker
             throw new RuntimeException( format( "Invalid 'month' value %s, must be in [1,12]", month ) );
         }
         month = month - 1;
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, year );
         calendar.set( Calendar.MONTH, month );
         calendar.set( Calendar.DAY_OF_MONTH, day );

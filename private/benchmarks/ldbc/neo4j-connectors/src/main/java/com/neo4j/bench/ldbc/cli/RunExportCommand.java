@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -316,7 +316,7 @@ public class RunExportCommand implements Runnable
     private static final String CMD_CYPHER_PLANNER = "--planner";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_PLANNER},
-            description = "Cypher Planner",
+            description = "Cypher Planner: DEFAULT, RULE, COST",
             title = "Cypher Planner",
             required = false )
     private PlannerType planner = PlannerType.DEFAULT;
@@ -324,7 +324,7 @@ public class RunExportCommand implements Runnable
     private static final String CMD_CYPHER_RUNTIME = "--runtime";
     @Option( type = OptionType.COMMAND,
             name = {CMD_CYPHER_RUNTIME},
-            description = "Cypher Runtime",
+            description = "Cypher Runtime: DEFAULT, INTERPRETED, COMPILED, SLOTTED",
             title = "Cypher Runtime",
             required = false )
     private RuntimeType runtime = RuntimeType.DEFAULT;

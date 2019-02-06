@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -24,6 +24,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -124,7 +125,8 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
 
             HashMap<String,AnyValue> stringParamMap = new HashMap<>();
             stringParamMap.put( "p",
-                    Values.stringValue( (String) randPropertyFor( STR_BIG ).value().create().next( random ) ) );
+                    Values.utf8Value( ((String) randPropertyFor( STR_BIG ).value().create().next( random )).getBytes(
+                            StandardCharsets.UTF_8 ) ) );
             stringParam = VirtualValues.map( stringParamMap );
             ValueGeneratorFun stringFun = randPropertyFor( STR_SML ).value().create();
             ValueGeneratorFun longFun = randPropertyFor( LNG ).value().create();

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,11 +9,13 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.ast._
-import org.neo4j.cypher.internal.frontend.v3_3.ast.functions.Count
-import org.neo4j.cypher.internal.frontend.v3_3.{ExpressionTypeInfo, SemanticTable, symbols}
+import org.neo4j.cypher.internal.util.v3_4.symbols
+import org.neo4j.cypher.internal.frontend.v3_4.ast._
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.expressions.Expression
+import org.neo4j.cypher.internal.v3_4.functions.Count
+import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
@@ -29,7 +31,7 @@ class Aggregation extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array(STR_SML, LNG, DBL),
-    base = Array(STR_SML, LNG))
+    base = Array(STR_SML))
   @Param(Array[String]())
   var Aggregation_type: String = _
 
@@ -45,12 +47,12 @@ class Aggregation extends AbstractCypherBenchmark {
     val listType = symbols.CTList(listElementType)
     val parameter = astParameter("list", listType)
     val unwindVariable = astVariable("value")
-    val leaf = plans.UnwindCollection(plans.SingleRow()(Solved), "value", parameter)(Solved)
+    val leaf = plans.UnwindCollection(plans.Argument()(IdGen), "value", parameter)(IdGen)
     val groupingExpressions = Map[String, Expression]()
     val aggregationExpressions = Map("count" -> astFunctionInvocation(Count.name, astVariable("value")))
-    val aggregation = plans.Aggregation(leaf, groupingExpressions, aggregationExpressions)(Solved)
+    val aggregation = plans.Aggregation(leaf, groupingExpressions, aggregationExpressions)(IdGen)
     val resultColumns = List("count")
-    val produceResults = plans.ProduceResult(columns = resultColumns, aggregation)
+    val produceResults = plans.ProduceResult(aggregation, resultColumns)(IdGen)
 
     val table = SemanticTable(types = ASTAnnotationMap.empty.updated(unwindVariable, ExpressionTypeInfo(listElementType.invariant, None)))
 

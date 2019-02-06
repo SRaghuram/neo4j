@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -6,38 +6,29 @@
 package com.neo4j.bench.ldbc.importer;
 
 import com.neo4j.bench.ldbc.connection.ImportDateUtil;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.connection.TimeStampedRelationshipTypesCache;
 
 import java.text.ParseException;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
+import org.neo4j.unsafe.impl.batchimport.input.InputEntityVisitor;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
 
-public class PostHasCreatorAtTimeRelationshipTypeDecorator
-        implements Decorator<InputRelationship>
+public class PostHasCreatorAtTimeRelationshipTypeDecorator implements Decorator
 {
-    private final ThreadLocal<Calendar> calendarThreadLocal = new ThreadLocal<Calendar>()
-    {
-        @Override
-        protected Calendar initialValue()
-        {
-            return LdbcDateCodec.newCalendar();
-        }
-    };
-    private static final String[] EMPTY_STRING_ARRAY = new String[]{};
-    private final ImportDateUtil importDateUtil;
+    private final Supplier<ImportDateUtil> importDateUtilSupplier;
     private final TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache;
     private final GraphMetadataTracker metadataTracker;
 
     public PostHasCreatorAtTimeRelationshipTypeDecorator(
-            ImportDateUtil importDateUtil,
+            Supplier<ImportDateUtil> importDateUtilSupplier,
             TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache,
             GraphMetadataTracker metadataTracker )
     {
-        this.importDateUtil = importDateUtil;
+        this.importDateUtilSupplier = importDateUtilSupplier;
         this.timeStampedRelationshipTypesCache = timeStampedRelationshipTypesCache;
         this.metadataTracker = metadataTracker;
     }
@@ -49,46 +40,48 @@ public class PostHasCreatorAtTimeRelationshipTypeDecorator
     }
 
     @Override
-    public InputRelationship apply( InputRelationship inputRelationship ) throws RuntimeException
+    public InputEntityVisitor apply( InputEntityVisitor inputEntityVisitor )
     {
-        Calendar calendar = calendarThreadLocal.get();
-
         // post has creator person - WITH TIME STAMP
         // posts: id|imageFile|creationDate|locationIP|browserUsed|language|content|length|creator|Forum.id|place|
         // NOTE: only creationDate is passed through
-        String creationDateString = (String) inputRelationship.properties()[1];
-        long creationDate;
-        long creationDateAtResolution;
-        try
+        return new InputEntityVisitor.Delegate( inputEntityVisitor )
         {
-            creationDate = importDateUtil.csvDateTimeToFormat( creationDateString, calendar );
-            creationDateAtResolution =
-                    importDateUtil.queryDateUtil().formatToEncodedDateAtResolution( creationDate );
-            metadataTracker.recordPostHasCreatorDateAtResolution( creationDateAtResolution );
-        }
-        catch ( ParseException e )
-        {
-            throw new RuntimeException( String.format( "Invalid Date string: %s", creationDateString ), e );
-        }
-        RelationshipType hasCreatorRelationshipType =
-                timeStampedRelationshipTypesCache.postHasCreatorForDateAtResolution(
-                        creationDateAtResolution,
-                        importDateUtil.queryDateUtil()
-                );
-        String newType = hasCreatorRelationshipType.name();
+            private final Calendar calendar = LdbcDateCodecUtil.newCalendar();
+            private final ImportDateUtil importDateUtil = importDateUtilSupplier.get();
 
-        return new InputRelationship(
-                inputRelationship.sourceDescription(),
-                inputRelationship.lineNumber(),
-                inputRelationship.position(),
-                EMPTY_STRING_ARRAY,
-                (inputRelationship.hasFirstPropertyId()) ? inputRelationship.firstPropertyId() : null,
-                inputRelationship.startNodeGroup(),
-                inputRelationship.startNode(),
-                inputRelationship.endNodeGroup(),
-                inputRelationship.endNode(),
-                newType,
-                inputRelationship.hasTypeId() ? inputRelationship.typeId() : null
-        );
+            @Override
+            public boolean property( String key, Object value )
+            {
+                if ( "creationDate".equals( key ) )
+                {
+                    String creationDateString = (String) value;
+                    long creationDateAtResolution;
+                    try
+                    {
+                        long creationDate = importDateUtil.csvDateTimeToFormat( creationDateString, calendar );
+                        creationDateAtResolution =
+                                importDateUtil.queryDateUtil().formatToEncodedDateAtResolution( creationDate );
+                        metadataTracker.recordPostHasCreatorDateAtResolution( creationDateAtResolution );
+                    }
+                    catch ( ParseException e )
+                    {
+                        throw new RuntimeException( String.format( "Invalid date string: %s", creationDateString ), e );
+                    }
+
+                    RelationshipType hasCreatorRelationshipType =
+                            timeStampedRelationshipTypesCache.postHasCreatorForDateAtResolution(
+                                    creationDateAtResolution,
+                                    importDateUtil.queryDateUtil() );
+
+                    return super.property( key, value ) &&
+                           super.type( hasCreatorRelationshipType.name() );
+                }
+                else
+                {
+                    return true;
+                }
+            }
+        };
     }
 }

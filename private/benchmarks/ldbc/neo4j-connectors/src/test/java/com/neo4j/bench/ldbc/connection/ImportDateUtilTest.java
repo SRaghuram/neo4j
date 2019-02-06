@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -15,6 +15,8 @@ import static org.junit.Assert.assertThat;
 
 public class ImportDateUtilTest
 {
+    private static final LdbcDateCodecUtil LDBC_DATE_CODEC_UTIL = new LdbcDateCodecUtil();
+
     @Test( expected = RuntimeException.class )
     public void shouldNotCreateUtcToEncodedStringConverter() throws ParseException
     {
@@ -50,7 +52,7 @@ public class ImportDateUtilTest
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.YEAR );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -68,8 +70,8 @@ public class ImportDateUtilTest
 
         long utcDate = calendar.getTimeInMillis();
 
-        String encodedStringDate = LdbcDateCodec.utcToEncodedDateString( utcDateTime );
-        String encodedStringDateTime = LdbcDateCodec.utcToEncodedDateTimeString( utcDateTime );
+        String encodedStringDate = LDBC_DATE_CODEC_UTIL.utcToEncodedDateString( utcDateTime );
+        String encodedStringDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedDateTimeString( utcDateTime );
 
         assertThat( importDateUtil.fromFormat(), equalTo( LdbcDateCodec.Format.STRING_ENCODED ) );
         assertThat( importDateUtil.toFormat(), equalTo( LdbcDateCodec.Format.NUMBER_UTC ) );
@@ -92,7 +94,7 @@ public class ImportDateUtilTest
                 importDateUtil.csvDateTimeToEncodedDateAtResolution( encodedStringDateTime, calendar ),
                 equalTo( 1982L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDate( encodedStringDate, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -102,7 +104,7 @@ public class ImportDateUtilTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 0 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 0 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDateTime( encodedStringDateTime, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -123,7 +125,7 @@ public class ImportDateUtilTest
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.MONTH );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -134,8 +136,8 @@ public class ImportDateUtilTest
 
         long utcDateTime = calendar.getTimeInMillis();
 
-        String encodedStringDate = LdbcDateCodec.utcToEncodedDateString( utcDateTime );
-        String encodedStringDateTime = LdbcDateCodec.utcToEncodedDateTimeString( utcDateTime );
+        String encodedStringDate = LDBC_DATE_CODEC_UTIL.utcToEncodedDateString( utcDateTime );
+        String encodedStringDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedDateTimeString( utcDateTime );
         assertThat( encodedStringDate, equalTo( "1982-01-23" ) );
         assertThat( encodedStringDateTime, equalTo( "1982-01-23T01:02:03.004+0000" ) );
 
@@ -160,7 +162,7 @@ public class ImportDateUtilTest
                 importDateUtil.csvDateTimeToEncodedDateAtResolution( encodedStringDateTime, calendar ),
                 equalTo( 198201L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDate( encodedStringDate, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -172,7 +174,7 @@ public class ImportDateUtilTest
 
         assertThat( importDateUtil.calendarToFormat( calendar ), equalTo( 19820123000000000L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDateTime( encodedStringDateTime, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -193,7 +195,7 @@ public class ImportDateUtilTest
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.DAY );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -232,7 +234,7 @@ public class ImportDateUtilTest
                 importDateUtil.csvDateTimeToEncodedDateAtResolution( Long.toString( utcDateTime ), calendar ),
                 equalTo( 19820123L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDate( Long.toString( utcDate ), calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -244,7 +246,7 @@ public class ImportDateUtilTest
 
         assertThat( importDateUtil.calendarToFormat( calendar ), equalTo( calendar.getTimeInMillis() ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDateTime( Long.toString( utcDateTime ), calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -265,7 +267,7 @@ public class ImportDateUtilTest
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.HOUR );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -304,7 +306,7 @@ public class ImportDateUtilTest
                 importDateUtil.csvDateTimeToEncodedDateAtResolution( Long.toString( utcDateTime ), calendar ),
                 equalTo( 1982012301L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDate( Long.toString( utcDate ), calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -316,7 +318,7 @@ public class ImportDateUtilTest
 
         assertThat( importDateUtil.calendarToFormat( calendar ), equalTo( 19820123000000000L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDateTime( Long.toString( utcDateTime ), calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -337,7 +339,7 @@ public class ImportDateUtilTest
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.MINUTE );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -376,7 +378,7 @@ public class ImportDateUtilTest
                 importDateUtil.csvDateTimeToEncodedDateAtResolution( "19820123010203004", calendar ),
                 equalTo( 198201230102L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDate( "19820123000000000", calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -388,7 +390,7 @@ public class ImportDateUtilTest
 
         assertThat( importDateUtil.calendarToFormat( calendar ), equalTo( calendar.getTimeInMillis() ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDateTime( "19820123010203004", calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -409,7 +411,7 @@ public class ImportDateUtilTest
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.SECOND );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
 
         assertThat( importDateUtil.fromFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
         assertThat( importDateUtil.toFormat(), equalTo( LdbcDateCodec.Format.NUMBER_ENCODED ) );
@@ -432,7 +434,7 @@ public class ImportDateUtilTest
                 importDateUtil.csvDateTimeToEncodedDateAtResolution( "19820123010203004", calendar ),
                 equalTo( 19820123010203L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDate( "19820123000000000", calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );
@@ -444,7 +446,7 @@ public class ImportDateUtilTest
 
         assertThat( importDateUtil.calendarToFormat( calendar ), equalTo( 19820123000000000L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         importDateUtil.populateCalendarFromCsvDateTime( "19820123010203004", calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( Calendar.JANUARY ) );

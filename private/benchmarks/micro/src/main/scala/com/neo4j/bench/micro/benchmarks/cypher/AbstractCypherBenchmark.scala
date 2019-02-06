@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,28 +9,34 @@ import java.util
 import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
-import org.neo4j.cypher.internal.compatibility.v3_3.WrappedMonitors
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.compiled.{BuildCompiledExecutionPlan, EnterpriseRuntimeContext}
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.executionplan.ExecutionPlan
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.phases.CompilationState
-import org.neo4j.cypher.internal.compatibility.v3_3.runtime.{BuildInterpretedExecutionPlan, NormalMode}
-import org.neo4j.cypher.internal.compiler.v3_3.CostBasedPlannerName
-import org.neo4j.cypher.internal.compiler.v3_3.phases.LogicalPlanState
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.parser.CypherParser
-import org.neo4j.cypher.internal.frontend.v3_3.phases.devNullLogger
-import org.neo4j.cypher.internal.frontend.v3_3.{PlannerName, SemanticTable}
-import org.neo4j.cypher.internal.spi.v3_3.TransactionBoundQueryContext.IndexSearchMonitor
-import org.neo4j.cypher.internal.spi.v3_3.codegen.GeneratedQueryStructure
-import org.neo4j.cypher.internal.spi.v3_3.{QueryContext, TransactionBoundPlanContext, TransactionBoundQueryContext, TransactionalContextWrapper}
-import org.neo4j.cypher.internal.v3_3.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.{BuildSlottedExecutionPlan, InternalExecutionResult}
-import org.neo4j.cypher.javacompat.internal.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.BuildSlottedExecutionPlan
+import org.neo4j.cypher.internal.compatibility.v3_4.WrappedMonitors
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.BuildInterpretedExecutionPlan
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.compiled.{BuildCompiledExecutionPlan, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.executionplan.ExecutionPlan
+import org.neo4j.cypher.internal.compatibility.v3_4.runtime.phases.CompilationState
+import org.neo4j.cypher.internal.compiler.v3_4.phases.LogicalPlanState
+import org.neo4j.cypher.internal.frontend.v3_4.PlannerName
+import org.neo4j.cypher.internal.frontend.v3_4.parser.CypherParser
+import org.neo4j.cypher.internal.frontend.v3_4.phases.devNullLogger
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.ir.v3_4.PlannerQuery
+import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanningAttributes.{Cardinalities, Solveds}
+import org.neo4j.cypher.internal.planner.v3_4.spi._
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundPlanContext, TransactionBoundQueryContext, TransactionalContextWrapper}
+import org.neo4j.cypher.internal.runtime.{InternalExecutionResult, NormalMode, QueryContext}
+import org.neo4j.cypher.internal.spi.v3_4.codegen.GeneratedQueryStructure
+import org.neo4j.cypher.internal.util.v3_4.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.util.v3_4.{Cardinality, LabelId, RelTypeId, Selectivity}
+import org.neo4j.cypher.internal.v3_4.logical.plans.LogicalPlan
 import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
+import org.neo4j.internal.kernel.api.security.SecurityContext
+import org.neo4j.internal.kernel.api.{Kernel, Transaction}
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
+import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.api.query.ExecutingQuery
-import org.neo4j.kernel.api.security.SecurityContext
-import org.neo4j.kernel.api.{KernelTransaction, Statement}
 import org.neo4j.kernel.guard.Guard
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.kernel.impl.coreapi.{InternalTransaction, PropertyContainerLocker}
@@ -44,6 +50,8 @@ import org.openjdk.jmh.infra.Blackhole
 
 abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
   private val defaultPlannerName: PlannerName = CostBasedPlannerName.default
+  private val solveds = new Solveds
+  private val cardinalities = new Cardinalities
 
   class CountVisitor(bh: Blackhole) extends QueryResultVisitor[Exception] {
     var count: Int = 0
@@ -76,7 +84,14 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     } else visitor.count
 
   def beginInternalTransaction(): InternalTransaction =
-    new GraphDatabaseCypherService(db).beginTransaction(KernelTransaction.Type.explicit, SecurityContext.AUTH_DISABLED)
+    new GraphDatabaseCypherService(db).beginTransaction(Transaction.Type.explicit, SecurityContext.AUTH_DISABLED)
+
+  private def solve(logicalPlan: LogicalPlan) {
+    solveds.set(logicalPlan.id, PlannerQuery.empty)
+    cardinalities.set(logicalPlan.id, 0.0)
+    logicalPlan.lhs.foreach(solve)
+    logicalPlan.rhs.foreach(solve)
+  }
 
   def buildPlan(cypherRuntime: CypherRuntime): InternalExecutionResultBuilder = {
     val tx: InternalTransaction = beginInternalTransaction()
@@ -84,8 +99,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       val planContext: PlanContext = getPlanContext(tx)
       val runtimeContext = getContext(cypherRuntime, planContext)
       val (logicalPlan, semanticTable, resultColumns) = getLogicalPlanAndSemanticTable(planContext)
-      //since we do "manual planning" we need to call assignIds once we are done
-      logicalPlan.assignIds()
+      solve(logicalPlan)
       val compilationStateBefore = getCompilationState(logicalPlan, semanticTable, resultColumns)
       val compilationStateAfter: CompilationState = cypherRuntime match {
         case Interpreted => BuildInterpretedExecutionPlan.process(compilationStateBefore, runtimeContext)
@@ -108,12 +122,16 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   private def getContext(cypherRuntime: CypherRuntime, planContext: PlanContext): EnterpriseRuntimeContext = ContextHelper.create(
     monitors = WrappedMonitors(kernelMonitors),
+    logicalPlanIdGen = new SequentialIdGen(),
     codeStructure = GeneratedQueryStructure,
     planContext = planContext,
     debugOptions = cypherRuntime.debugOptions)
 
   private def getPlanContext(tx: InternalTransaction): PlanContext =
-    new TransactionBoundPlanContext(transactionalContextWrapper(tx), devNullLogger)
+    new TransactionBoundPlanContext(
+      transactionalContextWrapper(tx),
+      devNullLogger,
+      new DummyGraphStatistics())
 
   private def getQueryContext(tx: InternalTransaction): QueryContext = {
     val searchMonitor = kernelMonitors.newMonitor(classOf[IndexSearchMonitor])
@@ -131,6 +149,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       queryText,
       startPosition = None,
       plannerName = defaultPlannerName,
+      solveds,
+      cardinalities,
       maybeStatement = Some(new CypherParser().parse(queryText)),
       maybeSemantics = None,
       maybeExtractedParams = None,
@@ -147,6 +167,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val metaData = new util.HashMap[String, AnyRef]()
     val threadToStatementContextBridge =
       dependencyResolver.provideDependency(classOf[ThreadToStatementContextBridge]).get
+    val kernel = dependencyResolver.resolveDependency(classOf[Kernel])
     val initialStatement: Statement = threadToStatementContextBridge.get()
     val threadExecutingTheQuery = Thread.currentThread()
     val activeLockCount: LongSupplier = new LongSupplier {
@@ -154,7 +175,6 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     }
     new Neo4jTransactionalContext(
       new GraphDatabaseCypherService(db),
-      threadToStatementContextBridge,
       guard,
       threadToStatementContextBridge,
       new PropertyContainerLocker(),
@@ -173,7 +193,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
         threadExecutingTheQuery.getName,
         Clocks.nanoClock(),
         CpuClock.CPU_CLOCK,
-        HeapAllocation.HEAP_ALLOCATION)) {
+        HeapAllocation.HEAP_ALLOCATION),
+      kernel) {
       override def close(success: Boolean): Unit = ()
     }
   }
@@ -182,6 +203,18 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   private trait TestMonitor {
     def testInvoke(obj: AnyRef)
+  }
+
+  private class DummyGraphStatistics extends GraphStatistics {
+    override def nodesWithLabelCardinality(labelId: Option[LabelId]): Cardinality = ???
+
+    override def nodesAllCardinality(): Cardinality = ???
+
+    override def cardinalityByLabelsAndRelationshipType(fromLabel: Option[LabelId], relTypeId: Option[RelTypeId], toLabel: Option[LabelId]): Cardinality = ???
+
+    override def indexSelectivity(index: IndexDescriptor): Option[Selectivity] = ???
+
+    override def indexPropertyExistsSelectivity(index: IndexDescriptor): Option[Selectivity] = ???
   }
 
 }

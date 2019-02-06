@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -39,6 +39,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
@@ -53,9 +54,9 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
 {
     @ParamValues(
             allowed = {
-                    INT, LNG, FLT, DBL, STR_SML, STR_BIG,
+                    INT, LNG, FLT, DBL, STR_SML, STR_BIG, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR, BYTE_ARR},
-            base = {LNG, STR_SML, STR_BIG, BYTE_ARR} )
+            base = {LNG, STR_SML, STR_BIG, POINT, BYTE_ARR} )
     @Param( {} )
     public String BoltPropertySerialization_type;
 

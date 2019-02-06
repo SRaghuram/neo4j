@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -21,18 +21,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static com.neo4j.bench.micro.JMHResultUtil.MODE_PARAM;
-import static com.neo4j.bench.micro.JMHResultUtil.THREADS_PARAM;
 import static com.neo4j.bench.micro.JMHResultUtil.extractParameterValues;
 import static com.neo4j.bench.micro.JMHResultUtil.parametersAsMap;
 import static com.neo4j.bench.micro.JMHResultUtil.toNameSuffix;
+
+import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 import static junit.framework.TestCase.assertFalse;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
-
-import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
+import static com.neo4j.bench.micro.JMHResultUtil.MODE_PARAM;
+import static com.neo4j.bench.micro.JMHResultUtil.THREADS_PARAM;
 
 public class JMHResultUtilTest
 {

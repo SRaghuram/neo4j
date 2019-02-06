@@ -11,7 +11,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark</artifactId>
-        <version>3.6.2-SNAPSHOT</version>
+        <version>3.4.13-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -24,23 +24,11 @@
         <uberjar.name>import-benchmarks</uberjar.name>
         <airline.version>0.7</airline.version>
         <scala.version>2.11.12</scala.version>
-        <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
-
-    <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
-          Copyright (c) 2002-2019 "Neo4j,"
-          Neo4j Sweden AB [http://neo4j.com]
-          This file is part of Neo4j internal tooling.
-        </comments>
-      </license>
-    </licenses>
 
     <dependencies>
         <dependency>
-            <groupId>com.neo4j</groupId>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -65,12 +53,6 @@
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-results-client</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-io</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
         </dependency>
     </dependencies>
     <build>

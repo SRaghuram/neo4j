@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -8,6 +8,7 @@ package com.neo4j.bench.micro;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.micro.benchmarks.core.ConcurrentReadWriteLabelsV2;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
+import com.neo4j.bench.micro.benchmarks.cypher.AllNodesScan;
 import com.neo4j.bench.micro.benchmarks.test.AlwaysCrashes;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataConstantAugment;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataVariableAugment;
@@ -15,8 +16,8 @@ import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.bench.micro.data.Stores;
@@ -35,10 +36,10 @@ import java.util.stream.Stream;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.micro.config.BenchmarkDescription.of;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class InteractiveRunIT
 {
@@ -63,7 +64,7 @@ public class InteractiveRunIT
     @Test
     public void shouldRunAllMethodsOfBenchmarkClass() throws Exception
     {
-        Class benchmark = ReadById.class;
+        Class benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters DO NOT affect store content, in this benchmark
@@ -147,12 +148,6 @@ public class InteractiveRunIT
             ErrorPolicy errorPolicy,
             String... methods ) throws Exception
     {
-
-        // TODO remove, this is solely for TC build debug
-        Jvm jvm = Jvm.defaultJvmOrFail();
-        System.out.println( String.format( "running interactively under VM %s in major version %s and implementor", jvm.jdkPath(),
-                jvm.version().majorVersion(), jvm.version().implementor() ) );
-
         File storesDir = temporaryFolder.newFolder();
         Path profilerRecordingDirectory = temporaryFolder.newFolder().toPath();
         boolean generateStoresInFork = true;
@@ -164,7 +159,7 @@ public class InteractiveRunIT
                 profileTo( profilerRecordingDirectory, Lists.newArrayList( ProfilerType.JFR ) ),
                 new Stores( storesDir.toPath() ),
                 errorPolicy,
-                Paths.get( jvm.launchJava() ),
+                Paths.get( Jvm.defaultJvmOrFail().launchJava() ),
                 methods );
 
         // for each variant/execution of the enabled benchmark one JFR recording file should be created

@@ -5,13 +5,13 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark</artifactId>
-        <version>3.3.10-SNAPSHOT</version>
+        <version>3.4.13-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>ldbc</artifactId>
     <packaging>pom</packaging>
-    <name>Neo4j implementation of LDBC Social Network benchmark</name>
+    <name>Neo4j - LDBC Social Network Benchmarks</name>
 
     <properties>
         <neo4j.version>${project.version}</neo4j.version>

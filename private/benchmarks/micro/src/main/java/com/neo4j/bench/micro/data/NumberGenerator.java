@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.SplittableRandom;
 import java.util.function.IntFunction;
+
+import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.Values;
 
 import static java.lang.String.format;
 
@@ -136,6 +139,12 @@ public abstract class NumberGenerator
                 {
                     return valueGeneratorFun.next( rng ).doubleValue();
                 }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.doubleValue( next( rng ) );
+                }
             };
         }
 
@@ -190,6 +199,12 @@ public abstract class NumberGenerator
                 public Float next( SplittableRandom rng )
                 {
                     return valueGeneratorFun.next( rng ).floatValue();
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.floatValue( next( rng ) );
                 }
             };
         }
@@ -246,6 +261,12 @@ public abstract class NumberGenerator
                 public Byte next( SplittableRandom rng )
                 {
                     return (byte) (min + (byte) (rng.nextDouble() * range));
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.byteValue( next( rng ) );
                 }
             };
         }
@@ -304,6 +325,12 @@ public abstract class NumberGenerator
                 {
                     return (short) (min + (short) (rng.nextDouble() * range));
                 }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.shortValue( next( rng ) );
+                }
             };
         }
 
@@ -360,6 +387,12 @@ public abstract class NumberGenerator
                 public Integer next( SplittableRandom rng )
                 {
                     return min + (int) (rng.nextDouble() * range);
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.intValue( next( rng ) );
                 }
             };
         }
@@ -418,6 +451,12 @@ public abstract class NumberGenerator
                 {
                     return min + (long) (rng.nextDouble() * range);
                 }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.longValue( next( rng ) );
+                }
             };
         }
 
@@ -474,6 +513,12 @@ public abstract class NumberGenerator
                 public Float next( SplittableRandom rng )
                 {
                     return min + ((float) rng.nextDouble()) * range;
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.floatValue( next( rng ) );
                 }
             };
         }
@@ -532,6 +577,12 @@ public abstract class NumberGenerator
                 {
                     return min + (rng.nextDouble() * range);
                 }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.doubleValue( next( rng ) );
+                }
             };
         }
 
@@ -589,6 +640,12 @@ public abstract class NumberGenerator
                 {
                     return state++;
                 }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.byteValue( next( rng ) );
+                }
             };
         }
 
@@ -644,6 +701,12 @@ public abstract class NumberGenerator
                 public Short next( SplittableRandom rng )
                 {
                     return state++;
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.shortValue( next( rng ) );
                 }
             };
         }
@@ -701,6 +764,12 @@ public abstract class NumberGenerator
                 {
                     return state++;
                 }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.intValue( next( rng ) );
+                }
             };
         }
 
@@ -756,6 +825,12 @@ public abstract class NumberGenerator
                 public Long next( SplittableRandom rng )
                 {
                     return state++;
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.longValue( next( rng ) );
                 }
             };
         }
@@ -813,6 +888,12 @@ public abstract class NumberGenerator
                 {
                     return state++;
                 }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.floatValue( next( rng ) );
+                }
             };
         }
 
@@ -868,6 +949,12 @@ public abstract class NumberGenerator
                 public Double next( SplittableRandom rng )
                 {
                     return state++;
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.doubleValue( next( rng ) );
                 }
             };
         }
@@ -1026,6 +1113,12 @@ public abstract class NumberGenerator
                     {
                         return toNumFun.apply( state );
                     }
+                }
+
+                @Override
+                public Value nextValue( SplittableRandom rng )
+                {
+                    return Values.numberValue( next( rng ) );
                 }
             };
         }

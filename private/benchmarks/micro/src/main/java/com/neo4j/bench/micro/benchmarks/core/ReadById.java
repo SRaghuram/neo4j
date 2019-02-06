@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -69,7 +69,10 @@ public class ReadById extends AbstractCoreBenchmark
         return new DataGeneratorConfigBuilder()
                 .withNodeCount( NODE_COUNT )
                 .withOutRelationships( RELATIONSHIP_DEFINITION )
-                .withNeo4jConfig( Neo4jConfig.empty().withSetting( record_format, ReadById_format ) )
+                .withNeo4jConfig( Neo4jConfig
+                        .empty()
+                        .withSetting( record_format, ReadById_format )
+                        .setTransactionMemory( ReadById_txMemory ))
                 .isReusableStore( true )
                 .build();
     }

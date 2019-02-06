@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,6 +9,7 @@ import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.SchemaRead;
+import org.neo4j.internal.kernel.api.Session;
 import org.neo4j.internal.kernel.api.Token;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Write;
@@ -16,12 +17,10 @@ import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelExce
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 
-import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
-
 public class KernelTxBatch
 {
     private final int txBatchSize;
-    private final Kernel kernel;
+    private final Session session;
     private int txSize;
     private Transaction tx;
     public CursorFactory cursors;
@@ -34,7 +33,7 @@ public class KernelTxBatch
     {
         this.txBatchSize = txBatchSize;
         this.txSize = 0;
-        this.kernel = kernel;
+        this.session = kernel.beginSession( SecurityContext.AUTH_DISABLED );
         newTx();
     }
 
@@ -50,6 +49,7 @@ public class KernelTxBatch
     public void closeTx() throws Exception
     {
         tx.close();
+        session.close();
         cursors = null;
         token = null;
     }
@@ -63,7 +63,7 @@ public class KernelTxBatch
 
     private void newTx() throws TransactionFailureException, InvalidTransactionTypeKernelException
     {
-        this.tx = kernel.beginTransaction( implicit, SecurityContext.AUTH_DISABLED );
+        tx = session.beginTransaction();
         cursors = tx.cursors();
         token = tx.token();
         read = tx.dataRead();

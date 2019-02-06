@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -6,10 +6,10 @@
 package com.neo4j.bench.ldbc.importer;
 
 import com.ldbc.driver.csv.charseeker.BufferedCharSeeker;
+import com.ldbc.driver.csv.charseeker.CharReadable;
 import com.ldbc.driver.csv.charseeker.Extractors;
 import com.ldbc.driver.csv.charseeker.Mark;
 import com.ldbc.driver.csv.charseeker.Readables;
-import com.ldbc.driver.csv.charseeker.ThreadAheadReadable;
 import com.ldbc.driver.csv.simple.SimpleCsvFileWriter;
 import com.neo4j.bench.ldbc.Domain.HasMember;
 import com.neo4j.bench.ldbc.cli.LdbcCli;
@@ -28,6 +28,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
+import static com.ldbc.driver.csv.charseeker.ThreadAheadReadable.threadAhead;
 import static java.util.stream.Collectors.toList;
 
 public class ForumHasMemberWithPostsLoader
@@ -89,64 +91,61 @@ public class ForumHasMemberWithPostsLoader
             Map<Long,LongSet> forumMembersWithPosts ) throws IOException
     {
         int bufferSize = 1 * 1024 * 1024;
-        BufferedCharSeeker mergePostCharSeeker = new BufferedCharSeeker(
-                ThreadAheadReadable.threadAhead(
-                        Readables.wrap(
-                                new InputStreamReader( new FileInputStream( mergedPostFile ), charset )
-                        ),
-                        bufferSize
-                ),
-                bufferSize
-        );
-        Extractors extractors = new Extractors( NO_ARRAY_SEPARATOR, NO_TUPLE_SEPARATOR );
-        Mark mark = new Mark();
-        int[] columnDelimiters = new int[]{columnDelimiter};
-
-        // skip headers
-        while ( !mark.isEndOfLine() )
+        try ( InputStreamReader fileReader = new InputStreamReader( new FileInputStream( mergedPostFile ), charset ) )
         {
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-        }
-
-        // read: post.id
-        while ( mergePostCharSeeker.seek( mark, columnDelimiters ) )
-        {
-            // read: post.imageFile
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            // read: post.creationDate
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            // read: post.locationIp
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            // read: post.browserUsed
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            // read: post.language
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            // read: post.content
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            // read: post.length
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            // read: creator
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            long personId = mergePostCharSeeker.extract( mark, extractors.long_() ).longValue();
-            // read: forum
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-            long forumId = mergePostCharSeeker.extract( mark, extractors.long_() ).longValue();
-            // read: place
-            mergePostCharSeeker.seek( mark, columnDelimiters );
-
-            LongSet members = forumMembersWithPosts.computeIfAbsent( forumId, k -> new LongOpenHashSet() );
-            members.add( personId );
-
-            // read to end of line, ignoring remaining columns <-- ignore end-of-row separator
-            while ( !mark.isEndOfLine() )
+            try ( CharReadable threadAheadReader = threadAhead( Readables.wrap( fileReader ), bufferSize ) )
             {
-                mergePostCharSeeker.seek( mark, columnDelimiters );
+                try ( BufferedCharSeeker mergePostCharSeeker = new BufferedCharSeeker( threadAheadReader, bufferSize ) )
+                {
+                    Extractors extractors = new Extractors( NO_ARRAY_SEPARATOR, NO_TUPLE_SEPARATOR );
+                    Mark mark = new Mark();
+                    int[] columnDelimiters = new int[]{columnDelimiter};
+
+                    // skip headers
+                    while ( !mark.isEndOfLine() )
+                    {
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                    }
+
+                    // read: post.id
+                    while ( mergePostCharSeeker.seek( mark, columnDelimiters ) )
+                    {
+                        // read: post.imageFile
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        // read: post.creationDate
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        // read: post.locationIp
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        // read: post.browserUsed
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        // read: post.language
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        // read: post.content
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        // read: post.length
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        // read: creator
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        long personId = mergePostCharSeeker.extract( mark, extractors.long_() ).longValue();
+                        // read: forum
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+                        long forumId = mergePostCharSeeker.extract( mark, extractors.long_() ).longValue();
+                        // read: place
+                        mergePostCharSeeker.seek( mark, columnDelimiters );
+
+                        LongSet members = forumMembersWithPosts.computeIfAbsent( forumId, k -> new LongOpenHashSet() );
+                        members.add( personId );
+
+                        // read to end of line, ignoring remaining columns <-- ignore end-of-row separator
+                        while ( !mark.isEndOfLine() )
+                        {
+                            mergePostCharSeeker.seek( mark, columnDelimiters );
+                        }
+                    }
+                    return forumMembersWithPosts;
+                }
             }
         }
-
-        mergePostCharSeeker.close();
-
-        return forumMembersWithPosts;
     }
 
     // Forum.id    Person.id   joinDate
@@ -189,68 +188,71 @@ public class ForumHasMemberWithPostsLoader
         String[] row = new String[3];
 
         int bufferSize = 1 * 1024 * 1024;
-        BufferedCharSeeker forumHasMemberCharSeeker = new BufferedCharSeeker(
-                ThreadAheadReadable.threadAhead(
-                        Readables.wrap(
-                                new InputStreamReader( new FileInputStream( forumHasMemberFile ), charset )
-                        ),
-                        bufferSize
-                ),
-                bufferSize
-        );
-        Extractors extractors = new Extractors( NO_ARRAY_SEPARATOR, NO_TUPLE_SEPARATOR );
-        Mark mark = new Mark();
-        int[] columnDelimiters = new int[]{columnDelimiter};
 
-        // skip headers
-        while ( !mark.isEndOfLine() )
+        try ( InputStreamReader fileReader =
+                      new InputStreamReader( new FileInputStream( forumHasMemberFile ), charset ) )
         {
-            forumHasMemberCharSeeker.seek( mark, columnDelimiters );
-        }
-
-        long forumId;
-        long personId;
-
-        // read: forum.id
-        while ( forumHasMemberCharSeeker.seek( mark, columnDelimiters ) )
-        {
-            forumId = forumHasMemberCharSeeker.extract( mark, extractors.long_() ).longValue();
-            LongSet members = forumMembersWithPosts.get( forumId );
-            if ( null != members )
+            try ( CharReadable threadAheadReader = threadAhead( Readables.wrap( fileReader ), bufferSize ) )
             {
-                // read: person.id
-                forumHasMemberCharSeeker.seek( mark, columnDelimiters );
-                personId = forumHasMemberCharSeeker.extract( mark, extractors.long_() ).longValue();
-                if ( members.contains( personId ) )
+                try ( BufferedCharSeeker forumHasMemberCharSeeker = new BufferedCharSeeker( threadAheadReader,
+                        bufferSize ) )
                 {
-                    // read: forum.joinDate
-                    forumHasMemberCharSeeker.seek( mark, columnDelimiters );
-                    String joinDateString = forumHasMemberCharSeeker.extract( mark, extractors.string() ).value();
-                    row[0] = Long.toString( forumId );
-                    row[1] = Long.toString( personId );
-                    row[2] = joinDateString;
-                    simpleCsvFileWriter.writeRow( row );
-                }
-                else
-                {
-                    // read: forum.joinDate
-                    forumHasMemberCharSeeker.seek( mark, columnDelimiters );
-                }
-            }
-            else
-            {
-                // read: person.id
-                forumHasMemberCharSeeker.seek( mark, columnDelimiters );
-                // read: forum.joinDate
-                forumHasMemberCharSeeker.seek( mark, columnDelimiters );
-            }
+                    Extractors extractors = new Extractors( NO_ARRAY_SEPARATOR, NO_TUPLE_SEPARATOR );
+                    Mark mark = new Mark();
+                    int[] columnDelimiters = new int[]{columnDelimiter};
 
-            // read to end of line, ignoring remaining columns <-- ignore end-of-row separator
-            while ( !mark.isEndOfLine() )
-            {
-                forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                    // skip headers
+                    while ( !mark.isEndOfLine() )
+                    {
+                        forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                    }
+
+                    long forumId;
+                    long personId;
+
+                    // read: forum.id
+                    while ( forumHasMemberCharSeeker.seek( mark, columnDelimiters ) )
+                    {
+                        forumId = forumHasMemberCharSeeker.extract( mark, extractors.long_() ).longValue();
+                        LongSet members = forumMembersWithPosts.get( forumId );
+                        if ( null != members )
+                        {
+                            // read: person.id
+                            forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                            personId = forumHasMemberCharSeeker.extract( mark, extractors.long_() ).longValue();
+                            if ( members.contains( personId ) )
+                            {
+                                // read: forum.joinDate
+                                forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                                String joinDateString =
+                                        forumHasMemberCharSeeker.extract( mark, extractors.string() ).value();
+                                row[0] = Long.toString( forumId );
+                                row[1] = Long.toString( personId );
+                                row[2] = joinDateString;
+                                simpleCsvFileWriter.writeRow( row );
+                            }
+                            else
+                            {
+                                // read: forum.joinDate
+                                forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                            }
+                        }
+                        else
+                        {
+                            // read: person.id
+                            forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                            // read: forum.joinDate
+                            forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                        }
+
+                        // read to end of line, ignoring remaining columns <-- ignore end-of-row separator
+                        while ( !mark.isEndOfLine() )
+                        {
+                            forumHasMemberCharSeeker.seek( mark, columnDelimiters );
+                        }
+                    }
+                }
             }
         }
-        forumHasMemberCharSeeker.close();
     }
 }

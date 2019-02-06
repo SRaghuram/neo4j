@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -12,12 +12,14 @@ import com.neo4j.bench.micro.data.Plans.{astLiteralFor, _}
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.v3_3.logical.plans.{ExpandAll, SingleQueryExpression}
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.ast._
-import org.neo4j.cypher.internal.frontend.v3_3.{ExpressionTypeInfo, SemanticDirection, SemanticTable, symbols}
-import org.neo4j.cypher.internal.ir.v3_3._
+import org.neo4j.cypher.internal.util.v3_4.symbols
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.ir.v3_4._
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.util.v3_4.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.v3_4.expressions.{RelTypeName, SemanticDirection, True}
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans.{ExpandAll, SingleQueryExpression}
 import org.neo4j.graphdb.{Label, RelationshipType}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -39,13 +41,13 @@ class VarExpand extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("1", "2"),
-    base = Array("1", "2"))
+    base = Array("2"))
   @Param(Array[String]())
   var VarExpand_minDepth: Int = _
 
   @ParamValues(
     allowed = Array("1", "2", "3"),
-    base = Array("1", "2", "3"))
+    base = Array("3"))
   @Param(Array[String]())
   var VarExpand_length: Int = _
 
@@ -83,7 +85,7 @@ class VarExpand extends AbstractCypherBenchmark {
       labelToken,
       Seq(keyToken),
       seekExpression,
-      Set.empty)(Solved)
+      Set.empty)(IdGen)
 
     val expand = plans.VarExpand(
       indexSeek,
@@ -99,10 +101,10 @@ class VarExpand extends AbstractCypherBenchmark {
       "r_RELS",
       nodePredicate = True()(Pos),
       edgePredicate = True()(Pos),
-      Seq.empty)(Solved)
+      Seq.empty)(IdGen)
 
     val resultColumns = List(startNode.name, endNode.name)
-    val produceResults = plans.ProduceResult(columns = resultColumns, expand)
+    val produceResults = plans.ProduceResult(expand, columns = resultColumns)(IdGen)
 
     val nodesTable = SemanticTable()
       .addNode(startNode)

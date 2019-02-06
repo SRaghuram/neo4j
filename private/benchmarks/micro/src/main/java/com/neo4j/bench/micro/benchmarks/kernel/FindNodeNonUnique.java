@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -23,9 +23,9 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
+import org.neo4j.internal.kernel.api.CapableIndexReference;
 import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
@@ -146,7 +146,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
         int lowSelectivityMin;
         int lowSelectivityMax;
 
-        IndexReference index;
+        CapableIndexReference index;
         NodeValueIndexCursor node;
         Read read;
 
@@ -181,7 +181,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
     public void countNodesWithLabelKeyValueWhenSelectivityHigh( TxState txState, Blackhole bh ) throws KernelException
     {
         IndexQuery query = IndexQuery.exact( txState.propertyKey, highSelectivityValue );
-        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, false, query );
+        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, query );
         assertCount( txState.node, txState.highSelectivityMin, txState.highSelectivityMax, bh );
     }
 
@@ -190,7 +190,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
     public void countNodesWithLabelKeyValueWhenSelectivityMedium( TxState txState, Blackhole bh ) throws KernelException
     {
         IndexQuery query = IndexQuery.exact( txState.propertyKey, mediumSelectivityValue );
-        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, false, query );
+        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, query );
         assertCount( txState.node, txState.mediumSelectivityMin, txState.mediumSelectivityMax, bh );
     }
 
@@ -199,7 +199,7 @@ public class FindNodeNonUnique extends AbstractKernelBenchmark
     public void countNodesWithLabelKeyValueWhenSelectivityLow( TxState txState, Blackhole bh ) throws KernelException
     {
         IndexQuery query = IndexQuery.exact( txState.propertyKey, lowSelectivityValue );
-        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, false, query );
+        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, query );
         assertCount( txState.node, txState.lowSelectivityMin, txState.lowSelectivityMax, bh );
     }
 

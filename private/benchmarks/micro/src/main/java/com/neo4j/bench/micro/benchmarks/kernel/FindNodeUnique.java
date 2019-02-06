@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -27,9 +27,9 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.SplittableRandom;
 
+import org.neo4j.internal.kernel.api.CapableIndexReference;
 import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
-import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
@@ -127,7 +127,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
         int labelId;
         int propertyKey;
         ValueGeneratorFun valueFun;
-        IndexReference index;
+        CapableIndexReference index;
         NodeValueIndexCursor node;
         Read read;
 
@@ -169,7 +169,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     public long findNodeByLabelKeyValue( TxState txState, RNGState rngState ) throws KernelException
     {
         IndexQuery query = IndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
-        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, false, query );
+        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, query );
         return assertCursorNotNull( txState.node );
     }
 
@@ -178,7 +178,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     public void countNodesWithLabelKeyValue( TxState txState, RNGState rngState, Blackhole bh ) throws KernelException
     {
         IndexQuery query = IndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
-        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, false, query );
+        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, query );
         assertCount( txState.node, 1, bh );
     }
 

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -7,6 +7,7 @@ package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
+import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -40,6 +41,8 @@ import static com.neo4j.bench.micro.data.NumberGenerator.stridingInt;
 import static com.neo4j.bench.micro.data.NumberGenerator.stridingLong;
 import static com.neo4j.bench.micro.data.NumberGenerator.toDouble;
 import static com.neo4j.bench.micro.data.NumberGenerator.toFloat;
+import static com.neo4j.bench.micro.data.PointGenerator.circleGrid;
+import static com.neo4j.bench.micro.data.PointGenerator.clusterGrid;
 import static com.neo4j.bench.micro.data.StringGenerator.BIG_STRING_LENGTH;
 import static com.neo4j.bench.micro.data.StringGenerator.SMALL_STRING_LENGTH;
 import static com.neo4j.bench.micro.data.StringGenerator.intString;
@@ -399,6 +402,59 @@ public class ValueGeneratorTest
     {
         doShouldBeSerializable( constant( STR_SML, 1 ) );
         doShouldBeSerializable( constant( LNG, 1 ) );
+    }
+
+    @Test
+    public void shouldSerializeDeserializePointGenerators() throws IOException
+    {
+        doShouldBeSerializable( PointGenerator.random( -1, 1, Long.MIN_VALUE, Long.MAX_VALUE, new CRS.Cartesian() ) );
+        doShouldBeSerializable( PointGenerator.random( -1, 1, Long.MIN_VALUE, Long.MAX_VALUE, new CRS.WGS84() ) );
+        doShouldBeSerializable( PointGenerator.grid( -10, 10, 0, 100, 1_000, new CRS.Cartesian() ) );
+        doShouldBeSerializable( PointGenerator.grid( -10, 10, 0, 100, 1_000, new CRS.WGS84() ) );
+        doShouldBeSerializable( circleGrid( ClusterGridDefinition.from(
+                10,
+                10,
+                10,
+                10,
+                -1_000,
+                1_000,
+                0,
+                10_000,
+                1_000_000,
+                new CRS.Cartesian()
+        ) ) );
+        doShouldBeSerializable( circleGrid( ClusterGridDefinition.from(
+                10,
+                10,
+                -1_000,
+                1_000,
+                -10_000,
+                0,
+                1_000_000,
+                new CRS.WGS84()
+        ) ) );
+        doShouldBeSerializable( clusterGrid( ClusterGridDefinition.from(
+                10,
+                10,
+                10,
+                10,
+                -1_000,
+                1_000,
+                0,
+                10_000,
+                1_000_000,
+                new CRS.Cartesian()
+        ) ) );
+        doShouldBeSerializable( clusterGrid( ClusterGridDefinition.from(
+                10,
+                10,
+                -1_000,
+                1_000,
+                -10_000,
+                0,
+                1_000_000,
+                new CRS.WGS84()
+        ) ) );
     }
 
     private void doShouldBeSerializable( ValueGeneratorFactory factory ) throws IOException

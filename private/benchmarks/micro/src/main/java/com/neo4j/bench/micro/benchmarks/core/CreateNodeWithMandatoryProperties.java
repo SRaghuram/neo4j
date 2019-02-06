@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -27,18 +27,25 @@ import java.util.SplittableRandom;
 
 import org.neo4j.graphdb.Label;
 
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.stridingFor;
 
 @BenchmarkEnabled( true )
@@ -50,6 +57,7 @@ public class CreateNodeWithMandatoryProperties extends AbstractCoreBenchmark
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
+                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
             base = {LNG, STR_SML} )
     @Param( {} )
@@ -65,12 +73,12 @@ public class CreateNodeWithMandatoryProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of creating nodes with mandatory constraints, " +
-               "using different transaction batch sizes.\n" +
-               "Method:\n" +
-               "- Threads create nodes, batching multiple writes per transaction\n" +
-               "- Every time a node is created it has one label, always the same label\n" +
-               "- Every time a node is created it has one property, always with same key, but different value\n" +
-               "- There is a mandatory constraint on the label:property pair being written";
+                "using different transaction batch sizes.\n" +
+                "Method:\n" +
+                "- Threads create nodes, batching multiple writes per transaction\n" +
+                "- Every time a node is created it has one label, always the same label\n" +
+                "- Every time a node is created it has one property, always with same key, but different value\n" +
+                "- There is a mandatory constraint on the label:property pair being written";
     }
 
     @Override

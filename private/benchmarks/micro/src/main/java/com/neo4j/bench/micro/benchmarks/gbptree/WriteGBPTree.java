@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.neo4j.index.internal.gbptree.Writer;
-
-import static com.neo4j.bench.micro.Main.run;
 
 public class WriteGBPTree extends AbstractGBPTreeBenchmark
 {
@@ -137,10 +135,5 @@ public class WriteGBPTree extends AbstractGBPTreeBenchmark
         layout.keyWithSeed( writerState.key, seed );
         layout.valueWithSeed( writerState.value, seed );
         writerState.writer.put( writerState.key, writerState.value );
-    }
-
-    public static void main( String... methods ) throws Exception
-    {
-        run( WriteGBPTree.class, methods );
     }
 }

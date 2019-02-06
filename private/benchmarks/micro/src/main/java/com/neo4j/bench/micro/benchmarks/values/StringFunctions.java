@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -65,14 +65,12 @@ public class StringFunctions extends AbstractValuesBenchmark
     @State( Scope.Thread )
     public static class ThreadState
     {
-        private TextValue value1;
-        private TextValue value2;
+        private TextValue nextValue;
 
         @Setup
         public void setUp( StringFunctions benchmarkState, RNGState rngState ) throws InterruptedException
         {
-            value1 = createValue( benchmarkState, rngState );
-            value2 = value1.substring( 0, value1.length() - 1 );
+            nextValue = createValue( benchmarkState, rngState );
         }
 
         private TextValue createValue( StringFunctions benchmarkState, RNGState rngState )
@@ -102,7 +100,7 @@ public class StringFunctions extends AbstractValuesBenchmark
     @BenchmarkMode( {Mode.AverageTime} )
     public int length( ThreadState threadState )
     {
-        return threadState.value1.length();
+        return threadState.nextValue.length();
     }
 
     @Benchmark
@@ -110,7 +108,7 @@ public class StringFunctions extends AbstractValuesBenchmark
     @BenchmarkMode( {Mode.AverageTime} )
     public TextValue trim( ThreadState threadState )
     {
-        return threadState.value1.trim();
+        return threadState.nextValue.trim();
     }
 
     @Benchmark
@@ -118,7 +116,7 @@ public class StringFunctions extends AbstractValuesBenchmark
     @BenchmarkMode( {Mode.AverageTime} )
     public TextValue substring( ThreadState threadState )
     {
-        return threadState.value1.substring( 3, 7 );
+        return threadState.nextValue.substring( 3, 7 );
     }
 
     @Benchmark
@@ -126,7 +124,7 @@ public class StringFunctions extends AbstractValuesBenchmark
     @BenchmarkMode( {Mode.AverageTime} )
     public ListValue split( ThreadState threadState )
     {
-        return threadState.value1.split( "a" );
+        return threadState.nextValue.split( "a" );
     }
 
     @Benchmark
@@ -134,7 +132,7 @@ public class StringFunctions extends AbstractValuesBenchmark
     @BenchmarkMode( {Mode.AverageTime} )
     public TextValue reverse( ThreadState threadState )
     {
-        return threadState.value1.reverse();
+        return threadState.nextValue.reverse();
     }
 
     @Benchmark
@@ -142,15 +140,7 @@ public class StringFunctions extends AbstractValuesBenchmark
     @BenchmarkMode( {Mode.AverageTime} )
     public TextValue replace( ThreadState threadState )
     {
-        return threadState.value1.replace( "a", "b" );
-    }
-
-    @Benchmark
-    @CompilerControl( CompilerControl.Mode.DONT_INLINE )
-    @BenchmarkMode( {Mode.AverageTime} )
-    public int compareTo( ThreadState threadState )
-    {
-        return threadState.value1.compareTo( threadState.value2 );
+        return threadState.nextValue.replace( "a", "b" );
     }
 
     public static void main( String... methods ) throws Exception

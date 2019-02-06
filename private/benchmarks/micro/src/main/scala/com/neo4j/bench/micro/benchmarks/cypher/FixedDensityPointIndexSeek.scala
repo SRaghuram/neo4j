@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -13,11 +13,11 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.PointGenerator.{grid, random}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.logical.plans
-import org.neo4j.cypher.internal.v3_5.logical.plans._
-import org.neo4j.cypher.internal.v3_5.util.symbols
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.util.v3_4.symbols
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans._
 import org.neo4j.graphdb.spatial.Point
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.{space_filling_curve_bottom_threshold, space_filling_curve_extra_levels, space_filling_curve_max_bits, space_filling_curve_top_threshold}
@@ -181,10 +181,9 @@ class FixedDensityPointIndexSeek extends AbstractSpatialBenchmark {
     val indexSeek = plans.NodeIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
-      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
+      Seq(astPropertyKeyToken(KEY, planContext)),
       seekExpression,
-      Set.empty,
-      IndexOrderNone)(IdGen)
+      Set.empty)(IdGen)
     val resultColumns = List(node.name)
     val produceResults = ProduceResult(indexSeek, resultColumns)(IdGen)
 
@@ -200,7 +199,7 @@ class FixedDensityPointIndexSeek extends AbstractSpatialBenchmark {
     val point = threadState.points.next(rngState.rng)
     val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("point" -> point).asJava)
     val visitor = new CountVisitor(bh)
-    threadState.executablePlan.execute(params, tx = threadState.tx).accept(visitor)
+    threadState.executionResult(params, tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(threadState.expectedRowCountMin, threadState.expectedRowCountMax, visitor)
   }
 }
@@ -209,14 +208,14 @@ class FixedDensityPointIndexSeek extends AbstractSpatialBenchmark {
 class FixedDensityPointIndexSeekThreadState {
   private val TOLERATED_ROW_COUNT_ERROR = 0.1
   var tx: InternalTransaction = _
-  var executablePlan: ExecutablePlan = _
+  var executionResult: InternalExecutionResultBuilder = _
   var points: ValueGeneratorFun[Point] = _
   var expectedRowCountMin: Int = _
   var expectedRowCountMax: Int = _
 
   @Setup
   def setUp(benchmark: FixedDensityPointIndexSeek): Unit = {
-    executablePlan = benchmark.buildPlan(from(benchmark.FixedDensityPointIndexSeek_runtime))
+    executionResult = benchmark.buildPlan(from(benchmark.FixedDensityPointIndexSeek_runtime))
     points = random(
       benchmark.searchExtentMinX,
       benchmark.searchExtentMaxX,

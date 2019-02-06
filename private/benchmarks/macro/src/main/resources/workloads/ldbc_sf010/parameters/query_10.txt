@@ -1,3 +1,9 @@
+====
+    Copyright (c) 2002-2019 "Neo4j,"
+    Neo4j Sweden AB [http://neo4j.com]
+    This file is part of Neo4j internal tooling.
+====
+
 Person:Long|HS0:Integer
 14293651217922|5
 36287|4
