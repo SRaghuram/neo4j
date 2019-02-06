@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -80,7 +80,7 @@ public class ConstantDataVariableAugment extends BaseDatabaseBenchmark
         return new Augmenterizer()
         {
             @Override
-            public void augment( Stores.StoreAndConfig storeAndConfig )
+            public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
             {
                 File storeDir = storeAndConfig.store().toFile();
                 GraphDatabaseService db = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( storeDir );

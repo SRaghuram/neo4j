@@ -1,4 +1,10 @@
 #!/bin/bash -exu
+#
+# Copyright (c) 2002-2019 "Neo4j,"
+# Neo4j Sweden AB [http://neo4j.com]
+# This file is part of Neo4j internal tooling.
+#
+
 
 # to cleanup after the script following command might be used:
 # sudo service teamcity-agent stop && sudo rm -rf /opt/teamcity-agent && sudo rm -rf /home/teamcity/.m2/ && sudo rm -f /usr/lib/jvm/oracle-jdk-8

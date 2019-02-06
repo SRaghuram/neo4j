@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -12,10 +12,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.v3_3.logical.plans._
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans._
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -31,7 +31,7 @@ class IndexSeek extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array("0.001", "0.01", "0.1"),
-    base = Array("0.001", "0.01", "0.1"))
+    base = Array("0.001", "0.1"))
   @Param(Array[String]())
   var IndexSeek_selectivity: Double = _
 
@@ -72,9 +72,9 @@ class IndexSeek extends AbstractCypherBenchmark {
       astLabelToken(LABEL, planContext),
       Seq(astPropertyKeyToken(KEY, planContext)),
       seekExpression,
-      Set.empty)(Solved)
+      Set.empty)(IdGen)
     val resultColumns = List(node.name)
-    val produceResults = ProduceResult(resultColumns, indexSeek)
+    val produceResults = ProduceResult(indexSeek, resultColumns)(IdGen)
 
     val table = SemanticTable().addNode(node)
 

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -13,6 +13,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
+
+import org.neo4j.values.storable.Values;
 
 import static com.neo4j.bench.micro.data.NumberGenerator.ascInt;
 import static com.neo4j.bench.micro.data.StringGenerator.BIG_STRING_LENGTH;
@@ -87,7 +89,7 @@ public class StringGeneratorTest
     public void ascendingStringGeneratorsShouldBeDeterministic() throws IOException
     {
         assertGeneratorIsDeterministic( intString( ascInt( 0 ), BIG_STRING_LENGTH ),
-                MAX_ASCENDING_GENERATION_DURATION );
+                                        MAX_ASCENDING_GENERATION_DURATION );
     }
 
     private void assertRandomStringGeneratorWorksAsAdvertised(
@@ -96,16 +98,20 @@ public class StringGeneratorTest
     {
         long start = System.currentTimeMillis();
         int repeatedValueCount = 0;
-        SplittableRandom rng = RNGState.newRandom( 42L );
-        ValueGeneratorFun<String> fun = stringGeneratorFactory.create();
-        String previous = fun.next( rng );
+        SplittableRandom rng1 = RNGState.newRandom( 42L );
+        SplittableRandom rng2 = RNGState.newRandom( 42L );
+        ValueGeneratorFun<String> fun1 = stringGeneratorFactory.create();
+        ValueGeneratorFun<String> fun2 = stringGeneratorFactory.create();
+        String previous = fun1.next( rng1 );
+        assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( previous ) ) );
         if ( -1 != expectedLength )
         {
             assertThat( previous.length(), equalTo( expectedLength ) );
         }
         for ( int i = 0; i < REPETITIONS; i++ )
         {
-            String current = fun.next( rng );
+            String current = fun1.next( rng1 );
+            assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( current ) ) );
             if ( current.equals( previous ) )
             {
                 repeatedValueCount++;
@@ -119,7 +125,7 @@ public class StringGeneratorTest
         long duration = System.currentTimeMillis() - start;
         int toleratedRepetitions = (int) (0.001 * REPETITIONS);
         System.out.println( format( "%s: Tolerated Repetitions = %s , Observed Repetitions = %s, Duration = %s (ms)",
-                stringGeneratorFactory, toleratedRepetitions, repeatedValueCount, duration ) );
+                                    stringGeneratorFactory, toleratedRepetitions, repeatedValueCount, duration ) );
         assertThat( "less than 0.01% value repetitions", repeatedValueCount, lessThan( toleratedRepetitions ) );
         assertThat( duration, lessThan( MAX_RANDOM_GENERATION_DURATION ) );
     }
@@ -129,16 +135,20 @@ public class StringGeneratorTest
             int expectedLength )
     {
         long start = System.currentTimeMillis();
-        SplittableRandom rng = RNGState.newRandom( 42L );
-        ValueGeneratorFun<String> fun = stringGeneratorFactory.create();
-        String previous = fun.next( rng );
+        SplittableRandom rng1 = RNGState.newRandom( 42L );
+        SplittableRandom rng2 = RNGState.newRandom( 42L );
+        ValueGeneratorFun<String> fun1 = stringGeneratorFactory.create();
+        ValueGeneratorFun<String> fun2 = stringGeneratorFactory.create();
+        String previous = fun1.next( rng1 );
+        assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( previous ) ) );
         if ( -1 != expectedLength )
         {
             assertThat( previous.length(), equalTo( expectedLength ) );
         }
         for ( int i = 0; i < REPETITIONS; i++ )
         {
-            String current = fun.next( rng );
+            String current = fun1.next( rng1 );
+            assertThat( fun2.nextValue( rng2 ), equalTo( Values.of( current ) ) );
             assertThat( current, greaterThan( previous ) );
             assertThat( Integer.parseInt( current ), greaterThan( Integer.parseInt( previous ) ) );
             if ( -1 != expectedLength )

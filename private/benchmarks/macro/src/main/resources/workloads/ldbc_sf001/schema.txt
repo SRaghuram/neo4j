@@ -1,3 +1,9 @@
+====
+    Copyright (c) 2002-2019 "Neo4j,"
+    Neo4j Sweden AB [http://neo4j.com]
+    This file is part of Neo4j internal tooling.
+====
+
 CONSTRAINT ON (tag:Tag) ASSERT tag.name IS UNIQUE
 CONSTRAINT ON (tagclass:TagClass) ASSERT tagclass.name IS UNIQUE
 CONSTRAINT ON (message:Message) ASSERT message.id IS UNIQUE

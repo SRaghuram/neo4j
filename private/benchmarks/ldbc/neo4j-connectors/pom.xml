@@ -6,10 +6,12 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>ldbc</artifactId>
-        <version>3.3.10-SNAPSHOT</version>
+        <version>3.4.13-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>neo4j-connectors</artifactId>
+    <name>Neo4j - LDBC Social Network Benchmarks Implementations</name>
 
     <properties>
         <ldbc-driver-version>0.3.0</ldbc-driver-version>

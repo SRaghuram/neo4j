@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -31,18 +31,25 @@ import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Label;
 
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DATE_TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DURATION;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.FLT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_DATE_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.LOCAL_TIME;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.POINT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_BIG_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
+import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
@@ -61,8 +68,9 @@ public class CreateUniqueNodeProperties extends AbstractCoreBenchmark
     @ParamValues(
             allowed = {
                     INT, LNG, FLT, DBL, STR_SML, STR_BIG,
+                    DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION, POINT,
                     INT_ARR, LNG_ARR, FLT_ARR, DBL_ARR, STR_SML_ARR, STR_BIG_ARR},
-            base = {LNG, STR_SML} )
+            base = {LNG, STR_SML, DATE_TIME, POINT} )
     @Param( {} )
     public String CreateUniqueNodeProperties_type;
 
@@ -88,21 +96,21 @@ public class CreateUniqueNodeProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of unique node property creation, using different transaction batch sizes.\n" +
-               "Creates unique key:value property pairs (allows comparison between index and unique constraints).\n" +
-               "Runs three indexing scenarios: no index, schema index, unique constraint.\n" +
-               "Guarantees unique values in the presence of parallelism:\n" +
-               "- Every node has exactly one, same label\n" +
-               "- Threads work on node ID sequences\n" +
-               "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
-               "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
-               "- When a sequence wraps the thread moves onto the next property key\n" +
-               "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
-               "- As this guarantees property(key):node(id) uniqueness, same policy is used for property values\n" +
-               "- I.e., value assigned to node property is ID of that node (in appropriate type)\n" +
-               "Outcome:\n" +
-               "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
-               "- Every node will have the same properties\n" +
-               "- No two nodes will have the same value for the same property";
+                "Creates unique key:value property pairs (allows comparison between index and unique constraints).\n" +
+                "Runs three indexing scenarios: no index, schema index, unique constraint.\n" +
+                "Guarantees unique values in the presence of parallelism:\n" +
+                "- Every node has exactly one, same label\n" +
+                "- Threads work on node ID sequences\n" +
+                "- Sequence of every thread is guaranteed to never overlap with that of another thread\n" +
+                "- Every thread starts at different offset (to accelerate warmup) in range, then wraps at max\n" +
+                "- When a sequence wraps the thread moves onto the next property key\n" +
+                "- Guarantees that for any property, each node ID appears in the sequence of exactly one thread\n" +
+                "- As this guarantees property(key):node(id) uniqueness, same policy is used for property values\n" +
+                "- I.e., value assigned to node property is ID of that node (in appropriate type)\n" +
+                "Outcome:\n" +
+                "- No two threads will ever create a property on the same node (avoids deadlocks)\n" +
+                "- Every node will have the same properties\n" +
+                "- No two nodes will have the same value for the same property";
     }
 
     @Override

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -10,17 +10,15 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.EventExecutor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -33,7 +31,7 @@ import org.neo4j.bolt.logging.NullBoltMessageLogger;
 import org.neo4j.bolt.security.auth.Authentication;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
 import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriter;
-import org.neo4j.bolt.v1.messaging.Neo4jPack;
+import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
 import org.neo4j.bolt.v1.packstream.PackOutput;
 import org.neo4j.bolt.v1.runtime.BoltFactoryImpl;
 import org.neo4j.bolt.v1.runtime.BoltResponseHandler;
@@ -50,8 +48,6 @@ import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.udc.UsageData;
 import org.neo4j.values.AnyValue;
-
-import static org.neo4j.bolt.v1.messaging.BoltResponseMessageWriter.NO_BOUNDARY_HOOK;
 
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 {
@@ -88,6 +84,24 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         {
             raw = new ByteArrayOutputStream();
             data = new DataOutputStream( raw );
+        }
+
+        @Override
+        public void beginMessage()
+        {
+            // do nothing
+        }
+
+        @Override
+        public void messageSucceeded() throws IOException
+        {
+            // do nothing
+        }
+
+        @Override
+        public void messageFailed() throws IOException
+        {
+            throw new IOException( "Benchmark should never fail in this way" );
         }
 
         @Override
@@ -153,6 +167,12 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         {
             return raw.toByteArray();
         }
+
+        @Override
+        public void close() throws IOException
+        {
+            data.close();
+        }
     }
 
     static final BoltResponseHandler RESPONSE_HANDLER = new DummyBoltResultHandler();
@@ -160,9 +180,11 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     static class DummyBoltResultHandler implements BoltResponseHandler
     {
         private final PackedOutputArray out = new PackedOutputArray();
-        private final BoltResponseMessageWriter writer = new BoltResponseMessageWriter( new Neo4jPack.Packer( out ),
-                                                                                        NO_BOUNDARY_HOOK,
-                                                                                        NullBoltMessageLogger.getInstance() );
+        private final BoltResponseMessageWriter writer = new BoltResponseMessageWriter(
+                new Neo4jPackV1(),
+                out,
+                NullLogService.getInstance(),
+                NullBoltMessageLogger.getInstance() );
 
         public byte[] result()
         {
@@ -236,7 +258,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         @Override
         public ChannelId id()
         {
-            return null;
+            return DefaultChannelId.newInstance();
         }
 
         @Override
@@ -492,254 +514,5 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
     };
 
-    private static final ChannelHandlerContext CONTEXT = new ChannelHandlerContext()
-    {
-        @Override
-        public Channel channel()
-        {
-            return CHANNEL;
-        }
-
-        @Override
-        public EventExecutor executor()
-        {
-            return null;
-        }
-
-        @Override
-        public String name()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandler handler()
-        {
-            return null;
-        }
-
-        @Override
-        public boolean isRemoved()
-        {
-            return false;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRegistered()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelUnregistered()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelActive()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelInactive()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireExceptionCaught( Throwable throwable )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireUserEventTriggered( Object o )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRead( Object o )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelReadComplete()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelWritabilityChanged()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture bind( SocketAddress socketAddress )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture connect( SocketAddress socketAddress )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture connect( SocketAddress socketAddress, SocketAddress socketAddress1 )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture disconnect()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture close()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture deregister()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture bind( SocketAddress socketAddress, ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture connect( SocketAddress socketAddress, ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture connect( SocketAddress socketAddress, SocketAddress socketAddress1, ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture disconnect( ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture close( ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture deregister( ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext read()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture write( Object o )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture write( Object o, ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelHandlerContext flush()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush( Object o, ChannelPromise channelPromise )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush( Object o )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelPromise newPromise()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelProgressivePromise newProgressivePromise()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture newSucceededFuture()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelFuture newFailedFuture( Throwable throwable )
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelPromise voidPromise()
-        {
-            return null;
-        }
-
-        @Override
-        public ChannelPipeline pipeline()
-        {
-            return null;
-        }
-
-        @Override
-        public ByteBufAllocator alloc()
-        {
-            return null;
-        }
-
-        @Override
-        public <T> Attribute<T> attr( AttributeKey<T> attributeKey )
-        {
-            return null;
-        }
-
-        @Override
-        public <T> boolean hasAttr( AttributeKey<T> attributeKey )
-        {
-            return false;
-        }
-    };
-
-    static final BoltChannel BOLT_CHANNEL = BoltChannel.open( CONTEXT, NullBoltMessageLogger.getInstance() );
+    static final BoltChannel BOLT_CHANNEL = BoltChannel.open( "default", CHANNEL, NullBoltMessageLogger.getInstance() );
 }

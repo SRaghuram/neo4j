@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -17,16 +17,17 @@ public abstract class ImportDateUtil
             LdbcDateCodec.Format toFormat,
             LdbcDateCodec.Resolution timestampResolution )
     {
-        QueryDateUtil queryDateUtil = QueryDateUtil.createFor( toFormat, timestampResolution );
+        LdbcDateCodecUtil ldbcDateCodecUtil = new LdbcDateCodecUtil();
+        QueryDateUtil queryDateUtil = QueryDateUtil.createFor( toFormat, timestampResolution, ldbcDateCodecUtil );
         switch ( fromFormat )
         {
         case STRING_ENCODED:
             switch ( toFormat )
             {
             case NUMBER_UTC:
-                return new EncodedStringToUtc( queryDateUtil );
+                return new EncodedStringToUtc( queryDateUtil, ldbcDateCodecUtil );
             case NUMBER_ENCODED:
-                return new EncodedStringToEncodedLong( queryDateUtil );
+                return new EncodedStringToEncodedLong( queryDateUtil, ldbcDateCodecUtil );
             default:
                 throw new RuntimeException( format( "Unsupported Formats: %s --> %s", fromFormat, toFormat ) );
             }
@@ -34,9 +35,9 @@ public abstract class ImportDateUtil
             switch ( toFormat )
             {
             case NUMBER_UTC:
-                return new UtcToUtc( queryDateUtil );
+                return new UtcToUtc( queryDateUtil, ldbcDateCodecUtil );
             case NUMBER_ENCODED:
-                return new UtcToEncodedLong( queryDateUtil );
+                return new UtcToEncodedLong( queryDateUtil, ldbcDateCodecUtil );
             default:
                 throw new RuntimeException( format( "Unsupported Formats: %s --> %s", fromFormat, toFormat ) );
             }
@@ -44,9 +45,9 @@ public abstract class ImportDateUtil
             switch ( toFormat )
             {
             case NUMBER_UTC:
-                return new EncodedLongToUtc( queryDateUtil );
+                return new EncodedLongToUtc( queryDateUtil, ldbcDateCodecUtil );
             case NUMBER_ENCODED:
-                return new EncodedLongToEncodedLong( queryDateUtil );
+                return new EncodedLongToEncodedLong( queryDateUtil, ldbcDateCodecUtil );
             default:
                 throw new RuntimeException( format( "Unsupported Formats: %s --> %s", fromFormat, toFormat ) );
             }
@@ -151,10 +152,12 @@ public abstract class ImportDateUtil
     private static class EncodedStringToUtc extends ImportDateUtil
     {
         private final QueryDateUtil queryDateUtil;
+        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        EncodedStringToUtc( QueryDateUtil queryDateUtil )
+        EncodedStringToUtc( QueryDateUtil queryDateUtil, LdbcDateCodecUtil ldbcDateCodecUtil )
         {
             this.queryDateUtil = queryDateUtil;
+            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -184,32 +187,32 @@ public abstract class ImportDateUtil
         @Override
         public long csvDateToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateStringToUtc( csvDate );
+            return ldbcDateCodecUtil.encodedDateStringToUtc( csvDate );
         }
 
         @Override
         public long csvDateTimeToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateTimeStringToUtc( csvDate );
+            return ldbcDateCodecUtil.encodedDateTimeStringToUtc( csvDate );
         }
 
         @Override
         public long csvDateToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateStringToEncodedLongDateTime( csvDate, calendar );
+            return ldbcDateCodecUtil.encodedDateStringToEncodedLongDateTime( csvDate, calendar );
         }
 
         @Override
         public long csvDateTimeToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateTimeStringToEncodedLongDateTime( csvDate, calendar );
+            return ldbcDateCodecUtil.encodedDateTimeStringToEncodedLongDateTime( csvDate, calendar );
         }
 
         @Override
         public long csvDateToEncodedDateAtResolution( String csvDate, Calendar calendar ) throws ParseException
         {
             return queryDateUtil.dateCodec().utcToEncodedDateAtResolution(
-                    LdbcDateCodec.encodedDateStringToUtc( csvDate ),
+                    ldbcDateCodecUtil.encodedDateStringToUtc( csvDate ),
                     calendar );
         }
 
@@ -218,7 +221,7 @@ public abstract class ImportDateUtil
                 throws ParseException
         {
             return queryDateUtil.dateCodec().utcToEncodedDateAtResolution(
-                    LdbcDateCodec.encodedDateTimeStringToUtc( csvDate ),
+                    ldbcDateCodecUtil.encodedDateTimeStringToUtc( csvDate ),
                     calendar );
         }
 
@@ -231,14 +234,14 @@ public abstract class ImportDateUtil
         @Override
         public void populateCalendarFromCsvDate( String csvDate, Calendar calendar ) throws ParseException
         {
-            long utcDateTime = LdbcDateCodec.encodedDateStringToUtc( csvDate );
+            long utcDateTime = ldbcDateCodecUtil.encodedDateStringToUtc( csvDate );
             calendar.setTimeInMillis( utcDateTime );
         }
 
         @Override
         public void populateCalendarFromCsvDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            long utcDateTime = LdbcDateCodec.encodedDateTimeStringToUtc( csvDate );
+            long utcDateTime = ldbcDateCodecUtil.encodedDateTimeStringToUtc( csvDate );
             calendar.setTimeInMillis( utcDateTime );
         }
     }
@@ -246,10 +249,12 @@ public abstract class ImportDateUtil
     private static class EncodedStringToEncodedLong extends ImportDateUtil
     {
         private final QueryDateUtil queryDateUtil;
+        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        EncodedStringToEncodedLong( QueryDateUtil queryDateUtil )
+        EncodedStringToEncodedLong( QueryDateUtil queryDateUtil, LdbcDateCodecUtil ldbcDateCodecUtil )
         {
             this.queryDateUtil = queryDateUtil;
+            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -279,32 +284,32 @@ public abstract class ImportDateUtil
         @Override
         public long csvDateToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateStringToEncodedLongDateTime( csvDate, calendar );
+            return ldbcDateCodecUtil.encodedDateStringToEncodedLongDateTime( csvDate, calendar );
         }
 
         @Override
         public long csvDateTimeToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateTimeStringToEncodedLongDateTime( csvDate, calendar );
+            return ldbcDateCodecUtil.encodedDateTimeStringToEncodedLongDateTime( csvDate, calendar );
         }
 
         @Override
         public long csvDateToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateStringToEncodedLongDateTime( csvDate, calendar );
+            return ldbcDateCodecUtil.encodedDateStringToEncodedLongDateTime( csvDate, calendar );
         }
 
         @Override
         public long csvDateTimeToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedDateTimeStringToEncodedLongDateTime( csvDate, calendar );
+            return ldbcDateCodecUtil.encodedDateTimeStringToEncodedLongDateTime( csvDate, calendar );
         }
 
         @Override
         public long csvDateToEncodedDateAtResolution( String csvDate, Calendar calendar ) throws ParseException
         {
             return queryDateUtil.dateCodec().utcToEncodedDateAtResolution(
-                    LdbcDateCodec.encodedDateStringToUtc( csvDate ),
+                    ldbcDateCodecUtil.encodedDateStringToUtc( csvDate ),
                     calendar );
         }
 
@@ -313,27 +318,27 @@ public abstract class ImportDateUtil
                 throws ParseException
         {
             return queryDateUtil.dateCodec().utcToEncodedDateAtResolution(
-                    LdbcDateCodec.encodedDateTimeStringToUtc( csvDate ),
+                    ldbcDateCodecUtil.encodedDateTimeStringToUtc( csvDate ),
                     calendar );
         }
 
         @Override
         public long calendarToFormat( Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.calendarToEncodedLongDateTime( calendar );
+            return ldbcDateCodecUtil.calendarToEncodedLongDateTime( calendar );
         }
 
         @Override
         public void populateCalendarFromCsvDate( String csvDate, Calendar calendar ) throws ParseException
         {
-            long utcDateTime = LdbcDateCodec.encodedDateStringToUtc( csvDate );
+            long utcDateTime = ldbcDateCodecUtil.encodedDateStringToUtc( csvDate );
             calendar.setTimeInMillis( utcDateTime );
         }
 
         @Override
         public void populateCalendarFromCsvDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            long utcDateTime = LdbcDateCodec.encodedDateTimeStringToUtc( csvDate );
+            long utcDateTime = ldbcDateCodecUtil.encodedDateTimeStringToUtc( csvDate );
             calendar.setTimeInMillis( utcDateTime );
         }
     }
@@ -341,10 +346,12 @@ public abstract class ImportDateUtil
     private static class UtcToUtc extends ImportDateUtil
     {
         private final QueryDateUtil queryDateUtil;
+        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        UtcToUtc( QueryDateUtil queryDateUtil )
+        UtcToUtc( QueryDateUtil queryDateUtil, LdbcDateCodecUtil ldbcDateCodecUtil )
         {
             this.queryDateUtil = queryDateUtil;
+            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -386,13 +393,13 @@ public abstract class ImportDateUtil
         @Override
         public long csvDateToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
+            return ldbcDateCodecUtil.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
         }
 
         @Override
         public long csvDateTimeToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
+            return ldbcDateCodecUtil.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
         }
 
         @Override
@@ -432,10 +439,12 @@ public abstract class ImportDateUtil
     private static class UtcToEncodedLong extends ImportDateUtil
     {
         private final QueryDateUtil queryDateUtil;
+        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        UtcToEncodedLong( QueryDateUtil queryDateUtil )
+        UtcToEncodedLong( QueryDateUtil queryDateUtil, LdbcDateCodecUtil ldbcDateCodecUtil )
         {
             this.queryDateUtil = queryDateUtil;
+            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -466,26 +475,26 @@ public abstract class ImportDateUtil
         public long csvDateToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
             long utcDateTime = Long.parseLong( csvDate );
-            return LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+            return ldbcDateCodecUtil.utcToEncodedLongDateTime( utcDateTime, calendar );
         }
 
         @Override
         public long csvDateTimeToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
             long utcDateTime = Long.parseLong( csvDate );
-            return LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+            return ldbcDateCodecUtil.utcToEncodedLongDateTime( utcDateTime, calendar );
         }
 
         @Override
         public long csvDateToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
+            return ldbcDateCodecUtil.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
         }
 
         @Override
         public long csvDateTimeToEncodedDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
+            return ldbcDateCodecUtil.utcToEncodedLongDateTime( Long.parseLong( csvDate ), calendar );
         }
 
         @Override
@@ -504,7 +513,7 @@ public abstract class ImportDateUtil
         @Override
         public long calendarToFormat( Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.calendarToEncodedLongDateTime( calendar );
+            return ldbcDateCodecUtil.calendarToEncodedLongDateTime( calendar );
         }
 
         @Override
@@ -525,10 +534,12 @@ public abstract class ImportDateUtil
     private static class EncodedLongToUtc extends ImportDateUtil
     {
         private final QueryDateUtil queryDateUtil;
+        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        EncodedLongToUtc( QueryDateUtil queryDateUtil )
+        EncodedLongToUtc( QueryDateUtil queryDateUtil, LdbcDateCodecUtil ldbcDateCodecUtil )
         {
             this.queryDateUtil = queryDateUtil;
+            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -558,13 +569,13 @@ public abstract class ImportDateUtil
         @Override
         public long csvDateToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedLongDateTimeToUtc( Long.parseLong( csvDate ), calendar );
+            return ldbcDateCodecUtil.encodedLongDateTimeToUtc( Long.parseLong( csvDate ), calendar );
         }
 
         @Override
         public long csvDateTimeToFormat( String csvDate, Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.encodedLongDateTimeToUtc( Long.parseLong( csvDate ), calendar );
+            return ldbcDateCodecUtil.encodedLongDateTimeToUtc( Long.parseLong( csvDate ), calendar );
         }
 
         @Override
@@ -602,24 +613,26 @@ public abstract class ImportDateUtil
         public void populateCalendarFromCsvDate( String csvDate, Calendar calendar ) throws ParseException
         {
             long encodedLongDateTime = Long.parseLong( csvDate );
-            LdbcDateCodec.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
+            ldbcDateCodecUtil.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
         }
 
         @Override
         public void populateCalendarFromCsvDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
             long encodedLongDateTime = Long.parseLong( csvDate );
-            LdbcDateCodec.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
+            ldbcDateCodecUtil.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
         }
     }
 
     private static class EncodedLongToEncodedLong extends ImportDateUtil
     {
         private final QueryDateUtil queryDateUtil;
+        private final LdbcDateCodecUtil ldbcDateCodecUtil;
 
-        EncodedLongToEncodedLong( QueryDateUtil queryDateUtil )
+        EncodedLongToEncodedLong( QueryDateUtil queryDateUtil, LdbcDateCodecUtil ldbcDateCodecUtil )
         {
             this.queryDateUtil = queryDateUtil;
+            this.ldbcDateCodecUtil = ldbcDateCodecUtil;
         }
 
         @Override
@@ -686,21 +699,21 @@ public abstract class ImportDateUtil
         @Override
         public long calendarToFormat( Calendar calendar ) throws ParseException
         {
-            return LdbcDateCodec.calendarToEncodedLongDateTime( calendar );
+            return ldbcDateCodecUtil.calendarToEncodedLongDateTime( calendar );
         }
 
         @Override
         public void populateCalendarFromCsvDate( String csvDate, Calendar calendar ) throws ParseException
         {
             long encodedLongDateTime = Long.parseLong( csvDate );
-            LdbcDateCodec.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
+            ldbcDateCodecUtil.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
         }
 
         @Override
         public void populateCalendarFromCsvDateTime( String csvDate, Calendar calendar ) throws ParseException
         {
             long encodedLongDateTime = Long.parseLong( csvDate );
-            LdbcDateCodec.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
+            ldbcDateCodecUtil.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendar );
         }
     }
 }

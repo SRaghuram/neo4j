@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -6,39 +6,29 @@
 package com.neo4j.bench.ldbc.importer;
 
 import com.neo4j.bench.ldbc.connection.ImportDateUtil;
-import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
+import com.neo4j.bench.ldbc.connection.LdbcDateCodecUtil;
 import com.neo4j.bench.ldbc.connection.TimeStampedRelationshipTypesCache;
 
-import java.util.Arrays;
+import java.text.ParseException;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.unsafe.impl.batchimport.input.InputRelationship;
+import org.neo4j.unsafe.impl.batchimport.input.InputEntityVisitor;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
 
-import static java.lang.String.format;
-
-public class CommentHasCreatorAtTimeRelationshipTypeDecorator implements Decorator<InputRelationship>
+public class CommentHasCreatorAtTimeRelationshipTypeDecorator implements Decorator
 {
-    private final ThreadLocal<Calendar> calendarThreadLocal = new ThreadLocal<Calendar>()
-    {
-        @Override
-        protected Calendar initialValue()
-        {
-            return LdbcDateCodec.newCalendar();
-        }
-    };
-    private static final String[] EMPTY_STRING_ARRAY = new String[]{};
-    private final ImportDateUtil importDateUtil;
+    private final Supplier<ImportDateUtil> importDateUtilSupplier;
     private final TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache;
     private final GraphMetadataTracker metadataTracker;
 
     public CommentHasCreatorAtTimeRelationshipTypeDecorator(
-            ImportDateUtil importDateUtil,
+            Supplier<ImportDateUtil> importDateUtilSupplier,
             TimeStampedRelationshipTypesCache timeStampedRelationshipTypesCache,
             GraphMetadataTracker metadataTracker )
     {
-        this.importDateUtil = importDateUtil;
+        this.importDateUtilSupplier = importDateUtilSupplier;
         this.timeStampedRelationshipTypesCache = timeStampedRelationshipTypesCache;
         this.metadataTracker = metadataTracker;
     }
@@ -50,54 +40,49 @@ public class CommentHasCreatorAtTimeRelationshipTypeDecorator implements Decorat
     }
 
     @Override
-    public InputRelationship apply( InputRelationship inputRelationship ) throws RuntimeException
+    public InputEntityVisitor apply( InputEntityVisitor inputEntityVisitor )
     {
-        Calendar calendar = calendarThreadLocal.get();
-
         // comment has creator person - WITH TIME STAMP
         // comments: id|creationDate|locationIP|browserUsed|content|length|creator|place|replyOfPost|replyOfComment|
         // NOTE: only creationDate is passed through
-        String creationDateString = (String) inputRelationship.properties()[1];
-        long creationDate = -1;
-        long creationDateAtResolution = -1;
-        try
+        return new InputEntityVisitor.Delegate( inputEntityVisitor )
         {
-            creationDate = importDateUtil.csvDateTimeToFormat( creationDateString, calendar );
-            creationDateAtResolution =
-                    importDateUtil.queryDateUtil().formatToEncodedDateAtResolution( creationDate );
-            metadataTracker.recordCommentHasCreatorDateAtResolution( creationDateAtResolution );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( format( "Error parsing date string: %s\n" +
-                                                "Creation date as UTC: %s\n" +
-                                                "Creation date at resolution: %s\n+" +
-                                                "InputRelationship properties: %s",
-                    creationDateString,
-                    creationDate,
-                    creationDateAtResolution,
-                    Arrays.toString( inputRelationship.properties() ) ), e );
-        }
+            private final Calendar calendar = LdbcDateCodecUtil.newCalendar();
+            private final ImportDateUtil importDateUtil = importDateUtilSupplier.get();
 
-        RelationshipType hasCreatorRelationshipType =
-                timeStampedRelationshipTypesCache.commentHasCreatorForDateAtResolution(
-                        creationDateAtResolution,
-                        importDateUtil.queryDateUtil()
-                );
-        String newType = hasCreatorRelationshipType.name();
+            @Override
+            public boolean property( String key, Object value )
+            {
+                if ( "creationDate".equals( key ) )
+                {
+                    String creationDateString = (String) value;
+                    long creationDate;
+                    long creationDateAtResolution;
+                    try
+                    {
+                        creationDate = importDateUtil.csvDateTimeToFormat( creationDateString, calendar );
+                        creationDateAtResolution =
+                                importDateUtil.queryDateUtil().formatToEncodedDateAtResolution( creationDate );
+                        metadataTracker.recordCommentHasCreatorDateAtResolution( creationDateAtResolution );
+                    }
+                    catch ( ParseException e )
+                    {
+                        throw new RuntimeException( String.format( "Invalid date string: %s", creationDateString ), e );
+                    }
 
-        return new InputRelationship(
-                inputRelationship.sourceDescription(),
-                inputRelationship.lineNumber(),
-                inputRelationship.position(),
-                EMPTY_STRING_ARRAY,
-                (inputRelationship.hasFirstPropertyId()) ? inputRelationship.firstPropertyId() : null,
-                inputRelationship.startNodeGroup(),
-                inputRelationship.startNode(),
-                inputRelationship.endNodeGroup(),
-                inputRelationship.endNode(),
-                newType,
-                inputRelationship.hasTypeId() ? inputRelationship.typeId() : null
-        );
+                    RelationshipType hasCreatorRelationshipType =
+                            timeStampedRelationshipTypesCache.commentHasCreatorForDateAtResolution(
+                                    creationDateAtResolution,
+                                    importDateUtil.queryDateUtil() );
+
+                    return super.property( key, creationDate ) &&
+                           super.type( hasCreatorRelationshipType.name() );
+                }
+                else
+                {
+                    return true;
+                }
+            }
+        };
     }
 }

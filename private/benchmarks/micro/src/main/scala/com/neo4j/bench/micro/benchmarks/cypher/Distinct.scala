@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -7,17 +7,16 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
-import com.neo4j.bench.micro.data.Plans.{Solved, astProperty, astVariable}
+import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
-import org.neo4j.cypher.internal.v3_3.logical.plans
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.logical.plans
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
-import com.neo4j.bench.micro.config.ParamValues
 
 @BenchmarkEnabled(true)
 class Distinct extends AbstractCypherBenchmark {
@@ -44,13 +43,13 @@ class Distinct extends AbstractCypherBenchmark {
 
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
-    base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
+    base = Array(CompiledByteCode.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var Distinct_runtime: String = _
 
   @ParamValues(
     allowed = Array(ONE_COLUMN_PRIMITIVE, ONE_COLUMN_LNG, ONE_COLUMN_STR_SML, TWO_COLUMNS_PRIMITIVE, TWO_COLUMNS_PRIMITIVE_LNG, TWO_COLUMNS_PRIMITIVE_STR_SML),
-    base = Array(ONE_COLUMN_PRIMITIVE, TWO_COLUMNS_PRIMITIVE, TWO_COLUMNS_PRIMITIVE_LNG, TWO_COLUMNS_PRIMITIVE_STR_SML))
+    base = Array(ONE_COLUMN_PRIMITIVE, TWO_COLUMNS_PRIMITIVE, TWO_COLUMNS_PRIMITIVE_STR_SML))
   @Param(Array[String]())
   var Distinct_columns: String = _
 
@@ -77,53 +76,53 @@ class Distinct extends AbstractCypherBenchmark {
       .addNode(astVariable(NODE_B))
     Distinct_columns match {
       case ONE_COLUMN_PRIMITIVE =>
-        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(Solved)
-        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(Solved)
-        val cartesianProduct = plans.CartesianProduct(allNodesScanA, allNodesScanB)(Solved)
-        val distinct = plans.Distinct(cartesianProduct, Map(NODE_B -> astVariable(NODE_B)))(Solved)
+        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
+        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(IdGen)
+        val cartesianProduct = plans.CartesianProduct(allNodesScanA, allNodesScanB)(IdGen)
+        val distinct = plans.Distinct(cartesianProduct, Map(NODE_B -> astVariable(NODE_B)))(IdGen)
         val resultColumns = List(NODE_B)
-        val produceResults = plans.ProduceResult(resultColumns, distinct)
+        val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
         (produceResults, table, resultColumns)
 
       case ONE_COLUMN_LNG | ONE_COLUMN_STR_SML =>
-        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(Solved)
+        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
         val nodePropertyA = astProperty(astVariable(NODE_A), PROPERTY)
         val projectionA = plans.Projection(
           allNodesScanA,
-          Map(PROPERTY -> nodePropertyA))(Solved)
-        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(Solved)
-        val cartesianProduct = plans.CartesianProduct(projectionA, allNodesScanB)(Solved)
+          Map(PROPERTY -> nodePropertyA))(IdGen)
+        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(IdGen)
+        val cartesianProduct = plans.CartesianProduct(projectionA, allNodesScanB)(IdGen)
         val distinct = plans.Distinct(
           cartesianProduct,
-          Map(PROPERTY -> nodePropertyA))(Solved)
+          Map(PROPERTY -> nodePropertyA))(IdGen)
         val resultColumns = List(PROPERTY)
-        val produceResults = plans.ProduceResult(resultColumns, distinct)
+        val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
         (produceResults, table, resultColumns)
 
       case TWO_COLUMNS_PRIMITIVE =>
-        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(Solved)
-        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(Solved)
-        val cartesianProduct = plans.CartesianProduct(allNodesScanA, allNodesScanB)(Solved)
+        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
+        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(IdGen)
+        val cartesianProduct = plans.CartesianProduct(allNodesScanA, allNodesScanB)(IdGen)
         val distinct = plans.Distinct(
           cartesianProduct,
-          Map(NODE_A -> astVariable(NODE_A), NODE_B -> astVariable(NODE_B)))(Solved)
+          Map(NODE_A -> astVariable(NODE_A), NODE_B -> astVariable(NODE_B)))(IdGen)
         val resultColumns = List(NODE_A, NODE_B)
-        val produceResults = plans.ProduceResult(resultColumns, distinct)
+        val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
         (produceResults, table, resultColumns)
 
       case TWO_COLUMNS_PRIMITIVE_LNG | TWO_COLUMNS_PRIMITIVE_STR_SML =>
-        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(Solved)
+        val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)
         val nodePropertyA = astProperty(astVariable(NODE_A), PROPERTY)
         val projectionA = plans.Projection(
           allNodesScanA,
-          Map(PROPERTY -> nodePropertyA))(Solved)
-        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(Solved)
-        val cartesianProduct = plans.CartesianProduct(projectionA, allNodesScanB)(Solved)
+          Map(PROPERTY -> nodePropertyA))(IdGen)
+        val allNodesScanB = plans.AllNodesScan(NODE_B, Set.empty)(IdGen)
+        val cartesianProduct = plans.CartesianProduct(projectionA, allNodesScanB)(IdGen)
         val distinct = plans.Distinct(
           cartesianProduct,
-          Map(PROPERTY -> nodePropertyA, NODE_B -> astVariable(NODE_B)))(Solved)
+          Map(PROPERTY -> nodePropertyA, NODE_B -> astVariable(NODE_B)))(IdGen)
         val resultColumns = List(PROPERTY, NODE_B)
-        val produceResults = plans.ProduceResult(resultColumns, distinct)
+        val produceResults = plans.ProduceResult(distinct, columns = resultColumns)(IdGen)
         (produceResults, table, resultColumns)
     }
   }

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -14,10 +14,11 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{ascGeneratorFor, randGeneratorFor}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.{SemanticTable, symbols}
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.v3_3.logical.plans._
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.util.v3_4.symbols
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans._
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -33,8 +34,8 @@ class UniqueIndexSeek extends AbstractCypherBenchmark {
   var UniqueIndexSeek_runtime: String = _
 
   @ParamValues(
-    allowed = Array(LNG, DBL, STR_SML, STR_BIG),
-    base = Array(LNG, STR_SML))
+    allowed = Array(LNG, DBL, STR_SML, STR_BIG, DATE_TIME, LOCAL_DATE_TIME, TIME, LOCAL_TIME, DATE, DURATION),
+    base = Array(DATE_TIME))
   @Param(Array[String]())
   var UniqueIndexSeek_type: String = _
 
@@ -66,9 +67,9 @@ class UniqueIndexSeek extends AbstractCypherBenchmark {
       astLabelToken(LABEL, planContext),
       Seq(astPropertyKeyToken(KEY, planContext)),
       seekExpression,
-      Set.empty)(Solved)
+      Set.empty)(IdGen)
     val resultColumns = List(node.name)
-    val produceResults = ProduceResult(resultColumns, indexSeek)
+    val produceResults = ProduceResult(indexSeek, resultColumns)(IdGen)
 
     val table = SemanticTable().addNode(node)
 

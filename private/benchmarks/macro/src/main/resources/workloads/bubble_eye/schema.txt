@@ -1,3 +1,9 @@
+====
+    Copyright (c) 2002-2019 "Neo4j,"
+    Neo4j Sweden AB [http://neo4j.com]
+    This file is part of Neo4j internal tooling.
+====
+
 CONSTRAINT ON (n:AppStub) ASSERT n.android_package IS UNIQUE
 CONSTRAINT ON (n:Device) ASSERT n.uuid IS UNIQUE
 CONSTRAINT ON (n:Publisher) ASSERT n.name IS UNIQUE

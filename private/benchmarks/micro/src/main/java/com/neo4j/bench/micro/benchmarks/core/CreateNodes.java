@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -63,7 +63,10 @@ public class CreateNodes extends AbstractCoreBenchmark
     protected DataGeneratorConfig getConfig()
     {
         return new DataGeneratorConfigBuilder()
-                .withNeo4jConfig( Neo4jConfig.empty().withSetting( record_format, CreateNodes_format ) )
+                .withNeo4jConfig( Neo4jConfig
+                        .empty()
+                        .withSetting( record_format, CreateNodes_format )
+                        .setTransactionMemory( CreateNodes_txMemory ))
                 .isReusableStore( false )
                 .build();
     }

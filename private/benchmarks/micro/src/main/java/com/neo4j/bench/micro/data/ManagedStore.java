@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -41,7 +41,8 @@ public class ManagedStore
             Benchmark benchmark,
             DataGeneratorConfig benchmarkConfig,
             Neo4jConfig baseNeo4jConfig,
-            Augmenterizer augmenterizer )
+            Augmenterizer augmenterizer,
+            int threads )
     {
         FullBenchmarkName benchmarkName = FullBenchmarkName.from( group, benchmark );
         dataGeneratorConfig = DataGeneratorConfigBuilder
@@ -54,7 +55,8 @@ public class ManagedStore
                 dataGeneratorConfig,
                 group,
                 benchmark,
-                augmenterizer );
+                augmenterizer,
+                threads );
     }
 
     public GraphDatabaseService startDb()

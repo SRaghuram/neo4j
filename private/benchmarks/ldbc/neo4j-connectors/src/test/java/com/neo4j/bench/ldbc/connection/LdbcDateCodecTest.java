@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -15,12 +15,14 @@ import static org.junit.Assert.assertThat;
 
 public class LdbcDateCodecTest
 {
+    private static final LdbcDateCodecUtil LDBC_DATE_CODEC_UTIL = new LdbcDateCodecUtil();
+
     // ----- Static -----
 
     @Test
     public void shouldCorrectlyConvertEncodedDateStringToUtc() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -29,7 +31,7 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
@@ -40,20 +42,20 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.MILLISECOND, 0 );
         long utcDate = calendar.getTimeInMillis();
 
-        String encodedStringDate = LdbcDateCodec.utcToEncodedDateString( utcDateTime );
+        String encodedStringDate = LDBC_DATE_CODEC_UTIL.utcToEncodedDateString( utcDateTime );
 
         assertThat(
                 encodedStringDate,
                 equalTo( "1982-01-23" ) );
         assertThat(
-                LdbcDateCodec.encodedDateStringToUtc( encodedStringDate ),
+                LDBC_DATE_CODEC_UTIL.encodedDateStringToUtc( encodedStringDate ),
                 equalTo( utcDate ) );
     }
 
     @Test
     public void shouldCorrectlyConvertEncodedDateTimeStringToUtc() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -63,20 +65,20 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDate = calendar.getTimeInMillis();
 
-        String encodedStringDateTime = LdbcDateCodec.utcToEncodedDateTimeString( utcDate );
+        String encodedStringDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedDateTimeString( utcDate );
 
         assertThat(
                 encodedStringDateTime,
                 equalTo( "1982-01-23T01:02:03.004+0000" ) );
         assertThat(
-                LdbcDateCodec.encodedDateTimeStringToUtc( encodedStringDateTime ),
+                LDBC_DATE_CODEC_UTIL.encodedDateTimeStringToUtc( encodedStringDateTime ),
                 equalTo( utcDate ) );
     }
 
     @Test
     public void shouldCorrectlyConvertEncodedDateStringToEncodedLong() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -85,22 +87,22 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 0 );
         calendar.set( Calendar.MILLISECOND, 0 );
         long utcDate = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
-        String encodedStringDate = LdbcDateCodec.utcToEncodedDateString( utcDate );
+        String encodedStringDate = LDBC_DATE_CODEC_UTIL.utcToEncodedDateString( utcDate );
 
         assertThat(
                 encodedStringDate,
                 equalTo( "1982-01-23" ) );
         assertThat(
-                LdbcDateCodec.encodedDateStringToEncodedLongDateTime( encodedStringDate, calendar ),
+                LDBC_DATE_CODEC_UTIL.encodedDateStringToEncodedLongDateTime( encodedStringDate, calendar ),
                 equalTo( 19820123000000000L ) );
     }
 
     @Test
     public void shouldCorrectlyConvertEncodedDateTimeStringToEncodedLong() throws ParseException
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -109,22 +111,22 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
-        String encodedStringDateTime = LdbcDateCodec.utcToEncodedDateTimeString( utcDateTime );
+        String encodedStringDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedDateTimeString( utcDateTime );
 
         assertThat(
                 encodedStringDateTime,
                 equalTo( "1982-01-23T01:02:03.004+0000" ) );
         assertThat(
-                LdbcDateCodec.encodedDateTimeStringToEncodedLongDateTime( encodedStringDateTime, calendar ),
+                LDBC_DATE_CODEC_UTIL.encodedDateTimeStringToEncodedLongDateTime( encodedStringDateTime, calendar ),
                 equalTo( 19820123010203004L ) );
     }
 
     @Test
     public void shouldCorrectlyConvertUtcToEncodedDateString()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -134,7 +136,7 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
 
-        String encodedStringDate = LdbcDateCodec.utcToEncodedDateString( utcDateTime );
+        String encodedStringDate = LDBC_DATE_CODEC_UTIL.utcToEncodedDateString( utcDateTime );
 
         assertThat(
                 encodedStringDate,
@@ -144,7 +146,7 @@ public class LdbcDateCodecTest
     @Test
     public void shouldCorrectlyConvertUtcToEncodedDateTimeString()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -154,7 +156,7 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
 
-        String encodedStringDateTime = LdbcDateCodec.utcToEncodedDateTimeString( utcDateTime );
+        String encodedStringDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedDateTimeString( utcDateTime );
 
         assertThat(
                 encodedStringDateTime,
@@ -164,7 +166,7 @@ public class LdbcDateCodecTest
     @Test
     public void shouldCorrectlyConvertUtcToEncodedLong()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -174,8 +176,8 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.MILLISECOND, 4 );
 
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
-        long encodedLongDateTime = LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+        calendar = LdbcDateCodecUtil.newCalendar();
+        long encodedLongDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedLongDateTime( utcDateTime, calendar );
 
         assertThat(
                 encodedLongDateTime,
@@ -185,7 +187,7 @@ public class LdbcDateCodecTest
     @Test
     public void shouldCorrectlyConvertEncodedLongDateTimeToEncodedLongDate()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -194,9 +196,9 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
-        long encodedLongDateTime = LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+        long encodedLongDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedLongDateTime( utcDateTime, calendar );
 
         assertThat(
                 encodedLongDateTime,
@@ -206,7 +208,7 @@ public class LdbcDateCodecTest
     @Test
     public void shouldCorrectlyConvertEncodedLongToEncodedDateString()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -215,23 +217,23 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
-        long encodedLongDateTime = LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+        long encodedLongDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedLongDateTime( utcDateTime, calendar );
 
         assertThat(
                 encodedLongDateTime,
                 equalTo( 19820123010203004L ) );
 
         assertThat(
-                LdbcDateCodec.encodedLongDateTimeToEncodedDateString( encodedLongDateTime, calendar ),
+                LDBC_DATE_CODEC_UTIL.encodedLongDateTimeToEncodedDateString( encodedLongDateTime, calendar ),
                 equalTo( "1982-01-23" ) );
     }
 
     @Test
     public void shouldCorrectlyConvertEncodedLongToEncodedDateTimeString()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -240,23 +242,23 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
-        long encodedLongDateTime = LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+        long encodedLongDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedLongDateTime( utcDateTime, calendar );
 
         assertThat(
                 encodedLongDateTime,
                 equalTo( 19820123010203004L ) );
 
         assertThat(
-                LdbcDateCodec.encodedLongDateTimeToEncodedDateTimeString( encodedLongDateTime, calendar ),
+                LDBC_DATE_CODEC_UTIL.encodedLongDateTimeToEncodedDateTimeString( encodedLongDateTime, calendar ),
                 equalTo( "1982-01-23T01:02:03.004+0000" ) );
     }
 
     @Test
     public void shouldCorrectlyConvertEncodedLongToUtc()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -265,23 +267,23 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
-        long encodedLongDateTime = LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+        long encodedLongDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedLongDateTime( utcDateTime, calendar );
 
         assertThat(
                 encodedLongDateTime,
                 equalTo( 19820123010203004L ) );
 
         assertThat(
-                LdbcDateCodec.encodedLongDateTimeToUtc( encodedLongDateTime, calendar ),
+                LDBC_DATE_CODEC_UTIL.encodedLongDateTimeToUtc( encodedLongDateTime, calendar ),
                 equalTo( utcDateTime ) );
     }
 
     @Test
     public void shouldCorrectlyPopulateCalendarFromEncodedLongDate()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -290,16 +292,16 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
         long utcDateTime = calendar.getTimeInMillis();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
 
-        long encodedLongDateTime = LdbcDateCodec.utcToEncodedLongDateTime( utcDateTime, calendar );
+        long encodedLongDateTime = LDBC_DATE_CODEC_UTIL.utcToEncodedLongDateTime( utcDateTime, calendar );
 
         assertThat(
                 encodedLongDateTime,
                 equalTo( 19820123010203004L ) );
 
-        Calendar calendarAfter = LdbcDateCodec.newCalendar();
-        LdbcDateCodec.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendarAfter );
+        Calendar calendarAfter = LdbcDateCodecUtil.newCalendar();
+        LDBC_DATE_CODEC_UTIL.populateCalendarFromEncodedLongDateTime( encodedLongDateTime, calendarAfter );
 
         assertThat( utcDateTime, equalTo( calendarAfter.getTimeInMillis() ) );
     }
@@ -307,7 +309,7 @@ public class LdbcDateCodecTest
     @Test
     public void shouldCorrectlyCreateEncodedLongDateFromCalendar()
     {
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -316,7 +318,7 @@ public class LdbcDateCodecTest
         calendar.set( Calendar.SECOND, 3 );
         calendar.set( Calendar.MILLISECOND, 4 );
 
-        long encodedLongDateTime = LdbcDateCodec.calendarToEncodedLongDateTime( calendar );
+        long encodedLongDateTime = LDBC_DATE_CODEC_UTIL.calendarToEncodedLongDateTime( calendar );
 
         assertThat(
                 encodedLongDateTime,
@@ -330,7 +332,7 @@ public class LdbcDateCodecTest
     {
         LdbcDateCodec dateCodec = LdbcDateCodec.codecFor( LdbcDateCodec.Resolution.YEAR );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -351,7 +353,7 @@ public class LdbcDateCodecTest
                 equalTo( "1982" ) );
         assertThat( dateCodec.encodedDateTimeToEncodedDateAtResolution( encodedLongDateTime ), equalTo( 1982L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 1982L, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( 0 ) );
@@ -361,13 +363,13 @@ public class LdbcDateCodecTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 0 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 0 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 1978L, 1982L, calendar ),
                 equalTo( new long[]{1978L, 1979L, 1980L, 1981L, 1982L} )
         );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 1982L, calendar );
         assertThat( dateCodec.calendarToEncodedDateAtResolution( calendar ), equalTo( 1982L ) );
         dateCodec.incrementCalendarByTimestampResolution( calendar, 2 );
@@ -379,7 +381,7 @@ public class LdbcDateCodecTest
     {
         LdbcDateCodec dateCodec = LdbcDateCodec.codecFor( LdbcDateCodec.Resolution.MONTH );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -400,7 +402,7 @@ public class LdbcDateCodecTest
                 equalTo( "198201" ) );
         assertThat( dateCodec.encodedDateTimeToEncodedDateAtResolution( encodedLongDateTime ), equalTo( 198201L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 198201L, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( 0 ) );
@@ -410,13 +412,13 @@ public class LdbcDateCodecTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 0 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 0 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 198201L, 198204L, calendar ),
                 equalTo( new long[]{198201L, 198202L, 198203L, 198204L} )
         );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 198201L, calendar );
         assertThat( dateCodec.calendarToEncodedDateAtResolution( calendar ), equalTo( 198201L ) );
         dateCodec.incrementCalendarByTimestampResolution( calendar, 2 );
@@ -428,7 +430,7 @@ public class LdbcDateCodecTest
     {
         LdbcDateCodec dateCodec = LdbcDateCodec.codecFor( LdbcDateCodec.Resolution.DAY );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -449,7 +451,7 @@ public class LdbcDateCodecTest
                 equalTo( "19820123" ) );
         assertThat( dateCodec.encodedDateTimeToEncodedDateAtResolution( encodedLongDateTime ), equalTo( 19820123L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 19820123L, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( 0 ) );
@@ -459,18 +461,18 @@ public class LdbcDateCodecTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 0 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 0 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 19820227L, 19820301L, calendar ),
                 equalTo( new long[]{19820227L, 19820228L, 19820301L} )
         );
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 19840227L, 19840301L, calendar ),
                 equalTo( new long[]{19840227L, 19840228L, 19840229L, 19840301L} )
         );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 19820123L, calendar );
         assertThat( dateCodec.calendarToEncodedDateAtResolution( calendar ), equalTo( 19820123L ) );
         dateCodec.incrementCalendarByTimestampResolution( calendar, 2 );
@@ -482,7 +484,7 @@ public class LdbcDateCodecTest
     {
         LdbcDateCodec dateCodec = LdbcDateCodec.codecFor( LdbcDateCodec.Resolution.HOUR );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -503,7 +505,7 @@ public class LdbcDateCodecTest
                 equalTo( "1982012301" ) );
         assertThat( dateCodec.encodedDateTimeToEncodedDateAtResolution( encodedLongDateTime ), equalTo( 1982012301L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 1982012301L, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( 0 ) );
@@ -513,13 +515,13 @@ public class LdbcDateCodecTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 0 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 0 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 1982012300L, 1982012301L, calendar ),
                 equalTo( new long[]{1982012300L, 1982012301L} )
         );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 1982012323L, calendar );
         assertThat( dateCodec.calendarToEncodedDateAtResolution( calendar ), equalTo( 1982012323L ) );
         dateCodec.incrementCalendarByTimestampResolution( calendar, 2 );
@@ -531,7 +533,7 @@ public class LdbcDateCodecTest
     {
         LdbcDateCodec dateCodec = LdbcDateCodec.codecFor( LdbcDateCodec.Resolution.MINUTE );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -553,7 +555,7 @@ public class LdbcDateCodecTest
         assertThat( dateCodec.encodedDateTimeToEncodedDateAtResolution( encodedLongDateTime ),
                     equalTo( 198201230102L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 198201230102L, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( 0 ) );
@@ -563,13 +565,13 @@ public class LdbcDateCodecTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 0 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 0 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 198201230058L, 198201230101L, calendar ),
                 equalTo( new long[]{198201230058L, 198201230059L, 198201230100L, 198201230101L} )
         );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 198201230058L, calendar );
         assertThat( dateCodec.calendarToEncodedDateAtResolution( calendar ), equalTo( 198201230058L ) );
         dateCodec.incrementCalendarByTimestampResolution( calendar, 2 );
@@ -581,7 +583,7 @@ public class LdbcDateCodecTest
     {
         LdbcDateCodec dateCodec = LdbcDateCodec.codecFor( LdbcDateCodec.Resolution.SECOND );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -603,7 +605,7 @@ public class LdbcDateCodecTest
         assertThat( dateCodec.encodedDateTimeToEncodedDateAtResolution( encodedLongDateTime ),
                     equalTo( 19820123010203L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 19820123010203L, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( 0 ) );
@@ -613,13 +615,13 @@ public class LdbcDateCodecTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 3 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 0 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 19820123005859L, 19820123005900L, calendar ),
                 equalTo( new long[]{19820123005859L, 19820123005900L} )
         );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 19820123005859L, calendar );
         assertThat( dateCodec.calendarToEncodedDateAtResolution( calendar ), equalTo( 19820123005859L ) );
         dateCodec.incrementCalendarByTimestampResolution( calendar, 2 );
@@ -631,7 +633,7 @@ public class LdbcDateCodecTest
     {
         LdbcDateCodec dateCodec = LdbcDateCodec.codecFor( LdbcDateCodec.Resolution.MILLISECOND );
 
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         calendar.set( Calendar.YEAR, 1982 );
         calendar.set( Calendar.MONTH, Calendar.JANUARY );
         calendar.set( Calendar.DAY_OF_MONTH, 23 );
@@ -653,7 +655,7 @@ public class LdbcDateCodecTest
         assertThat( dateCodec.encodedDateTimeToEncodedDateAtResolution( encodedLongDateTime ),
                     equalTo( 19820123010203004L ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 19820123010203004L, calendar );
         assertThat( calendar.get( Calendar.YEAR ), equalTo( 1982 ) );
         assertThat( calendar.get( Calendar.MONTH ), equalTo( 0 ) );
@@ -663,13 +665,13 @@ public class LdbcDateCodecTest
         assertThat( calendar.get( Calendar.SECOND ), equalTo( 3 ) );
         assertThat( calendar.get( Calendar.MILLISECOND ), equalTo( 4 ) );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         assertThat(
                 dateCodec.encodedDatesAtResolutionForRange( 19820123005859998L, 19820123005900001L, calendar ),
                 equalTo( new long[]{19820123005859998L, 19820123005859999L, 19820123005900000L, 19820123005900001L} )
         );
 
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateCodec.populateCalendarFromEncodedDateAtResolution( 19820123005900001L, calendar );
         assertThat( dateCodec.calendarToEncodedDateAtResolution( calendar ), equalTo( 19820123005900001L ) );
         dateCodec.incrementCalendarByTimestampResolution( calendar, 2 );

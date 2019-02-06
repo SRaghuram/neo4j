@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -26,10 +26,7 @@ import java.util.Properties;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import static com.neo4j.bench.ldbc.cli.RunCommand.discoverSchema;
-
 import static java.lang.String.format;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_store_upgrade;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
@@ -146,7 +143,6 @@ public class UpgradeStoreCommand implements Runnable
             Map<String,String> neo4jConfigMap = new HashMap<>();
             neo4jConfigMap.put( record_format.name(), recordFormat );
             neo4jConfigMap.put( allow_upgrade.name(), "true" );
-            neo4jConfigMap.put( allow_store_upgrade.name(), "true" );
             neo4jConfigMap.put( pagecache_memory.name(), storeSizeInMb + "m" );
             Properties neo4jConfigProperties = MapUtils.mapToProperties( neo4jConfigMap );
             neo4jConfigProperties.store( new FileOutputStream( neo4jConfigFile ), null );

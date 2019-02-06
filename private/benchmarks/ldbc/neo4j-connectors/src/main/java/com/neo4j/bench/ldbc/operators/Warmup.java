@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,19 +9,22 @@ import com.ldbc.driver.DbException;
 import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.temporal.TemporalUtil;
 
-import org.neo4j.cursor.Cursor;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.CursorFactory;
+import org.neo4j.internal.kernel.api.Kernel;
+import org.neo4j.internal.kernel.api.NodeCursor;
+import org.neo4j.internal.kernel.api.Read;
+import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.Session;
+import org.neo4j.internal.kernel.api.Transaction;
+import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.ByteUnit;
-import org.neo4j.kernel.api.ReadOperations;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordStorageEngine;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreAccess;
 import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.storageengine.api.NodeItem;
-import org.neo4j.storageengine.api.RelationshipItem;
 
 import static java.lang.String.format;
 
@@ -62,14 +65,18 @@ public class Warmup
             long highestNodeKey,
             int nodesPerPage ) throws DbException
     {
-        try ( Transaction ignore = db.beginTx() )
+        Kernel kernel = getKernel( db );
+        try ( Transaction tx = startTransaction( kernel ) )
         {
-            ReadOperations readOperations = getReadOperations( db );
-            for ( int i = 0; i <= highestNodeKey; i = i + nodesPerPage )
+            CursorFactory cursors = tx.cursors();
+            Read read = tx.dataRead();
+            try ( NodeCursor nodeCursor = cursors.allocateNodeCursor() )
             {
-                Cursor<NodeItem> cursor = readOperations.nodeCursorById( i );
-                cursor.next();
-                cursor.close();
+                for ( int i = 0; i <= highestNodeKey; i = i + nodesPerPage )
+                {
+                    read.singleNode( i, nodeCursor );
+                    nodeCursor.next();
+                }
             }
         }
         catch ( Exception e )
@@ -83,14 +90,18 @@ public class Warmup
             long highestRelationshipKey,
             int relationshipsPerPage ) throws DbException
     {
-        try ( Transaction ignore = db.beginTx() )
+        Kernel kernel = getKernel( db );
+        try ( Transaction tx = startTransaction( kernel ) )
         {
-            ReadOperations readOperations = getReadOperations( db );
-            for ( int i = 0; i <= highestRelationshipKey; i = i + relationshipsPerPage )
+            CursorFactory cursors = tx.cursors();
+            Read read = tx.dataRead();
+            try ( RelationshipScanCursor relationshipCursor = cursors.allocateRelationshipScanCursor() )
             {
-                Cursor<RelationshipItem> cursor = readOperations.relationshipCursorById( i );
-                cursor.next();
-                cursor.close();
+                for ( int i = 0; i <= highestRelationshipKey; i = i + relationshipsPerPage )
+                {
+                    read.singleRelationship( i, relationshipCursor );
+                    relationshipCursor.next();
+                }
             }
         }
         catch ( Exception e )
@@ -114,13 +125,15 @@ public class Warmup
         return db.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
     }
 
-    private static ReadOperations getReadOperations( GraphDatabaseAPI db )
+    private static Transaction startTransaction( Kernel kernel )
+            throws TransactionFailureException
     {
-        return getContextBridge( db ).get().readOperations();
+        Session session = kernel.beginSession( SecurityContext.AUTH_DISABLED );
+        return session.beginTransaction();
     }
 
-    private static ThreadToStatementContextBridge getContextBridge( GraphDatabaseAPI db )
+    private static Kernel getKernel( GraphDatabaseAPI db )
     {
-        return db.getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
+        return db.getDependencyResolver().resolveDependency( Kernel.class );
     }
 }

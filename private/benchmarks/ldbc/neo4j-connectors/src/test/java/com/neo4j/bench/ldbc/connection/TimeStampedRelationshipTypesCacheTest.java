@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -25,10 +25,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldDoJoinArrays() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         RelationshipType[] actualRange1 = cache.commentHasCreatorForDateRange(
                 calendar,
@@ -86,10 +87,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldFailCommentHasCreatorForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
@@ -104,7 +106,7 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldGetCommentHasCreatorForDateRangeForValidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         RelationshipType[] range;
         long minDate;
         long maxDate;
@@ -115,7 +117,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         minDate = 1982012300L;
         maxDate = 1982012400L;
@@ -152,7 +155,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         minDate = 198201L;
         maxDate = 198212L;
@@ -204,10 +208,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -322,10 +327,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -450,7 +456,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 1982012301L;
 
         assertThat(
@@ -465,7 +472,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 198201L;
 
         assertThat(
@@ -482,10 +490,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldFailPostHasCreatorForDateRangeWithInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
@@ -501,7 +510,7 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldGetPostHasCreatorForDateRangeForValidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         RelationshipType[] range;
         long minDate;
         long maxDate;
@@ -512,7 +521,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         minDate = 1982012300L;
         maxDate = 1982012400L;
@@ -549,7 +559,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         minDate = 198201L;
         maxDate = 198212L;
@@ -601,10 +612,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -719,10 +731,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -847,7 +860,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 1982012301L;
 
         assertThat(
@@ -862,7 +876,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 198201L;
 
         assertThat(
@@ -879,10 +894,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldFailPostIsLocatedInForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
@@ -898,7 +914,7 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldGetPostIsLocatedInForDateRangeForValidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         RelationshipType[] range;
         long minDate;
         long maxDate;
@@ -909,7 +925,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         minDate = 1982012300L;
         maxDate = 1982012400L;
@@ -946,7 +963,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         minDate = 198201L;
         maxDate = 198212L;
@@ -998,10 +1016,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -1116,10 +1135,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -1244,7 +1264,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 1982012301L;
 
         assertThat(
@@ -1259,7 +1280,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 198201L;
 
         assertThat(
@@ -1276,10 +1298,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldFailCommentIsLocatedInForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
@@ -1294,7 +1317,7 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldGetCommentIsLocatedInForDateRangeForValidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         RelationshipType[] range;
         long minDate;
         long maxDate;
@@ -1305,7 +1328,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         minDate = 1982012300L;
         maxDate = 1982012400L;
@@ -1342,7 +1366,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         minDate = 198201L;
         maxDate = 198212L;
@@ -1394,10 +1419,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -1512,10 +1538,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -1640,7 +1667,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 1982012301L;
 
         assertThat(
@@ -1655,7 +1683,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 198201L;
 
         assertThat(
@@ -1672,10 +1701,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldFailHasMemberForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
         cache.hasMemberForDateRange(
@@ -1697,10 +1727,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldFailHasMemberForDatesAfterIfBelowRange() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         cache.resizeHasMemberForNewDate( 1982012302L, calendar, dateUtil );
         cache.hasMemberForDatesAfter( 1982012301L );
@@ -1713,10 +1744,11 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldFailHasMemberForDatesAfterIfAboveRange() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         QueryDateUtil dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         cache.resizeHasMemberForNewDate( 1982012301L, calendar, dateUtil );
         cache.hasMemberForDatesAfter( 1982012302L );
     }
@@ -1725,7 +1757,7 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldGetHasMemberForDatesAfterForValidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         RelationshipType[] range;
         long minDate;
         long maxDate;
@@ -1736,7 +1768,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         minDate = 1982012300L;
         maxDate = 1982012400L;
         cache.resizeHasMemberForNewDate( minDate, calendar, dateUtil );
@@ -1772,7 +1805,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         minDate = 198201L;
         maxDate = 198212L;
@@ -1802,7 +1836,7 @@ public class TimeStampedRelationshipTypesCacheTest
     public void shouldGetHasMemberForDateRangeForValidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
-        Calendar calendar = LdbcDateCodec.newCalendar();
+        Calendar calendar = LdbcDateCodecUtil.newCalendar();
         RelationshipType[] range;
         long minDate;
         long maxDate;
@@ -1813,7 +1847,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
 
         minDate = 1982012300L;
         maxDate = 1982012400L;
@@ -1850,7 +1885,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
 
         minDate = 198201L;
         maxDate = 198212L;
@@ -1902,10 +1938,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -2020,10 +2057,11 @@ public class TimeStampedRelationshipTypesCacheTest
         // ===========================
 
         cache = new TimeStampedRelationshipTypesCache();
-        calendar = LdbcDateCodec.newCalendar();
+        calendar = LdbcDateCodecUtil.newCalendar();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         minDate = Long.MAX_VALUE;
         maxDate = Long.MIN_VALUE;
 
@@ -2148,7 +2186,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+                LdbcDateCodec.Resolution.HOUR,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 1982012301L;
 
         assertThat(
@@ -2163,7 +2202,8 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         dateUtil = QueryDateUtil.createFor(
                 LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Resolution.MONTH );
+                LdbcDateCodec.Resolution.MONTH,
+                new LdbcDateCodecUtil() );
         dateAtResolution = 198201L;
 
         assertThat(

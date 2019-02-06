@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -11,10 +11,11 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 
-import org.neo4j.kernel.api.exceptions.KernelException;
-import org.neo4j.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.api.proc.CallableUserAggregationFunction.Aggregator;
-import org.neo4j.kernel.api.proc.QualifiedName;
+import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
+import org.neo4j.internal.kernel.api.procs.UserAggregator;
+import org.neo4j.internal.kernel.api.procs.UserFunctionHandle;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.UserAggregationFunction;
 import org.neo4j.procedure.UserAggregationResult;
@@ -37,7 +38,9 @@ public class AggregationFunctionCall extends AbstractProceduresBenchmark
         {
             super.afterDatabaseStart();
             procedures.registerAggregationFunction( TestAggregation.class );
-            qualifiedName = new QualifiedName( new String[]{"tester"}, "aggregation" );
+            QualifiedName qualifiedName = new QualifiedName( new String[]{"tester"}, "aggregation" );
+            UserFunctionHandle handle = procedures.aggregationFunction( qualifiedName );
+            token = handle.id();
         }
         catch ( KernelException e )
         {
@@ -49,7 +52,7 @@ public class AggregationFunctionCall extends AbstractProceduresBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public long testAggregation() throws ProcedureException
     {
-        Aggregator aggregator = procedures.createAggregationFunction( context, qualifiedName );
+        UserAggregator aggregator = procedures.createAggregationFunction( context, token );
         for ( long i = 0; i < AggregationFunctionCall_rows; i++ )
         {
             aggregator.update( new Object[]{i} );

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
@@ -9,16 +9,16 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, Plans, RelationshipDefinition}
-import org.neo4j.cypher.internal.compiler.v3_3.spi.PlanContext
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.frontend.v3_3.SemanticTable
-import org.neo4j.cypher.internal.v3_3.logical.plans
-import org.neo4j.cypher.internal.v3_3.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
+import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
+import org.neo4j.cypher.internal.v3_4.expressions.SemanticDirection.OUTGOING
+import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.v3_4.logical.plans.ExpandAll
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-@BenchmarkEnabled(true)
+@BenchmarkEnabled(false)
 class Expand extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
@@ -41,10 +41,10 @@ class Expand extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val relTypeNames = RELATIONSHIP_DEFINITIONS.map(rel => Plans.astRelTypeName(rel.`type`()))
-    val allNodesScan = plans.AllNodesScan("a", Set.empty)(Solved)
-    val expand = plans.Expand(allNodesScan, "a", OUTGOING, relTypeNames, "b", "r1", ExpandAll)(Solved)
+    val allNodesScan = plans.AllNodesScan("a", Set.empty)(IdGen)
+    val expand = plans.Expand(allNodesScan, "a", OUTGOING, relTypeNames, "b", "r1", ExpandAll)(IdGen)
     val resultColumns = List("a", "b")
-    val produceResults = plans.ProduceResult(columns = resultColumns, expand)
+    val produceResults = plans.ProduceResult(expand, columns = resultColumns)(IdGen)
 
     val table = SemanticTable().
       addNode(astVariable("a")).
