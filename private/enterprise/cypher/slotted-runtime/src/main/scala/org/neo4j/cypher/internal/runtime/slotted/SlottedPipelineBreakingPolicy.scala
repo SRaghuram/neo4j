@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.physicalplanning.BreakingPolicy
+import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 
-object SlottedBreakingPolicy extends BreakingPolicy {
+object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 

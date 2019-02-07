@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.{Aggregation, Distinct, Logi
   *
   * One such part is called a Pipeline, and will have one shared slot configuration.
   */
-trait BreakingPolicy {
+trait PipelineBreakingPolicy {
 
   /**
     * True if the an operator should be the start of a new pipeline.
@@ -38,14 +38,14 @@ trait BreakingPolicy {
 
 }
 
-object I_BREAK_FOR_LEAFS extends BreakingPolicy {
+object BREAK_FOR_LEAFS extends PipelineBreakingPolicy {
   override def breakOn(lp: LogicalPlan): Boolean = lp.isInstanceOf[LogicalLeafPlan]
   override def breakOnNestedPlan: Boolean = false
 }
 
-object BreakingPolicy {
-  def breakFor(logicalPlans: LogicalPlan*): BreakingPolicy =
-    new BreakingPolicy {
+object PipelineBreakingPolicy {
+  def breakFor(logicalPlans: LogicalPlan*): PipelineBreakingPolicy =
+    new PipelineBreakingPolicy {
       override def breakOn(lp: LogicalPlan): Boolean = logicalPlans.contains(lp)
       override def breakOnNestedPlan: Boolean = false
     }

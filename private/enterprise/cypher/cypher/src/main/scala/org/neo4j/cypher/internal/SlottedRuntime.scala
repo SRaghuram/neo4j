@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedBreakingPolicy, SlottedExecutionResultBuilderFactory, SlottedPipeMapper}
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedPipelineBreakingPolicy, SlottedExecutionResultBuilderFactory, SlottedPipeMapper}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.CypherException
@@ -105,7 +105,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
   }
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan, semanticTable: SemanticTable): (LogicalPlan, PhysicalPlan) = {
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedBreakingPolicy)
+    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedPipelineBreakingPolicy)
     val slottedRewriter = new SlottedRewriter(context.tokenContext)
     val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
     (logicalPlan, physicalPlan)

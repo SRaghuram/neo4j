@@ -50,7 +50,7 @@ object SlotAllocation {
     */
   def allocateSlots(lp: LogicalPlan,
                     semanticTable: SemanticTable,
-                    breakingPolicy: BreakingPolicy,
+                    breakingPolicy: PipelineBreakingPolicy,
                     initialSlotsAndArgument: Option[SlotsAndArgument] = None,
                     allocations: SlotConfigurations = new SlotConfigurations,
                     arguments: ArgumentSizes = new ArgumentSizes): PhysicalPlan = {
@@ -150,7 +150,7 @@ object SlotAllocation {
   private def allocateExpressions(lp: LogicalPlan,
                                   nullable: Boolean,
                                   slots: SlotConfiguration,
-                                  breakingPolicy: BreakingPolicy,
+                                  breakingPolicy: PipelineBreakingPolicy,
                                   semanticTable: SemanticTable,
                                   slotConfigurations: SlotConfigurations,
                                   argumentSizes: ArgumentSizes,
@@ -161,7 +161,7 @@ object SlotAllocation {
   private def allocateExpressionsInternal(p: Foldable,
                                           nullable: Boolean,
                                           slots: SlotConfiguration,
-                                          breakingPolicy: BreakingPolicy,
+                                          breakingPolicy: PipelineBreakingPolicy,
                                           semanticTable: SemanticTable,
                                           slotConfigurations: SlotConfigurations,
                                           argumentSizes: ArgumentSizes,
@@ -476,7 +476,7 @@ object SlotAllocation {
                                lhs: SlotConfiguration,
                                rhs: SlotConfiguration,
                                recordArgument: LogicalPlan => Unit,
-                               breakingPolicy: BreakingPolicy): SlotConfiguration =
+                               breakingPolicy: PipelineBreakingPolicy): SlotConfiguration =
     lp match {
       case _: Apply =>
         rhs
