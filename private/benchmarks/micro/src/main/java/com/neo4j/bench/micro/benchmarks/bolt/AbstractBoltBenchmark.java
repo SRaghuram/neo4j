@@ -25,47 +25,50 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.time.Clock;
 
 import org.neo4j.bolt.BoltChannel;
-import org.neo4j.bolt.logging.NullBoltMessageLogger;
+import org.neo4j.bolt.runtime.BoltResponseHandler;
+import org.neo4j.bolt.runtime.BoltResult;
+import org.neo4j.bolt.runtime.BoltStateMachineFactory;
+import org.neo4j.bolt.runtime.BoltStateMachineFactoryImpl;
+import org.neo4j.bolt.runtime.Neo4jError;
 import org.neo4j.bolt.security.auth.Authentication;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
-import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriter;
+import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriterV1;
 import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
+import org.neo4j.bolt.v1.messaging.response.RecordMessage;
 import org.neo4j.bolt.v1.packstream.PackOutput;
-import org.neo4j.bolt.v1.runtime.BoltFactoryImpl;
-import org.neo4j.bolt.v1.runtime.BoltResponseHandler;
-import org.neo4j.bolt.v1.runtime.Neo4jError;
-import org.neo4j.bolt.v1.runtime.spi.BoltResult;
 import org.neo4j.cypher.result.QueryResult;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.kernel.api.bolt.BoltConnectionTracker;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
-import org.neo4j.kernel.impl.logging.NullLogService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.udc.UsageData;
 import org.neo4j.values.AnyValue;
 
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 {
     static final String USER_AGENT = "BoltPropertySerialization/0.0";
+    public static final long BOLT_VERSION = 1;
 
-    static BoltFactoryImpl boltFactory( GraphDatabaseAPI db )
+    static BoltStateMachineFactory boltFactory( GraphDatabaseAPI db )
     {
         DependencyResolver resolver = db.getDependencyResolver();
+        DatabaseManager databaseManager = resolver.resolveDependency( DatabaseManager.class );
         Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ),
                                                                  resolver.resolveDependency( UserManagerSupplier.class ) );
-        return new BoltFactoryImpl(
-                db,
+
+        return new BoltStateMachineFactoryImpl(
+                databaseManager,
                 new UsageData( null ),
-                NullLogService.getInstance(),
-                resolver.resolveDependency( ThreadToStatementContextBridge.class ),
                 authentication,
-                BoltConnectionTracker.NOOP,
-                Config.defaults()
+                Clock.systemUTC(),
+                Config.defaults(),
+                NullLogService.getInstance()
         );
     }
 
@@ -180,21 +183,14 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     static class DummyBoltResultHandler implements BoltResponseHandler
     {
         private final PackedOutputArray out = new PackedOutputArray();
-        private final BoltResponseMessageWriter writer = new BoltResponseMessageWriter(
+        private final BoltResponseMessageWriterV1 writer = new BoltResponseMessageWriterV1(
                 new Neo4jPackV1(),
                 out,
-                NullLogService.getInstance(),
-                NullBoltMessageLogger.getInstance() );
+                NullLogService.getInstance() );
 
         public byte[] result()
         {
             return out.bytes();
-        }
-
-        @Override
-        public void onStart()
-        {
-
         }
 
         public void reset()
@@ -210,7 +206,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                 @Override
                 public void visit( QueryResult.Record record ) throws Exception
                 {
-                    writer.onRecord( record );
+                    writer.write( new RecordMessage( record ) );
                     out.reset();
                 }
 
@@ -514,5 +510,5 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
     };
 
-    static final BoltChannel BOLT_CHANNEL = BoltChannel.open( "default", CHANNEL, NullBoltMessageLogger.getInstance() );
+    static final BoltChannel BOLT_CHANNEL = new BoltChannel( "bolt-1", "default", CHANNEL );
 }

@@ -7,8 +7,8 @@ package com.neo4j.bench.ldbc.utils;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.neo4j.cypher.internal.frontend.v3_4.phases.CompilationPhaseTracer;
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer;
+import org.neo4j.cypher.internal.v3_5.frontend.phases.CompilationPhaseTracer;
 
 public class LdbcCompilationTimeEventListener implements TimingCompilationTracer.EventListener
 {
@@ -18,6 +18,11 @@ public class LdbcCompilationTimeEventListener implements TimingCompilationTracer
     private final ConcurrentHashMap<String,Long> logicalPlanTimes = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String,Long> executionPlanTimes = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String,Long> totalCompilationTimes = new ConcurrentHashMap<>();
+
+    @Override
+    public void startQueryCompilation( String query )
+    {
+    }
 
     @Override
     public void queryCompiled( TimingCompilationTracer.QueryEvent queryEvent )

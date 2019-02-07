@@ -31,7 +31,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.impl.core.StartupStatistics;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
@@ -118,15 +117,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     @BenchmarkMode( Mode.SingleShotTime )
     public void recoverDatabase()
     {
-        GraphDatabaseAPI graphDatabaseService = (GraphDatabaseAPI) managedStore.startDb();
-        StartupStatistics startupStatistics = graphDatabaseService
-                .getDependencyResolver()
-                .resolveDependency( StartupStatistics.class );
-        int numberOfRecoveredTransactions = startupStatistics.numberOfRecoveredTransactions();
-        if ( numberOfRecoveredTransactions != expectedNumberOfRecoveredTransactions )
-        {
-            throw new RuntimeException( "Recovered unexpected number of transactions" );
-        }
+        managedStore.startDb();
     }
 
     @Override

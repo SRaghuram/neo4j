@@ -9,14 +9,14 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML, mapValuesOfList}
-import org.neo4j.cypher.internal.util.v3_4.symbols
-import org.neo4j.cypher.internal.util.v3_4.symbols.ListType
-import org.neo4j.cypher.internal.frontend.v3_4.ast._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.expressions.Expression
-import org.neo4j.cypher.internal.v3_4.logical.plans
-import org.neo4j.cypher.internal.v3_4.logical.plans.{Ascending, ColumnOrder, Descending}
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.ASTAnnotationMap
+import org.neo4j.cypher.internal.v3_5.ast.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.v3_5.expressions.Expression
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans.{Ascending, ColumnOrder, Descending}
+import org.neo4j.cypher.internal.v3_5.util.symbols
+import org.neo4j.cypher.internal.v3_5.util.symbols.ListType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
@@ -28,7 +28,7 @@ import scala.util.Random
 @BenchmarkEnabled(true)
 class MultiColumnOrderBy extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var MultiColumnOrderBy_runtime: String = _
@@ -103,7 +103,7 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: MultiColumnOrderByThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(params, threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
     assertExpectedRowCount(EXPECTED_ROW_COUNT, visitor)
   }
 }
@@ -111,12 +111,12 @@ class MultiColumnOrderBy extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class MultiColumnOrderByThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: MultiColumnOrderBy): Unit = {
     benchmarkState.params = mapValuesOfList("list", benchmarkState.values)
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.MultiColumnOrderBy_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.MultiColumnOrderBy_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

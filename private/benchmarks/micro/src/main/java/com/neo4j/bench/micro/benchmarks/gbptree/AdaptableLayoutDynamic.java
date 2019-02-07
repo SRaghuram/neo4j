@@ -19,9 +19,21 @@ class AdaptableLayoutDynamic extends AdaptableLayout
     }
 
     @Override
+    public int keySize( AdaptableKey adaptableKey )
+    {
+        return adaptableKey.totalSize;
+    }
+
+    @Override
     public boolean fixedSize()
     {
         return false;
+    }
+
+    @Override
+    public void minimalSplitter( AdaptableKey left, AdaptableKey right, AdaptableKey into )
+    {
+        copyKey( right, into, AdaptableKey.DATA_SIZE );
     }
 }
 

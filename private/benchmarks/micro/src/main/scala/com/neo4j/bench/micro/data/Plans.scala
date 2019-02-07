@@ -5,15 +5,15 @@
  */
 package com.neo4j.bench.micro.data
 
-import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
-
+import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.util.v3_4._
-import org.neo4j.cypher.internal.util.v3_4.attribution.SequentialIdGen
-import org.neo4j.cypher.internal.util.v3_4.symbols.CypherType
-import org.neo4j.cypher.internal.v3_4.expressions._
-import org.neo4j.cypher.internal.v3_4.logical.plans._
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.expressions
+import org.neo4j.cypher.internal.v3_5.expressions._
+import org.neo4j.cypher.internal.v3_5.logical.plans._
+import org.neo4j.cypher.internal.v3_5.util._
+import org.neo4j.cypher.internal.v3_5.util.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.v3_5.util.symbols.CypherType
 import org.neo4j.graphdb.{Label, RelationshipType}
 
 object Plans {
@@ -44,7 +44,7 @@ object Plans {
     PropertyKeyId(planContext.getPropertyKeyId(key))
 
   def astLabelToken(label: Label, planContext: PlanContext) =
-    LabelToken(label.name, astLabelId(label, planContext))
+    expressions.LabelToken(label.name, astLabelId(label, planContext))
 
   def astLabelId(label: Label, planContext: PlanContext): LabelId =
     LabelId(planContext.getLabelId(label.name))
@@ -55,8 +55,8 @@ object Plans {
   def astProperty(variable: Variable, key: String): Property =
     Property(variable, PropertyKeyName(key)(Pos))(Pos)
 
-  def astFunctionInvocation(functionName: String, variable: Variable): FunctionInvocation =
-    FunctionInvocation(astFunctionName(functionName), variable)(Pos)
+  def astFunctionInvocation(functionName: String, parameters: Expression*): FunctionInvocation =
+    FunctionInvocation(astFunctionName(functionName), distinct = false, parameters.toIndexedSeq)(Pos)
 
   def astFunctionName(functionName: String): FunctionName =
     FunctionName(functionName)(Pos)
@@ -66,15 +66,6 @@ object Plans {
 
   def astVariable(name: String): Variable =
     Variable(name)(Pos)
-
-  def astEquals(expression1: Expression, expression2: Expression): Expression =
-    Equals(expression1, expression2)(Pos)
-
-  def astNot(expression: Expression): Expression =
-    Not(expression)(Pos)
-
-  def astLiteralFor(bucket: Bucket, valueType: String): Literal =
-    astLiteralFor(bucket.value(), valueType)
 
   def astPointFunctionFor(xKey: String, xValue: Double, yKey: String, yValue: Double): FunctionInvocation =
     astPointFunctionFor(xKey, astLiteralFor(xValue, DBL), yKey, astLiteralFor(yValue, DBL))
@@ -149,6 +140,9 @@ object Plans {
     else
       ExclusiveBound(lower)
 
+  def astLiteralFor(bucket: Bucket, valueType: String): Literal =
+    astLiteralFor(bucket.value(), valueType)
+
   def astLiteralFor(value: Any, valueType: String): Literal = valueType match {
     case LNG => SignedDecimalIntegerLiteral(value.toString)(Pos)
     case DBL => DecimalDoubleLiteral(value.toString)(Pos)
@@ -156,4 +150,51 @@ object Plans {
     case STR_BIG => StringLiteral(value.toString)(Pos)
     case _ => throw new IllegalArgumentException(s"Invalid type: $valueType")
   }
+
+  def astEquals(expression1: Expression, expression2: Expression): Expression = Equals(expression1, expression2)(Pos)
+
+  def astNot(expression: Expression): Expression = Not(expression)(Pos)
+
+  def astGte(l: Expression, r: Expression): Expression = GreaterThanOrEqual(l, r)(Pos)
+
+  def astGt(l: Expression, r: Expression): Expression = GreaterThan(l, r)(Pos)
+
+  def astLte(l: Expression, r: Expression): Expression = LessThanOrEqual(l, r)(Pos)
+
+  def astLt(l: Expression, r: Expression): Expression = LessThan(l, r)(Pos)
+
+  def astMultiply(l: Expression, r: Expression): Expression = Multiply(l, r)(Pos)
+
+  def astAdd(l: Expression, r: Expression): Expression = Add(l, r)(Pos)
+
+  def astOrs(es: Expression*): Expression = Ors(es.toSet)(Pos)
+
+  def astAnds(es: Expression*): Expression = Ands(es.toSet)(Pos)
+
+  def astMap(kvs: (String, Expression)*): Expression = MapExpression(kvs.map {
+                                                                               case (key, value) => PropertyKeyName(key)(Pos) -> value
+                                                                             })(Pos)
+
+  def astReduce(accumulator: String, init: Expression, variable: String, list: Expression, expression: Expression): Expression =
+    ReduceExpression(astVariable(accumulator), init, astVariable(variable), list, expression)(Pos)
+
+  def astExtract(variable: String, list: Expression, expression: Expression): Expression =
+    ExtractExpression(astVariable(variable), list, None, Some(expression))(Pos)
+
+  def astFilter(variable: String, list: Expression, predicate: Expression): Expression =
+    expressions.FilterExpression(astVariable(variable), list, Some(predicate))(Pos)
+
+  def astAny(variable: String, list: Expression, predicate: Expression): Expression =
+    expressions.AnyIterablePredicate(astVariable(variable), list, Some(predicate))(Pos)
+
+  def astMapProjection(name: String, includeAllProps: Boolean, items: Seq[(String,Expression)]): Expression =
+    DesugaredMapProjection(astVariable(name), items.map(kv => LiteralEntry(PropertyKeyName(kv._1)(Pos), kv._2)(Pos)), includeAllProps)(Pos)
+
+  def astCase(input: Expression, alternatives: Seq[(Expression, Expression)], default: Option[Expression]): Expression =
+    expressions.CaseExpression(Some(input), alternatives.toIndexedSeq, default)(Pos)
+  def astIn(lhs: Expression, rhs: Expression): Expression = In(lhs, rhs)(Pos)
+
+  def astListLiteral(expressions: Seq[Expression]): Expression = ListLiteral(expressions)(Pos)
+
+  def astPathExpression(step: NodePathStep): Expression = PathExpression(step)(Pos)
 }

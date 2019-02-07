@@ -5,15 +5,14 @@
  */
 package com.neo4j.bench.micro.data;
 
-import org.junit.Test;
-
-import java.util.SplittableRandom;
-
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.util.RichRandom;
 import com.neo4j.bench.micro.data.CRS.Cartesian;
 import com.neo4j.bench.micro.data.CRS.WGS84;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
+import org.junit.Test;
+
+import java.util.SplittableRandom;
 
 import org.neo4j.graphdb.spatial.Point;
 import org.neo4j.values.storable.PointValue;
@@ -25,8 +24,6 @@ import static com.neo4j.bench.micro.data.PointGenerator.random;
 import static com.neo4j.bench.micro.data.PointGenerator.xFor;
 import static com.neo4j.bench.micro.data.PointGenerator.yFor;
 import static com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition.from;
-
-import static java.lang.Math.round;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.allOf;
@@ -36,6 +33,8 @@ import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+
+import static java.lang.Math.round;
 
 import static org.neo4j.values.storable.Values.pointValue;
 

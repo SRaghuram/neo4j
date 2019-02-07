@@ -21,18 +21,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static com.neo4j.bench.micro.JMHResultUtil.MODE_PARAM;
+import static com.neo4j.bench.micro.JMHResultUtil.THREADS_PARAM;
 import static com.neo4j.bench.micro.JMHResultUtil.extractParameterValues;
 import static com.neo4j.bench.micro.JMHResultUtil.parametersAsMap;
 import static com.neo4j.bench.micro.JMHResultUtil.toNameSuffix;
-
-import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertFalse;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static com.neo4j.bench.micro.JMHResultUtil.MODE_PARAM;
-import static com.neo4j.bench.micro.JMHResultUtil.THREADS_PARAM;
+
+import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
 
 public class JMHResultUtilTest
 {

@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark</artifactId>
-        <version>3.4.13-SNAPSHOT</version>
+        <version>3.5.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -41,6 +41,11 @@
             <artifactId>jmh-core</artifactId>
             <version>${jmh.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <scope>compile</scope>
+        </dependency>
         <!--TODO note: this is only used by IntelliJ build, not Maven+Terminal-->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
@@ -49,12 +54,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
             <version>${project.version}</version>
         </dependency>

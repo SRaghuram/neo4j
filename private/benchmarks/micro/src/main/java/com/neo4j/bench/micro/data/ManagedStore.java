@@ -16,6 +16,7 @@ import java.nio.file.Path;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
@@ -65,10 +66,22 @@ public class ManagedStore
         {
             throw new RuntimeException( "Can not start an already running database" );
         }
-        return db = new EnterpriseGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( storeAndConfig.store().toFile() )
-                .loadPropertiesFromFile( storeAndConfig.config().toFile().getAbsolutePath() )
-                .newGraphDatabase();
+        return db = newDb( storeAndConfig.store(), storeAndConfig.config() );
+    }
+
+    public static GraphDatabaseService newDb( Path dbPath )
+    {
+        return newDb( dbPath, null );
+    }
+
+    public static GraphDatabaseService newDb( Path dbPath, Path config )
+    {
+        GraphDatabaseBuilder builder = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbPath.toFile() );
+        if ( null != config )
+        {
+            builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );
+        }
+        return builder.newGraphDatabase();
     }
 
     public void tearDownDb() throws IOException

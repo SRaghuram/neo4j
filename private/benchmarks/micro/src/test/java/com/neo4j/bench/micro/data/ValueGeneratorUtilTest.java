@@ -18,12 +18,12 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.makeSelectivityCumul
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.middlePad;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.prefixPad;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.suffixPad;
-
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isOneOf;
+
+import static java.util.stream.Collectors.toList;
 
 public class ValueGeneratorUtilTest
 {

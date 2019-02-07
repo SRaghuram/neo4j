@@ -16,6 +16,7 @@ import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.IndexType;
 import com.neo4j.bench.micro.data.LabelKeyDefinition;
+import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.PropertyDefinition;
 import com.neo4j.bench.micro.data.Stores;
 import com.neo4j.bench.micro.data.ValueGeneratorFun;
@@ -41,7 +42,6 @@ import java.util.stream.Stream;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 
 import static com.neo4j.bench.micro.data.DataGenerator.createSchemaIndex;
 import static com.neo4j.bench.micro.data.DataGenerator.waitForSchemaIndexes;
@@ -137,12 +137,12 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
     public String description()
     {
         return "Tests performance of creating and deleting properties via " +
-                "GraphDatabaseService::removeProperty/setProperty.\n" +
-                "Benchmark invariants:\n" +
-                "- All nodes have the same number of properties\n" +
-                "- Number of properties on each node is stable throughout the experiment\n" +
-                "- The set of properties between any two nodes may differ by at most two\n" +
-                "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
+               "GraphDatabaseService::removeProperty/setProperty.\n" +
+               "Benchmark invariants:\n" +
+               "- All nodes have the same number of properties\n" +
+               "- Number of properties on each node is stable throughout the experiment\n" +
+               "- The set of properties between any two nodes may differ by at most two\n" +
+               "- Each property is on (almost exactly) same number of nodes --> every read does same amount of work";
     }
 
     @Override
@@ -186,10 +186,7 @@ public class CreateDeleteNodeProperties extends AbstractCoreBenchmark
                 SplittableRandom rng = RNGState.newRandom( 0 );
                 ValueGeneratorFun values = randPropertyFor( CreateDeleteNodeProperties_type ).value().create();
                 File storeDir = storeAndConfig.store().toFile();
-                GraphDatabaseService db = new EnterpriseGraphDatabaseFactory()
-                        .newEmbeddedDatabaseBuilder( storeDir )
-                        .loadPropertiesFromFile( storeAndConfig.config().toAbsolutePath().toString() )
-                        .newGraphDatabase();
+                GraphDatabaseService db = ManagedStore.newDb( storeDir.toPath(), storeAndConfig.config() );
                 List<String> keys = Stream.of( properties() ).map( PropertyDefinition::key ).collect( toList() );
                 TxBatch txBatch = new TxBatch( db, 1000 );
                 for ( int thread = 0; thread < threads; thread++ )

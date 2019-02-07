@@ -11,6 +11,7 @@ import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.ManagedStore;
 import com.neo4j.bench.micro.data.RelationshipDefinition;
 import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -28,7 +29,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 
 import static org.neo4j.graphdb.Direction.OUTGOING;
 import static org.neo4j.graphdb.Label.label;
@@ -83,7 +83,7 @@ public class ConstantDataVariableAugment extends BaseDatabaseBenchmark
             public void augment( int threads, Stores.StoreAndConfig storeAndConfig )
             {
                 File storeDir = storeAndConfig.store().toFile();
-                GraphDatabaseService db = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+                GraphDatabaseService db = ManagedStore.newDb( storeDir.toPath() );
                 try ( Transaction tx = db.beginTx() )
                 {
                     db.createNode();

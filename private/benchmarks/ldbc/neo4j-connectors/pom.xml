@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>ldbc</artifactId>
-        <version>3.4.13-SNAPSHOT</version>
+        <version>3.5.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -37,6 +37,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.opencypher</groupId>
+            <artifactId>util-9.0</artifactId>
+            <version>9.0.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
             <version>${neo4j-java-driver-version}</version>
@@ -49,12 +54,12 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
             <version>${project.version}</version>
         </dependency>

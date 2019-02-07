@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-#
-# Copyright (c) 2002-2019 "Neo4j,"
-# Neo4j Sweden AB [http://neo4j.com]
-# This file is part of Neo4j internal tooling.
-#
-
 
 if [ $# -lt 2 ] ; then
     echo "Expected at least 2 arguments, but got $#"
@@ -32,8 +26,9 @@ db_and_workloads=(
  "pokec;pokec_read"
  "qmul;qmul_read"
  "recommendations;recommendations"
- "socialnetwork;socialnetwork")
- 
+ "socialnetwork;socialnetwork"
+ "osmnodes;osmnodes")
+
 for i in "${db_and_workloads[@]}"; do
 
     # shellcheck disable=SC2206

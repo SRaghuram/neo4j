@@ -22,6 +22,8 @@ import java.util.Random;
 
 import org.neo4j.index.internal.gbptree.Writer;
 
+import static com.neo4j.bench.micro.Main.run;
+
 public class WriteGBPTree extends AbstractGBPTreeBenchmark
 {
     @ParamValues(
@@ -135,5 +137,10 @@ public class WriteGBPTree extends AbstractGBPTreeBenchmark
         layout.keyWithSeed( writerState.key, seed );
         layout.valueWithSeed( writerState.value, seed );
         writerState.writer.put( writerState.key, writerState.value );
+    }
+
+    public static void main( String... methods ) throws Exception
+    {
+        run( WriteGBPTree.class, methods );
     }
 }

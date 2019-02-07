@@ -7,8 +7,25 @@ package com.neo4j.bench.micro.benchmarks.gbptree;
 
 class AdaptableKey
 {
-    static int SIZE = Long.BYTES;
+    static int DATA_SIZE = Long.BYTES;
+    int totalSize;
     long value;
+
+    AdaptableKey( int totalSize )
+    {
+        this.totalSize = totalSize;
+    }
+
+    void copyFrom( AdaptableKey other, int targetLength )
+    {
+        this.totalSize = targetLength;
+        this.value = other.value;
+    }
+
+    int padding()
+    {
+        return totalSize - DATA_SIZE;
+    }
 
     @Override
     public String toString()

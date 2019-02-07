@@ -14,7 +14,6 @@ import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
-import org.neo4j.internal.kernel.api.Session;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -27,6 +26,7 @@ import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.kernel.api.Transaction.Type.implicit;
 
 public class Warmup
 {
@@ -128,8 +128,7 @@ public class Warmup
     private static Transaction startTransaction( Kernel kernel )
             throws TransactionFailureException
     {
-        Session session = kernel.beginSession( SecurityContext.AUTH_DISABLED );
-        return session.beginTransaction();
+        return kernel.beginTransaction( implicit, SecurityContext.AUTH_DISABLED );
     }
 
     private static Kernel getKernel( GraphDatabaseAPI db )
