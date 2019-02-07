@@ -19,6 +19,8 @@ import org.neo4j.graphdb.Resource;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<PrepareStoreCopyRequest>
 {
@@ -26,13 +28,15 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
     private final PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider;
     private final Database db;
     private final StoreFileStreamingProtocol streamingProtocol = new StoreFileStreamingProtocol();
+    private final Log log;
 
     public PrepareStoreCopyRequestHandler( CatchupServerProtocol catchupServerProtocol, Database db,
-            PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider )
+            PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider, LogProvider logProvider )
     {
         this.protocol = catchupServerProtocol;
         this.prepareStoreCopyFilesProvider = prepareStoreCopyFilesProvider;
         this.db = db;
+        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -42,9 +46,13 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
         PrepareStoreCopyResponse response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_LISTING_STORE );
         try
         {
+            if ( !canPrepareForStoreCopy( db ) )
+            {
+                return;
+            }
+
             if ( !DataSourceChecks.hasSameStoreId( prepareStoreCopyRequest.getStoreId(), db ) )
             {
-                channelHandlerContext.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
                 response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
             }
             else
@@ -58,12 +66,12 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
                 {
                     streamingProtocol.stream( channelHandlerContext, storeResource );
                 }
-                channelHandlerContext.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
                 response = createSuccessfulResponse( checkPointer, prepareStoreCopyFiles );
             }
         }
         finally
         {
+            channelHandlerContext.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
             channelHandlerContext.writeAndFlush( response ).addListener( closeablesListener );
             protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
         }
@@ -80,5 +88,15 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
     private Resource tryCheckpointAndAcquireMutex( CheckPointer checkPointer ) throws IOException
     {
         return db.getStoreCopyCheckPointMutex().storeCopy( () -> checkPointer.tryCheckPoint( new SimpleTriggerInfo( "Store copy" ) ) );
+    }
+
+    private boolean canPrepareForStoreCopy( Database db )
+    {
+        if ( !db.getDatabaseAvailabilityGuard().isAvailable() )
+        {
+            log.warn( "Unable to prepare for store copy because database '" + db.getDatabaseName() + "' is unavailable" );
+            return false;
+        }
+        return true;
     }
 }

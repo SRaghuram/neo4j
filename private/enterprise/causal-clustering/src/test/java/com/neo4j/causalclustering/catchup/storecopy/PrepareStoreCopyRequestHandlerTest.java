@@ -21,30 +21,37 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.StoreCopyCheckPointMutex;
 import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.logging.AssertableLogProvider;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 //TODO: Update with some test cases for issues related to databaseName
 public class PrepareStoreCopyRequestHandlerTest
 {
     private static final StoreId STORE_ID_MATCHING = new StoreId( 1, 2, 3, 4 );
     private static final StoreId STORE_ID_MISMATCHING = new StoreId( 5000, 6000, 7000, 8000 );
-    private final ChannelHandlerContext channelHandlerContext = mock( ChannelHandlerContext.class );
-    private EmbeddedChannel embeddedChannel;
 
-    private static final CheckPointer checkPointer = mock( CheckPointer.class );
-    private static final Database DATABASE = mock( Database.class );
-    private CatchupServerProtocol catchupServerProtocol;
+    private final ChannelHandlerContext channelHandlerContext = mock( ChannelHandlerContext.class );
+    private final CheckPointer checkPointer = mock( CheckPointer.class );
+    private final Database db = mock( Database.class );
+    private final DatabaseAvailabilityGuard availabilityGuard = mock( DatabaseAvailabilityGuard.class );
     private final PrepareStoreCopyFiles prepareStoreCopyFiles = mock( PrepareStoreCopyFiles.class );
+    private final AssertableLogProvider logProvider = new AssertableLogProvider();
+
+    private EmbeddedChannel embeddedChannel;
+    private CatchupServerProtocol catchupServerProtocol;
 
     @Before
     public void setup()
@@ -52,10 +59,11 @@ public class PrepareStoreCopyRequestHandlerTest
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( checkPointer );
         StoreCopyCheckPointMutex storeCopyCheckPointMutex = new StoreCopyCheckPointMutex();
-        when( DATABASE.getStoreCopyCheckPointMutex() ).thenReturn( storeCopyCheckPointMutex );
-        when( DATABASE.getDependencyResolver() ).thenReturn( dependencies );
-        PrepareStoreCopyRequestHandler subject = createHandler();
-        embeddedChannel = new EmbeddedChannel( subject );
+        when( db.getStoreCopyCheckPointMutex() ).thenReturn( storeCopyCheckPointMutex );
+        when( db.getDependencyResolver() ).thenReturn( dependencies );
+        when( availabilityGuard.isAvailable() ).thenReturn( true );
+        when( db.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
+        embeddedChannel = new EmbeddedChannel( createHandler() );
     }
 
     @Test
@@ -106,7 +114,7 @@ public class PrepareStoreCopyRequestHandlerTest
         when( channelHandlerContext.writeAndFlush( any( PrepareStoreCopyResponse.class ) ) ).thenReturn( channelPromise );
 
         ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-        when( DATABASE.getStoreCopyCheckPointMutex() ).thenReturn( new StoreCopyCheckPointMutex( lock ) );
+        when( db.getStoreCopyCheckPointMutex() ).thenReturn( new StoreCopyCheckPointMutex( lock ) );
         PrepareStoreCopyRequestHandler subjectHandler = createHandler();
 
         // and
@@ -128,16 +136,37 @@ public class PrepareStoreCopyRequestHandlerTest
         assertEquals( 0, lock.getReadLockCount() );
     }
 
+    @Test
+    public void shouldFailToPrepareForStoreCopyWhenDatabaseIsNotAvailable()
+    {
+        // database is unavailable
+        when( availabilityGuard.isAvailable() ).thenReturn( false );
+
+        // prepare store copy request is sent
+        embeddedChannel.writeInbound( new PrepareStoreCopyRequest( STORE_ID_MATCHING, DEFAULT_DATABASE_NAME ) );
+
+        // error response should be returned
+        assertEquals( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE, embeddedChannel.readOutbound() );
+        PrepareStoreCopyResponse response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_LISTING_STORE );
+        assertEquals( response, embeddedChannel.readOutbound() );
+
+        // warning should be logged
+        logProvider.containsMatchingLogCall( inLog( PrepareStoreCopyRequestHandler.class ).warn( containsString( "Unable to prepare for store copy" ) ) );
+
+        // and the protocol is reset to expect any message type after listing has been transmitted
+        assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
+    }
+
     private PrepareStoreCopyRequestHandler createHandler()
     {
         catchupServerProtocol = new CatchupServerProtocol();
         catchupServerProtocol.expect( CatchupServerProtocol.State.PREPARE_STORE_COPY );
-        when( DATABASE.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
+        when( db.getStoreId() ).thenReturn( new org.neo4j.storageengine.api.StoreId( 1, 2, 5, 3, 4 ) );
 
         PrepareStoreCopyFilesProvider prepareStoreCopyFilesProvider = mock( PrepareStoreCopyFilesProvider.class );
         when( prepareStoreCopyFilesProvider.prepareStoreCopyFiles( any() ) ).thenReturn( prepareStoreCopyFiles );
 
-        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, DATABASE, prepareStoreCopyFilesProvider );
+        return new PrepareStoreCopyRequestHandler( catchupServerProtocol, db, prepareStoreCopyFilesProvider, logProvider );
     }
 
     private void configureProvidedStoreCopyFiles( StoreResource[] atomicFiles, File[] files, LongSet indexIds, long lastCommitedTx )
