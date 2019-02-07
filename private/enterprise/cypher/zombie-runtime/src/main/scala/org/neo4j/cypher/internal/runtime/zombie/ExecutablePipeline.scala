@@ -27,7 +27,7 @@ case class ExecutablePipeline(id: Int,
   }
 }
 
-class PipelineState(pipeline: ExecutablePipeline, startState: OperatorState) {
+class PipelineState(val pipeline: ExecutablePipeline, startState: OperatorState) {
 
   def init(inputMorsel: MorselExecutionContext,
            context: QueryContext,

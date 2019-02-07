@@ -52,7 +52,10 @@ class SingleThreadedArgumentStateMap[T <: MorselAccumulator](val owningPlanId: I
   }
 
   override def decrement(argument: Long): Unit = {
-    counters(argument) -= 1
+    val curr = counters(argument)
+    if (curr == 0)
+      throw new IllegalStateException("Cannot have negative reference counts!")
+    counters(argument) = curr - 1
     debug("decr %03d to %s".format(argument, counters(argument)))
   }
 }

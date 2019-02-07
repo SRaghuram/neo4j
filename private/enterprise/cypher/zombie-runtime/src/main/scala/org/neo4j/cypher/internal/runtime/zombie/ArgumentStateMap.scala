@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Attribute, Id}
 
 /**
-  * Accumulator of morsels. Has internal state with it updates using provided morsel.
+  * Accumulator of morsels. Has internal state which it updates using provided morsel.
   */
 trait MorselAccumulator {
 
@@ -20,7 +20,7 @@ trait MorselAccumulator {
 }
 
 /**
-  * Maps every argument to one state object of type `T`.
+  * Maps every argument to one `MorselAccumulator`/`T`.
   */
 trait ArgumentStateMap[T <: MorselAccumulator] {
 

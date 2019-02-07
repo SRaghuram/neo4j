@@ -20,6 +20,9 @@ import scala.collection.mutable.ArrayBuffer
 
 class RowBufferDefinition(val id: Int,
                           val producingPipelineId: Int) {
+  // We need multiple counters because a buffer might need to
+  // reference count for multiple downstream reduce operators,
+  // at potentially different argument depths
   val counters = new ArrayBuffer[CounterDefinition]
 }
 
@@ -136,7 +139,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
           val counter = stateDefinition.newCounter(plan.id, argument.argumentSlotOffset)
           val pipeline = newPipeline(plan)
           pipeline.lhsRowBuffer = outputToBuffer(source)
-          forBuffersUntil(pipeline.lhsRowBuffer, argument, b => b.counters += counter)
+          addCounterToBuffers(pipeline.lhsRowBuffer, argument, counter)
           pipeline
         } else throw new UnsupportedOperationException("not implemented")
 
@@ -189,14 +192,14 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
 
   // HELPERS
 
-  private def forBuffersUntil(startBuffer: RowBufferDefinition,
-                              endBuffer: RowBufferDefinition,
-                              function: RowBufferDefinition => Unit): Unit = {
+  private def addCounterToBuffers(startBuffer: RowBufferDefinition,
+                                  endBuffer: RowBufferDefinition,
+                                  counter: CounterDefinition): Unit = {
     var b = startBuffer
     while (b != endBuffer) {
-      function(b)
+      b.counters += counter
       b = pipelines(b.producingPipelineId).lhsRowBuffer
     }
-    function(b)
+    b.counters += counter
   }
 }

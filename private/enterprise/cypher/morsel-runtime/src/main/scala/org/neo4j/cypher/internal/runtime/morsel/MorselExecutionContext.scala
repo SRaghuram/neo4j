@@ -43,11 +43,17 @@ class MorselExecutionContext(private val morsel: Morsel,
                              private var currentRow: Int,
                              val slots: SlotConfiguration) extends ExecutionContext with SlottedCompatible {
 
+  private var firstRow: Int = 0
+
   // BOOK KEEPING FOR REFERENCE COUNTING
 
   private var counters = new mutable.HashSet[Id]()
 
-  def setCounters(ids: Seq[Id]): Unit = counters ++= ids
+  def setCounters(ids: Seq[Id]): Unit = {
+    if (counters.nonEmpty)
+      throw new IllegalStateException("Should not have dangling counters!")
+    counters ++= ids
+  }
   def removeCounter(id: Id): Unit = counters -= id
   def getAndClearCounters(): Seq[Id] = {
     val x = counters.toSeq
@@ -58,7 +64,7 @@ class MorselExecutionContext(private val morsel: Morsel,
   // ARGUMENT COLUMNS
 
   def allArgumentRowIdsFor(offset: Int): Seq[Long] = {
-    var i = 0
+    var i = firstRow
     val res = new mutable.ArrayBuffer[Long]()
     var lastId = -1L
     while (i < validRows) {
@@ -71,8 +77,6 @@ class MorselExecutionContext(private val morsel: Morsel,
     }
     res
   }
-
-  private var firstRow: Int = 0
 
   def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, longsPerRow, refsPerRow, validRows, currentRow, slots)
 

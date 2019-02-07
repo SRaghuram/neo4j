@@ -32,7 +32,8 @@ trait ExecutionState extends ArgumentStateCreator {
   def pipelineState(pipelineId: Int): PipelineState
 
   /**
-    * Produce a morsel into the row buffer with id `bufferId`.
+    * Produce a morsel into the row buffer with id `bufferId`. This call
+    * also resets the morsel current row to the first row.
     */
   def produceMorsel(bufferId: Int, morsel: MorselExecutionContext): Unit
 

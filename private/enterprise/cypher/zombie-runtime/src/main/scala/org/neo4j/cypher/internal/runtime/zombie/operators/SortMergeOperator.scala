@@ -96,8 +96,8 @@ class SortMergeOperator(val planId: Id,
 
         if (sortedInputPerArgument.isEmpty && completedArguments.hasNext) {
           val inputs = completedArguments.next()
-          inputs.data.foreach { row =>
-            if (row.hasData) sortedInputPerArgument.add(row)
+          inputs.data.foreach { morsel =>
+            if (morsel.hasData) sortedInputPerArgument.add(morsel)
           }
         }
       }

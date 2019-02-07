@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentBufferDefinition, RowBufferDefinition, StateDefinition}
-import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.util.Preconditions
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -27,7 +27,7 @@ object SingleThreadedStateBuilder {
   * Not thread-safe implementation of [[ExecutionState]].
   */
 class SingleThreadedExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
-                                   pipelines: IndexedSeq[ExecutablePipeline],
+                                   pipelines: Seq[ExecutablePipeline],
                                    physicalPlan: PhysicalPlan) extends ExecutionState {
 
   private val asms = new ArgumentStateMaps
@@ -36,6 +36,9 @@ class SingleThreadedExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
     for (pipeline <- pipelines.toArray) yield {
       pipeline.createState(this)
     }
+
+  for (i <- pipelineStates.indices)
+    Preconditions.checkState(i == pipelineStates(i).pipeline.id, "Pipeline id does not match offset!")
 
   private val buffers: Array[MorselBuffer] =
     for (bufferDefinition <- bufferDefinitions.toArray) yield {
@@ -47,6 +50,9 @@ class SingleThreadedExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
           new MorselBuffer(counters, asms)
       }
     }
+
+  for (i <- bufferDefinitions.indices)
+    Preconditions.checkState(i == bufferDefinitions(i).id, "Buffer definition id does not match offset!")
 
   private val continuations = new Array[RegularBuffer[PipelineTask]](pipelines.size).map(i => new RegularBuffer[PipelineTask]())
 
@@ -133,6 +139,7 @@ class MorselBuffer(counters: Seq[Id],
       asm = argumentStateMaps(reducePlanId)
       argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
     } asm.increment(argumentId)
+    morsel.resetToFirstRow()
     morsel.setCounters(counters)
     data.append(morsel)
   }
@@ -161,7 +168,6 @@ class ArgumentBuffer(argumentSlotOffset: Int,
       argumentRowCount += 1
       morsel.moveToNextRow()
     }
-    morsel.resetToFirstRow()
     super.produce(morsel)
   }
 }

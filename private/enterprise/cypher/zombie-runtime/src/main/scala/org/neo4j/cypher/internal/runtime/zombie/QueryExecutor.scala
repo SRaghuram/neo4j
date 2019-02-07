@@ -74,7 +74,6 @@ class SingleThreadedQueryExecutor(transactionBinder: TransactionBinder) extends 
       task.executeWorkUnit(resources, output)
 
       if (pipeline.output != null ) {
-        output.resetToFirstRow()
         executionState.produceMorsel(pipeline.output.id, output)
       }
 
