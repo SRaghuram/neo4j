@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, SlotConfigurations}
-import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder.NO_PRODUCING_PIPELINE
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
@@ -18,22 +18,29 @@ import scala.collection.mutable.ArrayBuffer
 // TODO: refactor this file into a proper builder pattern, where the result of
 //  building is immutable definitions, and mutability is visible inside the builder only
 
-class RowBufferDefinition(val id: Int,
-                          val producingPipelineId: Int) {
+case class BufferId(x: Int) extends AnyVal
+case class PipelineId(x: Int) extends AnyVal
+
+object PipelineId {
+  val NO_PIPELINE: PipelineId = PipelineId(-1)
+}
+
+class RowBufferDefinition(val id: BufferId,
+                          val producingPipelineId: PipelineId) {
   // We need multiple counters because a buffer might need to
   // reference count for multiple downstream reduce operators,
   // at potentially different argument depths
   val counters = new ArrayBuffer[CounterDefinition]
 }
 
-class ArgumentBufferDefinition(id: Int,
-                               producingPipelineId: Int,
+class ArgumentBufferDefinition(id: BufferId,
+                               producingPipelineId: PipelineId,
                                applyPlanId: Id,
                                val argumentSlotOffset: Int) extends RowBufferDefinition(id, producingPipelineId)
 
 case class CounterDefinition(reducingPlanId: Id, argumentSlotOffset: Int)
 
-class Pipeline(val id: Int,
+class Pipeline(val id: PipelineId,
                val headPlan: LogicalPlan) {
   var output: RowBufferDefinition = _
   val middlePlans = new ArrayBuffer[LogicalPlan]
@@ -46,18 +53,18 @@ class StateDefinition(val physicalPlan: PhysicalPlan) {
   val counters = new ArrayBuffer[CounterDefinition]
   val rowBuffers = new ArrayBuffer[RowBufferDefinition]
 
-  def newStreamingBuffer(producingPipelineId: Int): RowBufferDefinition = {
+  def newStreamingBuffer(producingPipelineId: PipelineId): RowBufferDefinition = {
     val x = rowBuffers.size
-    val rows = new RowBufferDefinition(x, producingPipelineId)
+    val rows = new RowBufferDefinition(BufferId(x), producingPipelineId)
     rowBuffers += rows
     rows
   }
 
-  def newArgumentBuffer(producingPipelineId: Int,
+  def newArgumentBuffer(producingPipelineId: PipelineId,
                         applyPlanId: Id,
                         argumentSlotOffset: Int): ArgumentBufferDefinition = {
     val x = rowBuffers.size
-    val rows = new ArgumentBufferDefinition(x, producingPipelineId, applyPlanId, argumentSlotOffset)
+    val rows = new ArgumentBufferDefinition(BufferId(x), producingPipelineId, applyPlanId, argumentSlotOffset)
     rowBuffers += rows
     rows
   }
@@ -83,7 +90,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
   val pipelines = new ArrayBuffer[Pipeline]
 
   private def newPipeline(plan: LogicalPlan) = {
-    val pipeline = new Pipeline(pipelines.size, plan)
+    val pipeline = new Pipeline(PipelineId(pipelines.size), plan)
     pipelines += pipeline
     pipeline
   }
@@ -102,7 +109,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
 
   override protected def initialArgument(leftLeaf: LogicalPlan): ArgumentBufferDefinition = {
     val initialArgumentSlotOffset = slotConfigurations(leftLeaf.id).getArgumentLongOffsetFor(Id.INVALID_ID)
-    stateDefinition.initBuffer = stateDefinition.newArgumentBuffer(NO_PRODUCING_PIPELINE, Id.INVALID_ID, initialArgumentSlotOffset)
+    stateDefinition.initBuffer = stateDefinition.newArgumentBuffer(NO_PIPELINE, Id.INVALID_ID, initialArgumentSlotOffset)
     stateDefinition.initBuffer
   }
 
@@ -198,7 +205,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     var b = startBuffer
     while (b != endBuffer) {
       b.counters += counter
-      b = pipelines(b.producingPipelineId).lhsRowBuffer
+      b = pipelines(b.producingPipelineId.x).lhsRowBuffer
     }
     b.counters += counter
   }

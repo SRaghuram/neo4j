@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentBufferDefinition, RowBufferDefinition, StateDefinition}
+import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -38,7 +38,7 @@ class SingleThreadedExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
     }
 
   for (i <- pipelineStates.indices)
-    Preconditions.checkState(i == pipelineStates(i).pipeline.id, "Pipeline id does not match offset!")
+    Preconditions.checkState(i == pipelineStates(i).pipeline.id.x, "Pipeline id does not match offset!")
 
   private val buffers: Array[MorselBuffer] =
     for (bufferDefinition <- bufferDefinitions.toArray) yield {
@@ -52,29 +52,29 @@ class SingleThreadedExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
     }
 
   for (i <- bufferDefinitions.indices)
-    Preconditions.checkState(i == bufferDefinitions(i).id, "Buffer definition id does not match offset!")
+    Preconditions.checkState(i == bufferDefinitions(i).id.x, "Buffer definition id does not match offset!")
 
   private val continuations = new Array[RegularBuffer[PipelineTask]](pipelines.size).map(i => new RegularBuffer[PipelineTask]())
 
-  override def produceMorsel(outputId: Int,
-                             output: MorselExecutionContext): Unit = buffers(outputId).produce(output)
+  override def produceMorsel(bufferId: BufferId,
+                             output: MorselExecutionContext): Unit = buffers(bufferId.x).produce(output)
 
-  override def consumeMorsel(id: Int): MorselExecutionContext = buffers(id).consume()
+  override def consumeMorsel(bufferId: BufferId): MorselExecutionContext = buffers(bufferId.x).consume()
 
-  override def closeMorsel(rowBufferId: Int,
+  override def closeMorsel(bufferId: BufferId,
                            inputMorsel: MorselExecutionContext): Unit = {
-    buffers(rowBufferId).close(inputMorsel)
+    buffers(bufferId.x).close(inputMorsel)
   }
 
-  override def addContinuation(task: PipelineTask): Unit = continuations(task.pipeline.id).produce(task)
+  override def addContinuation(task: PipelineTask): Unit = continuations(task.pipeline.id.x).produce(task)
 
-  override def continue(p: ExecutablePipeline): PipelineTask = continuations(p.id).consume()
+  override def continue(p: ExecutablePipeline): PipelineTask = continuations(p.id.x).consume()
 
   override def initialize(): Unit = {
     buffers.head.produce(MorselExecutionContext.createInitialRow())
   }
 
-  override def pipelineState(pipelineId: Int): PipelineState = pipelineStates(pipelineId)
+  override def pipelineState(pipelineId: PipelineId): PipelineState = pipelineStates(pipelineId.x)
 
   override final def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
                                                                     constructor: () => T): ArgumentStateMap[T] = {

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
+import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
@@ -29,28 +30,28 @@ trait ExecutionState extends ArgumentStateCreator {
   /**
     * Get the [[PipelineState]] of this query execution for the given `pipelineId`.
     */
-  def pipelineState(pipelineId: Int): PipelineState
+  def pipelineState(pipelineId: PipelineId): PipelineState
 
   /**
     * Produce a morsel into the row buffer with id `bufferId`. This call
     * also resets the morsel current row to the first row.
     */
-  def produceMorsel(bufferId: Int, morsel: MorselExecutionContext): Unit
+  def produceMorsel(bufferId: BufferId, morsel: MorselExecutionContext): Unit
 
   /**
     * Consume a morsel from the row buffer with id `bufferId`.
     *
     * @return the morsel to consume, or `null` if no morsel was available
     */
-  def consumeMorsel(bufferId: Int): MorselExecutionContext
+  def consumeMorsel(bufferId: BufferId): MorselExecutionContext
 
   /**
     * Close this morsel, meaning that we are done consuming it.
     *
-    * @param rowBufferId buffer from which this morsel was consumed
+    * @param bufferId buffer from which this morsel was consumed
     * @param inputMorsel morsel to close
     */
-  def closeMorsel(rowBufferId: Int,
+  def closeMorsel(bufferId: BufferId,
                   inputMorsel: MorselExecutionContext): Unit
 
   /**
