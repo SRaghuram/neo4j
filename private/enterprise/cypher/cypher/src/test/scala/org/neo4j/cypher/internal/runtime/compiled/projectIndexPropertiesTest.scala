@@ -6,31 +6,32 @@
 package org.neo4j.cypher.internal.runtime.compiled
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.LogicalPlanningTestSupport2
+import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.PlanMatchHelp
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.v4_0.expressions.{LabelToken, Property, Variable}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.v4_0.util.{LabelId, PropertyKeyId}
+import org.neo4j.cypher.internal.v4_0.util.LabelId
 
-class projectIndexPropertiesTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
+class projectIndexPropertiesTest extends CypherFunSuite with LogicalPlanningTestSupport2 with PlanMatchHelp {
 
   type IndexOperator = GetValueFromIndexBehavior => IndexLeafPlan
 
-  val indexSeek: IndexOperator = getValue => IndexSeek("n:Awesome(prop = 42)", getValue)
-  val uniqueIndexSeek: IndexOperator = getValue => NodeUniqueIndexSeek(
+  private val indexSeek: IndexOperator = getValue => IndexSeek("n:Awesome(prop = 42)", getValue)
+  private val uniqueIndexSeek: IndexOperator = getValue => NodeUniqueIndexSeek(
     "n",
     LabelToken("Awesome", LabelId(0)),
-    Seq(IndexedProperty(PropertyKeyToken(PropertyKeyName("prop") _, PropertyKeyId(0)), getValue)),
-    SingleQueryExpression(SignedDecimalIntegerLiteral("42") _),
+    Seq(indexedProperty("prop", 0, getValue)),
+    SingleQueryExpression(literalInt(42)),
     Set.empty,
     IndexOrderNone)
-  val indexContainsScan: IndexOperator = getValue => IndexSeek("n:Awesome(prop CONTAINS 'foo')", getValue)
-  val indexEndsWithScan: IndexOperator = getValue => IndexSeek("n:Awesome(prop ENDS WITH 'foo')", getValue)
-  val indexScan: IndexOperator = getValue => IndexSeek("n:Awesome(prop)", getValue)
+  private val indexContainsScan: IndexOperator = getValue => IndexSeek("n:Awesome(prop CONTAINS 'foo')", getValue)
+  private val indexEndsWithScan: IndexOperator = getValue => IndexSeek("n:Awesome(prop ENDS WITH 'foo')", getValue)
+  private val indexScan: IndexOperator = getValue => IndexSeek("n:Awesome(prop)", getValue)
 
-  val expectedProjections = Map("n.prop" -> prop("n", "prop"))
+  private val expectedProjections = Map("n.prop" -> prop("n", "prop"))
 
-  val indexOperators = Seq(indexSeek, uniqueIndexSeek, indexContainsScan, indexEndsWithScan, indexScan)
+  private val indexOperators = Seq(indexSeek, uniqueIndexSeek, indexContainsScan, indexEndsWithScan, indexScan)
 
   for(indexOperator <- indexOperators) {
 
@@ -53,7 +54,7 @@ class projectIndexPropertiesTest extends CypherFunSuite with LogicalPlanningTest
       val updater = projectIndexProperties
       val emptyTable = SemanticTable()
 
-      val (newPlan, newTable) = updater(doNotGetValues, emptyTable)
+      val (newPlan, _) = updater(doNotGetValues, emptyTable)
       newPlan should equal(doNotGetValues)
     }
 

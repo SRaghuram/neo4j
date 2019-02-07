@@ -11,21 +11,18 @@ import org.neo4j.cypher.internal.ir.v4_0.CreateNode
 import org.neo4j.cypher.internal.v4_0.logical.plans._
 import org.neo4j.cypher.internal.v4_0.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 
 //noinspection NameBooleanParameters
 class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
 
-  private val x = "x"
-  private val z = "z"
-  private val r = "r"
   private val semanticTable = SemanticTable()
 
   test("zero size argument for single all nodes scan") {
     // given
-    val plan = AllNodesScan(x, Set.empty)
+    val plan = AllNodesScan("x", Set.empty)
 
     // when
     val arguments = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS).argumentSizes
@@ -37,8 +34,8 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
 
   test("zero size argument for only leaf operator") {
     // given
-    val leaf = AllNodesScan(x, Set.empty)
-    val expand = Expand(leaf, x, SemanticDirection.INCOMING, Seq.empty, z, r, ExpandAll)
+    val leaf = AllNodesScan("x", Set.empty)
+    val expand = Expand(leaf, "x", INCOMING, Seq.empty, "z", "r", ExpandAll)
 
     // when
     val arguments = SlotAllocation.allocateSlots(expand, semanticTable, BREAK_FOR_LEAFS).argumentSizes
