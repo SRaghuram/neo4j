@@ -9,9 +9,18 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
-import org.neo4j.index.internal.gbptree.TreePrinter;
+import org.neo4j.index.internal.gbptree.PrintingGBPTreeVisitor;
+import org.neo4j.index.internal.gbptree.GBPTreeStructure;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
+import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.scheduler.JobScheduler;
 
+import static org.neo4j.graphdb.config.Configuration.EMPTY;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 /**
@@ -25,7 +34,7 @@ public class DumpGBPTree
      * @param args arguments.
      * @throws IOException on I/O error.
      */
-    public static void main( String[] args ) throws IOException
+    public static void main( String[] args ) throws Exception
     {
         if ( args.length == 0 )
         {
@@ -35,6 +44,21 @@ public class DumpGBPTree
 
         File file = new File( args[0] );
         System.out.println( "Dumping " + file.getAbsolutePath() );
-        TreePrinter.printHeader( new DefaultFileSystemAbstraction(), createInitialisedScheduler(), file, System.out );
+
+        try ( JobScheduler jobScheduler = createInitialisedScheduler();
+              PageCache pageCache = pageCache( jobScheduler ) )
+        {
+            PrintingGBPTreeVisitor visitor = new PrintingGBPTreeVisitor( System.out, false, false, false, false );
+            GBPTreeStructure.visitHeader( pageCache, file, visitor );
+        }
+    }
+
+    private static PageCache pageCache( JobScheduler jobScheduler )
+    {
+        SingleFilePageSwapperFactory swapper = new SingleFilePageSwapperFactory();
+        DefaultFileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+        swapper.open( fs, EMPTY );
+        PageCursorTracerSupplier cursorTracerSupplier = PageCursorTracerSupplier.NULL;
+        return new MuninnPageCache( swapper, 100, NULL, cursorTracerSupplier, EmptyVersionContextSupplier.EMPTY, jobScheduler );
     }
 }
