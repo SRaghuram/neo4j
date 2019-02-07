@@ -13,11 +13,11 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.PointGenerator.{grid, random}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.util.v3_4.symbols
-import org.neo4j.cypher.internal.v3_4.logical.plans
-import org.neo4j.cypher.internal.v3_4.logical.plans._
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans._
+import org.neo4j.cypher.internal.v3_5.util.symbols
 import org.neo4j.graphdb.spatial.Point
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.{space_filling_curve_bottom_threshold, space_filling_curve_extra_levels, space_filling_curve_max_bits, space_filling_curve_top_threshold}
@@ -181,9 +181,10 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     val indexSeek = plans.NodeIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
-      Seq(astPropertyKeyToken(KEY, planContext)),
+      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
       seekExpression,
-      Set.empty)(IdGen)
+      Set.empty,
+      IndexOrderNone)(IdGen)
     val resultColumns = List(node.name)
     val produceResults = ProduceResult(indexSeek, resultColumns)(IdGen)
 
@@ -199,7 +200,7 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
     val point = threadState.points.next(rngState.rng)
     val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("point" -> point).asJava)
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(params, tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(params, tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(threadState.expectedRowCountMin, threadState.expectedRowCountMax, visitor)
   }
 }
@@ -208,14 +209,14 @@ class VariableDensityPointIndexSeek extends AbstractSpatialBenchmark {
 class VariableDensityPointIndexSeekThreadState {
   private val TOLERATED_ROW_COUNT_ERROR = 0.1
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
   var points: ValueGeneratorFun[Point] = _
   var expectedRowCountMin: Int = _
   var expectedRowCountMax: Int = _
 
   @Setup
   def setUp(benchmark: VariableDensityPointIndexSeek): Unit = {
-    executionResult = benchmark.buildPlan(from(benchmark.VariableDensityPointIndexSeek_runtime))
+    executablePlan = benchmark.buildPlan(from(benchmark.VariableDensityPointIndexSeek_runtime))
     points = random(
       benchmark.searchExtentMinX,
       benchmark.searchExtentMaxX,

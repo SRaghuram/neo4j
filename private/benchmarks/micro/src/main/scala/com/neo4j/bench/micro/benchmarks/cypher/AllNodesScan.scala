@@ -7,11 +7,11 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
-import com.neo4j.bench.micro.data.Plans.{IdGen,  astVariable}
+import com.neo4j.bench.micro.data.Plans.{IdGen, astVariable}
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.logical.plans
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -19,7 +19,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class AllNodesScan extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var AllNodesScan_runtime: String = _
@@ -50,7 +50,7 @@ class AllNodesScan extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: AllNodesScanThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(EXPECTED_ROW_COUNT, visitor)
   }
 }
@@ -58,11 +58,11 @@ class AllNodesScan extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class AllNodesScanThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: AllNodesScan): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.AllNodesScan_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.AllNodesScan_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

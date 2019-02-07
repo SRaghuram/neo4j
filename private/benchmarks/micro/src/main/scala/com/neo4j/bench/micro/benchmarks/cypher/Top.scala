@@ -11,12 +11,12 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{DBL, LNG, STR_SML, _}
-import org.neo4j.cypher.internal.util.v3_4.symbols
-import org.neo4j.cypher.internal.frontend.v3_4.ast._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.logical.plans
-import org.neo4j.cypher.internal.v3_4.logical.plans.Ascending
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.ASTAnnotationMap
+import org.neo4j.cypher.internal.v3_5.ast.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans.Ascending
+import org.neo4j.cypher.internal.v3_5.util.symbols
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
@@ -29,7 +29,7 @@ import scala.collection.mutable
 @BenchmarkEnabled(true)
 class Top extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var Top_runtime: String = _
@@ -74,7 +74,7 @@ class Top extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: TopThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(params, threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
     assertExpectedRowCount(Top_limit.toInt, visitor)
   }
 }
@@ -82,7 +82,7 @@ class Top extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class TopThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: Top): Unit = {
@@ -92,7 +92,7 @@ class TopThreadState {
       "list" -> unwindListValues,
       "limit" -> Long.box(benchmarkState.Top_limit)).asJava
     benchmarkState.params = ValueUtils.asMapValue(paramsMap)
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.Top_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.Top_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

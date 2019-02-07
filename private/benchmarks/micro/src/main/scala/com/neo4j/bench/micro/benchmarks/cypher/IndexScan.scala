@@ -11,9 +11,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.ascGeneratorFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans.{DoNotGetValue, IndexOrderNone, IndexedProperty}
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -22,7 +23,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class IndexScan extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var IndexScan_runtime: String = _
@@ -58,8 +59,9 @@ class IndexScan extends AbstractCypherBenchmark {
     val indexSeek = plans.NodeIndexScan(
       node.name,
       astLabelToken(LABEL, planContext),
-      astPropertyKeyToken(KEY, planContext),
-      Set.empty)(IdGen)
+      IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue),
+      Set.empty,
+      IndexOrderNone)(IdGen)
     val resultColumns = List(node.name)
     val produceResults = plans.ProduceResult(indexSeek, resultColumns)(IdGen)
 
@@ -72,7 +74,7 @@ class IndexScan extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: IndexScanThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, visitor)
   }
 }
@@ -80,11 +82,11 @@ class IndexScan extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class IndexScanThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: IndexScan): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.IndexScan_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.IndexScan_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

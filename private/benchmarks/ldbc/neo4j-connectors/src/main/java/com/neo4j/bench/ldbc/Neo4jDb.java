@@ -415,7 +415,6 @@ public class Neo4jDb extends Db
     // ==========================================  UTILS  =============================================================
     // ================================================================================================================
 
-    // TODO take Neo4j product version, Community vs Enterprise, as input
     public static GraphDatabaseService newDb( File dbDir, File configFile )
     {
         return newDbBuilder( dbDir, configFile ).newGraphDatabase();

@@ -28,7 +28,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.io.fs.FileUtils;
@@ -174,19 +173,19 @@ public class DataGenerator
         this.relationshipLocality = config.relationshipLocality();
         this.graphWriter = config.graphWriter();
         this.nodePropertyKeys = Stream.of( config.nodeProperties() )
-                .map( PropertyDefinition::key )
-                .toArray( String[]::new );
+                                      .map( PropertyDefinition::key )
+                                      .toArray( String[]::new );
         this.nodePropertyValues = Stream.of( config.nodeProperties() )
-                .map( PropertyDefinition::value )
-                .map( ValueGeneratorFactory::create )
-                .toArray( ValueGeneratorFun[]::new );
+                                        .map( PropertyDefinition::value )
+                                        .map( ValueGeneratorFactory::create )
+                                        .toArray( ValueGeneratorFun[]::new );
         this.relationshipPropertyKeys = Stream.of( config.relationshipProperties() )
-                .map( PropertyDefinition::key )
-                .toArray( String[]::new );
+                                              .map( PropertyDefinition::key )
+                                              .toArray( String[]::new );
         this.relationshipPropertyValues = Stream.of( config.relationshipProperties() )
-                .map( PropertyDefinition::value )
-                .map( ValueGeneratorFactory::create )
-                .toArray( ValueGeneratorFun[]::new );
+                                                .map( PropertyDefinition::value )
+                                                .map( ValueGeneratorFactory::create )
+                                                .toArray( ValueGeneratorFun[]::new );
         this.propertyLocality = config.propertyLocality();
         this.propertyOrder = config.propertyOrder();
         this.labels = config.labels();
@@ -314,10 +313,7 @@ public class DataGenerator
         {
             long startTime = System.currentTimeMillis();
 
-            db = new EnterpriseGraphDatabaseFactory()
-                    .newEmbeddedDatabaseBuilder( storeDir.toFile() )
-                    .loadPropertiesFromFile( neo4jConfig.toFile().getAbsolutePath() )
-                    .newGraphDatabase();
+            db = ManagedStore.newDb( storeDir, neo4jConfig );
 
             System.out.printf( "Creating Nodes... " );
             // NOTE: for node identifiers, use array instead of file, because random access is needed
@@ -385,10 +381,7 @@ public class DataGenerator
         GraphDatabaseService db = null;
         try
         {
-            db = new EnterpriseGraphDatabaseFactory()
-                    .newEmbeddedDatabaseBuilder( storeDir.toFile() )
-                    .loadPropertiesFromFile( neo4jConfig.toFile().getAbsolutePath() )
-                    .newGraphDatabase();
+            db = ManagedStore.newDb( storeDir, neo4jConfig );
 
             System.out.printf( "Creating Temporary Node Label Files... " );
             long startTime = System.currentTimeMillis();
@@ -511,8 +504,8 @@ public class DataGenerator
             return createRelationshipsCollocatedByStartNodeTx( db, nodeIds, relationshipTypeIndexReaders );
         default:
             throw new IllegalArgumentException( format( "Unexpected relationship locality: %s\nExpected one of: %s",
-                    relationshipLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        relationshipLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -529,8 +522,8 @@ public class DataGenerator
             return createRelationshipsCollocatedByStartNodeBatch( inserter, nodeIds, relationshipTypeIndexReaders );
         default:
             throw new IllegalArgumentException( format( "Unexpected relationship locality: %s\nExpected one of: %s",
-                    relationshipLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        relationshipLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -775,8 +768,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -795,8 +788,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -929,8 +922,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -949,8 +942,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected property locality: %s\nExpected one of: %s",
-                    propertyLocality.name(),
-                    Arrays.toString( PropertyLocality.values() ) ) );
+                                                        propertyLocality.name(),
+                                                        Arrays.toString( PropertyLocality.values() ) ) );
         }
     }
 
@@ -1083,8 +1076,8 @@ public class DataGenerator
             break;
         default:
             throw new IllegalArgumentException( format( "Unexpected label locality: %s\nExpected one of: %s",
-                    labelLocality.name(),
-                    Arrays.toString( LabelLocality.values() ) ) );
+                                                        labelLocality.name(),
+                                                        Arrays.toString( LabelLocality.values() ) ) );
         }
     }
 
@@ -1161,33 +1154,33 @@ public class DataGenerator
     private void createMandatoryNodeConstraints( GraphDatabaseService db )
     {
         Stream.of( mandatoryNodeConstraints )
-                .forEach( def ->
-                {
-                    assertIsNonComposite( def );
-                    createMandatoryNodeConstraint( db, def.label(), def.keys()[0] );
-                } );
+              .forEach( def ->
+                        {
+                            assertIsNonComposite( def );
+                            createMandatoryNodeConstraint( db, def.label(), def.keys()[0] );
+                        } );
     }
 
     private void createMandatoryRelationshipConstraints( GraphDatabaseService db )
     {
         Stream.of( mandatoryRelationshipConstraints )
-                .forEach( def -> createMandatoryRelationshipConstraint( db, def.type(), def.key() ) );
+              .forEach( def -> createMandatoryRelationshipConstraint( db, def.type(), def.key() ) );
     }
 
     private void createUniquenessConstraints( GraphDatabaseService db )
     {
         Stream.of( uniqueConstraints )
-                .forEach( def ->
-                {
-                    assertIsNonComposite( def );
-                    createUniquenessConstraint( db, def.label(), def.keys()[0] );
-                } );
+              .forEach( def ->
+                        {
+                            assertIsNonComposite( def );
+                            createUniquenessConstraint( db, def.label(), def.keys()[0] );
+                        } );
     }
 
     private void createSchemaIndexes( GraphDatabaseService db )
     {
         Stream.of( schemaIndexes )
-                .forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
+              .forEach( def -> createSchemaIndex( db, def.label(), def.keys() ) );
     }
 
     private void waitForSchemaIndexes( GraphDatabaseService db )
@@ -1222,7 +1215,7 @@ public class DataGenerator
     }
 
     public static void createMandatoryRelationshipConstraint( GraphDatabaseService db, RelationshipType type,
-            String key )
+                                                              String key )
     {
         try ( Transaction tx = db.beginTx() )
         {
@@ -1259,7 +1252,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite schema index on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 
@@ -1273,7 +1266,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite key on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 
@@ -1328,7 +1321,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite schema index on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 
@@ -1342,7 +1335,7 @@ public class DataGenerator
         catch ( Exception e )
         {
             throw new RuntimeException( format( "Error creating composite key on (%s,%s)",
-                    label, Arrays.toString( keys ) ), e );
+                                                label, Arrays.toString( keys ) ), e );
         }
     }
 

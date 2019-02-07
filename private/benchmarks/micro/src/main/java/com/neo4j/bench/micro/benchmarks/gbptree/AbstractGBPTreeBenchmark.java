@@ -30,6 +30,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
@@ -142,7 +143,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 }
             }
         }
-        gbpTree.checkpoint( IOLimiter.unlimited() );
+        gbpTree.checkpoint( IOLimiter.UNLIMITED );
     }
 
     static Random randomSequence( long pos )
@@ -169,14 +170,15 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 tracer,
                 tracerSupplier,
                 log,
-                EmptyVersionContextSupplier.EMPTY );
+                EmptyVersionContextSupplier.EMPTY,
+                JobSchedulerFactory.createInitialisedScheduler() );
         return factory.getOrCreatePageCache();
     }
 
     private static GBPTree<AdaptableKey,AdaptableValue> createGBPTree(
             PageCache pageCache,
             File indexFile,
-            AdaptableLayout layout ) throws IOException
+            AdaptableLayout layout )
     {
         return new GBPTree<>(
                 pageCache,

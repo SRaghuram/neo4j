@@ -11,12 +11,12 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.frontend.v3_4.ast._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.util.v3_4.symbols
-import org.neo4j.cypher.internal.v3_4.logical.plans
-import org.neo4j.cypher.internal.v3_4.logical.plans.Ascending
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.ASTAnnotationMap
+import org.neo4j.cypher.internal.v3_5.ast.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans.Ascending
+import org.neo4j.cypher.internal.v3_5.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
 import org.openjdk.jmh.annotations._
@@ -25,7 +25,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class OrderBy extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var OrderBy_runtime: String = _
@@ -66,7 +66,7 @@ class OrderBy extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: OrderByThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(params, threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(params, threadState.tx).accept(visitor)
     assertExpectedRowCount(EXPECTED_ROW_COUNT, visitor)
   }
 }
@@ -74,14 +74,14 @@ class OrderBy extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class OrderByThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: OrderBy): Unit = {
     val list = listOf(benchmarkState.OrderBy_type, benchmarkState.EXPECTED_ROW_COUNT)
     Collections.shuffle(list)
     benchmarkState.params = mapValuesOfList("list", list)
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.OrderBy_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.OrderBy_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

@@ -9,10 +9,10 @@ import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, RelationshipDefinition}
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.expressions.SemanticDirection.{INCOMING, OUTGOING}
-import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.expressions.SemanticDirection.{INCOMING, OUTGOING}
+import org.neo4j.cypher.internal.v3_5.logical.plans
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -21,7 +21,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class ExpandInto extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledSourceCode.NAME, CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var ExpandInto_runtime: String = _
@@ -58,7 +58,7 @@ class ExpandInto extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: ExpandIntoThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
     visitor.count
   }
 }
@@ -66,11 +66,11 @@ class ExpandInto extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class ExpandIntoThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: ExpandInto): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.ExpandInto_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.ExpandInto_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

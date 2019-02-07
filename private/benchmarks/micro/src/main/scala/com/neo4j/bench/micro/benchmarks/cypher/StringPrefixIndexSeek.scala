@@ -15,10 +15,11 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{calculateCumulativeSelectivities, stringLengthFor, suffixPad}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.expressions.StringLiteral
-import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.expressions.StringLiteral
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans.{DoNotGetValue, IndexOrderNone, IndexedProperty}
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -29,7 +30,7 @@ import scala.collection.JavaConverters._
 @BenchmarkEnabled(false)
 class StringPrefixIndexSeek extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var StringPrefixIndexSeek_runtime: String = _
@@ -102,9 +103,10 @@ class StringPrefixIndexSeek extends AbstractCypherBenchmark {
     val indexSeek = plans.NodeIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
-      Seq(astPropertyKeyToken(KEY, planContext)),
+      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
       seekExpression,
-      Set.empty)(IdGen)
+      Set.empty,
+      IndexOrderNone)(IdGen)
     val resultColumns = List(node.name)
     val produceResults = plans.ProduceResult(indexSeek, resultColumns)(IdGen)
 
@@ -117,7 +119,7 @@ class StringPrefixIndexSeek extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: StringPrefixIndexSeekThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, visitor)
   }
 }
@@ -125,11 +127,11 @@ class StringPrefixIndexSeek extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class StringPrefixIndexSeekThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: StringPrefixIndexSeek): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.StringPrefixIndexSeek_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.StringPrefixIndexSeek_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 
