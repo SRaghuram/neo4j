@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.v4_0.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.logical.plans.{Union, ValueHashJoin, _}
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlans.isApplyPlan
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.util.{Foldable, InternalException, UnNamedNameGenerator}
@@ -113,7 +112,7 @@ object SlotAllocation {
           allocations.set(current.id, slots)
           resultStack.push(slots)
 
-        case (Some(left), Some(right)) if (comingFrom eq left) && isApplyPlan(current) =>
+        case (Some(left), Some(right)) if (comingFrom eq left) && current.isInstanceOf[ApplyPlan] =>
           planStack.push((nullable, current))
           val argumentSlots = resultStack.top
           allocateLhsOfApply(current, nullable, argumentSlots, semanticTable)
@@ -135,7 +134,7 @@ object SlotAllocation {
           allocateExpressions(current, nullable, rhsSlots, breakingPolicy, semanticTable, allocations, arguments, shouldAllocateLhs = false)
           val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), breakingPolicy)
           allocations.set(current.id, result)
-          if (isApplyPlan(current))
+          if (current.isInstanceOf[ApplyPlan])
             argumentStack.pop()
           resultStack.push(result)
       }
