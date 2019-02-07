@@ -24,6 +24,8 @@ import org.neo4j.cursor.RawCursor;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Hit;
 
+import static com.neo4j.bench.micro.Main.run;
+
 public class ReadGBPTree extends AbstractGBPTreeBenchmark
 {
     @ParamValues(
@@ -172,5 +174,10 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
             }
         }
         return assertCount( count, ReadGBPTree_initialTreeSize );
+    }
+
+    public static void main( String... methods ) throws Exception
+    {
+        run( ReadGBPTree.class, methods );
     }
 }

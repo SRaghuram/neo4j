@@ -25,16 +25,18 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.ThreadParams;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.bolt.v1.runtime.BoltConnectionFatality;
-import org.neo4j.bolt.v1.runtime.BoltFactoryImpl;
-import org.neo4j.bolt.v1.runtime.BoltStateMachine;
+import org.neo4j.bolt.runtime.BoltConnectionFatality;
+import org.neo4j.bolt.runtime.BoltStateMachine;
+import org.neo4j.bolt.runtime.BoltStateMachineFactory;
+import org.neo4j.bolt.v1.messaging.request.InitMessage;
+import org.neo4j.bolt.v1.messaging.request.PullAllMessage;
+import org.neo4j.bolt.v1.messaging.request.RunMessage;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.AnyValue;
@@ -101,7 +103,7 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
     @State( Scope.Thread )
     public static class BoltMachine
     {
-        private BoltFactoryImpl boltFactory;
+        private BoltStateMachineFactory boltFactory;
         private BoltStateMachine machine;
         private String prefix;
         private DummyBoltResultHandler handler = new DummyBoltResultHandler();
@@ -116,18 +118,14 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
             random = RNGState.newRandom( threadParams );
             prefix = String.format( "CYPHER runtime=%s ", state.BoltValueSerialization_runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
-            boltFactory.start();
-            machine = boltFactory.newMachine( BOLT_CHANNEL, Clock.systemUTC() );
-            machine.init( USER_AGENT, map(
+            machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );
+            InitMessage init = new InitMessage( USER_AGENT, map(
                     "scheme", "basic",
                     "principal", "neo4j",
-                    "credentials", "neo4j" ), RESPONSE_HANDLER );
-
-            HashMap<String,AnyValue> stringParamMap = new HashMap<>();
-            stringParamMap.put( "p",
-                    Values.utf8Value( ((String) randPropertyFor( STR_BIG ).value().create().next( random )).getBytes(
-                            StandardCharsets.UTF_8 ) ) );
-            stringParam = VirtualValues.map( stringParamMap );
+                    "credentials", "neo4j" ) );
+            machine.process( init, RESPONSE_HANDLER );
+            stringParam = VirtualValues.map( new String[]{"p"}, new AnyValue[]{
+                    Values.utf8Value( ((String) randPropertyFor( STR_BIG ).value().create().next( random )).getBytes( StandardCharsets.UTF_8 ) )} );
             ValueGeneratorFun stringFun = randPropertyFor( STR_SML ).value().create();
             ValueGeneratorFun longFun = randPropertyFor( LNG ).value().create();
             ValueGeneratorFun dblFun = randPropertyFor( DBL ).value().create();
@@ -143,23 +141,23 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
             for ( int i = 0; i < size; i++ )
             {
                 list.add( Values.of( generators[i % generators.length].next( random ) ) );
-
             }
             listParamMap.put( "p", VirtualValues.fromList( list ) );
-            listParam = VirtualValues.map( listParamMap );
+            listParam = VirtualValues.map( new String[]{"p"}, new AnyValue[]{VirtualValues.fromList( list )} );
         }
 
         private void setupMap( ValueGeneratorFun... generators )
         {
-            HashMap<String,AnyValue> mapParamMap = new HashMap<>();
             int size = 100;
+            String[] key = new String[size];
+            AnyValue[] values = new AnyValue[size];
             Map<String,AnyValue> map = new HashMap<>( size );
             for ( int i = 0; i < size; i++ )
             {
-                map.put( "k" + i, Values.of( generators[i % generators.length].next( random ) ) );
+                key[i] = "k" + i;
+                values[i] = Values.of( generators[i % generators.length].next( random ) );
             }
-            mapParamMap.put( "p", VirtualValues.map( map ) );
-            mapParam = VirtualValues.map( mapParamMap );
+            mapParam = VirtualValues.map( new String[]{"p"}, new AnyValue[]{VirtualValues.map( key, values )} );
         }
 
         @TearDown
@@ -172,7 +170,6 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
             }
             if ( boltFactory != null )
             {
-                boltFactory.stop();
                 boltFactory = null;
             }
         }
@@ -180,8 +177,8 @@ public class BoltValueSerialization extends AbstractBoltBenchmark
         byte[] run( String query, MapValue param ) throws BoltConnectionFatality
         {
             handler.reset();
-            machine.run( prefix + query, param, handler );
-            machine.pullAll( handler );
+            machine.process( new RunMessage( prefix + query, param ), handler );
+            machine.process( PullAllMessage.INSTANCE, handler );
             return handler.result();
         }
     }

@@ -10,10 +10,10 @@ import com.neo4j.bench.micro.config.{BenchmarkEnabled, ParamValues}
 import com.neo4j.bench.micro.data.Plans.{astLiteralFor, _}
 import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML}
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.logical.plans
-import org.neo4j.cypher.internal.v3_4.logical.plans.{DoNotIncludeTies, LogicalPlan}
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans.{DoNotIncludeTies, LogicalPlan}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -21,7 +21,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class Eager extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var Eager_runtime: String = _
@@ -90,7 +90,7 @@ class Eager extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: EagerThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(EXPECTED_ROW_COUNT, visitor)
   }
 }
@@ -98,11 +98,11 @@ class Eager extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class EagerThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: Eager): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.Eager_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.Eager_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

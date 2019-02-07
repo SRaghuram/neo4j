@@ -22,8 +22,6 @@ import org.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import org.neo4j.causalclustering.protocol.ProtocolInstaller;
 import org.neo4j.logging.LogProvider;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-
 public class RaftProtocolInstallers implements ProtocolInstallers
 {
     private final ProtocolVersion version;
@@ -62,7 +60,7 @@ public class RaftProtocolInstallers implements ProtocolInstallers
         if ( version == ProtocolVersion.V1 )
         {
             return new RaftProtocolServerInstallerV1( raftMessageNettyHandler, new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER ),
-                                                      Collections.emptyList(), DEFAULT_DATABASE_NAME, logProvider );
+                    Collections.emptyList(), logProvider );
         }
         if ( version == ProtocolVersion.V2 )
         {

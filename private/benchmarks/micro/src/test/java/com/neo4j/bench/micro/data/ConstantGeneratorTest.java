@@ -45,10 +45,10 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_INL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
-
-import static java.time.ZoneOffset.UTC;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+
+import static java.time.ZoneOffset.UTC;
 
 import static org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian;
 

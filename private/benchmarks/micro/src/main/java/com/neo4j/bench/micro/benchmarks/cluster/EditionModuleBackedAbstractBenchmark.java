@@ -18,7 +18,6 @@ import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.micro.data.Stores;
 
 import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMarshalV2;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
@@ -30,8 +29,6 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.proc.Procedures;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBenchmark
 {
@@ -95,8 +92,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                 CountingChannel countingChannel = new CountingChannel();
                 try
                 {
-                    ReplicatedTransactionMarshalV2.marshal( countingChannel, ReplicatedTransaction.from( batch.transactionRepresentation(),
-                                                                                                         DEFAULT_DATABASE_NAME ) );
+                    ReplicatedTransaction.from( batch.transactionRepresentation() ).marshal( countingChannel );
                     clusterTxStack.add( new ClusterTx( txId, batch.transactionRepresentation(), countingChannel.totalSize ) );
                 }
                 catch ( IOException e )

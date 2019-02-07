@@ -20,12 +20,14 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.bolt.v1.runtime.BoltConnectionFatality;
-import org.neo4j.bolt.v1.runtime.BoltFactoryImpl;
-import org.neo4j.bolt.v1.runtime.BoltStateMachine;
+import org.neo4j.bolt.runtime.BoltConnectionFatality;
+import org.neo4j.bolt.runtime.BoltStateMachine;
+import org.neo4j.bolt.runtime.BoltStateMachineFactory;
+import org.neo4j.bolt.v1.messaging.request.InitMessage;
+import org.neo4j.bolt.v1.messaging.request.PullAllMessage;
+import org.neo4j.bolt.v1.messaging.request.RunMessage;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -98,7 +100,7 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
     @State( Scope.Thread )
     public static class BoltMachine
     {
-        private BoltFactoryImpl boltFactory;
+        private BoltStateMachineFactory boltFactory;
         private BoltStateMachine machine;
         private String query;
         private DummyBoltResultHandler handler = new DummyBoltResultHandler();
@@ -107,14 +109,14 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
         public void setup( BoltPropertySerialization state ) throws Throwable
         {
             query = String.format( "CYPHER runtime=%s MATCH (n) RETURN n.prop",
-                    state.BoltPropertySerialization_runtime );
+                                   state.BoltPropertySerialization_runtime );
             boltFactory = boltFactory( (GraphDatabaseAPI) state.db() );
-            boltFactory.start();
-            machine = boltFactory.newMachine( BOLT_CHANNEL, Clock.systemUTC() );
-            machine.init( USER_AGENT, map(
+            machine = boltFactory.newStateMachine( BOLT_VERSION, BOLT_CHANNEL );
+            InitMessage init = new InitMessage( USER_AGENT, map(
                     "scheme", "basic",
                     "principal", "neo4j",
-                    "credentials", "neo4j" ), RESPONSE_HANDLER );
+                    "credentials", "neo4j" ) );
+            machine.process( init, RESPONSE_HANDLER );
         }
 
         @TearDown
@@ -127,7 +129,6 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
             }
             if ( boltFactory != null )
             {
-                boltFactory.stop();
                 boltFactory = null;
             }
         }
@@ -135,8 +136,8 @@ public class BoltPropertySerialization extends AbstractBoltBenchmark
         byte[] getPropertyForAllNodes() throws BoltConnectionFatality
         {
             handler.reset();
-            machine.run( query, VirtualValues.EMPTY_MAP, handler );
-            machine.pullAll( handler );
+            machine.process( new RunMessage( query, VirtualValues.EMPTY_MAP ), handler );
+            machine.process( PullAllMessage.INSTANCE, handler );
             return handler.result();
         }
     }

@@ -19,9 +19,21 @@ class AdaptableLayoutFixed extends AdaptableLayout
     }
 
     @Override
+    public int keySize( AdaptableKey adaptableKey )
+    {
+        return keySize;
+    }
+
+    @Override
     public boolean fixedSize()
     {
         return true;
+    }
+
+    @Override
+    public void minimalSplitter( AdaptableKey left, AdaptableKey right, AdaptableKey into )
+    {
+        copyKey( right, into );
     }
 }
 

@@ -11,9 +11,9 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.logical.plans
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.logical.plans
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -21,7 +21,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(false)
 class ProjectNodeProperty extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var ProjectNodeProperty_runtime: String = _
@@ -62,7 +62,7 @@ class ProjectNodeProperty extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: ProjectNodePropertyThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(NODE_COUNT, visitor)
   }
 }
@@ -70,11 +70,11 @@ class ProjectNodeProperty extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class ProjectNodePropertyThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: ProjectNodeProperty): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.ProjectNodeProperty_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.ProjectNodeProperty_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

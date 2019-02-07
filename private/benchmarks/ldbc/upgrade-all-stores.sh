@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
-#
-# Copyright (c) 2002-2019 "Neo4j,"
-# Neo4j Sweden AB [http://neo4j.com]
-# This file is part of Neo4j internal tooling.
-#
-
 
 set -e
 set -u
 
-old_neo4j_version="32"
-new_neo4j_version="33"
+old_neo4j_version="34"
+new_neo4j_version="35"
 
 dbs=(
  "db_sf001_p006_regular_utc_${old_neo4j_version}ce;db_sf001_p006_regular_utc_${new_neo4j_version}ce;neo4j_sf001.conf"

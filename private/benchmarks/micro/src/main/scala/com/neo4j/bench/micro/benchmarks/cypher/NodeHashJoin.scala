@@ -12,11 +12,11 @@ import com.neo4j.bench.micro.data.DiscreteGenerator.{Bucket, discrete}
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{INT, LNG}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.frontend.v3_4.semantics.SemanticTable
-import org.neo4j.cypher.internal.planner.v3_4.spi.PlanContext
-import org.neo4j.cypher.internal.v3_4.expressions.SignedDecimalIntegerLiteral
-import org.neo4j.cypher.internal.v3_4.logical.plans
-import org.neo4j.cypher.internal.v3_4.logical.plans._
+import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v3_5.expressions.SignedDecimalIntegerLiteral
+import org.neo4j.cypher.internal.v3_5.logical.plans
+import org.neo4j.cypher.internal.v3_5.logical.plans._
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
@@ -25,7 +25,7 @@ import org.openjdk.jmh.infra.Blackhole
 @BenchmarkEnabled(true)
 class NodeHashJoin extends AbstractCypherBenchmark {
   @ParamValues(
-    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME),
+    allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME, Morsel.NAME),
     base = Array(CompiledByteCode.NAME, Interpreted.NAME, EnterpriseInterpreted.NAME))
   @Param(Array[String]())
   var NodeHashJoin_runtime: String = _
@@ -68,9 +68,10 @@ class NodeHashJoin extends AbstractCypherBenchmark {
     val lhs = plans.NodeIndexSeek(
       nodeIdName,
       astLabelToken(LABEL, planContext),
-      List(astPropertyKeyToken(KEY, planContext)),
+      List(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
       queryExpression,
-      Set.empty)(IdGen)
+      Set.empty,
+      IndexOrderNone)(IdGen)
     val rhs = plans.AllNodesScan(nodeIdName, Set.empty)(IdGen)
     val join = NodeHashJoin(Set(nodeIdName), lhs, rhs)(IdGen)
     val resultColumns = List(node.name)
@@ -85,7 +86,7 @@ class NodeHashJoin extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: NodeHashJoinThreadState, bh: Blackhole): Long = {
     val visitor = new CountVisitor(bh)
-    threadState.executionResult(tx = threadState.tx).accept(visitor)
+    threadState.executablePlan.execute(tx = threadState.tx).accept(visitor)
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, visitor)
   }
 }
@@ -93,11 +94,11 @@ class NodeHashJoin extends AbstractCypherBenchmark {
 @State(Scope.Thread)
 class NodeHashJoinThreadState {
   var tx: InternalTransaction = _
-  var executionResult: InternalExecutionResultBuilder = _
+  var executablePlan: ExecutablePlan = _
 
   @Setup
   def setUp(benchmarkState: NodeHashJoin): Unit = {
-    executionResult = benchmarkState.buildPlan(from(benchmarkState.NodeHashJoin_runtime))
+    executablePlan = benchmarkState.buildPlan(from(benchmarkState.NodeHashJoin_runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
 

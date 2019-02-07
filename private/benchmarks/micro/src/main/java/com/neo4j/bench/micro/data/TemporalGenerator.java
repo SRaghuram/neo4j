@@ -22,7 +22,6 @@ import org.neo4j.values.storable.LocalDateTimeValue;
 import org.neo4j.values.storable.LocalTimeValue;
 import org.neo4j.values.storable.TimeValue;
 import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
 
 public class TemporalGenerator
 {

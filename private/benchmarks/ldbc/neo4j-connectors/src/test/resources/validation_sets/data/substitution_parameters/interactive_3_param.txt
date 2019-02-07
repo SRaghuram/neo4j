@@ -1,9 +1,3 @@
-====
-    Copyright (c) 2002-2019 "Neo4j,"
-    Neo4j Sweden AB [http://neo4j.com]
-    This file is part of Neo4j internal tooling.
-====
-
 Person|Date0|Duration|Country1|Country2
 2199023255738|1277942400000|28|Slovenia|Bosnia_and_Herzegovina
 10995116279050|1277942400000|28|Switzerland|Mongolia

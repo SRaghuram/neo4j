@@ -30,6 +30,7 @@ import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
@@ -911,7 +912,7 @@ public class ImportTest
     {
         ConsistencyCheckService.Result result = new ConsistencyCheckService( new Date() )
                 .runFullConsistencyCheck(
-                        dbDir,
+                        DatabaseLayout.of( dbDir ),
                         Config.defaults(),
                         ProgressMonitorFactory.NONE,
                         NullLogProvider.getInstance(),

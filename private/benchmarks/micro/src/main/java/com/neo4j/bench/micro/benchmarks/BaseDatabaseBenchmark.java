@@ -30,6 +30,7 @@ import java.util.Iterator;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeIndexCursor;
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 
 /**
@@ -140,7 +141,9 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
 
     protected DataGeneratorConfig getConfig()
     {
-        return new DataGeneratorConfigBuilder().build();
+        return new DataGeneratorConfigBuilder()
+                .isReusableStore( true )
+                .build();
     }
 
     protected void benchmarkTearDown() throws Exception
@@ -177,6 +180,20 @@ public abstract class BaseDatabaseBenchmark implements Neo4jBenchmark
         if ( count < minCount || count > maxCount )
         {
             throw new RuntimeException( "Expected " + minCount + " <= count <= " + maxCount + ") but found " + count );
+        }
+    }
+
+    protected void assertCountAndValues( NodeValueIndexCursor cursor, long expectedCount, Blackhole bh )
+    {
+        long count = 0;
+        while ( cursor.next() )
+        {
+            bh.consume( cursor.propertyValue( 0 ) );
+            count++;
+        }
+        if ( count != expectedCount )
+        {
+            throw new RuntimeException( "Expected " + expectedCount + " values but found " + count );
         }
     }
 

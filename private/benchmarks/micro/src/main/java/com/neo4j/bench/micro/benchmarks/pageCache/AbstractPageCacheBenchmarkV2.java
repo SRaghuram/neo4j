@@ -35,6 +35,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
@@ -137,7 +138,8 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
                 tracer,
                 tracerSupplier,
                 log,
-                EmptyVersionContextSupplier.EMPTY );
+                EmptyVersionContextSupplier.EMPTY,
+                JobSchedulerFactory.createInitialisedScheduler() );
         pageCache = factory.getOrCreatePageCache();
         pagedFile = pageCache.map( STORE_FILE, (int) ByteUnit.kibiBytes( 8 ) );
         if ( getPercentageCached() > 0.49 )

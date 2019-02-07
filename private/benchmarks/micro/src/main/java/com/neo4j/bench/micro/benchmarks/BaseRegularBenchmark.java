@@ -30,7 +30,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
     public String storesDir;
 
     @Setup
-    public final void setUp( BenchmarkParams params ) throws Exception
+    public final void setUp( BenchmarkParams params ) throws Throwable
     {
         Stores stores = new Stores( Paths.get( storesDir ) );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
@@ -42,7 +42,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
     }
 
     @TearDown
-    public final void tearDown() throws Exception
+    public final void tearDown() throws Throwable
     {
         benchmarkTearDown();
     }
@@ -52,7 +52,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @Setup(Level.Trial).
      */
-    protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Exception
+    protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
     {
     }
 
@@ -61,7 +61,7 @@ public abstract class BaseRegularBenchmark implements Neo4jBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @TearDown(Level.Trial).
      */
-    protected void benchmarkTearDown() throws Exception
+    protected void benchmarkTearDown() throws Throwable
     {
     }
 }

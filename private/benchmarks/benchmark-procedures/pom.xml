@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark</artifactId>
-        <version>3.4.13-SNAPSHOT</version>
+        <version>3.5.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -32,7 +32,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.neo4j</groupId>
+            <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -78,7 +78,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.neo4j.test</groupId>
+            <groupId>com.neo4j.test</groupId>
             <artifactId>neo4j-harness-enterprise</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
