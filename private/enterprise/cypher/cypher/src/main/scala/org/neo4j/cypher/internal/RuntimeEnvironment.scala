@@ -9,7 +9,7 @@ import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
 import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, NO_TRANSACTION_BINDER, QueryResources}
 import org.neo4j.cypher.internal.runtime.scheduling._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.cypher.internal.runtime.zombie.execution.{CallingThreadQueryExecutor, QueryExecutor}
+import org.neo4j.cypher.internal.runtime.zombie.execution.{CallingThreadQueryExecutor, FixedWorkersQueryExecutor, QueryExecutor}
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.scheduler.{Group, JobScheduler}
@@ -26,6 +26,7 @@ object RuntimeEnvironment {
 
     new RuntimeEnvironment(config,
                            createDispatcher(config, jobScheduler, cursors, txBridge),
+                           createQueryExecutor(config, jobScheduler, cursors, txBridge),
                            createTracer(config, jobScheduler),
                            cursors)
   }
@@ -48,6 +49,20 @@ object RuntimeEnvironment {
     }
     new Dispatcher(config.morselSize, scheduler, transactionBinder)
   }
+
+  def createQueryExecutor(config: CypherRuntimeConfiguration,
+                          jobScheduler: JobScheduler,
+                          cursors: CursorFactory,
+                          txBridge: ThreadToStatementContextBridge): QueryExecutor =
+    config.scheduler match {
+      case SingleThreaded =>
+        new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER)
+      case Simple | LockFree =>
+        val threadFactory = jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER)
+        val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
+        val txBinder = new TxBridgeTransactionBinder(txBridge)
+        new FixedWorkersQueryExecutor(threadFactory, numberOfThreads, txBinder, () => new QueryResources(cursors))
+    }
 
   def createTracer(config: CypherRuntimeConfiguration, jobScheduler: JobScheduler): SchedulerTracer = {
     if (config.schedulerTracing == NoSchedulerTracing)
@@ -78,11 +93,15 @@ object RuntimeEnvironment {
 
 class RuntimeEnvironment(config: CypherRuntimeConfiguration,
                          dispatcher: Dispatcher,
+                         queryExecutor: QueryExecutor,
                          val tracer: SchedulerTracer,
                          val cursors: CursorFactory) {
 
   def getQueryExecutor(debugOptions: Set[String]): QueryExecutor =
-    new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER)
+    if (MorselOptions.singleThreaded(debugOptions) && !isAlreadySingleThreaded)
+      new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER)
+    else
+      queryExecutor
 
   def getDispatcher(debugOptions: Set[String]): Dispatcher =
     if (MorselOptions.singleThreaded(debugOptions) && !isAlreadySingleThreaded)

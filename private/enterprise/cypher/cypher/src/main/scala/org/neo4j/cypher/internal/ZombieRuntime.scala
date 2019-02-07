@@ -145,15 +145,16 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var resultRequested = false
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      queryExecutor.execute(executablePipelines,
-                            stateDefinition,
-                            inputDataStream,
-                            queryContext,
-                            params,
-                            schedulerTracer,
-                            queryIndexes,
-                            visitor)
+      val executionHandle = queryExecutor.execute(executablePipelines,
+                                                  stateDefinition,
+                                                  inputDataStream,
+                                                  queryContext,
+                                                  params,
+                                                  schedulerTracer,
+                                                  queryIndexes,
+                                                  visitor)
 
+      executionHandle.await()
       resultRequested = true
     }
 

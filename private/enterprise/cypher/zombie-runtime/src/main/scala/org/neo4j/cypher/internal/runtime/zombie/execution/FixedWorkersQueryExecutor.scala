@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
+import java.util.concurrent.ThreadFactory
+
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
@@ -16,11 +18,27 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.virtual.MapValue
 
 /**
-  * Single threaded implementation of [[QueryExecutor]]. Executes the query on
-  * the thread which calls execute, without any synchronization with other queries
-  * or any parallel execution.
+  * [[QueryExecutor]] implementation which uses a fixed number (n) of workers to execute
+  * query work.
   */
-class CallingThreadQueryExecutor(transactionBinder: TransactionBinder) extends QueryExecutor {
+class FixedWorkersQueryExecutor(threadFactory: ThreadFactory,
+                                val numberOfWorkers: Int,
+                                transactionBinder: TransactionBinder,
+                                queryResourceFactory: () => QueryResources) extends QueryExecutor {
+
+  private val queryManager = new QueryManager
+  private val workers =
+    for (workerId <- 0 until numberOfWorkers) yield {
+      new Worker(workerId, queryManager, LazyScheduling, queryResourceFactory())
+    }
+  private val workerThreads = workers.map(threadFactory.newThread(_))
+
+  /**
+    * Start all worker threads
+    */
+  def start(): Unit = {
+    workerThreads.foreach(_.start())
+  }
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,
@@ -31,7 +49,6 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder) extends Q
                                        queryIndexes: Array[IndexReadSession],
                                        visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle = {
 
-    val resources = new QueryResources(queryContext.transactionalContext.cursors)
     val queryState = QueryState(params,
                                 visitor,
                                 morselSize = 4,
@@ -43,12 +60,8 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder) extends Q
     val executionState = SingleThreadedStateBuilder.build(stateDefinition, executablePipelines)
     executionState.initialize()
 
-    val worker = new Worker(1, null, LazyScheduling, resources)
     val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState)
-    // TODO: currently busy looping until all work is done... this is a bad
-    //       way to handle backpressure with reactive results
-    while (worker.workOnQuery(executingQuery)) {}
-    executingQuery.stop(None) // TODO: error handling
+    queryManager.addQuery(executingQuery)
     executingQuery
   }
 }

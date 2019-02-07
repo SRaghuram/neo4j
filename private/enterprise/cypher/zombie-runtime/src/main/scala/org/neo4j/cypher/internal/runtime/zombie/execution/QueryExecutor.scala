@@ -24,5 +24,5 @@ trait QueryExecutor {
                               params: MapValue,
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession],
-                              visitor: QueryResult.QueryResultVisitor[E]): Unit
+                              visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle
 }

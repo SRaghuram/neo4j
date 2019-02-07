@@ -30,6 +30,7 @@ object ENTERPRISE_EDITION extends Edition[EnterpriseRuntimeContext](
       NullLog.getInstance(),
       runtimeConfig,
       RuntimeEnvironment.createDispatcher(runtimeConfig, jobScheduler, kernel.cursors(), txBridge),
+      RuntimeEnvironment.createQueryExecutor(runtimeConfig, jobScheduler, kernel.cursors(), txBridge),
       kernel.cursors(),
       () => new ParallelismTracer)
   }

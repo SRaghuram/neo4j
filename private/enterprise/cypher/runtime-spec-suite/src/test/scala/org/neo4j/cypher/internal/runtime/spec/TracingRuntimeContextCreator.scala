@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.morsel.Dispatcher
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
+import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
 import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, RuntimeContextCreator, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.logging.Log
@@ -20,6 +21,7 @@ case class TracingRuntimeContextCreator(codeStructure: CodeStructure[GeneratedQu
                                         log: Log,
                                         config: CypherRuntimeConfiguration,
                                         dispatcher: Dispatcher,
+                                        queryExecutor: QueryExecutor,
                                         cursors: CursorFactory,
                                         newTracer: () => SchedulerTracer)
   extends RuntimeContextCreator[EnterpriseRuntimeContext] {
@@ -37,7 +39,7 @@ case class TracingRuntimeContextCreator(codeStructure: CodeStructure[GeneratedQu
                              clock,
                              debugOptions,
                              config,
-                             new RuntimeEnvironment(config, dispatcher, newTracer(), cursors),
+                             new RuntimeEnvironment(config, dispatcher, queryExecutor, newTracer(), cursors),
                              compileExpressions)
   }
 }
