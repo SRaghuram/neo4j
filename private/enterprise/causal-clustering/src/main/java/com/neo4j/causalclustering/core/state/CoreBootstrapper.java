@@ -294,7 +294,7 @@ public class CoreBootstrapper
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout databaseLayout, Config config ) throws IOException
     {
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( pageCache, databaseLayout );
+        dependencies.satisfyDependencies( pageCache, databaseLayout, fs, config );
         TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( dependencies );
         LogFiles logFiles = LogFilesBuilder
                 .activeFilesBuilder( databaseLayout, fs, pageCache )

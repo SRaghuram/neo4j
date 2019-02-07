@@ -67,8 +67,8 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
                 .withDependencies( dependencies )
                 .withLastCommittedTransactionIdSupplier( () -> fromTxId - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
-                .withLogVersionRepository( metaDataStore );
-                // TODO do this too? .withTransactionIdStore( metaDataStore );
+                .withLogVersionRepository( metaDataStore )
+                .withTransactionIdStore( metaDataStore );
         this.logFiles = logFilesBuilder.build();
         this.lifespan.add( logFiles );
         this.logChannel = logFiles.getLogFile().getWriter();

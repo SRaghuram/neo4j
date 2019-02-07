@@ -24,6 +24,7 @@ import java.util.stream.StreamSupport;
 
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
+import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -37,12 +38,6 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.storemigration.RecordStoreVersionCheck;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
-import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
-import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
-import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.test.rule.PageCacheRule;
@@ -61,7 +56,7 @@ public class StoreMigrationIT
     @ClassRule
     public static final RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( pageCacheRule ).around( testDir );
 
-    public static final String CREATE_QUERY = readQuery();
+    private static final String CREATE_QUERY = readQuery();
     protected final RecordFormats from;
     protected final RecordFormats to;
 
@@ -75,9 +70,6 @@ public class StoreMigrationIT
         DatabaseLayout databaseLayout = testDirectory.databaseLayout();
         RecordStoreVersionCheck storeVersionCheck =
                 new RecordStoreVersionCheck( fs, pageCache, databaseLayout, NullLogProvider.getInstance(), Config.defaults() );
-        VersionAwareLogEntryReader<ReadableClosablePositionAwareChannel> logEntryReader = new VersionAwareLogEntryReader<>();
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs ).withLogEntryReader( logEntryReader ).build();
-        LogTailScanner tailScanner = new LogTailScanner( logFiles, logEntryReader, new Monitors() );
         List<Object[]> data = new ArrayList<>();
         ArrayList<RecordFormats> recordFormats = new ArrayList<>();
         RecordFormatSelector.allFormats().forEach( f -> addIfNotThere( f, recordFormats ) );
@@ -204,16 +196,16 @@ public class StoreMigrationIT
         return StreamSupport.stream( iterable.spliterator(), false );
     }
 
-    protected static ConsistencyCheckService.Result runConsistencyChecker( DatabaseLayout databaseLayout, FileSystemAbstraction fs,
+    private static ConsistencyCheckService.Result runConsistencyChecker( DatabaseLayout databaseLayout, FileSystemAbstraction fs,
             ConsistencyCheckService consistencyCheckService, String formatName )
             throws ConsistencyCheckIncompleteException
     {
         Config config = Config.defaults( GraphDatabaseSettings.record_format, formatName );
         return consistencyCheckService.runFullConsistencyCheck( databaseLayout, config, ProgressMonitorFactory.NONE,
-                NullLogProvider.getInstance(), fs, false );
+                NullLogProvider.getInstance(), fs, false, new ConsistencyFlags( config ) );
     }
 
-    protected static GraphDatabaseService getGraphDatabaseService( File db, String formatName )
+    private static GraphDatabaseService getGraphDatabaseService( File db, String formatName )
     {
         return new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( db )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
