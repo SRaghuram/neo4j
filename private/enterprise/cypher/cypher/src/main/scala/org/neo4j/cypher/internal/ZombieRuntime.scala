@@ -10,12 +10,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.{PipelineBuilder, SlotAllocation, SlottedRewriter, StateDefinition}
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.morsel.NO_TRANSACTION_BINDER
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.zombie._
-import org.neo4j.cypher.internal.runtime.zombie.state.SingleThreadedStateBuilder
+import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
@@ -72,12 +71,14 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                            p.output)
       }
 
+    val executor = context.runtimeEnvironment.getQueryExecutor(context.debugOptions)
+
     ZombieExecutionPlan(executablePipelines,
                         stateDefinition,
                         queryIndexes,
                         logicalPlan,
                         query.resultColumns,
-                        new SingleThreadedQueryExecutor(NO_TRANSACTION_BINDER),
+                        executor,
                         null)
   }
 
@@ -109,7 +110,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
 
       new ZombieRuntimeResult(executablePipelines,
-                              SingleThreadedStateBuilder.build(stateDefinition, executablePipelines),
+                              stateDefinition,
                               queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
                               inputDataStream,
                               logicalPlan,
@@ -130,7 +131,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   }
 
   class ZombieRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
-                            state: ExecutionState,
+                            stateDefinition: StateDefinition,
                             queryIndexes: Array[IndexReadSession],
                             inputDataStream: InputDataStream,
                             logicalPlan: LogicalPlan,
@@ -144,7 +145,15 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var resultRequested = false
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      queryExecutor.execute(executablePipelines, state, inputDataStream, queryContext, params, schedulerTracer, queryIndexes, visitor)
+      queryExecutor.execute(executablePipelines,
+                            stateDefinition,
+                            inputDataStream,
+                            queryContext,
+                            params,
+                            schedulerTracer,
+                            queryIndexes,
+                            visitor)
+
       resultRequested = true
     }
 
