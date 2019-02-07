@@ -38,8 +38,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneNodeHeader;
-import static org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput.bareboneRelationshipHeader;
 
 public class SimpleRandomizedInput implements Input
 {
@@ -59,8 +57,8 @@ public class SimpleRandomizedInput implements Input
         this.relationshipCount = relationshipCount;
         badCollector = new GatheringBadCollector();
         actual = new DataGeneratorInput( nodeCount, relationshipCount, idType, badCollector, seed, 0,
-                bareboneNodeHeader( ID_KEY, idType, extractors ),
-                bareboneRelationshipHeader( idType, extractors,
+                DataGeneratorInput.bareboneNodeHeader( ID_KEY, idType, extractors ),
+                DataGeneratorInput.bareboneRelationshipHeader( idType, extractors,
                         new Entry( SimpleRandomizedInput.ID_KEY, Type.PROPERTY, null, extractors.int_() ) ),
                 4, 4, factorBadNodeData, factorBadRelationshipData );
     }
@@ -248,16 +246,12 @@ public class SimpleRandomizedInput implements Input
             }
             if ( type == null )
             {
-                if ( other.type != null )
-                {
-                    return false;
-                }
+                return other.type == null;
             }
-            else if ( !type.equals( other.type ) )
+            else
             {
-                return false;
+                return type.equals( other.type );
             }
-            return true;
         }
     }
 
@@ -312,7 +306,7 @@ public class SimpleRandomizedInput implements Input
     }
 
     @Override
-    public Estimates calculateEstimates( ToIntFunction<Value[]> valueSizeCalculator ) throws IOException
+    public Estimates calculateEstimates( ToIntFunction<Value[]> valueSizeCalculator )
     {
         return Inputs.knownEstimates( nodeCount, relationshipCount, 0, 0, 0, 0, 0 );
     }

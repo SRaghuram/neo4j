@@ -57,7 +57,7 @@ class RestartableImportIT
     private RandomRule random;
 
     @Test
-    void shouldFinishDespiteUnfairShutdowns() throws Exception
+    void shouldFinishDespiteUnfairShutdowns()
     {
         assertTimeoutPreemptively( ofSeconds( 300 ), () ->
         {
