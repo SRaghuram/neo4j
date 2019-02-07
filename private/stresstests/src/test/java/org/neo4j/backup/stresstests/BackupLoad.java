@@ -30,6 +30,7 @@ import org.neo4j.logging.FormattedLogProvider;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
+import static com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse.Status.E_LISTING_STORE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 
@@ -40,7 +41,8 @@ class BackupLoad extends Workload
             new IsConnectionResetByPeer(),
             new IsChannelClosedException(),
             new IsStoreCopyFailure( E_TRANSACTION_PRUNED ),
-            new IsStoreCopyFailure( E_STORE_UNAVAILABLE ) );
+            new IsStoreCopyFailure( E_STORE_UNAVAILABLE ),
+            new IsStoreCopyFailure( E_LISTING_STORE ) );
 
     private final String backupHostname;
     private final int backupPort;

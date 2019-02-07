@@ -5,20 +5,17 @@
  */
 package org.neo4j.helper;
 
-import java.util.function.Predicate;
-
-import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 
-import static java.util.Objects.requireNonNull;
+import java.util.function.Predicate;
 
 public class IsStoreCopyFailure implements Predicate<Throwable>
 {
-    private final CatchupResult expectedResult;
+    private final String expectedMessage;
 
-    public IsStoreCopyFailure( CatchupResult expectedResult )
+    public IsStoreCopyFailure( Enum<?> expectedStatus )
     {
-        this.expectedResult = requireNonNull( expectedResult );
+        this.expectedMessage = expectedStatus.toString();
     }
 
     @Override
@@ -32,7 +29,7 @@ public class IsStoreCopyFailure implements Predicate<Throwable>
         if ( ex instanceof StoreCopyFailedException )
         {
             String message = ex.getMessage();
-            return message != null && message.contains( expectedResult.toString() );
+            return message != null && message.contains( expectedMessage );
         }
 
         return test( ex.getCause() );
