@@ -16,7 +16,6 @@ import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -31,12 +30,10 @@ import org.neo4j.scheduler.JobScheduler;
 
 public class ChannelPools implements Lifecycle
 {
-    private final ConcurrentHashMap<AdvertisedSocketAddress,SimpleChannelPool> poolMap = new ConcurrentHashMap<>();
+    private SimpleChannelPoolMap poolMap;
     private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private final JobScheduler scheduler;
     private final ChannelPoolHandler poolHandler;
-    private Bootstrap baseBootstrap;
-    private volatile boolean running;
     private EventLoopGroup eventLoopGroup;
     private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
@@ -49,19 +46,14 @@ public class ChannelPools implements Lifecycle
 
     public CompletableFuture<PooledChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
     {
-        if ( !running )
-        {
-            return null;
-        }
         readWriteLock.readLock().lock();
         try
         {
-            if ( !running )
+            if ( poolMap == null )
             {
                 return null;
             }
-            SimpleChannelPool channelPool = poolMap.computeIfAbsent( advertisedSocketAddress,
-                    advertisedSocketAddress1 -> new SimpleChannelPool( baseBootstrap.remoteAddress( advertisedSocketAddress1.socketAddress() ), poolHandler ) );
+            SimpleChannelPool channelPool = poolMap.get( advertisedSocketAddress );
             return PooledChannel.future( channelPool.acquire(), channelPool );
         }
         finally
@@ -82,17 +74,15 @@ public class ChannelPools implements Lifecycle
         readWriteLock.writeLock().lock();
         try
         {
-            running = true;
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.RAFT_CLIENT ) );
-            baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
+            Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
+            poolMap = new SimpleChannelPoolMap( baseBootstrap, poolHandler );
         }
         finally
-
         {
             readWriteLock.writeLock().unlock();
         }
     }
-
 
     @Override
     public void stop()
@@ -100,13 +90,10 @@ public class ChannelPools implements Lifecycle
         readWriteLock.writeLock().lock();
         try
         {
-
-            running = false;
-            for ( SimpleChannelPool value : poolMap.values() )
+            if ( poolMap != null )
             {
-                value.close();
+                poolMap.close();
             }
-            poolMap.clear();
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
         }
         finally
@@ -123,7 +110,8 @@ public class ChannelPools implements Lifecycle
 
     public Stream<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols()
     {
-        return poolMap.entrySet().stream().map( e -> Pair.of( e.getKey(), protocolStack( e.getValue() ) ) ).filter( p -> p.other() != null );
+        // disable for now
+        return Stream.empty();
     }
 
     private ProtocolStack protocolStack( ChannelPool pool )
