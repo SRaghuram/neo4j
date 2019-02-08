@@ -25,14 +25,12 @@
     </scm>
 
     <dependencies>
-        <!-- Neo4j dependencies -->
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-record-storage-engine</artifactId>
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Neo4j test dependencies -->
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-consistency-check</artifactId>
@@ -46,7 +44,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Test dependencies -->
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-random-values</artifactId>
@@ -77,7 +74,7 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>io-test-utils</artifactId>
-            <version>4.0.0-SNAPSHOT</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
