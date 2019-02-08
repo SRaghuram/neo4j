@@ -15,6 +15,8 @@ import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -27,6 +29,7 @@ import org.neo4j.scheduler.JobScheduler;
 public class SenderService extends LifecycleAdapter implements Outbound<AdvertisedSocketAddress,Message>
 {
     private final ChannelPools channels;
+    private final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
     private final Log log;
 
     private boolean senderServiceRunning;
@@ -46,15 +49,19 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         {
             return;
         }
-        synchronized ( this )
+        try
         {
+            serviceLock.readLock().lock();
             pooledChannel = loggingBlock( to, channels.acquire( to ) );
             if ( pooledChannel == null )
             {
                 return;
             }
         }
-
+        finally
+        {
+            serviceLock.readLock().unlock();
+        }
         if ( block )
         {
             loggingBlock( to, pooledChannel.channel().writeAndFlush( message ) );
@@ -86,15 +93,31 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     @Override
     public synchronized void start()
     {
-        channels.start();
-        senderServiceRunning = true;
+        serviceLock.writeLock().lock();
+        try
+        {
+            channels.start();
+            senderServiceRunning = true;
+        }
+        finally
+        {
+            serviceLock.writeLock().unlock();
+        }
     }
 
     @Override
     public synchronized void stop()
     {
-        senderServiceRunning = false;
-        channels.stop();
+        serviceLock.writeLock().lock();
+        try
+        {
+            senderServiceRunning = false;
+            channels.stop();
+        }
+        finally
+        {
+            serviceLock.writeLock().unlock();
+        }
     }
 
     public Stream<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols()
