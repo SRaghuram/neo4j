@@ -89,11 +89,9 @@ import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.assertDisallowFormatM
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.assertStoreFormatIsSet;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.extractScaleFactor;
 import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.toBenchmarkGroupName;
-
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 @Command(
@@ -255,10 +253,10 @@ public class RunExportCommand implements Runnable
 
     static final String CMD_TRIGGERED_BY = "--triggered-by";
     @Option( type = OptionType.COMMAND,
-             name = {CMD_TRIGGERED_BY},
-             description = "Specifies user that triggered this build",
-             title = "Specifies user that triggered this build",
-             required = true )
+            name = {CMD_TRIGGERED_BY},
+            description = "Specifies user that triggered this build",
+            title = "Specifies user that triggered this build",
+            required = true )
     private String triggeredBy;
 
     // ===================================================
@@ -308,7 +306,8 @@ public class RunExportCommand implements Runnable
     private static final String CMD_DB = "--db";
     @Option( type = OptionType.COMMAND,
             name = {CMD_DB},
-            description = "Neo4j database to copy into working directory",
+            description = "Neo4j database (graph.db) to copy into working directory," +
+                          "E.g. 'db_sf001_p064_regular_utc_40ce/' not 'store/db_sf001_p064_regular_utc_40ce/'",
             title = "Neo4j database",
             required = true )
     private File sourceDbDir;
@@ -635,7 +634,7 @@ public class RunExportCommand implements Runnable
         {
             if ( reuseDb.equals( ReusePolicy.REUSE ) )
             {
-                copyDir( sourceDbDir, ldbcRunConfig.dbDir );
+                copyDir( sourceDbDir, ldbcRunConfig.storeDir );
             }
 
             for ( ProfilerType profiler : additionalProfilers )
@@ -689,10 +688,10 @@ public class RunExportCommand implements Runnable
         }
         finally
         {
-            if ( ldbcRunConfig.dbDir.exists() )
+            if ( ldbcRunConfig.storeDir.exists() )
             {
-                System.out.println( format( "Deleting database: %s", ldbcRunConfig.dbDir.getAbsolutePath() ) );
-                org.apache.commons.io.FileUtils.deleteQuietly( ldbcRunConfig.dbDir );
+                System.out.println( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
+                org.apache.commons.io.FileUtils.deleteQuietly( ldbcRunConfig.storeDir );
             }
         }
         return resultsDirectories;
@@ -713,12 +712,12 @@ public class RunExportCommand implements Runnable
         {
             if ( reuseDb.equals( ReusePolicy.COPY_NEW ) )
             {
-                if ( ldbcRunConfig.dbDir.exists() )
+                if ( ldbcRunConfig.storeDir.exists() )
                 {
-                    System.out.println( format( "Deleting database: %s", ldbcRunConfig.dbDir.getAbsolutePath() ) );
-                    org.apache.commons.io.FileUtils.deleteDirectory( ldbcRunConfig.dbDir );
+                    System.out.println( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
+                    org.apache.commons.io.FileUtils.deleteDirectory( ldbcRunConfig.storeDir );
                 }
-                copyDir( sourceDbDir, ldbcRunConfig.dbDir );
+                copyDir( sourceDbDir, ldbcRunConfig.storeDir );
             }
 
             List<InternalProfiler> internalProfilers = new ArrayList<>();
@@ -740,7 +739,7 @@ public class RunExportCommand implements Runnable
 
             File waitForFile = forkDirectory.pathFor( "wait-for-file" ).toFile();
             LdbcRunConfig forkLdbcRunConfig = new LdbcRunConfig(
-                    ldbcRunConfig.dbDir,
+                    ldbcRunConfig.storeDir,
                     ldbcRunConfig.writeParams,
                     ldbcRunConfig.readParams,
                     ldbcRunConfig.neo4jApi,
@@ -993,8 +992,12 @@ public class RunExportCommand implements Runnable
 
     private static File localDbDir( File sourceDbDir, File workingDir )
     {
-        File destinationDbDir = workingDir.toPath().resolve( sourceDbDir.toPath().getFileName() ).toFile();
-        if ( sourceDbDir.equals( destinationDbDir ) )
+        // create a top level store directory, to copy the graph.db folder into
+        // E.g., source/graph.db --> workDir/tempStoreDir/graph.db
+        Path tempStoreDir = workingDir.toPath().resolve( "tempStoreDir" );
+        BenchmarkUtil.assertDoesNotExist( tempStoreDir );
+        File destinationDbDir = tempStoreDir.resolve( sourceDbDir.toPath().getFileName() ).toFile();
+        if ( sourceDbDir.getParentFile().equals( workingDir ) )
         {
             throw new RuntimeException( format( "Source database:                    %s\n" +
                                                 "Must not be in working directory:   %s",

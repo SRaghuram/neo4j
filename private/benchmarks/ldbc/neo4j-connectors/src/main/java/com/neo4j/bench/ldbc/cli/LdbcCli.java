@@ -7,6 +7,7 @@ package com.neo4j.bench.ldbc.cli;
 
 import com.google.common.base.Charsets;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
@@ -184,7 +185,7 @@ public class LdbcCli
     }
 
     public static void benchmark(
-            File dbDir,
+            Store store,
             File writeParametersDir,
             File readParametersDir,
             File resultsDir,
@@ -197,7 +198,7 @@ public class LdbcCli
         main(
                 RunCommand.buildArgs(
                         new LdbcRunConfig(
-                                dbDir,
+                                store.topLevelDirectory().toFile(),
                                 writeParametersDir,
                                 readParametersDir,
                                 neo4jApi,

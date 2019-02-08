@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.ofCount;
 import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.ofDuration;
 import static com.neo4j.bench.macro.execution.measurement.MeasurementControl.or;
-
 import static java.time.Duration.ofSeconds;
 
 public class WorkloadExecutionIT
@@ -61,7 +60,7 @@ public class WorkloadExecutionIT
             Path outputDir = temporaryFolder.newFolder().toPath();
             Path workloadConfigFile = resources.resourceFile( "/test_workloads/test/integration_test.json" );
             Workload workload = Workload.fromFile( workloadConfigFile );
-            Store emptyStore = Store.createEmptyAt( temporaryFolder.newFolder().toPath() );
+            Store emptyStore = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
             runEveryQueryForWorkloadUsingForkingRunner( measurementForkCount,
                                                         profilers,
                                                         ExecutionMode.EXECUTE,
@@ -85,7 +84,7 @@ public class WorkloadExecutionIT
 //            Workload workload = Workload.fromName( "test", resources );
             Path workloadConfigFile = resources.resourceFile( "/test_workloads/test/integration_test.json" );
             Workload workload = Workload.fromFile( workloadConfigFile );
-            Store emptyStore = Store.createEmptyAt( temporaryFolder.newFolder().toPath() );
+            Store emptyStore = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
             runEveryQueryForWorkloadUsingForkingRunner( measurementForkCount,
                                                         profilers,
                                                         ExecutionMode.EXECUTE,
@@ -131,6 +130,7 @@ public class WorkloadExecutionIT
         MeasurementControl warmupControl = or( ofCount( 10 ), ofDuration( ofSeconds( 10 ) ) );
         MeasurementControl measurementControl = or( ofCount( 10 ), ofDuration( ofSeconds( 10 ) ) );
 
+        Store store = TestSupport.createEmptyStore( storeDir );
         QueryRunner queryRunner = QueryRunner.runnerFor( ExecutionMode.EXECUTE );
         for ( Query query : workload.queries() )
         {
@@ -140,7 +140,6 @@ public class WorkloadExecutionIT
             Path neo4jConfigFile = temporaryFolder.newFile().toPath();
             Neo4jConfig neo4jConfig = Neo4jConfig.fromFile( neo4jConfigFile );
 
-            Store store = TestSupport.createEmptyStore(  storeDir );
             queryRunner.run(
                     Jvm.defaultJvmOrFail(),
                     store,

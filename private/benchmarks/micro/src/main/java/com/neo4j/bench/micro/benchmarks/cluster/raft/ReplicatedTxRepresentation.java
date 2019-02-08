@@ -26,6 +26,8 @@ import static com.neo4j.bench.micro.Main.run;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
 public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
@@ -66,7 +68,7 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         log.info( "Created transaction representation of size: %d. Expected: %d. Diff%%: %f", clusterTx.size(), expectedSize,
                 diffPercent( expectedSize, clusterTx.size() ) );
         return RaftMessages.ClusterIdAwareMessage.of( CLUSTER_ID,
-                new RaftMessages.NewEntry.Request( MEMBER_ID, ReplicatedTransaction.from( clusterTx.txRepresentation() ) ) );
+                new RaftMessages.NewEntry.Request( MEMBER_ID, ReplicatedTransaction.from( clusterTx.txRepresentation(), DEFAULT_DATABASE_NAME ) ) );
     }
 
     private float diffPercent( int expectedSize, int size )
