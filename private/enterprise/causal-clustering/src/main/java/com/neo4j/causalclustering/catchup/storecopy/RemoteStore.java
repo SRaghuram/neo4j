@@ -27,6 +27,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
@@ -53,9 +54,10 @@ public class RemoteStore
     private final TransactionLogCatchUpFactory transactionLogFactory;
     private final CommitStateHelper commitStateHelper;
     private final StoreCopyClientMonitor storeCopyClientMonitor;
+    private final StorageEngineFactory storageEngineFactory;
 
     public RemoteStore( LogProvider logProvider, FileSystemAbstraction fs, PageCache pageCache, StoreCopyClient storeCopyClient, TxPullClient txPullClient,
-            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors )
+            TransactionLogCatchUpFactory transactionLogFactory, Config config, Monitors monitors, StorageEngineFactory storageEngineFactory )
     {
         this.logProvider = logProvider;
         this.storeCopyClient = storeCopyClient;
@@ -67,7 +69,8 @@ public class RemoteStore
         this.log = logProvider.getLog( getClass() );
         this.monitors = monitors;
         this.storeCopyClientMonitor = monitors.newMonitor( StoreCopyClientMonitor.class );
-        this.commitStateHelper = new CommitStateHelper( pageCache, fs, config );
+        this.storageEngineFactory = storageEngineFactory;
+        this.commitStateHelper = new CommitStateHelper( pageCache, fs, config, storageEngineFactory );
     }
 
     /**
@@ -146,7 +149,7 @@ public class RemoteStore
         fromTxId = Math.max( fromTxId, MIN_COMMITTED_TRANSACTION_ID );
 
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config,
-                logProvider, fromTxId, asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
+                logProvider, storageEngineFactory, fromTxId, asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
             log.info( "Pulling transactions from %s starting with txId: %d", from, fromTxId );
 

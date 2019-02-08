@@ -27,6 +27,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 public class CatchupComponentsService implements CatchupComponentsRepository, CatchupComponentsFactory
 {
@@ -35,6 +36,7 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
     private final CopiedStoreRecovery copiedStoreRecovery;
     private final TimeoutStrategy storeCopyBackoffStrategy;
     private final Monitors monitors;
+    private final StorageEngineFactory storageEngineFactory;
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
     private final Config config;
@@ -42,7 +44,8 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
     private final Map<String, PerDatabaseCatchupComponents> components;
 
     CatchupComponentsService( DatabaseService databaseService, CatchupClientFactory catchupClient, CopiedStoreRecovery copiedStoreRecovery,
-            FileSystemAbstraction fileSystem, PageCache pageCache, Config config, LogProvider logProvider, Monitors monitors )
+            FileSystemAbstraction fileSystem, PageCache pageCache, Config config, LogProvider logProvider, Monitors monitors,
+            StorageEngineFactory storageEngineFactory )
     {
         this.databaseService = databaseService;
         this.catchupClient = catchupClient;
@@ -54,6 +57,7 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
         storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
         this.monitors = monitors;
+        this.storageEngineFactory = storageEngineFactory;
         this.components = new CopyOnWriteHashMap<>();
     }
 
@@ -73,7 +77,7 @@ public class CatchupComponentsService implements CatchupComponentsRepository, Ca
         TxPullClient txPullClient = new TxPullClient( catchupClient, localDatabase.databaseName(), () -> monitors, logProvider );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystem, pageCache,
-                storeCopyClient, txPullClient, transactionLogFactory, config, monitors );
+                storeCopyClient, txPullClient, transactionLogFactory, config, monitors, storageEngineFactory );
 
         StoreCopyProcess storeCopy = new StoreCopyProcess( fileSystem, pageCache, localDatabase,
                 copiedStoreRecovery, remoteStore, logProvider );

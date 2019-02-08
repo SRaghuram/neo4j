@@ -57,6 +57,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
@@ -92,6 +93,7 @@ class BackupRetriesIT
     private LogProvider logProvider;
     private Path backupsDir;
     private GraphDatabaseAPI db;
+    private StorageEngineFactory storageEngineFactory;
 
     @BeforeEach
     void setUp()
@@ -137,7 +139,9 @@ class BackupRetriesIT
     private GraphDatabaseAPI startDb()
     {
         File storeDir = testDirectory.databaseDir();
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory( logProvider ).newEmbeddedDatabase( storeDir );
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory( logProvider ).newEmbeddedDatabase( storeDir );
+        storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
+        return db;
     }
 
     private static void populate( GraphDatabaseService db )
@@ -231,7 +235,7 @@ class BackupRetriesIT
         Monitors monitors = new Monitors();
         monitors.addMonitorListener( channelBreakingMonitor );
 
-        BackupModule backupModule = new BackupModule( System.out, fs, logProvider, monitors );
+        BackupModule backupModule = new BackupModule( System.out, fs, logProvider, monitors, storageEngineFactory );
         BackupSupportingClassesFactory backupSupportingClassesFactory = new ChannelTrackingBackupSupportingClassesFactory( backupModule, channels );
 
         return OnlineBackupExecutor.builder()

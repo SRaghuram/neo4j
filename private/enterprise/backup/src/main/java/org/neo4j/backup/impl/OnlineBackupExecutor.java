@@ -12,6 +12,7 @@ import java.io.OutputStream;
 
 import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.consistency.ConsistencyCheckService;
+import org.neo4j.helpers.Service;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.NullOutputStream;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -21,6 +22,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 public class OnlineBackupExecutor
 {
@@ -30,7 +32,6 @@ public class OnlineBackupExecutor
     private final ProgressMonitorFactory progressMonitorFactory;
     private final Monitors monitors;
     private final BackupSupportingClassesFactory backupSupportingClassesFactory;
-
     private final ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
 
     private OnlineBackupExecutor( Builder builder )
@@ -64,7 +65,8 @@ public class OnlineBackupExecutor
             BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ) );
 
             BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), logProvider, storeFiles );
-            BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, logProvider );
+            BackupStrategyWrapper wrapper =
+                    new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, logProvider, context.getStorageEngineFactory() );
 
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, logProvider, progressMonitorFactory, wrapper );
             coordinator.performBackup( context );
@@ -72,9 +74,9 @@ public class OnlineBackupExecutor
     }
 
     private static BackupSupportingClassesFactory createBackupSupportingClassesFactory( OutputStream outputStream, FileSystemAbstraction fs,
-            LogProvider logProvider, Monitors monitors )
+            LogProvider logProvider, Monitors monitors, StorageEngineFactory storageEngineFactory )
     {
-        BackupModule backupModule = new BackupModule( outputStream, fs, logProvider, monitors );
+        BackupModule backupModule = new BackupModule( outputStream, fs, logProvider, monitors, storageEngineFactory );
 
         BackupSupportingClassesFactoryProvider classesFactoryProvider = BackupSupportingClassesFactoryProvider.getProvidersByPriority()
                 .findFirst()
@@ -101,6 +103,7 @@ public class OnlineBackupExecutor
         private ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.NONE;
         private Monitors monitors = new Monitors();
         private BackupSupportingClassesFactory supportingClassesFactory;
+        private StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
 
         private Builder()
         {
@@ -142,11 +145,17 @@ public class OnlineBackupExecutor
             return this;
         }
 
+        public Builder withStorageEngineFactory( StorageEngineFactory storageEngineFactory )
+        {
+            this.storageEngineFactory = storageEngineFactory;
+            return this;
+        }
+
         public OnlineBackupExecutor build()
         {
             if ( supportingClassesFactory == null )
             {
-                supportingClassesFactory = createBackupSupportingClassesFactory( outputStream, fs, logProvider, monitors );
+                supportingClassesFactory = createBackupSupportingClassesFactory( outputStream, fs, logProvider, monitors, storageEngineFactory );
             }
 
             return new OnlineBackupExecutor( this );

@@ -133,7 +133,7 @@ public class RaftServerModule
         loggingRaftInbound.registerHandler( messageHandlerChain );
 
         RecoveryRequiredChecker recoveryChecker =
-                recoveryRequiredChecker( globalModule.getFileSystem(), globalModule.getPageCache(), globalConfig );
+                recoveryRequiredChecker( globalModule.getFileSystem(), globalModule.getPageCache(), globalConfig, globalModule.getStorageEngineFactory() );
 
         //TODO: Understand that we add the CatchupServer to life here because we need to enforce an ordering between Raft and Catchup, but we should surface
         // all the separate components and do this ordered adding to life somewhere top level. Putting this in this method is just a bit weird.

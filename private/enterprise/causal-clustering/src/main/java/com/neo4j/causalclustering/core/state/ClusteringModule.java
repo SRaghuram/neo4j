@@ -69,7 +69,7 @@ public class ClusteringModule
         TemporaryDatabase.Factory tempDatabaseFactory = new TemporaryDatabase.Factory( pageCache );
 
         CoreBootstrapper coreBootstrapper = new CoreBootstrapper( databaseService, tempDatabaseFactory, databaseInitializers, fileSystem,
-                globalConfig, logProvider, pageCache );
+                globalConfig, logProvider, pageCache, globalModule.getStorageEngineFactory() );
 
         SimpleStorage<ClusterId> clusterIdStorage;
         SimpleStorage<DatabaseName> dbNameStorage;

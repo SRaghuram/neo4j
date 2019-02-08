@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
+import org.neo4j.helpers.Service;
 import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -37,6 +38,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -84,8 +86,8 @@ class CoreBootstrapperIT
     private File dataDirectory;
     private File storeDirectory; // "databases"
     private File txLogsDirectory;
-
     private Config defaultConfig;
+    private StorageEngineFactory storageEngineFactory;
 
     @BeforeEach
     void setup()
@@ -96,6 +98,7 @@ class CoreBootstrapperIT
         this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );
         this.txLogsDirectory = new File( dataDirectory, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         this.defaultConfig = Config.builder().withHome( neo4jHome ).build();
+        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
     }
 
     @Test
@@ -109,7 +112,7 @@ class CoreBootstrapperIT
                 .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
-                fileSystem, defaultConfig, logProvider, pageCache );
+                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -131,7 +134,7 @@ class CoreBootstrapperIT
                 .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
-                fileSystem, defaultConfig, logProvider, pageCache );
+                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -157,7 +160,7 @@ class CoreBootstrapperIT
                 .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
-                fileSystem, defaultConfig, logProvider, pageCache );
+                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -189,7 +192,7 @@ class CoreBootstrapperIT
                 .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
-                fileSystem, config, logProvider, pageCache );
+                fileSystem, config, logProvider, pageCache, storageEngineFactory );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -217,7 +220,7 @@ class CoreBootstrapperIT
                        .register();
 
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
-                fileSystem, defaultConfig, logProvider, pageCache );
+                fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
         CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
@@ -245,7 +248,7 @@ class CoreBootstrapperIT
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers, fileSystem,
-                defaultConfig, assertableLogProvider, pageCache );
+                defaultConfig, assertableLogProvider, pageCache, storageEngineFactory );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
@@ -280,7 +283,7 @@ class CoreBootstrapperIT
 
         AssertableLogProvider assertableLogProvider = new AssertableLogProvider();
         CoreBootstrapper bootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers,
-                fileSystem, config, assertableLogProvider, pageCache );
+                fileSystem, config, assertableLogProvider, pageCache, storageEngineFactory );
 
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );

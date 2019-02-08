@@ -11,6 +11,7 @@ import java.io.IOException;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.Args;
+import org.neo4j.helpers.Service;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -43,6 +44,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.StoreLogService;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
@@ -105,6 +107,7 @@ public class StoreMigration
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
+            StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
 
             final LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
                     .withConfig( config ).build();
@@ -117,7 +120,7 @@ public class StoreMigration
 
             long startTime = System.currentTimeMillis();
             DatabaseMigrator migrator = new DatabaseMigrator( fs, config, logService,
-                    indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator );
+                    indexProviderMap, pageCache, tailScanner, jobScheduler, databaseLayout, legacyLogsLocator, storageEngineFactory );
             migrator.migrate();
 
             // Append checkpoint so the last log entry will have the latest version

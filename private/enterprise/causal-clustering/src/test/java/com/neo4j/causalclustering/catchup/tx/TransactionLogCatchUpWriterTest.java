@@ -45,6 +45,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.recovery.LogTailScanner;
 import org.neo4j.kernel.recovery.LogTailScanner.LogTailInformation;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.rule.DatabaseRule;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
@@ -77,6 +78,7 @@ public class TransactionLogCatchUpWriterTest
 
     @Parameterized.Parameter
     public boolean partOfStoreCopy;
+    private StorageEngineFactory storageEngineFactory;
 
     @Parameterized.Parameters( name = "Part of store copy: {0}" )
     public static List<Boolean> partOfStoreCopy()
@@ -123,7 +125,8 @@ public class TransactionLogCatchUpWriterTest
         // and
         long fromTxId = BASE_TX_ID;
         TransactionLogCatchUpWriter subject =
-                new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(), fromTxId, partOfStoreCopy, false, true );
+                new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(), storageEngineFactory, fromTxId,
+                        partOfStoreCopy, false, true );
 
         // when a bunch of transactions received
         LongStream.range( fromTxId, MANY_TRANSACTIONS )
@@ -153,8 +156,8 @@ public class TransactionLogCatchUpWriterTest
         // and
         long fromTxId = BASE_TX_ID;
         TransactionLogCatchUpWriter subject =
-                new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(), fromTxId, partOfStoreCopy, false,
-                        false );
+                new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(), storageEngineFactory, fromTxId,
+                        partOfStoreCopy, false, false );
 
         // when 1M tx received
         LongStream.range( fromTxId, MANY_TRANSACTIONS )
@@ -177,7 +180,7 @@ public class TransactionLogCatchUpWriterTest
         int endTxId = fromTxId + 5;
 
         TransactionLogCatchUpWriter catchUpWriter = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config,
-                NullLogProvider.getInstance(), fromTxId, partOfStoreCopy, logsInStoreDir, true );
+                NullLogProvider.getInstance(), storageEngineFactory, fromTxId, partOfStoreCopy, logsInStoreDir, true );
 
         // when
         for ( int i = fromTxId; i <= endTxId; i++ )
@@ -246,6 +249,7 @@ public class TransactionLogCatchUpWriterTest
         // create an empty store
         org.neo4j.storageengine.api.StoreId storeId;
         Database ds = dsRule.getDatabase( databaseLayout, fs, pageCache );
+        storageEngineFactory = ds.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         try ( Lifespan ignored = new Lifespan( ds ) )
         {
             storeId = ds.getStoreId();

@@ -49,6 +49,7 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Service;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -57,6 +58,7 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.PageCacheRule;
@@ -76,6 +78,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.backup.impl.OnlineBackupContextFactory.ARG_NAME_FALLBACK_FULL;
 import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 @RunWith( Parameterized.class )
 public class OnlineBackupCommandCcIT
@@ -96,6 +99,7 @@ public class OnlineBackupCommandCcIT
     private static final String DATABASE_NAME = "defaultport";
     private File backupDatabaseDir;
     private File backupStoreDir;
+    private final StorageEngineFactory storageEngineFactory = selectStorageEngine( Service.load( StorageEngineFactory.class ) );
 
     @Parameter
     public String recordFormat;
@@ -259,7 +263,7 @@ public class OnlineBackupCommandCcIT
                 "--name=" + name ) );
 
         // then
-        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults() ) );
+        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults(), storageEngineFactory ) );
         ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
         assertTrue( "Consistency check failed", new ConsistencyCheckService()
                 .runFullConsistencyCheck( backupLayout, Config.defaults(), ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), false, consistencyFlags )
@@ -295,7 +299,7 @@ public class OnlineBackupCommandCcIT
                 arg( ARG_NAME_FALLBACK_FULL, false ) ) );
 
         // then
-        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults() ) );
+        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults(), storageEngineFactory ) );
         ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
         assertTrue( "Consistency check failed", new ConsistencyCheckService()
                 .runFullConsistencyCheck( backupLayout, Config.defaults(), ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), false, consistencyFlags )

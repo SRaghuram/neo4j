@@ -15,13 +15,16 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 public class OnlineBackupContext
 {
     private final OnlineBackupRequiredArguments requiredArguments;
     private final Config config;
     private final ConsistencyFlags consistencyFlags;
+    private final StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
 
     OnlineBackupContext( OnlineBackupRequiredArguments requiredArguments, Config config, ConsistencyFlags consistencyFlags )
     {
@@ -53,6 +56,11 @@ public class OnlineBackupContext
     Path getResolvedLocationFromName()
     {
         return requiredArguments.getResolvedLocationFromName();
+    }
+
+    StorageEngineFactory getStorageEngineFactory()
+    {
+        return storageEngineFactory;
     }
 
     public static final class Builder

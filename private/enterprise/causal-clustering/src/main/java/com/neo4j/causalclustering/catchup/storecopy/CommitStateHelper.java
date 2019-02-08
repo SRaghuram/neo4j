@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -33,12 +32,12 @@ public class CommitStateHelper
     private FileSystemAbstraction fs;
     private Config config;
 
-    public CommitStateHelper( PageCache pageCache, FileSystemAbstraction fs, Config config )
+    public CommitStateHelper( PageCache pageCache, FileSystemAbstraction fs, Config config, StorageEngineFactory storageEngineFactory )
     {
         this.pageCache = pageCache;
         this.fs = fs;
         this.config = config;
-        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
+        this.storageEngineFactory = storageEngineFactory;
     }
 
     CommitState getStoreState( DatabaseLayout databaseLayout ) throws IOException

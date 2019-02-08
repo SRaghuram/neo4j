@@ -28,7 +28,6 @@ import java.util.function.Function;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -124,7 +123,7 @@ public class CoreBootstrapper
     private final Config systemDatabaseFilteredConfig;
 
     CoreBootstrapper( DatabaseService databaseService, TemporaryDatabase.Factory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
-            FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache )
+            FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache, StorageEngineFactory storageEngineFactory )
     {
         this.databaseService = databaseService;
         this.tempDatabaseFactory = tempDatabaseFactory;
@@ -140,7 +139,7 @@ public class CoreBootstrapper
         this.activeDatabaseFilteredConfig = Config.defaults( activeDatabaseParams );
         this.systemDatabaseFilteredConfig = Config.defaults( systemDatabaseParams );
 
-        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
+        this.storageEngineFactory = storageEngineFactory;
     }
 
     private Map<String,String> initialActiveDatabaseParams( Config config )
@@ -248,7 +247,7 @@ public class CoreBootstrapper
 
     private void ensureRecoveredOrThrow( DatabaseLayout databaseLayout, Config config ) throws Exception
     {
-        if ( Recovery.isRecoveryRequired( fs, databaseLayout, config ) )
+        if ( Recovery.isRecoveryRequired( fs, databaseLayout, config, storageEngineFactory ) )
         {
             String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
                     "instance of Neo4j or a Neo4j backup";
@@ -320,7 +319,6 @@ public class CoreBootstrapper
             channel.prepareForFlush().flush();
         }
 
-        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
         try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies ) )
         {
             transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),

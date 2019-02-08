@@ -12,18 +12,21 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.LayoutConfig;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 @PageCacheExtension
 class CommitStateHelperTest
@@ -47,7 +50,7 @@ class CommitStateHelperTest
                 txLogLocation.getAbsolutePath() ).build();
         File storeDir = testDirectory.storeDir();
         databaseLayout = DatabaseLayout.of( storeDir, LayoutConfig.of( config ), config.get( GraphDatabaseSettings.active_database ) );
-        commitStateHelper = new CommitStateHelper( pageCache, fsa, config );
+        commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine( Service.load( StorageEngineFactory.class ) ) );
     }
 
     @Test

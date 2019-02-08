@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -52,13 +51,12 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private long expectedTxId;
 
     TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config,
-            LogProvider logProvider, long fromTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
+            LogProvider logProvider, StorageEngineFactory storageEngineFactory, long fromTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
             boolean forceTransactionRotations ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
         this.asPartOfStoreCopy = asPartOfStoreCopy;
         this.rotateTransactionsManually = forceTransactionRotations;
-        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( databaseLayout, fs, pageCache, configWithoutSpecificStoreFormat( config ) );
         metaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies );

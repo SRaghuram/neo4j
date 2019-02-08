@@ -74,9 +74,9 @@ public abstract class CatchupServersModule
 
         FileSystemAbstraction fileSystem = globalModule.getFileSystem();
         PageCache pageCache = globalModule.getPageCache();
-        CopiedStoreRecovery copiedStoreRecovery = globalLife.add( new CopiedStoreRecovery( pageCache, fileSystem ) );
+        CopiedStoreRecovery copiedStoreRecovery = globalLife.add( new CopiedStoreRecovery( pageCache, fileSystem, globalModule.getStorageEngineFactory() ) );
         this.databaseComponents = new CatchupComponentsService( databaseService, catchupClientFactory, copiedStoreRecovery, fileSystem,
-                pageCache, globalConfig, logProvider, globalModule.getGlobalMonitors() );
+                pageCache, globalConfig, logProvider, globalModule.getGlobalMonitors(), globalModule.getStorageEngineFactory() );
     }
 
     private CatchupClientFactory createCatchupClient()

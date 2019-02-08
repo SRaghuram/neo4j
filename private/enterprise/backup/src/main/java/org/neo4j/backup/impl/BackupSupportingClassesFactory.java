@@ -35,6 +35,7 @@ import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -52,6 +53,7 @@ public class BackupSupportingClassesFactory
     protected final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
     protected final OutputStream outputStream;
     private final JobScheduler jobScheduler;
+    private final StorageEngineFactory storageEngineFactory;
 
     protected BackupSupportingClassesFactory( BackupModule backupModule )
     {
@@ -62,6 +64,7 @@ public class BackupSupportingClassesFactory
         this.transactionLogCatchUpFactory = backupModule.getTransactionLogCatchUpFactory();
         this.jobScheduler = backupModule.jobScheduler();
         this.outputStream = backupModule.getOutputStream();
+        this.storageEngineFactory = backupModule.getStorageEngineFactory();
     }
 
     /**
@@ -90,7 +93,7 @@ public class BackupSupportingClassesFactory
         StoreCopyClient storeCopyClient = new StoreCopyClient( catchUpClient, databaseName, () -> monitors, logProvider, backOffStrategy );
 
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient,
-                txPullClient, transactionLogCatchUpFactory, config, monitors );
+                txPullClient, transactionLogCatchUpFactory, config, monitors, storageEngineFactory );
 
         return backupDelegator( remoteStore, catchUpClient, storeCopyClient );
     }

@@ -10,9 +10,11 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.helpers.Service;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -23,7 +25,8 @@ class CopiedStoreRecoveryTest
     @Test
     void shouldThrowIfAlreadyShutdown()
     {
-        CopiedStoreRecovery copiedStoreRecovery = new CopiedStoreRecovery( mock( PageCache.class ), new EphemeralFileSystemAbstraction() );
+        CopiedStoreRecovery copiedStoreRecovery = new CopiedStoreRecovery( mock( PageCache.class ), new EphemeralFileSystemAbstraction(),
+                StorageEngineFactory.selectStorageEngine( Service.load( StorageEngineFactory.class ) ) );
         copiedStoreRecovery.shutdown();
 
         Exception exception = assertThrows( Exception.class,

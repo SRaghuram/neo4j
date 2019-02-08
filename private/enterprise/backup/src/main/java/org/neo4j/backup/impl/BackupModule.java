@@ -14,6 +14,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
@@ -23,6 +24,7 @@ public class BackupModule
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final Monitors monitors;
+    private final StorageEngineFactory storageEngineFactory;
     private final Clock clock;
     private final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
     private final JobScheduler jobScheduler;
@@ -35,11 +37,13 @@ public class BackupModule
      * @param logProvider made available to subsequent dependency resolution classes
      * @param monitors will become shared across all resolved dependencies
      */
-    public BackupModule( OutputStream outputStream, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors )
+    public BackupModule( OutputStream outputStream, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors,
+            StorageEngineFactory storageEngineFactory )
     {
         this.outputStream = outputStream;
         this.logProvider = logProvider;
         this.monitors = monitors;
+        this.storageEngineFactory = storageEngineFactory;
         this.clock = Clock.systemDefaultZone();
         this.transactionLogCatchUpFactory = new TransactionLogCatchUpFactory();
         this.fs = fs;
@@ -79,5 +83,10 @@ public class BackupModule
     public JobScheduler jobScheduler()
     {
         return jobScheduler;
+    }
+
+    public StorageEngineFactory getStorageEngineFactory()
+    {
+        return storageEngineFactory;
     }
 }

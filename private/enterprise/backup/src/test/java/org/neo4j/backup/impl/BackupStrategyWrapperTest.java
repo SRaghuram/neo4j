@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -25,6 +26,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -46,6 +48,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 @ExtendWith( TestDirectoryExtension.class )
 class BackupStrategyWrapperTest
@@ -87,7 +90,7 @@ class BackupStrategyWrapperTest
         when( logProvider.getLog( (Class) any() ) ).thenReturn( log );
 
         backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache,
-                NullLogProvider.getInstance(), logProvider ) );
+                NullLogProvider.getInstance(), logProvider, selectStorageEngine( Service.load( StorageEngineFactory.class ) ) ) );
     }
 
     @Test
