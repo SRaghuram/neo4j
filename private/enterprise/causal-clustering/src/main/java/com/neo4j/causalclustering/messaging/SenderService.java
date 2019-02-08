@@ -45,13 +45,13 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     public void send( AdvertisedSocketAddress to, Message message, boolean block )
     {
         PooledChannel pooledChannel;
-        if ( !senderServiceRunning )
-        {
-            return;
-        }
         try
         {
             serviceLock.readLock().lock();
+            if ( !senderServiceRunning )
+            {
+                return;
+            }
             pooledChannel = loggingBlock( to, channels.acquire( to ) );
             if ( pooledChannel == null )
             {
@@ -91,7 +91,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     }
 
     @Override
-    public synchronized void start()
+    public void start()
     {
         serviceLock.writeLock().lock();
         try
@@ -106,7 +106,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     }
 
     @Override
-    public synchronized void stop()
+    public void stop()
     {
         serviceLock.writeLock().lock();
         try
