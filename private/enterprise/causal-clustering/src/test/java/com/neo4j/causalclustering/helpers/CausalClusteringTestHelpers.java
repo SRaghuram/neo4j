@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -36,6 +37,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -52,7 +54,7 @@ public final class CausalClusteringTestHelpers
     {
     }
 
-    public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler )
+    public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler, Consumer<Lifecycle> lifecycleConsumer )
     {
         return CatchupClientBuilder.builder()
                 .defaultDatabaseName( GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
@@ -63,7 +65,7 @@ public final class CausalClusteringTestHelpers
                 .bootstrapConfig( clientConfig( Config.defaults() ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( logProvider )
-                .build();
+                .build(lifecycleConsumer);
     }
 
     public static Server getCatchupServer( CatchupServerHandler catchupServerHandler, ListenSocketAddress listenAddress, JobScheduler scheduler )

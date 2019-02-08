@@ -39,6 +39,7 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreFileMetadata;
@@ -85,6 +86,7 @@ class CatchupServerIT
     private File temporaryDirectory;
     private ExecutorService executor;
     private PageCache pageCache;
+    private LifeSupport lifeSupport = new LifeSupport();
     private CatchupClientFactory catchupClient;
 
     @BeforeEach
@@ -97,10 +99,10 @@ class CatchupServerIT
 
         executor = Executors.newCachedThreadPool();
         catchupServer = new TestCatchupServer( fs, db, LOG_PROVIDER, executor );
-        catchupServer.start();
-        catchupClient = CausalClusteringTestHelpers.getCatchupClient( LOG_PROVIDER, new ThreadPoolJobScheduler( executor ) );
-        catchupClient.start();
+        lifeSupport.add( catchupServer );
+        catchupClient = CausalClusteringTestHelpers.getCatchupClient( LOG_PROVIDER, new ThreadPoolJobScheduler( executor ), lifeSupport::add );
         pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
+        lifeSupport.start();
     }
 
     @AfterEach
@@ -111,14 +113,7 @@ class CatchupServerIT
         {
             db.shutdown();
         }
-        if ( catchupClient != null )
-        {
-            catchupClient.stop();
-        }
-        if ( catchupServer != null )
-        {
-            catchupServer.stop();
-        }
+        lifeSupport.stop();
         executor.shutdown();
     }
 

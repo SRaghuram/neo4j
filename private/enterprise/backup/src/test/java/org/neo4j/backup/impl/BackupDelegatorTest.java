@@ -33,10 +33,9 @@ import static org.mockito.Mockito.when;
 public class BackupDelegatorTest
 {
     private RemoteStore remoteStore;
-    private CatchupClientFactory catchUpClient;
     private StoreCopyClient storeCopyClient;
 
-    BackupDelegator subject;
+    private BackupDelegator subject;
 
     private final AdvertisedSocketAddress anyAddress = new AdvertisedSocketAddress( "any.address", 1234 );
 
@@ -44,9 +43,8 @@ public class BackupDelegatorTest
     public void setup()
     {
         remoteStore = mock( RemoteStore.class );
-        catchUpClient = mock( CatchupClientFactory.class );
         storeCopyClient = mock( StoreCopyClient.class );
-        subject = new BackupDelegator( remoteStore, catchUpClient, storeCopyClient );
+        subject = new BackupDelegator( remoteStore, storeCopyClient );
     }
 
     @Test
@@ -63,26 +61,6 @@ public class BackupDelegatorTest
         // then
         verify( remoteStore ).tryCatchingUp( any( CatchupAddressProvider.SingleAddressProvider.class ), eq( expectedStoreId ), eq( databaseLayout ), eq( true ),
                 eq( true ) );
-    }
-
-    @Test
-    public void startDelegatesToCatchUpClient()
-    {
-        // when
-        subject.start();
-
-        // then
-        verify( catchUpClient ).start();
-    }
-
-    @Test
-    public void stopDelegatesToCatchUpClient()
-    {
-        // when
-        subject.stop();
-
-        // then
-        verify( catchUpClient ).stop();
     }
 
     @Test

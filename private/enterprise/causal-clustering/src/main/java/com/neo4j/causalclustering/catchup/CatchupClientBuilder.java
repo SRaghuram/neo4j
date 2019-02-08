@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
-
 import io.netty.channel.socket.SocketChannel;
 
 import java.time.Clock;
@@ -28,8 +27,10 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -144,7 +145,7 @@ public final class CatchupClientBuilder
         }
 
         @Override
-        public CatchupClientFactory build()
+        public CatchupClientFactory build( Consumer<Lifecycle> lifecycleHandler )
         {
             ApplicationProtocolRepository applicationProtocolRepository = new ApplicationProtocolRepository( ApplicationProtocols.values(), catchupProtocols );
             ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
@@ -163,8 +164,10 @@ public final class CatchupClientBuilder
                         handshakeTimeout, debugLogProvider, userLogProvider );
             };
 
-            return new CatchupClientFactory( debugLogProvider, clock, channelInitializerFactory, defaultDatabaseName, inactivityTimeout, scheduler,
-                    bootstrapConfiguration );
+            CatchupChannelPool catchupChannelPool = new CatchupChannelPool( bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
+            lifecycleHandler.accept( catchupChannelPool );
+
+            return new CatchupClientFactory( defaultDatabaseName, inactivityTimeout, catchupChannelPool );
         }
     }
 
@@ -209,6 +212,7 @@ public final class CatchupClientBuilder
         AcceptsOptionalParams clock( Clock clock );
         AcceptsOptionalParams debugLogProvider( LogProvider debugLogProvider );
         AcceptsOptionalParams userLogProvider( LogProvider userLogProvider );
-        CatchupClientFactory build();
+
+        CatchupClientFactory build( Consumer<Lifecycle> lifecycleHandler );
     }
 }
