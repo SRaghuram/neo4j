@@ -643,7 +643,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
   test("unwind and project") {
     // given UNWIND [1,2,3] as x RETURN x
     val leaf = Argument()
-    val unwind = UnwindCollection(leaf, "x", listOf(literalInt(1), literalInt(2), literalInt(3)))
+    val unwind = UnwindCollection(leaf, "x", listOfInt(1, 2, 3))
     val produceResult = ProduceResult(unwind, Seq("x"))
 
     // when

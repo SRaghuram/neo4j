@@ -470,7 +470,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("id on node") {
-    val compiled = compile(function("id", parameter("a")))
+    val compiled = compile(id(parameter("a")))
 
     val node = nodeValue()
 
@@ -479,7 +479,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("id on relationship") {
-    val compiled = compile(function("id", parameter("a")))
+    val compiled = compile(id(parameter("a")))
 
     val rel = relationshipValue()
 
@@ -1123,7 +1123,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("in with literal list not containing null") {
     val compiled = compile(in(parameter("a"),
-                              listOf(literalString("a"), literalString("b"), literalString("c"))))
+                              listOfString("a", "b", "c")))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.TRUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("b"))), cursors) should equal(Values.TRUE)
@@ -1602,13 +1602,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "b")
-    val compiledNone = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledNone = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), literalString("b"))))
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aaa")
-    val compiledSingle = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledSingle = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), literalString("aaa"))))
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "a")
-    val compiledMany = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledMany = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), literalString("a"))))
 
     //Then
@@ -1626,13 +1626,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "b")
-    val compiledNone = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledNone = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), varFor("b"))))
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aaa")
-    val compiledSingle = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledSingle = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), varFor("aaa"))))
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "a")
-    val compiledMany = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledMany = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), varFor("a"))))
 
     //Then
@@ -1658,7 +1658,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, single(bar IN ['a','aa','aaa'] WHERE bar = null)
-    val compiled = compile(singleInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), nullLiteral)))
 
     //Then
@@ -1708,10 +1708,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = "b")
-    val compiledTrue = compile(noneInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledTrue = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), literalString("b"))))
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = "a")
-    val compiledFalse = compile(noneInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledFalse = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), literalString("a"))))
 
     //Then
@@ -1725,10 +1725,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = b)
-    val compiledTrue = compile(noneInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledTrue = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), varFor("b"))))
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = a)
-    val compiledFalse = compile(noneInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledFalse = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), varFor("a"))))
 
     //Then
@@ -1753,7 +1753,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, none(bar IN null WHERE bar = null)
-    val compiled = compile(noneInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), nullLiteral )))
 
     //Then
@@ -1803,10 +1803,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = "a")
-    val compiledTrue = compile(anyInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledTrue = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), literalString("a"))))
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = "b")
-    val compiledFalse = compile(anyInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledFalse = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), literalString("b"))))
 
     //Then
@@ -1820,10 +1820,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = a)
-    val compiledTrue = compile(anyInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledTrue = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), varFor("a"))))
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = aa)
-    val compiledFalse = compile(anyInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledFalse = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), varFor("b"))))
 
     //Then
@@ -1848,7 +1848,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, any(bar IN ['a','aa','aaa'] WHERE bar = null)
-    val compiled = compile(anyInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
       equals(varFor("bar"), nullLiteral)))
 
     //Then
@@ -1898,10 +1898,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "a")
-    val compiledTrue = compile(allInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledTrue = compile(allInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), literalString("a"))))
     //all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aa")
-    val compiledFalse = compile(allInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledFalse = compile(allInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), literalString("aa"))))
 
     //Then
@@ -1915,10 +1915,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When
     // all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH a)
-    val compiledTrue = compile(allInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledTrue = compile(allInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), varFor("a"))))
     //all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH aa)
-    val compiledFalse = compile(allInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiledFalse = compile(allInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), varFor("aa"))))
 
     //Then
@@ -1943,7 +1943,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, all(bar IN null WHERE bar STARTS WITH null)
-    val compiled = compile(allInList("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(allInList("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), nullLiteral)))
 
     //Then
@@ -1992,7 +1992,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, filter(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aa")
-    val compiled = compile(filter("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(filter("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), literalString("aa"))))
 
     //Then
@@ -2004,7 +2004,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("foo" -> stringValue("aa")))
 
     //When, filter(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH foo)
-    val compiled = compile(filter("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(filter("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), varFor("foo"))))
 
     //Then
@@ -2028,7 +2028,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty)
 
     //When, filter(bar IN null WHERE bar STARTS WITH null)
-    val compiled = compile(filter("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(filter("bar", listOfString("a", "aa", "aaa"),
       startsWith(varFor("bar"), nullLiteral)))
 
     //Then
@@ -2081,19 +2081,19 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiledTrue = compile(
       noneInList(
         variable = "bar",
-        collection = listOf(literalString("a")),
+        collection = listOfString("a"),
         predicate = anyInList(
           variable = "foo",
-          collection = listOf(literalString("b")),
+          collection = listOfString("b"),
           predicate = equals(varFor("bar"), varFor("foo")))))
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar = foo)) --> false
     val compiledFalse = compile(
       noneInList(
         variable = "bar",
-        collection = listOf(literalString("a")),
+        collection = listOfString("a"),
         predicate = anyInList(
           variable = "foo",
-          collection = listOf(literalString("a")),
+          collection = listOfString("a"),
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
@@ -2113,7 +2113,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
         collection = varFor("list"),
         predicate = anyInList(
           variable = "foo",
-          collection = listOf(literalString("a")),
+          collection = listOfString("a"),
           predicate = notEquals(varFor("bar"), varFor("foo")))))
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar = foo)) --> false
     val compiledFalse = compile(
@@ -2122,7 +2122,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
         collection = varFor("list"),
         predicate = anyInList(
           variable = "foo",
-          collection = listOf(literalString("a")),
+          collection = listOfString("a"),
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
@@ -2139,10 +2139,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiledTrue = compile(
       noneInList(
         variable = "bar",
-        collection = listOf(literalString("a")),
+        collection = listOfString("a"),
         predicate = anyInList(
           variable = "foo",
-          collection = listOf(literalString("a")),
+          collection = listOfString("a"),
           predicate = notEquals(varFor("bar"), varFor("foo")))))
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar = foo)) --> false
     val compiledFalse = compile(
@@ -2193,7 +2193,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
-    val compiled = compile(extract("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(extract("bar", listOfString("a", "aa", "aaa"),
                                    function("size", varFor("bar"))))
 
     //Then
@@ -2205,7 +2205,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
 
     //When, extract(bar IN [1, 2, 3] | bar + foo)
-    val compiled = compile(extract("bar", listOf(literalInt(1), literalInt(2), literalInt(3)),
+    val compiled = compile(extract("bar", listOfInt(1, 2, 3),
                                    add(varFor("foo"), varFor("bar"))))
 
     //Then
@@ -2265,7 +2265,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN ["a", "aa", "aaa"] | count + size(bar))
-    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), listOfString("a", "aa", "aaa"),
                                    add(function("size", varFor("bar")), varFor("count"))))
 
     //Then
@@ -2300,8 +2300,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //When, reduce(count = 0, bar IN [1, 2, 3] | count + bar + foo)
     val compiled = compile(reduce(varFor("count"), literalInt(0),  varFor("bar"),
-                                  listOf(literalInt(1), literalInt(2), literalInt(3)),
-                                   add(add(varFor("foo"), varFor("bar")), varFor("count"))))
+                                  listOfInt(1, 2, 3),
+                                  add(add(varFor("foo"), varFor("bar")), varFor("count"))))
 
     //Then
     compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(intValue(36))
@@ -2361,7 +2361,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa' | bar + 'A']
-    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
                                              predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
                                              extractExpression = Some(add(varFor("bar"), literalString("A")))))
 
@@ -2374,7 +2374,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, [bar IN ["a", "aa", "aaa"] | bar + 'A']
-    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
                                              predicate = None,
                                              extractExpression = Some(add(varFor("bar"), literalString("A")))))
 
@@ -2387,7 +2387,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa']
-    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
                                              predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
                                              extractExpression = None))
 
@@ -2400,7 +2400,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
 
     //When, [bar IN ["a", "aa", "aaa"]]
-    val compiled = compile(listComprehension("bar", listOf(literalString("a"), literalString("aa"), literalString("aaa")),
+    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
                                              predicate = None,
                                              extractExpression = None))
 

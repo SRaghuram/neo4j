@@ -485,10 +485,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     val leafA = NodeByLabelScan("a", labelName("labelA"), Set.empty)
     val leafB = NodeByLabelScan("b", labelName("labelB"), Set.empty)
 
-    val lhsExp = aProp
-    val rhsExp = bProp
-    val join = ValueHashJoin(leafA, leafB, equals(lhsExp, rhsExp))
-
+    val join = ValueHashJoin(leafA, leafB, equals(aProp, bProp))
 
     val lhsPipeline = SlotConfiguration.empty.
       newLong("a", nullable = false, CTNode)

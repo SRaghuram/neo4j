@@ -295,7 +295,7 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
       )
 
     for ( i <- 0 until nRefs ) {
-      curr = UnwindCollection(curr, refPrefix+i, listOf(literalInt(1)))
+      curr = UnwindCollection(curr, refPrefix+i, listOfInt(1))
     }
     curr
   }

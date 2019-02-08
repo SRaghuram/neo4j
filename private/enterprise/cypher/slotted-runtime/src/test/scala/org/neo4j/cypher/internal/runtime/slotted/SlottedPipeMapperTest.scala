@@ -705,7 +705,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val xVar = varFor("x")
     val xVarName = xVar.name
     val leaf = Argument()
-    val unwind = UnwindCollection(leaf, xVarName, listOf(literalInt(1), literalInt(2), literalInt(3)))
+    val unwind = UnwindCollection(leaf, xVarName, listOfInt(1, 2, 3))
     val sort = Sort(unwind, List(plans.Ascending(xVarName)))
 
     // when
