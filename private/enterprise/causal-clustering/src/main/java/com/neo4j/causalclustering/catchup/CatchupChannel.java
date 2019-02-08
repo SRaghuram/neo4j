@@ -14,7 +14,6 @@ import io.netty.channel.Channel;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 class CatchupChannel
 {
@@ -26,9 +25,9 @@ class CatchupChannel
         this.pooledChannel = pooledChannel;
     }
 
-    void setResponseHandler( CatchupResponseCallback handler, CompletableFuture<?> completableFuture )
+    void setResponseHandler( CatchupResponseCallback handler, CompletableFuture<?> requestOutcomeSignal )
     {
-        getOrCreateResponseHanlder().setResponseHandler( handler, completableFuture );
+        getOrCreateResponseHandler().setResponseHandler( handler, requestOutcomeSignal );
     }
 
     CompletableFuture<Protocol.ApplicationProtocol> protocol()
@@ -36,27 +35,27 @@ class CatchupChannel
         return pooledChannel.getAttribute( ChannelAttribute.PROTOCOL_STACK ).thenApply( ProtocolStack::applicationProtocol );
     }
 
-    void send( CatchupProtocolMessage request )
+    void send( CatchupProtocolMessage message )
     {
         Channel channel = pooledChannel.channel();
         channel.eventLoop().execute( () ->
         {
-            channel.write( request.messageType() );
-            channel.writeAndFlush( request );
+            channel.write( message.messageType() );
+            channel.writeAndFlush( message );
         } );
     }
 
-    Future<Void> release()
+    void release()
     {
-        return pooledChannel.release();
+        pooledChannel.release();
     }
 
     Optional<Long> millisSinceLastResponse()
     {
-        return getOrCreateResponseHanlder().millisSinceLastResponse();
+        return getOrCreateResponseHandler().millisSinceLastResponse();
     }
 
-    private TrackingResponseHandler getOrCreateResponseHanlder()
+    private TrackingResponseHandler getOrCreateResponseHandler()
     {
         if ( trackingResponseHandler == null )
         {
@@ -65,7 +64,7 @@ class CatchupChannel
         return trackingResponseHandler;
     }
 
-    public void close()
+    void dispose()
     {
         pooledChannel.channel().close();
     }
