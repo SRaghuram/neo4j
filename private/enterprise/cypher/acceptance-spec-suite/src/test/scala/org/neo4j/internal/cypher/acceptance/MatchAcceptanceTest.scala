@@ -16,10 +16,6 @@ import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  test ("tbd") {
-    executeSingle("MATCH (a)\nWHERE a.name = 'Alice' RETURN size((a)-->()-->()) AS fof")
-  }
-
   test("should handle negative node id gracefully") {
     createNode("id" -> 0)
     for (i <- 1 to 1000) createNode("id" -> i)

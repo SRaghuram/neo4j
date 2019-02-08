@@ -179,7 +179,7 @@ public class EnterpriseBuiltInDbmsProcedures
                 providedLanguageFunctions.stream().map( FunctionResult::new );
 
         // gets you all non-aggregating functions that are registered in the db (incl. those from libs like apoc)
-        Stream<FunctionResult> loadedFunctions = resolver.resolveDependency( GlobalProcedures.class ).getAllFunctions()
+        Stream<FunctionResult> loadedFunctions = resolver.resolveDependency( GlobalProcedures.class ).getAllNonAggregatingFunctions()
                 .map( f -> new FunctionResult( f, false ) );
 
         // gets you all aggregation functions that are registered in the db (incl. those from libs like apoc)

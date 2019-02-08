@@ -319,7 +319,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         }
         else if ( valueNode instanceof BooleanNode )
         {
-            value = valueNode.getLongValue();
+            value = valueNode.getBooleanValue();
         }
         else if ( valueNode.isNull() )
         {
