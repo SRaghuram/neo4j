@@ -13,6 +13,7 @@ import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
@@ -27,6 +28,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -110,13 +112,13 @@ public abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File dbDir = temporaryFolder.newFolder();
+        File storeDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                dbDir,
+                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -125,10 +127,11 @@ public abstract class SnbInteractiveExecutionTest
                 true,
                 false
         );
+        Store store = Store.createFrom( storeDir.toPath() );
         File resultDir = temporaryFolder.newFolder();
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
-        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( dbDir ) )
+        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.graphDbDirectory().toFile() ) )
         {
             int threadCount = 4;
             String resultDirPath = resultDir.getAbsolutePath();
@@ -167,7 +170,7 @@ public abstract class SnbInteractiveExecutionTest
                             scenario.planner(),
                             scenario.runtime(),
                             scenario.neo4jSchema(),
-                            dbDir,
+                            store.graphDbDirectory().toFile(),
                             DriverConfigUtils.neo4jTestConfig(),
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
@@ -184,7 +187,7 @@ public abstract class SnbInteractiveExecutionTest
             File ldbcConfigFile = temporaryFolder.newFile();
             FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
             LdbcCli.benchmark(
-                    dbDir,
+                    store,
                     scenario.updatesDir(),
                     scenario.paramsDir(),
                     resultDir,
@@ -246,13 +249,13 @@ public abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File dbDir = temporaryFolder.newFolder();
+        File storeDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                dbDir,
+                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -262,10 +265,10 @@ public abstract class SnbInteractiveExecutionTest
                 false
         );
         File resultDir = temporaryFolder.newFolder();
-
+        Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
-        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( dbDir ) )
+        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.graphDbDirectory().toFile() ) )
         {
             int threadCount = 4;
             String resultDirPath = resultDir.getAbsolutePath();
@@ -307,7 +310,7 @@ public abstract class SnbInteractiveExecutionTest
                             scenario.planner(),
                             scenario.runtime(),
                             scenario.neo4jSchema(),
-                            dbDir,
+                            store.graphDbDirectory().toFile(),
                             DriverConfigUtils.neo4jTestConfig(),
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
@@ -334,7 +337,7 @@ public abstract class SnbInteractiveExecutionTest
             File ldbcConfigFile = temporaryFolder.newFile();
             FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
             LdbcCli.benchmark(
-                    dbDir,
+                    store,
                     scenario.updatesDir(),
                     scenario.paramsDir(),
                     resultDir,
@@ -397,13 +400,13 @@ public abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File dbDir = temporaryFolder.newFolder();
+        File storeDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                dbDir,
+                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -413,10 +416,10 @@ public abstract class SnbInteractiveExecutionTest
                 false
         );
         File resultDir = temporaryFolder.newFolder();
-
+        Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
-        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( dbDir ) )
+        try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.graphDbDirectory().toFile() ) )
         {
             int threadCount = 4;
             String resultDirPath = resultDir.getAbsolutePath();
@@ -453,7 +456,7 @@ public abstract class SnbInteractiveExecutionTest
                             scenario.planner(),
                             scenario.runtime(),
                             scenario.neo4jSchema(),
-                            dbDir,
+                            store.graphDbDirectory().toFile(),
                             DriverConfigUtils.neo4jTestConfig(),
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
@@ -484,7 +487,7 @@ public abstract class SnbInteractiveExecutionTest
             File ldbcConfigFile = temporaryFolder.newFile();
             FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
             LdbcCli.benchmark(
-                    dbDir,
+                    store,
                     scenario.updatesDir(),
                     scenario.paramsDir(),
                     resultDir,

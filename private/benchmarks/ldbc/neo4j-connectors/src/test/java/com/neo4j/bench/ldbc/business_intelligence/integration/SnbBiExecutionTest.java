@@ -10,6 +10,7 @@ import com.ldbc.driver.client.ResultsDirectory;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
+import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.TestUtils;
@@ -23,6 +24,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -73,13 +75,13 @@ public abstract class SnbBiExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File dbDir = temporaryFolder.newFolder();
+        File storeDir = temporaryFolder.newFolder();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
                 scenario.neo4jImporter()
         ).load(
-                dbDir,
+                storeDir.toPath().resolve( UUID.randomUUID().toString() ).toFile(),
                 scenario.csvDir(),
                 DriverConfigUtils.neo4jTestConfig(),
                 scenario.csvDateFormat(),
@@ -89,6 +91,7 @@ public abstract class SnbBiExecutionTest
                 false
         );
         File resultDir = temporaryFolder.newFolder();
+        Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
         int threadCount = 1;
@@ -124,7 +127,7 @@ public abstract class SnbBiExecutionTest
                         scenario.planner(),
                         scenario.runtime(),
                         scenario.neo4jSchema(),
-                        dbDir,
+                        store.graphDbDirectory().toFile(),
                         DriverConfigUtils.neo4jTestConfig(),
                         LdbcSnbBiWorkload.class,
                         null
@@ -221,7 +224,7 @@ public abstract class SnbBiExecutionTest
         File ldbcConfigFile = temporaryFolder.newFile();
         FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
         LdbcCli.benchmark(
-                dbDir,
+                store,
                 scenario.updatesDir(),
                 scenario.paramsDir(),
                 resultDir,

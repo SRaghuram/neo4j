@@ -23,6 +23,8 @@ import static com.neo4j.bench.micro.Main.run;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
 public class ReplicatedTxByteArray extends AbstractRaftBenchmark
@@ -56,8 +58,8 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
     @Override
     RaftMessages.ClusterIdAwareMessage<RaftMessages.RaftMessage> initializeRaftMessage()
     {
-        return RaftMessages.ClusterIdAwareMessage.of( AbstractRaftBenchmark.CLUSTER_ID, new RaftMessages.NewEntry.Request( AbstractRaftBenchmark.MEMBER_ID,
-                ReplicatedTransaction.from( new byte[nbrOfBytes( ReplicatedTxByteArray_txSize )] ) ) );
+        return RaftMessages.ClusterIdAwareMessage.of( AbstractRaftBenchmark.CLUSTER_ID, new RaftMessages.NewEntry.Request( MEMBER_ID,
+                ReplicatedTransaction.from( new byte[nbrOfBytes( ReplicatedTxByteArray_txSize )], DEFAULT_DATABASE_NAME ) ) );
     }
 
     @Benchmark

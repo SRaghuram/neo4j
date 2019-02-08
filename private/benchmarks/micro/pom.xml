@@ -15,7 +15,6 @@
         <jmh.version>1.21</jmh.version>
         <uberjar.name>micro-benchmarks</uberjar.name>
         <airline.version>0.7</airline.version>
-        <metrics.version>3.1.2</metrics.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
@@ -170,7 +169,7 @@
                     </execution>
                 </executions>
             </plugin>
-            
+
             <!-- 2. Compile Scala sources -->
             <plugin>
                 <groupId>net.alchim31.maven</groupId>

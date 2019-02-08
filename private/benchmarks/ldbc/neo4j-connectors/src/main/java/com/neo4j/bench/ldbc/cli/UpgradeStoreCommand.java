@@ -88,7 +88,7 @@ public class UpgradeStoreCommand implements Runnable
             try
             {
                 System.out.println( "Starting store and recreating Indexes..." );
-                Neo4jSchema neo4jSchema = discoverSchema( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile, null );
+                Neo4jSchema neo4jSchema = discoverSchema( upgradedStore.topLevelDirectory().toFile(), neo4jConfigFile, null );
                 GraphDatabaseService db = Neo4jDb.newDb( upgradedStore.graphDbDirectory().toFile(), neo4jConfigFile );
                 LdbcIndexer ldbcIndexer = new LdbcIndexer( neo4jSchema, true, false, true );
                 ldbcIndexer.createTransactional( db );
