@@ -29,11 +29,11 @@ final class ConsistencyHelper
     {
     }
 
-    static void assertStoreConsistent( FileSystemAbstraction fs, DatabaseLayout databaseLayout ) throws Exception
+    static void assertStoreConsistent( FileSystemAbstraction fs, File miscDir, DatabaseLayout databaseLayout ) throws Exception
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler );
-              TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, databaseLayout ) )
+              TemporaryStoreDirectory tempStore = new TemporaryStoreDirectory( fs, pageCache, DatabaseLayout.of( miscDir ) ) )
         {
             fs.copyRecursively( databaseLayout.databaseDirectory(), tempStore.storeDir() );
 

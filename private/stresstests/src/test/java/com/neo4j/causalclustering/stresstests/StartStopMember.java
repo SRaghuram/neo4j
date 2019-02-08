@@ -6,7 +6,11 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.ClusterMember;
+
+import java.io.File;
+
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.stresstests.ConsistencyHelper.assertStoreConsistent;
@@ -15,20 +19,23 @@ public class StartStopMember implements WorkOnMember
 {
     private final Log log;
     private final FileSystemAbstraction fileSystem;
+    private final File miscDir;
 
     StartStopMember( Resources resources )
     {
         this.log = resources.logProvider().getLog( getClass() );
         this.fileSystem = resources.fileSystem();
+        this.miscDir = resources.miscDir();
     }
 
     @Override
     public void doWorkOnMember( ClusterMember member ) throws Exception
     {
+        DatabaseLayout databaseLayout = member.database().databaseLayout();
         log.info( "Stopping: " + member );
         member.shutdown();
 
-        assertStoreConsistent( fileSystem, member.database().databaseLayout() );
+        assertStoreConsistent( fileSystem, miscDir, databaseLayout );
 
         Thread.sleep( 5000 );
         log.info( "Starting: " + member );

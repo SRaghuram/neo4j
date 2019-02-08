@@ -5,16 +5,17 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DefaultCluster;
+import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.IpFamily;
+
 import java.io.File;
 import java.io.IOException;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
-import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.IpFamily;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
@@ -33,6 +34,7 @@ class Resources
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
     private final LogProvider logProvider;
+    private final File miscDir;
 
     Resources( FileSystemAbstraction fileSystem, PageCache pageCache, Config config ) throws IOException
     {
@@ -51,6 +53,7 @@ class Resources
 
         this.clusterDir = ensureExistsAndEmpty( new File( workingDirectory, "cluster" ) );
         this.backupDir = ensureExistsAndEmpty( new File( workingDirectory, "backups" ) );
+        this.miscDir = ensureExistsAndEmpty( new File( workingDirectory, "misc" ) );
 
         Map<String,String> coreParams = new HashMap<>();
         Map<String,String> readReplicaParams = new HashMap<>();
@@ -71,6 +74,11 @@ class Resources
     public FileSystemAbstraction fileSystem()
     {
         return fileSystem;
+    }
+
+    public File miscDir()
+    {
+        return miscDir;
     }
 
     public LogProvider logProvider()
