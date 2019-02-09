@@ -57,6 +57,6 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
         row <- List(Array(r.getStartNode, r.getEndNode),
                     Array(r.getEndNode, r.getStartNode))
       } yield row
-    runtimeResult should beColumns("x", "y").withRows(expected.sortBy(arr => (arr(0).getId, -arr(1).getId))).inOrder
+    runtimeResult should beColumns("x", "y").withRows(inOrder(expected.sortBy(arr => (arr(0).getId, -arr(1).getId))))
   }
 }
