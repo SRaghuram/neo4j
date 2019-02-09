@@ -14,6 +14,7 @@ case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
                               middleOperators: Seq[StatelessOperator],
                               produceResult: Option[ProduceResultOperator],
+                              serial: Boolean,
                               slots: SlotConfiguration,
                               inputRowBuffer: RowBufferDefinition,
                               output: RowBufferDefinition) {

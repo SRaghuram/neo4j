@@ -43,16 +43,14 @@ trait ExecutionState extends ArgumentStateCreator {
     *
     * @return the morsel to consume, or `null` if no morsel was available
     */
-  def consumeMorsel(bufferId: BufferId): MorselExecutionContext
+  def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselExecutionContext
 
   /**
-    * Close this morsel, meaning that we are done consuming it.
+    * Close this task, meaning that we are done executing it.
     *
-    * @param bufferId buffer from which this morsel was consumed
-    * @param inputMorsel morsel to close
+    * @param task the task to close
     */
-  def closeMorsel(bufferId: BufferId,
-                  inputMorsel: MorselExecutionContext): Unit
+  def closeTask(task: PipelineTask): Unit
 
   /**
     * Continue executing pipeline `p`.
@@ -70,4 +68,16 @@ trait ExecutionState extends ArgumentStateCreator {
     * Adds an empty row to the initBuffer.
     */
   def initialize(): Unit
+
+  /**
+    * Await the completion of this query execution.
+    */
+  // TODO: strange place for this method. Consider refactoring.
+  def awaitCompletion(): Unit
+
+  /**
+    * Check whether this query has completed.
+    */
+  // TODO: strange place for this method. Consider refactoring.
+  def isCompleted: Boolean
 }

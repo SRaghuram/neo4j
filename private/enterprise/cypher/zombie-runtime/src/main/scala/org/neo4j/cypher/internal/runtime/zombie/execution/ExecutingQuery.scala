@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
-import java.util.concurrent.CountDownLatch
-
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.QueryState
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, ExecutionState}
@@ -16,18 +14,8 @@ class ExecutingQuery(val executablePipelines: IndexedSeq[ExecutablePipeline],
                      val queryContext: QueryContext,
                      val queryState: QueryState) extends QueryExecutionHandle {
 
-  private val latch = new CountDownLatch(1)
-
-  @volatile
-  private var queryFailed: Option[Throwable] = None
-
   override def await(): Option[Throwable] = {
-    latch.await()
-    queryFailed
-  }
-
-  def stop(result: Option[Throwable]): Unit = {
-    queryFailed = result
-    latch.countDown()
+    executionState.awaitCompletion()
+    None
   }
 }

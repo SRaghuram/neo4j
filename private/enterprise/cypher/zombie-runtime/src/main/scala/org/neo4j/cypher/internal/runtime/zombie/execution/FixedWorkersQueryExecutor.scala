@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadFactory
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.zombie.state.SingleThreadedStateBuilder
+import org.neo4j.cypher.internal.runtime.zombie.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult
@@ -36,9 +36,8 @@ class FixedWorkersQueryExecutor(threadFactory: ThreadFactory,
   /**
     * Start all worker threads
     */
-  def start(): Unit = {
-    workerThreads.foreach(_.start())
-  }
+  // TODO: shouldn't be done in constructor: integrate with lifecycle properly instead
+  workerThreads.foreach(_.start())
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,
@@ -57,7 +56,7 @@ class FixedWorkersQueryExecutor(threadFactory: ThreadFactory,
                                 numberOfWorkers = 1,
                                 inputDataStream)
 
-    val executionState = SingleThreadedStateBuilder.build(stateDefinition, executablePipelines)
+    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory)
     executionState.initialize()
 
     val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState)

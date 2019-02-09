@@ -20,13 +20,17 @@ class QueryManager {
   }
 
   def removeQuery(query: ExecutingQuery): Unit = {
-    query.stop(None)
     if (!runningQueries.remove(query)) {
       throw new IllegalStateException("Tried to remove query that did not exist in the queue")
     }
   }
 
   def nextQueryToWorkOn(workerId: Int): ExecutingQuery = {
-    runningQueries.peek()
+    var query = runningQueries.peek()
+    while (query != null && query.executionState.isCompleted) {
+      runningQueries.poll()
+      query = runningQueries.peek()
+    }
+    query
   }
 }

@@ -79,7 +79,7 @@ class SortMergeOperator(val planId: Id,
 
       if (completedArguments == null) {
         argumentStateMap.updateAndConsume(inputMorsel)
-        completedArguments = argumentStateMap.consumeComplete()
+        completedArguments = argumentStateMap.consumeCompleted()
       }
 
       while (outputRow.isValidRow && canContinue) {

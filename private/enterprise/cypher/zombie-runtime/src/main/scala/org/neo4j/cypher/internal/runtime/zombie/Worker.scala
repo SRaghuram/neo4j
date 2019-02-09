@@ -37,7 +37,7 @@ class Worker(val workerId: Int,
           sleeper.reset()
           val worked = workOnQuery(executingQuery)
           if (!worked) {
-            queryManager.removeQuery(executingQuery)
+            sleeper.reportIdle()
           }
         } else {
           sleeper.reportIdle()
@@ -68,7 +68,7 @@ class Worker(val workerId: Int,
         if (task.canContinue) {
           state.addContinuation(task)
         } else {
-          state.closeMorsel(pipeline.inputRowBuffer.id, task.start.inputMorsel)
+          state.closeTask(task)
         }
         true
       } else

@@ -66,6 +66,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                            headOperator,
                            middleOperators,
                            produceResultOperator,
+                           p.serial,
                            physicalPlan.slotConfigurations(p.headPlan.id),
                            p.lhsRowBuffer,
                            p.output)

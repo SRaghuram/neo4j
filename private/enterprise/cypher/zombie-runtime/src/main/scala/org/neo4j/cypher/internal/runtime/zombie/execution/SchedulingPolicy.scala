@@ -29,7 +29,7 @@ object LazyScheduling extends SchedulingPolicy {
         return task
       }
 
-      val input = state.consumeMorsel(p.inputRowBuffer.id)
+      val input = state.consumeMorsel(p.inputRowBuffer.id, p)
       if (input != null) {
         val pipelineState = state.pipelineState(p.id)
         val tasks = pipelineState.init(input, executingQuery.queryContext, executingQuery.queryState, queryResources)

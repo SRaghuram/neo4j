@@ -45,6 +45,7 @@ class Pipeline(val id: PipelineId,
   var output: RowBufferDefinition = _
   val middlePlans = new ArrayBuffer[LogicalPlan]
   var produceResults: Option[ProduceResult] = None
+  var serial: Boolean = false
   var lhsRowBuffer: RowBufferDefinition = _
 }
 
@@ -132,10 +133,11 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
           pipeline.lhsRowBuffer = outputToBuffer(source)
-          pipeline.produceResults = Some(produceResult)
+          pipeline.serial = true
           pipeline
         } else {
           source.produceResults = Some(produceResult)
+          source.serial = true
           source
         }
 

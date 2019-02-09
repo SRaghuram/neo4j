@@ -35,7 +35,7 @@ trait ArgumentStateMap[T <: MorselAccumulator] {
     * Consume the MorselAccumulators of all complete arguments. The MorselAccumulators will
     * be removed from the ArgumentStateMap and cannot be consumed or modified after this call.
     */
-  def consumeComplete(): Iterator[T]
+  def consumeCompleted(): Iterator[T]
 
   /**
     * Increment the argument counter for `argument`.

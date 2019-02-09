@@ -13,11 +13,11 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import scala.collection.mutable
 
 /**
-  * SingleThreaded and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
+  * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
   */
-class SingleThreadedArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
-                                                             val argumentSlotOffset: Int,
-                                                             constructor: () => T) extends ArgumentStateMap[T] {
+class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
+                                                       val argumentSlotOffset: Int,
+                                                       constructor: () => T) extends ArgumentStateMap[T] {
   private val arguments = mutable.Map[Long, T]()
   private val counters = mutable.Map[Long, Long]().withDefaultValue(0)
 
@@ -34,11 +34,10 @@ class SingleThreadedArgumentStateMap[T <: MorselAccumulator](val owningPlanId: I
     morsel.removeCounter(owningPlanId)
   }
 
-  override def consumeComplete(): Iterator[T] = {
+  override def consumeCompleted(): Iterator[T] = {
     val complete =
       for {
-        // TODO: sorting here is just a temporary hack to make testing easier, fix testing instead
-        argument <- counters.keys.toSeq.sorted
+        argument <- counters.keys
         if counters(argument) == 0
       } yield argument
 

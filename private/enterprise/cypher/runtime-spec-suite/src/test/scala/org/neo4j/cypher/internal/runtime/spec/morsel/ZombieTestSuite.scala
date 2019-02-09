@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.Descending
 
 class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime) {
 
-  ignore("should handle expand") {
+  test("should handle expand") {
     // given
     val (nodes, rels) = circleGraph(10)
 
@@ -34,7 +34,7 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
     runtimeResult should beColumns("x", "y").withRows(expected)
   }
 
-  ignore("should apply-sort") {
+  test("should apply-sort") {
     // given
     val (nodes, rels) = circleGraph(10)
 
@@ -51,12 +51,6 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
     val runtimeResult = execute(logicalQuery, runtime)
 
     // then
-    val expected =
-      for {
-        r <- rels
-        row <- List(Array(r.getStartNode, r.getEndNode),
-                    Array(r.getEndNode, r.getStartNode))
-      } yield row
-    runtimeResult should beColumns("x", "y").withRows(inOrder(expected.sortBy(arr => (arr(0).getId, -arr(1).getId))))
+    runtimeResult should beColumns("x", "y").withRows(groupedBy("x").desc("y"))
   }
 }
