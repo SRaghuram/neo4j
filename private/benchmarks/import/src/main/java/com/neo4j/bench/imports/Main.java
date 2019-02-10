@@ -28,21 +28,14 @@ import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 import io.airlift.airline.SingleCommand;
-import org.apache.commons.compress.utils.IOUtils;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.neo4j.test.proc.ProcessUtil;
 import org.neo4j.tooling.ImportTool;
@@ -144,8 +137,6 @@ public class Main
              title = "JVM Args" )
     private String jvmArgs = "";
 
-    private static final String BUCKET_NAME = "import-benchmarks-stores.neo4j.org";
-
     public static void main( String[] args ) throws Exception
     {
         Main runner = SingleCommand.singleCommand( Main.class ).parse( args );
@@ -166,27 +157,6 @@ public class Main
         }
 
         report( starttime, System.currentTimeMillis() - starttime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
-    }
-
-    private static void compressDir( String rootDir, String sourceDir, ZipOutputStream out ) throws IOException
-    {
-        for ( File file : Objects.requireNonNull( new File( sourceDir ).listFiles() ) )
-        {
-            if ( file.isDirectory() )
-            {
-                compressDir( rootDir, sourceDir + File.separator + file.getName(), out );
-            }
-            else
-            {
-                ZipEntry entry = new ZipEntry( sourceDir.replace( rootDir, "" ) + file.getName() );
-                out.putNextEntry( entry );
-
-                try ( InputStream in = new BufferedInputStream( new FileInputStream( sourceDir + File.separator + file.getName() ) ) )
-                {
-                    IOUtils.copy( in, out );
-                }
-            }
-        }
     }
 
     private void runImport( String size, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig )

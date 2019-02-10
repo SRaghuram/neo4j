@@ -26,7 +26,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import java.util.Arrays;
 import java.util.SplittableRandom;
 
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 
@@ -38,8 +37,8 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 @BenchmarkEnabled( false )
 public class CreateNodesWithProperty extends AbstractMarketingBenchmark
 {
-    private static final Label LABEL = DynamicLabel.label( "Label" );
-    private static final Label SCHEMA_LABEL = DynamicLabel.label( "SchemaLabel" );
+    private static final Label LABEL = Label.label( "Label" );
+    private static final Label SCHEMA_LABEL = Label.label( "SchemaLabel" );
     private static final String SCHEMA_PROPERTY = "SchemaProperty";
     private static final PropertyDefinition[] propertyDefinitions = new PropertyDefinition[]
             {

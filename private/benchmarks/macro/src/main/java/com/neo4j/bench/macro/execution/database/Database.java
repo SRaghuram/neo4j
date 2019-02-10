@@ -6,6 +6,7 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Lists;
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.util.BenchmarkUtil;
@@ -20,7 +21,6 @@ import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.schema.ConstraintDefinition;

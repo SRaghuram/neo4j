@@ -10,18 +10,17 @@ import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
+import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytes;
 import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;
-
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 

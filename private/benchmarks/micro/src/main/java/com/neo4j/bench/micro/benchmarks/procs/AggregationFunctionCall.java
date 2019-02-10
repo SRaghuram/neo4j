@@ -11,7 +11,7 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
 
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.internal.kernel.api.procs.UserAggregator;
@@ -20,8 +20,10 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.UserAggregationFunction;
 import org.neo4j.procedure.UserAggregationResult;
 import org.neo4j.procedure.UserAggregationUpdate;
+import org.neo4j.values.AnyValue;
 
 import static com.neo4j.bench.micro.Main.run;
+import static org.neo4j.values.storable.Values.longValue;
 
 public class AggregationFunctionCall extends AbstractProceduresBenchmark
 {
@@ -50,15 +52,15 @@ public class AggregationFunctionCall extends AbstractProceduresBenchmark
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )
-    public long testAggregation() throws ProcedureException
+    public AnyValue testAggregation() throws ProcedureException
     {
         UserAggregator aggregator = procedures.createAggregationFunction( context, token );
         for ( long i = 0; i < AggregationFunctionCall_rows; i++ )
         {
-            aggregator.update( new Object[]{i} );
+            aggregator.update( new AnyValue[]{longValue( i )} );
         }
 
-        return (long) aggregator.result();
+        return aggregator.result();
     }
 
     public static class TestAggregation

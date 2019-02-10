@@ -10,6 +10,9 @@ import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.bench.micro.benchmarks.cluster.TxFactory;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
+import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -18,15 +21,11 @@ import org.openjdk.jmh.annotations.Param;
 
 import java.util.concurrent.ExecutionException;
 
-import org.neo4j.causalclustering.core.consensus.RaftMessages;
-import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.bench.micro.Main.run;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -66,9 +65,9 @@ public class ReplicatedTxRepresentation extends AbstractRaftBenchmark
         ClusterTx clusterTx = popLatest();
         Log log = logProvider().getLog( getClass() );
         log.info( "Created transaction representation of size: %d. Expected: %d. Diff%%: %f", clusterTx.size(), expectedSize,
-                diffPercent( expectedSize, clusterTx.size() ) );
-        return RaftMessages.ClusterIdAwareMessage.of( CLUSTER_ID,
-                new RaftMessages.NewEntry.Request( MEMBER_ID, ReplicatedTransaction.from( clusterTx.txRepresentation(), DEFAULT_DATABASE_NAME ) ) );
+                  diffPercent( expectedSize, clusterTx.size() ) );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( clusterTx.txRepresentation(), "db-name" );
+        return RaftMessages.ClusterIdAwareMessage.of( CLUSTER_ID, new RaftMessages.NewEntry.Request( MEMBER_ID, replicatedTx ) );
     }
 
     private float diffPercent( int expectedSize, int size )

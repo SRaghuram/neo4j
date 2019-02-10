@@ -53,7 +53,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.kernel.impl.store.format.standard.StandardV3_4;
+import org.neo4j.kernel.impl.store.format.standard.StandardV4_0;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -745,7 +745,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 (null == importerProperties)
                 ? Config.defaults()
                 : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) ),
-                StandardV3_4.RECORD_FORMATS,
+                StandardV4_0.RECORD_FORMATS,
                 NO_MONITOR,
                 jobScheduler
         );

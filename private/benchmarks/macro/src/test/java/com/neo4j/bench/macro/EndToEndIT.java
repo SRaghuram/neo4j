@@ -26,6 +26,7 @@ import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
+import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import io.findify.s3mock.S3Mock;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,8 +46,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.EnterpriseNeo4jRule;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
 import static org.hamcrest.io.FileMatchers.anExistingFile;
@@ -66,7 +66,7 @@ public class EndToEndIT
 
     @Rule
     public Neo4jRule neo4jBootstrap =
-            new EnterpriseNeo4jRule().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
+            new CommercialNeo4jRule().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 

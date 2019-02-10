@@ -517,7 +517,7 @@ public class SyntheticStoreGenerator
                         java,
                         plans,
                         errors );
-                SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport, Planner.RULE );
+                SubmitTestRun submitTestRun = new SubmitTestRun( testRunReport, Planner.COST );
 
                 SubmitTestRunResult result = new QueryRetrier().execute( client, submitTestRun, 1 );
 

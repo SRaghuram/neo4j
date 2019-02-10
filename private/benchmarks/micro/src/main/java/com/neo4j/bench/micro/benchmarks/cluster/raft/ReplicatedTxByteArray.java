@@ -8,6 +8,8 @@ package com.neo4j.bench.micro.benchmarks.cluster.raft;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -16,14 +18,9 @@ import org.openjdk.jmh.annotations.Param;
 
 import java.util.concurrent.ExecutionException;
 
-import org.neo4j.causalclustering.core.consensus.RaftMessages;
-import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-
 import static com.neo4j.bench.micro.Main.run;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -58,8 +55,10 @@ public class ReplicatedTxByteArray extends AbstractRaftBenchmark
     @Override
     RaftMessages.ClusterIdAwareMessage<RaftMessages.RaftMessage> initializeRaftMessage()
     {
-        return RaftMessages.ClusterIdAwareMessage.of( AbstractRaftBenchmark.CLUSTER_ID, new RaftMessages.NewEntry.Request( MEMBER_ID,
-                ReplicatedTransaction.from( new byte[nbrOfBytes( ReplicatedTxByteArray_txSize )], DEFAULT_DATABASE_NAME ) ) );
+        return RaftMessages.ClusterIdAwareMessage.of(
+                AbstractRaftBenchmark.CLUSTER_ID,
+                new RaftMessages.NewEntry.Request( AbstractRaftBenchmark.MEMBER_ID,
+                                                   ReplicatedTransaction.from( new byte[nbrOfBytes( ReplicatedTxByteArray_txSize )], "db-name" ) ) );
     }
 
     @Benchmark

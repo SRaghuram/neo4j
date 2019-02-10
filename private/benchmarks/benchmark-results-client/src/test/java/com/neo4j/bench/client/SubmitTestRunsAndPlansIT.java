@@ -36,6 +36,7 @@ import com.neo4j.bench.client.queries.SetStoreVersion;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
+import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -52,8 +53,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.driver.v1.Session;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.EnterpriseNeo4jRule;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -71,7 +71,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class SubmitTestRunsAndPlansIT
 {
-    private final Neo4jRule neo4j = new EnterpriseNeo4jRule()
+    private final Neo4jRule neo4j = new CommercialNeo4jRule()
             .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
 
     @Rule

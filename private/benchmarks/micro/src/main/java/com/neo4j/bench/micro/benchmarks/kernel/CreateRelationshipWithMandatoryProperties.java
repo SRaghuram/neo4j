@@ -5,6 +5,16 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
+import com.neo4j.bench.micro.data.RelationshipKeyDefinition;
+import com.neo4j.bench.micro.data.ValueGeneratorFun;
+import org.eclipse.collections.api.list.primitive.MutableLongList;
+import org.eclipse.collections.impl.factory.primitive.LongLists;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -20,19 +30,8 @@ import java.util.Collections;
 import java.util.SplittableRandom;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.RelationshipKeyDefinition;
-import com.neo4j.bench.micro.data.ValueGeneratorFun;
-
-import org.neo4j.collection.primitive.Primitive;
-import org.neo4j.collection.primitive.PrimitiveLongList;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -57,7 +56,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.stridingFor;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
 
 @BenchmarkEnabled( false )
@@ -160,7 +158,7 @@ public class CreateRelationshipWithMandatoryProperties extends AbstractKernelBen
                     offset,
                     sliding ).create();
             ValueGeneratorFun<Long> idFun = stridingLong( stride, NODE_COUNT, offset, sliding ).create();
-            PrimitiveLongList nodeIds = Primitive.longList();
+            MutableLongList nodeIds =  LongLists.mutable.empty();
             long nodeId = idFun.next( rngState.rng );
             while ( !idFun.wrapped() )
             {

@@ -35,7 +35,6 @@ import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 
 import static com.neo4j.bench.client.ClientUtil.durationToString;
-
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.joining;
@@ -462,7 +461,7 @@ public class DataGenerator
         {
             for ( int n = 0; n < nodes; n++ )
             {
-                long nodeId = db.createNodeId();
+                long nodeId = db.createNode().getId();
                 nodeIds[n] = nodeId;
                 if ( ++txStateCounter % TX_SIZE == 0 )
                 {

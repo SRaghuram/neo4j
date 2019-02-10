@@ -172,7 +172,7 @@ public class InteractiveRunIT
         assertThat( jfrFlameGraphCount, equalTo( expectedBenchmarkCount ) );
 
         // expected number of stores are present
-        try ( Stream<Path> paths = Files.walk( storesDir.toPath() ) )
+        try ( Stream<Path> paths = Files.list( storesDir.toPath() ) )
         {
             List<String> pathNames = paths
                     .filter( Files::isDirectory )

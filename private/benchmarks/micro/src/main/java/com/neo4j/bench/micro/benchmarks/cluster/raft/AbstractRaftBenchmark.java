@@ -8,6 +8,10 @@ package com.neo4j.bench.micro.benchmarks.cluster.raft;
 import com.neo4j.bench.micro.benchmarks.cluster.EditionModuleBackedAbstractBenchmark;
 import com.neo4j.bench.micro.benchmarks.cluster.LocalNetworkPlatform;
 import com.neo4j.bench.micro.benchmarks.cluster.ProtocolVersion;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.identity.ClusterId;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.messaging.Inbound;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 
@@ -15,10 +19,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.neo4j.causalclustering.core.consensus.RaftMessages;
-import org.neo4j.causalclustering.identity.ClusterId;
-import org.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.causalclustering.messaging.Inbound;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;

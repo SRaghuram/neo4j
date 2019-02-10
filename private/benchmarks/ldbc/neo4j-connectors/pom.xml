@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>ldbc</artifactId>
-        <version>3.6.0-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -19,7 +19,7 @@
         <ldbc-driver-version>0.3.2</ldbc-driver-version>
         <airline.version>0.7</airline.version>
         <fastutil.version>7.0.10</fastutil.version>
-        <commons-compress.version>1.13</commons-compress.version>
+        <commons-compress.version>1.15</commons-compress.version>
         <uberjar.name>ldbc</uberjar.name>
         <license-text.header>../../build/license-header.txt</license-text.header>
     </properties>
@@ -61,6 +61,11 @@
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise-cypher</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-tools</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -122,6 +127,11 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.5</version>
+            </plugin>                        
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>

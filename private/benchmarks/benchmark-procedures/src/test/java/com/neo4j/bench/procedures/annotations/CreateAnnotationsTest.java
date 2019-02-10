@@ -11,6 +11,8 @@ import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator;
+import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -23,8 +25,7 @@ import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.EnterpriseNeo4jRule;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
 import static com.neo4j.bench.client.model.Annotation.AUTHOR;
@@ -32,6 +33,7 @@ import static com.neo4j.bench.client.model.Annotation.COMMENT;
 import static com.neo4j.bench.client.model.Annotation.DATE;
 import static com.neo4j.bench.client.model.Annotation.EVENT_ID;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
+
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -43,7 +45,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 
 public class CreateAnnotationsTest
 {
-    private final Neo4jRule neo4j = new EnterpriseNeo4jRule().
+    private final Neo4jRule neo4j = new CommercialNeo4jRule().
             withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE ).
             withProcedure( CreateAnnotation.class );
 

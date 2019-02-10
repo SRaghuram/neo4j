@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
-import org.neo4j.causalclustering.protocol.ProtocolInstaller;
+import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 
 public interface ProtocolInstallers
 {

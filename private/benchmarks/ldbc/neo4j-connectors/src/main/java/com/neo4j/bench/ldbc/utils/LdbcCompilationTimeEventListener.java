@@ -8,7 +8,7 @@ package com.neo4j.bench.ldbc.utils;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer;
-import org.neo4j.cypher.internal.v3_5.frontend.phases.CompilationPhaseTracer;
+import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer;
 
 public class LdbcCompilationTimeEventListener implements TimingCompilationTracer.EventListener
 {

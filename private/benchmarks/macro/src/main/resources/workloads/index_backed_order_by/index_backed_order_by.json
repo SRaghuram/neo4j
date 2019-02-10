@@ -121,6 +121,26 @@
       "name": "Q24",
       "description": "Wanted Improvement: Index backed property values with union",
       "queryFile": "queries/Q24.cypher"
+    },
+    {
+      "name": "Q25",
+      "description": "Wanted Improvement: Partial sort should improve over normal Sort. Few distinct values in already sorted column.",
+      "queryFile": "queries/Q25.cypher"
+    },
+    {
+      "name": "Q26",
+      "description": "Wanted Improvement: Partial sort should improve over normal Sort. Many distinct values in already sorted column.",
+      "queryFile": "queries/Q26.cypher"
+    },
+    {
+      "name": "Q27",
+      "description": "Wanted Improvement: Partial top should improve over normal Top. Few distinct values in already sorted column, limit half of first chunk.",
+      "queryFile": "queries/Q27.cypher"
+    },
+    {
+      "name": "Q28",
+      "description": "Wanted Improvement: Partial top should improve over normal Top. Many distinct values in already sorted column, limit quarter of rows.",
+      "queryFile": "queries/Q28.cypher"
     }
   ]
 }

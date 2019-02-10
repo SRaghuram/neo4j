@@ -5,10 +5,6 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Stack;
-
 import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
@@ -16,22 +12,25 @@ import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.micro.data.Stores;
+import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
+import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMarshalV2;
+import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 
-import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
-import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMarshalV2;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Stack;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.proc.Procedures;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 
 public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBenchmark
 {
@@ -85,9 +84,9 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
 
     class TxProbingEditionModule extends CommunityEditionModule
     {
-        TxProbingEditionModule( PlatformModule platformModule )
+        TxProbingEditionModule( GlobalModule globalModule )
         {
-            super( platformModule );
+            super( globalModule );
             commitProcessFactory = ( appender, storageEngine, config ) -> (TransactionCommitProcess) ( batch, commitEvent, mode ) ->
             {
                 long txId = batch.transactionId();
@@ -95,8 +94,11 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
                 CountingChannel countingChannel = new CountingChannel();
                 try
                 {
-                    ReplicatedTransactionMarshalV2.marshal( countingChannel, ReplicatedTransaction.from( batch.transactionRepresentation(),
-                                                                                                         DEFAULT_DATABASE_NAME ) );
+                    TransactionRepresentationReplicatedTransaction txRepresentation = ReplicatedTransaction.from( batch.transactionRepresentation(),
+                                                                                                                  "db-name" );
+
+                    ReplicatedTransactionMarshalV2.marshal( countingChannel, txRepresentation );
+
                     clusterTxStack.add( new ClusterTx( txId, batch.transactionRepresentation(), countingChannel.totalSize ) );
                 }
                 catch ( IOException e )
@@ -108,7 +110,7 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
         }
 
         @Override
-        public void createSecurityModule( PlatformModule platformModule, Procedures procedures )
+        public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
         {
             securityProvider = NoAuthSecurityProvider.INSTANCE;
         }

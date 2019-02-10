@@ -5,6 +5,10 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
+import com.neo4j.causalclustering.helper.ErrorHandler;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
+import com.neo4j.causalclustering.net.Server;
+import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -15,12 +19,12 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
-import org.neo4j.causalclustering.helper.ErrorHandler;
-import org.neo4j.causalclustering.net.Server;
-import org.neo4j.causalclustering.protocol.ProtocolInstaller;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;
@@ -36,15 +40,16 @@ public class LocalNetworkPlatform
 
     public void start( ProtocolInstallers serverClientContext, LogProvider logProvider ) throws Throwable
     {
+        Executor executor = Executors.newCachedThreadPool();
         log = logProvider.getLog( getClass() );
         try
         {
             log.info( "BEGIN start" );
             ProtocolInstaller<ProtocolInstaller.Orientation.Server> serverProtocolInstaller = serverClientContext.serverInstaller();
             ListenSocketAddress listenSocketAddress = new ListenSocketAddress( "localhost", SOME_BULLSHIT_PORT );
-
             log.info( "Starting server. Binding to: %s", listenSocketAddress );
-            server = new Server( serverProtocolInstaller::install, logProvider, logProvider, listenSocketAddress, "RaftServer" );
+            server = new Server( serverProtocolInstaller::install, logProvider, logProvider, listenSocketAddress, "RaftServer", executor,
+                                 BootstrapConfiguration.serverConfig( Config.defaults() ) );
             server.init();
             server.start();
 

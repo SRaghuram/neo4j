@@ -39,9 +39,9 @@ import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriterV1;
 import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
 import org.neo4j.bolt.v1.messaging.response.RecordMessage;
 import org.neo4j.bolt.v1.packstream.PackOutput;
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.configuration.Config;
@@ -199,23 +199,37 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
 
         @Override
-        public void onRecords( BoltResult boltResult, boolean pull ) throws Exception
+        public boolean onPullRecords( BoltResult result, long size ) throws Exception
         {
-            boltResult.accept( new BoltResult.Visitor()
-            {
-                @Override
-                public void visit( QueryResult.Record record ) throws Exception
-                {
-                    writer.write( new RecordMessage( record ) );
-                    out.reset();
-                }
 
-                @Override
-                public void addMetadata( String key, AnyValue value )
-                {
+            return doOnRecords( result, size );
+        }
 
-                }
-            } );
+        @Override
+        public boolean onDiscardRecords( BoltResult result, long size )
+        {
+            throw new RuntimeException( "Did not expect this to happen in benchmarks" );
+        }
+
+        private boolean doOnRecords( BoltResult boltResult, long size ) throws Exception
+        {
+            return boltResult.handleRecords(
+                    new BoltResult.Visitor()
+                    {
+                        @Override
+                        public void visit( QueryResult.Record record ) throws Exception
+                        {
+                            writer.write( new RecordMessage( record ) );
+                            out.reset();
+                        }
+
+                        @Override
+                        public void addMetadata( String key, AnyValue value )
+                        {
+
+                        }
+                    },
+                    size );
         }
 
         @Override

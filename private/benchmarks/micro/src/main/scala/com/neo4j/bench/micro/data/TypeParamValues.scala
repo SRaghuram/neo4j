@@ -8,9 +8,8 @@ package com.neo4j.bench.micro.data
 import java.time.{LocalDate, LocalTime, ZoneOffset}
 import java.util
 
+import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.benchmarks.RNGState
-import com.neo4j.bench.micro.data.ConstantGenerator.constant
-import com.neo4j.bench.micro.data.DiscreteGenerator.{Bucket, discrete}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian
 import org.neo4j.values.storable.Values.pointValue
@@ -18,6 +17,8 @@ import org.neo4j.values.storable._
 import org.neo4j.values.virtual.MapValue
 
 import scala.collection.JavaConverters._
+import com.neo4j.bench.micro.data.ConstantGenerator.constant;
+import com.neo4j.bench.micro.data.DiscreteGenerator.discrete;
 import scala.collection.mutable
 
 object TypeParamValues {

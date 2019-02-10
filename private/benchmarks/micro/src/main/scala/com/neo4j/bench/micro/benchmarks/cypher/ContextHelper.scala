@@ -8,15 +8,15 @@ package com.neo4j.bench.micro.benchmarks.cypher
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 
-import org.neo4j.cypher.internal.compatibility.CypherRuntimeConfiguration
-import org.neo4j.cypher.internal.compiler.v3_5.{CypherPlannerConfiguration, StatsDivergenceCalculator}
+import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
-import org.neo4j.cypher.internal.planner.v3_5.spi.PlanContext
+import org.neo4j.cypher.internal.planner.v4_0.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
-import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
-import org.neo4j.cypher.internal.v3_5.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
-import org.neo4j.cypher.internal.v3_5.util.{CypherException, InputPosition}
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
+import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
+import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
+import org.neo4j.cypher.internal.{CypherRuntimeConfiguration, EnterpriseRuntimeContext, NoSchedulerTracing, RuntimeEnvironment}
+import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
+import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 import org.scalatest.mock.MockitoSugar
@@ -24,26 +24,14 @@ import org.scalatest.mock.MockitoSugar
 import scala.concurrent.duration.Duration
 
 object ContextHelper extends MockitoSugar {
-  private val plannerConfig = CypherPlannerConfiguration(
-    queryCacheSize = 128,
-    statsDivergenceCalculator = StatsDivergenceCalculator.divergenceNoDecayCalculator(0.5, 1000),
-    useErrorsOverWarnings = false,
-    idpMaxTableSize = 128,
-    idpIterationDuration = 1000,
-    errorIfShortestPathFallbackUsedAtRuntime = false,
-    errorIfShortestPathHasCommonNodesAtRuntime = true,
-    legacyCsvQuoteEscaping = false,
-    csvBufferSize = CSVResources.DEFAULT_BUFFER_SIZE,
-    nonIndexedLabelWarningThreshold = 10000L,
-    planWithMinimumCardinalityEstimates = false,
-    lenientCreateRelationship = false
-  )
 
   private val runtimeConfig = CypherRuntimeConfiguration(
     workers = Runtime.getRuntime.availableProcessors(),
     morselSize = 10000,
-    doSchedulerTracing = false,
-    waitTimeout = Duration(3000, TimeUnit.MILLISECONDS)
+    schedulerTracing = NoSchedulerTracing,
+    waitTimeout = Duration(3000, TimeUnit.MILLISECONDS),
+    scheduler = CypherMorselRuntimeSchedulerOption.default,
+    lenientCreateRelationship = false
   )
 
   def create(exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null,
@@ -54,16 +42,19 @@ object ContextHelper extends MockitoSugar {
              clock: Clock = Clock.systemUTC(),
              codeStructure: CodeStructure[GeneratedQuery] = mock[CodeStructure[GeneratedQuery]],
              useCompiledExpressions: Boolean = false,
-             jobScheduler: JobScheduler): EnterpriseRuntimeContext = {
-                             EnterpriseRuntimeContext(
-                               planContext,
-                               readOnly = true,
-                               codeStructure,
-                               NullLog.getInstance(),
-                               clock,
-                               debugOptions,
-                               plannerConfig,
-                               runtimeEnvironment = RuntimeEnvironment(runtimeConfig, jobScheduler),
-                               compileExpressions = useCompiledExpressions)
+             jobScheduler: JobScheduler,
+             schemaRead: SchemaRead,
+             cursors: CursorFactory,
+             txBridge: ThreadToStatementContextBridge): EnterpriseRuntimeContext = {
+    EnterpriseRuntimeContext(
+      planContext,
+      schemaRead,
+      codeStructure,
+      NullLog.getInstance(),
+      clock,
+      debugOptions,
+      runtimeConfig,
+      runtimeEnvironment = RuntimeEnvironment.of(runtimeConfig, jobScheduler, cursors, txBridge),
+      compileExpressions = useCompiledExpressions)
   }
 }

@@ -26,7 +26,7 @@ import static java.util.stream.Collectors.toList;
 /*
     All inline-able short strings
     http://neo4j.com/docs/operations-manual/current/#property-compression
-    com.neo4j.kernel.impl.store.LongerShortString
+    org.neo4j.kernel.impl.store.LongerShortString
 
     String class                          Character count limit
     Numerical, Date and Hex                     54

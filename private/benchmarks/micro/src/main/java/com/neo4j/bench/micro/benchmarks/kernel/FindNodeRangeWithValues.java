@@ -26,12 +26,13 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.SplittableRandom;
 
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.IndexOrder;
 import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.IndexReference;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -132,6 +133,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
     {
         int propertyKey;
         IndexReference index;
+        IndexReadSession indexReadSession;
         NodeValueIndexCursor node;
         Read read;
         long min;
@@ -152,6 +154,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
             propertyKey = propertyKeyToId( ascPropertyFor( type, min ) );
 
             index = kernelTx.schemaRead.index( labelToId( LABEL ), propertyKey );
+            indexReadSession = kernelTx.read.indexReadSession( index );
             node = kernelTx.cursors.allocateNodeValueIndexCursor();
             read = kernelTx.read;
         }
@@ -180,7 +183,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
     public void findNodeByLabelKeyValue( TxState txState, RNGState rngState, Blackhole bh ) throws KernelException
     {
         IndexQuery query = txState.nextQuery( rngState.rng );
-        txState.read.nodeIndexSeek( txState.index, txState.node, IndexOrder.NONE, true, query );
+        txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, IndexOrder.NONE, true, query );
         assertCountAndValues( txState.node, txState.rangeSize, bh );
     }
 

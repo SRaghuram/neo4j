@@ -9,24 +9,29 @@ import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
+import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.BasicContext;
-import org.neo4j.kernel.impl.proc.Procedures;
+import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.values.ValueMapper;
 
 @State( Scope.Benchmark )
 public abstract class AbstractProceduresBenchmark extends BaseDatabaseBenchmark
 {
     static final ResourceTracker DUMMY_TRACKER = new DummyResourceTracker();
-    Procedures procedures;
+    GlobalProcedures procedures;
     int token;
-    BasicContext context;
+    Context context;
 
     @Override
     protected void afterDatabaseStart()
     {
-        procedures = ((GraphDatabaseAPI) db()).getDependencyResolver().resolveDependency( Procedures.class );
-        context = new BasicContext();
+        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db()).getDependencyResolver();
+        procedures = dependencyResolver.resolveDependency( GlobalProcedures.class );
+        context = BasicContext.buildContext( dependencyResolver,
+                                             dependencyResolver.resolveDependency( ValueMapper.class ) ).context();
     }
 
     @Override

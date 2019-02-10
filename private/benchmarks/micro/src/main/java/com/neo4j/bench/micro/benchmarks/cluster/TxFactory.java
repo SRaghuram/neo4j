@@ -120,31 +120,34 @@ public class TxFactory
         private static final List<Object> PROPERTY_SET = new ArrayList<Object>()
         {{
             add( "Kristersson föreslås som statsminister\n" +
-                 "I nästa vecka kommer riksdagen få rösta om Moderatledaren Ulf Kristersson som statsminister. Talmannen Andreas Norlén ger honom fram till" +
-                 " dess att undersöka vilka partier som ska ingå i hans regering.\n" +
-                 "\n" + "\n" + "TT\n" + "\n" + "Talman Andreas Norl n anländer till riksdagens pressrum.\n" + "Bild: Pontus Lundahl/TT\n" +
-                 "Det finns inga förutsättningar att utse en ny sonderingsperson, på det sätt som Ulf Kristersson och S-ledaren Stefan Löfven tidigare har" +
-                 " haft i uppdrag att sondera läget. Möjligheterna är uttömda, anser talmannen.\n" +
-                 "\n" + "I stället tänker Andreas Norlén nästa måndag föreslå att riksdagen ska få rösta om Kristersson som statsminister.\n" +
-                 "Talmannen är dock inte säker på att Kristersson kommer att bli vald.\n" +
-                 "– För dagen finns inga som helst garantier för att Ulf Kristersson blir vald, säger Andreas Norlén.\n" +
-                 "Ulf Kristersson har tidigare föreslagit olika regeringsalternativ där ett eller flera Allianspartier ingår, alla med honom själv som" +
-                 " statsminister. De har dock stoppats av att både Centern och Liberalerna sagt nej, eftersom dessa alternativ behöver stöd av " +
-                 "Sverigedemokraterna för att få igenom sin politik. Även SD säger nej till Kristerssons alternativ," +
-                 " så länge de inte får inflytande över politiken.\n" +
-                 "När riksdagen nu får rösta om Kristersson tvingas C och L att välja om de ska stå fast vid sina nej " +
-                 "eller släppa fram Moderatledaren som statsminister.\n" +
-                 "Norlén räknar med att riksdagen skulle kunna rösta om Kristersson som statsminister den 14 november.\n" +
-                 "– Men det är inte ett definitivt besked, säger Norlén.\n" +
-                 "Den 14 november är dagen innan riksdagen ska debattera budgeten. Därför kan omröstningen komma att ske senare. " +
-                 "Norlén understryker dock att det är viktigt att ta ett nytt steg i regeringssamtalen.\n" +
-                 "– Processen måste föras framåt, dynamiken mellan partierna måste förändras, de resultatlösa samtalen måste få ett slut, säger Norlén.\n" +
-                 "Hittills har sonderingarna ledda av M-ledaren Ulf Kristersson respektive S-ledaren Stefan Löfven inte gett några resultat," +
-                 " inte heller talmannens gruppsamtal med företrädare för fyra tänkbara regeringsalternativ.\n" +
-                 "En möjlighet som har förts fram är att C-ledaren Annie Lööf skulle få ett nytt sonderingsuppdrag.\n" +
-                 "– Annie Lööf har sagt att hon är redo att åta sig ett sonderingsuppdrag för att undersöka en regeringssamverkan mellan " +
-                 "Allianspartierna och Miljöpartiet om hela Alliansen står bakom ett sådant uppdrag, säger Andreas Norlén.\n" +
-                 "– Det sista föreligger dock inte eftersom två av fyra Allianspartier inte anser att ett sådant uppdrag ska ges.\n" );
+                    "I nästa vecka kommer riksdagen få rösta om Moderatledaren Ulf Kristersson som statsminister. " +
+                    "Talmannen Andreas Norlén ger honom fram till dess att " +
+                    "undersöka vilka partier som ska ingå i hans regering.\n" +
+                    "\n" + "\n" + "TT\n" + "\n" + "Talman Andreas Norl n anländer till riksdagens pressrum.\n" + "Bild: Pontus Lundahl/TT\n" +
+                    "Det finns inga förutsättningar att utse en ny sonderingsperson, på det sätt som Ulf Kristersson och S-ledaren Stefan " +
+                    "Löfven tidigare har haft i " +
+                    "uppdrag att sondera läget. Möjligheterna är uttömda, anser talmannen.\n" +
+                    "\n" + "I stället tänker Andreas Norlén nästa måndag föreslå att riksdagen ska få rösta om Kristersson som statsminister.\n" +
+                    "Talmannen är dock inte säker på att Kristersson kommer att bli vald.\n" +
+                    "– För dagen finns inga som helst garantier för att Ulf Kristersson blir vald, säger Andreas Norlén.\n" +
+                    "Ulf Kristersson har tidigare föreslagit olika regeringsalternativ där ett eller flera Allianspartier ingår, alla med " +
+                    "honom själv som statsminister." +
+                    " De har dock stoppats av att både Centern och Liberalerna sagt nej, eftersom dessa alternativ behöver stöd av " +
+                    "Sverigedemokraterna för att få igenom sin politik. Även SD säger nej till Kristerssons alternativ, så länge de " +
+                    "inte får inflytande över politiken.\n" +
+                    "När riksdagen nu får rösta om Kristersson tvingas C och L att välja om de ska stå fast vid sina nej eller släppa " +
+                    "fram Moderatledaren som statsminister.\n" +
+                    "Norlén räknar med att riksdagen skulle kunna rösta om Kristersson som statsminister den 14 november.\n" +
+                    "– Men det är inte ett definitivt besked, säger Norlén.\n" +
+                    "Den 14 november är dagen innan riksdagen ska debattera budgeten. Därför kan omröstningen komma att ske senare. Norlén understryker dock " +
+                    "att det är viktigt att ta ett nytt steg i regeringssamtalen.\n" +
+                    "– Processen måste föras framåt, dynamiken mellan partierna måste förändras, de resultatlösa samtalen måste få ett slut, säger Norlén.\n" +
+                    "Hittills har sonderingarna ledda av M-ledaren Ulf Kristersson respektive S-ledaren Stefan Löfven inte gett några resultat, inte " +
+                    "heller talmannens gruppsamtal med företrädare för fyra tänkbara regeringsalternativ.\n" +
+                    "En möjlighet som har förts fram är att C-ledaren Annie Lööf skulle få ett nytt sonderingsuppdrag.\n" +
+                    "– Annie Lööf har sagt att hon är redo att åta sig ett sonderingsuppdrag för att undersöka en regeringssamverkan mellan " +
+                    "Allianspartierna och Miljöpartiet om hela Alliansen står bakom ett sådant uppdrag, säger Andreas Norlén.\n" +
+                    "– Det sista föreligger dock inte eftersom två av fyra Allianspartier inte anser att ett sådant uppdrag ska ges.\n" );
 
             add( Integer.MAX_VALUE );
             add( new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} );

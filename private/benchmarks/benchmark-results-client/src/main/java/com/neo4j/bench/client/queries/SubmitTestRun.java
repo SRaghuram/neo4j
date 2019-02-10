@@ -37,7 +37,7 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
 
     public SubmitTestRun( TestRunReport report )
     {
-        this( report, Planner.RULE );
+        this( report, Planner.COST );
     }
 
     public SubmitTestRun( TestRunReport report, Planner submitTreeWithPlanner )

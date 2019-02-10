@@ -5,11 +5,11 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster.raft;
 
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.messaging.Inbound;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.neo4j.causalclustering.core.consensus.RaftMessages;
-import org.neo4j.causalclustering.messaging.Inbound;
 
 class CountingMessageHandler implements Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
 {

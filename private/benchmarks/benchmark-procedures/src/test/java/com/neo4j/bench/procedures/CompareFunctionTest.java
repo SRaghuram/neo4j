@@ -27,8 +27,8 @@ import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.EnterpriseNeo4jRule;
-import org.neo4j.harness.junit.Neo4jRule;
+import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.kernel.configuration.Settings;
 
 import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
@@ -43,7 +43,7 @@ public class CompareFunctionTest
     private static final String PASSWORD = "neo4j";
 
     @Rule
-    public Neo4jRule neo4j = new EnterpriseNeo4jRule()
+    public Neo4jRule neo4j = new CommercialNeo4jRule()
             .withProcedure( VarianceProcedure.class )
             .withFunction( CompareFunction.class )
             .withFunction( DateTimeFunction.class )

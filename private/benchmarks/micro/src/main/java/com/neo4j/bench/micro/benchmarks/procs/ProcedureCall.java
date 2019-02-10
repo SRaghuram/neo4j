@@ -19,14 +19,16 @@ import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureHandle;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.values.AnyValue;
 
 import static com.neo4j.bench.micro.Main.run;
+import static org.neo4j.values.storable.Values.longValue;
 
 @OutputTimeUnit( TimeUnit.MICROSECONDS )
 public class ProcedureCall extends AbstractProceduresBenchmark
@@ -58,10 +60,10 @@ public class ProcedureCall extends AbstractProceduresBenchmark
     @BenchmarkMode( {Mode.SampleTime} )
     public long testProcedure() throws ProcedureException
     {
-        RawIterator<Object[],ProcedureException> iterator = procedures.callProcedure(
+        RawIterator<AnyValue[],ProcedureException> iterator = procedures.callProcedure(
                 context,
                 token,
-                new Object[]{ProcedureCall_rows},
+                new AnyValue[]{longValue( ProcedureCall_rows )},
                 DUMMY_TRACKER );
 
         int count = 0;

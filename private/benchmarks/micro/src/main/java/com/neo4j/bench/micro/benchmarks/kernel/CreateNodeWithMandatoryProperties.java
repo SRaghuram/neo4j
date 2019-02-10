@@ -24,9 +24,9 @@ import org.openjdk.jmh.infra.ThreadParams;
 
 import java.util.SplittableRandom;
 
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.internal.kernel.api.Write;
-import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.values.storable.Value;
 
 import static com.neo4j.bench.micro.Main.run;
