@@ -34,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.scheduler.Group;
@@ -177,10 +178,12 @@ class ChannelPoolsIT
     }
 
     @Test
-    void shouldReturnEmptyStreamOfInstalledProtocolsIfNoChannels()
+    void shouldReturnEmptyStreamOfInstalledProtocolsIfNoOpenChannels() throws ExecutionException, InterruptedException
     {
         // when
-        Stream<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols = pool.installedProtocols();
+        Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols = pool.installedProtocols();
+
+        pool.acquire( to1 ).get().channel().close().get();
 
         // then
         assertThat( installedProtocols, empty() );
@@ -191,7 +194,7 @@ class ChannelPoolsIT
     {
         assertThrows( Exception.class, () -> pool.acquire( serverlessAddress ).get().release().get() );
         // when
-        Stream<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols = pool.installedProtocols();
+        Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols = pool.installedProtocols();
 
         // then
         assertThat( installedProtocols, empty() );
@@ -203,9 +206,10 @@ class ChannelPoolsIT
         pool.acquire( to1 ).get().release().get();
         pool.acquire( to2 ).get().release().get();
 
-        List<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols = pool.installedProtocols().collect( toList() );
+        List<Pair<SocketAddress,ProtocolStack>> installedProtocols = pool.installedProtocols().collect( toList() );
 
-        assertThat( installedProtocols, Matchers.containsInAnyOrder( Pair.of( to1, protocolStackRaft ), Pair.of( to2, protocolStackRaft ) ) );
+        assertThat( installedProtocols, Matchers.containsInAnyOrder( Pair.of( new SocketAddress( to1.getHostname(), to1.getPort() ), protocolStackRaft ),
+                Pair.of( new SocketAddress( to2.getHostname(), to2.getPort() ), protocolStackRaft ) ) );
     }
 
     private void startServers() throws InterruptedException, ExecutionException

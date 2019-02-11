@@ -29,11 +29,11 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 public class InstalledProtocolsProcedureTest
 {
-    private Pair<AdvertisedSocketAddress,ProtocolStack> outbound1 =
-            Pair.of( new AdvertisedSocketAddress( "host1", 1 ),
+    private Pair<SocketAddress,ProtocolStack> outbound1 =
+            Pair.of( new SocketAddress( "host1", 1 ),
                     new ProtocolStack( TestApplicationProtocols.RAFT_1, asList( TestModifierProtocols.SNAPPY ) ) );
-    private Pair<AdvertisedSocketAddress,ProtocolStack> outbound2 =
-            Pair.of( new AdvertisedSocketAddress( "host2", 2 ),
+    private Pair<SocketAddress,ProtocolStack> outbound2 =
+            Pair.of( new SocketAddress( "host2", 2 ),
                     new ProtocolStack( TestApplicationProtocols.RAFT_2, asList( TestModifierProtocols.SNAPPY, TestModifierProtocols.ROT13 ) ) );
 
     private Pair<SocketAddress,ProtocolStack> inbound1 =

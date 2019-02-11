@@ -5,24 +5,19 @@
  */
 package com.neo4j.causalclustering.net;
 
-import com.neo4j.causalclustering.protocol.handshake.ChannelAttribute;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.scheduler.Group;
@@ -30,10 +25,10 @@ import org.neo4j.scheduler.JobScheduler;
 
 public class ChannelPools implements Lifecycle
 {
-    private SimpleChannelPoolMap poolMap;
     private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private final JobScheduler scheduler;
     private final ChannelPoolHandler poolHandler;
+    private SimpleChannelPoolMap poolMap;
     private EventLoopGroup eventLoopGroup;
     private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
@@ -108,30 +103,8 @@ public class ChannelPools implements Lifecycle
         // do nothing
     }
 
-    public Stream<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols()
+    public Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols()
     {
-        // disable for now
-        return Stream.empty();
-    }
-
-    private ProtocolStack protocolStack( ChannelPool pool )
-    {
-        Channel channel = null;
-        try
-        {
-            channel = pool.acquire().get( 100, TimeUnit.MILLISECONDS );
-            return channel.attr( ChannelAttribute.PROTOCOL_STACK ).get().getNow( null );
-        }
-        catch ( InterruptedException | ExecutionException | TimeoutException ignore )
-        {
-        }
-        finally
-        {
-            if ( channel != null )
-            {
-                pool.release( channel );
-            }
-        }
-        return null;
+        return poolMap == null ? Stream.empty() : poolMap.installedProtocols();
     }
 }

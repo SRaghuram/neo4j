@@ -137,7 +137,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     private final CoreTopologyService topologyService;
     protected final LogProvider logProvider;
     protected final Config globalConfig;
-    private final Supplier<Stream<Pair<AdvertisedSocketAddress,ProtocolStack>>> clientInstalledProtocols;
+    private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> clientInstalledProtocols;
     private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> serverInstalledProtocols;
     private final CoreServerModule coreServerModule;
     private final CoreStateService coreStateService;

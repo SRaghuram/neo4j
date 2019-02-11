@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
-import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.helpers.collection.Pair;
@@ -37,10 +36,10 @@ public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedur
 
     public static final String PROCEDURE_NAME = "protocols";
 
-    private final Supplier<Stream<Pair<AdvertisedSocketAddress,ProtocolStack>>> clientInstalledProtocols;
+    private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> clientInstalledProtocols;
     private final Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> serverInstalledProtocols;
 
-    public InstalledProtocolsProcedure( Supplier<Stream<Pair<AdvertisedSocketAddress,ProtocolStack>>> clientInstalledProtocols,
+    public InstalledProtocolsProcedure( Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> clientInstalledProtocols,
             Supplier<Stream<Pair<SocketAddress,ProtocolStack>>> serverInstalledProtocols )
     {
         super( ProcedureSignature.procedureSignature( new QualifiedName( PROCEDURE_NAMESPACE, PROCEDURE_NAME ) )

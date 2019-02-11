@@ -20,6 +20,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -120,7 +121,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
         }
     }
 
-    public Stream<Pair<AdvertisedSocketAddress,ProtocolStack>> installedProtocols()
+    public Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols()
     {
         return channels.installedProtocols();
     }
