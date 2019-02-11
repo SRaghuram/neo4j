@@ -40,8 +40,8 @@ class CatchupChannel
         Channel channel = pooledChannel.channel();
         channel.eventLoop().execute( () ->
         {
-            channel.write( message.messageType() );
-            channel.writeAndFlush( message );
+            channel.write( message.messageType(), channel.voidPromise() );
+            channel.writeAndFlush( message, channel.voidPromise() );
         } );
     }
 

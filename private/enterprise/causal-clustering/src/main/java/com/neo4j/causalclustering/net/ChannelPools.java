@@ -46,7 +46,9 @@ public class ChannelPools implements Lifecycle
         {
             if ( poolMap == null )
             {
-                return null;
+                CompletableFuture<PooledChannel> failedFuture = new CompletableFuture<>();
+                failedFuture.completeExceptionally( new IllegalStateException( "Channel pools is not in a started state." ) );
+                return failedFuture;
             }
             SimpleChannelPool channelPool = poolMap.get( advertisedSocketAddress );
             return PooledChannel.future( channelPool.acquire(), channelPool );
