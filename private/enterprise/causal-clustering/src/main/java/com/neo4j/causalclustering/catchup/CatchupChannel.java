@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.protocol.handshake.ChannelAttribute;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.channel.Channel;
 
-import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 
 class CatchupChannel
@@ -50,7 +50,7 @@ class CatchupChannel
         pooledChannel.release();
     }
 
-    Optional<Long> millisSinceLastResponse()
+    OptionalLong millisSinceLastResponse()
     {
         return getOrCreateResponseHandler().millisSinceLastResponse();
     }

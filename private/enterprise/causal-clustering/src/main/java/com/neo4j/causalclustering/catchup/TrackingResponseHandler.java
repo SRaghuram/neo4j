@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 
 import java.nio.channels.ClosedChannelException;
 import java.time.Clock;
-import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 
 import static org.neo4j.util.concurrent.Futures.failedFuture;
@@ -27,12 +27,13 @@ class TrackingResponseHandler implements CatchupResponseHandler
     private static final CompletableFuture<Object> ILLEGAL_FUTURE =
             failedFuture( new IllegalStateException( "Not expected" ) );
     private static final CatchupResponseAdaptor ILLEGAL_HANDLER = new CatchupResponseAdaptor();
+    private static final long NO_RESPONSE_TIME = 1;
 
     private final Clock clock;
 
     private CatchupResponseCallback delegate;
     private CompletableFuture<?> requestOutcomeSignal;
-    private Long lastResponseTime;
+    private long lastResponseTime = NO_RESPONSE_TIME;
 
     TrackingResponseHandler( Clock clock )
     {
@@ -44,6 +45,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     {
         this.requestOutcomeSignal = ILLEGAL_FUTURE;
         this.delegate = ILLEGAL_HANDLER;
+        this.lastResponseTime = NO_RESPONSE_TIME;
     }
 
     void setResponseHandler( CatchupResponseCallback responseHandler, CompletableFuture<?>
@@ -152,9 +154,9 @@ class TrackingResponseHandler implements CatchupResponseHandler
         requestOutcomeSignal.completeExceptionally( new ClosedChannelException().fillInStackTrace() );
     }
 
-    Optional<Long> millisSinceLastResponse()
+    OptionalLong millisSinceLastResponse()
     {
-        return Optional.ofNullable( lastResponseTime ).map( responseMillis -> clock.millis() - responseMillis );
+        return lastResponseTime == NO_RESPONSE_TIME ? OptionalLong.empty() : OptionalLong.of( clock.millis() - lastResponseTime );
     }
 
     private void recordLastResponse()

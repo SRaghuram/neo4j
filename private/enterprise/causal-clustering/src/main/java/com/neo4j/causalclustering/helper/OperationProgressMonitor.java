@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.helper;
 
-import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -19,10 +19,10 @@ public final class OperationProgressMonitor<T>
 {
     private final Future<T> future;
     private final long inactivityTimeoutMillis;
-    private final Supplier<Optional<Long>> millisSinceLastResponseSupplier;
+    private final Supplier<OptionalLong> millisSinceLastResponseSupplier;
     private final Log log;
 
-    private OperationProgressMonitor( Future<T> future, long inactivityTimeoutMillis, Supplier<Optional<Long>> millisSinceLastResponseSupplier, Log log )
+    private OperationProgressMonitor( Future<T> future, long inactivityTimeoutMillis, Supplier<OptionalLong> millisSinceLastResponseSupplier, Log log )
     {
         this.future = future;
         this.inactivityTimeoutMillis = inactivityTimeoutMillis;
@@ -31,7 +31,7 @@ public final class OperationProgressMonitor<T>
     }
 
     public static <T> OperationProgressMonitor<T> of( Future<T> future, long inactivityTimeoutMillis,
-            Supplier<Optional<Long>> millisSinceLastResponseSupplier, Log log )
+            Supplier<OptionalLong> millisSinceLastResponseSupplier, Log log )
     {
         return new OperationProgressMonitor<>( future, inactivityTimeoutMillis, millisSinceLastResponseSupplier, log );
     }
@@ -56,7 +56,7 @@ public final class OperationProgressMonitor<T>
         return waitForCompletion( millisSinceLastResponseSupplier, exceptionFactory, inactivityTimeoutMillis, log );
     }
 
-    private <E extends Throwable> T waitForCompletion( Supplier<Optional<Long>> millisSinceLastResponseSupplier,
+    private <E extends Throwable> T waitForCompletion( Supplier<OptionalLong> millisSinceLastResponseSupplier,
             Function<Throwable,E> exceptionFactory, long inactivityTimeoutMillis, Log log ) throws E
     {
         long remainingTimeoutMillis = inactivityTimeoutMillis;
@@ -79,7 +79,8 @@ public final class OperationProgressMonitor<T>
             }
             catch ( TimeoutException e )
             {
-                if ( !millisSinceLastResponseSupplier.get().isPresent() )
+                OptionalLong millisSinceLastResponse = millisSinceLastResponseSupplier.get();
+                if ( !millisSinceLastResponse.isPresent() )
                 {
                     log.warn( "Request timed out with no responses after " + inactivityTimeoutMillis + " ms." );
                     future.cancel( false );
@@ -87,10 +88,9 @@ public final class OperationProgressMonitor<T>
                 }
                 else
                 {
-                    long millisSinceLastResponse = millisSinceLastResponseSupplier.get().get();
-                    if ( millisSinceLastResponse < inactivityTimeoutMillis )
+                    if ( millisSinceLastResponse.getAsLong() < inactivityTimeoutMillis )
                     {
-                        remainingTimeoutMillis = inactivityTimeoutMillis - millisSinceLastResponse;
+                        remainingTimeoutMillis = inactivityTimeoutMillis - millisSinceLastResponse.getAsLong();
                     }
                     else
                     {
