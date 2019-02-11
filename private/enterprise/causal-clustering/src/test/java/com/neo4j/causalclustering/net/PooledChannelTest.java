@@ -23,19 +23,20 @@ import static org.mockito.Mockito.when;
 
 public class PooledChannelTest
 {
+    private final EmbeddedChannel embeddedChannel = new EmbeddedChannel();
     private ChannelPool pool;
 
     @BeforeEach
     void setUp()
     {
         pool = mock( ChannelPool.class );
-        when( pool.release( any() ) ).thenReturn( new EmbeddedChannel().newPromise().setSuccess() );
+        when( pool.release( any() ) ).thenReturn( embeddedChannel.newPromise().setSuccess() );
     }
 
     @Test
     void shouldNotBeAbleToUseChannelAfterItHasBeenReleased() throws ExecutionException, InterruptedException
     {
-        PooledChannel pooledChannel = new PooledChannel( newMockedChannel(), pool );
+        PooledChannel pooledChannel = new PooledChannel( embeddedChannel, pool );
 
         pooledChannel.release().get();
 
@@ -47,7 +48,7 @@ public class PooledChannelTest
     @Test
     void shouldBeAbleToUseChannelAndThenChainRelease() throws ExecutionException, InterruptedException
     {
-        PooledChannel pooledChannel = new PooledChannel( newMockedChannel(), pool );
+        PooledChannel pooledChannel = new PooledChannel( embeddedChannel, pool );
 
         ByteBuf msg = ByteBufAllocator.DEFAULT.heapBuffer();
         pooledChannel.channel().writeAndFlush( msg ).addListener( f -> pooledChannel.release() ).get();
@@ -55,15 +56,5 @@ public class PooledChannelTest
         IllegalStateException illegalStateException = Assertions.assertThrows( IllegalStateException.class, pooledChannel::channel );
 
         assertEquals( "Channel has been released back into the pool.", illegalStateException.getMessage() );
-    }
-
-    public static PooledChannel createPooledChannel( Channel channel, ChannelPool channelPool )
-    {
-        return new PooledChannel( channel, channelPool );
-    }
-
-    private EmbeddedChannel newMockedChannel()
-    {
-        return new EmbeddedChannel();
     }
 }

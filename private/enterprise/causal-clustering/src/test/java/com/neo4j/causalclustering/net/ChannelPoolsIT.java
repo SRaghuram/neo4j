@@ -23,7 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -40,7 +40,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.scheduler.Group;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.scheduler.JobSchedulerAdapter;
-import org.neo4j.util.concurrent.Futures;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static co.unruly.matchers.StreamMatchers.empty;
 import static java.util.Collections.emptyList;
@@ -52,13 +52,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ChannelPoolsIT
 {
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;
-    private static final int DEFAULT_TIME_OUT = 1;
+    private static final int DEFAULT_TIME_OUT = 30;
     private final ProtocolStack protocolStackRaft = new ProtocolStack( TestApplicationProtocols.RAFT_2, emptyList() );
     private ChannelPools pool;
-    private final AdvertisedSocketAddress to1 = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
-    private final AdvertisedSocketAddress to2 = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
+    private AdvertisedSocketAddress to1;
+    private AdvertisedSocketAddress to2;
     private final AdvertisedSocketAddress serverlessAddress = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
-    private List<ChannelFuture> channelFutures;
     private EventLoopGroup serverEventExecutor;
     private PoolEventsMonitor poolEventsMonitor;
 
@@ -66,7 +65,7 @@ class ChannelPoolsIT
     void setUpServers() throws ExecutionException, InterruptedException
     {
         poolEventsMonitor = new PoolEventsMonitor();
-        pool = new ChannelPools( BootstrapConfiguration.clientConfig( Config.defaults() ), new SimpleJobScheduler(), poolEventsMonitor );
+        pool = new ChannelPools( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), poolEventsMonitor );
 
         startServers();
 
@@ -156,7 +155,7 @@ class ChannelPoolsIT
     }
 
     @Test
-    void shouldFailToAcquireChanelIfNoServer()
+    void shouldFailToAcquireChannelIfNoServer()
     {
         assertThrows( ExecutionException.class, () -> pool.acquire( serverlessAddress ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT ) );
     }
@@ -216,36 +215,29 @@ class ChannelPoolsIT
     {
         BootstrapConfiguration<? extends ServerSocketChannel> serverConfig = BootstrapConfiguration.serverConfig( Config.defaults() );
         serverEventExecutor = serverConfig.eventLoopGroup( Executors.newCachedThreadPool() );
-        ServerBootstrap serverBootrap = new ServerBootstrap().group( serverEventExecutor ).channel( serverConfig.channelClass() );
+        ServerBootstrap serverBootstrap = new ServerBootstrap().group( serverEventExecutor ).channel( serverConfig.channelClass() );
 
-        ChannelFuture server1 = serverBootrap.clone().childHandler( new EmptyChannelHandler() ).bind( to1.socketAddress() );
-        ChannelFuture server2 = serverBootrap.clone().childHandler( new EmptyChannelHandler() ).bind( to2.socketAddress() );
+        ChannelFuture server1 = serverBootstrap.clone().childHandler( new EmptyChannelHandler() ).bind( 0 );
+        ChannelFuture server2 = serverBootstrap.clone().childHandler( new EmptyChannelHandler() ).bind( 0 );
 
-        channelFutures = Arrays.asList( server1, server2 );
+        server1.get();
+        server2.get();
 
-        Futures.combine( server1, server2 ).get();
+        AdvertisedSocketAddress server1Address = getLocalAddress( server1 );
+        to1 = new AdvertisedSocketAddress( server1Address.getHostname(), server1Address.getPort() );
+        AdvertisedSocketAddress server2Address = getLocalAddress( server2 );
+        to2 = new AdvertisedSocketAddress( server2Address.getHostname(), server2Address.getPort() );
     }
 
-    private void closeServers() throws InterruptedException, ExecutionException
+    private AdvertisedSocketAddress getLocalAddress( ChannelFuture server1 )
     {
-        for ( ChannelFuture channelFuture : channelFutures )
-        {
-            Channel channel = channelFuture.channel();
-            if ( channel != null )
-            {
-                channel.close().get();
-            }
-        }
+        InetSocketAddress inetSocketAddress = (InetSocketAddress) server1.channel().localAddress();
+        return new AdvertisedSocketAddress( inetSocketAddress.getHostName(), inetSocketAddress.getPort() );
+    }
+
+    private void closeServers()
+    {
         serverEventExecutor.shutdownGracefully();
-    }
-    private static class SimpleJobScheduler extends JobSchedulerAdapter
-    {
-
-        @Override
-        public Executor executor( Group group )
-        {
-            return Executors.newCachedThreadPool();
-        }
     }
 
     @ChannelHandler.Sharable

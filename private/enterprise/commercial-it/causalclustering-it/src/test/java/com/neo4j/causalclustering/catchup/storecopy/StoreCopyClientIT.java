@@ -62,6 +62,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
@@ -150,13 +151,15 @@ public class StoreCopyClientIT
     }
 
     @Test
-    public void shouldHandleMultipleRequestsOnReusedChannel() throws StoreCopyFailedException
+    public void shouldHandleMultipleRequestsOnReusedChannel()
     {
         CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( from( catchupServer.address().getPort() ) );
         for ( int i = 0; i < 100; i++ )
         {
             StoreFileStreamProvider storeFileStream = new IgnoringStoreFileStreamProvider();
-            subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, () -> defaultTerminationCondition, targetLocation );
+            assertDoesNotThrow(
+                    () -> subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, () -> defaultTerminationCondition,
+                            targetLocation ) );
         }
     }
 
