@@ -59,7 +59,7 @@ class CatchupChannel
     {
         if ( trackingResponseHandler == null )
         {
-            trackingResponseHandler = pooledChannel.getAttribute( CatchupChannelPool.TRACKING_RESPONSE_HANDLER );
+            trackingResponseHandler = pooledChannel.getAttribute( CatchupChannelPoolService.TRACKING_RESPONSE_HANDLER );
         }
         return trackingResponseHandler;
     }

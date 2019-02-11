@@ -8,23 +8,23 @@ package com.neo4j.causalclustering.catchup;
 import java.time.Duration;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.logging.Log;
 
 public class CatchupClientFactory
 {
-    private final CatchupChannelPool pool;
+    private final CatchupChannelPoolService pool;
     private final String defaultDatabaseName;
     private final Duration inactivityTimeout;
 
-    public CatchupClientFactory( String defaultDatabaseName, Duration inactivityTimeout, CatchupChannelPool catchupChannelPool )
+    public CatchupClientFactory( String defaultDatabaseName, Duration inactivityTimeout, CatchupChannelPoolService catchupChannelPoolService )
     {
         this.defaultDatabaseName = defaultDatabaseName;
         this.inactivityTimeout = inactivityTimeout;
-        this.pool = catchupChannelPool;
+        this.pool = catchupChannelPoolService;
     }
 
     public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream, Log log )
     {
-        return new CatchupClient( pool.acquire( upstream ), defaultDatabaseName, inactivityTimeout, log );
+        return new CatchupClient( pool.acquire( upstream ).thenApply( CatchupChannel::new ), defaultDatabaseName, inactivityTimeout, log );
     }
 }

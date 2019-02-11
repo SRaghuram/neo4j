@@ -164,10 +164,11 @@ public final class CatchupClientBuilder
                         handshakeTimeout, debugLogProvider, userLogProvider );
             };
 
-            CatchupChannelPool catchupChannelPool = new CatchupChannelPool( bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
-            lifecycleHandler.accept( catchupChannelPool );
+            CatchupChannelPoolService
+                    catchupChannelPoolService = new CatchupChannelPoolService( bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
+            lifecycleHandler.accept( catchupChannelPoolService );
 
-            return new CatchupClientFactory( defaultDatabaseName, inactivityTimeout, catchupChannelPool );
+            return new CatchupClientFactory( defaultDatabaseName, inactivityTimeout, catchupChannelPoolService );
         }
     }
 

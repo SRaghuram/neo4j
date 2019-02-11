@@ -14,40 +14,18 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
 
 import java.time.Clock;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
 
-public class CatchupChannelPool extends LifecycleAdapter
+class CatchupChannelPoolService extends ChannelPoolService
 {
     static final AttributeKey<TrackingResponseHandler> TRACKING_RESPONSE_HANDLER = AttributeKey.valueOf( "TRACKING_RESPONSE_HANDLER" );
 
-    private final ChannelPoolService channelPoolService;
-
-    CatchupChannelPool( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler jobScheduler, Clock clock,
+    CatchupChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler jobScheduler, Clock clock,
             Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory )
     {
-        this.channelPoolService = new ChannelPoolService( bootstrapConfiguration, jobScheduler, new TrackingResponsePoolHandler( initializerFactory, clock ) );
-    }
-
-    CompletableFuture<CatchupChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
-    {
-        return channelPoolService.acquire( advertisedSocketAddress ).thenApply( CatchupChannel::new );
-    }
-
-    @Override
-    public void start()
-    {
-        channelPoolService.start();
-    }
-
-    @Override
-    public void stop()
-    {
-        channelPoolService.stop();
+        super( bootstrapConfiguration, jobScheduler, new TrackingResponsePoolHandler( initializerFactory, clock ) );
     }
 
     private static class TrackingResponsePoolHandler implements ChannelPoolHandler
