@@ -19,13 +19,11 @@ public class StartStopMember implements WorkOnMember
 {
     private final Log log;
     private final FileSystemAbstraction fileSystem;
-    private final File tempStoreDir;
 
     StartStopMember( Resources resources )
     {
         this.log = resources.logProvider().getLog( getClass() );
         this.fileSystem = resources.fileSystem();
-        this.tempStoreDir = resources.tempStoreDir();
     }
 
     @Override
@@ -35,7 +33,7 @@ public class StartStopMember implements WorkOnMember
         log.info( "Stopping: " + member );
         member.shutdown();
 
-        assertStoreConsistent( fileSystem, tempStoreDir, databaseLayout );
+        assertStoreConsistent( fileSystem, databaseLayout );
 
         Thread.sleep( 5000 );
         log.info( "Starting: " + member );

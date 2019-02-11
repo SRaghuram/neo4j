@@ -34,7 +34,6 @@ class Resources
     private final FileSystemAbstraction fileSystem;
     private final PageCache pageCache;
     private final LogProvider logProvider;
-    private final File tempStoreDir;
 
     Resources( FileSystemAbstraction fileSystem, PageCache pageCache, Config config ) throws IOException
     {
@@ -53,7 +52,6 @@ class Resources
 
         this.clusterDir = ensureExistsAndEmpty( new File( workingDirectory, "cluster" ) );
         this.backupDir = ensureExistsAndEmpty( new File( workingDirectory, "backups" ) );
-        this.tempStoreDir = ensureExistsAndEmpty( new File( workingDirectory, "util" ) );
 
         Map<String,String> coreParams = new HashMap<>();
         Map<String,String> readReplicaParams = new HashMap<>();
@@ -74,11 +72,6 @@ class Resources
     public FileSystemAbstraction fileSystem()
     {
         return fileSystem;
-    }
-
-    public File tempStoreDir()
-    {
-        return tempStoreDir;
     }
 
     public LogProvider logProvider()
