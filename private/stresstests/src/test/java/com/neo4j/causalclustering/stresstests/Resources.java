@@ -53,7 +53,7 @@ class Resources
 
         this.clusterDir = ensureExistsAndEmpty( new File( workingDirectory, "cluster" ) );
         this.backupDir = ensureExistsAndEmpty( new File( workingDirectory, "backups" ) );
-        this.tempStoreDir = ensureExistsAndEmpty( new File( workingDirectory, "util") );
+        this.tempStoreDir = ensureExistsAndEmpty( new File( workingDirectory, "util" ) );
 
         Map<String,String> coreParams = new HashMap<>();
         Map<String,String> readReplicaParams = new HashMap<>();
