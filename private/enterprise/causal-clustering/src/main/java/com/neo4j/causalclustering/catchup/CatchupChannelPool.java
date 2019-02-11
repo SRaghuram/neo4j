@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
-import com.neo4j.causalclustering.net.ChannelPools;
+import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPoolHandler;
@@ -25,29 +25,29 @@ public class CatchupChannelPool extends LifecycleAdapter
 {
     static final AttributeKey<TrackingResponseHandler> TRACKING_RESPONSE_HANDLER = AttributeKey.valueOf( "TRACKING_RESPONSE_HANDLER" );
 
-    private final ChannelPools channelPools;
+    private final ChannelPoolService channelPoolService;
 
     CatchupChannelPool( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler jobScheduler, Clock clock,
             Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory )
     {
-        this.channelPools = new ChannelPools( bootstrapConfiguration, jobScheduler, new TrackingResponsePoolHandler( initializerFactory, clock ) );
+        this.channelPoolService = new ChannelPoolService( bootstrapConfiguration, jobScheduler, new TrackingResponsePoolHandler( initializerFactory, clock ) );
     }
 
     CompletableFuture<CatchupChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
     {
-        return channelPools.acquire( advertisedSocketAddress ).thenApply( CatchupChannel::new );
+        return channelPoolService.acquire( advertisedSocketAddress ).thenApply( CatchupChannel::new );
     }
 
     @Override
     public void start()
     {
-        channelPools.start();
+        channelPoolService.start();
     }
 
     @Override
     public void stop()
     {
-        channelPools.stop();
+        channelPoolService.stop();
     }
 
     private static class TrackingResponsePoolHandler implements ChannelPoolHandler

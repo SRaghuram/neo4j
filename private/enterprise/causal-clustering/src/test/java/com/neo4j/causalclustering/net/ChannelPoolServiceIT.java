@@ -27,7 +27,6 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -37,9 +36,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.scheduler.Group;
 import org.neo4j.test.ports.PortAuthority;
-import org.neo4j.test.scheduler.JobSchedulerAdapter;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static co.unruly.matchers.StreamMatchers.empty;
@@ -49,12 +46,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class ChannelPoolsIT
+class ChannelPoolServiceIT
 {
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;
     private static final int DEFAULT_TIME_OUT = 30;
     private final ProtocolStack protocolStackRaft = new ProtocolStack( TestApplicationProtocols.RAFT_2, emptyList() );
-    private ChannelPools pool;
+    private ChannelPoolService pool;
     private AdvertisedSocketAddress to1;
     private AdvertisedSocketAddress to2;
     private final AdvertisedSocketAddress serverlessAddress = new AdvertisedSocketAddress( "localhost", PortAuthority.allocatePort() );
@@ -65,7 +62,7 @@ class ChannelPoolsIT
     void setUpServers() throws ExecutionException, InterruptedException
     {
         poolEventsMonitor = new PoolEventsMonitor();
-        pool = new ChannelPools( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), poolEventsMonitor );
+        pool = new ChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), poolEventsMonitor );
 
         startServers();
 
@@ -73,7 +70,7 @@ class ChannelPoolsIT
     }
 
     @AfterEach
-    void tearDown() throws ExecutionException, InterruptedException
+    void tearDown()
     {
         closeServers();
         pool.stop();

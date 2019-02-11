@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
-import com.neo4j.causalclustering.net.ChannelPools;
+import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.net.PooledChannel;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.channel.Channel;
@@ -29,7 +29,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 public class SenderService extends LifecycleAdapter implements Outbound<AdvertisedSocketAddress,Message>
 {
-    private final ChannelPools channels;
+    private final ChannelPoolService channels;
     private final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
     private final Log log;
 
@@ -38,7 +38,7 @@ public class SenderService extends LifecycleAdapter implements Outbound<Advertis
     public SenderService( ChannelInitializer channelInitializer, JobScheduler scheduler, LogProvider logProvider,
             BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
     {
-        this.channels = new ChannelPools( bootstrapConfiguration, scheduler, new ChannelInitializingHandler( channelInitializer ) );
+        this.channels = new ChannelPoolService( bootstrapConfiguration, scheduler, new ChannelInitializingHandler( channelInitializer ) );
         this.log = logProvider.getLog( getClass() );
     }
 

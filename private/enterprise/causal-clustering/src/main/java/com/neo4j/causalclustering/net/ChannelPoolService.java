@@ -23,7 +23,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
-public class ChannelPools implements Lifecycle
+public class ChannelPoolService implements Lifecycle
 {
     private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private final JobScheduler scheduler;
@@ -32,7 +32,7 @@ public class ChannelPools implements Lifecycle
     private EventLoopGroup eventLoopGroup;
     private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
-    public ChannelPools( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, ChannelPoolHandler channelPoolHandler )
+    public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, ChannelPoolHandler channelPoolHandler )
     {
         this.bootstrapConfiguration = bootstrapConfiguration;
         this.scheduler = scheduler;
