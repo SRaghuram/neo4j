@@ -32,7 +32,8 @@ public class ChannelPoolService implements Lifecycle
     private EventLoopGroup eventLoopGroup;
     private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
-    public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, ChannelPoolHandler channelPoolHandler )
+    public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler,
+            ChannelPoolHandler channelPoolHandler )
     {
         this.bootstrapConfiguration = bootstrapConfiguration;
         this.scheduler = scheduler;

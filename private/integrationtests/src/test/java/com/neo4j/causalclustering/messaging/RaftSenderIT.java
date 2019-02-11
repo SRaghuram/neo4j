@@ -46,23 +46,24 @@ import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.CleanupRule;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
+import static com.neo4j.causalclustering.messaging.RaftChannelPoolService.raftChannelPoolService;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
 @RunWith( Parameterized.class )
-public class SenderServiceIT
+public class RaftSenderIT
 {
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
@@ -112,8 +113,10 @@ public class SenderServiceIT
         raftServer.start();
 
         // given: raft messaging service
-        SenderService sender = raftSender();
-        sender.start();
+        RaftChannelPoolService raftPooLService = raftPooLService();
+        raftPooLService.start();
+
+        RaftSender sender = new RaftSender( logProvider, raftPooLService );
 
         // when
         AdvertisedSocketAddress to = new AdvertisedSocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
@@ -129,7 +132,7 @@ public class SenderServiceIT
         assertTrue( messageReceived.tryAcquire( 15, SECONDS ) );
 
         // cleanup
-        sender.stop();
+        raftPooLService.stop();
         raftServer.stop();
     }
 
@@ -153,7 +156,7 @@ public class SenderServiceIT
                 BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
-    private SenderService raftSender()
+    private RaftChannelPoolService raftPooLService()
     {
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
 
@@ -171,8 +174,8 @@ public class SenderServiceIT
                 logProvider,
                 logProvider );
 
-        return new SenderService( channelInitializer, cleanupRule.add( JobSchedulerFactory.createInitialisedScheduler() ), logProvider,
-                BootstrapConfiguration.clientConfig( Config.defaults() ) );
+        return raftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(),
+                        logProvider, channelInitializer );
     }
 
     private ApplicationProtocolRepository clientRepository()

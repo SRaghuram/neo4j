@@ -47,8 +47,9 @@ import com.neo4j.causalclustering.logging.MessageLogger;
 import com.neo4j.causalclustering.logging.NullMessageLogger;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
 import com.neo4j.causalclustering.messaging.Outbound;
+import com.neo4j.causalclustering.messaging.RaftChannelPoolService;
 import com.neo4j.causalclustering.messaging.RaftOutbound;
-import com.neo4j.causalclustering.messaging.SenderService;
+import com.neo4j.causalclustering.messaging.RaftSender;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -99,7 +100,6 @@ import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
-import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -123,6 +123,7 @@ import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
+import static com.neo4j.causalclustering.messaging.RaftChannelPoolService.raftChannelPoolService;
 import static java.util.Arrays.asList;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
@@ -225,14 +226,16 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         Duration handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );
         HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, logService.getUserLogProvider() );
-        final SenderService raftSender = new SenderService( channelInitializer, globalModule.getJobScheduler(), logProvider,
-                BootstrapConfiguration.clientConfig( globalConfig ) );
-        globalLife.add( raftSender );
-        this.clientInstalledProtocols = raftSender::installedProtocols;
+        RaftChannelPoolService raftChannelPoolService =
+                raftChannelPoolService( BootstrapConfiguration.clientConfig( globalConfig ), globalModule.getJobScheduler(), logProvider, channelInitializer );
+        globalLife.add( raftChannelPoolService );
+        this.clientInstalledProtocols = raftChannelPoolService::installedProtocols;
 
         final MessageLogger<MemberId> messageLogger = createMessageLogger( globalConfig, globalLife, identityModule.myself() );
 
-        RaftOutbound raftOutbound = new RaftOutbound( topologyService, raftSender, clusteringModule.clusterIdentity(), logProvider, logThresholdMillis );
+        RaftOutbound raftOutbound =
+                new RaftOutbound( topologyService, new RaftSender( logProvider, raftChannelPoolService ), clusteringModule.clusterIdentity(), logProvider,
+                        logThresholdMillis );
         Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
 
         consensusModule = new ConsensusModule( identityModule.myself(), globalModule,
