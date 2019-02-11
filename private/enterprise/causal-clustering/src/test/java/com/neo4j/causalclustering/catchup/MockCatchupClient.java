@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 
 import java.io.File;
-import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -166,7 +166,7 @@ public class MockCatchupClient implements VersionedCatchupClients
 
         private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
         {
-            return OperationProgressMonitor.of( request, 1, () -> Optional.of( 0L ), log );
+            return OperationProgressMonitor.of( request, 1, () -> OptionalLong.of( 0L ), log );
         }
     }
 

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.helper;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
@@ -31,10 +31,9 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings( "unchecked" )
 class OperationProgressMonitorTest
 {
-
-    private final Supplier<Optional<Long>> zeroMillisSinceLastResponse = () -> Optional.of( 0L );
-    private final Supplier<Optional<Long>> incrementingMillisSinceLastResponse = new IncrementingLastResponseTimer( 0 );
-    private final Supplier<Optional<Long>> foreverSinceLastResponse = new IncrementingLastResponseTimer();
+    private final Supplier<OptionalLong> zeroMillisSinceLastResponse = () -> OptionalLong.of( 0 );
+    private final Supplier<OptionalLong> incrementingMillisSinceLastResponse = new IncrementingLastResponseTimer( 0 );
+    private final Supplier<OptionalLong> foreverSinceLastResponse = new IncrementingLastResponseTimer();
     private final Log log = NullLog.getInstance();
 
     @Test
@@ -128,7 +127,7 @@ class OperationProgressMonitorTest
         }
     }
 
-    private static class IncrementingLastResponseTimer implements Supplier<Optional<Long>>
+    private static class IncrementingLastResponseTimer implements Supplier<OptionalLong>
     {
         private long noResponseSince;
         private final boolean noResponseEver;
@@ -144,9 +143,9 @@ class OperationProgressMonitorTest
             noResponseSince = initial;
         }
 
-        public Optional<Long> get()
+        public OptionalLong get()
         {
-            return noResponseEver ? Optional.empty() : Optional.of( ++noResponseSince );
+            return noResponseEver ? OptionalLong.empty() : OptionalLong.of( ++noResponseSince );
         }
     }
 
