@@ -20,7 +20,6 @@ import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.readreplica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.io.File;
@@ -93,20 +92,17 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
     private int highestCoreServerId;
     private int highestReplicaServerId;
 
-    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas,
-            T discoveryServiceFactory,
-            Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams,
+    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, T discoveryServiceFactory, Map<String,String> coreParams,
+            Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
             String recordFormat, IpFamily ipFamily, boolean useWildcard )
     {
-        this( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams,
-                instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily,
-                useWildcard, Collections.singleton( CausalClusteringSettings.database.getDefaultValue() ) );
+        this( parentDir, noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, coreParams, instanceCoreParams, readReplicaParams,
+                instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, Collections.singleton( CausalClusteringSettings.database.getDefaultValue() ) );
     }
 
-    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas,
-            T discoveryServiceFactory,
-            Map<String,String> coreParams, Map<String,IntFunction<String>> instanceCoreParams,
+    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, T discoveryServiceFactory, Map<String,String> coreParams,
+            Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
             String recordFormat, IpFamily ipFamily, boolean useWildcard, Set<String> dbNames )
     {
@@ -173,22 +169,30 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
         return addReadReplicaWithId( newReplicaServerId );
     }
 
-    private CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams,
-            Map<String,IntFunction<String>> instanceExtraParams, String recordFormat )
+    private CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams,
+            String recordFormat )
     {
         List<AdvertisedSocketAddress> initialHosts = extractInitialHosts( coreMembers );
-        CoreClusterMember coreClusterMember = createCoreClusterMember(
-                memberId,
-                PortAuthority.allocatePort(),
-                DEFAULT_CLUSTER_SIZE,
-                initialHosts,
-                recordFormat,
-                extraParams,
-                instanceExtraParams
-        );
+        CoreClusterMember coreClusterMember =
+                createCoreClusterMember( memberId, PortAuthority.allocatePort(), DEFAULT_CLUSTER_SIZE, initialHosts, recordFormat, extraParams,
+                        instanceExtraParams );
 
         coreMembers.put( memberId, coreClusterMember );
         return coreClusterMember;
+    }
+
+    public static void startMembers( ClusterMember... clusterMembers ) throws ExecutionException, InterruptedException
+    {
+        startMembers( Arrays.asList( clusterMembers ) );
+    }
+
+    public static void startMembers( Collection<? extends ClusterMember> clusterMembers ) throws ExecutionException, InterruptedException
+    {
+        combine( invokeAll( "starting-members", clusterMembers, cm ->
+        {
+            cm.start();
+            return null;
+        } ) ).get();
     }
 
     public ReadReplica addReadReplicaWithIdAndRecordFormat( int memberId, String recordFormat )
@@ -209,14 +213,7 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
     private ReadReplica addReadReplica( int memberId, String recordFormat, Monitors monitors )
     {
         List<AdvertisedSocketAddress> initialHosts = extractInitialHosts( coreMembers );
-        ReadReplica member = createReadReplica(
-                memberId,
-                initialHosts,
-                readReplicaParams,
-                instanceReadReplicaParams,
-                recordFormat,
-                monitors
-        );
+        ReadReplica member = createReadReplica( memberId, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat, monitors );
 
         readReplicas.put( memberId, member );
         return member;
@@ -226,32 +223,32 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
     {
         try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown cluster" ) )
         {
-            shutdownCoreMembers( coreMembers(), errorHandler );
-            shutdownReadReplicas( errorHandler );
+            shutdownMembers( coreMembers(), errorHandler );
+            shutdownMembers( readReplicas(), errorHandler );
         }
-    }
-
-    private static void shutdownCoreMembers( Collection<CoreClusterMember> members, ErrorHandler errorHandler )
-    {
-        shutdownMembers( members, errorHandler );
     }
 
     public void shutdownCoreMembers()
     {
-        shutdownCoreMembers( coreMembers() );
+        shutdownMembers( coreMembers() );
     }
 
-    private static void shutdownCoreMembers( Collection<CoreClusterMember> members )
+    public void shutdownReadReplicas()
     {
-        try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown core members" ) )
+        shutdownMembers( coreMembers() );
+    }
+
+    public static void shutdownMembers( ClusterMember... clusterMembers )
+    {
+        shutdownMembers( Arrays.asList( clusterMembers ) );
+    }
+
+    public static void shutdownMembers( Collection<? extends ClusterMember> clusterMembers )
+    {
+        try ( ErrorHandler errorHandler = new ErrorHandler( "Error when trying to shutdown members" ) )
         {
-            shutdownCoreMembers( members, errorHandler );
+            shutdownMembers( clusterMembers, errorHandler );
         }
-    }
-
-    public File getParentDir()
-    {
-        return parentDir;
     }
 
     @SuppressWarnings( "unchecked" )
@@ -283,8 +280,14 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
 
     public void removeCoreMembers( Collection<CoreClusterMember> coreClusterMembers )
     {
-        shutdownCoreMembers( coreClusterMembers );
+        shutdownMembers( coreClusterMembers );
         coreMembers.values().removeAll( coreClusterMembers );
+    }
+
+    public void removeReadReplicas( List<ReadReplica> readReplicasToRemove )
+    {
+        shutdownMembers( readReplicasToRemove );
+        readReplicas.values().removeAll( readReplicasToRemove );
     }
 
     public void removeCoreMemberWithServerId( int serverId )
@@ -595,42 +598,12 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
 
     public void startCoreMembers() throws InterruptedException, ExecutionException
     {
-        startCoreMembers( coreMembers.values() );
-    }
-
-    private static void startCoreMembers( Collection<CoreClusterMember> members ) throws InterruptedException, ExecutionException
-    {
-        List<Future<CoreGraphDatabase>> futures = invokeAll( "cluster-starter", members, cm ->
-        {
-            try
-            {
-                cm.start();
-                return cm.database();
-            }
-            catch ( Throwable e )
-            {
-                e.printStackTrace();
-                throw e;
-            }
-        } );
-        for ( Future<CoreGraphDatabase> future : futures )
-        {
-            future.get();
-        }
+        startMembers( coreMembers() );
     }
 
     private void startReadReplicas() throws InterruptedException, ExecutionException
     {
-        Collection<ReadReplica> members = readReplicas.values();
-        List<Future<ReadReplicaGraphDatabase>> futures = invokeAll( "cluster-starter", members, cm ->
-        {
-            cm.start();
-            return cm.database();
-        } );
-        for ( Future<ReadReplicaGraphDatabase> future : futures )
-        {
-            future.get();
-        }
+        startMembers( coreMembers() );
     }
 
     private void createReadReplicas( int noOfReadReplicas,
@@ -653,11 +626,6 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
             readReplicas.put( i, readReplica );
         }
         highestReplicaServerId = noOfReadReplicas - 1;
-    }
-
-    private void shutdownReadReplicas( ErrorHandler errorHandler )
-    {
-        shutdownMembers( readReplicas(), errorHandler );
     }
 
     /**
