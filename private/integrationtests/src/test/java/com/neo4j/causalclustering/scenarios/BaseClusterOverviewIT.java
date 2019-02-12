@@ -37,6 +37,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -67,7 +68,7 @@ public abstract class BaseClusterOverviewIT
 
         private Cluster<?> cluster;
         private int initialCoreMembers;
-        private int initalReadReplicas;
+        private int initialReadReplicas;
 
         @BeforeAll
         void startCluster() throws ExecutionException, InterruptedException
@@ -80,7 +81,7 @@ public abstract class BaseClusterOverviewIT
         void countInitialMembers()
         {
             initialCoreMembers = cluster.coreMembers().size();
-            initalReadReplicas = cluster.readReplicas().size();
+            initialReadReplicas = cluster.readReplicas().size();
         }
 
         @Test
@@ -91,7 +92,7 @@ public abstract class BaseClusterOverviewIT
                     ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, initialCoreMembers - 1 ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, initalReadReplicas ) );
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, initialReadReplicas ) );
 
             // then
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );
@@ -108,7 +109,7 @@ public abstract class BaseClusterOverviewIT
                     ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, initialCoreMembers - 1 ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, initalReadReplicas ) );
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, initialReadReplicas ) );
 
             // then
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );
@@ -120,15 +121,15 @@ public abstract class BaseClusterOverviewIT
             // when
             int extraCoreMembers = 2;
             int finalCoreMembers = initialCoreMembers + extraCoreMembers;
-            IntStream
-                    .range( 0, extraCoreMembers )
-                    .mapToObj( ignored -> cluster.newCoreMember() )
-                    .parallel()
-                    .forEach( CoreClusterMember::start );
+
+            CoreClusterMember[] newCoreMembers =
+                    IntStream.range( 0, extraCoreMembers ).mapToObj( ignored -> cluster.newCoreMember() ).toArray( CoreClusterMember[]::new );
+
+            Cluster.startMembers( newCoreMembers );
 
             Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
                     ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, initalReadReplicas ),
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, initialReadReplicas ),
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, finalCoreMembers - 1 ) );
 
@@ -140,13 +141,19 @@ public abstract class BaseClusterOverviewIT
         void shouldDiscoverNewReadReplicas() throws Exception
         {
             // when
-            IntStream.range( 0, 2 ).mapToObj( ignore -> cluster.newReadReplica() ).parallel().forEach( ReadReplica::start );
+            int extraReadReplicas = 2;
+            int finaReadReplicas = initialReadReplicas + extraReadReplicas;
+
+            ReadReplica[] newReadReplicas =
+                    IntStream.range( 0, extraReadReplicas ).mapToObj( ignore -> cluster.newReadReplica() ).toArray( ReadReplica[]::new );
+
+            Cluster.startMembers( newReadReplicas );
 
             Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
                     ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, initialCoreMembers - 1 ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, initalReadReplicas + 2 ) );
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, finaReadReplicas ) );
 
             // then
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );
@@ -155,16 +162,13 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverRemovalOfReadReplicas() throws Exception
         {
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster,
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, initalReadReplicas ) );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, ClusterOverviewHelper.containsRole( READ_REPLICA, initialReadReplicas ) );
 
             // when
-            cluster.removeReadReplicaWithMemberId( getRunningReadReplicaId( cluster ) );
-            cluster.removeReadReplicaWithMemberId( getRunningReadReplicaId( cluster ) );
+            cluster.removeReadReplicas( cluster.readReplicas().stream().limit( 2 ).collect( toList() ) );
 
             // then
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster,
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, initalReadReplicas - 2 ) );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, ClusterOverviewHelper.containsRole( READ_REPLICA, initialReadReplicas - 2 ) );
         }
 
         @Test
@@ -179,7 +183,8 @@ public abstract class BaseClusterOverviewIT
                     ClusterOverviewHelper.containsRole( FOLLOWER, initialCoreMembers - 1 ) ) );
 
             // when
-            cluster.coreMembers().stream().skip( initialCoreMembers - coresToRemove ).parallel().forEach( core -> cluster.removeCoreMember( core ) );
+            List<CoreClusterMember> coreMembersToRemove = cluster.coreMembers().stream().skip( initialCoreMembers - coresToRemove ).collect( toList() );
+            cluster.removeCoreMembers( coreMembersToRemove );
 
             // then
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, Matchers.allOf(
@@ -217,7 +222,7 @@ public abstract class BaseClusterOverviewIT
                     ClusterOverviewHelper.containsRole( FOLLOWER, coreMembers - 2 ),
                     ClusterOverviewHelper.containsRole( READ_REPLICA, readReplicas ) ) );
 
-            cluster.readReplicas().parallelStream().forEach( cluster::removeReadReplica );
+            cluster.removeReadReplicas( cluster.readReplicas() );
 
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),
@@ -264,11 +269,6 @@ public abstract class BaseClusterOverviewIT
 
     private static int getRunningCoreId( Cluster<?> cluster )
     {
-        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unale to find a running core" ) ).serverId();
-    }
-
-    private static int getRunningReadReplicaId( Cluster<?> cluster )
-    {
-        return cluster.readReplicas().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Could not find a running read replica" ) ).serverId();
+        return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unable to find a running core" ) ).serverId();
     }
 }

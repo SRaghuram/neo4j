@@ -284,7 +284,7 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
         coreMembers.values().removeAll( coreClusterMembers );
     }
 
-    public void removeReadReplicas( List<ReadReplica> readReplicasToRemove )
+    public void removeReadReplicas( Collection<ReadReplica> readReplicasToRemove )
     {
         shutdownMembers( readReplicasToRemove );
         readReplicas.values().removeAll( readReplicasToRemove );
@@ -603,7 +603,7 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
 
     private void startReadReplicas() throws InterruptedException, ExecutionException
     {
-        startMembers( coreMembers() );
+        startMembers( readReplicas() );
     }
 
     private void createReadReplicas( int noOfReadReplicas,
