@@ -47,7 +47,7 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   // BOOK KEEPING FOR REFERENCE COUNTING
 
-  private var counters = new mutable.HashSet[Id]()
+  private val counters = new mutable.HashSet[Id]()
 
   def setCounters(ids: Seq[Id]): Unit = {
     if (counters.nonEmpty)
@@ -66,12 +66,12 @@ class MorselExecutionContext(private val morsel: Morsel,
   def allArgumentRowIdsFor(offset: Int): Seq[Long] = {
     var i = firstRow
     val res = new mutable.ArrayBuffer[Long]()
-    var lastId = -1L
+    var previousId = -1L
     while (i < validRows) {
-      val currentId = morsel.longs(i * longsPerRow + offset)
-      if (currentId != lastId) {
+      val currentId = getLongAt(i + offset)
+      if (currentId != previousId) {
         res += currentId
-        lastId = currentId
+        previousId = currentId
       }
       i += 1
     }
@@ -196,7 +196,9 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   override def setLongAt(offset: Int, value: Long): Unit = morsel.longs(currentRow * longsPerRow + offset) = value
 
-  override def getLongAt(offset: Int): Long = morsel.longs(currentRow * longsPerRow + offset)
+  override def getLongAt(offset: Int): Long = getLongAt(currentRow, offset)
+
+  def getLongAt(row: Int, offset: Int): Long = morsel.longs(row * longsPerRow + offset)
 
   override def setRefAt(offset: Int, value: AnyValue): Unit = morsel.refs(currentRow * refsPerRow + offset) = value
 
