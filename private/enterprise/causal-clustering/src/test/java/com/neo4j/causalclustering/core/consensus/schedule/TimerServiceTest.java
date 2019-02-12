@@ -22,6 +22,7 @@ import static com.neo4j.causalclustering.core.consensus.schedule.TimerServiceTes
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -214,6 +215,46 @@ public class TimerServiceTest
         scheduler.forward( 100, MILLISECONDS );
 
         // then
+        verify( handlerA, never() ).onTimeout( any() );
+    }
+
+    @Test
+    public void shouldNotInvokeDeadTimer() throws Exception
+    {
+        // given
+        timerA.set( fixedTimeout( 1, SECONDS ) );
+        scheduler.forward( 900, MILLISECONDS );
+
+        // when
+        timerA.kill( SYNC_WAIT );
+        scheduler.forward( 100, MILLISECONDS );
+
+        // then
+        verify( handlerA, never() ).onTimeout( any() );
+    }
+
+    @Test
+    public void shouldIgnoreSettingOfDeadTimer() throws Exception
+    {
+        // given
+        timerA.set( fixedTimeout( 1, SECONDS ) );
+        scheduler.forward( 900, MILLISECONDS );
+        timerA.kill( SYNC_WAIT );
+
+        // when
+        boolean wasSet = timerA.set( fixedTimeout( 100, MILLISECONDS ) );
+        scheduler.forward( 100, MILLISECONDS );
+
+        // then
+        assertFalse( wasSet );
+        verify( handlerA, never() ).onTimeout( any() );
+
+        // when
+        boolean wasReset = timerA.reset();
+        scheduler.forward( 1, SECONDS );
+
+        // then
+        assertFalse( wasReset );
         verify( handlerA, never() ).onTimeout( any() );
     }
 

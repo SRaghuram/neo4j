@@ -30,6 +30,7 @@ public class Timer
     private Delay delay;
     private JobHandle job;
     private long activeJobId;
+    private boolean isDead;
 
     /**
      * Creates a timer in the deactivated state.
@@ -53,13 +54,19 @@ public class Timer
      * when the timer already is active will shift the timeout to the new value.
      *
      * @param newTimeout The new timeout value.
+     * @return false if the timer is dead and thus cannot be set, otherwise true.
      */
-    public synchronized void set( Timeout newTimeout )
+    public synchronized boolean set( Timeout newTimeout )
     {
+        if ( isDead )
+        {
+            return false;
+        }
         delay = newTimeout.next();
         timeout = newTimeout;
         long jobId = newJobId();
         job = scheduler.schedule( group, () -> handle( jobId ), delay.amount(), delay.unit() );
+        return true;
     }
 
     private long newJobId()
@@ -90,14 +97,16 @@ public class Timer
 
     /**
      * Resets the timer based on the currently programmed timeout.
+     *
+     * @return false if the timer is dead and thus cannot be set, otherwise true.
      */
-    public synchronized void reset()
+    public synchronized boolean reset()
     {
         if ( timeout == null )
         {
             throw new IllegalStateException( "You can't reset until you have set a timeout" );
         }
-        set( timeout );
+        return set( timeout );
     }
 
     /**
@@ -139,6 +148,22 @@ public class Timer
                 log.warn( format( "[%s] Cancelling timer threw exception", canonicalName() ), e );
             }
         }
+    }
+
+    /**
+     * Kills a timer and cancels any current job.
+     *
+     * A dead timer can no longer be set/reset, and those invocations will be silently ignored.
+     *
+     * @param cancelMode The mode of cancelling.
+     */
+    public void kill( CancelMode cancelMode )
+    {
+        synchronized ( this )
+        {
+            isDead = true;
+        }
+        cancel( cancelMode );
     }
 
     /**
