@@ -249,6 +249,7 @@ public class TransactionLogCatchUpWriterTest
         // create an empty store
         org.neo4j.storageengine.api.StoreId storeId;
         Database ds = dsRule.getDatabase( databaseLayout, fs, pageCache );
+        ds.start();
         storageEngineFactory = ds.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         try ( Lifespan ignored = new Lifespan( ds ) )
         {
