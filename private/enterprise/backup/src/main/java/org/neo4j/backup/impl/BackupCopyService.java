@@ -18,7 +18,12 @@ import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
+import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
@@ -29,11 +34,15 @@ class BackupCopyService
 
     private final FileSystemAbstraction fs;
     private final FileMoveProvider fileMoveProvider;
+    private final PageCache pageCache;
+    private final Log log;
 
-    BackupCopyService( FileSystemAbstraction fs, FileMoveProvider fileMoveProvider )
+    BackupCopyService( FileSystemAbstraction fs, FileMoveProvider fileMoveProvider, PageCache pageCache, LogProvider logProvider )
     {
         this.fs = fs;
         this.fileMoveProvider = fileMoveProvider;
+        this.pageCache = pageCache;
+        this.log = logProvider.getLog( getClass() );
     }
 
     void moveBackupLocation( Path oldLocation, Path newLocation ) throws IOException
@@ -77,6 +86,38 @@ class BackupCopyService
         if ( exception != null )
         {
             throw exception;
+        }
+    }
+
+    void deletePreExistingBrokenBackupIfPossible( Path preExistingBrokenBackupDir, Path newSuccessfulBackupDir ) throws IOException
+    {
+        DatabaseLayout preExistingBrokenBackupLayout = DatabaseLayout.of( preExistingBrokenBackupDir.toFile() );
+        DatabaseLayout newSuccessfulBackupLayout = DatabaseLayout.of( newSuccessfulBackupDir.toFile() );
+
+        StoreId preExistingBrokenBackupStoreId;
+        try
+        {
+            preExistingBrokenBackupStoreId = MetaDataStore.getStoreId( pageCache, preExistingBrokenBackupLayout.metadataStore() );
+        }
+        catch ( IOException e )
+        {
+            log.warn( "Unable to read store ID from the pre-existing invalid backup. It will not be deleted", e );
+            return;
+        }
+
+        StoreId newSuccessfulBackupStoreId = MetaDataStore.getStoreId( pageCache, newSuccessfulBackupLayout.metadataStore() );
+
+        if ( newSuccessfulBackupStoreId.equals( preExistingBrokenBackupStoreId ) )
+        {
+            log.info( "Deleting the pre-existing invalid backup because its store ID is the same as in the new successful backup %s",
+                    newSuccessfulBackupStoreId );
+
+            fs.deleteRecursively( preExistingBrokenBackupDir.toFile() );
+        }
+        else
+        {
+            log.info( "Pre-existing invalid backup can't be deleted because its store ID %s is not the same as in the new successful backup %s",
+                    preExistingBrokenBackupStoreId, newSuccessfulBackupStoreId );
         }
     }
 

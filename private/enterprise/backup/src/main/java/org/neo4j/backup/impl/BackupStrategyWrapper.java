@@ -193,6 +193,8 @@ class BackupStrategyWrapper
             userLog.info( "Moving temporary backup directory '%s' to the specified directory '%s'",
                     temporaryFullBackupLocation, userSpecifiedBackupLocation );
             backupCopyService.moveBackupLocation( temporaryFullBackupLocation, userSpecifiedBackupLocation );
+
+            backupCopyService.deletePreExistingBrokenBackupIfPossible( newBackupLocationForPreExistingBackup, userSpecifiedBackupLocation );
         }
         catch ( IOException e )
         {

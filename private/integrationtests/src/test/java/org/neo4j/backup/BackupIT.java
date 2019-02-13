@@ -31,6 +31,7 @@ import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -108,6 +109,7 @@ import static com.neo4j.causalclustering.core.TransactionBackupServiceProvider.B
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.lang.Integer.parseInt;
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
@@ -148,6 +150,9 @@ import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
 @ExtendWith( {RandomExtension.class, SuppressOutputExtension.class} )
 class BackupIT
 {
+    private static final String LABEL = "Cat";
+    private static final String PROPERTY = "name";
+
     @Inject
     private PageCache pageCache;
     @Inject
@@ -254,13 +259,11 @@ class BackupIT
     @TestWithRecordFormats
     void shouldFindTransactionLogContainingLastNeoStoreTransaction( String recordFormatName ) throws Exception
     {
-        String label = "Person";
-        String property = "name";
 
         GraphDatabaseService db = startDb( serverStorePath, recordFormatName );
         createInitialDataSet( db );
-        createIndex( db, label, property );
-        createNode( db, label, property );
+        createIndex( db );
+        createNode( db );
 
         executeBackup( db );
 
@@ -687,15 +690,12 @@ class BackupIT
          */
 
         // given
-        String label = "Node";
-        String property = "property";
-
         GraphDatabaseService db = startDb( serverStorePath );
-        createIndex( db, label, property );
+        createIndex( db );
 
         for ( int i = 0; i < 100; i++ )
         {
-            createNode( db, label, property );
+            createNode( db );
         }
 
         File oldLog = dependencyResolver( db ).resolveDependency( LogFiles.class ).getHighestLogFile();
@@ -703,7 +703,7 @@ class BackupIT
 
         for ( int i = 0; i < 1; i++ )
         {
-            createNode( db, label, property );
+            createNode( db );
         }
         rotateAndCheckPoint( db );
 
@@ -814,6 +814,24 @@ class BackupIT
     }
 
     @Test
+    void shouldCleanupUnusableBackupsAfterSuccessfulBackupOfTheSameStore() throws Exception
+    {
+        int staleBackupsCount = 5;
+        GraphDatabaseService db = prepareDatabaseWithTooOldBackup();
+
+        // trigger a number of failed incremental backups that should fallback to full
+        for ( int i = 0; i < staleBackupsCount; i++ )
+        {
+            forceTransactionLogRotation( db );
+            executeBackup( db );
+        }
+
+        File[] dirs = backupsDir.listFiles();
+        assertNotNull( dirs );
+        assertEquals( singletonList( new File( backupsDir, DEFAULT_DATABASE_NAME ) ), Arrays.asList( dirs ) );
+    }
+
+    @Test
     void shouldWorkWithReadOnlyDatabases() throws Exception
     {
         GraphDatabaseService db = startDb( serverStorePath );
@@ -901,26 +919,28 @@ class BackupIT
 
     private GraphDatabaseService prepareDatabaseWithTooOldBackup() throws Exception
     {
-        String label = "Node";
-        String property = "name";
-
         GraphDatabaseService db = startDb( serverStorePath, singletonMap( keep_logical_logs, "false" ) );
 
         createInitialDataSet( db );
-        createIndex( db, label, property );
-        createNode( db, label, property );
+        createIndex( db );
+        createNode( db );
         rotateAndCheckPoint( db );
 
         executeBackup( db ); // full backup should be successful
 
         // commit multiple transactions and rotate transaction logs to make incremental backup not possible
-        for ( int i = 0; i < 42; i++ )
-        {
-            createNode( db, label, property );
-            rotateAndCheckPoint( db );
-        }
+        forceTransactionLogRotation( db );
 
         return db;
+    }
+
+    private void forceTransactionLogRotation( GraphDatabaseService db ) throws IOException
+    {
+        for ( int i = 0; i < 1000; i++ )
+        {
+            createNode( db );
+            rotateAndCheckPoint( db );
+        }
     }
 
     private static void corruptStore( GraphDatabaseService db ) throws Exception
@@ -968,12 +988,10 @@ class BackupIT
 
     private void testTransactionsDuringFullBackup( int nodesInDbBeforeBackup ) throws Exception
     {
-        String label = "Cat";
-        String property = "name";
         int transactionsDuringBackup = 10;//random.nextInt( 10, 1000 );
 
         GraphDatabaseService db = startDb( serverStorePath );
-        createIndexAndNodes( db, label, property, nodesInDbBeforeBackup );
+        createIndexAndNodes( db, nodesInDbBeforeBackup );
         long lastCommittedTxIdBeforeBackup = getLastCommittedTx( db );
 
         Barrier.Control barrier = new Barrier.Control();
@@ -987,7 +1005,7 @@ class BackupIT
 
             for ( int i = 0; i < transactionsDuringBackup; i++ )
             {
-                createNode( db, label, property );
+                createNode( db );
             }
 
             flushAndForce( db );
@@ -1187,14 +1205,14 @@ class BackupIT
         }
     }
 
-    private void createIndexAndNodes( GraphDatabaseService db, String label, String property, int count )
+    private void createIndexAndNodes( GraphDatabaseService db, int count )
     {
         if ( count > 0 )
         {
-            createIndex( db, label, property );
+            createIndex( db );
             for ( int i = 0; i < count; i++ )
             {
-                createNode( db, label, property );
+                createNode( db );
             }
         }
     }
@@ -1246,6 +1264,11 @@ class BackupIT
         return indexedLabels;
     }
 
+    private static void createIndex( GraphDatabaseService db )
+    {
+        createIndex( db, LABEL, PROPERTY );
+    }
+
     private static void createIndex( GraphDatabaseService db, String labelName, String propertyName )
     {
         try ( Transaction tx = db.beginTx() )
@@ -1260,11 +1283,11 @@ class BackupIT
         }
     }
 
-    private void createNode( GraphDatabaseService db, String labelName, String propertyName )
+    private void createNode( GraphDatabaseService db )
     {
         try ( Transaction tx = db.beginTx() )
         {
-            db.createNode( Label.label( labelName ) ).setProperty( propertyName, random.nextString() );
+            db.createNode( Label.label( LABEL ) ).setProperty( PROPERTY, random.nextString() );
             tx.success();
         }
     }
