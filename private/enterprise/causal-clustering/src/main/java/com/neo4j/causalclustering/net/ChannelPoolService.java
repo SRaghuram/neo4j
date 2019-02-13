@@ -23,11 +23,14 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
+import static org.neo4j.util.concurrent.Futures.failedFuture;
+
 public class ChannelPoolService implements Lifecycle
 {
     private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private final JobScheduler scheduler;
     private final ChannelPoolHandler poolHandler;
+    private CompletableFuture<PooledChannel> lifeCompletionStage;
     private SimpleChannelPoolMap poolMap;
     private EventLoopGroup eventLoopGroup;
     private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -47,12 +50,10 @@ public class ChannelPoolService implements Lifecycle
         {
             if ( poolMap == null )
             {
-                CompletableFuture<PooledChannel> failedFuture = new CompletableFuture<>();
-                failedFuture.completeExceptionally( new IllegalStateException( "Channel pools is not in a started state." ) );
-                return failedFuture;
+                return failedFuture( new IllegalStateException( "Channel pools is not in a started state." ) );
             }
             SimpleChannelPool channelPool = poolMap.get( advertisedSocketAddress );
-            return PooledChannel.future( channelPool.acquire(), channelPool );
+            return PooledChannel.future( channelPool.acquire(), channelPool ).applyToEither( lifeCompletionStage, pooledChannel -> pooledChannel );
         }
         finally
         {
@@ -72,6 +73,7 @@ public class ChannelPoolService implements Lifecycle
         readWriteLock.writeLock().lock();
         try
         {
+            lifeCompletionStage = new CompletableFuture<>();
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.RAFT_CLIENT ) );
             Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
             poolMap = new SimpleChannelPoolMap( baseBootstrap, poolHandler );
@@ -88,6 +90,7 @@ public class ChannelPoolService implements Lifecycle
         readWriteLock.writeLock().lock();
         try
         {
+            lifeCompletionStage.completeExceptionally( new IllegalStateException( "Lifecycle has stopped" ) );
             if ( poolMap != null )
             {
                 poolMap.close();
