@@ -160,7 +160,7 @@ public class CatchupProcessManager extends SafeLifecycle
     @Override
     public void stop0()
     {
-        timer.cancel( Timer.CancelMode.SYNC_WAIT );
+        timer.kill( Timer.CancelMode.SYNC_WAIT );
         txPulling.stop();
     }
 
