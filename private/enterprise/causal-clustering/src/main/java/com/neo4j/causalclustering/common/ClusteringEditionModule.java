@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.core.state.CoreLife;
 import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
@@ -13,6 +14,7 @@ import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import java.io.File;
 import java.util.function.Predicate;
 
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.GlobalModule;
@@ -79,4 +81,15 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 
+    /**
+     * Returns {@code true} because {@link DatabaseManager}'s lifecycle is managed by {@link DatabaseService} via {@link CoreLife} and
+     * read replica startup process. So {@link DatabaseManager} does not need to be included in the global lifecycle.
+     *
+     * @return always {@code true}.
+     */
+    @Override
+    public final boolean handlesDatabaseManagerLifecycle()
+    {
+        return true;
+    }
 }

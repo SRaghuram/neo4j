@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.ReplicationModule;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
-import com.neo4j.causalclustering.common.DatabaseService;
 import com.neo4j.causalclustering.common.DefaultDatabaseService;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.consensus.ConsensusModule;
@@ -23,7 +22,6 @@ import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.core.server.CoreServerModule;
 import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import com.neo4j.causalclustering.core.state.ClusteringModule;
-import com.neo4j.causalclustering.core.state.CoreLife;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.CoreStateService;
@@ -368,18 +366,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     public boolean isLeader()
     {
         return consensusModule.raftMachine().currentRole() == Role.LEADER;
-    }
-
-    /**
-     * Returns {@code true} because {@link DatabaseManager}'s lifecycle is managed by {@link DatabaseService} via {@link CoreLife}.
-     * So {@link DatabaseManager} does not need to be included in the global lifecycle.
-     *
-     * @return always {@code true}.
-     */
-    @Override
-    public boolean handlesDatabaseManagerLifecycle()
-    {
-        return true;
     }
 
     /* Component Factories */
