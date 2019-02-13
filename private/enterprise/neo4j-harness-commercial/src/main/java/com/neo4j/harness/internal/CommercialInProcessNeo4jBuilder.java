@@ -8,6 +8,7 @@ package com.neo4j.harness.internal;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactorySelector;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.server.database.CommercialGraphFactory;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import org.apache.commons.lang3.SystemUtils;
@@ -32,6 +33,7 @@ public class CommercialInProcessNeo4jBuilder extends AbstractInProcessNeo4jBuild
     public CommercialInProcessNeo4jBuilder( File workingDir )
     {
         withWorkingDir( workingDir );
+        withConfig( OnlineBackupSettings.online_backup_listen_address, "localhost:0" );
     }
 
     public CommercialInProcessNeo4jBuilder( File workingDir, String dataSubDir )
