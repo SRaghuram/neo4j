@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
@@ -212,7 +213,7 @@ public class HalfAppliedConstraintRecoveryIT
             monitors.addMonitorListener( new IndexingService.MonitorAdapter()
             {
                 @Override
-                public void indexPopulationScanComplete()
+                public void indexPopulationScanStarting()
                 {
                     barrier.reached();
                 }
@@ -221,11 +222,14 @@ public class HalfAppliedConstraintRecoveryIT
             {
                 // Create two nodes that have duplicate property values
                 String value = "v";
+                String value2 = "w";
                 try ( Transaction tx = db.beginTx() )
                 {
                     for ( int i = 0; i < 2; i++ )
                     {
-                        db.createNode( LABEL ).setProperty( KEY, value );
+                        Node node = db.createNode( LABEL );
+                        node.setProperty( KEY, value );
+                        node.setProperty( KEY2, value2 );
                     }
                     tx.success();
                 }
@@ -236,8 +240,7 @@ public class HalfAppliedConstraintRecoveryIT
                 } );
                 barrier.await();
                 flushStores( db );
-                // Crash before index population have discovered that there are duplicates
-                // (nowadays happens in between index population and creating the constraint)
+                // Crash before index population have discovered that there are duplicates, right before scan actually starts.
                 crashSnapshot = fs.snapshot();
                 barrier.release();
             }
