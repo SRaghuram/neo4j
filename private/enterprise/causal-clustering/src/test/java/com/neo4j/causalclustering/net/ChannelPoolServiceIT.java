@@ -158,7 +158,7 @@ class ChannelPoolServiceIT
     }
 
     @Test
-    void shouldBeAbleToSendToServerAfterBeingRestarted() throws InterruptedException, ExecutionException, TimeoutException
+    void shouldBeAbleToSendToServerAfterServerBeingRestarted() throws InterruptedException, ExecutionException, TimeoutException
     {
         PooledChannel preRestartChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
 
@@ -171,6 +171,31 @@ class ChannelPoolServiceIT
         PooledChannel postRestartChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
 
         postRestartChannel.channel().writeAndFlush( emptyBuffer() ).addListener( f -> postRestartChannel.release() ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+    }
+
+    @Test
+    void shouldBeAbleToSendToServerAfterPoolBeingRestarted() throws InterruptedException, ExecutionException, TimeoutException
+    {
+        PooledChannel preRestartChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+
+        preRestartChannel.channel().writeAndFlush( emptyBuffer() ).addListener( f -> preRestartChannel.release() ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+
+        pool.stop();
+        pool.start();
+
+        PooledChannel postRestartChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+
+        postRestartChannel.channel().writeAndFlush( emptyBuffer() ).addListener( f -> postRestartChannel.release() ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
+    }
+
+    @Test
+    void shouldFailExceptionallyIfPoolIsStopped()
+    {
+        pool.stop();
+        ExecutionException executionException = assertThrows( ExecutionException.class, () -> pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT ) );
+
+        IllegalStateException cause = (IllegalStateException) executionException.getCause();
+        assertEquals( "Channel pool service is not in a started state", cause.getMessage() );
     }
 
     @Test

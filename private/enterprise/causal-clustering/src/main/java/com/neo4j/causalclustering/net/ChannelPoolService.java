@@ -50,7 +50,7 @@ public class ChannelPoolService implements Lifecycle
         {
             if ( poolMap == null )
             {
-                return failedFuture( new IllegalStateException( "Channel pools is not in a started state." ) );
+                return failedFuture( new IllegalStateException( "Channel pool service is not in a started state." ) );
             }
             SimpleChannelPool channelPool = poolMap.get( advertisedSocketAddress );
             return PooledChannel.future( channelPool.acquire(), channelPool ).applyToEither( lifeCompletionStage, pooledChannel -> pooledChannel );
@@ -95,6 +95,7 @@ public class ChannelPoolService implements Lifecycle
             {
                 poolMap.close();
             }
+            poolMap = null;
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
         }
         finally
