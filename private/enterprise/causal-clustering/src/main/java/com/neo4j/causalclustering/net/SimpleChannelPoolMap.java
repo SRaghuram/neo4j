@@ -12,9 +12,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.pool.AbstractChannelPoolMap;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
-import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
 
 import java.net.InetSocketAddress;
@@ -27,13 +25,13 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 
-class FixedChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddress,ChannelPool>
+class SimpleChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddress,SimpleChannelPool>
 {
     private final Bootstrap baseBootstrap;
     private final ChannelPoolHandlers poolHandlers = new ChannelPoolHandlers();
     private final InstalledProtocolsTracker protocolsTracker;
 
-    FixedChannelPoolMap( Bootstrap baseBootstrap, ChannelPoolHandler poolHandlers )
+    SimpleChannelPoolMap( Bootstrap baseBootstrap, ChannelPoolHandler poolHandlers )
     {
         this.baseBootstrap = baseBootstrap;
         this.protocolsTracker = new InstalledProtocolsTracker();
@@ -47,9 +45,9 @@ class FixedChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddress
     }
 
     @Override
-    protected ChannelPool newPool( AdvertisedSocketAddress key )
+    protected SimpleChannelPool newPool( AdvertisedSocketAddress key )
     {
-        return new FixedChannelPool( baseBootstrap.remoteAddress( key.socketAddress() ), poolHandlers, Integer.MAX_VALUE );
+        return new SimpleChannelPool( baseBootstrap.remoteAddress( key.socketAddress() ), poolHandlers );
     }
 
     private static class InstalledProtocolsTracker extends AbstractChannelPoolHandler

@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.net;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
+import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.CompletableFuture;
@@ -23,14 +23,12 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.neo4j.util.concurrent.Futures.failedFuture;
-
 public class ChannelPoolService implements Lifecycle
 {
     private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private final JobScheduler scheduler;
     private final ChannelPoolHandler poolHandler;
-    private FixedChannelPoolMap poolMap;
+    private SimpleChannelPoolMap poolMap;
     private EventLoopGroup eventLoopGroup;
     private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
@@ -49,9 +47,11 @@ public class ChannelPoolService implements Lifecycle
         {
             if ( poolMap == null )
             {
-                return failedFuture( new IllegalStateException( "Channel pools is not in a started state." ) );
+                CompletableFuture<PooledChannel> failedFuture = new CompletableFuture<>();
+                failedFuture.completeExceptionally( new IllegalStateException( "Channel pools is not in a started state." ) );
+                return failedFuture;
             }
-            ChannelPool channelPool = poolMap.get( advertisedSocketAddress );
+            SimpleChannelPool channelPool = poolMap.get( advertisedSocketAddress );
             return PooledChannel.future( channelPool.acquire(), channelPool );
         }
         finally
@@ -74,7 +74,7 @@ public class ChannelPoolService implements Lifecycle
         {
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.RAFT_CLIENT ) );
             Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
-            poolMap = new FixedChannelPoolMap( baseBootstrap, poolHandler );
+            poolMap = new SimpleChannelPoolMap( baseBootstrap, poolHandler );
         }
         finally
         {
