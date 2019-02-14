@@ -5,14 +5,16 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
-
 import com.neo4j.causalclustering.catchup.CatchupErrorResponse;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.CatchupResult;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+
 import org.neo4j.logging.Log;
 
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
 import static java.lang.String.format;
 
 public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdaptor<T>
@@ -106,7 +108,7 @@ public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdapto
             StoreCopyFinishedResponse.Status status =
                     catchupErrorResponse.status() == CatchupResult.E_DATABASE_UNKNOWN ? StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN
                                                                                       : StoreCopyFinishedResponse.Status.E_UNKNOWN;
-            signal.complete( new StoreCopyFinishedResponse( status, -1 ) );
+            signal.complete( new StoreCopyFinishedResponse( status, LAST_CHECKPOINTED_TX_UNAVAILABLE ) );
         }
     }
 

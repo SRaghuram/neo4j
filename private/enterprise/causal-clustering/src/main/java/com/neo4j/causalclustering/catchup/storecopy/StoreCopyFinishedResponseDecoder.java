@@ -11,12 +11,14 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
+
 public class StoreCopyFinishedResponseDecoder extends ByteToMessageDecoder
 {
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf msg, List<Object> out )
     {
         int statusOrdinal = msg.readInt();
-        out.add( new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.values()[statusOrdinal], -1 ) );
+        out.add( new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.values()[statusOrdinal], LAST_CHECKPOINTED_TX_UNAVAILABLE ) );
     }
 }

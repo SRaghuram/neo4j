@@ -22,6 +22,7 @@ import org.neo4j.cursor.RawCursor;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH;
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static org.mockito.Mockito.mock;
@@ -86,7 +87,7 @@ public class StoreFileStreamingProtocolTest
         // then
         InOrder inOrder = Mockito.inOrder( ctx );
         inOrder.verify( ctx ).write( ResponseMessageType.STORE_COPY_FINISHED );
-        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( E_STORE_ID_MISMATCH, -1 ) );
+        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( E_STORE_ID_MISMATCH, LAST_CHECKPOINTED_TX_UNAVAILABLE ) );
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -103,7 +104,7 @@ public class StoreFileStreamingProtocolTest
         // then
         InOrder inOrder = Mockito.inOrder( ctx );
         inOrder.verify( ctx ).write( ResponseMessageType.STORE_COPY_FINISHED );
-        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( SUCCESS, -1 ) );
+        inOrder.verify( ctx ).writeAndFlush( new StoreCopyFinishedResponse( SUCCESS, LAST_CHECKPOINTED_TX_UNAVAILABLE ) );
         inOrder.verifyNoMoreInteractions();
     }
 

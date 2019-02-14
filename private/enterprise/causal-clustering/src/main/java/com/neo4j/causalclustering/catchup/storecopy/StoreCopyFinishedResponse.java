@@ -9,6 +9,8 @@ import java.util.Objects;
 
 public class StoreCopyFinishedResponse
 {
+    public static final long LAST_CHECKPOINTED_TX_UNAVAILABLE = -1L;
+
     public enum Status
     {
         SUCCESS,
@@ -21,10 +23,17 @@ public class StoreCopyFinishedResponse
     private final Status status;
     private final long lastCheckpointedTx;
 
+    /**
+     * @param status provides the response status
+     * @param lastCheckpointedTx lastCheckpointedTx. This may be unavailable to the decoder for two reason.
+     * 1 if using an older catchup protocol
+     * 2. and error occurred while responding.
+     * If not available, it should be -1.
+     */
     public StoreCopyFinishedResponse( Status status, long lastCheckpointedTx )
     {
         this.status = status;
-        this.lastCheckpointedTx = status == Status.SUCCESS ? lastCheckpointedTx : -1;
+        this.lastCheckpointedTx = status == Status.SUCCESS ? lastCheckpointedTx : LAST_CHECKPOINTED_TX_UNAVAILABLE;
     }
 
     public Status status()
