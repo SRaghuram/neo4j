@@ -143,6 +143,17 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.size should equal(1)
   }
 
+  test("should call procedure with internal types") {
+    registerTestProcedures()
+
+    executeWith(Configs.All,
+                "CALL org.neo4j.internalTypes()").toList should equal(List(Map("textValue" -> "Dog", "mapValue" -> Map("key" -> 1337))))
+    executeWith(Configs.All,
+                "CALL org.neo4j.internalTypes('Cat')").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 1337))))
+    executeWith(Configs.All,
+                "CALL org.neo4j.internalTypes('Cat', {key: 42})").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 42))))
+  }
+
   private def registerTestProcedures(): Unit = {
     graph.getDependencyResolver.resolveDependency(classOf[GlobalProcedures]).registerProcedure(classOf[TestProcedure])
   }

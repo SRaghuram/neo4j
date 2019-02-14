@@ -37,12 +37,15 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.values.storable.TextValue;
+import org.neo4j.values.virtual.MapValue;
 
 import static org.neo4j.graphdb.traversal.Evaluation.EXCLUDE_AND_CONTINUE;
 import static org.neo4j.graphdb.traversal.Evaluation.EXCLUDE_AND_PRUNE;
 import static org.neo4j.graphdb.traversal.Evaluation.INCLUDE_AND_CONTINUE;
 import static org.neo4j.procedure.Mode.WRITE;
 
+@SuppressWarnings( {"unused", "WeakerAccess"} )
 public class TestProcedure
 {
     @Context
@@ -188,6 +191,25 @@ public class TestProcedure
                         .uniqueness( Uniqueness.NODE_GLOBAL );
 
         return td.traverse( start ).stream().map( PathResult::new );
+    }
+
+    @Procedure( "org.neo4j.internalTypes" )
+    public Stream<InternalTypeResult> internal( @Name( value = "text", defaultValue = "Dog" ) TextValue text,
+            @Name( value = "map", defaultValue = "{key: 1337}" ) MapValue map )
+    {
+        return Stream.of( new InternalTypeResult( text, map ) );
+    }
+
+    public static class InternalTypeResult
+    {
+        public final TextValue textValue;
+        public final MapValue mapValue;
+
+        public InternalTypeResult( TextValue textValue, MapValue mapValue )
+        {
+            this.textValue = textValue;
+            this.mapValue = mapValue;
+        }
     }
 
     public static class PathResult
