@@ -12,14 +12,11 @@ import akka.cluster.Cluster
 import akka.cluster.ddata.{Key, ReplicatedData, Replicator}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
-import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT.TSConf
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
-import com.typesafe.config.ConfigFactory
 import org.junit.runner.RunWith
 import org.neo4j.kernel.configuration.Config
-import org.neo4j.ports.allocation.PortAuthority
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 
@@ -31,10 +28,9 @@ object BaseAkkaIT {
   type TSConf = com.typesafe.config.Config
 
   def config: TSConf = {
-    val discoveryListenPort = PortAuthority.allocatePort()
+    val discoveryListenPort = 0
     val config = Config.defaults()
     config.augment("causal_clustering.discovery_listen_address", s":$discoveryListenPort")
-    config.augment("causal_clustering.initial_discovery_members", s"localhost:$discoveryListenPort")
 
     new TypesafeConfigService(ArteryTransport.TCP, config).generate()
   }
@@ -51,7 +47,7 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     with ImplicitSender
     with NeoSuite {
 
-  val defaultWaitTime = Duration(3, TimeUnit.SECONDS)
+  val defaultWaitTime = Duration(10, TimeUnit.SECONDS)
   implicit val timeout = Timeout(defaultWaitTime)
   implicit val execContext = ExecutionContext.global
 
