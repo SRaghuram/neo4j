@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.helper.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
@@ -100,7 +101,7 @@ public class RemoteStore
     {
         storeCopyClientMonitor.startReceivingTransactions( context.startTxIdExclusive() );
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
-                context.expectedFirstTxId(), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
+                validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
             TxPuller executor = new TxPuller( catchupAddressProvider, logProvider, config );
 
@@ -111,6 +112,11 @@ public class RemoteStore
         {
             throw new StoreCopyFailedException( e );
         }
+    }
+
+    private LongRange validInitialTxRange( TxPullRequestContext context )
+    {
+        return LongRange.range( context.startTxIdExclusive() + 1, context.fallbackStartId().orElse( context.startTxIdExclusive() ) + 1 );
     }
 
     public StoreId getStoreId( AdvertisedSocketAddress from ) throws StoreIdDownloadFailedException

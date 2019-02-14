@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.helper.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.util.OptionalLong;
@@ -95,10 +94,5 @@ class TxPullRequestContext
     boolean constraintReached( long lastWrittenTx )
     {
         return requiredTransactions.noRequiredTxId() || (requiredTransactions.requiredTxId() <= lastWrittenTx);
-    }
-
-    LongRange expectedFirstTxId()
-    {
-        return LongRange.range( startTxIdExclusive() + 1, fallbackStartId().orElse( startTxIdExclusive() ) + 1 );
     }
 }
