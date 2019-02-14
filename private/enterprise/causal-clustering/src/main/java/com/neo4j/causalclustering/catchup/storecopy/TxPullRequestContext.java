@@ -25,12 +25,21 @@ class TxPullRequestContext
     }
 
     /**
-     * Later stages of the startup process require at least one transaction to
-     * figure out the mapping between the transaction log and the consensus log.
      * <p>
-     * If there are no transaction logs then we can pull from and including
-     * the index which the metadata store points to. This would be the case
-     * for example with a backup taken during an idle period of the system.
+     * If there are no transaction logs then we look at where the metadata store points to.
+     * This would be the case for example with a backup taken during an idle period of the system.
+     *
+     * If our store is not empty we must pull from the metaDataStoreIndex either exclusively or
+     * inclusively, depending on the possible states of the remote store's transaction log. These
+     * possible states are:
+     *
+     * Assume MetaDataStore have index=N then if:
+     *
+     * 1. Remote store has Tx log containing ids up to N. In this case we must pull from N (inclusively) in order to get the latest remote transaction.
+     * 2. Remote store has Tx log containing ids from N+1 (if the remote store was seeded from the same store as ours then tx log will star at N+1).
+     *  In this case we must pull from N (exclusively) in order to get the latest remote transaction.
+     * 3. Remote store has Tx log containing both N and N+1. In this case any solution may work.
+     *
      * <p>
      * However, if there are transaction logs then we want to find out where
      * they end and pull from there, excluding the last one so that we do not
