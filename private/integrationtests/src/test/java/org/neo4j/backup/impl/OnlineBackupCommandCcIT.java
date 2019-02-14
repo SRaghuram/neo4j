@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
@@ -49,6 +50,7 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.Service;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
@@ -162,22 +164,19 @@ public class OnlineBackupCommandCcIT
     public void backupCanBeOptionallySwitchedOnWithTheBackupConfig() throws Exception
     {
         // given a cluster with backup switched on
-        int[] backupPorts = new int[]{PortAuthority.allocatePort(), PortAuthority.allocatePort(), PortAuthority.allocatePort()};
-        String value = "localhost:%d";
         clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "true" )
-                .withInstanceCoreParam( online_backup_listen_address, i -> format( value, backupPorts[i] ) );
+                .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
         Cluster<?> cluster = startCluster( recordFormat );
-        String customAddress = "localhost:" + backupPorts[0];
 
         // when a full backup is performed
-        assertEquals( 0, runBackupOtherJvm( customAddress, DATABASE_NAME ) );
+        assertEquals( 0, runBackupOtherJvm( leaderBackupAddress( cluster ), DATABASE_NAME ) );
         assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
 
         // and an incremental backup is performed
         createSomeData( cluster );
-        assertEquals( 0, runBackupOtherJvm( customAddress, DATABASE_NAME ) );
+        assertEquals( 0, runBackupOtherJvm( leaderBackupAddress( cluster ), DATABASE_NAME ) );
         assertEquals( 0, runBackupToolAndGetExitCode(
-                "--from=" + customAddress,
+                "--from=" + leaderBackupAddress( cluster ),
                 "--cc-report-dir=" + backupStoreDir,
                 "--backup-dir=" + backupStoreDir,
                 "--name=defaultport", arg( ARG_NAME_FALLBACK_FULL, false ) ) );
@@ -190,15 +189,12 @@ public class OnlineBackupCommandCcIT
     public void secondaryTransactionProtocolIsSwitchedOffCorrespondingBackupSetting() throws Exception
     {
         // given a cluster with backup switched off
-        int[] backupPorts = new int[]{PortAuthority.allocatePort(), PortAuthority.allocatePort(), PortAuthority.allocatePort()};
-        String value = "localhost:%d";
         clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "false" )
-                .withInstanceCoreParam( online_backup_listen_address, i -> format( value, backupPorts[i] ) );
-        startCluster( recordFormat );
-        String customAddress = "localhost:" + backupPorts[0];
+                .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
+        Cluster<?> cluster = startCluster( recordFormat );
 
         // then a full backup is impossible from the backup port
-        assertEquals( 1, runBackupOtherJvm( customAddress, DATABASE_NAME ) );
+        assertEquals( 1, runBackupOtherJvm( leaderBackupAddress( cluster ), DATABASE_NAME ) );
     }
 
     @Test
@@ -539,6 +535,13 @@ public class OnlineBackupCommandCcIT
     {
         DatabaseLayout backupLayout = DatabaseLayout.of( new File( backupStoreDir, backupName ) );
         return BackupTransactionLogFilesHelper.readLogFiles( backupLayout );
+    }
+
+    private static String leaderBackupAddress( Cluster<?> cluster ) throws TimeoutException
+    {
+        ListenSocketAddress address = cluster.awaitLeader().config().get( online_backup_listen_address );
+        assertNotNull( address );
+        return address.toString();
     }
 
     private static void writeConfigWithLogRotationThreshold( File conf, String value ) throws IOException
