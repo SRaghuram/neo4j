@@ -7,22 +7,19 @@ package com.neo4j.batchimport;
 
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 
-import java.util.function.Function;
-
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporterTest;
-import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
-import org.neo4j.unsafe.impl.batchimport.input.Groups;
+import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 
 /**
  * Test for {@link ParallelBatchImporter} in an enterprise environment so that enterprise store is used.
  */
 public class HighLimitParallelBatchImporterIT extends ParallelBatchImporterTest
 {
-    public HighLimitParallelBatchImporterIT( InputIdGenerator inputIdGenerator, Function<Groups,IdMapper> idMapper )
+    public HighLimitParallelBatchImporterIT( InputIdGenerator inputIdGenerator, IdType idType )
     {
-        super( inputIdGenerator, idMapper );
+        super( inputIdGenerator, idType );
     }
 
     @Override

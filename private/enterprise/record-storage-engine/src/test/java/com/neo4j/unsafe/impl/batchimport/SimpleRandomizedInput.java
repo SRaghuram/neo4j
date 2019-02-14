@@ -19,14 +19,13 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.InputIterator;
-import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
-import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.DataGeneratorInput;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.InputChunk;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntity;
 import org.neo4j.unsafe.impl.batchimport.input.Inputs;
+import org.neo4j.unsafe.impl.batchimport.input.ReadableGroups;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header.Entry;
 import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
@@ -76,9 +75,15 @@ public class SimpleRandomizedInput implements Input
     }
 
     @Override
-    public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
+    public IdType idType()
     {
-        return actual.idMapper( numberArrayFactory );
+        return actual.idType();
+    }
+
+    @Override
+    public ReadableGroups groups()
+    {
+        return actual.groups();
     }
 
     @Override

@@ -9,13 +9,12 @@ import java.util.function.ToIntFunction;
 
 import org.neo4j.unsafe.impl.batchimport.GeneratingInputIterator;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
-import org.neo4j.unsafe.impl.batchimport.cache.NumberArrayFactory;
-import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMapper;
-import org.neo4j.unsafe.impl.batchimport.cache.idmapping.IdMappers;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Collectors;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
+import org.neo4j.unsafe.impl.batchimport.input.ReadableGroups;
+import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.values.storable.Value;
 
 import static org.neo4j.unsafe.impl.batchimport.input.Inputs.knownEstimates;
@@ -57,9 +56,15 @@ public class NodeCountInputs implements Input
     }
 
     @Override
-    public IdMapper idMapper( NumberArrayFactory numberArrayFactory )
+    public IdType idType()
     {
-        return IdMappers.actual();
+        return IdType.ACTUAL;
+    }
+
+    @Override
+    public ReadableGroups groups()
+    {
+        return ReadableGroups.EMPTY;
     }
 
     @Override
