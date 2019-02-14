@@ -62,7 +62,7 @@ class TxPullerTest
     @Test
     void shouldThrowAfterConsecutiveRequestsWithoutProgression() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 1 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 1 );
         TxPullRequestContext context = getContext( requiredRange );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenReturn( new TxStreamFinishedResponse( CatchupResult.SUCCESS_END_OF_STREAM, 0 ) );
@@ -75,7 +75,7 @@ class TxPullerTest
     @Test
     void shouldSucceedIfRangeIsMet() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = getContext( requiredRange );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 100 ) );
@@ -86,7 +86,7 @@ class TxPullerTest
     @Test
     void shouldRetryUntilRangeIsMetAndSuccessfulResponse() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = getContext( requiredRange );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) )
@@ -102,7 +102,7 @@ class TxPullerTest
     @Test
     void shouldUsePrimaryMethodInLastRequestAfterConstraintIsMet() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = getContext( requiredRange );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
@@ -117,7 +117,7 @@ class TxPullerTest
     @Test
     void shouldUsePrimaryAddressIfLastTry() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = getContext( requiredRange );
 
         OngoingStubbing<TxStreamFinishedResponse> stubbing = when( client.pullTransactions( any(), any(), anyLong(), any() ) );
@@ -143,7 +143,7 @@ class TxPullerTest
     @Test
     void shouldUseFallbackStartTxIdIfLastAttempt() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
 
         OngoingStubbing<TxStreamFinishedResponse> stubbing = when( client.pullTransactions( any(), any(), anyLong(), any() ) );
@@ -163,7 +163,7 @@ class TxPullerTest
     {
         // All error responses are considered non transient
 
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( lastTxTracker.txAnswerWithoutProgress( result ) );
@@ -177,7 +177,7 @@ class TxPullerTest
     @Test
     void shouldImmediatelyMoveToLastAttemptIfNoProgressAndNotTransientException() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenThrow( RuntimeException.class );
@@ -191,7 +191,7 @@ class TxPullerTest
     @Test
     void shouldUseProgressConditionIfNoProgressAndConnectException() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenThrow( ConnectException.class );
@@ -205,7 +205,7 @@ class TxPullerTest
     @Test
     void shouldUseProgressConditionIfNoProgressAndCatchupResolutionException() throws Exception
     {
-        RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
 
         when( addressProvider.primary() ).thenThrow( CatchupAddressResolutionException.class );
@@ -242,7 +242,7 @@ class TxPullerTest
         }
     }
 
-    private TxPullRequestContext getContext( RequiredTransactionRange requiredRange )
+    private TxPullRequestContext getContext( RequiredTransactions requiredRange )
     {
         StoreId storeId = new StoreId( 1, 2, 3, 4 );
         return TxPullRequestContext.createContextFromStoreCopy( requiredRange, storeId );

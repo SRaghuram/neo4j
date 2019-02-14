@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange;
+import com.neo4j.causalclustering.helper.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,7 +52,6 @@ import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
-import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.single;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
@@ -126,7 +125,7 @@ public class TransactionLogCatchUpWriterTest
 
         // and
         long fromTxId = BASE_TX_ID;
-        RequiredTransactionRange validRange = single( fromTxId );
+        LongRange validRange = LongRange.range( fromTxId, fromTxId );
         TransactionLogCatchUpWriter subject =
                 new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
                         storageEngineFactory, validRange, partOfStoreCopy, false, true );
@@ -158,7 +157,7 @@ public class TransactionLogCatchUpWriterTest
 
         // and
         long fromTxId = BASE_TX_ID;
-        RequiredTransactionRange validRange = single( fromTxId );
+        LongRange validRange = LongRange.range( fromTxId, fromTxId );
         TransactionLogCatchUpWriter subject =
                 new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(), storageEngineFactory,
                         validRange, partOfStoreCopy, false, false );
@@ -183,7 +182,7 @@ public class TransactionLogCatchUpWriterTest
         int fromTxId = 37;
         int endTxId = fromTxId + 5;
 
-        RequiredTransactionRange validRange = single( fromTxId );
+        LongRange validRange = LongRange.range( fromTxId, fromTxId );
 
         TransactionLogCatchUpWriter catchUpWriter = new TransactionLogCatchUpWriter( databaseLayout, fs, pageCache, config, NullLogProvider.getInstance(),
                 storageEngineFactory, validRange, partOfStoreCopy, logsInStoreDir, true );

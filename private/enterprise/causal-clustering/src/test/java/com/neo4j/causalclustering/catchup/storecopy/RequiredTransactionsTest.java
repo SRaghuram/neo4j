@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -13,12 +12,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.stream.Stream;
 
-import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.single;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.requiredRange;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class RequiredTransactionRangeTest
+class RequiredTransactionsTest
 {
     @ParameterizedTest
     @MethodSource( "invalidRanges" )
@@ -31,33 +32,24 @@ class RequiredTransactionRangeTest
     @ValueSource( ints = {Integer.MIN_VALUE, -1} )
     void shouldNotAllowNegativeValue( int negativeInt )
     {
-        assertThrows( IllegalArgumentException.class, () -> single( negativeInt ) );
+        assertThrows( IllegalArgumentException.class, () -> noConstraint( negativeInt ) );
     }
 
     @Test
-    void shouldBeWithinRange()
+    void shouldNotHaveARequiredTx()
     {
-        int from = 4;
-        int to = 8;
-        RequiredTransactionRange range = RequiredTransactionRange.range( from, to );
+        RequiredTransactions requiredTransactions = noConstraint( 1 );
 
-        assertFalse( range.withinRange( from - 1 ) );
-        assertFalse( range.withinRange( to + 1 ) );
-        for ( int i = from; i < to + 1; i++ )
-        {
-            assertTrue( range.withinRange( i ) );
-        }
+        assertTrue( requiredTransactions.noRequiredTxId() );
     }
 
     @Test
-    void shouldBeWithinRangeForSingle()
+    void shouldHaveARequiredTx()
     {
-        int single = 4;
-        RequiredTransactionRange range = RequiredTransactionRange.single( single );
+        RequiredTransactions requiredTransactions = requiredRange( 1, 2 );
 
-        assertFalse( range.withinRange( single - 1 ) );
-        assertFalse( range.withinRange( single + 1 ) );
-        assertTrue( range.withinRange( single ) );
+        assertFalse( requiredTransactions.noRequiredTxId() );
+        assertEquals( 2, requiredTransactions.requiredTxId() );
     }
 
     private static Stream<RangeProvider> invalidRanges()
@@ -76,9 +68,9 @@ class RequiredTransactionRangeTest
             this.to = to;
         }
 
-        RequiredTransactionRange get()
+        RequiredTransactions get()
         {
-            return RequiredTransactionRange.range( from, to );
+            return requiredRange( from, to );
         }
 
         @Override

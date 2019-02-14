@@ -62,7 +62,7 @@ class RemoteStoreTest
     {
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         TxPullClient txPullClient = mock( TxPullClient.class );
-        when( storeCopyClient.copyStoreFiles( any(), any(), any(), any(), any() ) ).thenReturn( RequiredTransactionRange.single( 1 ) );
+        when( storeCopyClient.copyStoreFiles( any(), any(), any(), any(), any() ) ).thenReturn( RequiredTransactions.noConstraint( 1 ) );
         when( txPullClient.pullTransactions( any(), any(), anyLong(), any() ) )
                 .thenReturn( new TxStreamFinishedResponse( SUCCESS_END_OF_STREAM, 13 ) );
 
@@ -76,11 +76,11 @@ class RemoteStoreTest
     @Test
     void shouldSuccessfullyPullNoTxIfRangeAllowsIt() throws Exception
     {
-        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.single( 1 );
+        RequiredTransactions requiredTransactions = RequiredTransactions.noConstraint( 1 );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
-                any() ) ).thenReturn( requiredTransactionRange );
+                any() ) ).thenReturn( requiredTransactions );
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
@@ -98,11 +98,11 @@ class RemoteStoreTest
     @Test
     void shouldPullTxUntilConstraintRangeIsMet() throws Exception
     {
-        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 10 );
+        RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 10 );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
-                any() ) ).thenReturn( requiredTransactionRange );
+                any() ) ).thenReturn( requiredTransactions );
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
@@ -119,11 +119,11 @@ class RemoteStoreTest
     @Test
     void shouldEventuallyFailPullingTxIfConstraintIsNotMet() throws Exception
     {
-        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 10 );
+        RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 10 );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
-                any() ) ).thenReturn( requiredTransactionRange );
+                any() ) ).thenReturn( requiredTransactions );
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
@@ -146,7 +146,7 @@ class RemoteStoreTest
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
-                any() ) ).thenReturn( RequiredTransactionRange.single( lastFlushedTxId ) );
+                any() ) ).thenReturn( RequiredTransactions.noConstraint( lastFlushedTxId ) );
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) )
@@ -162,7 +162,7 @@ class RemoteStoreTest
     void shouldCloseDownTxLogWriterIfTxStreamingFails() throws Exception
     {
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
-        when( storeCopyClient.copyStoreFiles( any(), any(), any(), any(), any() ) ).thenReturn( RequiredTransactionRange.single( 1 ) );
+        when( storeCopyClient.copyStoreFiles( any(), any(), any(), any(), any() ) ).thenReturn( RequiredTransactions.noConstraint( 1 ) );
         TxPullClient txPullClient = mock( TxPullClient.class );
 
         doThrow( CatchUpClientException.class ).when( txPullClient )
@@ -177,7 +177,7 @@ class RemoteStoreTest
     @Test
     void shouldCallCallPrimaryOnceInTheEnd() throws Exception
     {
-        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 3 );
+        RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 3 );
 
         CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
         when( catchupAddressProvider.primary() ).thenReturn( localhost );
@@ -185,7 +185,7 @@ class RemoteStoreTest
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(), any() ) ).thenReturn(
-                requiredTransactionRange );
+                requiredTransactions );
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
@@ -204,7 +204,7 @@ class RemoteStoreTest
     @Test
     void shouldCallPrimaryAddressIfFailingConsecutively() throws Exception
     {
-        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 3 );
+        RequiredTransactions requiredTransactions = RequiredTransactions.requiredRange( 1, 3 );
 
         CatchupAddressProvider secondaryFailingAddressProvider = mock( CatchupAddressProvider.class );
         when( secondaryFailingAddressProvider.secondary() ).thenThrow( CatchupAddressResolutionException.class );
@@ -212,7 +212,7 @@ class RemoteStoreTest
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( secondaryFailingAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
-                any() ) ).thenReturn( requiredTransactionRange );
+                any() ) ).thenReturn( requiredTransactions );
 
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();

@@ -5,22 +5,23 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
+import com.neo4j.causalclustering.helper.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.util.OptionalLong;
 
-import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.single;
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
 
-public class TxPullRequestContext
+class TxPullRequestContext
 {
-    private final RequiredTransactionRange requiredTransactionRange;
+    private final RequiredTransactions requiredTransactions;
     private final StoreId expectedStoreId;
     private final boolean hasFallbackStartId;
 
-    static TxPullRequestContext createContextFromStoreCopy( RequiredTransactionRange requiredTransactionRange, StoreId expectedStoreId )
+    static TxPullRequestContext createContextFromStoreCopy( RequiredTransactions requiredTransactions, StoreId expectedStoreId )
     {
-        return new TxPullRequestContext( requiredTransactionRange, expectedStoreId );
+        return new TxPullRequestContext( requiredTransactions, expectedStoreId );
     }
 
     /**
@@ -39,42 +40,42 @@ public class TxPullRequestContext
     {
         if ( commitState.transactionLogIndex().isPresent() )
         {
-            return new TxPullRequestContext( single( commitState.transactionLogIndex().get() + 1 ), expectedStoreId );
+            return new TxPullRequestContext( noConstraint( commitState.transactionLogIndex().get() + 1 ), expectedStoreId );
         }
         else
         {
             long metaDataStoreIndex = commitState.metaDataStoreIndex();
             if ( metaDataStoreIndex == BASE_TX_ID )
             {
-                return new TxPullRequestContext( single( metaDataStoreIndex + 1 ), expectedStoreId );
+                return new TxPullRequestContext( noConstraint( metaDataStoreIndex + 1 ), expectedStoreId );
             }
             else
             {
-                return new TxPullRequestContext( single( metaDataStoreIndex ), expectedStoreId, true );
+                return new TxPullRequestContext( noConstraint( metaDataStoreIndex ), expectedStoreId, true );
             }
         }
     }
 
-    private TxPullRequestContext( RequiredTransactionRange requiredTransactionRange, StoreId expectedStoreId, boolean hasFallbackStartId )
+    private TxPullRequestContext( RequiredTransactions requiredTransactions, StoreId expectedStoreId, boolean hasFallbackStartId )
     {
-        this.requiredTransactionRange = requiredTransactionRange;
+        this.requiredTransactions = requiredTransactions;
         this.expectedStoreId = expectedStoreId;
         this.hasFallbackStartId = hasFallbackStartId;
     }
 
-    private TxPullRequestContext( RequiredTransactionRange requiredTransactionRange, StoreId expectedStoreId )
+    private TxPullRequestContext( RequiredTransactions requiredTransactions, StoreId expectedStoreId )
     {
-        this( requiredTransactionRange, expectedStoreId, false );
+        this( requiredTransactions, expectedStoreId, false );
     }
 
     OptionalLong fallbackStartId()
     {
-        return hasFallbackStartId ? OptionalLong.of( startTxId() + 1 ) : OptionalLong.empty();
+        return hasFallbackStartId ? OptionalLong.of( startTxIdExclusive() + 1 ) : OptionalLong.empty();
     }
 
-    public long startTxId()
+    long startTxIdExclusive()
     {
-        return requiredTransactionRange.startTxId() - 1;
+        return requiredTransactions.startTxId() - 1;
     }
 
     StoreId expectedStoreId()
@@ -84,11 +85,11 @@ public class TxPullRequestContext
 
     boolean constraintReached( long lastWrittenTx )
     {
-        return (requiredTransactionRange.requiredTxId() == -1) || (requiredTransactionRange.requiredTxId() <= lastWrittenTx);
+        return requiredTransactions.noRequiredTxId() || (requiredTransactions.requiredTxId() <= lastWrittenTx);
     }
 
-    RequiredTransactionRange expectedFirstTxId()
+    LongRange expectedFirstTxId()
     {
-        return RequiredTransactionRange.range( startTxId() + 1, fallbackStartId().orElse( startTxId() ) + 1 );
+        return LongRange.range( startTxIdExclusive() + 1, fallbackStartId().orElse( startTxIdExclusive() ) + 1 );
     }
 }

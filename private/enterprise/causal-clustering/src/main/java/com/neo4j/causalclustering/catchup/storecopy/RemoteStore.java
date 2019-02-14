@@ -78,14 +78,14 @@ public class RemoteStore
     public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout, boolean rotateTransactionsManually )
             throws StoreCopyFailedException
     {
-        RequiredTransactionRange requiredTransactionRange;
+        RequiredTransactions requiredTransactions;
         StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors );
-        requiredTransactionRange = storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider, this::getTerminationCondition,
+        requiredTransactions = storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider, this::getTerminationCondition,
                 destinationLayout.databaseDirectory() );
 
-        log.info( "Store files need to be recovered starting from: %s", requiredTransactionRange );
+        log.info( "Store files need to be recovered starting from: %s", requiredTransactions );
 
-        TxPullRequestContext context = createContextFromStoreCopy( requiredTransactionRange, expectedStoreId );
+        TxPullRequestContext context = createContextFromStoreCopy( requiredTransactions, expectedStoreId );
         pullTransactions( addressProvider, destinationLayout, context, true, true, rotateTransactionsManually );
     }
 
@@ -98,7 +98,7 @@ public class RemoteStore
             boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir, boolean rotateTransactionsManually )
             throws StoreCopyFailedException
     {
-        storeCopyClientMonitor.startReceivingTransactions( context.expectedFirstTxId().startTxId() );
+        storeCopyClientMonitor.startReceivingTransactions( context.startTxIdExclusive() );
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
                 context.expectedFirstTxId(), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {

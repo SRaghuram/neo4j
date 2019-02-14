@@ -57,7 +57,7 @@ class TxPuller
     {
         final StoreId expectedStoreId = context.expectedStoreId();
 
-        long requestedTxId = context.startTxId();
+        long requestedTxId = context.startTxIdExclusive();
         do
         {
             Result result = execute( client, expectedStoreId, writer, requestedTxId );

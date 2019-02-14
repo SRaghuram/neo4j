@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange;
+import com.neo4j.causalclustering.helper.LongRange;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private final LogFiles logFiles;
     private final TransactionMetaDataStore metaDataStore;
     private final boolean rotateTransactionsManually;
-    private final RequiredTransactionRange validInitialTxId;
+    private final LongRange validInitialTxId;
     private final FlushablePositionAwareChannel logChannel;
     private final LogPositionMarker logPositionMarker = new LogPositionMarker();
 
@@ -55,7 +55,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private long expectedTxId = -1;
 
     TransactionLogCatchUpWriter( DatabaseLayout databaseLayout, FileSystemAbstraction fs, PageCache pageCache, Config config, LogProvider logProvider,
-            StorageEngineFactory storageEngineFactory, RequiredTransactionRange validInitialTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
+            StorageEngineFactory storageEngineFactory, LongRange validInitialTxId, boolean asPartOfStoreCopy, boolean keepTxLogsInStoreDir,
             boolean forceTransactionRotations ) throws IOException
     {
         this.log = logProvider.getLog( getClass() );
@@ -65,7 +65,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         dependencies.satisfyDependencies( databaseLayout, fs, pageCache, configWithoutSpecificStoreFormat( config ) );
         metaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
-                .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.startTxId() - 1 )
+                .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
                 .withLogVersionRepository( metaDataStore )
                 .withTransactionIdStore( metaDataStore );
@@ -131,7 +131,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     {
         if ( isFirstTx() )
         {
-            if ( validInitialTxId.withinRange( receivedTxId ) )
+            if ( validInitialTxId.isWithinRange( receivedTxId ) )
             {
                 expectedTxId = receivedTxId;
             }

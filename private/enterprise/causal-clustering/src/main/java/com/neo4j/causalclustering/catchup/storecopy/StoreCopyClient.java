@@ -29,8 +29,8 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.range;
-import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.single;
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.requiredRange;
 import static java.lang.Long.max;
 import static java.lang.String.format;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
@@ -53,7 +53,7 @@ public class StoreCopyClient
         this.log = logProvider.getLog( getClass() );
     }
 
-    RequiredTransactionRange copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId,
+    RequiredTransactions copyStoreFiles( CatchupAddressProvider catchupAddressProvider, StoreId expectedStoreId,
             StoreFileStreamProvider storeFileStreamProvider, Supplier<TerminationCondition> requestWiseTerminationCondition, File destDir )
             throws StoreCopyFailedException
     {
@@ -261,25 +261,26 @@ public class StoreCopyClient
          * Represents the minimal transaction ID that can be committed by the user.
          */
         private static final long MIN_COMMITTED_TRANSACTION_ID = BASE_TX_ID + 1;
-        private final long fromTxId;
-        private long highestTxId = -1;
+        private final long initialTxId;
+        private long highestReceivedTxId = -1;
 
         TransactionIdHandler( PrepareStoreCopyResponse prepareStoreCopyResponse )
         {
-            this.fromTxId = prepareStoreCopyResponse.lastCheckPointedTransactionId();
+            this.initialTxId = prepareStoreCopyResponse.lastCheckPointedTransactionId();
         }
 
         void handle( StoreCopyFinishedResponse response )
         {
             if ( response.status() == StoreCopyFinishedResponse.Status.SUCCESS )
             {
-                highestTxId = max( highestTxId, response.lastCheckpointedTx() );
+                highestReceivedTxId = max( highestReceivedTxId, response.lastCheckpointedTx() );
             }
         }
 
-        RequiredTransactionRange requiredTransactionRange()
+        RequiredTransactions requiredTransactionRange()
         {
-            return highestTxId < MIN_COMMITTED_TRANSACTION_ID ? single( max( fromTxId, MIN_COMMITTED_TRANSACTION_ID ) ) : range( fromTxId, highestTxId );
+            return highestReceivedTxId < MIN_COMMITTED_TRANSACTION_ID ? noConstraint( max( initialTxId, MIN_COMMITTED_TRANSACTION_ID ) )
+                                                                      : requiredRange( initialTxId, highestReceivedTxId );
         }
     }
 }
