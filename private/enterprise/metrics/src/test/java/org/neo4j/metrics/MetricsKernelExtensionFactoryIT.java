@@ -48,7 +48,6 @@ import org.neo4j.kernel.impl.transaction.log.TransactionIdStore;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.metrics.source.cluster.ClusterMetrics;
-import org.neo4j.metrics.source.db.CheckPointingMetrics;
 import org.neo4j.metrics.source.db.CypherMetrics;
 import org.neo4j.metrics.source.db.EntityCountMetrics;
 import org.neo4j.metrics.source.db.TransactionMetrics;
@@ -78,6 +77,9 @@ import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
+import static org.neo4j.metrics.source.db.CheckPointingMetrics.CHECK_POINT_DURATION;
+import static org.neo4j.metrics.source.db.CheckPointingMetrics.CHECK_POINT_EVENTS;
+import static org.neo4j.metrics.source.db.CheckPointingMetrics.CHECK_POINT_TOTAL_TIME;
 
 public class MetricsKernelExtensionFactoryIT
 {
@@ -216,12 +218,18 @@ public class MetricsKernelExtensionFactoryIT
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
-        File metricFile = metricsCsv( outputPath, CheckPointingMetrics.CHECK_POINT_DURATION );
+        File metricFile = metricsCsv( outputPath, CHECK_POINT_DURATION );
+        File eventsMetricFile = metricsCsv( outputPath, CHECK_POINT_EVENTS );
+        File totalTimeMetricFile = metricsCsv( outputPath, CHECK_POINT_TOTAL_TIME );
 
         long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long eventsResult = readLongCounterAndAssert( eventsMetricFile, ( newValue, currentValue ) -> newValue > 0 );
+        long totalTimeResult = readLongCounterAndAssert( totalTimeMetricFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
         assertThat( result, greaterThanOrEqualTo( 0L ) );
+        assertThat( eventsResult, greaterThanOrEqualTo( 1L ) );
+        assertThat( totalTimeResult, greaterThanOrEqualTo( 0L ) );
     }
 
     @Test
