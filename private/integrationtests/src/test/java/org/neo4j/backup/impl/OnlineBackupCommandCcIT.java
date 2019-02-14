@@ -78,7 +78,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.backup.impl.OnlineBackupContextFactory.ARG_NAME_FALLBACK_FULL;
 import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
@@ -117,7 +116,7 @@ public class OnlineBackupCommandCcIT
     {
         backupStoreDir = testDirectory.directory( "backupStore" );
         backupDatabaseDir = new File( backupStoreDir, DATABASE_NAME );
-        backupDatabaseDir.mkdirs();
+        assertTrue( backupDatabaseDir.mkdirs() );
     }
 
     @Test
@@ -126,11 +125,11 @@ public class OnlineBackupCommandCcIT
         Cluster<?> cluster = startCluster( recordFormat );
         String customAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
 
-        assertEquals( 0, runBackupOtherJvm( customAddress, DATABASE_NAME ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
         assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
 
         createSomeData( cluster );
-        assertEquals( 0, runBackupOtherJvm( customAddress, DATABASE_NAME ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
         assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
     }
 
@@ -151,7 +150,7 @@ public class OnlineBackupCommandCcIT
         {
             // then backup is successful
             String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
-            assertEquals( 0, runBackupOtherJvm( address, DATABASE_NAME ) );
+            assertEquals( 0, runBackupToolAndGetExitCode( address, DATABASE_NAME ) );
         }
         finally
         {
@@ -169,17 +168,12 @@ public class OnlineBackupCommandCcIT
         Cluster<?> cluster = startCluster( recordFormat );
 
         // when a full backup is performed
-        assertEquals( 0, runBackupOtherJvm( leaderBackupAddress( cluster ), DATABASE_NAME ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
         assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
 
         // and an incremental backup is performed
         createSomeData( cluster );
-        assertEquals( 0, runBackupOtherJvm( leaderBackupAddress( cluster ), DATABASE_NAME ) );
-        assertEquals( 0, runBackupToolAndGetExitCode(
-                "--from=" + leaderBackupAddress( cluster ),
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
-                "--name=defaultport", arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+        assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
 
         // then the data matches
         assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
@@ -194,7 +188,7 @@ public class OnlineBackupCommandCcIT
         Cluster<?> cluster = startCluster( recordFormat );
 
         // then a full backup is impossible from the backup port
-        assertEquals( 1, runBackupOtherJvm( leaderBackupAddress( cluster ), DATABASE_NAME ) );
+        assertEquals( 1, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
     }
 
     @Test
@@ -205,7 +199,7 @@ public class OnlineBackupCommandCcIT
         String customAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
 
         // when
-        assertEquals( 0, runBackupOtherJvm( customAddress, DATABASE_NAME ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
 
         // then
         assertFalse( suppressOutput.getErrorVoice().toString().toLowerCase().contains( "exception" ) );
@@ -222,7 +216,7 @@ public class OnlineBackupCommandCcIT
 
         // when
         final String backupName = "reportsProgress_" + recordFormat;
-        assertEquals( 0, runBackupOtherJvm( customAddress, backupName ));
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, backupName ) );
 
         // then
         String output = suppressOutput.getOutputVoice().toString();
@@ -243,7 +237,7 @@ public class OnlineBackupCommandCcIT
     public void fullBackupIsRecoveredAndConsistent() throws Exception
     {
         // given database exists with data
-        Cluster cluster = startCluster( recordFormat );
+        Cluster<?> cluster = startCluster( recordFormat );
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
@@ -252,11 +246,7 @@ public class OnlineBackupCommandCcIT
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
 
         // when
-        assertEquals( 0, runBackupToolAndGetExitCode(
-                "--from", address,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
-                "--name=" + name ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( address, name ) );
 
         // then
         assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults(), storageEngineFactory ) );
@@ -270,7 +260,7 @@ public class OnlineBackupCommandCcIT
     public void incrementalBackupIsRecoveredAndConsistent() throws Exception
     {
         // given database exists with data
-        Cluster cluster = startCluster( recordFormat );
+        Cluster<?> cluster = startCluster( recordFormat );
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
@@ -279,20 +269,11 @@ public class OnlineBackupCommandCcIT
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
 
         // when
-        assertEquals( 0, runBackupToolAndGetExitCode(
-                "--from", address,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
-                "--name=" + name ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( address, name ) );
 
         // and
         createSomeData( cluster );
-        assertEquals( 0, runBackupToolAndGetExitCode(
-                "--from", address,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
-                "--name=" + name,
-                arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+        assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( address, name ) );
 
         // then
         assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults(), storageEngineFactory ) );
@@ -337,7 +318,7 @@ public class OnlineBackupCommandCcIT
                 "--backup-dir=" + backupStoreDir,
                 "--additional-config=" + configOverrideFile,
                 "--name=" + backupName,
-                arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+                "--fallback-to-full=false" ) );
 
         // then there has been a rotation
         assertThat( backupLogFiles.getHighestLogVersion(), greaterThan( 0L ) );
@@ -353,7 +334,7 @@ public class OnlineBackupCommandCcIT
         Cluster<?> cluster = startCluster( recordFormat );
         String firstBackupAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
 
-        assertEquals( 0, runBackupOtherJvm( firstBackupAddress, backupName ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( firstBackupAddress, backupName ) );
         DbRepresentation firstDatabaseRepresentation = DbRepresentation.of( clusterLeader( cluster ).database() );
 
         // and a different database
@@ -363,7 +344,7 @@ public class OnlineBackupCommandCcIT
         String secondBackupAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster2 ).database() );
 
         // when backup is performed
-        assertEquals( 0, runBackupOtherJvm( secondBackupAddress, backupName ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( secondBackupAddress, backupName ) );
         cluster2.shutdown();
 
         // then the new backup has the correct name
@@ -374,15 +355,6 @@ public class OnlineBackupCommandCcIT
 
         // and the data isn't equal (sanity check)
         assertNotEquals( firstDatabaseRepresentation, secondDatabaseRepresentation );
-    }
-
-    private int runBackupOtherJvm( String customAddress, String databaseName )
-    {
-        return runBackupToolAndGetExitCode(
-                "--from", customAddress,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
-                "--name=" + databaseName );
     }
 
     @Test
@@ -398,22 +370,13 @@ public class OnlineBackupCommandCcIT
             String backupName = "backup_" + recordFormat;
 
             // when full backup
-            assertEquals( 0, runBackupToolAndGetExitCode(
-                    "--from", customAddress,
-                    "--cc-report-dir=" + backupStoreDir,
-                    "--backup-dir=" + backupStoreDir,
-                    "--name=" + backupName ) );
+            assertEquals( 0, runBackupToolAndGetExitCode( customAddress, backupName ) );
 
             // and
             createSomeData( cluster );
 
             // and incremental backup
-            assertEquals( 0, runBackupToolAndGetExitCode(
-                    "--from", customAddress,
-                    "--cc-report-dir=" + backupStoreDir,
-                    "--backup-dir=" + backupStoreDir,
-                    "--name=" + backupName,
-                    arg( ARG_NAME_FALLBACK_FULL, false ) ) );
+            assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( customAddress, backupName ) );
 
             // then
             assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( backupName, backupStoreDir ) );
@@ -422,11 +385,6 @@ public class OnlineBackupCommandCcIT
         {
             cluster.shutdown();
         }
-    }
-
-    static String arg( String key, Object value )
-    {
-        return "--" + key + "=" + value;
     }
 
     private static void repeatedlyPopulateDatabase( Cluster<?> cluster, AtomicBoolean continueFlagReference )
@@ -523,6 +481,25 @@ public class OnlineBackupCommandCcIT
         Config config = Config.defaults();
         config.augment( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
         return DbRepresentation.of( DatabaseLayout.of( storeDir, name ).databaseDirectory(), config );
+    }
+
+    private int runBackupToolAndGetExitCode( String address, String backupName )
+    {
+        return runBackupToolAndGetExitCode(
+                "--from", address,
+                "--cc-report-dir=" + backupStoreDir,
+                "--backup-dir=" + backupStoreDir,
+                "--name=" + backupName );
+    }
+
+    private int runBackupToolWithoutFallbackToFullAndGetExitCode( String address, String backupName )
+    {
+        return runBackupToolAndGetExitCode(
+                "--from", address,
+                "--cc-report-dir=" + backupStoreDir,
+                "--backup-dir=" + backupStoreDir,
+                "--name=" + backupName,
+                "--fallback-to-full=false" );
     }
 
     private int runBackupToolAndGetExitCode( String... args )
