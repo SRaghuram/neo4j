@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.causalclustering.catchup.storecopy.CopiedStoreRecovery;
 import com.neo4j.causalclustering.catchup.storecopy.TemporaryStoreDirectory;
 
+import java.io.File;
 import java.io.PrintStream;
 
 import org.neo4j.consistency.ConsistencyCheckService;
