@@ -142,7 +142,7 @@ public abstract class BaseClusterOverviewIT
         {
             // when
             int extraReadReplicas = 2;
-            int finaReadReplicas = initialReadReplicas + extraReadReplicas;
+            int finalReadReplicas = initialReadReplicas + extraReadReplicas;
 
             ReadReplica[] newReadReplicas =
                     IntStream.range( 0, extraReadReplicas ).mapToObj( ignore -> cluster.newReadReplica() ).toArray( ReadReplica[]::new );
@@ -153,7 +153,7 @@ public abstract class BaseClusterOverviewIT
                     ClusterOverviewHelper.containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, initialCoreMembers - 1 ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, finaReadReplicas ) );
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, finalReadReplicas ) );
 
             // then
             ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );

@@ -235,7 +235,7 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
 
     public void shutdownReadReplicas()
     {
-        shutdownMembers( coreMembers() );
+        shutdownMembers( readReplicas() );
     }
 
     public static void shutdownMembers( ClusterMember... clusterMembers )
