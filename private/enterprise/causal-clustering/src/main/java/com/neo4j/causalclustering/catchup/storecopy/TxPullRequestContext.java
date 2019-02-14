@@ -43,14 +43,14 @@ public class TxPullRequestContext
         }
         else
         {
-            long metaDatStoreIndex = commitState.metaDataStoreIndex();
-            if ( metaDatStoreIndex == BASE_TX_ID )
+            long metaDataStoreIndex = commitState.metaDataStoreIndex();
+            if ( metaDataStoreIndex == BASE_TX_ID )
             {
-                return new TxPullRequestContext( single( metaDatStoreIndex + 1 ), expectedStoreId );
+                return new TxPullRequestContext( single( metaDataStoreIndex + 1 ), expectedStoreId );
             }
             else
             {
-                return new TxPullRequestContext( single( metaDatStoreIndex ), expectedStoreId, true );
+                return new TxPullRequestContext( single( metaDataStoreIndex ), expectedStoreId, true );
             }
         }
     }

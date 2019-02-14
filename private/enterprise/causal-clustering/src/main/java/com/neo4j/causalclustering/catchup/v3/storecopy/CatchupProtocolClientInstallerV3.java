@@ -24,6 +24,7 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponseDecoder;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponseHandler;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseDecoder;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseHandler;
+import com.neo4j.causalclustering.catchup.v2.storecopy.CatchupErrorResponseDecoder;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetIndexFilesRequestMarshalV2;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestEncoderV2;
@@ -73,6 +74,9 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
         this.handler = handler;
     }
 
+    /**
+     * Uses latest version of handlers. Hence version naming may be less than the current version if no change was needed for that handler
+     */
     @Override
     public void install( Channel channel ) throws Exception
     {
@@ -87,6 +91,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
         decoderDispatcher.register( CatchupClientProtocol.State.FILE_HEADER, new FileHeaderDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.PREPARE_STORE_COPY_RESPONSE, new PrepareStoreCopyResponse.Decoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.FILE_CONTENTS, new FileChunkDecoder() );
+        decoderDispatcher.register( CatchupClientProtocol.State.ERROR_RESPONSE, new CatchupErrorResponseDecoder() );
 
         pipelineBuilder.client( channel, log )
                 .modify( modifiers )

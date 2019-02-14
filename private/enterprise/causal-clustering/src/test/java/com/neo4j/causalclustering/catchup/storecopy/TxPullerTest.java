@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.identity.StoreId;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,25 +38,25 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class TxPullRequestExecutorTest
+class TxPullerTest
 {
     private static final int MAX_FAILED_TX_PULL_REQUESTS = 5;
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private TransactionLogCatchUpWriter writer;
     private CatchupAddressProvider addressProvider;
     private TxPullClient client;
-    private TxPullRequestExecutor executor;
-    private AtomicLong lastTxTracker;
+    private TxPuller executor;
+    private LastTxTracker lastTxTracker;
 
     @BeforeEach
     void setUp()
     {
-        lastTxTracker = new AtomicLong( -1 );
+        lastTxTracker = new LastTxTracker();
         writer = mock( TransactionLogCatchUpWriter.class );
-        when( writer.lastTx() ).thenAnswer( i -> lastTxTracker.longValue() );
+        when( writer.lastTx() ).thenAnswer( i -> lastTxTracker.getLastTx() );
         addressProvider = mock( CatchupAddressProvider.class );
         client = mock( TxPullClient.class );
-        executor = new TxPullRequestExecutor( addressProvider, logProvider, new MaxCount() );
+        executor = new TxPuller( addressProvider, logProvider, new MaxCount() );
     }
 
     @Test
@@ -79,7 +78,7 @@ class TxPullRequestExecutorTest
         RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
         TxPullRequestContext context = getContext( requiredRange );
 
-        when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 100 ) );
+        when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 100 ) );
 
         executor.pullTransactions( context, writer, client );
     }
@@ -91,10 +90,10 @@ class TxPullRequestExecutorTest
         TxPullRequestContext context = getContext( requiredRange );
 
         when( client.pullTransactions( any(), any(), anyLong(), any() ) )
-                .thenAnswer( txAnswerWithoutProgress( CatchupResult.E_TRANSACTION_PRUNED ) )
-                .thenAnswer( txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) )
+                .thenAnswer( lastTxTracker.txAnswerWithoutProgress( CatchupResult.E_TRANSACTION_PRUNED ) )
+                .thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) )
                 .thenThrow( Exception.class )
-                .thenAnswer( txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
+                .thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
         executor.pullTransactions( context, writer, client );
 
         verify( client, atLeast( 4 ) ).pullTransactions( any(), any(), anyLong(), any() );
@@ -106,7 +105,7 @@ class TxPullRequestExecutorTest
         RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
         TxPullRequestContext context = getContext( requiredRange );
 
-        when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
+        when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
         executor.pullTransactions( context, writer, client );
 
         InOrder inOrder = inOrder( addressProvider );
@@ -124,9 +123,9 @@ class TxPullRequestExecutorTest
         OngoingStubbing<TxStreamFinishedResponse> stubbing = when( client.pullTransactions( any(), any(), anyLong(), any() ) );
         for ( int i = 0; i < MAX_FAILED_TX_PULL_REQUESTS - 1; i++ )
         {
-            stubbing = stubbing.thenAnswer( txAnswerWithoutProgress( CatchupResult.SUCCESS_END_OF_STREAM ) );
+            stubbing = stubbing.thenAnswer( lastTxTracker.txAnswerWithoutProgress( CatchupResult.SUCCESS_END_OF_STREAM ) );
         }
-        stubbing.thenAnswer( txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
+        stubbing.thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
         executor.pullTransactions( context, writer, client );
 
         InOrder inOrder = inOrder( addressProvider );
@@ -150,26 +149,24 @@ class TxPullRequestExecutorTest
         OngoingStubbing<TxStreamFinishedResponse> stubbing = when( client.pullTransactions( any(), any(), anyLong(), any() ) );
         for ( int i = 0; i < MAX_FAILED_TX_PULL_REQUESTS - 1; i++ )
         {
-            stubbing = stubbing.thenAnswer( txAnswerWithoutProgress( CatchupResult.SUCCESS_END_OF_STREAM ) );
+            stubbing = stubbing.thenAnswer( lastTxTracker.txAnswerWithoutProgress( CatchupResult.SUCCESS_END_OF_STREAM ) );
         }
-        stubbing.thenAnswer( txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
+        stubbing.thenAnswer( lastTxTracker.txPullAnswer( CatchupResult.SUCCESS_END_OF_STREAM, 50 ) );
         executor.pullTransactions( context, writer, client );
 
         verify( context ).fallbackStartId();
     }
 
     @ParameterizedTest
-    @EnumSource( CatchupResult.class )
+    @EnumSource( value = CatchupResult.class, mode = EnumSource.Mode.EXCLUDE, names = {"SUCCESS_END_OF_STREAM", "SUCCESS_END_OF_BATCH"} )
     void shouldImmediatelyMoveToLastAttemptIfNoProgressAndErrorResponse( CatchupResult result ) throws Exception
     {
         // All error responses are considered non transient
-        Assumptions.assumeTrue( result != CatchupResult.SUCCESS_END_OF_STREAM );
-        Assumptions.assumeTrue( result != CatchupResult.SUCCESS_END_OF_BATCH );
 
         RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
 
-        when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( txAnswerWithoutProgress( result ) );
+        when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenAnswer( lastTxTracker.txAnswerWithoutProgress( result ) );
         assertThrows( StoreCopyFailedException.class, () -> executor.pullTransactions( context, writer, client ) );
 
         verify( client, times( 2 ) ).pullTransactions( any(), any(), anyLong(), any() );
@@ -206,7 +203,7 @@ class TxPullRequestExecutorTest
     }
 
     @Test
-    void shouldUseProgressConditionIfNoProgressAndCatchupResolutionExcpetion() throws Exception
+    void shouldUseProgressConditionIfNoProgressAndCatchupResolutionException() throws Exception
     {
         RequiredTransactionRange requiredRange = RequiredTransactionRange.range( 0, 99 );
         TxPullRequestContext context = spy( getContext( requiredRange ) );
@@ -221,18 +218,28 @@ class TxPullRequestExecutorTest
         verify( client, never() ).pullTransactions( any(), any(), anyLong(), any() );
     }
 
-    private Answer<TxStreamFinishedResponse> txAnswerWithoutProgress( CatchupResult result )
+    class LastTxTracker
     {
-        return txPullAnswer( result, 0 );
-    }
+        AtomicLong lastTx = new AtomicLong( -1 );
 
-    private Answer<TxStreamFinishedResponse> txPullAnswer( CatchupResult result, long txIdProgress )
-    {
-        return invocation ->
+        Answer<TxStreamFinishedResponse> txAnswerWithoutProgress( CatchupResult result )
         {
-            lastTxTracker.addAndGet( txIdProgress );
-            return new TxStreamFinishedResponse( result, 0 );
-        };
+            return txPullAnswer( result, 0 );
+        }
+
+        Answer<TxStreamFinishedResponse> txPullAnswer( CatchupResult result, long txIdProgress )
+        {
+            return invocation ->
+            {
+                lastTx.addAndGet( txIdProgress );
+                return new TxStreamFinishedResponse( result, 0 );
+            };
+        }
+
+        long getLastTx()
+        {
+            return lastTx.longValue();
+        }
     }
 
     private TxPullRequestContext getContext( RequiredTransactionRange requiredRange )

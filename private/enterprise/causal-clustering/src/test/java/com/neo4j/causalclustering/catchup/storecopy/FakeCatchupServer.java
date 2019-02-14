@@ -33,7 +33,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.rule.TestDirectory;
 
-class TestCatchupServerHandler implements CatchupServerHandler
+class FakeCatchupServer implements CatchupServerHandler
 {
     private final Set<FakeFile> filesystem = new HashSet<>();
     private final Set<FakeFile> indexFiles = new HashSet<>();
@@ -43,9 +43,9 @@ class TestCatchupServerHandler implements CatchupServerHandler
     private FileSystemAbstraction fileSystemAbstraction;
     private long startTxId;
 
-    TestCatchupServerHandler( LogProvider logProvider, TestDirectory testDirectory, FileSystemAbstraction fileSystemAbstraction )
+    FakeCatchupServer( LogProvider logProvider, TestDirectory testDirectory, FileSystemAbstraction fileSystemAbstraction )
     {
-        log = logProvider.getLog( TestCatchupServerHandler.class );
+        log = logProvider.getLog( FakeCatchupServer.class );
         this.testDirectory = testDirectory;
         this.fileSystemAbstraction = fileSystemAbstraction;
     }

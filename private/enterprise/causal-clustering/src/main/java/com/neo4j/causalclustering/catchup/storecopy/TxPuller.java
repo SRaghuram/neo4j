@@ -28,7 +28,7 @@ import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_ST
 import static java.lang.Long.max;
 import static java.lang.String.format;
 
-class TxPullRequestExecutor
+class TxPuller
 {
     private final StateBasedAddressProvider addressProvider;
     private final Log log;
@@ -37,13 +37,13 @@ class TxPullRequestExecutor
     private State currentState = State.NORMAL;
     private long highestTx;
 
-    TxPullRequestExecutor( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config )
+    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config )
     {
         this( catchupAddressProvider, logProvider, new NoProgressTimeout( config ) );
     }
 
     @VisibleForTesting
-    TxPullRequestExecutor( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler )
+    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler )
     {
         this.addressProvider = new StateBasedAddressProvider( catchupAddressProvider );
         this.log = logProvider.getLog( getClass() );

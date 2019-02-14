@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
@@ -26,7 +25,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
-import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromCatchingUp;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromStoreCopy;
 
@@ -104,7 +102,7 @@ public class RemoteStore
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
                 context.expectedFirstTxId(), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
-            TxPullRequestExecutor executor = new TxPullRequestExecutor( catchupAddressProvider, logProvider, config );
+            TxPuller executor = new TxPuller( catchupAddressProvider, logProvider, config );
 
             executor.pullTransactions( context, writer, txPullClient );
             storeCopyClientMonitor.finishReceivingTransactions( writer.lastTx() );

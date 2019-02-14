@@ -9,12 +9,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.stream.Stream;
 
+import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.single;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactionRange.single;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RequiredTransactionRangeTest
 {
@@ -22,13 +24,14 @@ class RequiredTransactionRangeTest
     @MethodSource( "invalidRanges" )
     void checkInvalidRanges( RangeProvider rangeProvider )
     {
-        Assertions.assertThrows( IllegalArgumentException.class, rangeProvider::get );
+        assertThrows( IllegalArgumentException.class, rangeProvider::get );
     }
 
-    @Test
-    void shouldNotAllowNegativeValue()
+    @ParameterizedTest
+    @ValueSource( ints = {Integer.MIN_VALUE, -1} )
+    void shouldNotAllowNegativeValue( int negativeInt )
     {
-        Assertions.assertThrows( IllegalArgumentException.class, () -> single( -1 ) );
+        assertThrows( IllegalArgumentException.class, () -> single( negativeInt ) );
     }
 
     @Test

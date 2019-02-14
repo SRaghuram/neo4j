@@ -81,7 +81,7 @@ public class StoreCopyClientIT
     private LogProvider logProvider;
     private StoreCopyClient subject;
     private Server catchupServer;
-    private TestCatchupServerHandler serverHandler;
+    private FakeCatchupServer serverHandler;
 
     private static void writeContents( FileSystemAbstraction fileSystemAbstraction, File file, String contents )
     {
@@ -101,7 +101,7 @@ public class StoreCopyClientIT
     {
         scheduler = new ThreadPoolJobScheduler();
         logProvider = new DuplicatingLogProvider( assertableLogProvider, FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ) );
-        serverHandler = new TestCatchupServerHandler( logProvider, testDirectory, fsa );
+        serverHandler = new FakeCatchupServer( logProvider, testDirectory, fsa );
         serverHandler.addFile( fileA );
         serverHandler.addFile( fileB );
         serverHandler.addIndexFile( indexFileA );
@@ -185,7 +185,7 @@ public class StoreCopyClientIT
         Iterator<String> contents = Iterators.iterator( unfinishedContent, finishedContent );
 
         // and
-        TestCatchupServerHandler halfWayFailingServerhandler = new TestCatchupServerHandler( logProvider, testDirectory, fsa )
+        FakeCatchupServer halfWayFailingServerHandler = new FakeCatchupServer( logProvider, testDirectory, fsa )
         {
             @Override
             public ChannelHandler getStoreFileRequestHandler( CatchupServerProtocol catchupServerProtocol )
@@ -198,9 +198,9 @@ public class StoreCopyClientIT
                         // create the files and write the given content
                         File file = new File( fileName );
                         File fileCopy = new File( copyFileName );
-                        String thisConent = contents.next();
-                        writeContents( fsa, file, thisConent );
-                        writeContents( fsa, fileCopy, thisConent );
+                        String thisContent = contents.next();
+                        writeContents( fsa, file, thisContent );
+                        writeContents( fsa, fileCopy, thisContent );
 
                         sendFile( ctx, file );
                         sendFile( ctx, fileCopy );
@@ -255,13 +255,13 @@ public class StoreCopyClientIT
         {
             // when
             ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
-            halfWayFailingServer = CausalClusteringTestHelpers.getCatchupServer( halfWayFailingServerhandler, listenAddress, scheduler );
+            halfWayFailingServer = CausalClusteringTestHelpers.getCatchupServer( halfWayFailingServerHandler, listenAddress, scheduler );
             halfWayFailingServer.start();
 
             CatchupAddressProvider addressProvider =
                     CatchupAddressProvider.fromSingleAddress( new AdvertisedSocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
 
-            StoreId storeId = halfWayFailingServerhandler.getStoreId();
+            StoreId storeId = halfWayFailingServerHandler.getStoreId();
             File databaseDir = testDirectory.databaseDir();
             StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( databaseDir, fsa, new Monitors() );
 
@@ -289,7 +289,7 @@ public class StoreCopyClientIT
     }
 
     @Test
-    public void shouldLogConnetionRefusedMessage()
+    public void shouldLogConnectionRefusedMessage()
     {
         InMemoryStoreStreamProvider clientStoreFileStream = new InMemoryStoreStreamProvider();
         int port = PortAuthority.allocatePort();

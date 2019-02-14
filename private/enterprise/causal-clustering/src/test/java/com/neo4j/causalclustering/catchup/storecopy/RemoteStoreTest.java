@@ -76,7 +76,7 @@ class RemoteStoreTest
     @Test
     void shouldSuccessfullyPullNoTxIfRangeAllowsIt() throws Exception
     {
-        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.range( 1, 1 );
+        RequiredTransactionRange requiredTransactionRange = RequiredTransactionRange.single( 1 );
 
         StoreCopyClient storeCopyClient = mock( StoreCopyClient.class );
         when( storeCopyClient.copyStoreFiles( eq( catchupAddressProvider ), eq( storeId ), any( StoreFileStreamProvider.class ), any(),
@@ -85,12 +85,13 @@ class RemoteStoreTest
         TxPullClient txPullClient = mock( TxPullClient.class );
         AtomicLong lastTxSupplier = new AtomicLong();
         when( txPullClient.pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() ) ).then(
-                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 1 ) );
+                incrementTxIdResponse( SUCCESS_END_OF_STREAM, lastTxSupplier, 0 ) );
 
         when( writer.lastTx() ).then( m -> lastTxSupplier.get() );
 
         doStoreCopy( storeCopyClient, txPullClient, catchupAddressProvider, Config.defaults() );
 
+        // will call pull transactions twice. First to secondary and then finally towards primary.
         verify( txPullClient, times( 2 ) ).pullTransactions( eq( localhost ), eq( storeId ), anyLong(), any() );
     }
 
@@ -223,6 +224,8 @@ class RemoteStoreTest
 
         doStoreCopy( storeCopyClient, txPullClient, secondaryFailingAddressProvider,
                 Config.builder().withSetting( CausalClusteringSettings.catch_up_client_inactivity_timeout, "0s" ).build() );
+
+        verify( secondaryFailingAddressProvider, atLeast( 1 ) ).primary();
     }
 
     private void doStoreCopy( StoreCopyClient storeCopyClient, TxPullClient txPullClient, CatchupAddressProvider catchupAddressProvider, Config config )

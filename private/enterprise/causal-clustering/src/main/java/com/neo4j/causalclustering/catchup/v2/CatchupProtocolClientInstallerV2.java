@@ -77,6 +77,9 @@ public class CatchupProtocolClientInstallerV2 implements ProtocolInstaller<Orien
         this.handler = handler;
     }
 
+    /**
+     * Uses latest version of handlers. Hence version naming may be less than the current version if no change was needed for that handler
+     */
     @Override
     public void install( Channel channel ) throws Exception
     {
