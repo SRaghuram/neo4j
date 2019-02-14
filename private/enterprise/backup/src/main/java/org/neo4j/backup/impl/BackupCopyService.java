@@ -5,6 +5,9 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
+import com.neo4j.causalclustering.identity.StoreId;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,12 +21,9 @@ import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 import static org.neo4j.io.fs.FileSystemUtils.isEmptyOrNonExistingDirectory;
@@ -34,14 +34,14 @@ class BackupCopyService
 
     private final FileSystemAbstraction fs;
     private final FileMoveProvider fileMoveProvider;
-    private final PageCache pageCache;
+    private final StoreFiles storeFiles;
     private final Log log;
 
-    BackupCopyService( FileSystemAbstraction fs, FileMoveProvider fileMoveProvider, PageCache pageCache, LogProvider logProvider )
+    BackupCopyService( FileSystemAbstraction fs, FileMoveProvider fileMoveProvider, StoreFiles storeFiles, LogProvider logProvider )
     {
         this.fs = fs;
         this.fileMoveProvider = fileMoveProvider;
-        this.pageCache = pageCache;
+        this.storeFiles = storeFiles;
         this.log = logProvider.getLog( getClass() );
     }
 
@@ -97,7 +97,7 @@ class BackupCopyService
         StoreId preExistingBrokenBackupStoreId;
         try
         {
-            preExistingBrokenBackupStoreId = MetaDataStore.getStoreId( pageCache, preExistingBrokenBackupLayout.metadataStore() );
+            preExistingBrokenBackupStoreId = storeFiles.readStoreId( preExistingBrokenBackupLayout );
         }
         catch ( IOException e )
         {
@@ -105,7 +105,15 @@ class BackupCopyService
             return;
         }
 
-        StoreId newSuccessfulBackupStoreId = MetaDataStore.getStoreId( pageCache, newSuccessfulBackupLayout.metadataStore() );
+        StoreId newSuccessfulBackupStoreId;
+        try
+        {
+            newSuccessfulBackupStoreId = storeFiles.readStoreId( newSuccessfulBackupLayout );
+        }
+        catch ( IOException e )
+        {
+            throw new IOException( "Unable to read store ID from the new successful backup", e );
+        }
 
         if ( newSuccessfulBackupStoreId.equals( preExistingBrokenBackupStoreId ) )
         {

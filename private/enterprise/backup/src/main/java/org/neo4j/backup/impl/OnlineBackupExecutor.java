@@ -62,7 +62,7 @@ public class OnlineBackupExecutor
             PageCache pageCache = supportingClasses.getPageCache();
 
             StoreFiles storeFiles = new StoreFiles( fs, pageCache );
-            BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ), pageCache, logProvider );
+            BackupCopyService copyService = new BackupCopyService( fs, new FileMoveProvider( fs ), storeFiles, logProvider );
 
             BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), logProvider, storeFiles );
             BackupStrategyWrapper wrapper =

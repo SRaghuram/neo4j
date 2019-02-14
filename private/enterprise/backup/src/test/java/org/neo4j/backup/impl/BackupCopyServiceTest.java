@@ -5,6 +5,7 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,7 +30,10 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -55,7 +59,7 @@ class BackupCopyServiceTest
     void beforeEach()
     {
         fileMoveProvider = mock( FileMoveProvider.class );
-        backupCopyService = new BackupCopyService( fs, fileMoveProvider, pageCache, NullLogProvider.getInstance() );
+        backupCopyService = new BackupCopyService( fs, fileMoveProvider, new StoreFiles( fs, pageCache ), NullLogProvider.getInstance() );
     }
 
     @Test
@@ -137,6 +141,26 @@ class BackupCopyServiceTest
 
         assertTrue( fs.isDirectory( oldDir ) );
         assertTrue( fs.isDirectory( newDir ) );
+    }
+
+    @Test
+    void shouldThrowWhenUnableToReadStoreIdFromNewSuccessfulBackup() throws Exception
+    {
+        File oldDir = testDirectory.directory( "old" );
+        File newDir = testDirectory.directory( "new" );
+
+        startAndStopDb( oldDir );
+        startAndStopDb( newDir );
+
+        assertTrue( fs.isDirectory( oldDir ) );
+        assertTrue( fs.isDirectory( newDir ) );
+
+        fs.deleteFileOrThrow( DatabaseLayout.of( newDir ).metadataStore() );
+
+        IOException error = assertThrows( IOException.class,
+                () -> backupCopyService.deletePreExistingBrokenBackupIfPossible( oldDir.toPath(), newDir.toPath() ) );
+
+        assertThat( error.getMessage(), containsString( "Unable to read store ID from the new successful backup" ) );
     }
 
     private void startAndStopDb( File databaseDir )

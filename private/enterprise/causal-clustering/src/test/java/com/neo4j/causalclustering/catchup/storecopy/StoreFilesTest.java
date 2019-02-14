@@ -35,9 +35,9 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class StoreFilesTest
 {
@@ -274,12 +274,17 @@ public class StoreFilesTest
     }
 
     @Test
-    public void readStoreIdWhenMetadataStoreDoesNotExist() throws Exception
+    public void failToReadStoreIdWhenMetadataStoreDoesNotExist()
     {
         DatabaseLayout databaseLayout = testDirectory.databaseLayout();
 
-        StoreId storeId = storeFiles.readStoreId( databaseLayout );
-
-        assertNull( storeId );
+        try
+        {
+            storeFiles.readStoreId( databaseLayout );
+            fail( "Exception expected" );
+        }
+        catch ( IOException ignore )
+        {
+        }
     }
 }
