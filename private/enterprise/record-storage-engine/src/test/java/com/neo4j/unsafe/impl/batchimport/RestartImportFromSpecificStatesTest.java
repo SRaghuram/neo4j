@@ -27,6 +27,7 @@ import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
 import org.neo4j.unsafe.impl.batchimport.DataImporter;
 import org.neo4j.unsafe.impl.batchimport.RelationshipCountsStage;
 import org.neo4j.unsafe.impl.batchimport.RelationshipLinkbackStage;
+import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 import static org.junit.Assert.fail;
@@ -103,7 +104,7 @@ public class RestartImportFromSpecificStatesTest
     {
         return BatchImporterFactory.withHighestPriority().instantiate(
               directory.databaseLayout(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler );
+              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException

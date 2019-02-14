@@ -30,6 +30,7 @@ import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics;
 import org.neo4j.unsafe.impl.batchimport.ImportLogic;
 import org.neo4j.unsafe.impl.batchimport.ImportLogic.Monitor;
+import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 import org.neo4j.unsafe.impl.batchimport.store.BatchingNeoStores;
@@ -78,10 +79,12 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final RelationshipTypeDistributionStorage dataStatisticsStorage;
     private final Monitor monitor;
     private final JobScheduler jobScheduler;
+    private final Collector badCollector;
 
     public RestartableParallelBatchImporter( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, Monitor monitor, JobScheduler jobScheduler )
+            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, Monitor monitor, JobScheduler jobScheduler,
+            Collector badCollector )
     {
         this.externalPageCache = externalPageCache;
         this.databaseDirectory = databaseLayout.databaseDirectory();
@@ -96,6 +99,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.dataStatisticsStorage = new RelationshipTypeDistributionStorage( fileSystem,
                 new File( databaseDirectory, FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
         this.jobScheduler = jobScheduler;
+        this.badCollector = badCollector;
     }
 
     @Override
@@ -104,7 +108,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
         try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseDirectory, externalPageCache, recordFormats,
                       config, logService, additionalInitialIds, dbConfig, jobScheduler );
               ImportLogic logic = new ImportLogic( databaseDirectory, fileSystem, store, config, logService,
-                      executionMonitor, recordFormats, monitor ) )
+                      executionMonitor, recordFormats, badCollector, monitor ) )
         {
             StateStorage stateStore = new StateStorage( fileSystem, new File( databaseDirectory, FILE_NAME_STATE ) );
 

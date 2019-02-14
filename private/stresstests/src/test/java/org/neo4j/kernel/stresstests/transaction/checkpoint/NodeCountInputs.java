@@ -10,7 +10,6 @@ import java.util.function.ToIntFunction;
 import org.neo4j.unsafe.impl.batchimport.GeneratingInputIterator;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.Collectors;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.ReadableGroups;
@@ -28,7 +27,6 @@ public class NodeCountInputs implements Input
     private static final String[] labels = new String[]{"a", "b", "c", "d"};
 
     private final long nodeCount;
-    private final Collector bad = Collectors.silentBadCollector( 0 );
 
     public NodeCountInputs( long nodeCount )
     {
@@ -36,7 +34,7 @@ public class NodeCountInputs implements Input
     }
 
     @Override
-    public InputIterable nodes()
+    public InputIterable nodes( Collector badCollector )
     {
         return () -> new GeneratingInputIterator<>( nodeCount, 1_000, batch -> null,
                 (GeneratingInputIterator.Generator<Void>) ( state, visitor, id ) -> {
@@ -50,7 +48,7 @@ public class NodeCountInputs implements Input
     }
 
     @Override
-    public InputIterable relationships()
+    public InputIterable relationships( Collector badCollector )
     {
         return GeneratingInputIterator.EMPTY_ITERABLE;
     }
@@ -65,12 +63,6 @@ public class NodeCountInputs implements Input
     public ReadableGroups groups()
     {
         return ReadableGroups.EMPTY;
-    }
-
-    @Override
-    public Collector badCollector()
-    {
-        return bad;
     }
 
     @Override

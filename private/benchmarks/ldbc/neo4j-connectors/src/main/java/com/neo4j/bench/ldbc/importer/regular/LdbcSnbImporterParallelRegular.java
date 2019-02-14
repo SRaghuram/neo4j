@@ -63,6 +63,7 @@ import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
+import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Collectors;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Groups;
@@ -724,16 +725,18 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 relationshipDataFactories,
                 new LdbcHeaderFactory( relationshipHeaders.stream().toArray( Header[]::new ) ),
                 IdType.INTEGER,
-                configuration,
-                Collectors.badCollector( System.out, 0 )
+                configuration
         );
 
         FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
         LogService logService = new SimpleLogService( systemOutLogProvider, systemOutLogProvider );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
+        Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
+        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) );
         LifeSupport lifeSupport = new LifeSupport();
         lifeSupport.add( jobScheduler );
         lifeSupport.start();
+        Collector badCollector = Collectors.badCollector( System.out, 0 );
         BatchImporter batchImporter = new ParallelBatchImporter(
                 DatabaseLayout.of( dbDir ),
                 new DefaultFileSystemAbstraction(),
@@ -747,13 +750,15 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) ),
                 StandardV4_0.RECORD_FORMATS,
                 NO_MONITOR,
-                jobScheduler
+                jobScheduler,
+                badCollector
         );
 
         System.out.println( "Loading CSV files" );
         long startTime = System.currentTimeMillis();
 
         batchImporter.doImport( input );
+        badCollector.close();
         lifeSupport.shutdown();
 
         long runtime = System.currentTimeMillis() - startTime;

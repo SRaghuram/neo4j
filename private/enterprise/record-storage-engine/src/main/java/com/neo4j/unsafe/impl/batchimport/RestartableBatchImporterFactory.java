@@ -17,6 +17,7 @@ import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.ImportLogic;
+import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 public class RestartableBatchImporterFactory extends BatchImporterFactory
@@ -31,9 +32,9 @@ public class RestartableBatchImporterFactory extends BatchImporterFactory
     @Override
     public BatchImporter instantiate( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache, Configuration config,
             LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig,
-            RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler )
+            RecordFormats recordFormats, ImportLogic.Monitor monitor, JobScheduler jobScheduler, Collector badCollector )
     {
         return new RestartableParallelBatchImporter( databaseLayout, fileSystem, externalPageCache, config, logService, executionMonitor,
-                additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler );
+                additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector );
     }
 }

@@ -38,6 +38,7 @@ import org.neo4j.unsafe.impl.batchimport.RelationshipLinkforwardStage;
 import org.neo4j.unsafe.impl.batchimport.ScanAndCacheGroupsStage;
 import org.neo4j.unsafe.impl.batchimport.SparseNodeFirstRelationshipStage;
 import org.neo4j.unsafe.impl.batchimport.WriteGroupsStage;
+import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
 import static org.junit.Assert.fail;
@@ -271,6 +272,6 @@ public class RestartableParallelBatchImporterIT
     {
         return BatchImporterFactory.withHighestPriority().instantiate(
               directory.databaseLayout(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler );
+              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY );
     }
 }

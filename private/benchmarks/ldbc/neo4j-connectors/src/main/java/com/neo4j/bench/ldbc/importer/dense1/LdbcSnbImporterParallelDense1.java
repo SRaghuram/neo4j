@@ -57,6 +57,7 @@ import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
+import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Collectors;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Groups;
@@ -925,11 +926,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 relationshipDataFactories,
                 new LdbcHeaderFactory( relationshipHeaders.stream().toArray( Header[]::new ) ),
                 IdType.INTEGER,
-                configuration,
-                Collectors.badCollector(
-                        System.out,
-                        tagClassesFiles.stream().map( path -> (int) path.toFile().length() ).mapToInt( i -> i ).sum(),
-                        Collectors.collect( true, false, false ) )
+                configuration
         );
 
         FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
@@ -951,13 +948,15 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
                 : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) ),
                 StandardV4_0.RECORD_FORMATS,
                 NO_MONITOR,
-                jobScheduler
+                jobScheduler,
+                badCollector
         );
 
         System.out.println( "Loading CSV files" );
         long startTime = System.currentTimeMillis();
 
         batchImporter.doImport( input );
+        badCollector.close();
         lifeSupport.shutdown();
 
         long runtime = System.currentTimeMillis() - startTime;

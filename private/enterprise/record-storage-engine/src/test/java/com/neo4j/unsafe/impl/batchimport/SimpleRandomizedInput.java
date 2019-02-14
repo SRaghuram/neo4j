@@ -55,7 +55,7 @@ public class SimpleRandomizedInput implements Input
         this.nodeCount = nodeCount;
         this.relationshipCount = relationshipCount;
         badCollector = new GatheringBadCollector();
-        actual = new DataGeneratorInput( nodeCount, relationshipCount, idType, badCollector, seed, 0,
+        actual = new DataGeneratorInput( nodeCount, relationshipCount, idType, seed, 0,
                 DataGeneratorInput.bareboneNodeHeader( ID_KEY, idType, extractors ),
                 DataGeneratorInput.bareboneRelationshipHeader( idType, extractors,
                         new Entry( SimpleRandomizedInput.ID_KEY, Type.PROPERTY, null, extractors.int_() ) ),
@@ -63,15 +63,15 @@ public class SimpleRandomizedInput implements Input
     }
 
     @Override
-    public InputIterable nodes()
+    public InputIterable nodes( Collector badCollector )
     {
-        return actual.nodes();
+        return actual.nodes( badCollector );
     }
 
     @Override
-    public InputIterable relationships()
+    public InputIterable relationships( Collector badCollector )
     {
-        return actual.relationships();
+        return actual.relationships( badCollector );
     }
 
     @Override
@@ -86,16 +86,10 @@ public class SimpleRandomizedInput implements Input
         return actual.groups();
     }
 
-    @Override
-    public Collector badCollector()
-    {
-        return badCollector;
-    }
-
     public void verify( GraphDatabaseService db ) throws IOException
     {
         Map<Number,InputEntity> expectedNodeData = new HashMap<>();
-        try ( InputIterator nodes = nodes().iterator();
+        try ( InputIterator nodes = nodes( Collector.EMPTY ).iterator();
               InputChunk chunk = nodes.newChunk() )
         {
             Number lastId = null;
@@ -114,7 +108,7 @@ public class SimpleRandomizedInput implements Input
             }
         }
         Map<RelationshipKey,Set<InputEntity>> expectedRelationshipData = new HashMap<>();
-        try ( InputIterator relationships = relationships().iterator();
+        try ( InputIterator relationships = relationships( Collector.EMPTY ).iterator();
               InputChunk chunk = relationships.newChunk() )
         {
             while ( relationships.next( chunk ) )
