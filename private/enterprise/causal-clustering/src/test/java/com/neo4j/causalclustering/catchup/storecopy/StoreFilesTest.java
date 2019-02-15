@@ -6,285 +6,392 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.identity.StoreId;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Supplier;
+import java.util.function.Predicate;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
+import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
-import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
+import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
+import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TIME;
+import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TRANSACTION_ID;
 
-public class StoreFilesTest
+@PageCacheExtension
+class StoreFilesTest
 {
-    protected TestDirectory testDirectory;
-    protected Supplier<FileSystemAbstraction> fileSystemRule;
-    protected PageCacheRule pageCacheRule;
-
-    @Rule
-    public RuleChain rules;
-
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
     private FileSystemAbstraction fs;
+    @Inject
     private PageCache pageCache;
-    private StoreFiles storeFiles;
+
+    private File databaseDir;
+    private DatabaseLayout databaseLayout;
+    private File otherDatabaseDir;
+    private DatabaseLayout otherDatabaseLayout;
     private LogFiles logFiles;
+    private LogFiles otherLogFiles;
 
-    public StoreFilesTest()
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        createRules();
-    }
-
-    protected void createRules()
-    {
-        testDirectory = TestDirectory.testDirectory();
-        EphemeralFileSystemRule ephemeralFileSystemRule = new EphemeralFileSystemRule();
-        fileSystemRule = ephemeralFileSystemRule;
-        pageCacheRule = new PageCacheRule();
-        rules = RuleChain.outerRule( ephemeralFileSystemRule )
-                         .around( testDirectory )
-                         .around( pageCacheRule );
-    }
-
-    @Before
-    public void setUp() throws Exception
-    {
-        fs = fileSystemRule.get();
-        pageCache = pageCacheRule.getPageCache( fs );
-        storeFiles = new StoreFiles( fs, pageCache );
-        logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( testDirectory.directory(), fs ).build();
-    }
-
-    private void createOnFileSystem( File file ) throws IOException
-    {
-        createFile( fs, file );
-    }
-
-    private void createFile( FileSystemAbstraction fs, File file ) throws IOException
-    {
-        fs.mkdirs( file.getParentFile() );
-        fs.open( file, OpenMode.READ_WRITE ).close();
-    }
-
-    protected File getBaseDir()
-    {
-        return new File( testDirectory.directory(), "dir" );
+        databaseDir = testDirectory.directory( "databaseDir" );
+        databaseLayout = DatabaseLayout.of( databaseDir );
+        otherDatabaseDir = testDirectory.directory( "otherDatabaseDir" );
+        otherDatabaseLayout = DatabaseLayout.of( otherDatabaseDir );
+        logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fs ).build();
+        otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir, fs ).build();
     }
 
     @Test
-    public void deleteMustRecursivelyRemoveFilesInGivenDirectory() throws Exception
+    void shouldDeleteFilesThatMatchTheFilter() throws Exception
     {
-        File dir = getBaseDir();
-        File a = new File( dir, "a" );
-        File b = new File( dir, "b" );
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        createOnFileSystem( a );
-        assertTrue( fs.fileExists( a ) );
-        assertFalse( fs.fileExists( b ) );
+        List<File> files = Arrays.asList(
+                createFile( databaseDir, "KnownFile1" ),
+                createFile( databaseDir, "KnownFile2" ),
+                createFile( databaseDir, "KnownFile3" ) );
 
-        storeFiles.delete( dir, logFiles );
+        storeFiles.delete( databaseLayout, logFiles );
 
-        assertFalse( fs.fileExists( a ) );
+        for ( File file : files )
+        {
+            assertFalse( fs.fileExists( file ) );
+        }
     }
 
     @Test
-    public void deleteMustNotDeleteIgnoredFiles() throws Exception
+    void shouldDeleteDirectoriesThatMatchTheFilter() throws Exception
     {
-        File dir = getBaseDir();
-        File a = new File( dir, "a" );
-        File c = new File( dir, "c" );
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
 
-        createOnFileSystem( a );
-        createOnFileSystem( c );
+        List<File> directories = Arrays.asList(
+                createDirectory( databaseDir, "KnownDirectory1" ),
+                createDirectory( databaseDir, "KnownDirectory2" ),
+                createDirectory( databaseDir, "KnownDirectory3" ) );
 
-        FilenameFilter filter = ( directory, name ) -> !name.equals( "c" ) && !name.equals( "d" );
-        storeFiles = new StoreFiles( fs, pageCache, filter );
-        storeFiles.delete( dir, logFiles );
+        for ( File directory : directories )
+        {
+            createFile( directory, "dummy-file" );
+        }
 
-        assertFalse( fs.fileExists( a ) );
-        assertTrue( fs.fileExists( c ) );
+        storeFiles.delete( databaseLayout, logFiles );
+
+        for ( File directory : directories )
+        {
+            assertFalse( fs.fileExists( directory ) );
+        }
     }
 
     @Test
-    public void deleteMustNotDeleteFilesInIgnoredDirectories() throws Exception
+    void shouldDeleteTransactionLogs() throws Exception
     {
-        File dir = getBaseDir();
-        File ignore = new File( dir, "ignore" );
-        File a = new File( dir, "a" );
-        File c = new File( ignore, "c" );
+        StoreFiles storeFiles = newStoreFiles();
 
-        createOnFileSystem( a );
-        createOnFileSystem( c );
+        File[] txLogFiles = {logFiles.getLogFileForVersion( 1 ), logFiles.getLogFileForVersion( 2 ), logFiles.getLogFileForVersion( 42 )};
+        for ( File txLogFile : txLogFiles )
+        {
+            createFile( txLogFile );
+        }
 
-        FilenameFilter filter = ( directory, name ) -> !name.startsWith( "ignore" );
-        storeFiles = new StoreFiles( fs, pageCache, filter );
-        storeFiles.delete( dir, logFiles );
+        storeFiles.delete( databaseLayout, logFiles );
 
-        assertFalse( fs.fileExists( a ) );
-        assertTrue( fs.fileExists( c ) );
+        for ( File txLogFile : txLogFiles )
+        {
+            assertFalse( fs.fileExists( txLogFile ) );
+        }
     }
 
     @Test
-    public void deleteMustSilentlyIgnoreMissingDirectories() throws Exception
+    void shouldNotDeleteFilesThatDoNotMatchTheFilter() throws Exception
     {
-        File dir = getBaseDir();
-        File sub = new File( dir, "sub" );
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        storeFiles.delete( sub, logFiles );
+        File file1 = createFile( databaseDir, "UnknownFile1" );
+        File file2 = createFile( databaseDir, "KnownFile2" );
+        File file3 = createFile( databaseDir, "UnknownFile3" );
+
+        storeFiles.delete( databaseLayout, logFiles );
+
+        assertTrue( fs.fileExists( file1 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertTrue( fs.fileExists( file3 ) );
     }
 
     @Test
-    public void mustMoveFilesToTargetDirectory() throws Exception
+    void shouldNotDeleteDirectoriesThatDoNotMatchTheFilter() throws Exception
     {
-        File base = getBaseDir();
-        File src = new File( base, "src" );
-        File tgt = new File( base, "tgt" );
-        File a = new File( src, "a" );
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
 
-        createOnFileSystem( a );
+        File dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
+        File dir2 = createDirectory( databaseDir, "KnownDirectory2" );
+        File dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
 
-        // Ensure the 'tgt' directory exists
-        createOnFileSystem( new File( tgt, ".fs-ignore" ) );
+        storeFiles.delete( databaseLayout, logFiles );
 
-        storeFiles.moveTo( src, tgt, logFiles );
-
-        assertFalse( fs.fileExists( a ) );
-        assertTrue( fs.fileExists( new File( tgt, "a" ) ) );
+        assertTrue( fs.isDirectory( dir1 ) );
+        assertFalse( fs.isDirectory( dir2 ) );
+        assertFalse( fs.fileExists( dir2 ) );
+        assertTrue( fs.isDirectory( dir3 ) );
     }
 
     @Test
-    public void movedFilesMustRetainTheirRelativePaths() throws Exception
+    void shouldMoveFilesThatMatchTheFilter() throws Exception
     {
-        File base = getBaseDir();
-        File src = new File( base, "src" );
-        File tgt = new File( base, "tgt" );
-        File dir = new File( src, "dir" );
-        File a = new File( dir, "a" );
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        createOnFileSystem( a );
+        File file1 = createFile( databaseDir, "KnownFile1" );
+        File file2 = createFile( databaseDir, "KnownFile2" );
+        File file3 = createFile( databaseDir, "KnownFile3" );
 
-        // Ensure the 'tgt' directory exists
-        createOnFileSystem( new File( tgt, ".fs-ignore" ) );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
-        storeFiles.moveTo( src, tgt, logFiles );
+        assertFalse( fs.fileExists( file1 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertFalse( fs.fileExists( file3 ) );
 
-        assertFalse( fs.fileExists( a ) );
-        assertTrue( fs.fileExists( new File( new File( tgt, "dir" ), "a" ) ) );
+        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile1" ) ) );
+        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile2" ) ) );
+        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile3" ) ) );
     }
 
     @Test
-    public void moveMustIgnoreFilesFilteredOut() throws Exception
+    void shouldMoveDirectoriesThatMatchTheFilter() throws Exception
     {
-        File base = getBaseDir();
-        File src = new File( base, "src" );
-        File a = new File( src, "a" );
-        File ignore = new File( src, "ignore" );
-        File c = new File( ignore, "c" );
-        File tgt = new File( base, "tgt" );
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
 
-        createOnFileSystem( a );
-        createOnFileSystem( c );
+        File dir1 = createDirectory( databaseDir, "KnownDirectory1" );
+        File dir2 = createDirectory( databaseDir, "KnownDirectory2" );
+        File dir3 = createDirectory( databaseDir, "KnownDirectory3" );
 
-        // Ensure the 'tgt' directory exists
-        createOnFileSystem( new File( tgt, ".fs-ignore" ) );
+        createFile( dir1, "dummy-file-1" );
+        createFile( dir2, "dummy-file-2" );
+        createFile( dir3, "dummy-file-3" );
 
-        FilenameFilter filter = ( directory, name ) -> !name.startsWith( "ignore" );
-        storeFiles = new StoreFiles( fs, pageCache, filter );
-        storeFiles.moveTo( src, tgt, logFiles );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
-        assertFalse( fs.fileExists( a ) );
-        assertTrue( fs.fileExists( c ) );
-        assertTrue( fs.fileExists( new File( tgt, "a" ) ) );
+        assertFalse( fs.fileExists( dir1 ) );
+        assertFalse( fs.fileExists( dir2 ) );
+        assertFalse( fs.fileExists( dir3 ) );
+
+        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory1" ) ) );
+        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory1" ), "dummy-file-1" ) ) );
+
+        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory2" ) ) );
+        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory2" ), "dummy-file-2" ) ) );
+
+        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory3" ) ) );
+        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory3" ), "dummy-file-3" ) ) );
     }
 
     @Test
-    public void isEmptyMustFindFilesBothOnFileSystemAndPageCache() throws Exception
+    void shouldMoveTransactionLogs() throws Exception
     {
-        File dir = getBaseDir();
-        File ignore = new File( dir, "ignore" );
-        File a = new File( dir, "a" );
-        File c = new File( dir, "c" );
+        StoreFiles storeFiles = newStoreFiles();
 
-        createOnFileSystem( a );
-        createOnFileSystem( c );
-        createOnFileSystem( ignore );
+        File[] txLogFiles = {logFiles.getLogFileForVersion( 99 ), logFiles.getLogFileForVersion( 100 ), logFiles.getLogFileForVersion( 101 )};
+        for ( File txLogFile : txLogFiles )
+        {
+            createFile( txLogFile );
+        }
 
-        FilenameFilter filter = ( directory, name ) -> !name.startsWith( "ignore" );
-        storeFiles = new StoreFiles( fs, pageCache, filter );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
 
-        List<File> filesOnFilesystem = asList( a, c );
-        List<File> fileOnFilesystem = singletonList( a );
-        List<File> ignoredList = singletonList( ignore );
-
-        assertFalse( storeFiles.isEmpty( dir, filesOnFilesystem ) );
-        assertFalse( storeFiles.isEmpty( dir, fileOnFilesystem ) );
-        assertTrue( storeFiles.isEmpty( dir, Collections.emptyList() ) );
-        assertTrue( storeFiles.isEmpty( dir, ignoredList ) );
+        for ( File txLogFile : txLogFiles )
+        {
+            assertFalse( fs.fileExists( txLogFile ) );
+            File copiedTxLogFile = new File( otherDatabaseDir, txLogFile.getName() );
+            assertTrue( fs.fileExists( copiedTxLogFile ) );
+        }
     }
 
     @Test
-    public void mustReadStoreId() throws Exception
+    void shouldNotMoveFilesThatDoNotMatchTheFilter() throws Exception
     {
-        File dir = getBaseDir();
-        DatabaseLayout databaseLayout = testDirectory.databaseLayout( dir );
-        File neostore = databaseLayout.metadataStore();
-        ThreadLocalRandom rng = ThreadLocalRandom.current();
-        long time = rng.nextLong();
-        long randomNumber = rng.nextLong();
-        long upgradeTime = rng.nextLong();
-        long upgradeTransactionId = rng.nextLong();
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownFile" ) );
 
-        createOnFileSystem( neostore );
+        File file1 = createFile( databaseDir, "UnknownFile1" );
+        File file2 = createFile( databaseDir, "KnownFile2" );
+        File file3 = createFile( databaseDir, "UnknownFile3" );
 
-        MetaDataStore.setRecord( pageCache, neostore, Position.TIME, time );
-        MetaDataStore.setRecord( pageCache, neostore, Position.RANDOM_NUMBER, randomNumber );
-        MetaDataStore.setRecord( pageCache, neostore, Position.STORE_VERSION, rng.nextLong() );
-        MetaDataStore.setRecord( pageCache, neostore, Position.UPGRADE_TIME, upgradeTime );
-        MetaDataStore.setRecord( pageCache, neostore, Position.UPGRADE_TRANSACTION_ID, upgradeTransactionId );
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+
+        assertTrue( fs.fileExists( file1 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertTrue( fs.fileExists( file3 ) );
+
+        assertFalse( fs.fileExists( new File( otherDatabaseDir, "UnknownFile1" ) ) );
+        assertTrue( fs.fileExists( new File( otherDatabaseDir, "KnownFile2" ) ) );
+        assertFalse( fs.fileExists( new File( otherDatabaseDir, "UnknownFile3" ) ) );
+    }
+
+    @Test
+    void shouldNotMoveDirectoriesThatDoNotMatchTheFilter() throws Exception
+    {
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
+
+        File dir1 = createDirectory( databaseDir, "UnknownDirectory1" );
+        File dir2 = createDirectory( databaseDir, "KnownDirectory2" );
+        File dir3 = createDirectory( databaseDir, "UnknownDirectory3" );
+
+        File file1 = createFile( dir1, "dummy-file-1" );
+        File file2 = createFile( dir2, "dummy-file-2" );
+        File file3 = createFile( dir3, "dummy-file-3" );
+
+        storeFiles.moveTo( databaseDir, otherDatabaseLayout, otherLogFiles );
+
+        assertTrue( fs.isDirectory( dir1 ) );
+        assertTrue( fs.fileExists( file1 ) );
+        assertFalse( fs.isDirectory( dir2 ) );
+        assertFalse( fs.fileExists( file2 ) );
+        assertTrue( fs.isDirectory( dir3 ) );
+        assertTrue( fs.fileExists( file3 ) );
+
+        assertFalse( fs.isDirectory( new File( otherDatabaseDir, "UnknownDirectory1" ) ) );
+        assertFalse( fs.fileExists( new File( new File( otherDatabaseDir, "UnknownDirectory1" ), "dummy-file-1" ) ) );
+        assertTrue( fs.isDirectory( new File( otherDatabaseDir, "KnownDirectory2" ) ) );
+        assertTrue( fs.fileExists( new File( new File( otherDatabaseDir, "KnownDirectory2" ), "dummy-file-2" ) ) );
+        assertFalse( fs.isDirectory( new File( otherDatabaseDir, "UnknownDirectory3" ) ) );
+        assertFalse( fs.fileExists( new File( new File( otherDatabaseDir, "UnknownDirectory3" ), "dummy-file-3" ) ) );
+    }
+
+    @Test
+    void shouldCheckIfNonExistingDirectoryIsEmpty()
+    {
+        StoreFiles storeFiles = newStoreFiles();
+
+        File nonExistingDirectory = new File( "NonExistingDirectory" );
+        DatabaseLayout layout = DatabaseLayout.of( nonExistingDirectory );
+
+        assertTrue( storeFiles.isEmpty( layout ) );
+    }
+
+    @Test
+    void shouldCheckIfEmptyDirectoryIsEmpty()
+    {
+        StoreFiles storeFiles = newStoreFiles();
+
+        File emptyDirectory = testDirectory.directory( "EmptyDirectory" );
+        DatabaseLayout layout = DatabaseLayout.of( emptyDirectory );
+
+        assertTrue( storeFiles.isEmpty( layout ) );
+    }
+
+    @Test
+    void shouldCheckDirectoryWithDatabaseFilesIsEmpty() throws Exception
+    {
+        StoreFiles storeFiles = newStoreFiles();
+
+        createFile( databaseDir, DatabaseFile.METADATA_STORE.getName() );
+        createFile( databaseDir, DatabaseFile.NODE_STORE.getName() );
+        createFile( databaseDir, DatabaseFile.RELATIONSHIP_STORE.getName() );
+
+        DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDir );
+
+        assertFalse( storeFiles.isEmpty( databaseLayout ) );
+    }
+
+    @Test
+    void shouldReadStoreIdWhenMetadataStoreExists() throws Exception
+    {
+        StoreFiles storeFiles = newStoreFiles();
+        File metadataStore = new File( databaseDir, DatabaseFile.METADATA_STORE.getName() );
+        createFile( metadataStore );
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        long creationTime = random.nextLong();
+        long randomId = random.nextLong();
+        long upgradeTime = random.nextLong();
+        long upgradeId = random.nextLong();
+
+        MetaDataStore.setRecord( pageCache, metadataStore, TIME, creationTime );
+        MetaDataStore.setRecord( pageCache, metadataStore, RANDOM_NUMBER, randomId );
+        MetaDataStore.setRecord( pageCache, metadataStore, STORE_VERSION, random.nextLong() );
+        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TIME, upgradeTime );
+        MetaDataStore.setRecord( pageCache, metadataStore, UPGRADE_TRANSACTION_ID, upgradeId );
+
+        DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDir );
 
         StoreId storeId = storeFiles.readStoreId( databaseLayout );
 
-        assertThat( storeId.getCreationTime(), is( time ) );
-        assertThat( storeId.getRandomId(), is( randomNumber ) );
-        assertThat( storeId.getUpgradeTime(), is( upgradeTime ) );
-        assertThat( storeId.getUpgradeId(), is( upgradeTransactionId ) );
+        assertEquals( new StoreId( creationTime, randomId, upgradeTime, upgradeId ), storeId );
     }
 
     @Test
-    public void failToReadStoreIdWhenMetadataStoreDoesNotExist()
+    void shouldFailToReadStoreIdWhenMetadataIsMissing()
     {
-        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+        StoreFiles storeFiles = newStoreFiles();
 
-        try
-        {
-            storeFiles.readStoreId( databaseLayout );
-            fail( "Exception expected" );
-        }
-        catch ( IOException ignore )
-        {
-        }
+        DatabaseLayout databaseLayout = DatabaseLayout.of( databaseDir );
+
+        assertThrows( IOException.class, () -> storeFiles.readStoreId( databaseLayout ) );
+    }
+
+    @Test
+    void shouldNotDeleteTempCopyDirectory()
+    {
+
+    }
+
+    @Test
+    void shouldNotMoveTempCopyDirectory()
+    {
+
+    }
+
+    private File createFile( File parentDir, String name ) throws IOException
+    {
+        File file = new File( parentDir, name );
+        return createFile( file );
+    }
+
+    private File createFile( File file ) throws IOException
+    {
+        fs.mkdirs( file.getParentFile() );
+        fs.open( file, OpenMode.READ_WRITE ).close();
+        assertTrue( fs.fileExists( file ) );
+        return file;
+    }
+
+    private File createDirectory( File parentDir, String name ) throws IOException
+    {
+        File dir = new File( parentDir, name );
+        fs.mkdirs( dir );
+        assertTrue( fs.isDirectory( dir ) );
+        return dir;
+    }
+
+    private StoreFiles newStoreFiles( Predicate<String> nameFilter )
+    {
+        return new StoreFiles( fs, pageCache, ( dir, name ) -> nameFilter.test( name ) );
+    }
+
+    private StoreFiles newStoreFiles()
+    {
+        return new StoreFiles( fs, pageCache );
     }
 }

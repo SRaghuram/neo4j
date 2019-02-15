@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -104,14 +103,13 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public void delete() throws IOException
     {
-        storeFiles.delete( databaseLayout.databaseDirectory(), txLogs );
+        storeFiles.delete( databaseLayout, txLogs );
     }
 
     @Override
-    public boolean isEmpty() throws IOException
+    public boolean isEmpty()
     {
-        Set<File> filesToLookFor = databaseLayout.storeFiles();
-        return storeFiles.isEmpty( databaseLayout.databaseDirectory(), filesToLookFor );
+        return storeFiles.isEmpty( databaseLayout );
     }
 
     @Override
@@ -123,8 +121,8 @@ public abstract class AbstractLocalDatabase extends SafeLifecycle implements Loc
     @Override
     public void replaceWith( File sourceDir ) throws IOException
     {
-        storeFiles.delete( databaseLayout.databaseDirectory(), txLogs );
-        storeFiles.moveTo( sourceDir, databaseLayout.databaseDirectory(), txLogs );
+        storeFiles.delete( databaseLayout, txLogs );
+        storeFiles.moveTo( sourceDir, databaseLayout, txLogs );
     }
 
     @Override

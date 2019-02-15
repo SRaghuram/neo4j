@@ -10,14 +10,9 @@ import com.neo4j.causalclustering.identity.StoreId;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.StandardCopyOption;
-import java.util.Collection;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
+import java.util.Set;
 
 import org.neo4j.helpers.Service;
-import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -25,38 +20,32 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
+import static com.neo4j.causalclustering.catchup.storecopy.TemporaryStoreDirectory.TEMP_COPY_DIRECTORY_NAME;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 public class StoreFiles
 {
-    private static final FilenameFilter STORE_FILE_FILTER = ( dir, name ) ->
-    {
-        // Skip log files and tx files from temporary database
-        return !name.startsWith( "metrics" ) && !name.startsWith( "temp-copy" ) &&
-               !name.startsWith( "raft-messages." ) && !name.startsWith( "debug." ) &&
-               !name.startsWith( "data" ) && !name.startsWith( "store_lock" );
-    };
+    private static final FilenameFilter DATABASE_FILE_FILTER = ( dir, name ) -> !name.equals( TEMP_COPY_DIRECTORY_NAME );
 
-    private final FilenameFilter fileFilter;
-    private FileSystemAbstraction fs;
-    private PageCache pageCache;
+    private final FileSystemAbstraction fs;
+    private final PageCache pageCache;
+    private final FilenameFilter filenameFilter;
 
     public StoreFiles( FileSystemAbstraction fs, PageCache pageCache )
     {
-        this( fs, pageCache, STORE_FILE_FILTER );
+        this( fs, pageCache, DATABASE_FILE_FILTER );
     }
 
-    public StoreFiles( FileSystemAbstraction fs, PageCache pageCache, FilenameFilter fileFilter )
+    public StoreFiles( FileSystemAbstraction fs, PageCache pageCache, FilenameFilter filenameFilter )
     {
         this.fs = fs;
         this.pageCache = pageCache;
-        this.fileFilter = fileFilter;
+        this.filenameFilter = filenameFilter;
     }
 
-    public void delete( File storeDir, LogFiles logFiles ) throws IOException
+    public void delete( DatabaseLayout databaseLayout, LogFiles logFiles ) throws IOException
     {
-        // 'files' can be null if the directory doesn't exist. This is fine, we just ignore it then.
-        File[] files = fs.listFiles( storeDir, fileFilter );
+        File[] files = fs.listFiles( databaseLayout.databaseDirectory(), filenameFilter );
         if ( files != null )
         {
             for ( File file : files )
@@ -65,77 +54,42 @@ public class StoreFiles
             }
         }
 
-        File[] txLogs = fs.listFiles( logFiles.logFilesDirectory() );
-        if ( txLogs != null )
+        for ( File txLog : logFiles.logFiles() )
         {
-            for ( File txLog : txLogs )
-            {
-                fs.deleteFile( txLog );
-            }
-        }
-
-        Iterable<FileHandle> iterator = acceptedPageCachedFiles( storeDir )::iterator;
-        for ( FileHandle fh : iterator )
-        {
-            fh.delete();
+            fs.deleteFile( txLog );
         }
     }
 
-    private Stream<FileHandle> acceptedPageCachedFiles( File databaseDirectory ) throws IOException
-    {
-        try
-        {
-            Stream<FileHandle> stream = fs.streamFilesRecursive( databaseDirectory );
-            Predicate<FileHandle> acceptableFiles = fh -> fileFilter.accept( databaseDirectory, fh.getRelativeFile().getPath() );
-            return stream.filter( acceptableFiles );
-        }
-        catch ( NoSuchFileException e )
-        {
-            // This is fine. Just ignore empty or non-existing directories.
-            return Stream.empty();
-        }
-    }
-
-    public void moveTo( File source, File target, LogFiles logFiles ) throws IOException
+    public void moveTo( File source, DatabaseLayout target, LogFiles logFiles ) throws IOException
     {
         fs.mkdirs( logFiles.logFilesDirectory() );
-        for ( File candidate : fs.listFiles( source, fileFilter ) )
-        {
-            File destination = logFiles.isLogFile( candidate) ? logFiles.logFilesDirectory() : target;
-            fs.moveToDirectory( candidate, destination );
-        }
 
-        Iterable<FileHandle> fileHandles = acceptedPageCachedFiles( source )::iterator;
-        for ( FileHandle fh : fileHandles )
-        {
-            fh.rename( new File( target, fh.getRelativeFile().getPath() ), StandardCopyOption.REPLACE_EXISTING );
-        }
-    }
-
-    public boolean isEmpty( File storeDir, Collection<File> filesToLookFor ) throws IOException
-    {
-        // 'files' can be null if the directory doesn't exist. This is fine, we just ignore it then.
-        File[] files = fs.listFiles( storeDir, fileFilter );
+        File[] files = fs.listFiles( source, filenameFilter );
         if ( files != null )
         {
             for ( File file : files )
             {
-                if ( filesToLookFor.contains( file ) )
+                File destination = logFiles.isLogFile( file ) ? logFiles.logFilesDirectory() : target.databaseDirectory();
+                fs.moveToDirectory( file, destination );
+            }
+        }
+    }
+
+    public boolean isEmpty( DatabaseLayout databaseLayout )
+    {
+        Set<File> storeFiles = databaseLayout.storeFiles();
+
+        File[] files = fs.listFiles( databaseLayout.databaseDirectory() );
+        if ( files != null )
+        {
+            for ( File file : files )
+            {
+                if ( storeFiles.contains( file ) )
                 {
                     return false;
                 }
             }
         }
-
-        Iterable<FileHandle> fileHandles = acceptedPageCachedFiles( storeDir )::iterator;
-        for ( FileHandle fh : fileHandles )
-        {
-            if ( filesToLookFor.contains( fh.getFile() ) )
-            {
-                return false;
-            }
-        }
-
         return true;
     }
 

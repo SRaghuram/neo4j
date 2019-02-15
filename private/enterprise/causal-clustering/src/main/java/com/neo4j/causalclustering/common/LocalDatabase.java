@@ -58,9 +58,8 @@ public interface LocalDatabase extends Lifecycle
 
     /**
      * @return Whether or not the store files for this database are empty/non-existent.
-     * @throws IOException
      */
-    boolean isEmpty() throws IOException;
+    boolean isEmpty();
 
     /**
      * @return A listing of all store files which comprise this database
