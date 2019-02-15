@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import java.time.Clock;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import org.neo4j.time.Clocks;
 
@@ -16,20 +16,18 @@ public class MaximumTotalTime implements TerminationCondition
 {
     private final long endTime;
     private final Clock clock;
-    private long time;
-    private TimeUnit timeUnit;
+    private final Duration duration;
 
-    MaximumTotalTime( long time, TimeUnit timeUnit )
+    MaximumTotalTime( Duration duration, Clock clock )
     {
-        this( time, timeUnit, Clocks.systemClock() );
+        this.duration = duration;
+        this.endTime = clock.millis() + duration.toMillis();
+        this.clock = clock;
     }
 
-    MaximumTotalTime( long time, TimeUnit timeUnit, Clock clock )
+    MaximumTotalTime( Duration duration )
     {
-        this.endTime = clock.millis() + timeUnit.toMillis( time );
-        this.clock = clock;
-        this.time = time;
-        this.timeUnit = timeUnit;
+        this( duration, Clocks.systemClock() );
     }
 
     @Override
@@ -37,7 +35,7 @@ public class MaximumTotalTime implements TerminationCondition
     {
         if ( clock.millis() > endTime )
         {
-            throw new StoreCopyFailedException( format( "Maximum time passed %d %s. Not allowed to continue", time, timeUnit ) );
+            throw new StoreCopyFailedException( format( "Maximum time passed %s. Not allowed to continue", duration ) );
         }
     }
 }

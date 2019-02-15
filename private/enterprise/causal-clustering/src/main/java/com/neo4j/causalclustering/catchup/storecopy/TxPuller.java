@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.identity.StoreId;
 
 import java.net.ConnectException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -37,19 +38,20 @@ class TxPuller
     private State currentState = State.NORMAL;
     private long highestTx;
 
-    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config )
+    static TxPuller createTxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, Config config )
     {
-        this( catchupAddressProvider, logProvider, new NoProgressTimeout( config ) );
+        Clock clock = Clock.systemUTC();
+        Duration inactivityTimeout = config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout );
+        return new TxPuller( catchupAddressProvider, logProvider, new ResettableTimeout( inactivityTimeout, clock ), clock );
     }
 
     @VisibleForTesting
-    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler )
+    TxPuller( CatchupAddressProvider catchupAddressProvider, LogProvider logProvider, ResettableCondition noProgressHandler, Clock clock )
     {
         this.addressProvider = new StateBasedAddressProvider( catchupAddressProvider );
         this.log = logProvider.getLog( getClass() );
         this.resettableCondition = noProgressHandler;
         this.connectionErrorLogger = new CappedLogger( log );
-        Clock clock = Clock.systemUTC();
         connectionErrorLogger.setTimeLimit( 1, TimeUnit.SECONDS, clock );
     }
 
@@ -180,7 +182,6 @@ class TxPuller
             switch ( state )
             {
             case LAST_ATTEMPT:
-                return catchupAddressProvider.primary();
             case COMPLETE:
                 return catchupAddressProvider.primary();
             default:
@@ -201,34 +202,5 @@ class TxPuller
         COMPLETE,
         LAST_ATTEMPT,
         NORMAL
-    }
-
-    static class NoProgressTimeout implements ResettableCondition
-    {
-        private final long allowedNoProgressMs;
-        private final Clock clock = Clock.systemUTC();
-        private long timeout = -1;
-
-        NoProgressTimeout( Config config )
-        {
-            allowedNoProgressMs = config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ).toMillis();
-        }
-
-        @Override
-        public boolean canContinue()
-        {
-            if ( timeout == -1 )
-            {
-                timeout = clock.millis() + allowedNoProgressMs;
-                return true;
-            }
-            return timeout > clock.millis();
-        }
-
-        @Override
-        public void reset()
-        {
-            timeout = -1;
-        }
     }
 }

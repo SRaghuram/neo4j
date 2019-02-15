@@ -31,6 +31,7 @@ import org.neo4j.logging.LogProvider;
 
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.requiredRange;
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
 import static java.lang.Long.max;
 import static java.lang.String.format;
 import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
@@ -255,14 +256,14 @@ public class StoreCopyClient
         }
     }
 
-    private class TransactionIdHandler
+    private static class TransactionIdHandler
     {
         /**
          * Represents the minimal transaction ID that can be committed by the user.
          */
         private static final long MIN_COMMITTED_TRANSACTION_ID = BASE_TX_ID + 1;
         private final long initialTxId;
-        private long highestReceivedTxId = -1;
+        private long highestReceivedTxId = LAST_CHECKPOINTED_TX_UNAVAILABLE;
 
         TransactionIdHandler( PrepareStoreCopyResponse prepareStoreCopyResponse )
         {

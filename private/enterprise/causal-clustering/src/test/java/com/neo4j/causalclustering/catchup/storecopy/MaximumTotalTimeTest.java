@@ -9,6 +9,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.time.FakeClock;
@@ -21,10 +22,11 @@ public class MaximumTotalTimeTest
     @Test
     public void shouldFailWhenAllowedTimeHasPassed() throws StoreCopyFailedException
     {
+        Duration fiveSeconds = Duration.ofSeconds( 5 );
         TimeUnit timeUnit = TimeUnit.SECONDS;
         FakeClock fakeClock = new FakeClock( 0, timeUnit );
 
-        MaximumTotalTime maximumTotalTime = new MaximumTotalTime( 5, timeUnit, fakeClock );
+        MaximumTotalTime maximumTotalTime = new MaximumTotalTime( fiveSeconds, fakeClock );
 
         maximumTotalTime.assertContinue();
         fakeClock.forward( 5, timeUnit );

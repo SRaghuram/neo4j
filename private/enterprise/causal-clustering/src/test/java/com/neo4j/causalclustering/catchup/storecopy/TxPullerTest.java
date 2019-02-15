@@ -21,6 +21,7 @@ import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 
 import java.net.ConnectException;
+import java.time.Clock;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.logging.LogProvider;
@@ -56,7 +57,7 @@ class TxPullerTest
         when( writer.lastTx() ).thenAnswer( i -> lastTxTracker.getLastTx() );
         addressProvider = mock( CatchupAddressProvider.class );
         client = mock( TxPullClient.class );
-        executor = new TxPuller( addressProvider, logProvider, new MaxCount() );
+        executor = new TxPuller( addressProvider, logProvider, new MaxCount(), Clock.systemUTC() );
     }
 
     @Test
@@ -218,7 +219,13 @@ class TxPullerTest
         verify( client, never() ).pullTransactions( any(), any(), anyLong(), any() );
     }
 
-    class LastTxTracker
+    private static TxPullRequestContext getContext( RequiredTransactions requiredRange )
+    {
+        StoreId storeId = new StoreId( 1, 2, 3, 4 );
+        return TxPullRequestContext.createContextFromStoreCopy( requiredRange, storeId );
+    }
+
+    private static class LastTxTracker
     {
         AtomicLong lastTx = new AtomicLong( -1 );
 
@@ -240,12 +247,6 @@ class TxPullerTest
         {
             return lastTx.longValue();
         }
-    }
-
-    private TxPullRequestContext getContext( RequiredTransactions requiredRange )
-    {
-        StoreId storeId = new StoreId( 1, 2, 3, 4 );
-        return TxPullRequestContext.createContextFromStoreCopy( requiredRange, storeId );
     }
 
     private static class MaxCount implements ResettableCondition

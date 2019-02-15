@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.helper.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -28,6 +28,7 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromCatchingUp;
 import static com.neo4j.causalclustering.catchup.storecopy.TxPullRequestContext.createContextFromStoreCopy;
+import static com.neo4j.causalclustering.catchup.storecopy.TxPuller.createTxPuller;
 
 /**
  * Entry point for remote store related RPC.
@@ -79,10 +80,10 @@ public class RemoteStore
     public void copy( CatchupAddressProvider addressProvider, StoreId expectedStoreId, DatabaseLayout destinationLayout, boolean rotateTransactionsManually )
             throws StoreCopyFailedException
     {
-        RequiredTransactions requiredTransactions;
         StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( destinationLayout.databaseDirectory(), fs, monitors );
-        requiredTransactions = storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider, this::getTerminationCondition,
-                destinationLayout.databaseDirectory() );
+        RequiredTransactions requiredTransactions =
+                storeCopyClient.copyStoreFiles( addressProvider, expectedStoreId, streamToDiskProvider, this::getTerminationCondition,
+                        destinationLayout.databaseDirectory() );
 
         log.info( "Store files need to be recovered starting from: %s", requiredTransactions );
 
@@ -92,7 +93,7 @@ public class RemoteStore
 
     private MaximumTotalTime getTerminationCondition()
     {
-        return new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ).getSeconds(), TimeUnit.SECONDS );
+        return new MaximumTotalTime( config.get( CausalClusteringSettings.store_copy_max_retry_time_per_request ) );
     }
 
     private void pullTransactions( CatchupAddressProvider catchupAddressProvider, DatabaseLayout databaseLayout, TxPullRequestContext context,
@@ -103,9 +104,9 @@ public class RemoteStore
         try ( TransactionLogCatchUpWriter writer = transactionLogFactory.create( databaseLayout, fs, pageCache, config, logProvider, storageEngineFactory,
                 validInitialTxRange( context ), asPartOfStoreCopy, keepTxLogsInStoreDir, rotateTransactionsManually ) )
         {
-            TxPuller executor = new TxPuller( catchupAddressProvider, logProvider, config );
+            TxPuller txPuller = createTxPuller( catchupAddressProvider, logProvider, config );
 
-            executor.pullTransactions( context, writer, txPullClient );
+            txPuller.pullTransactions( context, writer, txPullClient );
             storeCopyClientMonitor.finishReceivingTransactions( writer.lastTx() );
         }
         catch ( IOException e )

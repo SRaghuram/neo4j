@@ -33,6 +33,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreFileMetadata;
 
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.LAST_CHECKPOINTED_TX_UNAVAILABLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,7 +53,6 @@ class StoreCopyRequestHandlerTest
     private EmbeddedChannel embeddedChannel;
     private CatchupServerProtocol catchupServerProtocol;
     private JobScheduler jobScheduler = new FakeJobScheduler();
-    private long lastCheckpointedTx = -1;
 
     @BeforeEach
     void setup()
@@ -78,7 +78,8 @@ class StoreCopyRequestHandlerTest
                 new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH, lastCheckpointedTx );
+        StoreCopyFinishedResponse expectedResponse =
+                new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH, LAST_CHECKPOINTED_TX_UNAVAILABLE );
         assertEquals( expectedResponse, embeddedChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
@@ -91,7 +92,8 @@ class StoreCopyRequestHandlerTest
                 new File( "some-file" ), 2, DEFAULT_DATABASE_NAME ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND, lastCheckpointedTx );
+        StoreCopyFinishedResponse expectedResponse =
+                new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_TOO_FAR_BEHIND, LAST_CHECKPOINTED_TX_UNAVAILABLE );
         assertEquals( expectedResponse, embeddedChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
@@ -106,14 +108,15 @@ class StoreCopyRequestHandlerTest
                 () -> embeddedChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, embeddedChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN, lastCheckpointedTx );
+        StoreCopyFinishedResponse expectedResponse =
+                new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN, LAST_CHECKPOINTED_TX_UNAVAILABLE );
         assertEquals( expectedResponse, embeddedChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );
     }
 
     @Test
-    void shoulResetProtocolAndGiveErrorIfFilesThrowException()
+    void shouldResetProtocolAndGiveErrorIfFilesThrowException()
     {
         EmbeddedChannel alternativeChannel = new EmbeddedChannel(
                 new EvilStoreCopyRequestHandler( catchupServerProtocol, database, new StoreFileStreamingProtocol(),
@@ -123,7 +126,8 @@ class StoreCopyRequestHandlerTest
                 () -> alternativeChannel.writeInbound( new GetStoreFileRequest( STORE_ID_MATCHING, new File( "some-file" ), 1, DEFAULT_DATABASE_NAME ) ) );
 
         assertEquals( ResponseMessageType.STORE_COPY_FINISHED, alternativeChannel.readOutbound() );
-        StoreCopyFinishedResponse expectedResponse = new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN, lastCheckpointedTx );
+        StoreCopyFinishedResponse expectedResponse =
+                new StoreCopyFinishedResponse( StoreCopyFinishedResponse.Status.E_UNKNOWN, LAST_CHECKPOINTED_TX_UNAVAILABLE );
         assertEquals( expectedResponse, alternativeChannel.readOutbound() );
 
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );

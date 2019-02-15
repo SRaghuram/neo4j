@@ -69,7 +69,7 @@ class StoreCopyFinishedResponseEncodeDecodeTest
 
     private enum Versions
     {
-        V1AND2
+        V1_AND_2
                 {
                     @Override
                     ChannelHandler encoder()
