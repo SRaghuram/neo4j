@@ -10,11 +10,10 @@ import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpWriter;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.helper.LongRange;
+import org.neo4j.helpers.collection.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.IOException;
-import java.time.Duration;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;

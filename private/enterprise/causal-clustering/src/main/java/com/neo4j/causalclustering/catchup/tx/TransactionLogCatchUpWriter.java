@@ -5,9 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.helper.LongRange;
+import org.neo4j.helpers.collection.LongRange;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 

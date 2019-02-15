@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import com.neo4j.causalclustering.helper.LongRange;
+import org.neo4j.helpers.collection.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Before;
 import org.junit.Rule;
