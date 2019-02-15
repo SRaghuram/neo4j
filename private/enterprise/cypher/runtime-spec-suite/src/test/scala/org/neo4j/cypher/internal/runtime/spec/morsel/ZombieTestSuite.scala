@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.Descending
 
 class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime) {
 
-  test("should handle expand") {
+  ignore("should handle expand") {
     // given
     val (nodes, rels) = circleGraph(10)
 
@@ -34,7 +34,7 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
     runtimeResult should beColumns("x", "y").withRows(expected)
   }
 
-  test("should apply-sort") {
+  ignore("should apply-sort") {
     // given
     val (nodes, rels) = circleGraph(10)
 
