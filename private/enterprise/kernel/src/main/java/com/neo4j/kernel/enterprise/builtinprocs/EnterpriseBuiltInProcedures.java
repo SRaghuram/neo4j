@@ -17,6 +17,7 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.values.storable.TextValue;
 
 import static org.neo4j.procedure.Mode.SCHEMA;
 
@@ -34,13 +35,13 @@ public class EnterpriseBuiltInProcedures
             "YIELD index, providerName, status" )
     @Procedure( name = "db.createNodeKey", mode = SCHEMA )
     public Stream<BuiltInProcedures.SchemaIndexInfo> createNodeKey(
-            @Name( "index" ) String index,
-            @Name( "providerName" ) String providerName )
+            @Name( "index" ) TextValue index,
+            @Name( "providerName" ) TextValue providerName )
             throws ProcedureException
     {
         try ( IndexProcedures indexProcedures = indexProcedures() )
         {
-            return indexProcedures.createNodeKey( index, providerName );
+            return indexProcedures.createNodeKey( index.stringValue(), providerName.stringValue() );
         }
     }
 
