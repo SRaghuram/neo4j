@@ -10,20 +10,15 @@ import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import java.io.File;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.LogService;
-import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
 
@@ -60,29 +55,9 @@ public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
                 config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
                 config.augment( GraphDatabaseSettings.active_database, absoluteStoreDir.getName() );
                 config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-                return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new )
-                {
-                    @Override
-                    protected GlobalModule createGlobalPlatform( File storeDir, Config config, ExternalDependencies dependencies )
-                    {
-                        return new GlobalModule( storeDir, config, databaseInfo, dependencies )
-                        {
-                            @Override
-                            protected LogService createLogService( LogProvider userLogProvider )
-                            {
-                                if ( state instanceof TestGraphDatabaseFactoryState )
-                                {
-                                    LogProvider logProvider = ((TestGraphDatabaseFactoryState) state).getInternalLogProvider();
-                                    if ( logProvider != null )
-                                    {
-                                        return new SimpleLogService( logProvider );
-                                    }
-                                }
-                                return super.createLogService( userLogProvider );
-                            }
-                        };
-                    }
-                }.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
+                TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
+                TestEnterpriseGraphDatabaseFacadeFactory facadeFactory = new TestEnterpriseGraphDatabaseFacadeFactory( testState, false );
+                return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
             }
         };
     }
@@ -104,7 +79,6 @@ public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
 
     static class TestEnterpriseGraphDatabaseFacadeFactory extends TestGraphDatabaseFacadeFactory
     {
-
         TestEnterpriseGraphDatabaseFacadeFactory( TestGraphDatabaseFactoryState state, boolean impermanent )
         {
             super( state, impermanent, DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new );
