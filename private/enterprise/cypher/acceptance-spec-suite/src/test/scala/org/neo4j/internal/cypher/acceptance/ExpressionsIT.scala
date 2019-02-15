@@ -289,7 +289,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("exists on node") {
-    val compiled = compile(function("exists", property(parameter("a"), "prop")))
+    val compiled = compile(function("exists", prop(parameter("a"), "prop")))
 
     val node = nodeValue(map(Array("prop"), Array(stringValue("hello"))))
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
@@ -297,7 +297,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("exists on relationship") {
-    val compiled = compile(function("exists", property(parameter("a"), "prop")))
+    val compiled = compile(function("exists", prop(parameter("a"), "prop")))
 
     val rel = relationshipValue(nodeValue(),
                                 nodeValue(),
@@ -307,7 +307,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("exists on map") {
-    val compiled = compile(function("exists", property(parameter("a"), "prop")))
+    val compiled = compile(function("exists", prop(parameter("a"), "prop")))
 
     val mapValue = map(Array("prop"), Array(stringValue("hello")))
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
@@ -1523,7 +1523,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("access property on node") {
-    val compiled = compile(property(parameter("a"), "prop"))
+    val compiled = compile(prop(parameter("a"), "prop"))
 
     val node = nodeValue(map(Array("prop"), Array(stringValue("hello"))))
 
@@ -1532,7 +1532,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("access property on relationship") {
-    val compiled = compile(property(parameter("a"), "prop"))
+    val compiled = compile(prop(parameter("a"), "prop"))
 
     val rel = relationshipValue(map(Array("prop"), Array(stringValue("hello"))))
 
@@ -1541,7 +1541,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   test("access property on map") {
-    val compiled = compile(property(parameter("a"), "prop"))
+    val compiled = compile(prop(parameter("a"), "prop"))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(map(Array("prop"), Array(stringValue("hello"))))), cursors) should equal(stringValue("hello"))
@@ -1549,7 +1549,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("access property on temporal") {
     val value = TimeValue.now(Clock.systemUTC())
-    val compiled = compile(property(parameter("a"), "timezone"))
+    val compiled = compile(prop(parameter("a"), "timezone"))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors) should equal(value.get("timezone"))
@@ -1557,7 +1557,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("access property on duration") {
     val value = durationValue(Duration.ofHours(3))
-    val compiled = compile(property(parameter("a"), "seconds"))
+    val compiled = compile(prop(parameter("a"), "seconds"))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors) should equal(value.get("seconds"))
@@ -1566,7 +1566,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("access property on point") {
     val value = pointValue(Cartesian, 1.0, 3.6)
 
-    val compiled = compile(property(parameter("a"), "x"))
+    val compiled = compile(prop(parameter("a"), "x"))
 
     compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
     compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors) should equal(doubleValue(1.0))
@@ -1575,7 +1575,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("access property on point with invalid key") {
     val value = pointValue(Cartesian, 1.0, 3.6)
 
-    val compiled = compile(property(parameter("a"), "foobar"))
+    val compiled = compile(prop(parameter("a"), "foobar"))
 
     an[InvalidArgumentException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors)
   }
