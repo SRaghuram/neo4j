@@ -15,6 +15,8 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
+
 public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
 {
     private final ChannelPoolService channels;
@@ -38,7 +40,7 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
         {
             try
             {
-                loggingBlock( to, pooledChannel.channel().writeAndFlush( message ) );
+                loggingBlock( to, pooledChannel.channel().writeAndFlush( message ).addListener( CLOSE_ON_FAILURE ) );
             }
             finally
             {
@@ -47,7 +49,7 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
         }
         else
         {
-            pooledChannel.channel().writeAndFlush( message ).addListener( future -> pooledChannel.release() );
+            pooledChannel.channel().writeAndFlush( message ).addListeners( future -> pooledChannel.release(), CLOSE_ON_FAILURE );
         }
     }
 
@@ -63,6 +65,7 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
         }
         catch ( InterruptedException e )
         {
+            future.cancel( true );
             log.info( "Interrupted while sending", e );
         }
         return null;
