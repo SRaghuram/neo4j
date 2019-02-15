@@ -5,6 +5,10 @@
  */
 package org.neo4j.metrics;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -12,11 +16,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.kernel.configuration.Settings;
-import com.neo4j.test.causalclustering.ClusterRule;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
