@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.slotted
 
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_SINGLE_THREAD
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, ExpandAllWithOptionalTestBase, InputTestBase, LabelScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, ExpandAllWithOptionalTestBase, InputTestBase, LabelScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase, PartialSortTestBase, PartialTop1TestBase, PartialTopNTestBase}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, SlottedRuntime}
 
 object SlottedSpecSuite {
@@ -24,3 +24,6 @@ class SlottedNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE_SINGLE_T
                                with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]
 class SlottedInputTest extends InputTestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)
+class SlottedPartialSortTest extends PartialSortTestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)
+class SlottedPartialTopNTest extends PartialTopNTestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)
+class SlottedPartialTop1Test extends PartialTop1TestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)
