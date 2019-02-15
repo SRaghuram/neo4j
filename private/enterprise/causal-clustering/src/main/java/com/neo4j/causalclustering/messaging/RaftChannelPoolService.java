@@ -14,27 +14,34 @@ import io.netty.channel.socket.SocketChannel;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 public class RaftChannelPoolService extends ChannelPoolService
 {
-    public static RaftChannelPoolService raftChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler,
-            LogProvider logProvider, HandshakeClientInitializer handshakeClientInitializer )
-    {
-        return new RaftChannelPoolService( bootstrapConfiguration, scheduler, logProvider.getLog( RaftChannelPoolService.class ), handshakeClientInitializer );
-    }
-
-    private RaftChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, Log log,
+    public RaftChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, LogProvider logProvider,
             HandshakeClientInitializer handshakeClientInitializer )
     {
-        super( bootstrapConfiguration, scheduler, new AbstractChannelPoolHandler()
+        super( bootstrapConfiguration, scheduler, Group.RAFT_CLIENT,
+                new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), handshakeClientInitializer ) );
+    }
+
+    private static class PipelineInstaller extends AbstractChannelPoolHandler
+    {
+        private final Log log;
+        private final HandshakeClientInitializer handshakeClientInitializer;
+
+        PipelineInstaller( Log log, HandshakeClientInitializer handshakeClientInitializer )
         {
-            @Override
-            public void channelCreated( Channel ch )
-            {
-                log.info( "Channel created [%s]", ch );
-                ch.pipeline().addLast( handshakeClientInitializer );
-            }
-        } );
+            this.log = log;
+            this.handshakeClientInitializer = handshakeClientInitializer;
+        }
+
+        @Override
+        public void channelCreated( Channel ch )
+        {
+            log.info( "Channel created [%s]", ch );
+            ch.pipeline().addLast( handshakeClientInitializer );
+        }
     }
 }

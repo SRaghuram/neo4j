@@ -7,19 +7,11 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.net.PooledChannel;
-import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.pool.AbstractChannelPoolHandler;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Stream;
+import java.util.concurrent.Future;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.SocketAddress;
-import org.neo4j.helpers.collection.Pair;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -44,8 +36,14 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
         }
         if ( block )
         {
-            loggingBlock( to, pooledChannel.channel().writeAndFlush( message ) );
-            loggingBlock( to, pooledChannel.release() );
+            try
+            {
+                loggingBlock( to, pooledChannel.channel().writeAndFlush( message ) );
+            }
+            finally
+            {
+                loggingBlock( to, pooledChannel.release() );
+            }
         }
         else
         {
@@ -53,7 +51,7 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
         }
     }
 
-    private <V> V loggingBlock( AdvertisedSocketAddress to, java.util.concurrent.Future<V> future )
+    private <V> V loggingBlock( AdvertisedSocketAddress to, Future<V> future )
     {
         try
         {

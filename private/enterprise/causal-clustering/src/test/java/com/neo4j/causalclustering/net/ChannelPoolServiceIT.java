@@ -36,6 +36,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.scheduler.Group;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
@@ -62,7 +63,8 @@ class ChannelPoolServiceIT
     void setUpServers() throws ExecutionException, InterruptedException
     {
         poolEventsMonitor = new PoolEventsMonitor();
-        pool = new ChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), poolEventsMonitor );
+        pool = new ChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), Group.RAFT_CLIENT,
+                poolEventsMonitor );
 
         startServers();
 

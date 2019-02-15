@@ -123,7 +123,6 @@ import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.messaging.RaftChannelPoolService.raftChannelPoolService;
 import static java.util.Arrays.asList;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
@@ -227,7 +226,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         HandshakeClientInitializer channelInitializer = new HandshakeClientInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilders.client(), handshakeTimeout, logProvider, logService.getUserLogProvider() );
         RaftChannelPoolService raftChannelPoolService =
-                raftChannelPoolService( BootstrapConfiguration.clientConfig( globalConfig ), globalModule.getJobScheduler(), logProvider, channelInitializer );
+                new RaftChannelPoolService( BootstrapConfiguration.clientConfig( globalConfig ), globalModule.getJobScheduler(), logProvider,
+                        channelInitializer );
         globalLife.add( raftChannelPoolService );
         this.clientInstalledProtocols = raftChannelPoolService::installedProtocols;
 

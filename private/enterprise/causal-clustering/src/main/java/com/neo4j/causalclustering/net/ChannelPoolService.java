@@ -29,17 +29,19 @@ public class ChannelPoolService implements Lifecycle
 {
     private final BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
     private final JobScheduler scheduler;
+    private final Group group;
     private final ChannelPoolHandler poolHandler;
+    private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private CompletableFuture<PooledChannel> lifeCompletionStage;
     private SimpleChannelPoolMap poolMap;
     private EventLoopGroup eventLoopGroup;
-    private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
-    public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler,
+    public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, Group group,
             ChannelPoolHandler channelPoolHandler )
     {
         this.bootstrapConfiguration = bootstrapConfiguration;
         this.scheduler = scheduler;
+        this.group = group;
         this.poolHandler = channelPoolHandler;
     }
 
@@ -74,7 +76,7 @@ public class ChannelPoolService implements Lifecycle
         try
         {
             lifeCompletionStage = new CompletableFuture<>();
-            eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( Group.RAFT_CLIENT ) );
+            eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( group ) );
             Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
             poolMap = new SimpleChannelPoolMap( baseBootstrap, poolHandler );
         }
@@ -112,6 +114,14 @@ public class ChannelPoolService implements Lifecycle
 
     public Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols()
     {
-        return poolMap == null ? Stream.empty() : poolMap.installedProtocols();
+        readWriteLock.readLock().lock();
+        try
+        {
+            return poolMap == null ? Stream.empty() : poolMap.installedProtocols();
+        }
+        finally
+        {
+            readWriteLock.readLock().unlock();
+        }
     }
 }

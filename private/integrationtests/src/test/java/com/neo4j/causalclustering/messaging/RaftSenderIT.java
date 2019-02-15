@@ -51,7 +51,6 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOID_WRAPPER;
-import static com.neo4j.causalclustering.messaging.RaftChannelPoolService.raftChannelPoolService;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -153,7 +152,7 @@ class RaftSenderIT
     {
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
 
-        ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstaller = null;
+        ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstaller;
         if ( clientProtocol == ApplicationProtocols.RAFT_1 )
         {
             RaftProtocolClientInstallerV1.Factory factoryV1 = new RaftProtocolClientInstallerV1.Factory( pipelineFactory, logProvider );
@@ -177,8 +176,8 @@ class RaftSenderIT
                 logProvider,
                 logProvider );
 
-        return raftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(),
-                        logProvider, channelInitializer );
+        return new RaftChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), new ThreadPoolJobScheduler(), logProvider,
+                channelInitializer );
     }
 
     private ApplicationProtocolRepository clientRepository( ApplicationProtocols clientProtocol )

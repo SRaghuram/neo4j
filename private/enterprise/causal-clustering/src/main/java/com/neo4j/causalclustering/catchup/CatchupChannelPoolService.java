@@ -9,13 +9,14 @@ import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import io.netty.channel.Channel;
-import io.netty.channel.pool.ChannelPoolHandler;
+import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
 
 import java.time.Clock;
 import java.util.function.Function;
 
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 class CatchupChannelPoolService extends ChannelPoolService
@@ -25,10 +26,10 @@ class CatchupChannelPoolService extends ChannelPoolService
     CatchupChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler jobScheduler, Clock clock,
             Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory )
     {
-        super( bootstrapConfiguration, jobScheduler, new TrackingResponsePoolHandler( initializerFactory, clock ) );
+        super( bootstrapConfiguration, jobScheduler, Group.CATCHUP_CLIENT, new TrackingResponsePoolHandler( initializerFactory, clock ) );
     }
 
-    private static class TrackingResponsePoolHandler implements ChannelPoolHandler
+    private static class TrackingResponsePoolHandler extends AbstractChannelPoolHandler
     {
         private final Function<CatchupResponseHandler,HandshakeClientInitializer> initializerFactory;
         private final Clock clock;
@@ -43,12 +44,6 @@ class CatchupChannelPoolService extends ChannelPoolService
         public void channelReleased( Channel ch )
         {
             ch.attr( TRACKING_RESPONSE_HANDLER ).get().clearResponseHandler();
-        }
-
-        @Override
-        public void channelAcquired( Channel ch )
-        {
-            // do nothing
         }
 
         @Override

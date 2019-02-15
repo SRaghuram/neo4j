@@ -58,22 +58,12 @@ public class PooledChannel
 
     public <ATTR> ATTR getAttribute( AttributeKey<ATTR> key )
     {
-        notReleased();
         return channel.attr( key ).get();
     }
 
     public Channel channel()
     {
-        notReleased();
         return channel;
-    }
-
-    private void notReleased()
-    {
-        if ( released )
-        {
-            throw new IllegalStateException( "Channel has been released back into the pool." );
-        }
     }
 
     /**
@@ -83,7 +73,6 @@ public class PooledChannel
      */
     public Future<Void> release()
     {
-        notReleased();
         released = true;
         return pool.release( channel );
     }
