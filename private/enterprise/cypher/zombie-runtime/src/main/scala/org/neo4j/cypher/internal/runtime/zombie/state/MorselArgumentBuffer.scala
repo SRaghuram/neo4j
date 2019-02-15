@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
+import java.util.concurrent.atomic.AtomicLong
+
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -16,21 +18,31 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
   */
 class MorselArgumentBuffer(argumentSlotOffset: Int,
                            tracker: Tracker,
-                           counters: Seq[Id],
+                           countersForThisBuffer: Seq[Id],
+                           countersForOtherBuffers: Seq[Id],
                            argumentStateMaps: ArgumentStateMaps,
                            inner: Buffer[MorselExecutionContext]
-                          ) extends MorselBuffer(tracker, counters, argumentStateMaps, inner) {
+                          ) extends MorselBuffer(tracker, countersForOtherBuffers, argumentStateMaps, inner) {
 
-  private var argumentRowCount = 0L
+  private val argumentRowCount : AtomicLong = new AtomicLong(0)
 
   override def produce(morsel: MorselExecutionContext): Unit = {
+    var count = argumentRowCount.addAndGet(morsel.getValidRows) - morsel.getValidRows
+
     morsel.resetToFirstRow()
     while (morsel.isValidRow) {
-      morsel.setLongAt(argumentSlotOffset, argumentRowCount)
-      argumentRowCount += 1
+      morsel.setLongAt(argumentSlotOffset, count)
+      count += 1
       morsel.moveToNextRow()
     }
-    morsel.resetToFirstRow()
+
+    for {
+      reducePlanId <- countersForThisBuffer
+      asm = argumentStateMaps(reducePlanId)
+      argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
+    } asm.initiate(argumentId)
+    morsel.setCounters(countersForThisBuffer)
+
     super.produce(morsel)
   }
 }

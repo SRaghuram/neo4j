@@ -8,12 +8,13 @@ package org.neo4j.cypher.internal.runtime.zombie.operators
 import java.util.{Comparator, PriorityQueue}
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator, Zombie}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselSorting
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
@@ -51,11 +52,11 @@ class SortMergeOperator(val planId: Id,
   class State(argumentStateMap: ArgumentStateMap[UnsortedBuffer]) extends OperatorState {
     override def init(queryContext: QueryContext,
                       state: QueryState,
-                      input: MorselExecutionContext,
+                      input: MorselParallelizer,
                       resources: QueryResources
                      ): IndexedSeq[ContinuableInputOperatorTask] = {
 
-      Array(new OTask(input, argumentStateMap))
+      Array(new OTask(input.original, argumentStateMap))
     }
   }
 
@@ -76,6 +77,8 @@ class SortMergeOperator(val planId: Id,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
+
+//      Zombie.debug("SortMerge start")
 
       if (completedArguments == null) {
         argumentStateMap.updateAndConsume(inputMorsel)
@@ -103,6 +106,8 @@ class SortMergeOperator(val planId: Id,
       }
 
       outputRow.finishedWriting()
+
+//      Zombie.debug("SortMerge end")
     }
 
     override def canContinue: Boolean = !sortedInputPerArgument.isEmpty || completedArguments.hasNext

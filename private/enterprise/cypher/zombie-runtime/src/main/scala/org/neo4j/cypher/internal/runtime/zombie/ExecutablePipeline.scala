@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{PipelineId, RowBufferDefiniti
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, StatelessOperator}
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 
 case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
@@ -30,7 +31,7 @@ case class ExecutablePipeline(id: PipelineId,
 
 class PipelineState(val pipeline: ExecutablePipeline, startState: OperatorState) {
 
-  def init(inputMorsel: MorselExecutionContext,
+  def init(inputMorsel: MorselParallelizer,
            context: QueryContext,
            state: QueryState,
            resources: QueryResources): IndexedSeq[PipelineTask] = {

@@ -43,7 +43,7 @@ class NoLock(val id: Int) extends Lock {
   override def tryLock(): Boolean = {
     if (isLocked)
       throw new IllegalStateException("NoLock is already locked")
-    Zombie.debug(s"Locked #$id")
+//    Zombie.debug(s"Locked #$id")
     isLocked = true
     isLocked
   }
@@ -53,7 +53,7 @@ class NoLock(val id: Int) extends Lock {
   override def unlock(): Unit = {
     if (!isLocked)
       throw new IllegalStateException("NoLock is not locked")
-    Zombie.debug(s"Unlocked #$id")
+//    Zombie.debug(s"Unlocked #$id")
     isLocked = false
   }
 }

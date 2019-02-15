@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.zombie.ArgumentStateCreator
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 
 /**
   * A executable morsel operator.
@@ -35,7 +36,7 @@ trait OperatorState {
     */
   def init(context: QueryContext,
            state: QueryState,
-           inputMorsel: MorselExecutionContext,
+           inputMorsel: MorselParallelizer,
            resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask]
 }
 
@@ -43,10 +44,10 @@ trait OperatorState {
   * A streaming operator is initialized with an input morsel, to produce 0-n [[ContinuableOperatorTask]].
   */
 trait StreamingOperator extends Operator with OperatorState {
-  def init(context: QueryContext,
-           state: QueryState,
-           inputMorsel: MorselExecutionContext,
-           resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask]
+  override def init(context: QueryContext,
+                    state: QueryState,
+                    inputMorsel: MorselParallelizer,
+                    resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask]
 
   override final def createState(argumentStateCreator: ArgumentStateCreator): OperatorState = this
 }

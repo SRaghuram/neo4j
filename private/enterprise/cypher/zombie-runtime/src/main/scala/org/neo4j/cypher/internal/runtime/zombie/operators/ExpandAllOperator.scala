@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyTypes
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
@@ -27,9 +28,9 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
   override def init(queryContext: QueryContext,
                     state: QueryState,
-                    inputMorsel: MorselExecutionContext,
+                    inputMorsel: MorselParallelizer,
                     resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
-    IndexedSeq(new OTask(inputMorsel))
+    IndexedSeq(new OTask(inputMorsel.original))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 

@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 /**
@@ -43,7 +44,7 @@ trait ExecutionState extends ArgumentStateCreator {
     *
     * @return the morsel to consume, or `null` if no morsel was available
     */
-  def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselExecutionContext
+  def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer
 
   /**
     * Close this task, meaning that we are done executing it.

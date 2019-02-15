@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 
 class ArgumentOperator(val workIdentity: WorkIdentity,
                        argumentSize: SlotConfiguration.Size) extends StreamingOperator {
@@ -17,9 +18,9 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 
   override def init(queryContext: QueryContext,
                     state: QueryState,
-                    inputMorsel: MorselExecutionContext,
+                    inputMorsel: MorselParallelizer,
                     resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
-    IndexedSeq(new OTask(inputMorsel))
+    IndexedSeq(new OTask(inputMorsel.original))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableInputOperatorTask {
 

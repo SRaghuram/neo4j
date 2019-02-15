@@ -36,7 +36,9 @@ class RowBufferDefinition(val id: BufferId,
 class ArgumentBufferDefinition(id: BufferId,
                                producingPipelineId: PipelineId,
                                applyPlanId: Id,
-                               val argumentSlotOffset: Int) extends RowBufferDefinition(id, producingPipelineId)
+                               val argumentSlotOffset: Int) extends RowBufferDefinition(id, producingPipelineId) {
+  val countersForThisBuffer = new ArrayBuffer[CounterDefinition]
+}
 
 case class CounterDefinition(reducingPlanId: Id, argumentSlotOffset: Int)
 
@@ -202,13 +204,13 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
   // HELPERS
 
   private def addCounterToBuffers(startBuffer: RowBufferDefinition,
-                                  endBuffer: RowBufferDefinition,
+                                  endBuffer: ArgumentBufferDefinition,
                                   counter: CounterDefinition): Unit = {
     var b = startBuffer
     while (b != endBuffer) {
       b.counters += counter
       b = pipelines(b.producingPipelineId.x).lhsRowBuffer
     }
-    b.counters += counter
+    endBuffer.countersForThisBuffer += counter
   }
 }

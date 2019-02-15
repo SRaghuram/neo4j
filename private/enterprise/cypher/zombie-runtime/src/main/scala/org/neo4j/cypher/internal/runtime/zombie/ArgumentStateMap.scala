@@ -38,6 +38,11 @@ trait ArgumentStateMap[T <: MorselAccumulator] {
   def consumeCompleted(): Iterator[T]
 
   /**
+    * Initiate state and counting for a new argument.
+    */
+  def initiate(argument: Long): Unit
+
+  /**
     * Increment the argument counter for `argument`.
     */
   def increment(argument: Long): Unit

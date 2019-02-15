@@ -70,13 +70,13 @@ class ConcurrentTracker extends Tracker {
 
   override def increment(): Long = {
     val newCount = count.incrementAndGet()
-    debug("incr TRACKER to %d".format(newCount))
+//    debug("incr TRACKER to %d".format(newCount))
     newCount
   }
 
   override def decrement(): Long = {
     val newCount = count.decrementAndGet()
-    debug("decr TRACKER to %d".format(newCount))
+//    debug("decr TRACKER to %d".format(newCount))
     if (newCount == 0)
       latch.countDown()
     if (newCount < 0)

@@ -61,7 +61,6 @@ class Worker(val workerId: Int,
         task.executeWorkUnit(resources, output)
 
         if (pipeline.output != null) {
-          output.resetToFirstRow()
           state.produceMorsel(pipeline.output.id, output)
         }
 

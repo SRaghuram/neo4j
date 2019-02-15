@@ -8,8 +8,11 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 /**
   * Basic buffer.
   */
-trait Buffer[T <: AnyRef] {
-  def hasData: Boolean
+trait Buffer[T <: AnyRef] extends Consumable[T] {
   def produce(t: T): Unit
+}
+
+trait Consumable[T <: AnyRef] {
+  def hasData: Boolean
   def consume(): T
 }

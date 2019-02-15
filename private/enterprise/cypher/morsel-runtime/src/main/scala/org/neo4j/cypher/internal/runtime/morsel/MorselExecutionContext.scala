@@ -68,7 +68,7 @@ class MorselExecutionContext(private val morsel: Morsel,
     val res = new mutable.ArrayBuffer[Long]()
     var previousId = -1L
     while (i < validRows) {
-      val currentId = getLongAt(i + offset)
+      val currentId = getLongAt(i, offset)
       if (currentId != previousId) {
         res += currentId
         previousId = currentId

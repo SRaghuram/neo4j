@@ -42,7 +42,13 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
       val counters = bufferDefinition.counters.map(_.reducingPlanId)
       bufferDefinition match {
         case x: ArgumentBufferDefinition =>
-          new MorselArgumentBuffer(x.argumentSlotOffset, tracker, counters, asms, stateFactory.newBuffer())
+          new MorselArgumentBuffer(x.argumentSlotOffset,
+                                   tracker,
+                                   x.countersForThisBuffer.map(_.reducingPlanId),
+                                   counters,
+                                   asms,
+                                   stateFactory.newBuffer())
+
         case _: RowBufferDefinition =>
           new MorselBuffer(tracker, counters, asms, stateFactory.newBuffer())
       }
@@ -54,8 +60,8 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
   override def produceMorsel(bufferId: BufferId,
                              output: MorselExecutionContext): Unit = buffers(bufferId.x).produce(output)
 
-  override def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselExecutionContext = {
-    acquireUnderPotentialLock(pipeline, buffers(bufferId.x))
+  override def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
+    consumeUnderPotentialLock(pipeline, buffers(bufferId.x))
   }
 
   def closeWorkUnit(task: PipelineTask): Unit = {
@@ -75,19 +81,19 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
   }
 
   override def continue(pipeline: ExecutablePipeline): PipelineTask = {
-    acquireUnderPotentialLock(pipeline, continuations(pipeline.id.x))
+    consumeUnderPotentialLock(pipeline, continuations(pipeline.id.x))
   }
 
-  private def acquireUnderPotentialLock[T <: AnyRef](pipeline: ExecutablePipeline, buffer: Buffer[T]): T = {
+  private def consumeUnderPotentialLock[T <: AnyRef](pipeline: ExecutablePipeline, consumable: Consumable[T]): T = {
     if (pipeline.serial) {
-      if (buffer.hasData && pipelineLocks(pipeline.id.x).tryLock()) {
-        val t = buffer.consume() // the data might have been consumed while we took the lock
+      if (consumable.hasData && pipelineLocks(pipeline.id.x).tryLock()) {
+        val t = consumable.consume() // the data might have been consumed while we took the lock
         if (t == null)
           pipelineLocks(pipeline.id.x).unlock()
         t
       } else null.asInstanceOf[T]
     } else
-      buffer.consume()
+      consumable.consume()
   }
 
   override def initialize(): Unit = {

@@ -21,11 +21,29 @@ class MorselBuffer(tracker: Tracker,
                    counters: Seq[Id],
                    argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[MorselExecutionContext]
-                  ) extends Buffer[MorselExecutionContext] {
+                  ) extends Consumable[MorselParallelizer] {
 
   override def hasData: Boolean = inner.hasData
 
-  override def produce(morsel: MorselExecutionContext): Unit = {
+  def produce(morsel: MorselExecutionContext): Unit = {
+    morsel.resetToFirstRow()
+    incrementCounters(morsel)
+    inner.produce(morsel)
+  }
+
+  override def consume(): MorselParallelizer = {
+    val morsel = inner.consume()
+    if (morsel == null)
+      null
+    else Parallelizer(morsel)
+  }
+
+  /**
+    * Decrement reference counters attached to `morsel`.
+    */
+  def close(morsel: MorselExecutionContext): Unit = decrementCounters(morsel)
+
+  private def incrementCounters(morsel: MorselExecutionContext): Unit = {
     for {
       reducePlanId <- counters
       asm = argumentStateMaps(reducePlanId)
@@ -33,22 +51,22 @@ class MorselBuffer(tracker: Tracker,
     } asm.increment(argumentId)
     tracker.increment()
     morsel.setCounters(counters)
-    inner.produce(morsel)
   }
 
-  override def consume(): MorselExecutionContext = {
-    inner.consume()
-  }
-
-  /**
-    * Decrement reference counters attached to `morsel`.
-    */
-  def close(morsel: MorselExecutionContext): Unit = {
+  private def decrementCounters(morsel: MorselExecutionContext): Unit = {
     for {
       reducePlanId <- morsel.getAndClearCounters()
       asm = argumentStateMaps(reducePlanId)
       argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
     } asm.decrement(argumentId)
     tracker.decrement()
+  }
+
+  case class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
+    override def parallelClone: MorselExecutionContext = {
+      val copy = original.shallowCopy()
+      incrementCounters(copy)
+      copy
+    }
   }
 }

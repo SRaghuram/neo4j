@@ -9,5 +9,6 @@ object Zombie {
   val DEBUG = false
   def debug(msg: => String): Unit =
     if (DEBUG)
-      print(msg + "\n")
+      println(msg)
+//      print(msg + "\n")
 }

@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.internal.kernel.api.{NodeCursor, Scan}
 
 class AllNodeScanOperator(val workIdentity: WorkIdentity,
@@ -19,12 +20,12 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
   override def init(queryContext: QueryContext,
                     state: QueryState,
-                    inputMorsel: MorselExecutionContext,
+                    inputMorsel: MorselParallelizer,
                     resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] = {
 
     if (state.singeThreaded) {
       // Single threaded scan
-      IndexedSeq(new SingleThreadedScanTask(inputMorsel))
+      IndexedSeq(new SingleThreadedScanTask(inputMorsel.original))
     } else {
       // Parallel scan
       val scan = queryContext.transactionalContext.dataRead.allNodesScan()
@@ -32,7 +33,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       for (i <- 0 until state.numberOfWorkers) {
         // Each task gets its own cursor which is reuses until it's done.
         val cursor = resources.cursorPools.nodeCursorPool.allocate()
-        val rowForTask = inputMorsel.shallowCopy()
+        val rowForTask = if (i == 0) inputMorsel.original else inputMorsel.parallelClone
         tasks(i) = new ParallelScanTask(rowForTask, scan, cursor, state.morselSize)
       }
       tasks

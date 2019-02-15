@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQue
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ArrayResultExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 /**
@@ -30,9 +31,9 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   override def init(context: QueryContext,
                     state: QueryState,
-                    inputMorsel: MorselExecutionContext,
+                    inputMorsel: MorselParallelizer,
                     resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
-    Array(new InputOTask(inputMorsel))
+    Array(new InputOTask(inputMorsel.original))
 
   override def init(context: QueryContext,
                     state: QueryState,

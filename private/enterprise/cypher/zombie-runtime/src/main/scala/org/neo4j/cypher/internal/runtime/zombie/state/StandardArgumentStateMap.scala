@@ -26,7 +26,7 @@ class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
       argumentSlotOffset,
       morsel,
       (argument, morselView) => {
-        val accumulator = arguments.getOrElseUpdate(argument, constructor())
+        val accumulator = arguments(argument)
         accumulator.update(morselView)
         decrement(argument)
       }
@@ -43,6 +43,10 @@ class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
 
     complete.foreach(argument => counters -= argument)
     complete.map(arguments).toIterator
+  }
+
+  override def initiate(argument: Long): Unit = {
+    arguments += argument -> constructor()
   }
 
   override def increment(argument: Long): Unit = {

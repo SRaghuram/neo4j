@@ -7,13 +7,13 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.ZombieRuntime
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_EDITION, LogicalQueryBuilder, RuntimeTestSuite}
-import org.neo4j.cypher.internal.v4_0.logical.plans.Descending
+import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, Descending}
 
 class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime) {
 
   test("should handle expand") {
     // given
-    val (nodes, rels) = circleGraph(10)
+    val (nodes, rels) = circleGraph(10000)
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -34,9 +34,27 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
     runtimeResult should beColumns("x", "y").withRows(expected)
   }
 
+  test("should sort") {
+    // given
+    val (nodes, rels) = circleGraph(10000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder()
+      .produceResults("x", "y")
+      .sort(Descending("y"))
+      .expandAll("(x)--(y)")
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x", "y").withRows(sortedDesc("y"))
+  }
+
   test("should apply-sort") {
     // given
-    val (nodes, rels) = circleGraph(10)
+    val (nodes, rels) = circleGraph(10000)
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -52,5 +70,29 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
 
     // then
     runtimeResult should beColumns("x", "y").withRows(groupedBy("x").desc("y"))
+  }
+
+  test("should apply-apply-sort") {
+    // given
+    val (nodes, rels) = circleGraph(1000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder()
+      .produceResults("x", "y", "z")
+      .apply()
+      .|.apply()
+      .|.|.sort(Ascending("z"))
+      .|.|.expandAll("(y)--(z)")
+      .|.|.argument()
+      .|.sort(Descending("y"))
+      .|.expandAll("(x)--(y)")
+      .|.argument()
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    runtimeResult should beColumns("x", "y", "z").withRows(groupedBy("x", "y").asc("z"))
   }
 }
