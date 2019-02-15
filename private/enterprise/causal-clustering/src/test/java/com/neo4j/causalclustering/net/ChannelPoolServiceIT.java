@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -108,9 +109,9 @@ class ChannelPoolServiceIT
             pooledChannel.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
         }
 
-        assertEquals( 1, poolEventsMonitor.created );
-        assertEquals( 1, poolEventsMonitor.acquired );
-        assertEquals( 2, poolEventsMonitor.released );
+        assertEquals( 1, poolEventsMonitor.created() );
+        assertEquals( 1, poolEventsMonitor.acquired() );
+        assertEquals( 2, poolEventsMonitor.released() );
     }
 
     @Test
@@ -129,9 +130,9 @@ class ChannelPoolServiceIT
 
         notReleased.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
 
-        assertEquals( 2, poolEventsMonitor.created );
-        assertEquals( 1, poolEventsMonitor.acquired );
-        assertEquals( 3, poolEventsMonitor.released );
+        assertEquals( 2, poolEventsMonitor.created() );
+        assertEquals( 1, poolEventsMonitor.acquired() );
+        assertEquals( 3, poolEventsMonitor.released() );
     }
 
     @Test
@@ -140,9 +141,9 @@ class ChannelPoolServiceIT
         assertThrows( ExecutionException.class, () -> pool.acquire( serverlessAddress ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT ) );
         assertThrows( ExecutionException.class, () -> pool.acquire( serverlessAddress ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT ) );
 
-        assertEquals( 2, poolEventsMonitor.created );
-        assertEquals( 0, poolEventsMonitor.acquired );
-        assertEquals( 0, poolEventsMonitor.released );
+        assertEquals( 2, poolEventsMonitor.created() );
+        assertEquals( 0, poolEventsMonitor.acquired() );
+        assertEquals( 0, poolEventsMonitor.released() );
     }
 
     @Test
@@ -275,27 +276,42 @@ class ChannelPoolServiceIT
 
     private class PoolEventsMonitor implements ChannelPoolHandler
     {
-        private int created;
-        private int acquired;
-        private int released;
+        private AtomicInteger created = new AtomicInteger();
+        private AtomicInteger acquired = new AtomicInteger();
+        private AtomicInteger released = new AtomicInteger();
 
         @Override
         public void channelReleased( Channel ch )
         {
-            released++;
+            released.getAndIncrement();
         }
 
         @Override
         public void channelAcquired( Channel ch )
         {
-            acquired++;
+            acquired.getAndIncrement();
         }
 
         @Override
         public void channelCreated( Channel ch )
         {
             ch.attr( ChannelAttribute.PROTOCOL_STACK ).set( CompletableFuture.completedFuture( protocolStackRaft ) );
-            created++;
+            created.getAndIncrement();
+        }
+
+        int created()
+        {
+            return created.get();
+        }
+
+        int acquired()
+        {
+            return acquired.get();
+        }
+
+        int released()
+        {
+            return released.get();
         }
     }
 }
