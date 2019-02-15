@@ -18,7 +18,7 @@ import io.netty.channel.pool.SimpleChannelPool;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -52,16 +52,16 @@ class SimpleChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddres
 
     private static class InstalledProtocolsTracker extends AbstractChannelPoolHandler
     {
-        private final Collection<Channel> createdChannels = new HashSet<>();
+        private final Collection<Channel> createdChannels = ConcurrentHashMap.newKeySet();
 
         Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols()
         {
-            return createdChannels.stream().filter( Channel::isOpen ).map( ch ->
-            {
-                InetSocketAddress address = (InetSocketAddress) ch.remoteAddress();
-                return Pair.of( new SocketAddress( address.getHostName(), address.getPort() ),
-                        ch.attr( ChannelAttribute.PROTOCOL_STACK ).get().getNow( null ) );
-            } ).filter( pair -> pair.other() != null );
+            return createdChannels.stream().filter( Channel::isActive ).map( ch ->
+                {
+                    InetSocketAddress address = (InetSocketAddress) ch.remoteAddress();
+                    return Pair.of( new SocketAddress( address.getHostName(), address.getPort() ),
+                            ch.attr( ChannelAttribute.PROTOCOL_STACK ).get().getNow( null ) );
+                } ).filter( pair -> pair.other() != null );
         }
 
         @Override
