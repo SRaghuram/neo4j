@@ -195,7 +195,7 @@ class ChannelPoolServiceIT
         ExecutionException executionException = assertThrows( ExecutionException.class, () -> pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT ) );
 
         IllegalStateException cause = (IllegalStateException) executionException.getCause();
-        assertEquals( "Channel pool service is not in a started state", cause.getMessage() );
+        assertEquals( "Channel pool service is not in a started state.", cause.getMessage() );
     }
 
     @Test
