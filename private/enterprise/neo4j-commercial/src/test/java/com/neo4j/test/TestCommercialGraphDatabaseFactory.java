@@ -83,6 +83,12 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
         {
             super( state, impermanent, DatabaseInfo.COMMERCIAL, CommercialEditionModule::new );
         }
+
+        @Override
+        protected File configureAndGetDatabaseRoot( File storeDir, Config config )
+        {
+            return storeDir;
+        }
     }
 }
 
