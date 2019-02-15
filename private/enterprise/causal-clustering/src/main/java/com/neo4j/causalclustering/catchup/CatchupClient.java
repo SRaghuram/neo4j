@@ -32,8 +32,8 @@ import org.neo4j.logging.Log;
 
 class CatchupClient implements VersionedCatchupClients
 {
-    private static final int DEFAULT_TIMEOUT = 1;
-    private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;
+    private static final int REQUEST_SENT_TIMEOUT = 1;
+    private static final TimeUnit REQUEST_SENT_TIME_UNIT = TimeUnit.MINUTES;
     private final String defaultDatabaseName;
     private final CompletableFuture<CatchupChannel> channelFuture;
     private final Duration inactivityTimeout;
@@ -142,7 +142,7 @@ class CatchupClient implements VersionedCatchupClients
         {
             return channel
                     .thenCompose( this::doRequest )
-                    .get( DEFAULT_TIMEOUT, DEFAULT_TIME_UNIT )
+                    .get( REQUEST_SENT_TIMEOUT, REQUEST_SENT_TIME_UNIT )
                     .get();
         }
 
