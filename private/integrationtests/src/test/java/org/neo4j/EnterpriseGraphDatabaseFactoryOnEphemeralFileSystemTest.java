@@ -10,7 +10,7 @@ import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.GraphDatabaseFactoryOnEphemeralFileSystemTest;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
-class EnterpriseGraphDatabaseFactoryOnEphemeralFilesystemTest extends GraphDatabaseFactoryOnEphemeralFileSystemTest
+class EnterpriseGraphDatabaseFactoryOnEphemeralFileSystemTest extends GraphDatabaseFactoryOnEphemeralFileSystemTest
 {
     @Override
     protected TestGraphDatabaseFactory createGraphDatabaseFactory()
