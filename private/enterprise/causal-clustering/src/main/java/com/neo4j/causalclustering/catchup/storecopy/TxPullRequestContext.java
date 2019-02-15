@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.identity.StoreId;
 import java.util.OptionalLong;
 
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
-import static org.neo4j.kernel.impl.transaction.log.TransactionIdStore.BASE_TX_ID;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 class TxPullRequestContext
 {
