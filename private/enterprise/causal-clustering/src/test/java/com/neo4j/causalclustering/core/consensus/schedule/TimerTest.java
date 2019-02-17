@@ -5,12 +5,14 @@
  */
 package com.neo4j.causalclustering.core.consensus.schedule;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -20,16 +22,17 @@ import static org.neo4j.logging.NullLog.getInstance;
 /**
  * Most aspects of the Timer are tested through the {@link TimerServiceTest}.
  */
-public class TimerTest
+@ExtendWith( LifeExtension.class )
+class TimerTest
 {
-    @Rule
-    public LifeRule lifeRule = new LifeRule( true );
+    @Inject
+    private LifeSupport life;
 
     @Test
-    public void shouldHandleConcurrentResetAndInvocationOfHandler()
+    void shouldHandleConcurrentResetAndInvocationOfHandler()
     {
         // given
-        JobScheduler scheduler = lifeRule.add( createScheduler() );
+        JobScheduler scheduler = life.add( createScheduler() );
 
         BinaryLatch invoked = new BinaryLatch();
         BinaryLatch done = new BinaryLatch();

@@ -11,38 +11,41 @@ import com.neo4j.causalclustering.core.consensus.outcome.AppendLogEntry;
 import com.neo4j.causalclustering.core.consensus.outcome.RaftLogCommand;
 import com.neo4j.causalclustering.core.consensus.outcome.TruncateLogCommand;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.consensus.membership.RaftMembershipState.Marshal;
 import static com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder.INSTANCE;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class RaftMembershipManagerTest
+@ExtendWith( LifeExtension.class )
+class RaftMembershipManagerTest
 {
     private final Log log = NullLog.getInstance();
 
-    @Rule
-    public LifeRule lifeRule = new LifeRule( true );
+    @Inject
+    private LifeSupport life;
 
     @Test
-    public void membershipManagerShouldUseLatestAppendedMembershipSetEntries()
+    void membershipManagerShouldUseLatestAppendedMembershipSetEntries()
             throws Exception
     {
         // given
         final InMemoryRaftLog log = new InMemoryRaftLog();
 
-        RaftMembershipManager membershipManager = lifeRule.add( raftMembershipManager( log ) );
+        RaftMembershipManager membershipManager = life.add( raftMembershipManager( log ) );
         // when
         membershipManager.processLog( 0, asList(
                 new AppendLogEntry( 0, new RaftLogEntry( 0, new RaftTestGroup( 1, 2, 3, 4 ) ) ),
@@ -54,13 +57,13 @@ public class RaftMembershipManagerTest
     }
 
     @Test
-    public void membershipManagerShouldRevertToOldMembershipSetAfterTruncationCausesLossOfAllAppendedMembershipSets()
+    void membershipManagerShouldRevertToOldMembershipSetAfterTruncationCausesLossOfAllAppendedMembershipSets()
             throws Exception
     {
         // given
         final InMemoryRaftLog raftLog = new InMemoryRaftLog();
 
-        RaftMembershipManager membershipManager = lifeRule.add( raftMembershipManager( raftLog ) );
+        RaftMembershipManager membershipManager = life.add( raftMembershipManager( raftLog ) );
 
         // when
         List<RaftLogCommand> logCommands = asList(
@@ -81,13 +84,13 @@ public class RaftMembershipManagerTest
     }
 
     @Test
-    public void membershipManagerShouldRevertToEarlierAppendedMembershipSetAfterTruncationCausesLossOfLastAppended()
+    void membershipManagerShouldRevertToEarlierAppendedMembershipSetAfterTruncationCausesLossOfLastAppended()
             throws Exception
     {
         // given
         final InMemoryRaftLog raftLog = new InMemoryRaftLog();
 
-        RaftMembershipManager membershipManager = lifeRule.add( raftMembershipManager( raftLog ) );
+        RaftMembershipManager membershipManager = life.add( raftMembershipManager( raftLog ) );
 
         // when
         List<RaftLogCommand> logCommands = asList(

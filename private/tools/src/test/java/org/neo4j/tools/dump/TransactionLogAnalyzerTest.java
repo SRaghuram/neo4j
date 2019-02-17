@@ -5,12 +5,10 @@
  */
 package org.neo4j.tools.dump;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.collection.PrimitiveLongArrayQueue;
 import org.neo4j.internal.recordstorage.Command;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
@@ -40,34 +38,37 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.StorageCommand;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
+import org.neo4j.test.extension.RandomExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
-import org.neo4j.test.rule.fs.FileSystemRule;
 import org.neo4j.tools.dump.TransactionLogAnalyzer.Monitor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.impl.transaction.log.entry.InvalidLogEntryHandler.STRICT;
 import static org.neo4j.storageengine.api.LogVersionRepository.BASE_TX_LOG_VERSION;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-public class TransactionLogAnalyzerTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class, RandomExtension.class} )
+class TransactionLogAnalyzerTest
 {
-    private final FileSystemRule<DefaultFileSystemAbstraction> fs = new DefaultFileSystemRule();
-    private final TestDirectory directory = TestDirectory.testDirectory( fs );
-    private final LifeRule life = new LifeRule( true );
-    private final RandomRule random = new RandomRule();
-    private final ExpectedException expectedException = ExpectedException.none();
-
-    @Rule
-    public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory ).around( life )
-            .around( expectedException );
-
+    @Inject
+    private TestDirectory directory;
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private LifeSupport life;
+    @Inject
+    private RandomRule random;
     private LogFile logFile;
     private FlushablePositionAwareChannel writer;
     private TransactionLogWriter transactionLogWriter;
@@ -76,8 +77,8 @@ public class TransactionLogAnalyzerTest
     private LogVersionRepository logVersionRepository;
     private LogFiles logFiles;
 
-    @Before
-    public void before() throws IOException
+    @BeforeEach
+    void before() throws IOException
     {
         lastCommittedTxId = new AtomicLong( BASE_TX_ID );
         logVersionRepository = new SimpleLogVersionRepository();
@@ -92,14 +93,14 @@ public class TransactionLogAnalyzerTest
         monitor = new VerifyingMonitor();
     }
 
-    @After
-    public void after()
+    @AfterEach
+    void after()
     {
         life.shutdown();
     }
 
     @Test
-    public void shouldSeeTransactionsInOneLogFile() throws Exception
+    void shouldSeeTransactionsInOneLogFile() throws Exception
     {
         // given
         writeTransactions( 5 );
@@ -113,16 +114,14 @@ public class TransactionLogAnalyzerTest
     }
 
     @Test
-    public void throwExceptionWithErrorMessageIfLogFilesNotFound() throws Exception
+    void throwExceptionWithErrorMessageIfLogFilesNotFound() throws Exception
     {
         File emptyDirectory = directory.directory( "empty" );
-        expectedException.expect( IllegalStateException.class );
-        expectedException.expectMessage( "not found." );
-        TransactionLogAnalyzer.analyze( fs, emptyDirectory, STRICT, monitor );
+        assertThrows( IllegalStateException.class, () -> TransactionLogAnalyzer.analyze( fs, emptyDirectory, STRICT, monitor ) );
     }
 
     @Test
-    public void shouldSeeCheckpointsInBetweenTransactionsInOneLogFile() throws Exception
+    void shouldSeeCheckpointsInBetweenTransactionsInOneLogFile() throws Exception
     {
         // given
         writeTransactions( 3 ); // txs 2, 3, 4
@@ -141,7 +140,7 @@ public class TransactionLogAnalyzerTest
     }
 
     @Test
-    public void shouldSeeLogFileTransitions() throws Exception
+    void shouldSeeLogFileTransitions() throws Exception
     {
         // given
         writeTransactions( 1 );
@@ -160,7 +159,7 @@ public class TransactionLogAnalyzerTest
     }
 
     @Test
-    public void shouldSeeLogFileTransitionsTransactionsAndCheckpointsInMultipleLogFiles() throws Exception
+    void shouldSeeLogFileTransitionsTransactionsAndCheckpointsInMultipleLogFiles() throws Exception
     {
         // given
         int expectedTransactions = 0;
@@ -198,7 +197,7 @@ public class TransactionLogAnalyzerTest
     }
 
     @Test
-    public void shouldAnalyzeSingleLogWhenExplicitlySelected() throws Exception
+    void shouldAnalyzeSingleLogWhenExplicitlySelected() throws Exception
     {
         // given
         writeTransactions( 2 ); // txs 2, 3
@@ -228,7 +227,7 @@ public class TransactionLogAnalyzerTest
 
     private static void assertTransaction( LogEntry[] transactionEntries, long expectedId )
     {
-        assertTrue( Arrays.toString( transactionEntries ), transactionEntries[0] instanceof LogEntryStart );
+        assertTrue( transactionEntries[0] instanceof LogEntryStart, Arrays.toString( transactionEntries ) );
         assertTrue( transactionEntries[1] instanceof LogEntryCommand );
         LogEntryCommand command = transactionEntries[1].as();
         assertEquals( expectedId, ((Command.NodeCommand)command.getCommand()).getKey() );
@@ -296,7 +295,7 @@ public class TransactionLogAnalyzerTest
         {
             checkpoints++;
             Long expected = expectedCheckpointsAt.dequeue();
-            assertNotNull( "Unexpected checkpoint", expected );
+            assertNotNull( expected, "Unexpected checkpoint" );
             assertEquals( expected.longValue(), nextExpectedTxId - 1 );
         }
     }

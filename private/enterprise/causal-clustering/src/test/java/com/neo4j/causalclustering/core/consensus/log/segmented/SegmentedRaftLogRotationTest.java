@@ -10,50 +10,53 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class SegmentedRaftLogRotationTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
+class SegmentedRaftLogRotationTest
 {
     private static final int ROTATE_AT_SIZE_IN_BYTES = 100;
 
-    private final TestDirectory testDirectory = TestDirectory.testDirectory();
-    private final LifeRule life = new LifeRule( true );
-    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( testDirectory )
-                                          .around( fileSystemRule ).around( life );
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private FileSystemAbstraction fileSystem;
+    @Inject
+    private LifeSupport life;
 
     @Test
-    public void shouldRotateOnAppendWhenRotateSizeIsReached() throws Exception
+    void shouldRotateOnAppendWhenRotateSizeIsReached() throws Exception
     {
         // When
         SegmentedRaftLog log = life.add( createRaftLog( ROTATE_AT_SIZE_IN_BYTES ) );
         log.append( new RaftLogEntry( 0, replicatedStringOfBytes( ROTATE_AT_SIZE_IN_BYTES ) ) );
 
         // Then
-        File[] files = fileSystemRule.get().listFiles( testDirectory.directory(), ( dir, name ) -> name.startsWith( "raft" ) );
+        File[] files = fileSystem.listFiles( testDirectory.directory(), ( dir, name ) -> name.startsWith( "raft" ) );
         assertEquals( 2, files.length );
     }
 
     @Test
-    public void shouldBeAbleToRecoverToLatestStateAfterRotation() throws Throwable
+    void shouldBeAbleToRecoverToLatestStateAfterRotation() throws Throwable
     {
         // Given
         int term = 0;
@@ -84,7 +87,7 @@ public class SegmentedRaftLogRotationTest
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.getDefaultValue(), logProvider )
                         .newInstance();
-        return new SegmentedRaftLog( fileSystemRule.get(), testDirectory.directory(), rotateAtSize,
+        return new SegmentedRaftLog( fileSystem, testDirectory.directory(), rotateAtSize,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, 0, Clocks.fakeClock(), new OnDemandJobScheduler(),
                 pruningStrategy );
     }

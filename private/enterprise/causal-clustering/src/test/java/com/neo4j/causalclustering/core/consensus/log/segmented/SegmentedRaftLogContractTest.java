@@ -8,40 +8,35 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogContractTest;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import org.junit.Rule;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
-
-import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.rule.LifeRule;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
 public class SegmentedRaftLogContractTest extends RaftLogContractTest
 {
-    private final EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
-    private final LifeRule life = new LifeRule( true );
-
-    @Rule
-    public RuleChain chain = RuleChain.outerRule( fsRule ).around( life );
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private LifeSupport life;
 
     @Override
     public RaftLog createRaftLog()
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
-        FileSystemAbstraction fileSystem = fsRule.get();
-        fileSystem.mkdir( directory );
-
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "1 entries", logProvider ).newInstance();
-        return life.add( new SegmentedRaftLog( fileSystem, directory, 1024, ignored -> new DummyRaftableContentSerializer(),
+        return life.add( new SegmentedRaftLog( testDirectory.getFileSystem(), testDirectory.directory(), 1024, ignored -> new DummyRaftableContentSerializer(),
                 logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy ) );
     }
 }

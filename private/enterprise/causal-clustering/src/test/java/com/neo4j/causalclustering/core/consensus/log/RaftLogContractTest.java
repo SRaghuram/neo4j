@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.consensus.log;
 
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -18,15 +18,16 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class RaftLogContractTest
 {
     public abstract RaftLog createRaftLog();
 
     @Test
-    public void shouldReportCorrectDefaultValuesOnEmptyLog() throws Exception
+    void shouldReportCorrectDefaultValuesOnEmptyLog() throws Exception
     {
         // given
         ReadableRaftLog log = createRaftLog();
@@ -39,7 +40,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldResetHighTermOnTruncate() throws Exception
+    void shouldResetHighTermOnTruncate() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -59,7 +60,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldAppendDataAndNotCommitImmediately() throws Exception
+    void shouldAppendDataAndNotCommitImmediately() throws Exception
     {
         RaftLog log = createRaftLog();
 
@@ -71,7 +72,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldTruncatePreviouslyAppendedEntries() throws Exception
+    void shouldTruncatePreviouslyAppendedEntries() throws Exception
     {
         RaftLog log = createRaftLog();
 
@@ -88,7 +89,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldReplacePreviouslyAppendedEntries() throws Exception
+    void shouldReplacePreviouslyAppendedEntries() throws Exception
     {
         RaftLog log = createRaftLog();
 
@@ -111,7 +112,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldHaveNoEffectWhenTruncatingNonExistingEntries() throws Exception
+    void shouldHaveNoEffectWhenTruncatingNonExistingEntries() throws Exception
     {
         // Given
         RaftLog log = createRaftLog();
@@ -121,17 +122,7 @@ public abstract class RaftLogContractTest
 
         log.append( logEntryA, logEntryB );
 
-        try
-        {
-            // When
-            log.truncate( 5 );
-            fail("Truncate at index after append index should never be attempted");
-        }
-        catch ( IllegalArgumentException e )
-        {
-            // Then
-            // an exception should be thrown
-        }
+        assertThrows( IllegalArgumentException.class, () -> log.truncate( 5 ) );
 
         // Then, assert that the state is unchanged
         assertThat( log.appendIndex(), is( 1L ) );
@@ -140,7 +131,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldLogDifferentContentTypes() throws Exception
+    void shouldLogDifferentContentTypes() throws Exception
     {
         RaftLog log = createRaftLog();
 
@@ -156,7 +147,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldRejectNonMonotonicTermsForEntries() throws Exception
+    void shouldRejectNonMonotonicTermsForEntries() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -164,21 +155,11 @@ public abstract class RaftLogContractTest
                 new RaftLogEntry( 0, valueOf( 1 ) ),
                 new RaftLogEntry( 1, valueOf( 2 ) ) );
 
-        try
-        {
-            // when the term has a lower value
-            log.append( new RaftLogEntry( 0, valueOf( 3 ) ) );
-            // then an exception should be thrown
-            fail( "Should have failed because of non-monotonic terms" );
-        }
-        catch ( IllegalStateException expected )
-        {
-            // expected
-        }
+        assertThrows( IllegalStateException.class, () -> log.append( new RaftLogEntry( 0, valueOf( 3 ) ) ) );
     }
 
     @Test
-    public void shouldAppendAndThenTruncateSubsequentEntry() throws Exception
+    void shouldAppendAndThenTruncateSubsequentEntry() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -195,7 +176,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldAppendAfterTruncating() throws Exception
+    void shouldAppendAfterTruncating() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -214,7 +195,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldEventuallyPrune() throws Exception
+    void shouldEventuallyPrune() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -249,7 +230,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldSkipAheadInEmptyLog() throws Exception
+    void shouldSkipAheadInEmptyLog() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -265,7 +246,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldSkipAheadInLogWithContent() throws Exception
+    void shouldSkipAheadInLogWithContent() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -288,7 +269,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldNotSkipInLogWithLaterContent() throws Exception
+    void shouldNotSkipInLogWithLaterContent() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -311,7 +292,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldBeAbleToAppendAfterSkipping() throws Exception
+    void shouldBeAbleToAppendAfterSkipping() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -329,20 +310,13 @@ public abstract class RaftLogContractTest
         assertEquals( newEntryIndex, log.appendIndex() );
         assertEquals( newEntryIndex, appendedIndex );
 
-        try
-        {
-            readLogEntry( log, skipIndex );
-            fail( "Should have thrown exception" );
-        }
-        catch ( IOException e )
-        {
-            // expected
-        }
+        assertThrows( IOException.class, () -> readLogEntry( log, skipIndex ) );
+
         assertThat( readLogEntry( log, newEntryIndex ).content(), is( valueOf( newContentValue ) ) );
     }
 
     @Test
-    public void pruneShouldNotChangePrevIndexAfterSkipping() throws Exception
+    void pruneShouldNotChangePrevIndexAfterSkipping() throws Exception
     {
         /**
          * Given the situation where a skip happens followed by a prune, you may have the prune operation incorrectly
@@ -376,7 +350,7 @@ public abstract class RaftLogContractTest
     }
 
     @Test
-    public void shouldProperlyReportExistenceOfIndexesAfterSkipping() throws Exception
+    void shouldProperlyReportExistenceOfIndexesAfterSkipping() throws Exception
     {
         // given
         RaftLog log = createRaftLog();
@@ -394,20 +368,13 @@ public abstract class RaftLogContractTest
         // all indexes starting from the next of the last appended to the skipped index (and forward) should not be present
         for ( long i = existingEntryIndex + 1; i < skipIndex + 2; i++ )
         {
-            try
-            {
-                readLogEntry( log, i );
-                fail( "Should have thrown exception at index " + i );
-            }
-            catch ( IOException e )
-            {
-                // expected
-            }
+            long index = i;
+            assertThrows( IOException.class, () -> readLogEntry( log, index ) );
         }
     }
 
     @Test
-    public void shouldThrowExceptionWhenReadingAnEntryWhichHasBeenPruned() throws Exception
+    void shouldThrowExceptionWhenReadingAnEntryWhichHasBeenPruned() throws Exception
     {
         RaftLog log = createRaftLog();
         log.append( new RaftLogEntry( 0, string( 1024 ) ) );

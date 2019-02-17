@@ -6,53 +6,57 @@
 package org.neo4j.metrics.output;
 
 import com.codahale.metrics.MetricRegistry;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.nio.file.Files;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLog;
 import org.neo4j.metrics.MetricsSettings;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-public class CsvOutputTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
+class CsvOutputTest
 {
-    private final LifeRule life = new LifeRule();
-    private final TestDirectory directory = TestDirectory.testDirectory();
-    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Inject
+    private LifeSupport life;
+    @Inject
+    private TestDirectory directory;
+    @Inject
+    private FileSystemAbstraction fileSystem;
     private final JobScheduler jobScheduler = new OnDemandJobScheduler();
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( directory ).around( fileSystemRule ).around( life );
 
     private ExtensionContext extensionContext;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         extensionContext = new DatabaseExtensionContext( directory.databaseLayout(), DatabaseInfo.UNKNOWN, new Dependencies() );
     }
 
     @Test
-    public void shouldHaveRelativeMetricsCsvPathBeRelativeToNeo4jHome() throws Exception
+    void shouldHaveRelativeMetricsCsvPathBeRelativeToNeo4jHome() throws Exception
     {
         // GIVEN
         File home = directory.absolutePath();
@@ -71,7 +75,7 @@ public class CsvOutputTest
     }
 
     @Test
-    public void shouldHaveAbsoluteMetricsCsvPathBeAbsolute() throws Exception
+    void shouldHaveAbsoluteMetricsCsvPathBeAbsolute() throws Exception
     {
         // GIVEN
         File outputFPath = Files.createTempDirectory( "output" ).toFile();
@@ -90,7 +94,7 @@ public class CsvOutputTest
 
     private CsvOutput createCsvOutput( Config config )
     {
-        return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), extensionContext, fileSystemRule, jobScheduler );
+        return new CsvOutput( config, new MetricRegistry(), NullLog.getInstance(), extensionContext, fileSystem, jobScheduler );
     }
 
     private Config config( String... keysValues )

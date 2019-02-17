@@ -18,10 +18,10 @@ import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCa
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.test.matchers.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -29,29 +29,32 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static com.neo4j.test.matchers.Matchers.hasMessage;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
 
+@ExtendWith( LifeExtension.class )
 public class RaftLogShipperTest
 {
-    @Rule
-    public LifeRule life = new LifeRule( true );
-    private JobScheduler scheduler = life.add( createScheduler() );
+    @Inject
+    public LifeSupport life;
 
+    private JobScheduler scheduler = createScheduler();
     private OutboundMessageCollector outbound;
     private RaftLog raftLog;
     private Clock clock;
@@ -73,9 +76,10 @@ public class RaftLogShipperTest
     private RaftLogEntry entry2 = new RaftLogEntry( 0, ReplicatedInteger.valueOf( 2000 ) );
     private RaftLogEntry entry3 = new RaftLogEntry( 0, ReplicatedString.valueOf( "chupchick" ) );
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
+        life.add( scheduler );
         // defaults
         outbound = new OutboundMessageCollector();
         raftLog = new InMemoryRaftLog();
@@ -91,8 +95,8 @@ public class RaftLogShipperTest
         when( logProvider.getLog( RaftLogShipper.class ) ).thenReturn( log );
     }
 
-    @After
-    public void teardown()
+    @AfterEach
+    void teardown()
     {
         if ( logShipper != null )
         {
@@ -109,7 +113,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldSendLastEntryOnStart() throws Throwable
+    void shouldSendLastEntryOnStart() throws Throwable
     {
         // given
         raftLog.append( entry0 );
@@ -126,7 +130,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldSendPreviousEntryOnMismatch() throws Throwable
+    void shouldSendPreviousEntryOnMismatch() throws Throwable
     {
         // given
         raftLog.append( entry0 );
@@ -145,7 +149,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldKeepSendingFirstEntryAfterSeveralMismatches() throws Throwable
+    void shouldKeepSendingFirstEntryAfterSeveralMismatches() throws Throwable
     {
         // given
         raftLog.append( entry0 );
@@ -166,7 +170,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldSendNextBatchAfterMatch() throws Throwable
+    void shouldSendNextBatchAfterMatch() throws Throwable
     {
         // given
         raftLog.append( entry0 );
@@ -186,7 +190,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldSendNewEntriesAfterMatchingLastEntry() throws Throwable
+    void shouldSendNewEntriesAfterMatchingLastEntry() throws Throwable
     {
         // given
         raftLog.append( entry0 );
@@ -207,7 +211,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldNotSendNewEntriesWhenNotMatched() throws Throwable
+    void shouldNotSendNewEntriesWhenNotMatched() throws Throwable
     {
         // given
         raftLog.append( entry0 );
@@ -223,7 +227,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldResendLastSentEntryOnFirstMismatch() throws Throwable
+    void shouldResendLastSentEntryOnFirstMismatch() throws Throwable
     {
         // given
         raftLog.append( entry0 );
@@ -247,7 +251,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldSendAllEntriesAndCatchupCompletely() throws Throwable
+    void shouldSendAllEntriesAndCatchupCompletely() throws Throwable
     {
         // given
         final int ENTRY_COUNT = catchupBatchSize * 10;
@@ -290,7 +294,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldSendMostRecentlyAvailableEntryIfPruningHappened() throws IOException
+    void shouldSendMostRecentlyAvailableEntryIfPruningHappened() throws IOException
     {
         //given
         raftLog.append( entry0 );
@@ -312,7 +316,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldSendLogCompactionInfoToFollowerOnMatchIfEntryHasBeenPrunedAway() throws Exception
+    void shouldSendLogCompactionInfoToFollowerOnMatchIfEntryHasBeenPrunedAway() throws Exception
     {
         //given
         raftLog.append( entry0 );
@@ -335,7 +339,7 @@ public class RaftLogShipperTest
     }
 
     @Test
-    public void shouldPickUpAfterMissedBatch() throws Exception
+    void shouldPickUpAfterMissedBatch() throws Exception
     {
         //given
         raftLog.append( entry0 );

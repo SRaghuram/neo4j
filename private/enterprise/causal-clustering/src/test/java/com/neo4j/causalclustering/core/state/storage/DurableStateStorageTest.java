@@ -6,9 +6,8 @@
 package com.neo4j.causalclustering.core.state.storage;
 
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,55 +15,53 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.ReadableChannel;
 import org.neo4j.storageengine.api.WritableChannel;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class DurableStateStorageTest
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class, LifeExtension.class} )
+class DurableStateStorageTest
 {
-    private final TestDirectory testDir = TestDirectory.testDirectory();
-    private final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
-    private final LifeRule lifeRule = new LifeRule( true );
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( lifeRule ).around( testDir );
+    @Inject
+    private FileSystemAbstraction fileSystem;
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private LifeSupport life;
 
     @Test
-    public void shouldMaintainStateGivenAnEmptyInitialStore() throws Exception
+    void shouldMaintainStateGivenAnEmptyInitialStore() throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
-
-        DurableStateStorage<AtomicInteger> storage = lifeRule.add( new DurableStateStorage<>( fsa, testDir.directory(),
+        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.directory(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), 100, NullLogProvider.getInstance() ) );
 
         // when
         storage.persistStoreData( new AtomicInteger( 99 ) );
 
         // then
-        assertEquals( 4, fsa.getFileSize( stateFileA() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
     }
 
     @Test
-    public void shouldRotateToOtherStoreFileAfterSufficientEntries() throws Exception
+    void shouldRotateToOtherStoreFileAfterSufficientEntries() throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
-
         final int numberOfEntriesBeforeRotation = 100;
-        DurableStateStorage<AtomicInteger> storage = lifeRule.add( new DurableStateStorage<>( fsa, testDir.directory(),
+        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.directory(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance() ) );
 
         // when
@@ -77,19 +74,16 @@ public class DurableStateStorageTest
         storage.persistStoreData( new AtomicInteger( 9999 ) );
 
         // then
-        assertEquals( 4, fsa.getFileSize( stateFileB() ) );
-        assertEquals( numberOfEntriesBeforeRotation * 4, fsa.getFileSize( stateFileA() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileB() ) );
+        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileA() ) );
     }
 
     @Test
-    public void shouldRotateBackToFirstStoreFileAfterSufficientEntries() throws Exception
+    void shouldRotateBackToFirstStoreFileAfterSufficientEntries() throws Exception
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
-
         final int numberOfEntriesBeforeRotation = 100;
-        DurableStateStorage<AtomicInteger> storage = lifeRule.add( new DurableStateStorage<>( fsa, testDir.directory(),
+        DurableStateStorage<AtomicInteger> storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.directory(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), numberOfEntriesBeforeRotation, NullLogProvider.getInstance() ) );
 
         // when
@@ -102,20 +96,17 @@ public class DurableStateStorageTest
         storage.persistStoreData( new AtomicInteger( 9999 ) );
 
         // then
-        assertEquals( 4, fsa.getFileSize( stateFileA() ) );
-        assertEquals( numberOfEntriesBeforeRotation * 4, fsa.getFileSize( stateFileB() ) );
+        assertEquals( 4, fileSystem.getFileSize( stateFileA() ) );
+        assertEquals( numberOfEntriesBeforeRotation * 4, fileSystem.getFileSize( stateFileB() ) );
     }
 
     @Test
-    public void shouldClearFileOnFirstUse() throws Throwable
+    void shouldClearFileOnFirstUse() throws Throwable
     {
         // given
-        EphemeralFileSystemAbstraction fsa = fileSystemRule.get();
-        fsa.mkdir( testDir.directory() );
-
         int rotationCount = 10;
 
-        DurableStateStorage<AtomicInteger> storage = new DurableStateStorage<>( fsa, testDir.directory(),
+        DurableStateStorage<AtomicInteger> storage = new DurableStateStorage<>( fileSystem, testDirectory.directory(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance() );
         int largestValueWritten = 0;
         try ( Lifespan lifespan = new Lifespan( storage ) )
@@ -127,7 +118,7 @@ public class DurableStateStorageTest
         }
 
         // now both files are full. We reopen, then write some more.
-        storage = lifeRule.add( new DurableStateStorage<>( fsa, testDir.directory(),
+        storage = life.add( new DurableStateStorage<>( fileSystem, testDirectory.directory(),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ), rotationCount, NullLogProvider.getInstance() ) );
 
         storage.persistStoreData( new AtomicInteger( largestValueWritten++ ) );
@@ -139,7 +130,7 @@ public class DurableStateStorageTest
          * should nevertheless be correct
          */
         ByteBuffer forReadingBackIn = ByteBuffer.allocate( 10_000 );
-        StoreChannel lastWrittenTo = fsa.open( stateFileA(), OpenMode.READ );
+        StoreChannel lastWrittenTo = fileSystem.open( stateFileA(), OpenMode.READ );
         lastWrittenTo.read( forReadingBackIn );
         forReadingBackIn.flip();
 
@@ -190,13 +181,13 @@ public class DurableStateStorageTest
 
     private File stateFileA()
     {
-        return new File( new File( testDir.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).directoryName() ),
+        return new File( new File( testDirectory.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).directoryName() ),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).baseName() + ".a" );
     }
 
     private File stateFileB()
     {
-        return new File( new File( testDir.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).directoryName() ),
+        return new File( new File( testDirectory.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).directoryName() ),
                 CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).baseName() + ".b" );
     }
 }

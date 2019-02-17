@@ -6,17 +6,19 @@
 package com.neo4j.causalclustering.helper;
 
 import org.hamcrest.Matchers;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.test.rule.LifeRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;
@@ -25,24 +27,25 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-public class RobustJobSchedulerWrapperTest
+@ExtendWith( LifeExtension.class )
+class RobustJobSchedulerWrapperTest
 {
     private final int DEFAULT_TIMEOUT_MS = 5000;
 
-    @Rule
-    public LifeRule schedulerLife = new LifeRule( true );
+    @Inject
+    private LifeSupport schedulerLife;
     private final JobScheduler actualScheduler = createInitialisedScheduler();
 
     private final Log log = mock( Log.class );
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         schedulerLife.add( actualScheduler );
     }
 
     @Test
-    public void oneOffJobWithExceptionShouldLog() throws Exception
+    void oneOffJobWithExceptionShouldLog() throws Exception
     {
         // given
         Log log = mock( Log.class );
@@ -65,7 +68,7 @@ public class RobustJobSchedulerWrapperTest
     }
 
     @Test
-    public void recurringJobWithExceptionShouldKeepRunning() throws Exception
+    void recurringJobWithExceptionShouldKeepRunning() throws Exception
     {
         // given
         RobustJobSchedulerWrapper robustWrapper = new RobustJobSchedulerWrapper( actualScheduler, log );
@@ -91,7 +94,7 @@ public class RobustJobSchedulerWrapperTest
     }
 
     @Test
-    public void recurringJobWithErrorShouldStop() throws Exception
+    void recurringJobWithErrorShouldStop() throws Exception
     {
         // given
         RobustJobSchedulerWrapper robustWrapper = new RobustJobSchedulerWrapper( actualScheduler, log );
