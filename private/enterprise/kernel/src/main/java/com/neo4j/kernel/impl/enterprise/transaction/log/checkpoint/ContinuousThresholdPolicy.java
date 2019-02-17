@@ -7,14 +7,12 @@ package com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint;
 
 import java.time.Clock;
 
-import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointThreshold;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointThresholdPolicy;
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruning;
 import org.neo4j.logging.LogProvider;
 
-@Service.Implementation( CheckPointThresholdPolicy.class )
 public class ContinuousThresholdPolicy extends CheckPointThresholdPolicy
 {
     public ContinuousThresholdPolicy()

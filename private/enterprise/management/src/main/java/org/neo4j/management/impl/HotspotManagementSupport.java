@@ -5,10 +5,6 @@
  */
 package org.neo4j.management.impl;
 
-import org.neo4j.helpers.Service;
-import org.neo4j.jmx.impl.ManagementSupport;
-
-@Service.Implementation( ManagementSupport.class )
 @Deprecated
 public class HotspotManagementSupport extends AdvancedManagementSupport
 {

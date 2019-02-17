@@ -5,7 +5,6 @@
  */
 package org.neo4j.kernel.impl.query;
 
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.ExtensionFactory;
@@ -18,7 +17,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
-@Service.Implementation( ExtensionFactory.class )
 public class QueryLoggerExtension extends ExtensionFactory<QueryLoggerExtension.Dependencies>
 {
     public interface Dependencies

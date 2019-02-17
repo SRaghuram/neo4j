@@ -12,9 +12,6 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import java.util.List;
 import java.util.Optional;
 
-import org.neo4j.helpers.Service;
-
-@Service.Implementation( UpstreamDatabaseSelectionStrategy.class )
 public class ConnectRandomlyToServerGroupStrategy extends UpstreamDatabaseSelectionStrategy
 {
     static final String IDENTITY = "connect-randomly-to-server-group";

@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
@@ -39,7 +38,6 @@ import static java.util.Collections.emptyList;
  *
  * An example would be to define different policies for different regions.
  */
-@Service.Implementation( LoadBalancingPlugin.class )
 public class ServerPoliciesPlugin implements LoadBalancingPlugin
 {
     public static final String PLUGIN_NAME = "server_policies";

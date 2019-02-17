@@ -13,9 +13,6 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import java.util.Optional;
 import java.util.Random;
 
-import org.neo4j.helpers.Service;
-
-@Service.Implementation( UpstreamDatabaseSelectionStrategy.class )
 public class ConnectToRandomCoreServerStrategy extends UpstreamDatabaseSelectionStrategy
 {
     public static final String IDENTITY = "connect-to-random-core-server";

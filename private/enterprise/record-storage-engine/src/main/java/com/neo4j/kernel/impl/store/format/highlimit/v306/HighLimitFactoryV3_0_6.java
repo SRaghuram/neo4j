@@ -5,10 +5,8 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit.v306;
 
-import org.neo4j.helpers.Service;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 
-@Service.Implementation( RecordFormats.Factory.class )
 public class HighLimitFactoryV3_0_6 extends RecordFormats.Factory
 {
     public HighLimitFactoryV3_0_6()

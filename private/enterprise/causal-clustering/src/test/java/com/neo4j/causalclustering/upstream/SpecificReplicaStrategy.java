@@ -10,9 +10,6 @@ import com.neo4j.causalclustering.readreplica.ReadReplica;
 
 import java.util.Optional;
 
-import org.neo4j.helpers.Service;
-
-@Service.Implementation( UpstreamDatabaseSelectionStrategy.class )
 public class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
 {
     // This because we need a stable point for config to inject into Service loader loaded classes

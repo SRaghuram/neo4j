@@ -15,7 +15,6 @@ import org.junit.Test;
 import java.util.Optional;
 
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -136,7 +135,6 @@ public class LoadBalancingPluginLoaderTest
         return String.format( "%s.%s.%s", CausalClusteringSettings.load_balancing_config.name(), pluginName, settingName );
     }
 
-    @Service.Implementation( LoadBalancingPlugin.class )
     public static class DummyLoadBalancingPlugin implements LoadBalancingPlugin
     {
         static final String DO_NOT_USE_THIS_CONFIG = "do_not_use";

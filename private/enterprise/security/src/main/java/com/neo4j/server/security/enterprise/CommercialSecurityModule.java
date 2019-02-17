@@ -82,7 +82,6 @@ import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSe
 import static java.lang.String.format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
-@Service.Implementation( SecurityModule.class )
 public class CommercialSecurityModule extends SecurityModule
 {
     public static final String ROLE_STORE_FILENAME = "roles";

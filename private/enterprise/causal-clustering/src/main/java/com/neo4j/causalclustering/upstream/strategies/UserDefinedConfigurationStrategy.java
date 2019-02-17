@@ -22,9 +22,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.helpers.Service;
-
-@Service.Implementation( UpstreamDatabaseSelectionStrategy.class )
 public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionStrategy
 {
 
