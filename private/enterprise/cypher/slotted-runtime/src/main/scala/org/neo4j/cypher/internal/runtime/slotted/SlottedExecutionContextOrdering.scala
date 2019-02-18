@@ -7,11 +7,11 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import java.util.Comparator
 
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
+import org.neo4j.values.{AnyValue, AnyValues}
 
-object ExecutionContextOrdering {
+object SlottedExecutionContextOrdering {
   def comparator(order: ColumnOrder): scala.Ordering[ExecutionContext] = order.slot match {
     case LongSlot(offset, true, _) =>
       new scala.Ordering[ExecutionContext] {
@@ -42,6 +42,26 @@ object ExecutionContextOrdering {
   }
 
   def asComparator(orderBy: Seq[ColumnOrder]): Comparator[ExecutionContext] =
-    orderBy.map(ExecutionContextOrdering.comparator)
+    orderBy.map(SlottedExecutionContextOrdering.comparator)
     .reduceLeft[Comparator[ExecutionContext]]((a, b) => a.thenComparing(b))
+}
+
+sealed trait ColumnOrder {
+  def slot: Slot
+
+  def compareValues(a: AnyValue, b: AnyValue): Int
+  def compareLongs(a: Long, b: Long): Int
+  def compareNullableLongs(a: Long, b: Long): Int
+}
+
+case class Ascending(slot: Slot) extends ColumnOrder {
+  override def compareValues(a: AnyValue, b: AnyValue): Int = AnyValues.COMPARATOR.compare(a, b)
+  override def compareLongs(a: Long, b: Long): Int = java.lang.Long.compare(a, b)
+  override def compareNullableLongs(a: Long, b: Long): Int = java.lang.Long.compareUnsigned(a, b)
+}
+
+case class Descending(slot: Slot) extends ColumnOrder {
+  override def compareValues(a: AnyValue, b: AnyValue): Int = AnyValues.COMPARATOR.compare(b, a)
+  override def compareLongs(a: Long, b: Long): Int = java.lang.Long.compare(b, a)
+  override def compareNullableLongs(a: Long, b: Long): Int = java.lang.Long.compareUnsigned(b, a)
 }

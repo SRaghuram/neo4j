@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, Top1Pipe, Top1WithTiesPipe, TopNPipe}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport._
-import org.neo4j.cypher.internal.runtime.slotted.{ExecutionContextOrdering, SlottedExecutionContext}
+import org.neo4j.cypher.internal.runtime.slotted.{Ascending, ColumnOrder, Descending, SlottedExecutionContext, SlottedExecutionContextOrdering}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.cypher.internal.v4_0.util.symbols._
@@ -224,7 +224,7 @@ object TopSlottedPipeTestSupport {
   }
 
   private def createTopPipe(source: Pipe, orderBy: List[ColumnOrder], limit: Long, withTies: Boolean) = {
-    val comparator = ExecutionContextOrdering.asComparator(orderBy)
+    val comparator = SlottedExecutionContextOrdering.asComparator(orderBy)
     if (withTies) {
       assert(limit == 1)
       Top1WithTiesPipe(source, comparator)()

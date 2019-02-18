@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Aggreg
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{Predicate, True}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{KeyTokenResolver, expressions => commandExpressions}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, ColumnOrder => _, _}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
@@ -25,7 +25,7 @@ import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressi
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans._
+import org.neo4j.cypher.internal.v4_0.logical.plans.{AbstractSelectOrSemiApply, AbstractSemiApply, Aggregation, AllNodesScan, AntiConditionalApply, Apply, Argument, AssertSameNode, CartesianProduct, ConditionalApply, Create, DeleteExpression, DeleteNode, DeletePath, DeleteRelationship, DetachDeleteExpression, DetachDeleteNode, DetachDeletePath, Distinct, DropResult, Eager, EmptyResult, ErrorPlan, Expand, ExpandAll, ExpandInto, ForeachApply, IncludeTies, Limit, LockNodes, LogicalPlan, MergeCreateNode, MergeCreateRelationship, NodeByLabelScan, NodeHashJoin, NodeIndexScan, NodeIndexSeek, NodeUniqueIndexSeek, Optional, OptionalExpand, ProduceResult, Projection, RemoveLabels, RollUpApply, Selection, SetLabels, SetNodePropertiesFromMap, SetNodeProperty, SetProperty, SetRelationshipPropertiesFromMap, SetRelationshipProperty, Skip, Sort, Top, Union, UnwindCollection, ValueHashJoin, VarExpand}
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -255,16 +255,16 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Top(_, sortItems, _) if sortItems.isEmpty => source
 
       case Top(_, sortItems, SignedDecimalIntegerLiteral("1")) =>
-        Top1Pipe(source, ExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
+        Top1Pipe(source, SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
       case Top(_, sortItems, limit) =>
         TopNPipe(source, convertExpressions(limit),
-                 ExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
+                 SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
       case Limit(_, count, IncludeTies) =>
         (source, count) match {
-          case (SortSlottedPipe(inner, sortDescription, _), SignedDecimalIntegerLiteral("1")) =>
-            Top1WithTiesPipe(inner, ExecutionContextOrdering.asComparator(sortDescription))(id = id)
+          case (SortPipe(inner, comparator), SignedDecimalIntegerLiteral("1")) =>
+            Top1WithTiesPipe(inner, comparator)(id = id)
 
           case _ => throw new InternalException("Including ties is only supported for very specific plans")
         }
@@ -277,7 +277,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         fallback.onOneChildPlan(plan, source)
 
       case Sort(_, sortItems) =>
-        SortSlottedPipe(source, sortItems.map(translateColumnOrder(slots, _)), slots)(id = id)
+        SortPipe(source, SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
       case Eager(_) =>
         EagerSlottedPipe(source, slots)(id)
@@ -315,16 +315,16 @@ class SlottedPipeMapper(fallback: PipeMapper,
       slots.get(k).forall(_.isInstanceOf[RefSlot])
   }
 
-  private def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): pipes.ColumnOrder = s match {
+  private def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): ColumnOrder = s match {
     case plans.Ascending(name) =>
       slots.get(name) match {
-        case Some(slot) => pipes.Ascending(slot)
+        case Some(slot) => Ascending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the slot configuration")
       }
 
     case plans.Descending(name) =>
       slots.get(name) match {
-        case Some(slot) => pipes.Descending(slot)
+        case Some(slot) => Descending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the slot configuration")
       }
   }
@@ -665,15 +665,15 @@ object SlottedPipeMapper {
 
   }
 
-  def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): pipes.ColumnOrder = s match {
+  def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): ColumnOrder = s match {
     case plans.Ascending(name) =>
       slots.get(name) match {
-        case Some(slot) => pipes.Ascending(slot)
+        case Some(slot) => Ascending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the pipeline information")
       }
     case plans.Descending(name) =>
       slots.get(name) match {
-        case Some(slot) => pipes.Descending(slot)
+        case Some(slot) => Descending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the pipeline information")
       }
   }

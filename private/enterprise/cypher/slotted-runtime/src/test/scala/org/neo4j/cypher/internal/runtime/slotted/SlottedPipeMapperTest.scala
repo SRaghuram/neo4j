@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, com
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, RelationshipProperty, SlottedCommandProjection, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans.{UnwindCollection, _}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{CountStar, LabelToken, SemanticDirection}
 import org.neo4j.cypher.internal.v4_0.util.LabelId
@@ -714,17 +714,17 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     val expectedSlots1 = SlotConfiguration.empty
     val xSlot = RefSlot(0, nullable = true, CTAny)
-    val expectedSlots2 =
-      SlotConfiguration(numberOfLongs = 0, numberOfReferences = 1, slots = Map("x" -> xSlot))
+    val expectedSlots2 = SlotConfiguration(numberOfLongs = 0, numberOfReferences = 1, slots = Map("x" -> xSlot))
 
-    pipe should equal(
-      SortSlottedPipe(orderBy = Seq(pipes.Ascending(xSlot)), slots = expectedSlots2,
-        source = UnwindSlottedPipe(collection = commands.expressions.ListLiteral(commands.expressions.Literal(1),
-          commands.expressions.Literal(2), commands.expressions.Literal(3)), offset = 0, slots = expectedSlots2,
-          source = ArgumentSlottedPipe(expectedSlots1, Size.zero)()
-        )()
-      )()
-    )
+    // We have to use mathPattern to ignore equality on the comparator, which does not implement equals in a sensible way.
+    pipe should matchPattern {
+      case SortPipe(
+      UnwindSlottedPipe(
+      ArgumentSlottedPipe(`expectedSlots1`, Size.zero),
+      commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2), commands.expressions.Literal(3)), 0, `expectedSlots2`
+        ), _) =>
+
+    }
   }
 
   test("should have correct order for grouping columns") {

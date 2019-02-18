@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
-import org.neo4j.cypher.internal.runtime.slotted.pipes.ColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext}
 import org.neo4j.values.AnyValue
 
