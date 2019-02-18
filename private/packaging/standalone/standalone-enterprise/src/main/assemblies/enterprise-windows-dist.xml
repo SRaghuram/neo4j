@@ -95,7 +95,6 @@
       </includes>
       <excludes>
         <exclude>*:pom:*</exclude>
-        <exclude>com.neo4j:neo4j-enterprise:jar</exclude>
       </excludes>
     </dependencySet>
     <dependencySet>
