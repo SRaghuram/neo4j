@@ -58,7 +58,7 @@ class MemoryPerformanceAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   test("should unwind a long range without going OOM") {
     val expectedResult = 20000000
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"UNWIND range(1, $expectedResult) AS i RETURN count(*) AS c")
+    val result = executeWith(Configs.InterpretedAndSlotted, s"UNWIND range(1, $expectedResult) AS i RETURN count(*) AS c", executeExpectedFailures = false)
     result.columnAs[Long]("c").toList should equal(List(expectedResult))
   }
 

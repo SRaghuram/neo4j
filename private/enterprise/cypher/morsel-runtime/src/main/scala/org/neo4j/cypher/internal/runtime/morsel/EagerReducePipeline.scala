@@ -87,6 +87,8 @@ class EagerReducePipeline(start: EagerReduceOperator,
                               resources: QueryResources,
                               from: AbstractPipelineTask): IndexedSeq[Task[QueryResources]] = {
       eagerData.add(inputMorsel)
+      if (eagerData.size() > 10000)
+        throw new RuntimeException("It's leaking in everywhere! Abort ship!")
       IndexedSeq.empty
     }
 
