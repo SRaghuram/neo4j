@@ -98,9 +98,7 @@ public class PropertyConstraintValidationIT
                     node.setProperty( "property3", "3" );
                     transaction.success();
                 }
-            }, ConstraintViolationException.class,
-                    anyOf( containsString( "Node(1) with label `multiNodeKeyLabel` must have the properties `property2, property3`" ),
-                            containsString( "Node(1) with label `multiNodeKeyLabel` must have the properties `property3, property4`" ) ) );
+            }, ConstraintViolationException.class, containsString( "Node(1) with label `multiNodeKeyLabel` must have the properties `property3, property4`" ) );
         }
     }
 

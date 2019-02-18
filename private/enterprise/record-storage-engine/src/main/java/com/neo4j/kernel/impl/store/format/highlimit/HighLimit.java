@@ -100,7 +100,7 @@ public class HighLimit extends BaseRecordFormats
     }
 
     @Override
-    public RecordFormat<SchemaRecord> schemaRecord()
+    public RecordFormat<SchemaRecord> schema()
     {
         return new SchemaRecordFormat();
     }
