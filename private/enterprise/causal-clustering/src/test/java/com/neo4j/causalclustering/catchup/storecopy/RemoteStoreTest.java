@@ -48,6 +48,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 class RemoteStoreTest
 {
@@ -233,7 +234,7 @@ class RemoteStoreTest
     {
         RemoteStore remoteStore =
                 new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null, storeCopyClient, txPullClient, factory( writer ),
-                        config, new Monitors(), any() );
+                        config, new Monitors(), selectStorageEngine( Service.load( StorageEngineFactory.class ) ) );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
     }
