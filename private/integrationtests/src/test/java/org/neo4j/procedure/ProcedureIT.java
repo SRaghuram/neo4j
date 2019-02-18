@@ -5,7 +5,7 @@
  */
 package org.neo4j.procedure;
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,7 +91,7 @@ public class ProcedureIT
         exceptionsInProcedure.clear();
         new JarBuilder().createJarFor( plugins.createFile( "myProcedures.jar" ), ClassWithProcedures.class );
         new JarBuilder().createJarFor( plugins.createFile( "myFunctions.jar" ), ClassWithFunctions.class );
-        db = new TestEnterpriseGraphDatabaseFactory().newImpermanentDatabaseBuilder().setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
+        db = new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder().setConfig( plugin_dir, plugins.directory().getAbsolutePath() ).setConfig(
                 GraphDatabaseSettings.record_id_batch_size, "1" ).newGraphDatabase();
         onCloseCalled = new boolean[2];
     }

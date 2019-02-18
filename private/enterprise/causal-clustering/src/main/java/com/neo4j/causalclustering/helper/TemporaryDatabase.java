@@ -5,28 +5,13 @@
  */
 package com.neo4j.causalclustering.helper;
 
-import com.neo4j.graphdb.factory.ExternallyManagedPageCache;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-
-import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.logging.NullLogProvider;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.ignore_store_lock;
-import static org.neo4j.kernel.configuration.Settings.FALSE;
-import static org.neo4j.kernel.configuration.Settings.TRUE;
 
 public class TemporaryDatabase implements AutoCloseable
 {
     private final GraphDatabaseService graphDatabaseService;
 
-    private TemporaryDatabase( GraphDatabaseService graphDatabaseService )
+    public TemporaryDatabase( GraphDatabaseService graphDatabaseService )
     {
         this.graphDatabaseService = graphDatabaseService;
     }
@@ -34,49 +19,6 @@ public class TemporaryDatabase implements AutoCloseable
     public GraphDatabaseService graphDatabaseService()
     {
         return graphDatabaseService;
-    }
-
-    public static class Factory
-    {
-        private final PageCache pageCache;
-
-        public Factory( PageCache pageCache )
-        {
-            this.pageCache = pageCache;
-        }
-
-        public TemporaryDatabase startTemporaryDatabase( File databaseDirectory, Map<String,String> params )
-        {
-            ExternallyManagedPageCache.GraphDatabaseFactoryWithPageCacheFactory factory =
-                    ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
-
-            GraphDatabaseService db = factory
-                    .setUserLogProvider( NullLogProvider.getInstance() ) // TODO: Could be good to save the user log somewhere.
-                    .newEmbeddedDatabaseBuilder( databaseDirectory )
-                    .setConfig( augmentParams( params, databaseDirectory ) )
-                    .newGraphDatabase();
-
-            return new TemporaryDatabase( db );
-        }
-
-        private Map<String,String> augmentParams( Map<String,String> params, File databaseDirectory )
-        {
-            Map<String,String> augmentedParams = new HashMap<>( params );
-
-            /* This adhoc quiescing of services is unfortunate and fragile, but there really aren't any better options currently. */
-            augmentedParams.putIfAbsent( GraphDatabaseSettings.pagecache_warmup_enabled.name(), FALSE );
-            augmentedParams.putIfAbsent( OnlineBackupSettings.online_backup_enabled.name(), FALSE );
-            augmentedParams.putIfAbsent( "metrics.enabled", Settings.FALSE );
-            augmentedParams.putIfAbsent( "metrics.csv.enabled", Settings.FALSE );
-
-            /* Touching the store is allowed during bootstrapping. */
-            augmentedParams.putIfAbsent( ignore_store_lock.name(), TRUE );
-
-            augmentedParams.putIfAbsent( GraphDatabaseSettings.store_internal_log_path.name(),
-                    new File( databaseDirectory, "bootstrap.debug.log" ).getAbsolutePath() );
-
-            return augmentedParams;
-        }
     }
 
     @Override

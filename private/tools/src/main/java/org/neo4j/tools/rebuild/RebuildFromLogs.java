@@ -5,7 +5,7 @@
  */
 package org.neo4j.tools.rebuild;
 
-import com.neo4j.graphdb.factory.ExternallyManagedPageCache;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -21,7 +21,6 @@ import org.neo4j.consistency.report.ConsistencySummaryStatistics;
 import org.neo4j.consistency.statistics.Statistics;
 import org.neo4j.consistency.store.DirectStoreAccess;
 import org.neo4j.cursor.IOCursor;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.Args;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
@@ -267,7 +266,7 @@ class RebuildFromLogs
 
     static GraphDatabaseAPI startTemporaryDb( File targetDirectory, PageCache pageCache )
     {
-        GraphDatabaseFactory factory = ExternallyManagedPageCache.graphDatabaseFactoryWithPageCache( pageCache );
-        return (GraphDatabaseAPI) factory.newEmbeddedDatabaseBuilder( targetDirectory ).newGraphDatabase();
+        return (GraphDatabaseAPI) new CommercialGraphDatabaseFactory().setPageCache( pageCache ).newEmbeddedDatabaseBuilder(
+                targetDirectory ).newGraphDatabase();
     }
 }

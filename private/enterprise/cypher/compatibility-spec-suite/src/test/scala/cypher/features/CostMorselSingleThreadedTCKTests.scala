@@ -7,10 +7,10 @@ package cypher.features
 
 import java.util
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
-import org.junit.jupiter.api.{Disabled, DynamicTest, Test, TestFactory}
+import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
 class CostMorselSingleThreadedTCKTests extends EnterpriseBaseTCKTests {
 
@@ -18,12 +18,12 @@ class CostMorselSingleThreadedTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runCostMorselSingleThreaded(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    createTests(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialGraphDatabaseFactory())
   }
 
   @Disabled
   def generateBlacklistCostMorsel(): Unit = {
-    printComputedBlacklist(scenarios, CostMorselSingleThreadedTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    printComputedBlacklist(scenarios, CostMorselSingleThreadedTestConfig, new TestCommercialGraphDatabaseFactory())
     fail("Do not forget to add @Disabled to this method")
   }
 }

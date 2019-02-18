@@ -8,12 +8,13 @@ package com.neo4j.causalclustering.core.state;
 import com.neo4j.causalclustering.common.IdFilesDeleter;
 import com.neo4j.causalclustering.common.LocalDatabase;
 import com.neo4j.causalclustering.common.StubLocalDatabaseService;
+import com.neo4j.causalclustering.core.CommercialTemporaryDatabaseFactory;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.machines.tx.LastCommittedIndexFinder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.helper.TemporaryDatabase;
+import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.helpers.ClassicNeo4jDatabase;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +81,7 @@ class CoreBootstrapperIT
     private final LogProvider logProvider = NullLogProvider.getInstance();
     private final Monitors monitors = new Monitors();
 
-    private TemporaryDatabase.Factory temporaryDatabaseFactory;
+    private TemporaryDatabaseFactory temporaryDatabaseFactory;
 
     private File neo4jHome;
     private File dataDirectory;
@@ -92,7 +93,7 @@ class CoreBootstrapperIT
     @BeforeEach
     void setup()
     {
-        this.temporaryDatabaseFactory = new TemporaryDatabase.Factory( pageCache );
+        this.temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory();
         this.neo4jHome = testDirectory.directory();
         this.dataDirectory = new File( neo4jHome, DEFAULT_DATA_DIR_NAME );
         this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );

@@ -10,7 +10,7 @@ import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
 import java.nio.file.Files
 import java.util.Collections.emptyMap
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
@@ -767,7 +767,7 @@ class LoadCsvAcceptanceTest
   }
 
   private def acceptanceTestDatabaseBuilder = {
-    new TestEnterpriseGraphDatabaseFactory().newImpermanentDatabaseBuilder(acceptanceDbFolder)
+    new TestCommercialGraphDatabaseFactory().newImpermanentDatabaseBuilder(acceptanceDbFolder)
   }
 
   private def acceptanceDbFolder = {

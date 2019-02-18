@@ -8,7 +8,7 @@ package cypher.features
 import java.util
 import java.util.Collections
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
@@ -22,7 +22,7 @@ class CostMorselTCKTests extends EnterpriseBaseTCKTests {
     if (runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
-      createTests(scenarios, CostMorselTestConfig, new TestEnterpriseGraphDatabaseFactory())
+      createTests(scenarios, CostMorselTestConfig, new TestCommercialGraphDatabaseFactory())
     }
   }
 
@@ -34,7 +34,7 @@ class CostMorselTCKTests extends EnterpriseBaseTCKTests {
 
   @Disabled
   def generateBlacklistCostMorsel(): Unit = {
-    printComputedBlacklist(scenarios, CostMorselTestConfig, new TestEnterpriseGraphDatabaseFactory())
+    printComputedBlacklist(scenarios, CostMorselTestConfig, new TestCommercialGraphDatabaseFactory())
     fail("Do not forget to add @Disabled to this method")
   }
 }

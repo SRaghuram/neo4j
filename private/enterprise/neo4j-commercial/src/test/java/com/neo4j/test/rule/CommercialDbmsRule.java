@@ -13,6 +13,11 @@ import org.neo4j.test.rule.TestDirectory;
 
 public class CommercialDbmsRule extends EmbeddedDbmsRule
 {
+    public CommercialDbmsRule()
+    {
+        super();
+    }
+
     public CommercialDbmsRule( TestDirectory testDirectory )
     {
         super( testDirectory );

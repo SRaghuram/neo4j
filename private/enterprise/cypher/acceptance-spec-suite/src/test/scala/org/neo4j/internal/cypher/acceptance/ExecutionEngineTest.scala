@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.io.{File, PrintWriter}
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
@@ -933,9 +933,9 @@ order by a.COL1""".format(a, b))
 
   private def readOnlyEngine()(run: ExecutionEngine => Unit): Unit = {
     FileUtils.deleteRecursively(new File("target/readonly"))
-    val old = new TestEnterpriseGraphDatabaseFactory().newEmbeddedDatabase( new File( "target/readonly" ) )
+    val old = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( "target/readonly" ) )
     old.shutdown()
-    val db = new TestEnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( new File( "target/readonly" ) )
+    val db = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( new File( "target/readonly" ) )
       .setConfig( GraphDatabaseSettings.read_only, "true" )
       .newGraphDatabase()
     try {

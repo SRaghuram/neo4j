@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.helper.TemporaryDatabase;
+import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.ClusterBinder;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.DatabaseName;
@@ -46,7 +46,8 @@ public class ClusteringModule
     private final ClusterBinder clusterBinder;
 
     public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, GlobalModule globalModule,
-            CoreStateStorageService coreStateStorage, DatabaseService databaseService, Function<String,DatabaseInitializer> databaseInitializers )
+            CoreStateStorageService coreStateStorage, DatabaseService databaseService, TemporaryDatabaseFactory temporaryDatabaseFactory,
+            Function<String,DatabaseInitializer> databaseInitializers )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
         Config globalConfig = globalModule.getGlobalConfig();
@@ -66,9 +67,7 @@ public class ClusteringModule
         globalDependencies.satisfyDependency( topologyService ); // for tests
 
         PageCache pageCache = globalModule.getPageCache();
-        TemporaryDatabase.Factory tempDatabaseFactory = new TemporaryDatabase.Factory( pageCache );
-
-        CoreBootstrapper coreBootstrapper = new CoreBootstrapper( databaseService, tempDatabaseFactory, databaseInitializers, fileSystem,
+        CoreBootstrapper coreBootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers, fileSystem,
                 globalConfig, logProvider, pageCache, globalModule.getStorageEngineFactory() );
 
         SimpleStorage<ClusterId> clusterIdStorage;

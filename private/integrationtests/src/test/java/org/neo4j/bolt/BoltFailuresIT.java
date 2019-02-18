@@ -6,7 +6,7 @@
 package org.neo4j.bolt;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -194,9 +194,9 @@ public class BoltFailuresIT
                 .newGraphDatabase();
     }
 
-    private static TestEnterpriseGraphDatabaseFactory newDbFactory()
+    private static TestCommercialGraphDatabaseFactory newDbFactory()
     {
-        return new TestEnterpriseGraphDatabaseFactory();
+        return new TestCommercialGraphDatabaseFactory();
     }
 
     private static Driver createDriver( int port )

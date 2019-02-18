@@ -5,7 +5,7 @@
  */
 package org.neo4j.kernel.impl.index.schema;
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Test;
 
 import org.neo4j.exceptions.KernelException;
@@ -19,7 +19,7 @@ public class IndexCreateEnterpriseIT extends IndexCreateIT
     @Override
     protected TestGraphDatabaseFactory createGraphDatabaseFactory()
     {
-        return new TestEnterpriseGraphDatabaseFactory();
+        return new TestCommercialGraphDatabaseFactory();
     }
 
     @Test

@@ -6,7 +6,7 @@
 package org.neo4j.kernel.builtinprocs;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.rule.EnterpriseDbmsRule;
+import com.neo4j.test.rule.CommercialDbmsRule;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
 public class ProcedureResourcesIT
 {
     @Rule
-    public DbmsRule db = new EnterpriseDbmsRule()
+    public DbmsRule db = new CommercialDbmsRule()
             .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
 
     private final String indexDefinition = ":Label(prop)";

@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import cypher.features.Phase
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
@@ -54,7 +54,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
     )
   }
 
-  override protected def createDatabaseFactory(): TestGraphDatabaseFactory = new TestEnterpriseGraphDatabaseFactory()
+  override protected def createDatabaseFactory(): TestGraphDatabaseFactory = new TestCommercialGraphDatabaseFactory()
 }
 
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport {

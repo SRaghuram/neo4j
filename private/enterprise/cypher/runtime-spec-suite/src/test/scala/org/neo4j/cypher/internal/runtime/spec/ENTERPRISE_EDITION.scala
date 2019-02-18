@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory
+import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{CypherConfiguration, EnterpriseRuntimeContext, RuntimeEnvironment}
@@ -16,7 +16,7 @@ import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 
 object ENTERPRISE_EDITION extends Edition[EnterpriseRuntimeContext](
-  new TestEnterpriseGraphDatabaseFactory()
+  new TestCommercialGraphDatabaseFactory()
 ) {
   override def runtimeContextCreator(resolver: DependencyResolver): TracingRuntimeContextCreator = {
     val runtimeConfig = CypherConfiguration.fromConfig(Config.defaults()).toCypherRuntimeConfiguration

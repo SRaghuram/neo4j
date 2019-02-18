@@ -15,32 +15,49 @@ import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
-import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
+import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
+import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
+import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
+import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
+import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.time.Clock;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
+import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
+import org.neo4j.graphdb.factory.module.id.IdContextFactory;
+import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.internal.kernel.api.Kernel;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.ConnectorPortRegister;
+import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
+import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.proc.GlobalProcedures;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
@@ -50,19 +67,62 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.format;
+import static org.neo4j.function.Predicates.any;
 
-public class CommercialEditionModule extends EnterpriseEditionModule
+public class CommercialEditionModule extends CommunityEditionModule
 {
     private final GlobalTransactionStats globalTransactionStats;
 
     public CommercialEditionModule( GlobalModule globalModule )
     {
         super( globalModule );
+        ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
         globalTransactionStats = new GlobalTransactionStats();
         initGlobalGuard( globalModule.getGlobalClock(), globalModule.getLogService() );
         initBackupIfNeeded( globalModule, globalModule.getGlobalConfig() );
     }
 
+    @Override
+    public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
+    {
+        globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
+        globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
+    }
+
+    @Override
+    protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
+    {
+        return IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
+                globalModule.getJobScheduler() )
+                .withFileSystem( fileSystem )
+                .build();
+    }
+
+    @Override
+    protected Predicate<String> fileWatcherFileNameFilter()
+    {
+        return any( fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ), filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
+    }
+
+    @Override
+    protected ConstraintSemantics createSchemaRuleVerifier()
+    {
+        return new EnterpriseConstraintSemantics();
+    }
+
+    @Override
+    protected NetworkConnectionTracker createConnectionTracker()
+    {
+        return new DefaultNetworkConnectionTracker();
+    }
+
+    @Override
+    protected StatementLocksFactory createStatementLocksFactory( Locks locks, Config config, LogService logService )
+    {
+        return new StatementLocksFactorySelector( locks, config, logService ).select();
+    }
+
+    @Override
     protected Function<String,TokenHolders> createTokenHolderProvider( GlobalModule platform )
     {
         Config globalConfig = platform.getGlobalConfig();
@@ -142,7 +202,7 @@ public class CommercialEditionModule extends EnterpriseEditionModule
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
         {
             SecurityModule securityModule = setupSecurityModule( globalModule, editionModule,
-                    globalModule.getLogService().getUserLog( EnterpriseEditionModule.class ), globalProcedures, "commercial-security-module" );
+                    globalModule.getLogService().getUserLog( CommercialEditionModule.class ), globalProcedures, "commercial-security-module" );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }

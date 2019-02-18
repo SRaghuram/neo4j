@@ -6,7 +6,7 @@
 package org.neo4j.index;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -53,7 +53,7 @@ public class StartOnExistingDbWithIndexIT
 
     private GraphDatabaseService getDatabase( LogProvider logProvider )
     {
-        return new TestEnterpriseGraphDatabaseFactory()
+        return new TestCommercialGraphDatabaseFactory()
                 .setInternalLogProvider( logProvider )
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )

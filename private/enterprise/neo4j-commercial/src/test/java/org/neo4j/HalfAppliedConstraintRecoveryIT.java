@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -150,7 +150,7 @@ public class HalfAppliedConstraintRecoveryIT
         }
 
         // WHEN
-        db = (GraphDatabaseAPI) new TestEnterpriseGraphDatabaseFactory().setFileSystem( crashSnapshot ).newImpermanentDatabase();
+        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot ).newImpermanentDatabase();
         try
         {
             applier.accept( db, transactions );
@@ -247,7 +247,7 @@ public class HalfAppliedConstraintRecoveryIT
 
         // WHEN
         {
-            GraphDatabaseAPI db = (GraphDatabaseAPI) new TestEnterpriseGraphDatabaseFactory().setFileSystem( crashSnapshot )
+            GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot )
                     .newImpermanentDatabase();
             try
             {
@@ -281,7 +281,7 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        return (GraphDatabaseAPI) new TestEnterpriseGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors )
+        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors )
                 .newImpermanentDatabase();
     }
 
@@ -312,7 +312,7 @@ public class HalfAppliedConstraintRecoveryIT
             throws Exception
     {
         // A separate db altogether
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestEnterpriseGraphDatabaseFactory().newImpermanentDatabase();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newImpermanentDatabase();
         try
         {
             LogicalTransactionStore txStore =

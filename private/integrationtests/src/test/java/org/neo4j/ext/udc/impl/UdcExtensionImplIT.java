@@ -5,7 +5,7 @@
  */
 package org.neo4j.ext.udc.impl;
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.http.HttpHost;
@@ -471,7 +471,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
     private GraphDatabaseService createDatabase( File storeDir, Map<String,String> config )
     {
-        TestEnterpriseGraphDatabaseFactory factory = new TestEnterpriseGraphDatabaseFactory();
+        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         GraphDatabaseBuilder graphDatabaseBuilder =
                 (storeDir != null) ? factory.newImpermanentDatabaseBuilder( storeDir )
                                    : factory.newImpermanentDatabaseBuilder();

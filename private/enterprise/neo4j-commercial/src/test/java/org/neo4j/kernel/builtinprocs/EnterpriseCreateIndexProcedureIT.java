@@ -5,7 +5,7 @@
  */
 package org.neo4j.kernel.builtinprocs;
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -417,6 +417,6 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
     @Override
     protected TestGraphDatabaseFactory createGraphDatabaseFactory()
     {
-        return new TestEnterpriseGraphDatabaseFactory();
+        return new TestCommercialGraphDatabaseFactory();
     }
 }

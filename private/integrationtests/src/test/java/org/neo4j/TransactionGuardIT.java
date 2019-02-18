@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
+import com.neo4j.commercial.edition.CommercialEditionModule;
 import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
@@ -611,7 +611,7 @@ public class TransactionGuardIT
         }
     }
 
-    private class TransactionGuardTerminationEditionModule extends EnterpriseEditionModule
+    private class TransactionGuardTerminationEditionModule extends CommercialEditionModule
     {
         TransactionGuardTerminationEditionModule( GlobalModule globalModule )
         {

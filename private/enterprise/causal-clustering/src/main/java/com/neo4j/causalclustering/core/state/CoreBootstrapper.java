@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncodin
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.helper.TemporaryDatabase;
+import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.io.File;
@@ -109,7 +110,7 @@ public class CoreBootstrapper
     private static final long FIRST_TERM = 0L;
 
     private final DatabaseService databaseService;
-    private final TemporaryDatabase.Factory tempDatabaseFactory;
+    private final TemporaryDatabaseFactory tempDatabaseFactory;
     private final Function<String,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
@@ -122,7 +123,7 @@ public class CoreBootstrapper
     private final Config activeDatabaseFilteredConfig;
     private final Config systemDatabaseFilteredConfig;
 
-    CoreBootstrapper( DatabaseService databaseService, TemporaryDatabase.Factory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
+    CoreBootstrapper( DatabaseService databaseService, TemporaryDatabaseFactory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
             FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache, StorageEngineFactory storageEngineFactory )
     {
         this.databaseService = databaseService;
@@ -278,7 +279,7 @@ public class CoreBootstrapper
      */
     private void initializeDatabase( File databaseDirectory, Map<String,String> params, DatabaseInitializer databaseInitializer )
     {
-        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( databaseDirectory, params ) )
+        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( pageCache, databaseDirectory, params ) )
         {
             databaseInitializer.initialize( temporaryDatabase.graphDatabaseService() );
         }

@@ -5,31 +5,15 @@
  */
 package com.neo4j.graphdb.factory;
 
-import com.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
 import java.util.List;
 import java.util.Optional;
 
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
-import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
-import org.neo4j.kernel.impl.factory.DatabaseInfo;
-import org.neo4j.kernel.monitoring.tracing.Tracers;
-import org.neo4j.logging.internal.LogService;
-import org.neo4j.scheduler.JobScheduler;
 
 /**
  * A PageCache implementation that delegates to another page cache, whose life cycle is managed elsewhere.
@@ -98,51 +82,5 @@ public class ExternallyManagedPageCache implements PageCache
     public void reportEvents()
     {
         delegate.reportEvents();
-    }
-
-    /**
-     * Create a GraphDatabaseFactory that will build EmbeddedGraphDatabase instances that all use the given page cache.
-     */
-    public static GraphDatabaseFactoryWithPageCacheFactory graphDatabaseFactoryWithPageCache(
-            final PageCache delegatePageCache )
-    {
-        return new GraphDatabaseFactoryWithPageCacheFactory( delegatePageCache );
-    }
-
-    public static class GraphDatabaseFactoryWithPageCacheFactory extends GraphDatabaseFactory
-    {
-        private final PageCache delegatePageCache;
-
-        GraphDatabaseFactoryWithPageCacheFactory( PageCache delegatePageCache )
-        {
-            this.delegatePageCache = delegatePageCache;
-        }
-
-        @Override
-        protected GraphDatabaseService newDatabase( File storeDir, Config config,
-                ExternalDependencies dependencies )
-        {
-            File absoluteStoreDir = storeDir.getAbsoluteFile();
-            File databasesRoot = absoluteStoreDir.getParentFile();
-            config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
-            config.augment( GraphDatabaseSettings.active_database, absoluteStoreDir.getName() );
-            config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-            return new GraphDatabaseFacadeFactory( DatabaseInfo.COMMERCIAL, EnterpriseEditionModule::new )
-            {
-                @Override
-                protected GlobalModule createGlobalPlatform( File storeDir, Config config, ExternalDependencies dependencies )
-                {
-                    return new GlobalModule( storeDir, config, databaseInfo, dependencies )
-                    {
-                        @Override
-                        protected PageCache createPageCache( FileSystemAbstraction fileSystem, Config config,
-                                LogService logging, Tracers tracers, VersionContextSupplier versionContextSupplier, JobScheduler jobScheduler )
-                        {
-                            return new ExternallyManagedPageCache( delegatePageCache );
-                        }
-                    };
-                }
-            }.newFacade( databasesRoot, config, dependencies );
-        }
     }
 }

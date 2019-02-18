@@ -39,6 +39,7 @@ import com.neo4j.causalclustering.error_handling.PanicEventHandlers;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
+import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.BetterMessageLogger;
 import com.neo4j.causalclustering.logging.MessageLogger;
@@ -446,7 +447,9 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
         }
 
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storage, databaseService,
+        TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory();
+
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storage, databaseService, temporaryDatabaseFactory,
                 dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
     }
 
