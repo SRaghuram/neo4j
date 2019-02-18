@@ -54,7 +54,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-enterprise</artifactId>
+            <artifactId>neo4j-commercial</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -65,6 +65,11 @@
         <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-tools</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-commercial-record-storage-engine</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -129,7 +134,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.5</version>
-            </plugin>                        
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
