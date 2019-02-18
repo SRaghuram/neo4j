@@ -151,10 +151,8 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   private val primitiveNodeSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
   private val primitiveRelationshipSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
 
-  def emptyWithCachedProperties(): SlotConfiguration = {
-    val config = new SlotConfiguration(mutable.Map.empty, mutable.Map.empty, 0, 0)
-    cachedProperties.foreach { case (key, _) => config.newCachedProperty(key) }
-    config
+  def addCachedPropertiesOf(other: SlotConfiguration): Unit = {
+    other.cachedProperties.foreach { case (key, _) => this.newCachedProperty(key) }
   }
 
   def size() = SlotConfiguration.Size(numberOfLongs, numberOfReferences)

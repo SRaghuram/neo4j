@@ -101,7 +101,7 @@ object SlotAllocation {
           val argument = if (argumentStack.isEmpty) NO_ARGUMENT()
                          else argumentStack.top
           val slotsIncludingExpressions = allocateExpressions(current, nullable, sourceSlots, allocations, arguments)(semanticTable)
-          val result = allocate(current, nullable, slotsIncludingExpressions, recordArgument(_, argument))
+          val result = allocate(current, nullable, slotsIncludingExpressions, recordArgument(_, argument), argument.slotConfiguration)
           allocations.set(current.id, result)
           resultStack.push(result)
 
@@ -300,16 +300,19 @@ object SlotAllocation {
   private def allocate(lp: LogicalPlan,
                        nullable: Boolean,
                        source: SlotConfiguration,
-                       recordArgument: LogicalPlan => Unit): SlotConfiguration =
+                       recordArgument: LogicalPlan => Unit,
+                       argumentSlots: SlotConfiguration): SlotConfiguration =
     lp match {
 
       case Distinct(_, groupingExpressions) =>
-        val result = source.emptyWithCachedProperties()
+        val result = argumentSlots.copy()
+        result.addCachedPropertiesOf(source)
         addGroupingMap(groupingExpressions, source, result)
         result
 
       case Aggregation(_, groupingExpressions, aggregationExpressions) =>
-        val result = SlotConfiguration.empty
+        val result = argumentSlots.copy()
+        result.addCachedPropertiesOf(source)
         addGroupingMap(groupingExpressions, source, result)
 
         aggregationExpressions foreach {

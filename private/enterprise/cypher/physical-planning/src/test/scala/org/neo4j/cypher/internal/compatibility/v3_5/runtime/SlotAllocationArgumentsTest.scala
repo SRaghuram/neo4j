@@ -12,7 +12,9 @@ import org.neo4j.cypher.internal.v3_5.logical.plans._
 import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v3_5.expressions._
 import org.neo4j.cypher.internal.v3_5.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.v3_5.util.symbols._
 
+//noinspection NameBooleanParameters
 class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
 
   private val x = "x"
@@ -220,20 +222,82 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
     arguments(optional.id) should equal(Size(1, 0))
   }
 
+  test("Distinct should retain argument slots") {
+    // given
+    //     applyRight
+    //    /        \
+    // +1 long   distinct
+    // +2 ref       |
+    //    |       +2 long
+    //  leaf1     +2 ref
+    //              |
+    //            leaf2
+
+    val leaf1 = leaf()
+    val lhs = pipe(leaf1, 1, 2, "lhsLong", "lhsRef")
+    val leaf2 = leaf()
+    val rhs = pipe(leaf2, 2, 2, "rhsLong", "rhsRef")
+    val distinct = Distinct(rhs, Map("rhsLong0" -> varFor("rhsLong0"), "rhsRef1" -> varFor("rhsRef1")))
+    val plan = applyRight(lhs, distinct)
+
+    // when
+    val slots = SlotAllocation.allocateSlots(plan, semanticTable).slotConfigurations
+
+    // then
+    slots(distinct.id) should be(SlotConfiguration.empty
+                                   .newLong("lhsLong0", false, CTNode)
+                                   .newLong("rhsLong0", false, CTNode)
+                                   .newReference("lhsRef0", true, CTAny)
+                                   .newReference("lhsRef1", true, CTAny)
+                                   .newReference("rhsRef1", true, CTAny)
+    )
+  }
+
+  test("Aggregation should retain argument slots") {
+    // given
+    //     applyRight
+    //    /        \
+    // +1 long   aggregation
+    // +2 ref       |
+    //    |       +2 long
+    //  leaf1     +2 ref
+    //              |
+    //            leaf2
+
+    val leaf1 = leaf()
+    val lhs = pipe(leaf1, 1, 2, "lhsLong", "lhsRef")
+    val leaf2 = leaf()
+    val rhs = pipe(leaf2, 2, 2, "rhsLong", "rhsRef")
+    val aggregation = Aggregation(rhs, Map("rhsLong0" -> varFor("rhsLong0")), Map("rhsRef1" -> varFor("rhsRef1")))
+    val plan = applyRight(lhs, aggregation)
+
+    // when
+    val slots = SlotAllocation.allocateSlots(plan, semanticTable).slotConfigurations
+
+    // then
+    slots(aggregation.id) should be(SlotConfiguration.empty
+                                   .newLong("lhsLong0", false, CTNode)
+                                   .newLong("rhsLong0", false, CTNode)
+                                   .newReference("lhsRef0", true, CTAny)
+                                   .newReference("lhsRef1", true, CTAny)
+                                   .newReference("rhsRef1", true, CTAny)
+    )
+  }
+
   private def leaf() = Argument(Set.empty)
   private def applyRight(lhs:LogicalPlan, rhs:LogicalPlan) = Apply(lhs, rhs)
   private def applyLeft(lhs:LogicalPlan, rhs:LogicalPlan) = SemiApply(lhs, rhs)
   private def break(source:LogicalPlan) = Eager(source)
-  private def pipe(source:LogicalPlan, nLongs:Int, nRefs:Int) = {
+  private def pipe(source:LogicalPlan, nLongs:Int, nRefs:Int, longPrefix: String = "long", refPrefix: String = "ref") = {
     var curr: LogicalPlan =
       Create(
         source,
-        (0 until nLongs).map(i => CreateNode("long"+i, Nil, None)),
+        (0 until nLongs).map(i => CreateNode(longPrefix+i, Nil, None)),
         Nil
       )
 
     for ( i <- 0 until nRefs ) {
-      curr = UnwindCollection(curr, "ref"+i, listOf(literalInt(1)))
+      curr = UnwindCollection(curr, refPrefix+i, listOf(literalInt(1)))
     }
     curr
   }
