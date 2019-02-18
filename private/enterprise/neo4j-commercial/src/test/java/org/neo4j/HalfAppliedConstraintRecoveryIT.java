@@ -38,7 +38,6 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.Barrier;
-import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.rule.OtherThreadRule;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
@@ -270,7 +269,7 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors )
+        return (GraphDatabaseAPI) new TestEnterpriseGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors )
                 .newImpermanentDatabase();
     }
 
@@ -297,7 +296,7 @@ public class HalfAppliedConstraintRecoveryIT
         } );
     }
 
-    private static List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator )
+    private List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator )
             throws Exception
     {
         // A separate db altogether
