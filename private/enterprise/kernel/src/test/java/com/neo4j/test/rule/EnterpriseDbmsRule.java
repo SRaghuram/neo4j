@@ -11,6 +11,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.test.rule.EmbeddedDbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 
+//TODO:
 public class EnterpriseDbmsRule extends EmbeddedDbmsRule
 {
     public EnterpriseDbmsRule()

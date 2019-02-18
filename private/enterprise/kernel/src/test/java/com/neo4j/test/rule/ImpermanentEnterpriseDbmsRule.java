@@ -10,6 +10,7 @@ import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.test.rule.ImpermanentDbmsRule;
 
+//TODO:remove
 public class ImpermanentEnterpriseDbmsRule extends ImpermanentDbmsRule
 {
     @Override

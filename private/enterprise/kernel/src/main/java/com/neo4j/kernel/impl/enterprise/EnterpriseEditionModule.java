@@ -42,6 +42,7 @@ import org.neo4j.logging.internal.LogService;
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
  * that are specific to the Enterprise edition, without HA
  */
+//:TODO remove
 public class EnterpriseEditionModule extends CommunityEditionModule
 {
     @Override

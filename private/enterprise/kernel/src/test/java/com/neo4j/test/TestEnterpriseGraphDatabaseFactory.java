@@ -25,6 +25,7 @@ import org.neo4j.test.TestGraphDatabaseFactoryState;
 /**
  * Factory for test graph database.
  */
+//TODO:remove
 public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
 {
     public TestEnterpriseGraphDatabaseFactory()
