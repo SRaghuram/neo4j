@@ -11,8 +11,8 @@ import com.neo4j.causalclustering.catchup.storecopy.TemporaryStoreDirectory;
 import java.io.File;
 import java.io.PrintStream;
 
+import org.neo4j.common.Service;
 import org.neo4j.consistency.ConsistencyCheckService;
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -40,7 +40,7 @@ final class ConsistencyHelper
         {
             fs.copyRecursively( databaseLayout.databaseDirectory(), tempStore.storeDir() );
 
-            new CopiedStoreRecovery( pageCache, fs, selectStorageEngine( Service.load( StorageEngineFactory.class ) ) )
+            new CopiedStoreRecovery( pageCache, fs, selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ) )
                     .recoverCopiedStore( Config.defaults(), tempStore.databaseLayout() );
 
             ConsistencyCheckService.Result result = runConsistencyCheckTool(

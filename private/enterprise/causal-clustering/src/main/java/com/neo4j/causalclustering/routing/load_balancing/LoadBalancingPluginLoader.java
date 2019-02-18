@@ -13,8 +13,8 @@ import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShuffling
 import java.util.HashSet;
 import java.util.Set;
 
+import org.neo4j.common.Service;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -52,7 +52,7 @@ public class LoadBalancingPluginLoader
     private static LoadBalancingPlugin findPlugin( Config config ) throws InvalidSettingException
     {
         Set<String> availableOptions = new HashSet<>();
-        Iterable<LoadBalancingPlugin> allImplementationsOnClasspath = Service.load( LoadBalancingPlugin.class );
+        Iterable<LoadBalancingPlugin> allImplementationsOnClasspath = Service.loadAll( LoadBalancingPlugin.class );
 
         String configuredName = config.get( CausalClusteringSettings.load_balancing_plugin );
 

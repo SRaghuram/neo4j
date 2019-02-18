@@ -23,8 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.neo4j.common.Service;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.configuration.Config;
@@ -234,7 +234,7 @@ class RemoteStoreTest
     {
         RemoteStore remoteStore =
                 new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null, storeCopyClient, txPullClient, factory( writer ),
-                        config, new Monitors(), selectStorageEngine( Service.load( StorageEngineFactory.class ) ) );
+                        config, new Monitors(), selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ) );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
     }

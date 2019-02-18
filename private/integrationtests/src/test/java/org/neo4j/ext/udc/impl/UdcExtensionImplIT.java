@@ -30,6 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import org.neo4j.common.Service;
 import org.neo4j.ext.udc.UdcConstants;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -66,7 +67,7 @@ import static org.neo4j.ext.udc.UdcConstants.VERSION;
  * <p>
  * The UdcExtensionImpl is loaded when a new
  * GraphDatabase is instantiated, as part of
- * {@link org.neo4j.helpers.Service#load}.
+ * {@link Service#loadOrFail}.
  */
 public class UdcExtensionImplIT extends LocalServerTestBase
 {

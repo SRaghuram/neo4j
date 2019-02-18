@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.common.Service;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -50,7 +50,7 @@ class CommitStateHelperTest
                 txLogLocation.getAbsolutePath() ).build();
         File storeDir = testDirectory.storeDir();
         databaseLayout = DatabaseLayout.of( storeDir, LayoutConfig.of( config ), config.get( GraphDatabaseSettings.active_database ) );
-        commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine( Service.load( StorageEngineFactory.class ) ) );
+        commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ) );
     }
 
     @Test

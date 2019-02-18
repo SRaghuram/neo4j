@@ -14,7 +14,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
-import org.neo4j.helpers.Service;
+import org.neo4j.common.Service;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -43,7 +43,7 @@ public class UpstreamDatabaseStrategiesLoader implements Iterable<UpstreamDataba
     @Override
     public Iterator<UpstreamDatabaseSelectionStrategy> iterator()
     {
-        Iterable<UpstreamDatabaseSelectionStrategy> allImplementationsOnClasspath = Service.load( UpstreamDatabaseSelectionStrategy.class );
+        Iterable<UpstreamDatabaseSelectionStrategy> allImplementationsOnClasspath = Service.loadAll( UpstreamDatabaseSelectionStrategy.class );
 
         LinkedHashSet<UpstreamDatabaseSelectionStrategy> candidates = new LinkedHashSet<>();
         for ( String key : config.get( CausalClusteringSettings.upstream_selection_strategy ) )

@@ -15,9 +15,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.commandline.admin.OutsideWorld;
+import org.neo4j.common.Service;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.helpers.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -90,7 +90,7 @@ class BackupStrategyWrapperTest
         when( logProvider.getLog( (Class) any() ) ).thenReturn( log );
 
         backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache,
-                NullLogProvider.getInstance(), logProvider, selectStorageEngine( Service.load( StorageEngineFactory.class ) ) ) );
+                NullLogProvider.getInstance(), logProvider, selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ) ) );
     }
 
     @Test

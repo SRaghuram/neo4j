@@ -45,13 +45,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
 import org.neo4j.backup.clusteringsupport.ClusterHelper;
+import org.neo4j.common.Service;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.helpers.Service;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -100,7 +100,7 @@ public class OnlineBackupCommandCcIT
     private static final String DATABASE_NAME = "defaultport";
     private File backupDatabaseDir;
     private File backupStoreDir;
-    private final StorageEngineFactory storageEngineFactory = selectStorageEngine( Service.load( StorageEngineFactory.class ) );
+    private final StorageEngineFactory storageEngineFactory = selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
 
     @Parameter
     public String recordFormat;

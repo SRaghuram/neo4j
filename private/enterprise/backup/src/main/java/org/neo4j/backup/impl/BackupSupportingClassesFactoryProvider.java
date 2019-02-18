@@ -8,7 +8,7 @@ package org.neo4j.backup.impl;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.neo4j.helpers.Service;
+import org.neo4j.common.Service;
 
 import static java.util.Comparator.comparingInt;
 
@@ -38,7 +38,7 @@ public class BackupSupportingClassesFactoryProvider extends Service
     public static Stream<BackupSupportingClassesFactoryProvider> getProvidersByPriority()
     {
         Stream<BackupSupportingClassesFactoryProvider> providers = StreamSupport.stream(
-                load( BackupSupportingClassesFactoryProvider.class ).spliterator(), false );
+                loadAll( BackupSupportingClassesFactoryProvider.class ).spliterator(), false );
         // Inject the default provider into the stream, so it participates in sorting by priority.
         providers = Stream.concat( providers, Stream.of( new BackupSupportingClassesFactoryProvider() ) );
         return providers.sorted( comparingInt( BackupSupportingClassesFactoryProvider::getPriority ).reversed() );

@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import org.neo4j.helpers.Service;
+import org.neo4j.common.Service;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -41,7 +41,7 @@ public abstract class UpstreamDatabaseSelectionStrategy extends Service
         this.myself = myself;
         this.dbName = config.get( CausalClusteringSettings.database );
 
-        readableName = StreamSupport.stream( getKeys().spliterator(), false ).collect( Collectors.joining( ", " ) );
+        readableName = String.join( ", ", getKeys() );
         log.info( "Using upstream selection strategy " + readableName );
         init();
     }

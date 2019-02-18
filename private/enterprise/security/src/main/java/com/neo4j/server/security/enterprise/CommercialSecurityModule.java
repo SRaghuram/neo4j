@@ -44,6 +44,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
+import org.neo4j.common.Service;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
@@ -54,7 +55,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
-import org.neo4j.helpers.Service;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.security.AuthManager;
@@ -457,7 +457,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.pluginAuthentication && securityConfig.pluginAuthorization )
         {
-            for ( AuthPlugin plugin : Service.load( AuthPlugin.class ) )
+            for ( AuthPlugin plugin : Service.loadAll( AuthPlugin.class ) )
             {
                 PluginRealm pluginRealm =
                         new PluginRealm( plugin, config, securityLog, Clocks.systemClock(), secureHasher );
@@ -467,7 +467,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.pluginAuthentication )
         {
-            for ( AuthenticationPlugin plugin : Service.load( AuthenticationPlugin.class ) )
+            for ( AuthenticationPlugin plugin : Service.loadAll( AuthenticationPlugin.class ) )
             {
                 PluginRealm pluginRealm;
 
@@ -492,7 +492,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.pluginAuthorization )
         {
-            for ( AuthorizationPlugin plugin : Service.load( AuthorizationPlugin.class ) )
+            for ( AuthorizationPlugin plugin : Service.loadAll( AuthorizationPlugin.class ) )
             {
                 if ( !excludedClasses.contains( plugin.getClass() ) )
                 {

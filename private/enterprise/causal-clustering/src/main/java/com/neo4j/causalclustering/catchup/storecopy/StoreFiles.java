@@ -12,7 +12,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Set;
 
-import org.neo4j.helpers.Service;
+import org.neo4j.common.Service;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -105,7 +105,7 @@ public class StoreFiles
         File neoStoreFile = databaseLayout.metadataStore();
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( fs, pageCache, databaseLayout );
-        org.neo4j.storageengine.api.StoreId kernelStoreId = selectStorageEngine( Service.load( StorageEngineFactory.class ) ).storeId( dependencies );
+        org.neo4j.storageengine.api.StoreId kernelStoreId = selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ).storeId( dependencies );
         return new StoreId( kernelStoreId.getCreationTime(), kernelStoreId.getRandomId(),
                 kernelStoreId.getUpgradeTime(), kernelStoreId.getUpgradeId() );
     }
