@@ -800,7 +800,7 @@ class BackupIT
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
         Throwable cause = error.getCause();
         assertThat( cause, instanceOf( StoreCopyFailedException.class ) );
-        assertThat( cause.getMessage(), containsString( CatchupResult.E_TRANSACTION_PRUNED.toString() ) );
+        assertThat( cause.getMessage(), containsString( "Pulling tx failed consecutively without progress" ) );
     }
 
     @Test

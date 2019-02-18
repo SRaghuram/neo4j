@@ -94,7 +94,7 @@ class TxPuller
             {
                 log.info( "Pulling transactions from %s starting with txId: %d", fromAddress, fromTxId );
                 CatchupResult status = txPullClient.pullTransactions( fromAddress, expectedStoreId, fromTxId, writer ).status();
-                return status == SUCCESS_END_OF_STREAM ? Result.SUCCESS : Result.ERROR;
+                return setResult( status );
             }
             catch ( ConnectException e )
             {
@@ -111,6 +111,19 @@ class TxPuller
         {
             log.info( "Unable to find a suitable address to pull transactions from" );
             return Result.TRANSIENT_ERROR;
+        }
+    }
+
+    private Result setResult( CatchupResult status )
+    {
+        if ( status == SUCCESS_END_OF_STREAM )
+        {
+            return Result.SUCCESS;
+        }
+        else
+        {
+            log.info( "Transaction pulling attempt failed with error: " + status );
+            return Result.ERROR;
         }
     }
 
@@ -150,6 +163,7 @@ class TxPuller
 
             if ( currentState == State.LAST_ATTEMPT )
             {
+                log.warn( "Failed to pull transactions" );
                 throw new StoreCopyFailedException( "Pulling tx failed consecutively without progress" );
             }
             if ( resettableCondition.canContinue() && result != Result.ERROR )
