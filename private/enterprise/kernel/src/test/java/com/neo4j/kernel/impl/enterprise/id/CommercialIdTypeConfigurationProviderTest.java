@@ -25,7 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith( Parameterized.class )
-public class EnterpriseIdTypeConfigurationProviderTest
+public class CommercialIdTypeConfigurationProviderTest
 {
     private final IdType reusableType;
 
@@ -40,7 +40,7 @@ public class EnterpriseIdTypeConfigurationProviderTest
                 IdType.NODE_LABELS );
     }
 
-    public EnterpriseIdTypeConfigurationProviderTest( IdType reusableType )
+    public CommercialIdTypeConfigurationProviderTest( IdType reusableType )
     {
         this.reusableType = reusableType;
     }
@@ -68,6 +68,6 @@ public class EnterpriseIdTypeConfigurationProviderTest
         Map<String,String> params = MapUtil.stringMap( CommercialEditionSettings.idTypesToReuse.name(),
                 IdType.NODE + "," + IdType.RELATIONSHIP );
         Config config = Config.defaults( params );
-        return new EnterpriseIdTypeConfigurationProvider( config );
+        return new CommercialIdTypeConfigurationProvider( config );
     }
 }

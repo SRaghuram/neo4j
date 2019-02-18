@@ -55,7 +55,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
         InternalTransaction transaction = localGraph
-                .beginTransaction( KernelTransaction.Type.explicit, StandardEnterpriseLoginContext.AUTH_DISABLED );
+                .beginTransaction( KernelTransaction.Type.explicit, StandardCommercialLoginContext.AUTH_DISABLED );
         Result result =
                 localGraph.execute( transaction, "EXPLAIN CALL dbms.security.listUsers", EMPTY_MAP );
         String description = String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(),
@@ -73,7 +73,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
                 r -> assertKeyIsMap( r, "username", "roles", valueOf( userList ) ) );
         GraphDatabaseFacade localGraph = neo.getLocalGraph();
         InternalTransaction transaction = localGraph
-                .beginTransaction( KernelTransaction.Type.explicit, StandardEnterpriseLoginContext.AUTH_DISABLED );
+                .beginTransaction( KernelTransaction.Type.explicit, StandardCommercialLoginContext.AUTH_DISABLED );
         Result result =
                 localGraph.execute( transaction, "EXPLAIN CALL dbms.security.listUsers", EMPTY_MAP );
         String description = String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(),

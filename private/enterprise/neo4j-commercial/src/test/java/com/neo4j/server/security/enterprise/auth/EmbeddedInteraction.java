@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import java.util.Collections;
@@ -33,10 +33,10 @@ import static org.junit.Assert.assertThat;
 import static org.neo4j.kernel.configuration.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
-public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginContext>
+public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginContext>
 {
     protected GraphDatabaseFacade db;
-    private EnterpriseAuthManager authManager;
+    private CommercialAuthManager authManager;
     private FileSystemAbstraction fileSystem;
     private ConnectorPortRegister connectorRegister;
 
@@ -77,16 +77,16 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
         builder.setConfig( config );
 
         db = (GraphDatabaseFacade) builder.newGraphDatabase();
-        authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
+        authManager = db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
     }
 
     @Override
     public EnterpriseUserManager getLocalUserManager() throws Exception
     {
-        if ( authManager instanceof EnterpriseAuthAndUserManager )
+        if ( authManager instanceof CommercialAuthAndUserManager )
         {
-            return ((EnterpriseAuthAndUserManager) authManager).getUserManager();
+            return ((CommercialAuthAndUserManager) authManager).getUserManager();
         }
         throw new Exception( "The configuration used does not have a user manager" );
     }
@@ -104,13 +104,13 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
-    public InternalTransaction beginLocalTransactionAsUser( EnterpriseLoginContext loginContext, KernelTransaction.Type txType )
+    public InternalTransaction beginLocalTransactionAsUser( CommercialLoginContext loginContext, KernelTransaction.Type txType )
     {
         return db.beginTransaction( txType, loginContext );
     }
 
     @Override
-    public String executeQuery( EnterpriseLoginContext loginContext, String call, Map<String,Object> params,
+    public String executeQuery( CommercialLoginContext loginContext, String call, Map<String,Object> params,
             Consumer<ResourceIterator<Map<String, Object>>> resultConsumer )
     {
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
@@ -127,24 +127,24 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
-    public EnterpriseLoginContext login( String username, String password ) throws Exception
+    public CommercialLoginContext login( String username, String password ) throws Exception
     {
         return authManager.login( authToken( username, password ) );
     }
 
     @Override
-    public void logout( EnterpriseLoginContext loginContext )
+    public void logout( CommercialLoginContext loginContext )
     {
         loginContext.subject().logout();
     }
 
     @Override
-    public void updateAuthToken( EnterpriseLoginContext subject, String username, String password )
+    public void updateAuthToken( CommercialLoginContext subject, String username, String password )
     {
     }
 
     @Override
-    public String nameOf( EnterpriseLoginContext loginContext )
+    public String nameOf( CommercialLoginContext loginContext )
     {
         return loginContext.subject().username();
     }
@@ -156,25 +156,25 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
-    public void assertAuthenticated( EnterpriseLoginContext loginContext )
+    public void assertAuthenticated( CommercialLoginContext loginContext )
     {
         assertThat( loginContext.subject().getAuthenticationResult(), equalTo( AuthenticationResult.SUCCESS ) );
     }
 
     @Override
-    public void assertPasswordChangeRequired( EnterpriseLoginContext loginContext )
+    public void assertPasswordChangeRequired( CommercialLoginContext loginContext )
     {
         assertThat( loginContext.subject().getAuthenticationResult(), equalTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED ) );
     }
 
     @Override
-    public void assertInitFailed( EnterpriseLoginContext loginContext )
+    public void assertInitFailed( CommercialLoginContext loginContext )
     {
         assertThat( loginContext.subject().getAuthenticationResult(), equalTo( AuthenticationResult.FAILURE ) );
     }
 
     @Override
-    public void assertSessionKilled( EnterpriseLoginContext loginContext )
+    public void assertSessionKilled( CommercialLoginContext loginContext )
     {
         // There is no session that could have been killed
     }

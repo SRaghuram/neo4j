@@ -12,14 +12,14 @@ import java.util.function.ToIntFunction;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 
-public interface EnterpriseLoginContext extends LoginContext
+public interface CommercialLoginContext extends LoginContext
 {
     Set<String> roles();
 
     @Override
-    EnterpriseSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName );
+    CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName );
 
-    EnterpriseLoginContext AUTH_DISABLED = new EnterpriseLoginContext()
+    CommercialLoginContext AUTH_DISABLED = new CommercialLoginContext()
     {
         @Override
         public AuthSubject subject()
@@ -34,9 +34,9 @@ public interface EnterpriseLoginContext extends LoginContext
         }
 
         @Override
-        public EnterpriseSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+        public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
         {
-            return EnterpriseSecurityContext.AUTH_DISABLED;
+            return CommercialSecurityContext.AUTH_DISABLED;
         }
     };
 }

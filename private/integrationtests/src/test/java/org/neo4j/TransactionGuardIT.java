@@ -6,7 +6,7 @@
 package org.neo4j;
 
 import com.neo4j.commercial.edition.CommercialEditionModule;
-import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.junit.After;
@@ -621,7 +621,7 @@ public class TransactionGuardIT
         @Override
         protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
         {
-            return IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
+            return IdContextFactoryBuilder.of( new CommercialIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
                     globalModule.getJobScheduler() )
                     .withIdGenerationFactoryProvider(
                             any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( globalModule.getFileSystem() ) ) )

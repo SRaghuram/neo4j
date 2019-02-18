@@ -6,10 +6,10 @@
 package com.neo4j.server.security.enterprise;
 
 import com.github.benmanes.caffeine.cache.Ticker;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.InternalFlatFileRealm;
@@ -96,7 +96,7 @@ public class CommercialSecurityModule extends SecurityModule
     private LogProvider logProvider;
     private FileSystemAbstraction fileSystem;
     private AccessCapability accessCapability;
-    private EnterpriseAuthAndUserManager authManager;
+    private CommercialAuthAndUserManager authManager;
     private SecurityConfig securityConfig;
 
     public CommercialSecurityModule()
@@ -147,8 +147,8 @@ public class CommercialSecurityModule extends SecurityModule
 
         // Register procedures
         globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
-        globalProcedures.registerComponent( EnterpriseAuthManager.class, ctx -> authManager, false );
-        globalProcedures.registerComponent( EnterpriseSecurityContext.class,
+        globalProcedures.registerComponent( CommercialAuthManager.class, ctx -> authManager, false );
+        globalProcedures.registerComponent( CommercialSecurityContext.class,
                 ctx -> asEnterprise( ctx.securityContext() ), true );
 
         if ( securityConfig.nativeAuthEnabled )
@@ -231,17 +231,17 @@ public class CommercialSecurityModule extends SecurityModule
         } );
     }
 
-    private EnterpriseSecurityContext asEnterprise( SecurityContext securityContext )
+    private CommercialSecurityContext asEnterprise( SecurityContext securityContext )
     {
-        if ( securityContext instanceof EnterpriseSecurityContext )
+        if ( securityContext instanceof CommercialSecurityContext )
         {
-            return (EnterpriseSecurityContext) securityContext;
+            return (CommercialSecurityContext) securityContext;
         }
         // TODO: better handling of this possible cast failure
-        throw new RuntimeException( "Expected EnterpriseSecurityContext, got " + securityContext.getClass().getName() );
+        throw new RuntimeException( "Expected CommercialSecurityContext, got " + securityContext.getClass().getName() );
     }
 
-    EnterpriseAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
+    CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
             JobScheduler jobScheduler, AccessCapability accessCapability )
     {
         securityConfig = getValidatedSecurityConfig( config );

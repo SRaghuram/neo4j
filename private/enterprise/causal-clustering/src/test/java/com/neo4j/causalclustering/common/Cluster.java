@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.readreplica.ReadReplica;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -503,7 +503,7 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
                 throw new DatabaseShutdownException();
             }
 
-            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialSecurityContext.AUTH_DISABLED ) )
             {
                 op.accept( db, tx );
                 return member;

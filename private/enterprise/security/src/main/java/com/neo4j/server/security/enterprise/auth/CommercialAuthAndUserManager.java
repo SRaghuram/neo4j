@@ -5,12 +5,12 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 
-public interface EnterpriseAuthAndUserManager extends EnterpriseAuthManager, UserManagerSupplier
+public interface CommercialAuthAndUserManager extends CommercialAuthManager, UserManagerSupplier
 {
     @Override
     EnterpriseUserManager getUserManager( AuthSubject authSubject, boolean isUserManager );

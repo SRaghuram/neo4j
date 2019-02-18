@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
@@ -16,13 +16,13 @@ import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
-public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<EnterpriseLoginContext>
+public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<CommercialLoginContext>
 {
     @Inject
     private FileSystemAbstraction fileSystem;
 
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
         return new EmbeddedInteraction( config, () -> new UncloseableDelegatingFileSystemAbstraction( fileSystem ) );
     }

@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 
 import java.util.stream.Stream;
 
@@ -20,7 +20,7 @@ import static org.neo4j.procedure.Mode.DBMS;
 public class SecurityProcedures extends AuthProceduresBase
 {
     @Context
-    public EnterpriseAuthManager authManager;
+    public CommercialAuthManager authManager;
 
     @Deprecated
     @Description( "Show the current user. Deprecated by dbms.showCurrentUser." )

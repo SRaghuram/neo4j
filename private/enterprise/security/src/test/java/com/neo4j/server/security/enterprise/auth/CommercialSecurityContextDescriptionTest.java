@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,7 +28,7 @@ import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 
-public class EnterpriseSecurityContextDescriptionTest
+public class CommercialSecurityContextDescriptionTest
 {
     @Rule
     public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule( new InMemoryUserRepository(),
@@ -66,7 +66,7 @@ public class EnterpriseSecurityContextDescriptionTest
         manager.newRole( "role1", "mats" );
         manager.addRoleToUser( PUBLISHER, "mats" );
 
-        EnterpriseSecurityContext modified = context().withMode( AccessMode.Static.CREDENTIALS_EXPIRED );
+        CommercialSecurityContext modified = context().withMode( AccessMode.Static.CREDENTIALS_EXPIRED );
         assertThat( modified.description(), equalTo( "user 'mats' with CREDENTIALS_EXPIRED" ) );
     }
 
@@ -76,8 +76,8 @@ public class EnterpriseSecurityContextDescriptionTest
         manager.newRole( "role1", "mats" );
         manager.addRoleToUser( PUBLISHER, "mats" );
 
-        EnterpriseSecurityContext context = context();
-        EnterpriseSecurityContext restricted =
+        CommercialSecurityContext context = context();
+        CommercialSecurityContext restricted =
                 context.withMode( new RestrictedAccessMode( context.mode(), AccessMode.Static.READ ) );
         assertThat( restricted.description(), equalTo( "user 'mats' with roles [publisher,role1] restricted to READ" ) );
     }
@@ -88,8 +88,8 @@ public class EnterpriseSecurityContextDescriptionTest
         manager.newRole( "role1", "mats" );
         manager.addRoleToUser( PUBLISHER, "mats" );
 
-        EnterpriseSecurityContext context = context();
-        EnterpriseSecurityContext overridden =
+        CommercialSecurityContext context = context();
+        CommercialSecurityContext overridden =
                 context.withMode( new OverriddenAccessMode( context.mode(), AccessMode.Static.READ ) );
         assertThat( overridden.description(), equalTo( "user 'mats' with roles [publisher,role1] overridden by READ" ) );
     }
@@ -97,20 +97,20 @@ public class EnterpriseSecurityContextDescriptionTest
     @Test
     public void shouldMakeNiceDescriptionAuthDisabled()
     {
-        EnterpriseSecurityContext disabled = EnterpriseSecurityContext.AUTH_DISABLED;
+        CommercialSecurityContext disabled = CommercialSecurityContext.AUTH_DISABLED;
         assertThat( disabled.description(), equalTo( "AUTH_DISABLED with FULL" ) );
     }
 
     @Test
     public void shouldMakeNiceDescriptionAuthDisabledAndRestricted()
     {
-        EnterpriseSecurityContext disabled = EnterpriseSecurityContext.AUTH_DISABLED;
-        EnterpriseSecurityContext restricted =
+        CommercialSecurityContext disabled = CommercialSecurityContext.AUTH_DISABLED;
+        CommercialSecurityContext restricted =
                 disabled.withMode( new RestrictedAccessMode( disabled.mode(), AccessMode.Static.READ ) );
         assertThat( restricted.description(), equalTo( "AUTH_DISABLED with FULL restricted to READ" ) );
     }
 
-    private EnterpriseSecurityContext context() throws InvalidAuthTokenException
+    private CommercialSecurityContext context() throws InvalidAuthTokenException
     {
         return authManagerRule.getManager().login( authToken( "mats", "foo" ) )
                 .authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );

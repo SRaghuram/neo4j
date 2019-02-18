@@ -1,19 +1,29 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.graphdb.factory;
+package org.neo4j.io.pagecache;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
 import java.util.List;
 import java.util.Optional;
-
-import org.neo4j.io.pagecache.IOLimiter;
-import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.PagedFile;
 
 /**
  * A PageCache implementation that delegates to another page cache, whose life cycle is managed elsewhere.
@@ -25,7 +35,7 @@ public class ExternallyManagedPageCache implements PageCache
 {
     private final PageCache delegate;
 
-    private ExternallyManagedPageCache( PageCache delegate )
+    public ExternallyManagedPageCache( PageCache delegate )
     {
         this.delegate = delegate;
     }

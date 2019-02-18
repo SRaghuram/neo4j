@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.readreplica.ReadReplica;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -64,7 +64,7 @@ public class ClusterFormationIT
             }
 
             // (2) BuiltInProcedures from enterprise
-            try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.explicit, EnterpriseLoginContext.AUTH_DISABLED ) )
+            try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
             {
                 Result result = gdb.execute( tx, "CALL dbms.listQueries()", EMPTY_MAP );
                 assertTrue( result.hasNext() );

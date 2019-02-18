@@ -27,6 +27,7 @@ import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
@@ -264,9 +265,10 @@ class RebuildFromLogs
         }
     }
 
-    static GraphDatabaseAPI startTemporaryDb( File targetDirectory, PageCache pageCache )
+    private static GraphDatabaseAPI startTemporaryDb( File targetDirectory, PageCache pageCache )
     {
-        return (GraphDatabaseAPI) new CommercialGraphDatabaseFactory().setPageCache( pageCache ).newEmbeddedDatabaseBuilder(
-                targetDirectory ).newGraphDatabase();
+        return (GraphDatabaseAPI) new CommercialGraphDatabaseFactory()
+                .setPageCache( new ExternallyManagedPageCache( pageCache ) )
+                .newEmbeddedDatabaseBuilder( targetDirectory ).newGraphDatabase();
     }
 }

@@ -21,7 +21,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 
-import static com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext.AUTH_DISABLED;
+import static com.neo4j.kernel.enterprise.api.security.CommercialLoginContext.AUTH_DISABLED;
 import static org.junit.Assert.assertTrue;
 
 public class CausalClusteringProceduresIT

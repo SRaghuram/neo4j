@@ -5,25 +5,25 @@
  */
 package com.neo4j.kernel.enterprise.api.security.provider;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-public class EnterpriseNoAuthSecurityProvider extends LifecycleAdapter implements SecurityProvider
+public class CommercialNoAuthSecurityProvider extends LifecycleAdapter implements SecurityProvider
 {
-    public static final EnterpriseNoAuthSecurityProvider INSTANCE = new EnterpriseNoAuthSecurityProvider();
+    public static final CommercialNoAuthSecurityProvider INSTANCE = new CommercialNoAuthSecurityProvider();
 
-    private EnterpriseNoAuthSecurityProvider()
+    private CommercialNoAuthSecurityProvider()
     {
     }
 
     @Override
     public AuthManager authManager()
     {
-        return EnterpriseAuthManager.NO_AUTH;
+        return CommercialAuthManager.NO_AUTH;
     }
 
     @Override

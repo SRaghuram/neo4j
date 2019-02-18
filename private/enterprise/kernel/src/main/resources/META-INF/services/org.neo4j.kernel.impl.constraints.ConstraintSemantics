@@ -1,1 +1,1 @@
-com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics
+com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics

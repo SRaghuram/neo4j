@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.auth.AuthProceduresBase.UserResult;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +34,7 @@ public class SecurityProceduresTest
         AuthSubject subject = mock( AuthSubject.class );
         when( subject.username() ).thenReturn( "pearl" );
 
-        EnterpriseSecurityContext ctx = mock( EnterpriseSecurityContext.class );
+        CommercialSecurityContext ctx = mock( CommercialSecurityContext.class );
         when( ctx.subject() ).thenReturn( subject );
         when( ctx.roles() ).thenReturn( Collections.singleton( "jammer" ) );
 

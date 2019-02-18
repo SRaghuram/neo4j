@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
-public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInteractionTestBase<EnterpriseLoginContext>
+public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInteractionTestBase<CommercialLoginContext>
 {
 
     @Override
@@ -48,7 +48,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     }
 
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
         return new EmbeddedInteraction( config );
     }
@@ -56,7 +56,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     @Test
     void shouldNotListAnyQueriesIfNotAuthenticated()
     {
-        EnterpriseLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
+        CommercialLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
         GraphDatabaseFacade graph = neo.getLocalGraph();
 
         try ( InternalTransaction tx = graph
@@ -71,11 +71,11 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     @Test
     void shouldNotKillQueryIfNotAuthenticated() throws Throwable
     {
-        EnterpriseLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
+        CommercialLoginContext unAuthSubject = createFakeAnonymousEnterpriseLoginContext();
 
         GraphDatabaseFacade graph = neo.getLocalGraph();
         DoubleLatch latch = new DoubleLatch( 2 );
-        ThreadedTransaction<EnterpriseLoginContext> read = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<CommercialLoginContext> read = new ThreadedTransaction<>( neo, latch );
         String query = read.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
 
         latch.startAndWaitForAllToStart();
@@ -96,14 +96,14 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
         read.closeAndAssertSuccess();
     }
 
-    private EnterpriseLoginContext createFakeAnonymousEnterpriseLoginContext()
+    private CommercialLoginContext createFakeAnonymousEnterpriseLoginContext()
     {
-        return new EnterpriseLoginContext()
+        return new CommercialLoginContext()
         {
             @Override
-            public EnterpriseSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+            public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
             {
-                return new EnterpriseSecurityContext( subject(), inner.mode(), Collections.emptySet(), false );
+                return new CommercialSecurityContext( subject(), inner.mode(), Collections.emptySet(), false );
             }
 
             @Override

@@ -6,10 +6,14 @@
 package com.neo4j.commercial;
 
 import com.neo4j.causalclustering.common.SecureCluster;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
@@ -22,10 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -157,14 +157,14 @@ class SystemGraphSecurityReplicationIT
 
     private boolean userCanLogin( String username, String password, GraphDatabaseFacade db )
     {
-        EnterpriseAuthManager authManager = authManager( db );
+        CommercialAuthManager authManager = authManager( db );
         AuthSubject subject = login( authManager, username, password );
         return AuthenticationResult.SUCCESS == subject.getAuthenticationResult();
     }
 
-    private AuthSubject login( EnterpriseAuthManager authManager, String username, String password )
+    private AuthSubject login( CommercialAuthManager authManager, String username, String password )
     {
-        EnterpriseLoginContext loginContext;
+        CommercialLoginContext loginContext;
         try
         {
             loginContext = authManager.login( authToken( username, password ) );
@@ -178,16 +178,16 @@ class SystemGraphSecurityReplicationIT
 
     private EnterpriseUserManager userManager( GraphDatabaseFacade db )
     {
-        EnterpriseAuthManager enterpriseAuthManager = authManager( db );
-        if ( enterpriseAuthManager instanceof EnterpriseAuthAndUserManager )
+        CommercialAuthManager commercialAuthManager = authManager( db );
+        if ( commercialAuthManager instanceof CommercialAuthAndUserManager )
         {
-            return ((EnterpriseAuthAndUserManager) enterpriseAuthManager).getUserManager();
+            return ((CommercialAuthAndUserManager) commercialAuthManager).getUserManager();
         }
         throw new RuntimeException( "The configuration used does not have a user manager" );
     }
 
-    private EnterpriseAuthManager authManager( GraphDatabaseFacade db )
+    private CommercialAuthManager authManager( GraphDatabaseFacade db )
     {
-        return db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
+        return db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
     }
 }

@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.directory.server.annotations.CreateLdapServer;
@@ -337,7 +337,7 @@ public class AuthIT extends AuthTestBase
         LdapServer ldapServer = ldapServerRule.getLdapServer();
         ldapServer.setConfidentialityRequired( confidentialityRequired );
 
-        EnterpriseAuthAndUserManager authManager = dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
+        CommercialAuthAndUserManager authManager = dbRule.resolveDependency( CommercialAuthAndUserManager.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
         if ( userManager != null )
         {

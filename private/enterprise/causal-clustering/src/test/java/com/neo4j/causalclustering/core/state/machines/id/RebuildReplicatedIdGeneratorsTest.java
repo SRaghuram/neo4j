@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core.state.machines.id;
 
 import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -84,6 +84,6 @@ public class RebuildReplicatedIdGeneratorsTest
         when( idRangeAcquirer.acquireIds( IdType.NODE ) ).thenReturn( new IdAllocation( new IdRange(
                 PrimitiveLongCollections.EMPTY_LONG_ARRAY, 0, 10000 ), 0, 0 ) );
         return new ReplicatedIdGeneratorFactory( fileSystemAbstraction, ignoredDBName -> idRangeAcquirer, NullLogProvider.getInstance(),
-                new EnterpriseIdTypeConfigurationProvider( Config.defaults() ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME, panicker );
+                new CommercialIdTypeConfigurationProvider( Config.defaults() ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME, panicker );
     }
 }

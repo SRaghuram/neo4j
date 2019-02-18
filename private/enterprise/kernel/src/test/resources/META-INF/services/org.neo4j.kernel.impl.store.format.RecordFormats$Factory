@@ -1,4 +1,0 @@
-com.neo4j.kernel.impl.storemigration.StoreMigrationIT$Standard23Factory
-com.neo4j.kernel.impl.storemigration.StoreMigrationIT$Standard30Factory
-com.neo4j.kernel.impl.storemigration.StoreMigrationIT$Standard32Factory
-com.neo4j.kernel.impl.storemigration.StoreMigrationIT$Standard34Factory

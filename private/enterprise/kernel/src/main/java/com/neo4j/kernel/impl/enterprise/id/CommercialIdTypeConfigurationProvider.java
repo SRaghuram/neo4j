@@ -25,11 +25,11 @@ import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfiguration;
  * @see IdType
  * @see IdTypeConfiguration
  */
-public class EnterpriseIdTypeConfigurationProvider extends CommunityIdTypeConfigurationProvider
+public class CommercialIdTypeConfigurationProvider extends CommunityIdTypeConfigurationProvider
 {
     private final Set<IdType> typesToReuse;
 
-    public EnterpriseIdTypeConfigurationProvider( Config config )
+    public CommercialIdTypeConfigurationProvider( Config config )
     {
         typesToReuse = configureReusableTypes( config );
     }

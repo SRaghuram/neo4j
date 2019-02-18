@@ -5,17 +5,17 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.auth.ConfiguredAuthScenariosInteractionTestBase;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 
 import java.util.Map;
 
-public class SystemGraphEmbeddedConfiguredAuthScenariosInteractionIT extends ConfiguredAuthScenariosInteractionTestBase<EnterpriseLoginContext>
+public class SystemGraphEmbeddedConfiguredAuthScenariosInteractionIT extends ConfiguredAuthScenariosInteractionTestBase<CommercialLoginContext>
 {
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
         return new SystemGraphEmbeddedInteraction( config, testDirectory );
     }

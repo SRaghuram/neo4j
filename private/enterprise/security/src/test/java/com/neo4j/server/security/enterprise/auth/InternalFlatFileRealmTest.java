@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -94,7 +94,7 @@ public class InternalFlatFileRealmTest
     public void shouldNotCacheAuthenticationInfo() throws InvalidAuthTokenException
     {
         // Given
-        EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
+        CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );
         assertThat( mike.subject().getAuthenticationResult(), equalTo( AuthenticationResult.SUCCESS ) );
         assertThat( "Test realm did not receive a call", testRealm.takeAuthenticationFlag(), is( true ) );
 
@@ -110,7 +110,7 @@ public class InternalFlatFileRealmTest
     public void shouldNotCacheAuthorizationInfo() throws InvalidAuthTokenException
     {
         // Given
-        EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
+        CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );
         assertThat( mike.subject().getAuthenticationResult(), equalTo( AuthenticationResult.SUCCESS ) );
 
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME ).mode().allowsReads();

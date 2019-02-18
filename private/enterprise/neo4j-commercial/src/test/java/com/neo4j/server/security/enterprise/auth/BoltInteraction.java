@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import java.util.ArrayList;
@@ -71,7 +71,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     private final Neo4jWithSocket server;
     private Map<String,BoltSubject> subjects = new HashMap<>();
     private FileSystemAbstraction fileSystem;
-    private EnterpriseAuthManager authManager;
+    private CommercialAuthManager authManager;
 
     BoltInteraction( Map<String,String> config )
     {
@@ -94,15 +94,15 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
         {
         } );
         GraphDatabaseFacade db = (GraphDatabaseFacade) server.graphDatabaseService();
-        authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
+        authManager = db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
     }
 
     @Override
     public EnterpriseUserManager getLocalUserManager() throws Exception
     {
-        if ( authManager instanceof EnterpriseAuthAndUserManager )
+        if ( authManager instanceof CommercialAuthAndUserManager )
         {
-            return ((EnterpriseAuthAndUserManager) authManager).getUserManager();
+            return ((CommercialAuthAndUserManager) authManager).getUserManager();
         }
         throw new Exception( "The used configuration does not have a user manager" );
     }

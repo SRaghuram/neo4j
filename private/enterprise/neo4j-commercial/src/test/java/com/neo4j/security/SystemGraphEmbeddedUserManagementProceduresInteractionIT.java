@@ -5,7 +5,7 @@
  */
 package com.neo4j.security;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.auth.AuthProceduresInteractionTestBase;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -18,10 +18,10 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SystemGraphEmbeddedUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<EnterpriseLoginContext>
+public class SystemGraphEmbeddedUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<CommercialLoginContext>
 {
     @Override
-    protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<String, String> config )
+    protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config )
             throws Throwable
     {
         return new SystemGraphEmbeddedInteraction( config, testDirectory );

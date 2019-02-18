@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.routing.Endpoint;
 import com.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.MultiClusterRoutingResultFormat;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -186,7 +186,7 @@ public abstract class BaseMultiClusterRoutingIT
 
         Optional<MultiClusterRoutingResult> routingResult = Optional.empty();
         try (
-                InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseLoginContext.AUTH_DISABLED );
+                InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED );
                 Result result = db.execute( tx, "CALL " + procedure.callName(), ValueUtils.asMapValue( params )) )
         {
             if ( result.hasNext() )

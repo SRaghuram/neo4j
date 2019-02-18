@@ -71,14 +71,14 @@ public class MultiRealmAuthManagerRule implements TestRule
         manager.init();
     }
 
-    public EnterpriseAuthAndUserManager getManager()
+    public CommercialAuthAndUserManager getManager()
     {
         return manager;
     }
 
     public LoginContext makeLoginContext( ShiroSubject shiroSubject )
     {
-        return new StandardEnterpriseLoginContext( manager, shiroSubject );
+        return new StandardCommercialLoginContext( manager, shiroSubject );
     }
 
     @Override

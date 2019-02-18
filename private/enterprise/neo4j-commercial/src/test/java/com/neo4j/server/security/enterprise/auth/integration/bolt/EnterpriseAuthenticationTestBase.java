@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import com.neo4j.test.rule.CommercialDbmsRule;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
@@ -348,8 +348,8 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 
     void createNativeUser( String username, String password, String... roles ) throws IOException, InvalidArgumentsException
     {
-        EnterpriseAuthAndUserManager authManager =
-                dbRule.resolveDependency( EnterpriseAuthAndUserManager.class );
+        CommercialAuthAndUserManager authManager =
+                dbRule.resolveDependency( CommercialAuthAndUserManager.class );
 
         authManager.getUserManager( AuthSubject.AUTH_DISABLED, true )
                 .newUser( username, password( password ), false );

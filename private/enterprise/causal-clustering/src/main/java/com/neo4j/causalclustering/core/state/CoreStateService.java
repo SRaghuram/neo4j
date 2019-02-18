@@ -33,7 +33,7 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -138,7 +138,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         dbStateMap = new CopyOnWriteHashMap<>();
         dispatchers = new AggregateStateMachinesCommandDispatcher( databaseService, this );
 
-        idTypeConfigurationProvider = new EnterpriseIdTypeConfigurationProvider( config );
+        idTypeConfigurationProvider = new CommercialIdTypeConfigurationProvider( config );
         idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myself );
         Function<String,IdGeneratorFactory> idGeneratorProvider =
                 databaseName -> createIdGeneratorFactory( fs, logProvider, idTypeConfigurationProvider, databaseName );

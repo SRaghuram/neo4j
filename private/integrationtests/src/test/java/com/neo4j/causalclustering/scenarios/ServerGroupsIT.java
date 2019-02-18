@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
@@ -179,7 +179,7 @@ public class ServerGroupsIT
     private List<List<String>> getServerGroups( CoreGraphDatabase db )
     {
         List<List<String>> serverGroups = new ArrayList<>();
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseLoginContext.AUTH_DISABLED ) )
+        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
         {
             try ( Result result = db.execute( tx, "CALL dbms.cluster.overview", EMPTY_MAP ) )
             {

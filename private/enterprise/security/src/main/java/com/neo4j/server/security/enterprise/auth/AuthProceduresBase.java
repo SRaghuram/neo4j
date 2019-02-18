@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 
 import java.util.ArrayList;
@@ -30,7 +30,7 @@ import static java.util.Collections.emptyList;
 public class AuthProceduresBase
 {
     @Context
-    public EnterpriseSecurityContext securityContext;
+    public CommercialSecurityContext securityContext;
 
     @Context
     public GraphDatabaseAPI graph;

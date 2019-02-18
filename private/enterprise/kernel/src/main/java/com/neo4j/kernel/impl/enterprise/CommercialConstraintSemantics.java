@@ -28,11 +28,11 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import static com.neo4j.kernel.impl.enterprise.PropertyExistenceEnforcer.getOrCreatePropertyExistenceEnforcerFrom;
 import static org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException.Phase.VERIFICATION;
 
-public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
+public class CommercialConstraintSemantics extends StandardConstraintSemantics
 {
-    public EnterpriseConstraintSemantics()
+    public CommercialConstraintSemantics()
     {
-        super( "enterpriseConstraints", 2 );
+        super( "commercialConstraints", 2 );
     }
 
     @Override

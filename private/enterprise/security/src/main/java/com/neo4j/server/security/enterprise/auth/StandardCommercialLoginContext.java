@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import org.apache.shiro.authz.AuthorizationInfo;
 
 import java.util.Collection;
@@ -23,7 +23,7 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
-class StandardEnterpriseLoginContext implements EnterpriseLoginContext
+class StandardCommercialLoginContext implements CommercialLoginContext
 {
     private static final String SCHEMA_READ_WRITE = "schema:read,write";
     private static final String TOKEN_CREATE = "token:create";
@@ -34,7 +34,7 @@ class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     private final ShiroSubject shiroSubject;
     private final NeoShiroSubject neoShiroSubject;
 
-    StandardEnterpriseLoginContext( MultiRealmAuthManager authManager, ShiroSubject shiroSubject )
+    StandardCommercialLoginContext( MultiRealmAuthManager authManager, ShiroSubject shiroSubject )
     {
         this.authManager = authManager;
         this.shiroSubject = shiroSubject;
@@ -67,10 +67,10 @@ class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     }
 
     @Override
-    public EnterpriseSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+    public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
     {
         StandardAccessMode mode = mode( propertyIdLookup );
-        return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.roles, isAdmin() );
+        return new CommercialSecurityContext( neoShiroSubject, mode, mode.roles, isAdmin() );
     }
 
     @Override

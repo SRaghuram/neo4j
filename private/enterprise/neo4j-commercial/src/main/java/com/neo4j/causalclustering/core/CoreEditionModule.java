@@ -74,7 +74,7 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
-import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
+import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
 import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
@@ -522,7 +522,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         }
         else
         {
-            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
+            securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
     }

@@ -5,9 +5,9 @@
  */
 package com.neo4j.server.rest.security;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.NeoInteractionLevel;
 import org.codehaus.jackson.JsonNode;
@@ -58,7 +58,7 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
 
     static final String POST = "POST";
     private final ConnectorPortRegister connectorPortRegister;
-    private final EnterpriseAuthManager authManager;
+    private final CommercialAuthManager authManager;
 
     abstract String commitPath();
 
@@ -87,16 +87,16 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
         }
         this.server = builder.build();
         this.server.start();
-        authManager = this.server.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
+        authManager = this.server.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         connectorPortRegister = server.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
     }
 
     @Override
     public EnterpriseUserManager getLocalUserManager() throws Exception
     {
-        if ( authManager instanceof EnterpriseAuthAndUserManager )
+        if ( authManager instanceof CommercialAuthAndUserManager )
         {
-            return ((EnterpriseAuthAndUserManager) authManager).getUserManager();
+            return ((CommercialAuthAndUserManager) authManager).getUserManager();
         }
         throw new Exception( "The used configuration does not have a user manager" );
     }

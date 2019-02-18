@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.Policies;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.ParameterNames;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.ResultFormatV1;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -208,7 +208,7 @@ public class ServerPoliciesLoadBalancingIT
     private LoadBalancingResult getServers( CoreGraphDatabase db, Map<String,String> context )
     {
         LoadBalancingResult lbResult = null;
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseLoginContext.AUTH_DISABLED ) )
+        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
         {
             Map<String,Object> parameters = MapUtil.map( ParameterNames.CONTEXT.parameterName(), context );
             try ( Result result = db.execute( tx, "CALL " + GET_SERVERS_V2.callName(), ValueUtils.asMapValue( parameters )) )

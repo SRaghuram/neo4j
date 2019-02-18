@@ -16,12 +16,12 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 /**
  * A logged in and authorized user.
  */
-public class EnterpriseSecurityContext extends SecurityContext
+public class CommercialSecurityContext extends SecurityContext
 {
     private final Set<String> roles;
     private final boolean isAdmin;
 
-    public EnterpriseSecurityContext( AuthSubject subject, AccessMode mode, Set<String> roles, boolean isAdmin )
+    public CommercialSecurityContext( AuthSubject subject, AccessMode mode, Set<String> roles, boolean isAdmin )
     {
         super( subject, mode );
         this.roles = roles;
@@ -35,15 +35,15 @@ public class EnterpriseSecurityContext extends SecurityContext
     }
 
     @Override
-    public EnterpriseSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+    public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
     {
         return this;
     }
 
     @Override
-    public EnterpriseSecurityContext withMode( AccessMode mode )
+    public CommercialSecurityContext withMode( AccessMode mode )
     {
-        return new EnterpriseSecurityContext( subject, mode, roles, isAdmin );
+        return new CommercialSecurityContext( subject, mode, roles, isAdmin );
     }
 
     /**
@@ -55,15 +55,15 @@ public class EnterpriseSecurityContext extends SecurityContext
     }
 
     /** Allows all operations. */
-    public static final EnterpriseSecurityContext AUTH_DISABLED = authDisabled( AccessMode.Static.FULL );
+    public static final CommercialSecurityContext AUTH_DISABLED = authDisabled( AccessMode.Static.FULL );
 
-    private static EnterpriseSecurityContext authDisabled( AccessMode mode )
+    private static CommercialSecurityContext authDisabled( AccessMode mode )
     {
-        return new EnterpriseSecurityContext( AuthSubject.AUTH_DISABLED, mode, Collections.emptySet(), true )
+        return new CommercialSecurityContext( AuthSubject.AUTH_DISABLED, mode, Collections.emptySet(), true )
         {
 
             @Override
-            public EnterpriseSecurityContext withMode( AccessMode mode )
+            public CommercialSecurityContext withMode( AccessMode mode )
             {
                 return authDisabled( mode );
             }

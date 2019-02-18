@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 
 import java.util.function.Function;
 
@@ -56,7 +56,7 @@ public class ReadReplicaDatabaseContext implements EditionDatabaseContext
         this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, globalModule.getLogService() ).select();
 
         IdContextFactory idContextFactory =
-                IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( globalConfig ), globalModule.getJobScheduler() )
+                IdContextFactoryBuilder.of( new CommercialIdTypeConfigurationProvider( globalConfig ), globalModule.getJobScheduler() )
                 .withFileSystem( globalModule.getFileSystem() )
                 .build();
 

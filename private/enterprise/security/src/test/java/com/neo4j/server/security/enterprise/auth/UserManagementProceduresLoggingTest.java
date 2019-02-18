@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +38,7 @@ public class UserManagementProceduresLoggingTest
 {
     protected TestUserManagementProcedures authProcedures;
     private AssertableLogProvider log;
-    private EnterpriseSecurityContext matsContext;
+    private CommercialSecurityContext matsContext;
     private EnterpriseUserManager generalUserManager;
 
     @Before
@@ -52,16 +52,16 @@ public class UserManagementProceduresLoggingTest
         authProcedures.securityLog = securityLog;
 
         generalUserManager = getUserManager();
-        EnterpriseSecurityContext adminContext =
-                new EnterpriseSecurityContext( new MockAuthSubject( "admin" ), AccessMode.Static.FULL, Collections.emptySet(), true );
+        CommercialSecurityContext adminContext =
+                new CommercialSecurityContext( new MockAuthSubject( "admin" ), AccessMode.Static.FULL, Collections.emptySet(), true );
         matsContext =
-                new EnterpriseSecurityContext( new MockAuthSubject( "mats" ), AccessMode.Static.NONE, Collections.emptySet(), false );
+                new CommercialSecurityContext( new MockAuthSubject( "mats" ), AccessMode.Static.NONE, Collections.emptySet(), false );
 
         setSubject( adminContext );
         log.clear();
     }
 
-    private void setSubject( EnterpriseSecurityContext securityContext )
+    private void setSubject( CommercialSecurityContext securityContext )
     {
         authProcedures.securityContext = securityContext;
         authProcedures.userManager = new PersonalUserManager( generalUserManager, securityContext.subject(),

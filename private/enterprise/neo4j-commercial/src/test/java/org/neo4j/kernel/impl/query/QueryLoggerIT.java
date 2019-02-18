@@ -5,8 +5,8 @@
  */
 package org.neo4j.kernel.impl.query;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.auth.EmbeddedInteraction;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.After;
@@ -131,14 +131,14 @@ public class QueryLoggerIT
         db.getLocalUserManager().addRoleToUser( "architect", "mats" );
         db.getLocalUserManager().addRoleToUser( "reader", "andres" );
 
-        EnterpriseLoginContext mats = db.login( "mats", "neo4j" );
+        CommercialLoginContext mats = db.login( "mats", "neo4j" );
 
         // run query
         db.executeQuery( mats, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", Collections.emptyMap(), ResourceIterator::close );
         db.executeQuery( mats, "CREATE (:Label)", Collections.emptyMap(), ResourceIterator::close );
 
         // switch user, run query
-        EnterpriseLoginContext andres = db.login( "andres", "neo4j" );
+        CommercialLoginContext andres = db.login( "andres", "neo4j" );
         db.executeQuery( andres, "MATCH (n:Label) RETURN n", Collections.emptyMap(), ResourceIterator::close );
 
         db.tearDown();
@@ -163,7 +163,7 @@ public class QueryLoggerIT
 
         db.getLocalUserManager().setUserPassword( "neo4j", password( "123" ), false );
 
-        EnterpriseLoginContext subject = db.login( "neo4j", "123" );
+        CommercialLoginContext subject = db.login( "neo4j", "123" );
         db.executeQuery( subject, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", Collections.emptyMap(),
                 ResourceIterator::close );
 
@@ -384,8 +384,8 @@ public class QueryLoggerIT
                 .newGraphDatabase();
         GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
 
-        EnterpriseAuthManager authManager = facade.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        EnterpriseLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
+        CommercialAuthManager authManager = facade.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
+        CommercialLoginContext neo = authManager.login( AuthToken.newBasicAuthToken( "neo4j", "neo4j" ) );
 
         String query = "CALL dbms.security.changePassword('abc123')";
         try ( InternalTransaction tx = facade.beginTransaction( KernelTransaction.Type.explicit, neo ) )

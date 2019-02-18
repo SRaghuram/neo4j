@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager;
-import com.neo4j.server.security.enterprise.auth.EnterpriseAuthAndUserManager;
+import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
+import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
@@ -68,7 +68,7 @@ public class PropertyLevelSecurityIT
                 .setConfig( SecuritySettings.procedure_roles, "test.*:procRole" )
                 .setConfig( GraphDatabaseSettings.auth_enabled, "true" )
                 .newGraphDatabase();
-        EnterpriseAuthAndUserManager authManager = (EnterpriseAuthAndUserManager) db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
+        CommercialAuthAndUserManager authManager = (CommercialAuthAndUserManager) db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
         GlobalProcedures globalProcedures = db.getDependencyResolver().resolveDependency( GlobalProcedures.class );
         globalProcedures.registerProcedure( TestProcedure.class );
         EnterpriseUserManager userManager = authManager.getUserManager();

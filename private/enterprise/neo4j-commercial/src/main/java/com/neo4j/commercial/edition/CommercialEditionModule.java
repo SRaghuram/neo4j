@@ -14,11 +14,11 @@ import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
-import com.neo4j.kernel.enterprise.api.security.provider.EnterpriseNoAuthSecurityProvider;
+import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.kernel.enterprise.builtinprocs.EnterpriseBuiltInProcedures;
-import com.neo4j.kernel.impl.enterprise.EnterpriseConstraintSemantics;
-import com.neo4j.kernel.impl.enterprise.id.EnterpriseIdTypeConfigurationProvider;
+import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
+import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
@@ -92,7 +92,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     @Override
     protected IdContextFactory createIdContextFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
     {
-        return IdContextFactoryBuilder.of( new EnterpriseIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
+        return IdContextFactoryBuilder.of( new CommercialIdTypeConfigurationProvider( globalModule.getGlobalConfig() ),
                 globalModule.getJobScheduler() )
                 .withFileSystem( fileSystem )
                 .build();
@@ -107,7 +107,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     @Override
     protected ConstraintSemantics createSchemaRuleVerifier()
     {
-        return new EnterpriseConstraintSemantics();
+        return new CommercialConstraintSemantics();
     }
 
     @Override
@@ -208,7 +208,7 @@ public class CommercialEditionModule extends CommunityEditionModule
         }
         else
         {
-            securityProvider = EnterpriseNoAuthSecurityProvider.INSTANCE;
+            securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         editionModule.setSecurityProvider( securityProvider );
     }
