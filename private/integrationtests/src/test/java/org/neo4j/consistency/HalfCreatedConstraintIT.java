@@ -5,12 +5,11 @@
  */
 package org.neo4j.consistency;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +46,7 @@ public class HalfCreatedConstraintIT
         Label marker = Label.label( "MARKER" );
         String property = "property";
 
-        GraphDatabaseService database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        GraphDatabaseService database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
         try
         {
             createNodes( marker, property, database );

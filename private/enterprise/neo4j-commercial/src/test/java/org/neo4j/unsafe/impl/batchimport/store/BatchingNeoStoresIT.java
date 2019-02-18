@@ -5,7 +5,7 @@
  */
 package org.neo4j.unsafe.impl.batchimport.store;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,7 +80,7 @@ class BatchingNeoStoresIT
             batchingNeoStores.createNew();
         }
 
-        GraphDatabaseService database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
+        GraphDatabaseService database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
         try
         {
             TransactionIdStore transactionIdStore = getTransactionIdStore( (GraphDatabaseAPI) database );

@@ -6,7 +6,6 @@
 package com.neo4j.commandline.admin.security;
 
 import java.nio.file.Path;
-import javax.annotation.Nonnull;
 
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
@@ -22,14 +21,12 @@ public class ImportAuthCommandProvider extends AdminCommand.Provider
     }
 
     @Override
-    @Nonnull
     public Arguments allArguments()
     {
         return ImportAuthCommand.arguments();
     }
 
     @Override
-    @Nonnull
     public String description()
     {
         return "Import users and roles from files into the system graph, " +
@@ -39,21 +36,18 @@ public class ImportAuthCommandProvider extends AdminCommand.Provider
     }
 
     @Override
-    @Nonnull
     public String summary()
     {
         return "Import users and roles from files into the system graph.";
     }
 
     @Override
-    @Nonnull
     public AdminCommandSection commandSection()
     {
         return AuthenticationCommandSection.instance();
     }
 
     @Override
-    @Nonnull
     public AdminCommand create( Path homeDir, Path configDir, OutsideWorld outsideWorld )
     {
         return new ImportAuthCommand( homeDir, configDir, outsideWorld );

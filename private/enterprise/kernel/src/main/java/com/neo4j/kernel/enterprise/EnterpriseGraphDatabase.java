@@ -15,6 +15,7 @@ import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
+//TODO:remove
 public class EnterpriseGraphDatabase extends GraphDatabaseFacade
 {
     public EnterpriseGraphDatabase( File storeDir, Config config,

@@ -5,7 +5,7 @@
  */
 package org.neo4j.metrics.output;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +48,7 @@ class RotatableCsvOutputIT
     void setup()
     {
         outputPath = testDirectory.directory( "metrics" );
-        database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
+        database = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( csvPath, outputPath.getAbsolutePath() )
                 .setConfig( csvRotationThreshold, "21" )
                 .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )

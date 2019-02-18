@@ -5,7 +5,7 @@
  */
 package org.neo4j.unsafe.batchinsert;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import org.junit.Rule;
@@ -88,7 +88,7 @@ public class BatchInsertEnterpriseIT
         }
 
         // THEN
-        GraphDatabaseService db = new EnterpriseGraphDatabaseFactory()
+        GraphDatabaseService db = new CommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( directory.databaseDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
@@ -181,7 +181,7 @@ public class BatchInsertEnterpriseIT
 
     private GraphDatabaseService newDb( File storeDir, String recordFormat )
     {
-        return new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        return new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();

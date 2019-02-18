@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +37,7 @@ class CompositeConstraintIT
     @Test
     void compositeNodeKeyConstraintUpdate() throws Exception
     {
-        GraphDatabaseService database = new EnterpriseGraphDatabaseFactory()
+        GraphDatabaseService database = new CommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();

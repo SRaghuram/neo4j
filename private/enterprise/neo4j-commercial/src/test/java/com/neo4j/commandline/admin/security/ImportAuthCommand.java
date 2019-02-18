@@ -5,7 +5,7 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
@@ -196,9 +196,8 @@ public class ImportAuthCommand implements AdminCommand
         File systemDbStoreDir = new File( databaseDir, IMPORT_SYSTEM_DATABASE_NAME );
 
         // NOTE: We do not have the dependency to use CommercialGraphDatabaseFactory here, but EnterpriseGraphDatabaseFactory should work fine for this purpose
-        EnterpriseGraphDatabaseFactory factory = new EnterpriseGraphDatabaseFactory();
-        GraphDatabaseService db = factory.newEmbeddedDatabaseBuilder( systemDbStoreDir ).newGraphDatabase();
-        return db;
+        CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
+        return factory.newEmbeddedDatabaseBuilder( systemDbStoreDir ).newGraphDatabase();
     }
 
     private RealmLifecycle createSystemGraphRealmForOfflineImport( GraphDatabaseService db, Config config,
@@ -209,13 +208,12 @@ public class ImportAuthCommand implements AdminCommand
         SecurityLog securityLog = new SecurityLog( config, outsideWorld.fileSystem(), Runnable::run );
 
         DatabaseManager databaseManager = getDatabaseManager( db );
-        RealmLifecycle systemGraphRealm = CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
+        return CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
                 config,
                 securityLog,
                 databaseManager,
                 importUserRepository, importRoleRepository,
                 shouldResetSystemGraphAuthBeforeImport );
-        return systemGraphRealm;
     }
 
     private DatabaseManager getDatabaseManager( GraphDatabaseService db )

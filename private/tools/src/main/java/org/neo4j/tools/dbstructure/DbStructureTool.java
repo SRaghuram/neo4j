@@ -5,7 +5,7 @@
  */
 package org.neo4j.tools.dbstructure;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,7 +80,7 @@ public class DbStructureTool
 
     protected GraphDatabaseService instantiateGraphDatabase( String dbDir )
     {
-        return new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( new File( dbDir ) );
+        return new CommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( dbDir ) );
     }
 
     private void traceDb( String generator,

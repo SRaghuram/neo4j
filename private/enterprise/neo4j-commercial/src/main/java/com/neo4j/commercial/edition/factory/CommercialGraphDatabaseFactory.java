@@ -6,23 +6,29 @@
 package com.neo4j.commercial.edition.factory;
 
 import com.neo4j.commercial.edition.CommercialGraphDatabase;
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 
 import java.io.File;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.Edition;
 
-public class CommercialGraphDatabaseFactory extends EnterpriseGraphDatabaseFactory
+public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
 {
     @Override
-    protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( final File storeDir,
-            final GraphDatabaseFactoryState state )
+    protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( File storeDir, GraphDatabaseFactoryState state )
     {
         return new CommercialDatabaseCreator( storeDir, state );
+    }
+
+    @Override
+    public String getEdition()
+    {
+        return Edition.COMMERCIAL.toString();
     }
 
     private static class CommercialDatabaseCreator implements GraphDatabaseBuilder.DatabaseCreator

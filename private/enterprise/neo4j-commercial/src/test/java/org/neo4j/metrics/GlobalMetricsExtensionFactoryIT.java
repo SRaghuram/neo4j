@@ -5,7 +5,7 @@
  */
 package org.neo4j.metrics;
 
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.rule.CommercialDbmsRule;
 import org.hamcrest.Description;
@@ -114,7 +114,7 @@ public class GlobalMetricsExtensionFactoryIT
     {
         // Start the database
         File disabledTracerDb = directory.databaseDir( "disabledTracerDb" );
-        GraphDatabaseBuilder builder = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledTracerDb );
+        GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( disabledTracerDb );
         GraphDatabaseService nullTracerDatabase =
                 builder.setConfig( MetricsSettings.neoEnabled, TRUE ).setConfig( csvEnabled, TRUE )
                         .setConfig( csvPath, outputPath.getAbsolutePath() )
