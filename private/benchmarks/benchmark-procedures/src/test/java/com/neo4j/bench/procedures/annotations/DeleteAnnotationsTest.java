@@ -22,7 +22,7 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.configuration.Settings;
 
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
 import static org.hamcrest.CoreMatchers.equalTo;

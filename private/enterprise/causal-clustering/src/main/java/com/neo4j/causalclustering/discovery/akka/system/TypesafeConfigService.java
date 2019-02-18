@@ -38,10 +38,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.SocketAddress;
-import org.neo4j.kernel.configuration.Config;
 
 public final class TypesafeConfigService
 {

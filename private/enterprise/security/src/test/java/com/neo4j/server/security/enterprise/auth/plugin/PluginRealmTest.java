@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import java.time.Clock;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperations;
 

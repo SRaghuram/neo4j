@@ -15,6 +15,9 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
+import org.neo4j.configuration.BoltConnector;
+import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.Settings;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -29,9 +32,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.TestDirectory;
 

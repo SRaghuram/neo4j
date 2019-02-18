@@ -5,15 +5,16 @@
  */
 package com.neo4j.bench.micro.benchmarks.gbptree;
 
+import com.neo4j.bench.client.profiling.FullBenchmarkName;
+import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
+import com.neo4j.bench.micro.data.Augmenterizer;
+import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
-import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark;
-import com.neo4j.bench.client.profiling.FullBenchmarkName;
-import com.neo4j.bench.micro.data.Augmenterizer;
-import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
-
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.progress.ProgressListener;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.index.internal.gbptree.GBPTree;
@@ -28,7 +29,6 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;

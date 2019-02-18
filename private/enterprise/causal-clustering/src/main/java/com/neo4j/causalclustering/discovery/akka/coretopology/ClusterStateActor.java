@@ -15,7 +15,7 @@ import akka.japi.pf.ReceiveBuilder;
 
 import java.time.Duration;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

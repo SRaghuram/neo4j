@@ -5,26 +5,27 @@
  */
 package org.neo4j.commandline.dbms;
 
+import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.arguments.Arguments;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.kernel.StoreLockException;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.Validators;
 
 import static org.neo4j.commandline.arguments.common.Database.ARG_DATABASE;
-import static org.neo4j.kernel.configuration.Config.fromFile;
+import static org.neo4j.configuration.Config.fromFile;
 
 public class UnbindFromClusterCommand implements AdminCommand
 {

@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.facade.ExternalDependencies;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.Log;
 import org.neo4j.metrics.source.server.ServerThreadView;
 import org.neo4j.metrics.source.server.ServerThreadViewSetter;

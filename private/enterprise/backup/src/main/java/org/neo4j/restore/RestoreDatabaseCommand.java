@@ -9,9 +9,9 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.commandline.admin.CommandFailed;
+import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Validators;
@@ -19,8 +19,8 @@ import org.neo4j.kernel.impl.util.Validators;
 import static java.lang.String.format;
 import static org.neo4j.commandline.Util.checkLock;
 import static org.neo4j.commandline.Util.isSameOrChildFile;
+import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.database_path;
-import static org.neo4j.kernel.configuration.LayoutConfig.of;
 
 public class RestoreDatabaseCommand
 {

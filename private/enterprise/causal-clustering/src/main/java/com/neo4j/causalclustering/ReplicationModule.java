@@ -25,9 +25,9 @@ import com.neo4j.causalclustering.messaging.Outbound;
 import java.time.Duration;
 import java.util.UUID;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
 public class ReplicationModule

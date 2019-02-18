@@ -13,7 +13,7 @@ import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
 

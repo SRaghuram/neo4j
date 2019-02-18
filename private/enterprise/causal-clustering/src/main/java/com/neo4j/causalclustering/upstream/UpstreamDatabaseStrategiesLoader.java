@@ -15,7 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 import org.neo4j.common.Service;
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

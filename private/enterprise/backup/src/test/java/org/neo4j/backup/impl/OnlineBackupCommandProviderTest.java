@@ -5,11 +5,11 @@
  */
 package org.neo4j.backup.impl;
 
-import org.junit.jupiter.api.Test;
-
 import com.neo4j.causalclustering.handlers.PipelineWrapper;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
-import org.neo4j.kernel.configuration.Config;
+import org.junit.jupiter.api.Test;
+
+import org.neo4j.configuration.Config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;

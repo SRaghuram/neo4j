@@ -17,8 +17,8 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.Settings;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;

@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.time.Clock;
 import java.util.logging.Level;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;

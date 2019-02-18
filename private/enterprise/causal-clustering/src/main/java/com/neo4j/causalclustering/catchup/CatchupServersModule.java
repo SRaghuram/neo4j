@@ -19,12 +19,12 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import java.util.Collection;
 import java.util.Optional;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;

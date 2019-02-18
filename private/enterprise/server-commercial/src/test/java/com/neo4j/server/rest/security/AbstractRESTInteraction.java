@@ -26,6 +26,9 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import javax.ws.rs.core.HttpHeaders;
 
+import org.neo4j.configuration.BoltConnector;
+import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.LegacySslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.HostnamePort;
@@ -33,9 +36,6 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.query.clientconnection.HttpConnectionInfo;
@@ -51,8 +51,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
-import static org.neo4j.kernel.configuration.BoltConnector.EncryptionLevel.OPTIONAL;
 
 abstract class AbstractRESTInteraction extends CommunityServerTestBase implements NeoInteractionLevel<RESTSubject>
 {

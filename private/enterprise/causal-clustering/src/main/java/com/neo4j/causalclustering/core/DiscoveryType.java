@@ -17,8 +17,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.BiFunction;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.internal.LogService;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;

@@ -35,7 +35,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapContext;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;

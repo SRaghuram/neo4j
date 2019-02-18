@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.consensus.log.cache;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.in_flight_cache_max_bytes;

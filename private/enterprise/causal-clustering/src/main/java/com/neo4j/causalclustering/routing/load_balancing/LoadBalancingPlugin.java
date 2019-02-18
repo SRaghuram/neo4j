@@ -8,8 +8,8 @@ package com.neo4j.causalclustering.routing.load_balancing;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

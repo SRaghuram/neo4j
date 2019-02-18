@@ -11,9 +11,9 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.ObjLongConsumer;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOLimiter;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.util.VisibleForTesting;
 
 public class ConfigurableIOLimiter implements IOLimiter

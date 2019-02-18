@@ -13,19 +13,19 @@ import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.HostnamePort;
 
-import static org.neo4j.kernel.configuration.Settings.BOOLEAN;
-import static org.neo4j.kernel.configuration.Settings.BYTES;
-import static org.neo4j.kernel.configuration.Settings.DURATION;
-import static org.neo4j.kernel.configuration.Settings.FALSE;
-import static org.neo4j.kernel.configuration.Settings.HOSTNAME_PORT;
-import static org.neo4j.kernel.configuration.Settings.INTEGER;
-import static org.neo4j.kernel.configuration.Settings.STRING;
-import static org.neo4j.kernel.configuration.Settings.TRUE;
-import static org.neo4j.kernel.configuration.Settings.buildSetting;
-import static org.neo4j.kernel.configuration.Settings.min;
-import static org.neo4j.kernel.configuration.Settings.pathSetting;
-import static org.neo4j.kernel.configuration.Settings.range;
-import static org.neo4j.kernel.configuration.Settings.setting;
+import static org.neo4j.configuration.Settings.BOOLEAN;
+import static org.neo4j.configuration.Settings.BYTES;
+import static org.neo4j.configuration.Settings.DURATION;
+import static org.neo4j.configuration.Settings.FALSE;
+import static org.neo4j.configuration.Settings.HOSTNAME_PORT;
+import static org.neo4j.configuration.Settings.INTEGER;
+import static org.neo4j.configuration.Settings.STRING;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.Settings.buildSetting;
+import static org.neo4j.configuration.Settings.min;
+import static org.neo4j.configuration.Settings.pathSetting;
+import static org.neo4j.configuration.Settings.range;
+import static org.neo4j.configuration.Settings.setting;
 
 /**
  * Settings for the Neo4j Enterprise metrics reporting.

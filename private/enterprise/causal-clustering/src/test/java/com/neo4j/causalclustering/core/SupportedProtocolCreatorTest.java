@@ -15,7 +15,7 @@ import org.junit.Test;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.COMPRESSION_SNAPPY;

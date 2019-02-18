@@ -7,8 +7,8 @@ package org.neo4j.kernel.impl.locking;
 
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.Settings;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;

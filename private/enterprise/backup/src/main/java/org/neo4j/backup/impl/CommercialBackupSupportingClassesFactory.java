@@ -5,13 +5,13 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.handlers.PipelineWrapper;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
-import com.neo4j.causalclustering.handlers.PipelineWrapper;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 public class CommercialBackupSupportingClassesFactory extends BackupSupportingClassesFactory
 {

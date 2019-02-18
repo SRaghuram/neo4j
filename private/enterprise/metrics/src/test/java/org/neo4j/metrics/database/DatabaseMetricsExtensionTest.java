@@ -12,13 +12,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Supplier;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.Settings;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.extension.context.DatabaseExtensionContext;
 import org.neo4j.kernel.extension.context.ExtensionContext;

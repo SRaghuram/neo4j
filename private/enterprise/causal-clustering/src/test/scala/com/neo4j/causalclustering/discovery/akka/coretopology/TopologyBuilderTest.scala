@@ -16,7 +16,7 @@ import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.neo4j.kernel.configuration.Config
+import org.neo4j.configuration.Config
 import org.neo4j.logging.NullLogProvider
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mock.MockitoSugar

@@ -37,8 +37,8 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.util.VisibleForTesting;

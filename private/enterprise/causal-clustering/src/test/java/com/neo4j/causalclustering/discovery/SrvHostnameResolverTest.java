@@ -15,8 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.discovery;
 
 import com.hazelcast.client.config.ClientNetworkConfig;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
 

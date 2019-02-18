@@ -14,7 +14,7 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.identity.MemberId
-import org.neo4j.kernel.configuration.Config
+import org.neo4j.configuration.Config
 import org.neo4j.logging.NullLogProvider
 
 class MetadataActorIT extends BaseAkkaIT("MetadataActorTest") {

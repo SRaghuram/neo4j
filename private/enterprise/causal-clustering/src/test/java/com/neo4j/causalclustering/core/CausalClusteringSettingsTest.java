@@ -10,8 +10,8 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.BaseSetting;
-import org.neo4j.kernel.configuration.Settings;
 
 import static org.junit.Assert.assertEquals;
 

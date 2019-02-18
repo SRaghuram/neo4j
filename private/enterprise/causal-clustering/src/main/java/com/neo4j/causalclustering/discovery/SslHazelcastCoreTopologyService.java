@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.hazelcast.config.NetworkConfig;
 import com.neo4j.causalclustering.identity.MemberId;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;

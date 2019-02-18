@@ -13,7 +13,7 @@ import akka.testkit.TestKit
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
-import org.neo4j.kernel.configuration.Config
+import org.neo4j.configuration.Config
 import org.neo4j.logging.AssertableLogProvider
 
 

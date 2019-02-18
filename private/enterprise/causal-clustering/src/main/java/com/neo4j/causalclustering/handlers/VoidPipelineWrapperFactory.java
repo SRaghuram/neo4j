@@ -10,8 +10,8 @@ import io.netty.channel.ChannelHandler;
 
 import java.util.List;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 

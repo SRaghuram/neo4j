@@ -13,11 +13,11 @@ import org.neo4j.configuration.LoadableConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.store.id.IdType;
 
-import static org.neo4j.kernel.configuration.Settings.STRING;
-import static org.neo4j.kernel.configuration.Settings.list;
-import static org.neo4j.kernel.configuration.Settings.optionsIgnoreCase;
-import static org.neo4j.kernel.configuration.Settings.optionsObeyCase;
-import static org.neo4j.kernel.configuration.Settings.setting;
+import static org.neo4j.configuration.Settings.STRING;
+import static org.neo4j.configuration.Settings.list;
+import static org.neo4j.configuration.Settings.optionsIgnoreCase;
+import static org.neo4j.configuration.Settings.optionsObeyCase;
+import static org.neo4j.configuration.Settings.setting;
 import static org.neo4j.kernel.impl.store.id.IdType.NODE;
 import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP;
 

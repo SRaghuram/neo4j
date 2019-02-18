@@ -12,9 +12,9 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.BoltConnector;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.hamcrest.MatcherAssert.assertThat;

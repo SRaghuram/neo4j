@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policie
 import com.neo4j.causalclustering.routing.load_balancing.filters.Filter;
 import org.junit.Test;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;

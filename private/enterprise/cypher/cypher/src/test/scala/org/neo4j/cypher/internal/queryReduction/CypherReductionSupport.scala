@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.queryReduction
 
+import org.neo4j.configuration.Config
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.compatibility.v4_0.WrappedMonitors
 import org.neo4j.cypher.internal.compiler.v4_0._
@@ -31,7 +32,6 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherT
 import org.neo4j.cypher.{CypherRuntimeOption, GraphIcing}
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
-import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}

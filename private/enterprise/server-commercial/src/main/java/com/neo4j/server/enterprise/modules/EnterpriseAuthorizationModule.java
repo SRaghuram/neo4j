@@ -10,8 +10,8 @@ import com.neo4j.server.rest.dbms.EnterpriseAuthorizationDisabledFilter;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.api.security.AuthManager;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.modules.AuthorizationModule;
 import org.neo4j.server.rest.dbms.AuthorizationDisabledFilter;

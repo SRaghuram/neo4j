@@ -21,9 +21,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.IntFunction;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
 

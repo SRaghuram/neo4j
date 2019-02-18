@@ -5,13 +5,14 @@
  */
 package org.neo4j.metrics.global;
 
+import com.neo4j.causalclustering.core.consensus.CoreMetaData;
+
 import java.util.function.Supplier;
 
-import com.neo4j.causalclustering.core.consensus.CoreMetaData;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;

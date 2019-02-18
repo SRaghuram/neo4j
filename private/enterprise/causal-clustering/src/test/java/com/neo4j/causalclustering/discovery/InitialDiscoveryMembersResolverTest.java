@@ -14,8 +14,8 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.configuration.Config;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;
 import static java.util.Arrays.asList;

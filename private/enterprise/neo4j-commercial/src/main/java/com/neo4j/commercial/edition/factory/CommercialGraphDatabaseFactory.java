@@ -9,13 +9,13 @@ import com.neo4j.commercial.edition.CommercialGraphDatabase;
 
 import java.io.File;
 
+import org.neo4j.common.Edition;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.factory.Edition;
 
 public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
 {

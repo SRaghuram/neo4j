@@ -43,6 +43,7 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.ModificationItem;
 import javax.naming.ldap.LdapContext;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Secret;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.Record;
@@ -53,7 +54,6 @@ import org.neo4j.driver.v1.exceptions.TransientException;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.diagnostics.providers.ConfigDiagnostics;
 import org.neo4j.kernel.impl.proc.GlobalProcedures;
 import org.neo4j.logging.Logger;

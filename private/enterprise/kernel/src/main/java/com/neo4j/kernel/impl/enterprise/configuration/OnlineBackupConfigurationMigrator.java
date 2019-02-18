@@ -9,7 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
-import org.neo4j.kernel.configuration.BaseConfigurationMigrator;
+import org.neo4j.configuration.BaseConfigurationMigrator;
 
 class OnlineBackupConfigurationMigrator extends BaseConfigurationMigrator
 {

@@ -17,10 +17,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import org.neo4j.configuration.BoltConnector;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.configuration.Config;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.discovery_type;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.initial_discovery_members;

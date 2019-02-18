@@ -47,7 +47,7 @@ import java.util.Optional;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.configuration.Settings;
 
 import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.Assert.assertNotNull;

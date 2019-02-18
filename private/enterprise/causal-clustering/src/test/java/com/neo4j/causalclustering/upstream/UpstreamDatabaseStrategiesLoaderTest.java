@@ -12,7 +12,7 @@ import org.junit.Test;
 import java.util.Set;
 import java.util.UUID;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.upstream_selection_strategy;

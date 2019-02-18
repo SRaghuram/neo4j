@@ -10,8 +10,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.test.matchers.NestedThrowableMatcher;
 import org.neo4j.test.rule.DbmsRule;
 

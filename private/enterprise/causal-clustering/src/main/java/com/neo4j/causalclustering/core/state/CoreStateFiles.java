@@ -27,8 +27,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.configuration.Config;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.global_session_tracker_state_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.id_alloc_state_size;

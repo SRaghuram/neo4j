@@ -9,11 +9,11 @@ import java.io.StringWriter;
 import java.time.ZoneId;
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.diagnostics.providers.DbmsDiagnosticsManager;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.management.Diagnostics;

@@ -17,9 +17,8 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings.{akka_failure_de
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.{atLeastOnce, verify}
-import com.neo4j.causalclustering.core.CausalClusteringSettings.{akka_failure_detector_acceptable_heartbeat_pause, akka_failure_detector_heartbeat_interval}
+import org.neo4j.configuration.Config
 import org.neo4j.helpers.collection.Iterators
-import org.neo4j.kernel.configuration.Config
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.immutable.SortedSet

@@ -11,11 +11,11 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ssl.SslPolicyConfig;
-import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
-import org.neo4j.kernel.configuration.ssl.SslSystemSettings;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.SslPolicyConfig;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.ssl.config.SslPolicyLoader;
+import org.neo4j.ssl.config.SslSystemSettings;
 
 public class SslContextFactory
 {

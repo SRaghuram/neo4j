@@ -14,9 +14,9 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

@@ -16,7 +16,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.metrics.MetricsTestHelper.TimerField;
 
 import static org.hamcrest.Matchers.greaterThan;

@@ -27,7 +27,7 @@ import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.configuration.Settings;
 
 import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;

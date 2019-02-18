@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContextExecutor;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
 public class ActorSystemFactory

@@ -17,8 +17,8 @@ import org.junit.Test;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.configuration.HttpConnector;
+import org.neo4j.configuration.BoltConnector;
+import org.neo4j.configuration.HttpConnector;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;

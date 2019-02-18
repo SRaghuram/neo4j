@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 

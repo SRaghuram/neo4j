@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.Mode;
 
@@ -12,10 +13,9 @@ import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nonnull;
 
-import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConfigurationValidator;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConfigurationValidator;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;

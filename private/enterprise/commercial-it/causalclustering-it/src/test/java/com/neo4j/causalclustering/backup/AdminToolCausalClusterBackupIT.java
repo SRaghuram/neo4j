@@ -17,18 +17,18 @@ import org.junit.Test;
 import java.io.File;
 import java.time.LocalDateTime;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static com.neo4j.util.TestHelpers.runBackupToolFromSameJvm;
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
-import static org.neo4j.kernel.configuration.Settings.FALSE;
 import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 
 public class AdminToolCausalClusterBackupIT

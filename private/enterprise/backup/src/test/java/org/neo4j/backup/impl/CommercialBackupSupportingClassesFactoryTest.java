@@ -5,12 +5,12 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.handlers.PipelineWrapper;
 import com.neo4j.causalclustering.handlers.SslClientPipelineWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.neo4j.causalclustering.handlers.PipelineWrapper;
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

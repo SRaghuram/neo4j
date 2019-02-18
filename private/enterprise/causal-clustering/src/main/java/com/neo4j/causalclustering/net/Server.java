@@ -18,14 +18,13 @@ import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.String.format;
-import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 
 public class Server extends SuspendableLifeCycle
 {

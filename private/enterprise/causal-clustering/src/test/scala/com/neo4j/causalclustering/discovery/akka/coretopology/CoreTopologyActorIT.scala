@@ -21,7 +21,7 @@ import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.neo4j.kernel.configuration.Config
+import org.neo4j.configuration.Config
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._

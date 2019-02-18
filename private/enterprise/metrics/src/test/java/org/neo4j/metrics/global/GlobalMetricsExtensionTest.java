@@ -5,18 +5,18 @@
  */
 package org.neo4j.metrics.global;
 
+import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Supplier;
 
-import com.neo4j.causalclustering.core.consensus.CoreMetaData;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.Settings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.extension.context.GlobalExtensionContext;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;

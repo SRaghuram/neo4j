@@ -24,8 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;

@@ -7,7 +7,7 @@ package com.neo4j.kernel.impl.proc;
 
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.proc.ProcedureConfig;
 
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.default_allowed;

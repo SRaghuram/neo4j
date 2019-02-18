@@ -9,13 +9,12 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
-import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.Executor;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 
 public interface BootstrapConfiguration<TYPE extends Channel>
 {

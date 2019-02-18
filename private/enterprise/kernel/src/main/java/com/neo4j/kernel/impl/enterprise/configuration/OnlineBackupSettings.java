@@ -5,20 +5,20 @@
  */
 package com.neo4j.kernel.impl.enterprise.configuration;
 
+import org.neo4j.configuration.ConfigurationMigrator;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.configuration.Migrator;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.kernel.configuration.ConfigurationMigrator;
-import org.neo4j.kernel.configuration.Migrator;
 
-import static org.neo4j.kernel.configuration.Settings.BOOLEAN;
-import static org.neo4j.kernel.configuration.Settings.NO_DEFAULT;
-import static org.neo4j.kernel.configuration.Settings.STRING;
-import static org.neo4j.kernel.configuration.Settings.TRUE;
-import static org.neo4j.kernel.configuration.Settings.listenAddress;
-import static org.neo4j.kernel.configuration.Settings.prefixSetting;
-import static org.neo4j.kernel.configuration.Settings.setting;
+import static org.neo4j.configuration.Settings.BOOLEAN;
+import static org.neo4j.configuration.Settings.NO_DEFAULT;
+import static org.neo4j.configuration.Settings.STRING;
+import static org.neo4j.configuration.Settings.TRUE;
+import static org.neo4j.configuration.Settings.listenAddress;
+import static org.neo4j.configuration.Settings.prefixSetting;
+import static org.neo4j.configuration.Settings.setting;
 
 /**
  * Settings for online backup

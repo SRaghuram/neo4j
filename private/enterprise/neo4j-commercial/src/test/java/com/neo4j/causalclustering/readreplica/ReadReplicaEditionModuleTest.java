@@ -15,12 +15,12 @@ import org.mockito.InOrder;
 import java.util.UUID;
 import java.util.function.Predicate;
 
+import org.neo4j.configuration.BoltConnector;
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.Settings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.configuration.BoltConnector;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;

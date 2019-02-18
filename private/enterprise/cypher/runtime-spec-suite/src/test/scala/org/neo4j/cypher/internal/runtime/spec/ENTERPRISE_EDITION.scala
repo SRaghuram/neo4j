@@ -7,10 +7,10 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.common.DependencyResolver
+import org.neo4j.configuration.Config
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{CypherConfiguration, CypherRuntimeConfiguration, EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.Kernel
-import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler

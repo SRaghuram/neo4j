@@ -19,7 +19,7 @@ import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMe
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink, TopologyUpdateSink}
 import com.neo4j.causalclustering.discovery.{CoreTopology, ReadReplicaTopology, TestTopology}
 import com.neo4j.causalclustering.identity.{ClusterId, MemberId}
-import org.neo4j.kernel.configuration.Config
+import org.neo4j.configuration.Config
 import org.neo4j.logging.NullLogProvider
 
 import scala.collection.JavaConverters._

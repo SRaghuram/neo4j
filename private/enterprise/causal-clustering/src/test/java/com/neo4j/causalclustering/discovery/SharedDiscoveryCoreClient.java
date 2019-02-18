@@ -14,8 +14,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.util.Map;
 import java.util.Optional;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 
 class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements Comparable<SharedDiscoveryCoreClient>

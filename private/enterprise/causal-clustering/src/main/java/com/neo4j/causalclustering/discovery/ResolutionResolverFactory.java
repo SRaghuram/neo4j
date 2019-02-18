@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.DiscoveryType;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.internal.LogService;
 
 public class ResolutionResolverFactory

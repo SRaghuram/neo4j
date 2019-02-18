@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
-import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -29,8 +29,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;

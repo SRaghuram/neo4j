@@ -16,8 +16,8 @@ import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import java.time.Duration;
 import java.util.ArrayList;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

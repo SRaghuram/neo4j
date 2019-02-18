@@ -5,12 +5,12 @@
  */
 package com.neo4j.causalclustering.handlers;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.ssl.SslPolicyLoader;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 public class SecurePipelineFactory implements DuplexPipelineWrapperFactory
 {

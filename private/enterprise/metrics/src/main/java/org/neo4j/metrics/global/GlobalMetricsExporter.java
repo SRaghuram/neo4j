@@ -7,7 +7,7 @@ package org.neo4j.metrics.global;
 
 import com.codahale.metrics.MetricRegistry;
 
-import org.neo4j.kernel.configuration.Config;
+import org.neo4j.configuration.Config;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.kernel.lifecycle.LifeSupport;

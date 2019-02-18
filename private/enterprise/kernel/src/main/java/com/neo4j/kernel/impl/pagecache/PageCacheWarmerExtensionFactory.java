@@ -8,10 +8,10 @@ package com.neo4j.kernel.impl.pagecache;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerLoggingMonitor;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitor;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;

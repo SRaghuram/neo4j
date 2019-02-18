@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.tx;
 
-import org.neo4j.helpers.collection.LongRange;
 import com.neo4j.causalclustering.identity.StoreId;
 import org.junit.Before;
 import org.junit.Rule;
@@ -19,11 +18,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.LongStream;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.TestCommand;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -59,8 +59,8 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.kernel.configuration.Config.defaults;
 import static org.neo4j.kernel.impl.api.TestCommandReaderFactory.logEntryReader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
