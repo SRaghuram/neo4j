@@ -24,11 +24,17 @@ trait PipelineBreakingPolicy {
     */
   def breakOnNestedPlan: Boolean
 
-  def invoke(lp: LogicalPlan, slots: SlotConfiguration): SlotConfiguration =
+  def invoke(lp: LogicalPlan, slots: SlotConfiguration, argumentSlots: SlotConfiguration): SlotConfiguration =
     if (breakOn(lp)) {
       lp match {
-        case _: Distinct => slots.emptyWithCachedProperties()
-        case _: Aggregation => SlotConfiguration.empty
+        case _: Distinct =>
+          val result = argumentSlots.copy()
+          result.addCachedPropertiesOf(slots)
+          result
+        case _: Aggregation =>
+          val result = argumentSlots.copy()
+          result.addCachedPropertiesOf(slots)
+          result
         case _ => slots.copy()
       }
     } else slots

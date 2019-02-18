@@ -56,9 +56,9 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
         if (slots.numberOfLongs > otherPipeline.numberOfLongs ||
           slots.numberOfReferences > otherPipeline.numberOfReferences)
           throw new InternalException(
-            s"""Tried to copy more data into less:
-               |From : ${slots}
-               |To :   ${otherPipeline}""".stripMargin)
+            s"""A bug has occurred in the slotted runtime: The target slotted execution context cannot hold the data to copy
+               |From : $slots
+               |To :   $otherPipeline""".stripMargin)
         else {
           System.arraycopy(longs, fromLongOffset, other.longs, toLongOffset, slots.numberOfLongs - fromLongOffset)
           System.arraycopy(refs, fromRefOffset, other.refs, toRefOffset, slots.numberOfReferences - fromRefOffset)
@@ -69,7 +69,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit =
     if (nLongs > slots.numberOfLongs || nRefs > slots.numberOfReferences)
-      throw new InternalException("Tried to copy more data into less.")
+      throw new InternalException("A bug has occurred in the slotted runtime: The target slotted execution context cannot hold the data to copy.")
     else input match {
       case other@SlottedExecutionContext(otherPipeline) =>
         System.arraycopy(other.longs, 0, longs, 0, nLongs)

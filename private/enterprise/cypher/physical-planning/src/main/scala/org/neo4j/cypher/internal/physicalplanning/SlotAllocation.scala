@@ -93,7 +93,7 @@ object SlotAllocation {
                          else argumentStack.top
           recordArgument(current, argument)
 
-          val slots = breakingPolicy.invoke(current, argument.slotConfiguration)
+          val slots = breakingPolicy.invoke(current, argument.slotConfiguration, argument.slotConfiguration)
 
           allocateExpressions(current, nullable, slots, breakingPolicy, semanticTable, allocations, arguments)
           allocateLeaf(current, nullable, slots)
@@ -107,7 +107,7 @@ object SlotAllocation {
 
           allocateExpressions(current, nullable, sourceSlots, breakingPolicy, semanticTable, allocations, arguments)
 
-          val slots = breakingPolicy.invoke(current, sourceSlots)
+          val slots = breakingPolicy.invoke(current, sourceSlots, argument.slotConfiguration)
           allocateOneChild(current, nullable, sourceSlots, slots, recordArgument(_, argument), semanticTable)
           allocations.set(current.id, slots)
           resultStack.push(slots)
@@ -132,7 +132,7 @@ object SlotAllocation {
           //       particular scope (lhs or rhs) we need to add handling of it to allocateExpressions.
           allocateExpressions(current, nullable, lhsSlots, breakingPolicy, semanticTable, allocations, arguments, shouldAllocateLhs = true)
           allocateExpressions(current, nullable, rhsSlots, breakingPolicy, semanticTable, allocations, arguments, shouldAllocateLhs = false)
-          val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), breakingPolicy)
+          val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), breakingPolicy, argument)
           allocations.set(current.id, result)
           if (current.isInstanceOf[ApplyPlan])
             argumentStack.pop()
@@ -362,7 +362,7 @@ object SlotAllocation {
         slots.newLong(rel, nullable = true, CTRelationship)
 
       case VarExpand(_,
-                       from,
+                       _,
                        _,
                        _,
                        _,
@@ -475,7 +475,8 @@ object SlotAllocation {
                                lhs: SlotConfiguration,
                                rhs: SlotConfiguration,
                                recordArgument: LogicalPlan => Unit,
-                               breakingPolicy: PipelineBreakingPolicy): SlotConfiguration =
+                               breakingPolicy: PipelineBreakingPolicy,
+                               argument: SlotsAndArgument): SlotConfiguration =
     lp match {
       case _: Apply =>
         rhs
@@ -512,7 +513,7 @@ object SlotAllocation {
       case _: CartesianProduct =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
         rhs.foreachSlotOrdered(result.add, result.newCachedPropertyIfUnseen)
@@ -522,7 +523,7 @@ object SlotAllocation {
       case RightOuterHashJoin(nodes, _, _) =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, rhs)
+        val result = breakingPolicy.invoke(lp, rhs, argument.slotConfiguration)
 
         // If the column is one of the join columns there is no need to add it again
         def onVariableSlot(key: String, slot: Slot): Unit =
@@ -535,7 +536,7 @@ object SlotAllocation {
       case LeftOuterHashJoin(nodes, _, _) =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
 
         // If the column is one of the join columns there is no need to add it again
         def onVariableSlot(key: String, slot: Slot): Unit =
@@ -548,7 +549,7 @@ object SlotAllocation {
       case NodeHashJoin(nodes, _, _) =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
 
         // If the column is one of the join columns there is no need to add it again
         def onVariableSlot(key: String, slot: Slot): Unit =
@@ -561,7 +562,7 @@ object SlotAllocation {
       case _: ValueHashJoin =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
-        val result = breakingPolicy.invoke(lp, lhs)
+        val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
         rhs.foreachSlotOrdered(result.add, result.newCachedPropertyIfUnseen)
@@ -574,7 +575,7 @@ object SlotAllocation {
       case _: ForeachApply =>
         lhs
 
-      case _: Union  =>
+      case _: Union =>
         // The result slot configuration should only contain the variables we join on.
         // If both lhs and rhs has a long slot with the same type the result should
         // also use a long slot, otherwise we use a ref slot.
@@ -583,11 +584,11 @@ object SlotAllocation {
           case (key, lhsSlot: LongSlot) =>
             //find all shared variables and look for other long slots with same type
             rhs.get(key).foreach {
-            case LongSlot(_, rhsNullable, typ) if typ == lhsSlot.typ =>
-              result.newLong(key, lhsSlot.nullable || rhsNullable, typ)
-            case rhsSlot =>
-              val newType = if (lhsSlot.typ == rhsSlot.typ) lhsSlot.typ else CTAny
-              result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
+              case LongSlot(_, rhsNullable, typ) if typ == lhsSlot.typ =>
+                result.newLong(key, lhsSlot.nullable || rhsNullable, typ)
+              case rhsSlot =>
+                val newType = if (lhsSlot.typ == rhsSlot.typ) lhsSlot.typ else CTAny
+                result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
             }
           case (key, lhsSlot) =>
             //We know lhs uses a ref slot so just look for shared variables.

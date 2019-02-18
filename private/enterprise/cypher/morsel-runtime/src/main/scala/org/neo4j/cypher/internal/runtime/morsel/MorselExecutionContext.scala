@@ -110,7 +110,7 @@ class MorselExecutionContext(private val morsel: Morsel,
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = input match {
     case other:MorselExecutionContext =>
       if (nLongs > longsPerRow || nRefs > refsPerRow)
-        throw new InternalException("Tried to copy too much data.")
+        throw new InternalException("A bug has occurred in the morsel runtime: The target morsel execution context cannot hold the data to copy.")
       else {
         System.arraycopy(other.morsel.longs, other.longsAtCurrentRow, morsel.longs, longsAtCurrentRow, nLongs)
         System.arraycopy(other.morsel.refs, other.refsAtCurrentRow, morsel.refs, refsAtCurrentRow, nRefs)
@@ -118,7 +118,7 @@ class MorselExecutionContext(private val morsel: Morsel,
 
     case other:SlottedExecutionContext =>
       if (nLongs > longsPerRow || nRefs > refsPerRow)
-        throw new InternalException("Tried to copy too much data.")
+        throw new InternalException("A bug has occurred in the morsel runtime: The target morsel execution context cannot hold the data to copy.")
       else {
         System.arraycopy(other.longs, 0, morsel.longs, longsAtCurrentRow, nLongs)
         System.arraycopy(other.refs, 0, morsel.refs, refsAtCurrentRow, nRefs)
