@@ -17,7 +17,6 @@
         <ldbc-driver-version>0.3.0</ldbc-driver-version>
         <neo4j-java-driver-version>1.4.4</neo4j-java-driver-version>
         <ldbc-driver-version>0.3.2</ldbc-driver-version>
-        <airline.version>0.7</airline.version>
         <fastutil.version>7.0.10</fastutil.version>
         <commons-compress.version>1.15</commons-compress.version>
         <uberjar.name>ldbc</uberjar.name>
@@ -93,7 +92,6 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>airline</artifactId>
-            <version>${airline.version}</version>
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>

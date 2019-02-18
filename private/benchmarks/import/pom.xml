@@ -22,7 +22,6 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <uberjar.name>import-benchmarks</uberjar.name>
-        <airline.version>0.7</airline.version>
         <scala.version>2.11.12</scala.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
@@ -64,8 +63,7 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>airline</artifactId>
-            <version>${airline.version}</version>
-        </dependency>
+            </dependency>
         <dependency>
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-results-client</artifactId>
@@ -73,7 +71,7 @@
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-io</artifactId>
+            <artifactId>io-test-utils</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
         </dependency>
