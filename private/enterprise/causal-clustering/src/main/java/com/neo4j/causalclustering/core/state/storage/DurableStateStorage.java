@@ -27,7 +27,7 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
     private final File fileA;
     private final File fileB;
     private final FileSystemAbstraction fsa;
-    private final CoreStateFiles fileType;
+    private final CoreStateFiles<STATE> fileType;
     private final StateMarshal<STATE> marshal;
     private final int numberOfEntriesBeforeRotation;
 
@@ -120,7 +120,15 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         numberOfEntriesWrittenInActiveFile++;
     }
 
-    void switchStoreFile() throws IOException
+    @Override
+    public String toString()
+    {
+        return "DurableStateStorage{" +
+               "fileType=" + fileType +
+               '}';
+    }
+
+    private void switchStoreFile() throws IOException
     {
         currentStoreChannel.close();
 
