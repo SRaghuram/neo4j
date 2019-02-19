@@ -48,9 +48,9 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     EmbeddedInteraction( Map<String, String> config, Supplier<FileSystemAbstraction> fileSystemSupplier ) throws Throwable
     {
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        factory.setFileSystem( fileSystemSupplier.get() );
+        this.fileSystem = fileSystemSupplier.get();
+        factory.setFileSystem( fileSystem );
         GraphDatabaseBuilder builder = factory.newImpermanentDatabaseBuilder();
-        this.fileSystem = factory.getFileSystem();
         init( builder, config );
     }
 

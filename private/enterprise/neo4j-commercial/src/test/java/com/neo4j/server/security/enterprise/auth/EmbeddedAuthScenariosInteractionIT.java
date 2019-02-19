@@ -10,8 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
+import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
@@ -19,11 +19,12 @@ import org.neo4j.test.extension.Inject;
 public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteractionTestBase<CommercialLoginContext>
 {
     @Inject
-    private FileSystemAbstraction fileSystem;
+    private EphemeralFileSystemAbstraction fileSystem;
 
     @Override
     protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
+        fileSystem.clear();
         return new EmbeddedInteraction( config, () -> new UncloseableDelegatingFileSystemAbstraction( fileSystem ) );
     }
 
