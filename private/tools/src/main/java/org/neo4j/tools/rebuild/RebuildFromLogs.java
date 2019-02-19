@@ -6,6 +6,7 @@
 package org.neo4j.tools.rebuild;
 
 import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -32,6 +33,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -269,6 +271,8 @@ class RebuildFromLogs
     {
         return (GraphDatabaseAPI) new CommercialGraphDatabaseFactory()
                 .setPageCache( new ExternallyManagedPageCache( pageCache ) )
-                .newEmbeddedDatabaseBuilder( targetDirectory ).newGraphDatabase();
+                .newEmbeddedDatabaseBuilder( targetDirectory )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                .newGraphDatabase();
     }
 }

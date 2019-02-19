@@ -6,6 +6,7 @@
 package org.neo4j;
 
 import com.neo4j.commercial.edition.CommercialEditionModule;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
@@ -469,7 +470,8 @@ public class TransactionGuardIT
                 boltConnector.type, "BOLT",
                 boltConnector.enabled, "true",
                 boltConnector.encryption_level, BoltConnector.EncryptionLevel.DISABLED.name(),
-                GraphDatabaseSettings.auth_enabled, "false" );
+                OnlineBackupSettings.online_backup_enabled, Settings.FALSE,
+                GraphDatabaseSettings.auth_enabled, Settings.FALSE );
     }
 
     private Map<Setting<?>,String> getSettingsWithoutTransactionTimeout()
@@ -505,15 +507,13 @@ public class TransactionGuardIT
 
     private GraphDatabaseAPI startCustomDatabase( File storeDir, Map<Setting<?>,String> configMap )
     {
-        CustomClockEnterpriseFacadeFactory customClockEnterpriseFacadeFactory = new CustomClockEnterpriseFacadeFactory();
-        GraphDatabaseBuilder databaseBuilder = new CustomGuardTestTestGraphDatabaseFactory(
-                customClockEnterpriseFacadeFactory )
+        CustomClockCommercialFacadeFactory customClockCommercialFacadeFactory = new CustomClockCommercialFacadeFactory();
+        GraphDatabaseBuilder databaseBuilder = new CustomGuardTestGraphDatabaseFactory( customClockCommercialFacadeFactory )
                 .newImpermanentDatabaseBuilder( storeDir );
         configMap.forEach( databaseBuilder::setConfig );
         databaseBuilder.setConfig( GraphDatabaseSettings.record_id_batch_size, "1" );
 
-        GraphDatabaseAPI database = (GraphDatabaseAPI) databaseBuilder
-                .newGraphDatabase();
+        GraphDatabaseAPI database = (GraphDatabaseAPI) databaseBuilder.newGraphDatabase();
         cleanupRule.add( database );
         return database;
     }
@@ -585,12 +585,12 @@ public class TransactionGuardIT
         }
     }
 
-    private class CustomGuardTestTestGraphDatabaseFactory extends TestGraphDatabaseFactory
+    private class CustomGuardTestGraphDatabaseFactory extends TestGraphDatabaseFactory
     {
 
         private GraphDatabaseFacadeFactory customFacadeFactory;
 
-        CustomGuardTestTestGraphDatabaseFactory( GraphDatabaseFacadeFactory customFacadeFactory )
+        CustomGuardTestGraphDatabaseFactory( GraphDatabaseFacadeFactory customFacadeFactory )
         {
             this.customFacadeFactory = customFacadeFactory;
         }
@@ -629,10 +629,10 @@ public class TransactionGuardIT
         }
     }
 
-    private class CustomClockEnterpriseFacadeFactory extends GraphDatabaseFacadeFactory
+    private class CustomClockCommercialFacadeFactory extends GraphDatabaseFacadeFactory
     {
 
-        CustomClockEnterpriseFacadeFactory()
+        CustomClockCommercialFacadeFactory()
         {
             // XXX: This has to be a Function, JVM crashes with ClassFormatError if you pass a lambda here
             super( DatabaseInfo.COMMERCIAL, new Function<GlobalModule,AbstractEditionModule>() // Don't make a lambda

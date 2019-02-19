@@ -16,12 +16,13 @@ import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.Edition;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.TestGraphDatabaseFactoryState;
+
+import static org.neo4j.kernel.configuration.Settings.FALSE;
 
 public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
 {
@@ -45,15 +46,24 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
             public GraphDatabaseService newDatabase( Config config )
             {
                 File databasesRoot = storeDir.getParentFile();
-                config.augment( GraphDatabaseSettings.ephemeral, Settings.FALSE );
-                config.augment( GraphDatabaseSettings.active_database, storeDir.getName() );
-                config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
-                config.augment( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" );
+                augmentConfig( config, databasesRoot, storeDir );
                 TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
                 TestCommercialGraphDatabaseFacadeFactory facadeFactory = new TestCommercialGraphDatabaseFacadeFactory( testState, false );
                 return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
             }
         };
+    }
+
+    private static void augmentConfig( Config config, File databasesRoot, File storeDir )
+    {
+        config.augment( GraphDatabaseSettings.ephemeral, FALSE );
+        config.augment( GraphDatabaseSettings.active_database, storeDir.getName() );
+        config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
+        config.augment( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" );
+        if ( !config.isConfigured( OnlineBackupSettings.online_backup_enabled ) )
+        {
+            config.augment( OnlineBackupSettings.online_backup_enabled, FALSE );
+        }
     }
 
     @Override
@@ -65,6 +75,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
             @Override
             public GraphDatabaseService newDatabase( Config config )
             {
+                augmentConfig( config, storeDir.getParentFile(), storeDir );
                 return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
                         GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
             }
