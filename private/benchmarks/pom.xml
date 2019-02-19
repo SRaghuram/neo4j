@@ -3,10 +3,10 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <parent>
-      <groupId>com.neo4j</groupId>
-      <artifactId>commercial-parent</artifactId>
-      <version>4.0.0-SNAPSHOT</version>
-      <relativePath>../pom.xml</relativePath>
+        <groupId>com.neo4j</groupId>
+        <artifactId>commercial-parent</artifactId>
+        <version>4.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -22,14 +22,14 @@
     </properties>
 
     <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
         Copyright (c) 2002-2019 "Neo4j,"
         Neo4j Sweden AB [http://neo4j.com]
         This file is part of Neo4j internal tooling.
         </comments>
-      </license>
+        </license>
     </licenses>
 
     <dependencyManagement>
@@ -106,10 +106,10 @@
                     </plugin>
                     <plugin>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                            <configuration>
-                                <skipTests>false</skipTests>
-                                <skipITs>false</skipITs>
-                            </configuration>
+                        <configuration>
+                            <skipTests>false</skipTests>
+                            <skipITs>false</skipITs>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
@@ -140,10 +140,10 @@
             </plugin>
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                    <configuration>
-                        <skipTests>true</skipTests>
-                        <skipITs>true</skipITs>
-                    </configuration>
+                <configuration>
+                    <skipTests>true</skipTests>
+                    <skipITs>true</skipITs>
+                </configuration>
             </plugin>
         </plugins>
     </build>

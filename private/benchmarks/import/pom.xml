@@ -1,12 +1,8 @@
-<!--
-
-    Copyright (c) 2002-2019 "Neo4j,"
-    Neo4j Sweden AB [http://neo4j.com]
-    This file is part of Neo4j internal tooling.
-
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!-- Copyright (c) 2002-2019 "Neo4j," Neo4j Sweden AB [http://neo4j.com] 
+    This file is part of Neo4j internal tooling. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <parent>
         <groupId>com.neo4j.bench</groupId>
@@ -27,14 +23,14 @@
     </properties>
 
     <licenses>
-      <license>
-        <name>Neo4j Commercial license</name>
-        <comments>
+        <license>
+            <name>Neo4j Commercial license</name>
+            <comments>
           Copyright (c) 2002-2019 "Neo4j,"
           Neo4j Sweden AB [http://neo4j.com]
           This file is part of Neo4j internal tooling.
         </comments>
-      </license>
+        </license>
     </licenses>
 
     <dependencies>
@@ -63,7 +59,7 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>airline</artifactId>
-            </dependency>
+        </dependency>
         <dependency>
             <groupId>com.neo4j.bench</groupId>
             <artifactId>benchmark-results-client</artifactId>
@@ -78,11 +74,11 @@
     </dependencies>
     <build>
         <plugins>
-          <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-jar-plugin</artifactId>
-              <version>2.5</version>
-          </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.5</version>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -96,35 +92,35 @@
                             <finalName>${uberjar.name}</finalName>
                             <transformers>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.neo4j.bench.imports.Main</mainClass>
                                 </transformer>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>
                                         META-INF/services/org.neo4j.kernel.extension.KernelExtensionFactory
                                     </resource>
                                 </transformer>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>
                                         META-INF/services/org.neo4j.commandline.admin.AdminCommand$Provider
                                     </resource>
                                 </transformer>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>
                                         META-INF/services/org.apache.lucene.codecs.Codec
                                     </resource>
                                 </transformer>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>
                                         META-INF/services/org.apache.lucene.codecs.PostingsFormat
                                     </resource>
                                 </transformer>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>
                                         META-INF/services/org.apache.lucene.codecs.DocValuesFormat
                                     </resource>
@@ -132,10 +128,8 @@
                             </transformers>
                             <filters>
                                 <filter>
-                                    <!--
-                                        Shading signed JARs will fail without this.
-                                        http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar
-                                    -->
+                                    <!-- Shading signed JARs will fail without 
+                                        this. http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar -->
                                     <artifact>*:*</artifact>
                                     <excludes>
                                         <exclude>META-INF/*.SF</exclude>
