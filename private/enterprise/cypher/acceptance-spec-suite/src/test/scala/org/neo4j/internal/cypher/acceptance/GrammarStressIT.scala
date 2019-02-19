@@ -34,7 +34,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
   private val NODES_PER_LAYER = 10
   private val NUM_LAYERS = 3
 
-  override implicit val generatorDrivenConfig = PropertyCheckConfig(
+  override implicit val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfig(
     minSuccessful = numberOfTestRuns, maxDiscarded = maxDiscardedInputs, maxSize = maxSize
   )
 
