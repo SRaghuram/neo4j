@@ -39,7 +39,7 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
     circleGraph(10000)
 
     // when
-    val logicalQuery = new LogicalQueryBuilder()
+    val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x", "y")
       .sort(Descending("y"))
       .expandAll("(x)--(y)")
@@ -77,7 +77,7 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
     circleGraph(1000)
 
     // when
-    val logicalQuery = new LogicalQueryBuilder()
+    val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x", "y", "z")
       .apply()
       .|.apply()

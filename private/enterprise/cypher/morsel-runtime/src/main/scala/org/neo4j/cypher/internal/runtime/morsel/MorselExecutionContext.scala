@@ -50,8 +50,6 @@ class MorselExecutionContext(private val morsel: Morsel,
   private val counters = new mutable.HashSet[Id]()
 
   def setCounters(ids: Seq[Id]): Unit = {
-    if (counters.nonEmpty)
-      throw new IllegalStateException("Should not have dangling counters!")
     counters ++= ids
   }
   def removeCounter(id: Id): Unit = counters -= id
