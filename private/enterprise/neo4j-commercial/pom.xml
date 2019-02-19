@@ -65,6 +65,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-enterprise-cypher</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j</artifactId>
             <version>${project.version}</version>
@@ -128,6 +134,16 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-util-4.0</artifactId>
             <version>${project.version}</version>
@@ -145,6 +161,12 @@
             <artifactId>bolt-it</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-query-logging</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

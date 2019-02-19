@@ -27,7 +27,7 @@
         <moduleName>org.neo4j.internal.enterprise.cypher.compatibility.spec.suite</moduleName>
     </properties>
 
-  <dependencies>
+    <dependencies>
 
         <!-- shared versions are defined in the parent pom -->
 
@@ -86,6 +86,13 @@
         <dependency>
             <groupId>org.neo4j.community</groupId>
             <artifactId>it-test-support</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-commercial</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

@@ -262,7 +262,7 @@ public class QueryLoggerIT
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ), endsWith( String.format(
-                " ms: %s - %s - {} - runtime=interpreted - {}",
+                " ms: %s - %s - {} - runtime=compiled - {}",
                 connectionAndUserDetails(),
                 query ) ) );
     }
