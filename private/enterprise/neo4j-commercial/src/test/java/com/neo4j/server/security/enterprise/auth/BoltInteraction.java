@@ -268,7 +268,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
             message = util.receiveOneResponseMessage( client );
             if ( message instanceof RecordMessage )
             {
-                Object[] row = ((RecordMessage) message).record().fields();
+                Object[] row = ((RecordMessage) message).fields();
                 Map<String,Object> rowMap = new HashMap<>();
                 for ( int i = 0; i < row.length; i++ )
                 {
