@@ -65,9 +65,7 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
 
         TxPullingContext txPullingContext = prepare.txPullingContext();
 
-        ChunkedTransactionStream txStream =
-                new ChunkedTransactionStream( log, txPullingContext.localStoreId, txPullingContext.firstTxId, txPullingContext.txIdPromise,
-                        txPullingContext.transactions, protocol );
+        TransactionStream txStream = new TransactionStream( log, txPullingContext, protocol );
         // chunked transaction stream ends the interaction internally and closes the cursor
         ctx.writeAndFlush( txStream ).addListener( f ->
         {
@@ -170,22 +168,6 @@ public class TxPullRequestHandler extends SimpleChannelInboundHandler<TxPullRequ
     private static LogicalTransactionStore logicalTransactionStore( Database db )
     {
         return db.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
-    }
-
-    private static class TxPullingContext
-    {
-        private final TransactionCursor transactions;
-        private final StoreId localStoreId;
-        private final long firstTxId;
-        private final long txIdPromise;
-
-        TxPullingContext( TransactionCursor transactions, StoreId localStoreId, long firstTxId, long txIdPromise )
-        {
-            this.transactions = transactions;
-            this.localStoreId = localStoreId;
-            this.firstTxId = firstTxId;
-            this.txIdPromise = txIdPromise;
-        }
     }
 
     private static class Prepare

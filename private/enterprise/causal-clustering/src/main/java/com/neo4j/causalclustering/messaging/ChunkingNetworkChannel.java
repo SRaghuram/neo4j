@@ -25,7 +25,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     private final ByteBufAllocator allocator;
     private final int maxChunkSize;
     private final int initSize;
-    private final Queue<ByteBuf> byteBufs;
+    private final Queue<ByteBuf> byteBuffs;
     private ByteBuf current;
     private boolean isClosed;
 
@@ -45,7 +45,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
         {
             throw new IllegalArgumentException( "Chunk size must be at least 8. Got " + maxChunkSize );
         }
-        this.byteBufs = outputQueue;
+        this.byteBuffs = outputQueue;
     }
 
     @Override
@@ -128,6 +128,14 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
         return this;
     }
 
+    /**
+     * @return Provides the writer index of the current (not yet flushed) buffer.
+     */
+    public int currentIndex()
+    {
+        return current != null ? current.writerIndex() : 0;
+    }
+
     private int prepareGently( int size )
     {
         if ( getOrCreateCurrent().writerIndex() == maxChunkSize )
@@ -163,7 +171,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
         }
         try
         {
-            while ( !byteBufs.offer( current ) )
+            while ( !byteBuffs.offer( current ) )
             {
                 Thread.sleep( 10 );
             }

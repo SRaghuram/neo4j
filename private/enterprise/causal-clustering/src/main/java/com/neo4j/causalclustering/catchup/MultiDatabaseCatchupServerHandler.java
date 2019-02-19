@@ -84,7 +84,7 @@ public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
                 CoreSnapshotRequest.class, logProvider );
     }
 
-    private static TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
+    private TxPullRequestHandler buildTxPullRequestHandler( Database db, CatchupServerProtocol protocol )
     {
         return new TxPullRequestHandler( protocol, db );
     }

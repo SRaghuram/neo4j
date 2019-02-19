@@ -96,7 +96,7 @@ class TxPullRequestHandlerTest
     @BeforeEach
     void setUp()
     {
-        Dependencies dependencies = mock( Dependencies.class );
+        var dependencies = mock( Dependencies.class );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( dependencies.resolveDependency( LogicalTransactionStore.class ) ).thenReturn( logicalTransactionStore );
         when( dependencies.resolveDependency( TransactionIdStore.class ) ).thenReturn( transactionIdStore );
@@ -104,9 +104,10 @@ class TxPullRequestHandlerTest
         when( database.getDatabaseAvailabilityGuard() ).thenReturn( availabilityGuard );
         when( database.getMonitors() ).thenReturn( new Monitors() );
         when( database.getStoreId() ).thenReturn( storeId );
-        DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( DATABASE_ID ), new SimpleLogService( logProvider ) );
+        var databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( DATABASE_ID ), new SimpleLogService( logProvider ) );
         when( database.getInternalLogProvider() ).thenReturn( databaseLogService.getInternalLogProvider() );
-        txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
+        final var protocol = new CatchupServerProtocol();
+        txPullRequestHandler = new TxPullRequestHandler( protocol, database );
         lifeSupport.add( availabilityGuard );
     }
 
@@ -115,7 +116,7 @@ class TxPullRequestHandlerTest
     {
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenThrow( StoreFileClosedException.class );
-        ChannelFuture channelFuture = mock( ChannelFuture.class );
+        var channelFuture = mock( ChannelFuture.class );
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
         // when
@@ -132,14 +133,14 @@ class TxPullRequestHandlerTest
         // given
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
         when( logicalTransactionStore.getTransactions( 14L ) ).thenReturn( txCursor( tx( 14 ), tx( 15 ) ) );
-        ChannelFuture channelFuture = mock( ChannelFuture.class );
+        var channelFuture = mock( ChannelFuture.class );
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DATABASE_ID ) );
 
         // then
-        verify( context ).writeAndFlush( isA( ChunkedTransactionStream.class ) );
+        verify( context ).writeAndFlush( isA( TransactionStream.class ) );
     }
 
     @Test
@@ -167,8 +168,8 @@ class TxPullRequestHandlerTest
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 13, storeId, DATABASE_ID ) );
 
         // then
-        verify( context, never() ).write( isA( ChunkedTransactionStream.class ) );
-        verify( context, never() ).writeAndFlush( isA( ChunkedTransactionStream.class ) );
+        verify( context, never() ).write( isA( TransactionStream.class ) );
+        verify( context, never() ).writeAndFlush( isA( TransactionStream.class ) );
 
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_TRANSACTION_PRUNED, -1L ) );
@@ -180,12 +181,14 @@ class TxPullRequestHandlerTest
     void shouldNotStreamTxEntriesIfStoreIdMismatches() throws Exception
     {
         // given
-        StoreId serverStoreId = new StoreId( 1, 2, 3, 4, 5 );
-        StoreId clientStoreId = new StoreId( 6, 7, 8, 9, 10 );
+        var serverStoreId = new StoreId( 1, 2, 3, 4, 5 );
+        var clientStoreId = new StoreId( 6, 7, 8, 9, 10 );
 
         when( database.getStoreId() ).thenReturn( serverStoreId );
 
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
+        final var protocol = new CatchupServerProtocol();
+        var txPullRequestHandler =
+                new TxPullRequestHandler( protocol, database );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, clientStoreId, DATABASE_ID ) );
@@ -205,7 +208,9 @@ class TxPullRequestHandlerTest
         availabilityGuard.require( new DescriptiveAvailabilityRequirement( "Test" ) );
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( 15L );
 
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
+        final var protocol = new CatchupServerProtocol();
+        var txPullRequestHandler =
+                new TxPullRequestHandler( protocol, database );
 
         // when
         txPullRequestHandler.channelRead0( context, new TxPullRequest( 1, storeId, DATABASE_ID ) );
@@ -221,9 +226,11 @@ class TxPullRequestHandlerTest
     @ValueSource( longs = {Long.MIN_VALUE, BASE_TX_ID - 42, BASE_TX_ID - 2, BASE_TX_ID - 1} )
     void shouldRespondWithIllegalRequestWhenTransactionIdIsIncorrect( long incorrectTxId ) throws Exception
     {
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
+        final var protocol = new CatchupServerProtocol();
+        var txPullRequestHandler =
+                new TxPullRequestHandler( protocol, database );
 
-        TxPullRequest request = mock( TxPullRequest.class );
+        var request = mock( TxPullRequest.class );
         when( request.previousTxId() ).thenReturn( incorrectTxId );
 
         txPullRequestHandler.channelRead0( context, request );
@@ -235,45 +242,52 @@ class TxPullRequestHandlerTest
     @Test
     void shouldReturnStreamOfTransactionsForBaseTransactionId() throws Exception
     {
-        long previousTxId = BASE_TX_ID;
-        long firstTxIdInTxStream = previousTxId + 1;
+        var previousTxId = BASE_TX_ID;
+        var firstTxIdInTxStream = previousTxId + 1;
         long lastCommittedTxId = 42;
 
-        CommittedTransactionRepresentation[] transactions = LongStream.rangeClosed( firstTxIdInTxStream, lastCommittedTxId )
+        var transactions = LongStream.rangeClosed( firstTxIdInTxStream, lastCommittedTxId )
                 .mapToObj( TxPullRequestHandlerTest::tx )
                 .toArray( CommittedTransactionRepresentation[]::new );
 
         when( transactionIdStore.getLastCommittedTransactionId() ).thenReturn( lastCommittedTxId );
         when( logicalTransactionStore.getTransactions( BASE_TX_ID + 1 ) ).thenReturn( txCursor( transactions ) );
-        ChannelFuture channelFuture = mock( ChannelFuture.class );
+        var channelFuture = mock( ChannelFuture.class );
         when( context.writeAndFlush( any() ) ).thenReturn( channelFuture );
 
-        TxPullRequestHandler txPullRequestHandler = new TxPullRequestHandler( new CatchupServerProtocol(), database );
+        final var protocol = new CatchupServerProtocol();
+        var txPullRequestHandler =
+                new TxPullRequestHandler( protocol, database );
 
         txPullRequestHandler.channelRead0( context, new TxPullRequest( previousTxId, storeId, DATABASE_ID ) );
 
-        ArgumentCaptor<ChunkedTransactionStream> txStreamCaptor = ArgumentCaptor.forClass( ChunkedTransactionStream.class );
+        var txStreamCaptor = ArgumentCaptor.forClass( TransactionStream.class );
         verify( context ).writeAndFlush( txStreamCaptor.capture() );
         verifyTransactionStream( txStreamCaptor.getValue(), transactions );
         verify( logicalTransactionStore ).getTransactions( firstTxIdInTxStream );
     }
 
-    private void verifyTransactionStream( ChunkedTransactionStream txStream, CommittedTransactionRepresentation[] expectedTransactions ) throws Exception
+    private void verifyTransactionStream( TransactionStream txStream, CommittedTransactionRepresentation[] expectedTransactions ) throws Exception
     {
         ByteBufAllocator allocator = new UnpooledByteBufAllocator( false );
-        for ( CommittedTransactionRepresentation tx : expectedTransactions )
+        var isFirst = true;
+        for ( var tx : expectedTransactions )
         {
-            Object chunk1 = txStream.readChunk( allocator );
-            assertEquals( ResponseMessageType.TX, chunk1 );
+            if ( isFirst )
+            {
+                var chunk1 = txStream.readChunk( allocator );
+                assertEquals( ResponseMessageType.TX, chunk1 );
+                isFirst = false;
+            }
 
-            Object chunk2 = txStream.readChunk( allocator );
+            var chunk2 = txStream.readChunk( allocator );
             assertEquals( new TxPullResponse( storeId, tx ), chunk2 );
         }
     }
 
     private static CommittedTransactionRepresentation tx( long id )
     {
-        PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.singletonList( new TestCommand() ) );
+        var tx = new PhysicalTransactionRepresentation( Collections.singletonList( new TestCommand() ) );
         tx.setHeader( new byte[0], 0, 0, 0, 0, 0, 0 );
         return new CommittedTransactionRepresentation(
                 new LogEntryStart( toIntExact( id ), toIntExact( id ), id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED ),

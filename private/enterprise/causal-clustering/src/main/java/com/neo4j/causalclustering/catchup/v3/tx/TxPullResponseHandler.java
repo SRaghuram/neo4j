@@ -3,10 +3,11 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.catchup.tx;
+package com.neo4j.causalclustering.catchup.v3.tx;
 
 import com.neo4j.causalclustering.catchup.CatchupClientProtocol;
 import com.neo4j.causalclustering.catchup.CatchupResponseHandler;
+import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -15,8 +16,7 @@ public class TxPullResponseHandler extends SimpleChannelInboundHandler<TxPullRes
     private final CatchupClientProtocol protocol;
     private final CatchupResponseHandler handler;
 
-    public TxPullResponseHandler( CatchupClientProtocol protocol,
-                                  CatchupResponseHandler handler )
+    public TxPullResponseHandler( CatchupClientProtocol protocol, CatchupResponseHandler handler )
     {
         this.protocol = protocol;
         this.handler = handler;
@@ -27,8 +27,14 @@ public class TxPullResponseHandler extends SimpleChannelInboundHandler<TxPullRes
     {
         if ( protocol.isExpecting( CatchupClientProtocol.State.TX_PULL_RESPONSE ) )
         {
-            handler.onTxPullResponse( msg );
-            protocol.expect( CatchupClientProtocol.State.MESSAGE_TYPE );
+            if ( msg.equals( TxPullResponse.V3_END_OF_STREAM_RESPONSE ) )
+            {
+                protocol.expect( CatchupClientProtocol.State.MESSAGE_TYPE );
+            }
+            else
+            {
+                handler.onTxPullResponse( msg );
+            }
         }
         else
         {

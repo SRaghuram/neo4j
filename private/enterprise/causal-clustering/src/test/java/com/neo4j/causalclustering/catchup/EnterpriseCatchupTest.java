@@ -12,8 +12,8 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
-import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstaller;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstaller;
 import com.neo4j.causalclustering.catchup.v3.databaseid.GetDatabaseIdResponse;
 import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
@@ -183,8 +183,8 @@ abstract class EnterpriseCatchupTest
     {
         if ( applicationProtocols == ApplicationProtocols.CATCHUP_3_0 )
         {
-            new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );
+            new CatchupProtocolClientInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
+            new CatchupProtocolServerInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );
         }
         else
         {
@@ -203,7 +203,7 @@ abstract class EnterpriseCatchupTest
         }
 
         @Override
-        public boolean onFileContent( FileChunk fileChunk ) throws IOException
+        public boolean onFileContent( FileChunk fileChunk )
         {
             unexpected();
             return false;

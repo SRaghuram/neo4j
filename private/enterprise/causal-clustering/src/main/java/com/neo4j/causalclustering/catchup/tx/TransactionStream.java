@@ -12,6 +12,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.logging.Log;
@@ -24,7 +27,7 @@ import static java.lang.String.format;
 /**
  * Returns a chunked stream of transactions.
  */
-public class ChunkedTransactionStream implements ChunkedInput<Object>
+public class TransactionStream implements ChunkedInput<Object>
 {
     private final Log log;
     private final StoreId storeId;
@@ -37,16 +40,15 @@ public class ChunkedTransactionStream implements ChunkedInput<Object>
     private long expectedTxId;
     private long lastTxId;
 
-    private Object pending;
+    private final Queue<Object> pending = new LinkedList<>();
 
-    ChunkedTransactionStream( Log log, StoreId storeId, long firstTxId, long txIdPromise, IOCursor<CommittedTransactionRepresentation> txCursor,
-            CatchupServerProtocol protocol )
+    TransactionStream( Log log, TxPullingContext txPullingContext, CatchupServerProtocol protocol )
     {
         this.log = log;
-        this.storeId = storeId;
-        this.expectedTxId = firstTxId;
-        this.txIdPromise = txIdPromise;
-        this.txCursor = txCursor;
+        this.storeId = txPullingContext.localStoreId;
+        this.expectedTxId = txPullingContext.firstTxId;
+        this.txIdPromise = txPullingContext.txIdPromise;
+        this.txCursor = txPullingContext.transactions;
         this.protocol = protocol;
     }
 
@@ -73,23 +75,20 @@ public class ChunkedTransactionStream implements ChunkedInput<Object>
     {
         assert !endOfInput;
 
-        if ( pending != null )
+        if ( !pending.isEmpty() )
         {
-            if ( noMoreTransactions )
+            Object prevPending = pending.poll();
+            if ( pending.isEmpty() && noMoreTransactions )
             {
                 endOfInput = true;
             }
-
-            return consumePending();
-        }
-        else if ( noMoreTransactions )
-        {
-            /* finalization should always have a last ending message */
-            throw new IllegalStateException();
+            return prevPending;
         }
         else if ( txCursor.next() )
         {
-            assert pending == null;
+            assert pending.isEmpty();
+
+            boolean isFirst = lastTxId == 0;
 
             CommittedTransactionRepresentation tx = txCursor.get();
             lastTxId = tx.getCommitEntry().getTxId();
@@ -99,13 +98,17 @@ public class ChunkedTransactionStream implements ChunkedInput<Object>
                 throw new IllegalStateException( msg );
             }
             expectedTxId++;
-            pending = new TxPullResponse( storeId, tx );
-            return ResponseMessageType.TX;
+            return sendTx( isFirst, tx );
         }
         else
         {
-            assert pending == null;
+            assert pending.isEmpty();
 
+            if ( lastTxId != 0 )
+            {
+                // only send if at least one tx was sent
+                pending.add( TxPullResponse.V3_END_OF_STREAM_RESPONSE );
+            }
             noMoreTransactions = true;
             protocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
             CatchupResult result;
@@ -118,16 +121,27 @@ public class ChunkedTransactionStream implements ChunkedInput<Object>
                 result = E_TRANSACTION_PRUNED;
                 log.warn( "Transaction cursor fell short. Expected at least %d but only got to %d.", txIdPromise, lastTxId );
             }
-            pending = new TxStreamFinishedResponse( result, lastTxId );
-            return ResponseMessageType.TX_STREAM_FINISHED;
+            pending.add( ResponseMessageType.TX_STREAM_FINISHED );
+            pending.add( new TxStreamFinishedResponse( result, lastTxId ) );
+            return pending.poll();
         }
     }
 
-    private Object consumePending()
+    /**
+     * Chunking protocol only requires the {@link ResponseMessageType#TX} to be sent before the first chunk while
+     * older protocols requires it to be sent before each transaction.
+     */
+    private Object sendTx( boolean isFirst, CommittedTransactionRepresentation tx )
     {
-        Object prevPending = pending;
-        pending = null;
-        return prevPending;
+        if ( isFirst )
+        {
+            pending.add( new TxPullResponse( storeId, tx ) );
+            return ResponseMessageType.TX;
+        }
+        else
+        {
+            return new TxPullResponse( storeId, tx );
+        }
     }
 
     @Override

@@ -9,39 +9,42 @@ import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import io.netty.buffer.ByteBufAllocator;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.neo4j.cursor.IOCursor;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
-import org.neo4j.logging.NullLog;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsElementsOf;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-@SuppressWarnings( {"unchecked", "UnnecessaryLocalVariable"} )
-public class ChunkedTransactionStreamTest
+@SuppressWarnings( {"UnnecessaryLocalVariable"} )
+class TransactionStreamTest
 {
+    private final LogProvider logProvider = NullLogProvider.getInstance();
+    private final CatchupServerProtocol protocol = mock( CatchupServerProtocol.class );
+
     private final StoreId storeId = StoreId.UNKNOWN;
     private final ByteBufAllocator allocator = mock( ByteBufAllocator.class );
-    private final CatchupServerProtocol protocol = mock( CatchupServerProtocol.class );
-    private final IOCursor<CommittedTransactionRepresentation> cursor = mock( IOCursor.class );
+    private final TransactionCursor cursor = mock( TransactionCursor.class );
     private final int baseTxId = (int) BASE_TX_ID;
 
     @Test
-    public void shouldSucceedExactNumberOfTransactions() throws Exception
+    void shouldSucceedExactNumberOfTransactions() throws Exception
     {
         int firstTxId = baseTxId;
         int lastTxId = 10;
@@ -50,7 +53,7 @@ public class ChunkedTransactionStreamTest
     }
 
     @Test
-    public void shouldSucceedWithNoTransactions() throws Exception
+    void shouldSucceedWithNoTransactions() throws Exception
     {
         int firstTxId = baseTxId;
         int lastTxId = baseTxId;
@@ -59,7 +62,7 @@ public class ChunkedTransactionStreamTest
     }
 
     @Test
-    public void shouldSucceedExcessiveNumberOfTransactions() throws Exception
+    void shouldSucceedExcessiveNumberOfTransactions() throws Exception
     {
         int firstTxId = baseTxId;
         int lastTxId = 10;
@@ -68,7 +71,7 @@ public class ChunkedTransactionStreamTest
     }
 
     @Test
-    public void shouldFailIncompleteStreamOfTransactions() throws Exception
+    void shouldFailIncompleteStreamOfTransactions() throws Exception
     {
         int firstTxId = baseTxId;
         int lastTxId = 10;
@@ -77,7 +80,7 @@ public class ChunkedTransactionStreamTest
     }
 
     @Test
-    public void shouldSucceedLargeNumberOfTransactions() throws Exception
+    void shouldSucceedLargeNumberOfTransactions() throws Exception
     {
         int firstTxId = baseTxId;
         int lastTxId = 1000;
@@ -88,7 +91,9 @@ public class ChunkedTransactionStreamTest
     @SuppressWarnings( "SameParameterValue" )
     private void testTransactionStream( int firstTxId, int lastTxId, int txIdPromise, CatchupResult expectedResult ) throws Exception
     {
-        ChunkedTransactionStream txStream = new ChunkedTransactionStream( NullLog.getInstance(), storeId, firstTxId, txIdPromise, cursor, protocol );
+        TransactionStream txStream =
+                new TransactionStream( logProvider.getLog( TransactionStream.class ), new TxPullingContext( cursor, storeId, firstTxId, txIdPromise ),
+                        protocol );
 
         List<Boolean> more = new ArrayList<>();
         List<CommittedTransactionRepresentation> txs = new ArrayList<>();
@@ -109,8 +114,17 @@ public class ChunkedTransactionStreamTest
 
         for ( int txId = firstTxId; txId <= lastTxId; txId++ )
         {
-            assertEquals( ResponseMessageType.TX, txStream.readChunk( allocator ) );
+            if ( txId == firstTxId )
+            {
+                assertEquals( ResponseMessageType.TX, txStream.readChunk( allocator ) );
+            }
             assertEquals( new TxPullResponse( storeId, txs.get( txId - firstTxId ) ), txStream.readChunk( allocator ) );
+        }
+
+        if ( firstTxId <= lastTxId )
+        {
+            final Object actual = txStream.readChunk( allocator );
+            assertEquals( TxPullResponse.V3_END_OF_STREAM_RESPONSE, actual );
         }
 
         assertEquals( ResponseMessageType.TX_STREAM_FINISHED, txStream.readChunk( allocator ) );
