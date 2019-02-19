@@ -36,7 +36,7 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
 
   test("should sort") {
     // given
-    val (nodes, rels) = circleGraph(10000)
+    circleGraph(10000)
 
     // when
     val logicalQuery = new LogicalQueryBuilder()
@@ -54,7 +54,7 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
 
   test("should apply-sort") {
     // given
-    val (nodes, rels) = circleGraph(10000)
+    circleGraph(1000)
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
@@ -74,7 +74,7 @@ class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime
 
   test("should apply-apply-sort") {
     // given
-    val (nodes, rels) = circleGraph(1000)
+    circleGraph(1000)
 
     // when
     val logicalQuery = new LogicalQueryBuilder()
