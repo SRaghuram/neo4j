@@ -308,6 +308,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         slots.newReference(leaf.idName, false, CTInteger)
 
       case leaf: Input =>
+        for (v <- leaf.nodes)
+          slots.newLong(v, true, CTNode)
         for (v <- leaf.variables)
           slots.newReference(v, true, CTAny)
 

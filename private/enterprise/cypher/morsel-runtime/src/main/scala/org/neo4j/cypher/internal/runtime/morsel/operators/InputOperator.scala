@@ -8,9 +8,11 @@ package org.neo4j.cypher.internal.runtime.morsel.operators
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryContext}
+import org.neo4j.values.virtual.NodeValue
 
 class InputOperator(val workIdentity: WorkIdentity,
-                    offsets: Array[Int]) extends StreamingOperator {
+                    longOffsets: Array[Int],
+                    refOffsets: Array[Int]) extends StreamingOperator {
 
   override def init(queryContext: QueryContext,
                     state: QueryState,
@@ -38,8 +40,13 @@ class InputOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.isValidRow && nextInput()) {
         var i = 0
-        while (i < offsets.length) {
-          outputRow.setRefAt(offsets(i), cursor.value(i))
+        while (i < longOffsets.length) {
+          outputRow.setLongAt(longOffsets(i), cursor.value(i).asInstanceOf[NodeValue].id())
+          i += 1
+        }
+        i = 0
+        while (i < refOffsets.length) {
+          outputRow.setRefAt(refOffsets(i), cursor.value(i))
           i += 1
         }
         outputRow.moveToNextRow()

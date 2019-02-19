@@ -110,8 +110,8 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
       case plans.Argument(_) =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan), argumentSize)
 
-      case plans.Input(variables) =>
-        new InputOperator(WorkIdentity.fromPlan(plan), variables.map(v => slots.getReferenceOffsetFor(v)))
+      case plans.Input(nodes, variables) =>
+        new InputOperator(WorkIdentity.fromPlan(plan), nodes.map(v => slots.getLongOffsetFor(v)), variables.map(v => slots.getReferenceOffsetFor(v)))
 
       case p: plans.LazyLogicalPlan =>
         val pipe = fallbackPipeMapper.onLeaf(plan)
