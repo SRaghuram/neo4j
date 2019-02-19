@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import java.util.concurrent.atomic.AtomicLong
-
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -21,18 +19,17 @@ class MorselArgumentBuffer(argumentSlotOffset: Int,
                            countersForThisBuffer: Seq[Id],
                            countersForOtherBuffers: Seq[Id],
                            argumentStateMaps: ArgumentStateMaps,
-                           inner: Buffer[MorselExecutionContext]
+                           inner: Buffer[MorselExecutionContext],
+                           idAllocator: IdAllocator
                           ) extends MorselBuffer(tracker, countersForOtherBuffers, argumentStateMaps, inner) {
 
-  private val argumentRowCount : AtomicLong = new AtomicLong(0)
-
   override def produce(morsel: MorselExecutionContext): Unit = {
-    var count = argumentRowCount.addAndGet(morsel.getValidRows) - morsel.getValidRows
+    var argumentRowId = idAllocator.allocateIdBatch(morsel.getValidRows)
 
     morsel.resetToFirstRow()
     while (morsel.isValidRow) {
-      morsel.setLongAt(argumentSlotOffset, count)
-      count += 1
+      morsel.setLongAt(argumentSlotOffset, argumentRowId)
+      argumentRowId += 1
       morsel.moveToNextRow()
     }
 

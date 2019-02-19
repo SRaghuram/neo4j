@@ -16,6 +16,8 @@ object ConcurrentStateFactory extends StateFactory {
 
   override def newTracker(): Tracker = new ConcurrentTracker
 
+  override def newIdAllocator(): IdAllocator = new ConcurrentIdAllocator
+
   override def newLock(id: Int): Lock = new ConcurrentLock(id)
 
   override def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,

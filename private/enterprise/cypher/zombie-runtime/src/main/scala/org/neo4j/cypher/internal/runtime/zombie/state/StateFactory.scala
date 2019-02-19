@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 trait StateFactory {
   def newBuffer[T <: AnyRef](): Buffer[T]
   def newTracker(): Tracker
+  def newIdAllocator(): IdAllocator
   def newLock(id: Int): Lock
   def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
                                                   argumentSlotOffset: Int,

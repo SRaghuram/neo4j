@@ -16,6 +16,8 @@ object StandardStateFactory extends StateFactory {
 
   override def newTracker(): Tracker = new StandardTracker
 
+  override def newIdAllocator(): IdAllocator = new StandardIdAllocator
+
   override def newLock(id: Int): Lock = new NoLock(id)
 
   override def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,

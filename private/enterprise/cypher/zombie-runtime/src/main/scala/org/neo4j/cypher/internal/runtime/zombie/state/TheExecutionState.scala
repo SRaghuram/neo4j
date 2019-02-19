@@ -47,7 +47,8 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
                                    x.countersForThisBuffer.map(_.reducingPlanId),
                                    counters,
                                    asms,
-                                   stateFactory.newBuffer())
+                                   stateFactory.newBuffer(),
+                                   stateFactory.newIdAllocator())
 
         case _: RowBufferDefinition =>
           new MorselBuffer(tracker, counters, asms, stateFactory.newBuffer())
