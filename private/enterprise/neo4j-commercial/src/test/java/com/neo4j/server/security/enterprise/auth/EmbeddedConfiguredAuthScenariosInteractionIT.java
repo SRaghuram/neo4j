@@ -24,6 +24,7 @@ public class EmbeddedConfiguredAuthScenariosInteractionIT extends ConfiguredAuth
     @Override
     protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
+        fileSystem.clear();
         return new EmbeddedInteraction( config, () -> new UncloseableDelegatingFileSystemAbstraction( fileSystem ) );
     }
 }

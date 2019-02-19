@@ -83,7 +83,12 @@
         </dependency>
 
         <!-- neo4j testing -->
-
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-commercial-record-storage-engine</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.neo4j.community</groupId>
             <artifactId>it-test-support</artifactId>

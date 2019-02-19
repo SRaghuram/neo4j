@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core.state;
 
 import com.neo4j.causalclustering.common.DatabaseService;
 import com.neo4j.causalclustering.common.LocalDatabase;
-import com.neo4j.causalclustering.core.IdFilesSanitationModule;
 import com.neo4j.causalclustering.core.consensus.membership.MembershipEntry;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
@@ -24,20 +23,18 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.DatabaseSchemaState;
-import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
-import org.neo4j.kernel.impl.locking.LockService;
-import org.neo4j.kernel.impl.store.id.DefaultIdController;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -49,12 +46,10 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Dependencies;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifespan;
-import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLog;
-import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
@@ -64,8 +59,6 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NA
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.active_database;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
-import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
-import static org.neo4j.kernel.impl.core.TokenHolders.readOnlyTokenHolders;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN_NAME;
@@ -81,7 +74,6 @@ import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP_TYPE_TOKEN;
 import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP_TYPE_TOKEN_NAME;
 import static org.neo4j.kernel.impl.store.id.IdType.SCHEMA;
 import static org.neo4j.kernel.impl.store.id.IdType.STRING_BLOCK;
-import static org.neo4j.kernel.internal.DatabaseHealth.newDatabaseHealth;
 
 /**
  * Bootstraps the core. A single instance is chosen as the bootstrapper, by the discovery service.
@@ -183,52 +175,41 @@ public class CoreBootstrapper
 
         String activeDatabaseName = activeDatabaseFilteredConfig.get( GraphDatabaseSettings.active_database );
         LocalDatabase activeDatabase = getDatabaseOrThrow( activeDatabaseName );
-        assert activeDatabase.databaseLayout().getTransactionLogsDirectory().isAbsolute();
 
-        LocalDatabase systemDatabase = null;
-        if ( databaseCount == 2 )
-        {
-            systemDatabase = getDatabaseOrThrow( SYSTEM_DATABASE_NAME );
-        }
+        LocalDatabase systemDatabase = getDatabaseOrThrow( SYSTEM_DATABASE_NAME );
+        boolean systemDatabaseExists = isStorePresent( systemDatabase.databaseLayout() );
+
+        DatabaseLayout activeDatabaseLayout = activeDatabase.databaseLayout();
 
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
 
-        bootstrapDatabase( activeDatabase, activeDatabaseParams, activeDatabaseFilteredConfig, NO_INITIALIZATION );
-        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( activeDatabase.databaseLayout(), activeDatabaseFilteredConfig );
-
-        IdAllocationState activeDatabaseIdAllocationState = deriveIdAllocationState( activeDatabase.databaseLayout() );
-        coreSnapshot.add( activeDatabaseName, CoreStateFiles.ID_ALLOCATION, activeDatabaseIdAllocationState );
-        coreSnapshot.add( activeDatabaseName, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
-
-        if ( databaseCount == 2 )
+        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( pageCache, activeDatabaseLayout.databaseDirectory(),
+                activeDatabaseParams ) )
         {
-            DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
-            bootstrapDatabase( systemDatabase, systemDatabaseParams, systemDatabaseFilteredConfig, systemDatabaseInitializer );
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( systemDatabase.databaseLayout(), systemDatabaseFilteredConfig );
-
-            IdAllocationState systemDatabaseIdAllocationState = deriveIdAllocationState( systemDatabase.databaseLayout() );
-            coreSnapshot.add( SYSTEM_DATABASE_NAME, CoreStateFiles.ID_ALLOCATION, systemDatabaseIdAllocationState );
-            coreSnapshot.add( SYSTEM_DATABASE_NAME, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
+            if ( !systemDatabaseExists )
+            {
+                DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
+                DatabaseManager databaseManager =
+                        ((GraphDatabaseAPI) temporaryDatabase.graphDatabaseService()).getDependencyResolver().resolveDependency( DatabaseManager.class );
+                Optional<DatabaseContext> systemContext = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME );
+                systemDatabaseInitializer.initialize( systemContext.get().getDatabaseFacade() );
+            }
         }
+        registerDatabase( coreSnapshot, activeDatabaseLayout, activeDatabaseFilteredConfig, activeDatabaseName );
+        registerDatabase( coreSnapshot, systemDatabase.databaseLayout(), systemDatabaseFilteredConfig, SYSTEM_DATABASE_NAME );
 
         return coreSnapshot;
     }
 
-    private void bootstrapDatabase( LocalDatabase database, Map<String,String> params, Config databaseConfig, DatabaseInitializer databaseInitializer )
-            throws Exception
+    private void registerDatabase( CoreSnapshot coreSnapshot, DatabaseLayout databaseLayout, Config config, String systemDatabaseName ) throws IOException
     {
-        DatabaseLayout databaseLayout = database.databaseLayout();
-        ensureRecoveredOrThrow( databaseLayout, databaseConfig );
+        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout, config );
 
-        if ( isStorePresent( databaseLayout ) )
-        {
-            recoverMissingFiles( databaseLayout, databaseConfig );
-            return;
-        }
-
-        initializeDatabase( databaseLayout.databaseDirectory(), params, databaseInitializer );
+        IdAllocationState idAllocation = deriveIdAllocationState( databaseLayout );
+        coreSnapshot.add( systemDatabaseName, CoreStateFiles.ID_ALLOCATION, idAllocation );
+        coreSnapshot.add( systemDatabaseName, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
     }
 
     private boolean isStorePresent( DatabaseLayout databaseLayout )
@@ -244,45 +225,6 @@ public class CoreBootstrapper
             throw new IllegalStateException( "Should have found database named " + databaseName );
         }
         return localDatabase;
-    }
-
-    private void ensureRecoveredOrThrow( DatabaseLayout databaseLayout, Config config ) throws Exception
-    {
-        if ( Recovery.isRecoveryRequired( fs, databaseLayout, config, storageEngineFactory ) )
-        {
-            String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
-                    "instance of Neo4j or a Neo4j backup";
-            log.error( message );
-            throw new IllegalStateException( message );
-        }
-    }
-
-    /**
-     * This step recreates missing store files, like ID-files. It is not considered a part of regular recovery.
-     * ID-files could have been deleted by the {@link IdFilesSanitationModule}, tooling or even manually by an operator.
-     */
-    private void recoverMissingFiles( DatabaseLayout databaseLayout, Config config )
-    {
-        Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( databaseLayout, config, pageCache, fs, logProvider, readOnlyTokenHolders(), new DatabaseSchemaState( logProvider ),
-                new StandardConstraintSemantics(), LockService.NO_LOCK_SERVICE, newDatabaseHealth( NullLog.getInstance() ),
-                new DefaultIdGeneratorFactory( fs ), new DefaultIdController(), EmptyVersionContextSupplier.EMPTY );
-        StorageEngine storageEngine = storageEngineFactory.instantiate( dependencies, dependencies );
-        try ( Lifespan lifespan = new Lifespan( storageEngine ) )
-        {
-            // A simple start/stop will do
-        }
-    }
-
-    /**
-     * This method has the purpose of both creating a database and optionally initializing its contents.
-     */
-    private void initializeDatabase( File databaseDirectory, Map<String,String> params, DatabaseInitializer databaseInitializer )
-    {
-        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( pageCache, databaseDirectory, params ) )
-        {
-            databaseInitializer.initialize( temporaryDatabase.graphDatabaseService() );
-        }
     }
 
     /**

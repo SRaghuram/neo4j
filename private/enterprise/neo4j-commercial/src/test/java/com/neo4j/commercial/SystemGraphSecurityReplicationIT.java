@@ -29,13 +29,11 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.string.UTF8;
-import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -53,16 +51,13 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 
-@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class SystemGraphSecurityReplicationIT
 {
     private static final int DEFAULT_TIMEOUT_MS = 20_000;
 
     @Inject
     private TestDirectory testDir;
-
-    @Inject
-    private DefaultFileSystemAbstraction fs;
 
     private SecureCluster cluster;
 
@@ -108,7 +103,7 @@ class SystemGraphSecurityReplicationIT
         }
     }
 
-//    @Test
+    @Test
     void shouldReplicateNewUser() throws Exception
     {
         String username = "martin";
