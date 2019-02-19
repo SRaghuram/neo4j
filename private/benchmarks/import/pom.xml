@@ -11,7 +11,7 @@
     <parent>
         <groupId>com.neo4j.bench</groupId>
         <artifactId>benchmark</artifactId>
-        <version>3.5.3-SNAPSHOT</version>
+        <version>3.5.4-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -26,7 +26,7 @@
         <scala.version>2.11.12</scala.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
-    
+
     <licenses>
       <license>
         <name>Neo4j Commercial license</name>
@@ -37,7 +37,7 @@
         </comments>
       </license>
     </licenses>
-    
+
     <dependencies>
         <dependency>
             <groupId>com.neo4j</groupId>
