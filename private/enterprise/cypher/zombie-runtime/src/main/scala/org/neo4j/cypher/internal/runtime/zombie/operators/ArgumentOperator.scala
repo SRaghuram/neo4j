@@ -20,7 +20,7 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
                     state: QueryState,
                     inputMorsel: MorselParallelizer,
                     resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
-    IndexedSeq(new OTask(inputMorsel.original))
+    IndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableInputOperatorTask {
 

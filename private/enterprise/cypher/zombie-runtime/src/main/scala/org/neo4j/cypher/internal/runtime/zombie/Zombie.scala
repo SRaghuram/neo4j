@@ -10,5 +10,4 @@ object Zombie {
   def debug(msg: => String): Unit =
     if (DEBUG)
       println(msg)
-//      print(msg + "\n")
 }

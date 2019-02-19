@@ -8,9 +8,12 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 
 /**
-  * Executor of queries. It's currently a merge of a dispatcher, a scheduler and a spatula.
+  * Allows consuming the same input morsel in parallel.
   */
 trait MorselParallelizer {
-  def original: MorselExecutionContext
-  def parallelClone: MorselExecutionContext
+
+  /**
+    * Return the next shallow copy of the underlying morsel.
+    */
+  def nextCopy: MorselExecutionContext
 }

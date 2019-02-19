@@ -25,7 +25,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     if (state.singeThreaded) {
       // Single threaded scan
-      IndexedSeq(new SingleThreadedScanTask(inputMorsel.original))
+      IndexedSeq(new SingleThreadedScanTask(inputMorsel.nextCopy))
     } else {
       // Parallel scan
       val scan = queryContext.transactionalContext.dataRead.allNodesScan()
@@ -33,7 +33,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       for (i <- 0 until state.numberOfWorkers) {
         // Each task gets its own cursor which is reuses until it's done.
         val cursor = resources.cursorPools.nodeCursorPool.allocate()
-        val rowForTask = if (i == 0) inputMorsel.original else inputMorsel.parallelClone
+        val rowForTask = inputMorsel.nextCopy
         tasks(i) = new ParallelScanTask(rowForTask, scan, cursor, state.morselSize)
       }
       tasks

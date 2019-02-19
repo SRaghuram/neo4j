@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.physicalplanning.{PipelineId, RowBufferDefinition, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, StatelessOperator}
-import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 
 case class ExecutablePipeline(id: PipelineId,

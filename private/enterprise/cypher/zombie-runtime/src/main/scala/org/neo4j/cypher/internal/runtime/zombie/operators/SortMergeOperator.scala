@@ -56,7 +56,7 @@ class SortMergeOperator(val planId: Id,
                       resources: QueryResources
                      ): IndexedSeq[ContinuableInputOperatorTask] = {
 
-      Array(new OTask(input.original, argumentStateMap))
+      Array(new OTask(input.nextCopy, argumentStateMap))
     }
   }
 

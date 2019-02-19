@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
 import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableInputOperatorTask, ContinuableOperatorTask, StatelessOperator}
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 
@@ -25,28 +24,23 @@ case class PipelineTask(start: ContinuableInputOperatorTask,
   extends Task[QueryResources] {
 
   override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): Unit = {
-//    debug("START OF: "+pipeline)
     try {
       state.transactionBinder.bindToThread(queryContext.transactionalContext.transaction)
       doExecuteWorkUnit(resources, output)
     } finally {
       state.transactionBinder.unbindFromThread()
     }
-//    debug("END OF: "+pipeline)
   }
 
   private def doExecuteWorkUnit(resources: QueryResources,
                                 output: MorselExecutionContext): Unit = {
-//    debug("  operate "+start)
     start.operate(output, queryContext, state, resources)
     for (op <- middleOperators) {
       output.resetToFirstRow()
-//      debug("  operate "+op+", rows: "+output.getValidRows)
       op.operate(output, queryContext, state, resources)
     }
     if (produceResult != null) {
       output.resetToFirstRow()
-//      debug("  operate "+produceResult+", rows: "+output.getValidRows)
       produceResult.operate(output, queryContext, state, resources)
     }
   }

@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicLong
 import java.util.function.BiConsumer
 
@@ -24,10 +23,6 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
                                                          constructor: () => T) extends ArgumentStateMap[T] {
 
   private val accumulatorControllers = new java.util.concurrent.ConcurrentHashMap[Long, AccumulatorController[T]]()
-  private val newController =
-    new java.util.function.Function[Long, AccumulatorController[T]] {
-      override def apply(t: Long): AccumulatorController[T] = new AccumulatorController(constructor())
-    }
 
   override def updateAndConsume(morsel: MorselExecutionContext): Unit = {
     ArgumentStateMap.foreachArgument(
@@ -35,15 +30,9 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
       morsel,
       (argumentRowId, morselView) => {
         val controller = accumulatorControllers.get(argumentRowId)
-        if (controller == null) {
-          print(morsel + "\n")
-          print(s"argumentRowId: $argumentRowId\n")
-          print(s"argumentSlotOffest: $argumentSlotOffset\n")
-        }
         controller.update(morselView)
         val newCount = controller.decrement()
         debug("decr %03d to %s".format(argumentRowId, newCount))
-        newCount
       }
     )
     morsel.removeCounter(owningPlanId)
@@ -77,10 +66,7 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
   }
 
   override def decrement(argument: Long): Unit = {
-    val controller = accumulatorControllers.get(argument)
-    if (controller == null)
-      throw new IllegalStateException(s"It's null! argumentRowId: $argument")
-    val newCount = controller.decrement()
+    val newCount = accumulatorControllers.get(argument).decrement()
     debug("decr %03d to %d".format(argument, newCount))
   }
 }

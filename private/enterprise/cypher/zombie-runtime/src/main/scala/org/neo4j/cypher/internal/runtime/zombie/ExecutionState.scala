@@ -73,12 +73,10 @@ trait ExecutionState extends ArgumentStateCreator {
   /**
     * Await the completion of this query execution.
     */
-  // TODO: strange place for this method. Consider refactoring.
   def awaitCompletion(): Unit
 
   /**
     * Check whether this query has completed.
     */
-  // TODO: strange place for this method. Consider refactoring.
   def isCompleted: Boolean
 }

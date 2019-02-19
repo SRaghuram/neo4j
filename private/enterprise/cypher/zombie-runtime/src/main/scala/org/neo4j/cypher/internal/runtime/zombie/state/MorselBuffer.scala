@@ -35,7 +35,7 @@ class MorselBuffer(tracker: Tracker,
     val morsel = inner.consume()
     if (morsel == null)
       null
-    else Parallelizer(morsel)
+    else new Parallelizer(morsel)
   }
 
   /**
@@ -62,11 +62,17 @@ class MorselBuffer(tracker: Tracker,
     tracker.decrement()
   }
 
-  case class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
-    override def parallelClone: MorselExecutionContext = {
-      val copy = original.shallowCopy()
-      incrementCounters(copy)
-      copy
+  class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
+    private var usedOriginal = false
+    override def nextCopy: MorselExecutionContext = {
+      if (!usedOriginal) {
+        usedOriginal = true
+        original
+      } else {
+        val copy = original.shallowCopy()
+        incrementCounters(copy)
+        copy
+      }
     }
   }
 }

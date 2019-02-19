@@ -33,7 +33,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                     state: QueryState,
                     inputMorsel: MorselParallelizer,
                     resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
-    Array(new InputOTask(inputMorsel.original))
+    Array(new InputOTask(inputMorsel.nextCopy))
 
   override def init(context: QueryContext,
                     state: QueryState,
