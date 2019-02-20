@@ -15,7 +15,7 @@
 
     <properties>
         <uberjar.name>benchmark-results-client</uberjar.name>
-        <guava.version>20.0</guava.version>
+        <guava.version>21.0</guava.version>
         <apache-commons-lang3.version>3.8</apache-commons-lang3.version>
         <commons.io.version>2.6</commons.io.version>
         <license-text.header>../build/license-header.txt</license-text.header>
