@@ -328,10 +328,10 @@ object SlotAllocation {
     lp match {
 
       case Distinct(_, groupingExpressions) =>
-        addGroupingMap(groupingExpressions, source, slots)
+        addGroupingSlots(groupingExpressions, source, slots)
 
       case Aggregation(_, groupingExpressions, aggregationExpressions) =>
-        addGroupingMap(groupingExpressions, source, slots)
+        addGroupingSlots(groupingExpressions, source, slots)
 
         aggregationExpressions foreach {
           case (key, _) =>
@@ -652,7 +652,7 @@ object SlotAllocation {
       case _ =>
     }
 
-  private def addGroupingMap(groupingExpressions: Map[String, Expression],
+  private def addGroupingSlots(groupingExpressions: Map[String, Expression],
                              incoming: SlotConfiguration,
                              outgoing: SlotConfiguration): Unit = {
     groupingExpressions foreach {
@@ -667,6 +667,9 @@ object SlotAllocation {
       case (key, _) =>
         outgoing.newReference(key, nullable = true, CTAny)
     }
+
+    val renames: Map[String, String] = groupingExpressions.collect { case (name, v: Variable)  => (v.name, name) }
+    outgoing.addCachedPropertiesOf(incoming, renames)
   }
 
   private def allocateShortestPathPattern(shortestPathPattern: ShortestPathPattern,

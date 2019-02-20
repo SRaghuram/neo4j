@@ -55,8 +55,14 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   private val primitiveNodeSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
   private val primitiveRelationshipSetters: mutable.Map[String, (ExecutionContext, Long) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long) => Unit]()
 
-  def addCachedPropertiesOf(other: SlotConfiguration): Unit = {
-    other.cachedProperties.foreach { case (key, _) => this.newCachedProperty(key) }
+  def addCachedPropertiesOf(other: SlotConfiguration, renames: Map[String, String]): Unit = {
+    other.cachedProperties.foreach {
+      case (prop@CachedNodeProperty(varName, _), _) =>
+        newCachedProperty(prop)
+        renames.get(prop.nodeVariableName).foreach(newName =>
+          addAlias(prop.nodeVariableName, newName)
+        )
+    }
     other.applyPlans.foreach { case (id, slotOffset) => applyPlans.put(id, slotOffset) }
   }
 

@@ -82,7 +82,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
       case _ => fail()
     }
 
-  def copyCachedFrom(input: ExecutionContext): Unit = input match {
+  override def copyCachedFrom(input: ExecutionContext): Unit = input match {
     case other@SlottedExecutionContext(otherPipeline) =>
       slots.foreachCachedSlot({
         case (key, slot) => setCachedPropertyAt(slot.offset, other.getCachedPropertyAt(otherPipeline.getCachedNodePropertyOffsetFor(key)))
