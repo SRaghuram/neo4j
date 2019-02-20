@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
@@ -599,15 +598,8 @@ public class TransactionGuardIT
         protected GraphDatabaseBuilder.DatabaseCreator createImpermanentDatabaseCreator( File storeDir,
                 TestGraphDatabaseFactoryState state )
         {
-            return new GraphDatabaseBuilder.DatabaseCreator()
-            {
-                @Override
-                public GraphDatabaseService newDatabase( Config config )
-                {
-                    return customFacadeFactory.newFacade( storeDir, config,
-                            newDependencies( state.databaseDependencies() ) );
-                }
-            };
+            return config -> customFacadeFactory.newFacade( storeDir, config,
+                    newDependencies( state.databaseDependencies() ) );
         }
     }
 

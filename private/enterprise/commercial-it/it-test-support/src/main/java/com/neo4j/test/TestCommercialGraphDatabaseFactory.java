@@ -70,15 +70,11 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
     protected GraphDatabaseBuilder.DatabaseCreator createImpermanentDatabaseCreator( final File storeDir,
             final TestGraphDatabaseFactoryState state )
     {
-        return new GraphDatabaseBuilder.DatabaseCreator()
+        return config ->
         {
-            @Override
-            public GraphDatabaseService newDatabase( Config config )
-            {
-                augmentConfig( config, storeDir.getParentFile(), storeDir );
-                return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
-                        GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
-            }
+            augmentConfig( config, storeDir.getParentFile(), storeDir );
+            return new TestCommercialGraphDatabaseFacadeFactory( state, true ).newFacade( storeDir, config,
+                    GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
     }
 
