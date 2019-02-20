@@ -1,0 +1,1 @@
+{"name":"HashCode.indexEntryHashCode4xx_(threads,1)_(type,big_string)_(mode,LATENCY)","queryString":null,"simpleName":"HashCode.indexEntryHashCode4xx","description":"Benchmarks hashcode implementations of Values","mode":"LATENCY","parameters":["java.util.HashMap",{"threads":"1","type":"big_string"}]}

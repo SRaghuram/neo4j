@@ -1,0 +1,5 @@
+CONSTRAINT ON (n:User) ASSERT n.login IS UNIQUE
+INDEX ON :Movie(title)
+INDEX ON :Director(name)
+INDEX ON :Actor(name)
+INDEX ON :Person(name)

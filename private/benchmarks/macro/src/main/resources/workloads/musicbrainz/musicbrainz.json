@@ -1,0 +1,133 @@
+{
+  "name": "musicbrainz",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Artist Connections",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "Song Connections",
+      "queryFile": "queries/Q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "Artists from the UK with a label in the US",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "Artists from a country X with a label in country Y",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/countries.txt"
+      }
+    },
+    {
+      "name": "Q5 ",
+      "description": "Bob Dylan's songs which he composed, wrote and sang himself",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6 ",
+      "description": "An artist's songs which he composed, wrote and sang himself",
+      "queryFile": "queries/Q6.cypher",
+      "parameters": {
+        "file": "parameters/artists.txt"
+      }
+    },
+    {
+      "name": "Q7",
+      "description": "John Lennon's 3rd degree network (via bands)",
+      "queryFile": "queries/Q7.cypher"
+    },
+    {
+      "name": "Q8",
+      "description": "An artist's 3rd degree network (via bands)",
+      "queryFile": "queries/Q8.cypher",
+      "parameters": {
+        "file": "parameters/artists.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "description": "Artist-related information",
+      "queryFile": "queries/Q9.cypher",
+      "parameters": {
+        "file": "parameters/artists.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "What are the titles of all the tracks John Lennon played on?",
+      "queryFile": "queries/Q10.cypher"
+    },
+    {
+      "name": "Q11",
+      "description": "What are the titles of all the tracks an artist played on?",
+      "queryFile": "queries/Q11.cypher",
+      "parameters": {
+        "file": "parameters/artists.txt"
+      }
+    },
+    {
+      "name": "Q12",
+      "description": "What are the titles and album names of all the tracks John Lennon played on?",
+      "queryFile": "queries/Q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "description": "What are the titles and album names of all the tracks an artist played on?",
+      "queryFile": "queries/Q13.cypher",
+      "parameters": {
+        "file": "parameters/artists.txt"
+      }
+    },
+    {
+      "name": "Q14",
+      "description": "John Lennon's 3rd degree network (via bands)",
+      "queryFile": "queries/Q14.cypher"
+    },
+    {
+      "name": "Q15",
+      "queryFile": "queries/Q15.cypher",
+      "parameters": {
+        "file": "parameters/albums.txt"
+      }
+    },
+    {
+      "name": "Q16",
+      "queryFile": "queries/Q16.cypher"
+    },
+    {
+      "name": "Q20",
+      "queryFile": "queries/Q20.cypher"
+    },
+    {
+      "name": "Q22",
+      "queryFile": "queries/Q22.cypher"
+    },
+    {
+      "name": "Q23",
+      "queryFile": "queries/Q23.cypher"
+    },
+    {
+      "name": "Q24",
+      "queryFile": "queries/Q24.cypher"
+    },
+    {
+      "name": "Q25",
+      "queryFile": "queries/Q25.cypher"
+    },
+    {
+      "name": "Q26",
+      "queryFile": "queries/Q26.cypher"
+    },
+    {
+      "name": "Q27",
+      "queryFile": "queries/Q27.cypher"
+    }
+  ]
+}

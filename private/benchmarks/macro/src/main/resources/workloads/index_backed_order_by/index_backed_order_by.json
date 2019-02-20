@@ -1,0 +1,101 @@
+{
+  "name": "index_backed_order_by",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Wanted Improvement: Index range scan followed by get property value from index",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "Wanted Improvement: Index full scan followed by get property value from index and LIMIT",
+      "queryFile": "queries/Q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "Wanted Improvement: Index range scan followed by indexed property aggregation",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "Wanted Improvement: Index range scan followed by DISTINCT indexed property",
+      "queryFile": "queries/Q4.cypher"
+    },
+    {
+      "name": "Q5",
+      "description": "Possible Regression: Index seek followed by unrelated node property projection",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "description": "Possible Regression: Index full scan followed by unrelated node property projection",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "description": "Possible Regression: Index range scan followed by unrelated node property projection",
+      "queryFile": "queries/Q7.cypher"
+    },
+    {
+      "name": "Q8",
+      "description": "Possible Regression: Composite index range scan followed by unrelated node property projection",
+      "queryFile": "queries/Q8.cypher"
+    },
+    {
+      "name": "Q9",
+      "description": "Wanted Improvement: Index range scan followed by index backed ASC order and projection",
+      "queryFile": "queries/Q9.cypher"
+    },
+    {
+      "name": "Q10",
+      "description": "Wanted Improvement: Index range scan followed by index backed DESC order and projection",
+      "queryFile": "queries/Q10.cypher"
+    },
+    {
+      "name": "Q11",
+      "description": "Wanted Improvement: Index full scan followed by index backed ASC order and projection",
+      "queryFile": "queries/Q11.cypher"
+    },
+    {
+      "name": "Q12",
+      "description": "Wanted Improvement: Composite order-by where the first order property is index backed",
+      "queryFile": "queries/Q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "description": "Wanted Improvement: Composite order-by where both order properties are backed by a composite index",
+      "queryFile": "queries/Q13.cypher"
+    },
+    {
+      "name": "Q14",
+      "description": "Wanted Improvement: Index range scan followed ordered aggregation",
+      "queryFile": "queries/Q14.cypher"
+    },
+    {
+      "name": "Q15",
+      "description": "Wanted Improvement: Sorted merge join of two index range scans",
+      "queryFile": "queries/Q15.cypher"
+    },
+    {
+      "name": "Q16",
+      "description": "Possible Regression: Index range scan followed by unrelated order-by of non-indexed property",
+      "queryFile": "queries/Q16.cypher"
+    },
+    {
+      "name": "Q17",
+      "description": "Possible Regression: Index range scan followed by unrelated order-by of other-indexed property",
+      "queryFile": "queries/Q17.cypher"
+    },
+    {
+      "name": "Q18",
+      "description": "Wanted Improvement: Index range scan followed by index backed ASC order",
+      "queryFile": "queries/Q18.cypher"
+    },
+    {
+      "name": "Q19",
+      "description": "Wanted Improvement: Index range scan followed by index backed DESC order",
+      "queryFile": "queries/Q19.cypher"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "invalid_missing_query_file",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "queryFile": "queries/invalid.cypher"
+    }
+  ]
+}

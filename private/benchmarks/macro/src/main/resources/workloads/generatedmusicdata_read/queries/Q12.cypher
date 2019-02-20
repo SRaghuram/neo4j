@@ -1,0 +1,2 @@
+MATCH (a)-[:APPEARS_ON]->(b)<-[:CREATED]-(c)
+RETURN *

@@ -1,0 +1,46 @@
+---
+  - hosts: machines
+    remote_user: neo
+    environment:
+      JAVA_HOME: /usr/lib/jvm/oracle-jdk-8
+    tasks:
+      - name: clone FlameGraph
+        command: git clone https://github.com/brendangregg/FlameGraph.git
+        args:
+          creates: /tmp/FlameGraph
+          chdir: /tmp
+      - name: set proper version of FlameGraph
+        command: git reset --hard 18c3dea3b2c55ae66768936f1039e36a12b627f6
+        args:
+          chdir: /tmp/FlameGraph
+      - name: create FlameGraph directory
+        file:
+          path: /opt/profiling/FlameGraph
+          state: directory
+      - name: copy FlameGraphs to final destination
+        shell: cp -R --remove-destination /tmp/FlameGraph/* /opt/profiling/FlameGraph
+        become: yes
+      - name: clone jfr-flame-graph
+        command: git clone https://github.com/chrishantha/jfr-flame-graph.git
+        args:
+          creates: /tmp/jfr-flame-graph
+          chdir: /tmp
+      - name: set proper version of jfr-flame-graph
+        command: git reset --hard e14e3d43f23f2ea8ac38b26e46980ba0b784e5d1
+        args:
+          chdir: /tmp/jfr-flame-graph
+      - name: build jfr-flame-graph
+        command: ./gradlew installDist
+        args:
+          chdir: /tmp/jfr-flame-graph
+      - name: backup jfr-flame-graph
+        command: mv -v /opt/profiling/jfr-flame-graph /opt/profiling/jfr-flame-graph.old
+        become: yes
+      - name: create jfr-flame-graph directory
+        file:
+          path: /opt/profiling/jfr-flame-graph
+          state: directory
+        become: yes
+      - name: copy jfr-flame-graph to final destination
+        shell: cp -R --remove-destination /tmp/jfr-flame-graph/build/install/jfr-flame-graph/* /opt/profiling/jfr-flame-graph
+        become: yes
