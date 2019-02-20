@@ -105,7 +105,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
   }
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan, semanticTable: SemanticTable): (LogicalPlan, PhysicalPlan) = {
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedPipelineBreakingPolicy)
+    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedPipelineBreakingPolicy, allocateArgumentSlots = false)
     val slottedRewriter = new SlottedRewriter(context.tokenContext)
     val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
     (logicalPlan, physicalPlan)

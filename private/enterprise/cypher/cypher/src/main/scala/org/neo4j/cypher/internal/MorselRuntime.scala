@@ -77,7 +77,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan,
                           semanticTable: SemanticTable) = {
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedPipelineBreakingPolicy)
+    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedPipelineBreakingPolicy, allocateArgumentSlots = false)
     val slottedRewriter = new SlottedRewriter(context.tokenContext)
     val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
     (logicalPlan, physicalPlan)

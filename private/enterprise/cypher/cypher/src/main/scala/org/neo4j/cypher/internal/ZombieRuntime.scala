@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.physicalplanning.{PipelineBuilder, SlotAllocation, SlottedRewriter, StateDefinition}
+import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters

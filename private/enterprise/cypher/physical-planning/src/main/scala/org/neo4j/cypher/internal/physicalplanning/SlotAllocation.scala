@@ -31,7 +31,6 @@ import scala.util.Try
   * whereas the knowledge of how to traverse the plan tree is store in the while loops and stacks in the `populate`
   * method.
   **/
-//noinspection NameBooleanParameters
 object SlotAllocation {
 
   case class SlotsAndArgument(slotConfiguration: SlotConfiguration, argumentSize: Size, applyPlan: Id)
@@ -40,7 +39,7 @@ object SlotAllocation {
                           argumentSizes: ArgumentSizes,
                           applyPlans: ApplyPlans)
 
-  private def NO_ARGUMENT(allocateArgumentSlots: Boolean): SlotsAndArgument = {
+  private[physicalplanning] def NO_ARGUMENT(allocateArgumentSlots: Boolean): SlotsAndArgument = {
     val slots = SlotConfiguration.empty
     if (allocateArgumentSlots)
       slots.newArgument(Id.INVALID_ID)
@@ -48,6 +47,26 @@ object SlotAllocation {
   }
 
   val INITIAL_SLOT_CONFIGURATION: SlotConfiguration = NO_ARGUMENT(true).slotConfiguration
+
+  def allocateSlots(lp: LogicalPlan,
+                    semanticTable: SemanticTable,
+                    breakingPolicy: PipelineBreakingPolicy,
+                    allocateArgumentSlots: Boolean = false): PhysicalPlan =
+    new SingleQuerySlotAllocator(allocateArgumentSlots, breakingPolicy).allocateSlots(lp, semanticTable)
+}
+
+/**
+  * Single shot slot allocator. Will break if used on two logical plans.
+  */
+//noinspection NameBooleanParameters,RedundantDefaultArgument
+class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: Boolean,
+                                                         breakingPolicy: PipelineBreakingPolicy) {
+
+  import SlotAllocation._
+
+  private val allocations = new  SlotConfigurations
+  private val argumentSizes = new ArgumentSizes
+  private val applyPlans = new ApplyPlans
 
   /**
     * Allocate slot for every operator in the logical plan tree `lp`.
@@ -57,12 +76,7 @@ object SlotAllocation {
     */
   def allocateSlots(lp: LogicalPlan,
                     semanticTable: SemanticTable,
-                    breakingPolicy: PipelineBreakingPolicy,
-                    allocateArgumentSlots: Boolean = false,
-                    initialSlotsAndArgument: Option[SlotsAndArgument] = None,
-                    allocations: SlotConfigurations = new SlotConfigurations,
-                    argumentSizes: ArgumentSizes = new ArgumentSizes,
-                    applyPlans: ApplyPlans = new ApplyPlans): PhysicalPlan = {
+                    initialSlotsAndArgument: Option[SlotsAndArgument] = None): PhysicalPlan = {
 
     val planStack = new mutable.Stack[(Boolean, LogicalPlan)]()
     val resultStack = new mutable.Stack[SlotConfiguration]()
@@ -108,7 +122,7 @@ object SlotAllocation {
 
           val slots = breakingPolicy.invoke(current, argument.slotConfiguration, argument.slotConfiguration)
 
-          allocateExpressions(current, nullable, slots, breakingPolicy, semanticTable, allocateArgumentSlots, allocations, argumentSizes, applyPlans)
+          allocateExpressions(current, nullable, slots, semanticTable)
           allocateLeaf(current, nullable, slots)
           allocations.set(current.id, slots)
           resultStack.push(slots)
@@ -118,7 +132,7 @@ object SlotAllocation {
           val argument = if (argumentStack.isEmpty) NO_ARGUMENT(allocateArgumentSlots)
                          else argumentStack.top
 
-          allocateExpressions(current, nullable, sourceSlots, breakingPolicy, semanticTable, allocateArgumentSlots, allocations, argumentSizes, applyPlans)
+          allocateExpressions(current, nullable, sourceSlots, semanticTable)
 
           val slots = breakingPolicy.invoke(current, sourceSlots, argument.slotConfiguration)
           allocateOneChild(current, nullable, sourceSlots, slots, recordArgument(_, argument), semanticTable)
@@ -146,9 +160,9 @@ object SlotAllocation {
                          else argumentStack.top
           // NOTE: If we introduce a two sourced logical plan with an expression that needs to be evaluated in a
           //       particular scope (lhs or rhs) we need to add handling of it to allocateExpressions.
-          allocateExpressions(current, nullable, lhsSlots, breakingPolicy, semanticTable, allocateArgumentSlots, allocations, argumentSizes, applyPlans, shouldAllocateLhs = true)
-          allocateExpressions(current, nullable, rhsSlots, breakingPolicy, semanticTable, allocateArgumentSlots, allocations, argumentSizes, applyPlans, shouldAllocateLhs = false)
-          val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), breakingPolicy, argument)
+          allocateExpressions(current, nullable, lhsSlots, semanticTable, shouldAllocateLhs = true)
+          allocateExpressions(current, nullable, rhsSlots, semanticTable, shouldAllocateLhs = false)
+          val result = allocateTwoChild(current, nullable, lhsSlots, rhsSlots, recordArgument(_, argument), argument)
           allocations.set(current.id, result)
           if (current.isInstanceOf[ApplyPlan])
             argumentStack.pop()
@@ -165,25 +179,15 @@ object SlotAllocation {
   private def allocateExpressions(lp: LogicalPlan,
                                   nullable: Boolean,
                                   slots: SlotConfiguration,
-                                  breakingPolicy: PipelineBreakingPolicy,
                                   semanticTable: SemanticTable,
-                                  allocateArgumentSlots: Boolean,
-                                  slotConfigurations: SlotConfigurations,
-                                  argumentSizes: ArgumentSizes,
-                                  applyPlans: ApplyPlans,
                                   shouldAllocateLhs: Boolean = true): Unit = {
-    allocateExpressionsInternal(lp, nullable, slots, breakingPolicy, semanticTable, allocateArgumentSlots, slotConfigurations, argumentSizes, applyPlans, shouldAllocateLhs, lp.id)
+    allocateExpressionsInternal(lp, nullable, slots, semanticTable, shouldAllocateLhs, lp.id)
   }
 
   private def allocateExpressionsInternal(p: Foldable,
                                           nullable: Boolean,
                                           slots: SlotConfiguration,
-                                          breakingPolicy: PipelineBreakingPolicy,
                                           semanticTable: SemanticTable,
-                                          allocateArgumentSlots: Boolean,
-                                          slotConfigurations: SlotConfigurations,
-                                          argumentSizes: ArgumentSizes,
-                                          applyPlans: ApplyPlans,
                                           shouldAllocateLhs: Boolean = true,
                                           planId: Id): Unit = {
     case class Accumulator(doNotTraverseExpression: Option[Expression])
@@ -200,7 +204,7 @@ object SlotAllocation {
       throw new SlotAllocationFailed(s"Don't know how to handle $p")
     }
 
-    val result = p.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
+    p.treeFold[Accumulator](Accumulator(doNotTraverseExpression = None)) {
       //-----------------------------------------------------
       // Logical plans
       //-----------------------------------------------------
@@ -208,11 +212,11 @@ object SlotAllocation {
         acc: Accumulator => (acc, DO_NOT_TRAVERSE_INTO_CHILDREN) // Do not traverse the logical plan tree! We are only looking at the given lp
 
       case ValueHashJoin(_, _, Equals(_, rhsExpression)) if shouldAllocateLhs =>
-        acc: Accumulator =>
+        _: Accumulator =>
           (Accumulator(doNotTraverseExpression = Some(rhsExpression)), TRAVERSE_INTO_CHILDREN) // Only look at lhsExpression
 
       case ValueHashJoin(_, _, Equals(lhsExpression, _)) if !shouldAllocateLhs =>
-        acc: Accumulator =>
+        _: Accumulator =>
           (Accumulator(doNotTraverseExpression = Some(lhsExpression)), TRAVERSE_INTO_CHILDREN) // Only look at rhsExpression
 
       // Only allocate expression on the LHS for these plans
@@ -229,7 +233,7 @@ object SlotAllocation {
             (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
           else {
             e.introducedVariables.foreach {
-              case v@Variable(name) =>
+              case Variable(name) =>
                 slots.newReference(name, true, CTAny)
             }
             (acc, TRAVERSE_INTO_CHILDREN)
@@ -246,12 +250,12 @@ object SlotAllocation {
 
             // Allocate slots for nested plan
             // Pass in mutable attributes to be modified by recursive call
-            val nestedPhysicalPlan = allocateSlots(e.plan, semanticTable, breakingPolicy, allocateArgumentSlots, initialSlotsAndArgument = Some(slotsAndArgument), slotConfigurations, argumentSizes, applyPlans)
+            val nestedPhysicalPlan = allocateSlots(e.plan, semanticTable, initialSlotsAndArgument = Some(slotsAndArgument))
 
             // Allocate slots for the projection expression, based on the resulting slot configuration
             // from the inner plan
             val nestedSlots = nestedPhysicalPlan.slotConfigurations(e.plan.id)
-            allocateExpressionsInternal(e.projection, nullable, nestedSlots, breakingPolicy, semanticTable, allocateArgumentSlots, slotConfigurations, argumentSizes, applyPlans, shouldAllocateLhs, planId)
+            allocateExpressionsInternal(e.projection, nullable, nestedSlots, semanticTable, shouldAllocateLhs, planId)
 
             // Since we did allocation for nested plan and projection explicitly we do not need to traverse into children
             // The inner slot configuration does not need to affect the accumulated result of the outer plan
@@ -470,11 +474,11 @@ object SlotAllocation {
 
       case ProcedureCall(_, ResolvedCall(_, _, callResults, _, _)) =>
         callResults.foreach {
-          case ProcedureResultItem(output, variable) =>
+          case ProcedureResultItem(_, variable) =>
             slots.newReference(variable.name, true, CTAny)
         }
 
-      case FindShortestPaths(_, shortestPathPattern, predicates, withFallBack, disallowSameNode) =>
+      case FindShortestPaths(_, shortestPathPattern, _, _, _) =>
         allocateShortestPathPattern(shortestPathPattern, slots, nullable)
 
       case p =>
@@ -495,7 +499,6 @@ object SlotAllocation {
                                lhs: SlotConfiguration,
                                rhs: SlotConfiguration,
                                recordArgument: LogicalPlan => Unit,
-                               breakingPolicy: PipelineBreakingPolicy,
                                argument: SlotsAndArgument): SlotConfiguration =
     lp match {
       case _: Apply =>
