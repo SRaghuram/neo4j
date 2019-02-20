@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{NaiveRuntimeResult, QueryProfile, RuntimeResult}
+import org.neo4j.cypher.result.{NaiveQuerySubscription, QueryProfile, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
@@ -139,7 +139,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             override val fieldNames: Array[String],
                             queryExecutor: QueryExecutor,
                             schedulerTracer: SchedulerTracer,
-                            subscriber: QuerySubscriber) extends NaiveRuntimeResult(subscriber) {
+                            subscriber: QuerySubscriber) extends NaiveQuerySubscription(subscriber) {
 
     private var resultRequested = false
 

@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.executionplan.GeneratedQueryExecution
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{NaiveRuntimeResult, QueryProfile, QueryResult, RuntimeResult}
+import org.neo4j.cypher.result.{NaiveQuerySubscription, QueryProfile, QueryResult, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
@@ -23,7 +23,7 @@ class CompiledExecutionResult(context: QueryContext,
                               override val queryProfile: QueryProfile,
                               prePopulateResults: Boolean,
                               subscriber: QuerySubscriber)
-  extends NaiveRuntimeResult(subscriber) {
+  extends NaiveQuerySubscription(subscriber) {
 
   private var resultRequested = false
 
