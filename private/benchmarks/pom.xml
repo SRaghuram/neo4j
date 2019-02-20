@@ -1,0 +1,160 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <parent>
+      <groupId>com.neo4j</groupId>
+      <artifactId>commercial-parent</artifactId>
+      <version>3.6.2-SNAPSHOT</version>
+      <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.neo4j.bench</groupId>
+    <artifactId>benchmark</artifactId>
+    <packaging>pom</packaging>
+    <name>Neo4j - Benchmarks</name>
+
+    <properties>
+        <junit.version>5.2.0</junit.version>
+        <junit.platform.version>1.2.0</junit.platform.version>
+        <neo4j-java-driver.version>1.4.4</neo4j-java-driver.version>
+        <license-text.header>build/license-header.txt</license-text.header>
+    </properties>
+
+    <licenses>
+      <license>
+        <name>Neo4j Commercial license</name>
+        <comments>
+        Copyright (c) 2002-2019 "Neo4j,"
+        Neo4j Sweden AB [http://neo4j.com]
+        This file is part of Neo4j internal tooling.
+        </comments>
+      </license>
+    </licenses>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-params</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-migrationsupport</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.vintage</groupId>
+                <artifactId>junit-vintage-engine</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <module>benchmark-results-client</module>
+        <module>benchmark-procedures</module>
+        <module>ldbc</module>
+        <module>micro</module>
+        <module>macro</module>
+        <module>import</module>
+    </modules>
+
+    <profiles>
+        <profile>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.3.2</version>
+                        <inherited>false</inherited>
+                        <executions>
+                            <execution>
+                                <id>shellcheck</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <executable>src/main/scripts/checkShellScrips.sh</executable>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>false</skipTests>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                            <configuration>
+                                <skipTests>false</skipTests>
+                                <skipITs>false</skipITs>
+                            </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+            <id>CI</id>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.neo4j.build.plugins</groupId>
+                <artifactId>licensing-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-licenses</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <skipTests>true</skipTests>
+                        <skipITs>true</skipITs>
+                    </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>ldbc</id>
+            <name>LDBC SNB</name>
+            <url>https://dl.bintray.com/ldbc/snb/</url>
+        </repository>
+    </repositories>
+</project>

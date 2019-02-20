@@ -1,0 +1,5 @@
+INDEX ON :Employee(name)
+INDEX ON :Administrator(name)
+INDEX ON :Company(name)
+INDEX ON :Resource(name)
+INDEX ON :Account(name)

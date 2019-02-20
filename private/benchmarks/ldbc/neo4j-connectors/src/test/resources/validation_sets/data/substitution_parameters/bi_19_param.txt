@@ -1,0 +1,11 @@
+date|tagClass1|tagClass2
+599612400000|MusicalArtist|OfficeHolder
+599612400000|MusicalArtist|Writer
+599612400000|MusicalArtist|BritishRoyalty
+599612400000|MusicalArtist|TennisPlayer
+599612400000|OfficeHolder|Writer
+599612400000|OfficeHolder|BritishRoyalty
+599612400000|OfficeHolder|TennisPlayer
+599612400000|Writer|BritishRoyalty
+599612400000|Writer|TennisPlayer
+599612400000|BritishRoyalty|TennisPlayer

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.neo4j.bench</groupId>
+        <artifactId>benchmark</artifactId>
+        <version>3.6.2-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>ldbc</artifactId>
+    <packaging>pom</packaging>
+    <name>Neo4j - LDBC Social Network Benchmarks</name>
+
+    <properties>
+        <neo4j.version>${project.version}</neo4j.version>
+        <junit.version>5.2.0</junit.version>
+        <junit.platform.version>1.2.0</junit.platform.version>
+        <license-text.header>../build/license-header.txt</license-text.header>
+    </properties>
+
+    <licenses>
+      <license>
+        <name>Neo4j Commercial license</name>
+        <comments>
+          Copyright (c) 2002-2019 "Neo4j,"
+          Neo4j Sweden AB [http://neo4j.com]
+          This file is part of Neo4j internal tooling.
+        </comments>
+      </license>
+    </licenses>
+
+    <modules>
+        <module>neo4j-connectors</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

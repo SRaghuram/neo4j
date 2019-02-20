@@ -1,0 +1,2 @@
+MATCH (f:PROFILES)
+RETURN f.AGE, count(*)

@@ -1,0 +1,13 @@
+[2019-01-24T11:42:43.935862Z] Starting jfr profiler...
+[2019-01-24T11:42:43.935862Z] Command: /usr/lib/jvm/java-11-oracle/bin/jcmd 9656 JFR.start settings=profile name=Values.HashCode.indexEntryHashCode4xx__threads_1___type_byte[]___mode_LATENCY dumponexit=false
+[2019-01-24T11:42:43.935862Z] -------------------------------
+[2019-01-24T11:42:44.690565Z] JFR profiler started
+[2019-01-24T11:42:44.690565Z] -------------------------------
+[2019-01-24T11:43:09.701888Z] Dumping JFR recording...
+[2019-01-24T11:43:09.701888Z] Command: /usr/lib/jvm/java-11-oracle/bin/jcmd 9656 JFR.dump name=Values.HashCode.indexEntryHashCode4xx__threads_1___type_byte[]___mode_LATENCY filename='/var/home/jarek/projects/neo4j/benchmarks/micro/benchmark_stores/Values/HashCode.indexEntryHashCode4xx__threads_1___type_byte[]___mode_LATENCY/fork_1/Values.HashCode.indexEntryHashCode4xx__threads_1___type_byte[]___mode_LATENCY.jfr'
+[2019-01-24T11:43:09.701888Z] -------------------------------
+[2019-01-24T11:43:10.047448Z] Stopping JFR profiler...
+[2019-01-24T11:43:10.047448Z] Command: jcmd 9656 JFR.stop name=Values.HashCode.indexEntryHashCode4xx__threads_1___type_byte[]___mode_LATENCY
+[2019-01-24T11:43:10.047448Z] -------------------------------
+[2019-01-24T11:43:10.316691Z] Profiling complete: /var/home/jarek/projects/neo4j/benchmarks/micro/benchmark_stores/Values/HashCode.indexEntryHashCode4xx__threads_1___type_byte[]___mode_LATENCY/fork_1/Values.HashCode.indexEntryHashCode4xx__threads_1___type_byte[]___mode_LATENCY.jfr
+[2019-01-24T11:43:10.316691Z] -------------------------------

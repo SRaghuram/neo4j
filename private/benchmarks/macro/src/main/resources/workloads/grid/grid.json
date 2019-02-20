@@ -1,0 +1,31 @@
+{
+  "name": "grid",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Short pattern expression: 4 relationships (short compile times)",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "Long pattern expression: 7 relationships (moderate compile times)",
+      "queryFile": "queries/Q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "Long pattern expression: 13 relationships (long compile times)",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "Very long pattern expression: 20 relationships (original IDP cannot compile)",
+      "queryFile": "queries/Q4.cypher"
+    },
+    {
+      "name": "Q5",
+      "description": "Extremely long pattern expression: 30 relationships (original IDP cannot compile)",
+      "queryFile": "queries/Q5.cypher"
+    }
+  ]
+}

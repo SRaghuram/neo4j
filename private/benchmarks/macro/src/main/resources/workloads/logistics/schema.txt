@@ -1,0 +1,5 @@
+INDEX ON :DeliverySegment(name)
+INDEX ON :Location(name)
+INDEX ON :ParcelCentre(name)
+INDEX ON :DeliveryArea(name)
+INDEX ON :DeliveryBase(name)
