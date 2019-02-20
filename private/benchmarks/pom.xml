@@ -21,6 +21,8 @@
         <junit.platform.version>1.2.0</junit.platform.version>
         <neo4j-java-driver.version>1.4.4</neo4j-java-driver.version>
         <license-text.header>build/license-header.txt</license-text.header>
+        <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
+        <maven.javadoc.skip>true</maven.javadoc.skip>
     </properties>
 
     <licenses>
