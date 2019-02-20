@@ -35,6 +35,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
 import org.neo4j.kernel.impl.store.id.IdType;
@@ -48,6 +49,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
@@ -175,18 +177,37 @@ public class CoreBootstrapper
 
         String activeDatabaseName = activeDatabaseFilteredConfig.get( GraphDatabaseSettings.active_database );
         LocalDatabase activeDatabase = getDatabaseOrThrow( activeDatabaseName );
-
-        LocalDatabase systemDatabase = getDatabaseOrThrow( SYSTEM_DATABASE_NAME );
-        boolean systemDatabaseExists = isStorePresent( systemDatabase.databaseLayout() );
-
         DatabaseLayout activeDatabaseLayout = activeDatabase.databaseLayout();
+
+        DatabaseLayout systemDatabaseLayout = DatabaseLayout.of( activeDatabaseLayout.getStoreLayout(), SYSTEM_DATABASE_NAME );
 
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
 
-        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( pageCache, activeDatabaseLayout.databaseDirectory(),
-                activeDatabaseParams ) )
+        ensureRecoveredOrThrow( activeDatabaseLayout, activeDatabaseFilteredConfig );
+        ensureRecoveredOrThrow( systemDatabaseLayout, systemDatabaseFilteredConfig);
+
+        initialise( activeDatabaseLayout, systemDatabaseLayout );
+        registerDatabase( coreSnapshot, activeDatabaseLayout, activeDatabaseFilteredConfig, activeDatabaseName );
+        registerDatabase( coreSnapshot, systemDatabaseLayout, systemDatabaseFilteredConfig, SYSTEM_DATABASE_NAME );
+
+        return coreSnapshot;
+    }
+
+    private void initialise( DatabaseLayout activeDatabaseLayout, DatabaseLayout systemDatabaseLayout ) throws IOException
+    {
+        boolean systemDatabaseExists = isStorePresent( systemDatabaseLayout );
+        if ( isStorePresent( activeDatabaseLayout ) )
+        {
+            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( activeDatabaseLayout, activeDatabaseFilteredConfig);
+        }
+        if ( systemDatabaseExists )
+        {
+            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( systemDatabaseLayout, systemDatabaseFilteredConfig );
+        }
+        try ( TemporaryDatabase temporaryDatabase =
+                tempDatabaseFactory.startTemporaryDatabase( pageCache, activeDatabaseLayout.databaseDirectory(), activeDatabaseParams ) )
         {
             if ( !systemDatabaseExists )
             {
@@ -194,27 +215,37 @@ public class CoreBootstrapper
                 DatabaseManager databaseManager =
                         ((GraphDatabaseAPI) temporaryDatabase.graphDatabaseService()).getDependencyResolver().resolveDependency( DatabaseManager.class );
                 Optional<DatabaseContext> systemContext = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME );
-                systemDatabaseInitializer.initialize( systemContext.get().getDatabaseFacade() );
+                GraphDatabaseFacade systemDatabaseFacade = systemContext
+                        .orElseThrow( () -> new IllegalStateException( SYSTEM_DATABASE_NAME + " database should exist." ) )
+                        .getDatabaseFacade();
+                systemDatabaseInitializer.initialize( systemDatabaseFacade );
             }
         }
-        registerDatabase( coreSnapshot, activeDatabaseLayout, activeDatabaseFilteredConfig, activeDatabaseName );
-        registerDatabase( coreSnapshot, systemDatabase.databaseLayout(), systemDatabaseFilteredConfig, SYSTEM_DATABASE_NAME );
-
-        return coreSnapshot;
     }
 
-    private void registerDatabase( CoreSnapshot coreSnapshot, DatabaseLayout databaseLayout, Config config, String systemDatabaseName ) throws IOException
+    private void registerDatabase( CoreSnapshot coreSnapshot, DatabaseLayout databaseLayout, Config config, String databaseName ) throws IOException
     {
         appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout, config );
 
         IdAllocationState idAllocation = deriveIdAllocationState( databaseLayout );
-        coreSnapshot.add( systemDatabaseName, CoreStateFiles.ID_ALLOCATION, idAllocation );
-        coreSnapshot.add( systemDatabaseName, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
+        coreSnapshot.add( databaseName, CoreStateFiles.ID_ALLOCATION, idAllocation );
+        coreSnapshot.add( databaseName, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
     }
 
     private boolean isStorePresent( DatabaseLayout databaseLayout )
     {
         return storageEngineFactory.storageExists( fs, pageCache, databaseLayout );
+    }
+
+    private void ensureRecoveredOrThrow( DatabaseLayout databaseLayout, Config config ) throws Exception
+    {
+        if ( Recovery.isRecoveryRequired( fs, databaseLayout, config, storageEngineFactory ) )
+        {
+            String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
+                    "instance of Neo4j or a Neo4j backup";
+            log.error( message );
+            throw new IllegalStateException( message );
+        }
     }
 
     private LocalDatabase getDatabaseOrThrow( String databaseName )

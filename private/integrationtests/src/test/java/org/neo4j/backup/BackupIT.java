@@ -108,9 +108,7 @@ import org.neo4j.test.scheduler.DaemonThreadFactory;
 import static com.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.lang.Integer.parseInt;
-import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.arrayWithSize;
@@ -461,7 +459,7 @@ class BackupIT
     void backupDatabaseWithCustomTransactionLogsLocation( String recordFormatName ) throws Exception
     {
         String customTxLogsLocation = testDirectory.directory( "customLogLocation" ).getAbsolutePath();
-        Map<Setting<?>,String> settings = Maps.fixedSize.of( record_format, recordFormatName, transaction_logs_root_path, customTxLogsLocation );
+        Map<Setting<?>,String> settings = Maps.mutable.of( record_format, recordFormatName, transaction_logs_root_path, customTxLogsLocation );
         GraphDatabaseService db = startDb( serverStorePath, settings );
         createInitialDataSet( db );
 
@@ -839,7 +837,7 @@ class BackupIT
         addLotsOfData( db );
         db.shutdown();
 
-        db = startDb( serverStorePath, singletonMap( read_only, TRUE ) );
+        db = startDb( serverStorePath, Maps.mutable.of( read_only, TRUE ) );
 
         executeBackup( db );
 
@@ -919,7 +917,7 @@ class BackupIT
 
     private GraphDatabaseService prepareDatabaseWithTooOldBackup() throws Exception
     {
-        GraphDatabaseService db = startDb( serverStorePath, singletonMap( keep_logical_logs, "false" ) );
+        GraphDatabaseService db = startDb( serverStorePath, Maps.mutable.of( keep_logical_logs, "false" ) );
 
         createInitialDataSet( db );
         createIndex( db );
@@ -1082,12 +1080,12 @@ class BackupIT
 
     private GraphDatabaseService startDb( File path )
     {
-        return startDb( path, emptyMap() );
+        return startDb( path, Maps.mutable.of() );
     }
 
     private GraphDatabaseService startDb( File path, String recordFormatName )
     {
-        return startDb( path, singletonMap( record_format, recordFormatName ) );
+        return startDb( path, Maps.mutable.of( record_format, recordFormatName ) );
     }
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path )
@@ -1097,7 +1095,7 @@ class BackupIT
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path, String recordFormatName )
     {
-        Map<Setting<?>,String> settings = Maps.fixedSize.of( online_backup_enabled, FALSE, record_format, recordFormatName );
+        Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE, record_format, recordFormatName );
         return startDb( path, settings );
     }
 
@@ -1105,6 +1103,7 @@ class BackupIT
     {
         GraphDatabaseBuilder builder = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( path );
 
+        settings.putIfAbsent( online_backup_enabled, TRUE );
         for ( Map.Entry<Setting<?>,String> entry : settings.entrySet() )
         {
             builder.setConfig( entry.getKey(), entry.getValue() );

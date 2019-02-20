@@ -75,7 +75,7 @@ class CoreBootstrapperIT
 
     private final StubLocalDatabaseService databaseService = new StubLocalDatabaseService();
 
-    private final Function<String,DatabaseInitializer> databaseInitializers = databaseName -> null;
+    private final Function<String,DatabaseInitializer> databaseInitializers = databaseName -> DatabaseInitializer.NO_INITIALIZATION;
     private final Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
 
     private final LogProvider logProvider = NullLogProvider.getInstance();

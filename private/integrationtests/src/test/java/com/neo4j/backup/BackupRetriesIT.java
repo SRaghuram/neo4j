@@ -7,6 +7,7 @@ package com.neo4j.backup;
 
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.handlers.PipelineWrapper;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -76,6 +77,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 
 @ExtendWith( {SuppressOutputExtension.class, RandomExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class BackupRetriesIT
@@ -139,7 +141,10 @@ class BackupRetriesIT
     private GraphDatabaseAPI startDb()
     {
         File storeDir = testDirectory.databaseDir();
-        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory( logProvider ).newEmbeddedDatabase( storeDir );
+        GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory( logProvider )
+                .newEmbeddedDatabaseBuilder( storeDir )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, TRUE )
+                .newGraphDatabase();
         storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         return db;
     }
