@@ -263,6 +263,33 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("m.prop1" -> 40), Map("m.prop1" -> 40)))
   }
 
+  test("should pass cached property through distinct with two renamed nodes") {
+    val config = Configs.InterpretedAndSlotted + Configs.Version3_4
+    val query =
+      """
+        |PROFILE
+        |MATCH (a:Awesome {prop1: 40}), (n:Awesome {prop1: 42})
+        |WITH DISTINCT a as n, n as m
+        |RETURN n.prop1, m.prop1
+      """.stripMargin
+    val result = executeWith(config, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("Projection")
+        .withDBHits(0)
+        .containingArgument("{n.prop1 : cached[a.prop1], m.prop1 : cached[n.prop1]}")
+
+    result.toList should equal(
+      List(
+        Map("n.prop1" -> 40, "m.prop1" -> 42),
+        Map("n.prop1" -> 40, "m.prop1" -> 42),
+        Map("n.prop1" -> 40, "m.prop1" -> 42),
+        Map("n.prop1" -> 40, "m.prop1" -> 42)
+      )
+    )
+  }
+
+
   test("should pass cached property through distinct single node with renaming of node and reuse of old name") {
     val setup = "MATCH (n:Awesome {prop1: 40}) CREATE (n)-[:R]->(:Label {prop1: 42})"
     executeSingle(setup)
