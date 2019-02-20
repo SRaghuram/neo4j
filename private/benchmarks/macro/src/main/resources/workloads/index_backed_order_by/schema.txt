@@ -1,0 +1,11 @@
+CONSTRAINT ON (p:PROFILES) ASSERT(p._key) IS NODE KEY
+INDEX ON :PROFILES(gender)
+INDEX ON :PROFILES(eye_color)
+INDEX ON :PROFILES(hair_color)
+INDEX ON :PROFILES(pets)
+INDEX ON :PROFILES(children)
+INDEX ON :PROFILES(gender,hair_color)
+INDEX ON :PROFILES(gender,hair_color,eye_color)
+INDEX ON :PROFILES(gender,pets,children)
+INDEX ON :PROFILES(pets,children)
+INDEX ON :PROFILES(gender,hair_color,eye_color,pets,children)

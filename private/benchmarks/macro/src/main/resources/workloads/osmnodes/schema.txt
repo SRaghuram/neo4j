@@ -1,0 +1,5 @@
+CONSTRAINT ON (n:OSMNode) ASSERT n.osm_id IS UNIQUE
+INDEX ON :OSMNode(created)
+INDEX ON :OSMNode(location)
+INDEX ON :OSMNode(name)
+INDEX ON :OSMNode(place)

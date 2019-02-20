@@ -1,0 +1,89 @@
+{
+  "name": "cineasts",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Find the most prolific actors",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "Find actors who have been in at least 20 movies",
+      "queryFile": "queries/Q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "Find the actors with 20+ movies, and the movies in which they acted",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "Find prolific actors (10+) who have directed at least two films, count films acted in and list films directed",
+      "queryFile": "queries/Q4.cypher"
+    },
+    {
+      "name": "Q5",
+      "description": "Rewritten to filter both :Actor and :Director labels up front (ought to be twice as fast as Q4)",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "description": "Using the lowest cardinality label, :Director (ought to be 5 times as fast as Q5)",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "description": "Recommendations including counts, grouping and sorting",
+      "queryFile": "queries/Q7.cypher",
+      "parameters": {
+        "file": "parameters/users.txt"
+      }
+    },
+    {
+      "name": "Q8",
+      "description": "Ratings by like-minded people",
+      "queryFile": "queries/Q8.cypher"
+    },
+    {
+      "name": "Q9",
+      "description": "Actors who played in some movie",
+      "queryFile": "queries/Q9.cypher",
+      "parameters": {
+        "file": "parameters/movies.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "User-Ratings",
+      "queryFile": "queries/Q10.cypher",
+      "parameters": {
+        "file": "parameters/users.txt"
+      }
+    },
+    {
+      "name": "Q11",
+      "description": "Mutual Friend recommendations",
+      "queryFile": "queries/Q11.cypher",
+      "parameters": {
+        "file": "parameters/users.txt"
+      }
+    },
+    {
+      "name": "Q12",
+      "description": "Movie suggestions based on a movie",
+      "queryFile": "queries/Q12.cypher",
+      "parameters": {
+        "file": "parameters/movies.txt"
+      }
+    },
+    {
+      "name": "Q13",
+      "description": "Co-Actors, sorted by count and some actor name",
+      "queryFile": "queries/Q13.cypher",
+      "parameters": {
+        "file": "parameters/actors.txt"
+      }
+    }
+  ]
+}

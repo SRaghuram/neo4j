@@ -1,0 +1,257 @@
+{
+  "name": "pokec_read",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "first and second degree neighbours",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "1st degree neighbours",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "1st degree neighbours with label and rel-type",
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "description": "2nd degree neighbours",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "2nd degree neighbours with varlength",
+      "queryFile": "queries/Q5.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q6",
+      "description": "shortest path between two profiles",
+      "queryFile": "queries/Q6.cypher",
+      "parameters": {
+        "file": "parameters/profiles_pairs.txt"
+      }
+    },
+    {
+      "name": "Q7",
+      "description": "shortest RELATION path between two profiles (return keys)",
+      "queryFile": "queries/Q7.cypher",
+      "parameters": {
+        "file": "parameters/profiles_pairs.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "description": "shortest RELATION path between two profiles (return ids)",
+      "queryFile": "queries/Q9.cypher",
+      "parameters": {
+        "file": "parameters/profiles_pairs.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "aggregation (AGE)",
+      "queryFile": "queries/Q10.cypher"
+    },
+    {
+      "name": "Q11",
+      "description": "aggregation (complete_percentage)",
+      "queryFile": "queries/Q11.cypher"
+    },
+    {
+      "name": "Q12",
+      "description": "1000 x single read",
+      "queryFile": "queries/Q12.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q13",
+      "description": "READ first 770 items",
+      "queryFile": "queries/Q13.cypher"
+    },
+    {
+      "name": "Q14",
+      "description": "READ 770 items across the store",
+      "queryFile": "queries/Q14.cypher"
+    },
+    {
+      "name": "Q15",
+      "description": "mutual relationships of a dense node using optional match",
+      "queryFile": "queries/Q15.cypher",
+      "parameters": {
+        "file": "parameters/dense_nodes.txt"
+      }
+    },
+    {
+      "name": "Q16",
+      "description": "mutual relationships of a dense node using match",
+      "queryFile": "queries/Q16.cypher",
+      "parameters": {
+        "file": "parameters/dense_nodes.txt"
+      }
+    },
+    {
+      "name": "Q17",
+      "description": "Find perfect matches (part of WQ8)",
+      "queryFile": "queries/Q17.cypher"
+    },
+    {
+      "name": "Q18",
+      "description": "Match with one high cardinality property (should not benefit from composite index)",
+      "queryFile": "queries/Q18.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      }
+    },
+    {
+      "name": "Q19",
+      "description": "Match with two high cardinality properties (can benefit from composite index)",
+      "queryFile": "queries/Q19.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      }
+    },
+    {
+      "name": "Q20",
+      "description": "Match with three high cardinality properties (can benefit from composite index)",
+      "queryFile": "queries/Q20.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      }
+    },
+    {
+      "name": "Q21",
+      "description": "Match with one medium cardinality property (should not benefit from composite index)",
+      "queryFile": "queries/Q21.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_pets_children.txt"
+      }
+    },
+    {
+      "name": "Q22",
+      "description": "Match with two medium cardinality properties (can benefit from composite index)",
+      "queryFile": "queries/Q22.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_pets_children.txt"
+      }
+    },
+    {
+      "name": "Q23",
+      "description": "Match with three medium cardinality properties (can benefit from composite index)",
+      "queryFile": "queries/Q23.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_pets_children.txt"
+      }
+    },
+    {
+      "name": "Q24",
+      "description": "Match with two medium cardinality properties as literals (can benefit from composite index)",
+      "queryFile": "queries/Q24.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_pets_children.txt"
+      }
+    },
+    {
+      "name": "Q25",
+      "description": "Match with three medium cardinality properties as literals (can benefit from composite index)",
+      "queryFile": "queries/Q25.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_pets_children.txt"
+      }
+    },
+    {
+      "name": "Q26",
+      "description": "Match with two high cardinality properties as literals (can benefit from composite index)",
+      "queryFile": "queries/Q26.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      }
+    },
+    {
+      "name": "Q27",
+      "description": "Match with three high cardinality properties as literals (can benefit from composite index)",
+      "queryFile": "queries/Q27.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      }
+    },
+    {
+      "name": "Q28",
+      "description": "Match with three high cardinality and two medium cardinality properties as literals (can benefit from composite index)",
+      "queryFile": "queries/Q28.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_pets_children.txt"
+      }
+    },
+    {
+      "name": "Q29",
+      "description": "OR with two high cardinality properties (can benefit from OR-index support)",
+      "queryFile": "queries/Q29.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      }
+    },
+    {
+      "name": "Q30",
+      "description": "OR with two medium cardinality properties (can benefit from OR-index support)",
+      "queryFile": "queries/Q30.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_pets_children.txt"
+      }
+    },
+    {
+      "name": "Q31",
+      "description": "Var length 3rd degree neighbour with distinct (can benefit from PruningVarExpander)",
+      "queryFile": "queries/Q31.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q32",
+      "description": "Var length 4rd degree neighbour with distinct (can benefit from PruningVarExpander)",
+      "queryFile": "queries/Q32.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q33",
+      "description": "Var length 5rd degree neighbour with distinct (can benefit from PruningVarExpander)",
+      "queryFile": "queries/Q33.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      }
+    },
+    {
+      "name": "Q34",
+      "description": "Transitive closure",
+      "queryFile": "queries/Q34.cypher"
+    },
+    {
+      "name": "Q35",
+      "description": "Impossible predicates",
+      "queryFile": "queries/Q35.cypher"
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "name": "qmul_write",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "WQ1",
+      "description": "Create new users",
+      "queryFile": "queries/WQ1.cypher",
+      "parameters": {
+        "file": "parameters/names.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ2",
+      "description": "Match one node and create another (eager in older code)",
+      "queryFile": "queries/WQ2.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ3",
+      "description": "Match one node and create another with different label (not eager)",
+      "queryFile": "queries/WQ3.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ4",
+      "description": "Match one node and create another and a relationship (eager in older code)",
+      "queryFile": "queries/WQ4.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ5",
+      "description": "Create nodes and relationships between them",
+      "queryFile": "queries/WQ5.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ6",
+      "description": "Create and find nodes and relationships between them",
+      "queryFile": "queries/WQ6.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ7",
+      "description": "Create relationships between existing nodes",
+      "queryFile": "queries/WQ7.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ8",
+      "description": "Find two nodes, create a third (eager even in new code)",
+      "queryFile": "queries/WQ8.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ9",
+      "description": "Find two nodes, create a third and a relationship (eager even in new code)",
+      "queryFile": "queries/WQ9.cypher",
+      "parameters": {
+        "file": "parameters/relationships.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ10",
+      "description": "Match many nodes and create many others (eager in older code)",
+      "queryFile": "queries/WQ10.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ11",
+      "description": "Match many nodes and create many others (eager in older code)",
+      "queryFile": "queries/WQ11.cypher",
+      "isSingleShot": true,
+      "hasWarmup": false,
+      "isMutating": true
+    },
+    {
+      "name": "WQ12",
+      "description": "Match one node and set a property",
+      "queryFile": "queries/WQ12.cypher",
+      "parameters": {
+        "file": "parameters/names.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ13",
+      "description": "Match one node and set all properties with ={}",
+      "queryFile": "queries/WQ13.cypher",
+      "parameters": {
+        "file": "parameters/names.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ14",
+      "description": "Match one node and set properties with +={}",
+      "queryFile": "queries/WQ14.cypher",
+      "parameters": {
+        "file": "parameters/names.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ15",
+      "description": "Match many nodes and set properties on all (limit 1000)",
+      "queryFile": "queries/WQ15.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ16",
+      "description": "Match many nodes and set properties on all with ={} (limit 1000)",
+      "queryFile": "queries/WQ16.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ17",
+      "description": "Match many nodes and set properties on all with +={} (limit 1000)",
+      "queryFile": "queries/WQ17.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ18",
+      "description": "Match many nodes and set properties on all (no limit)",
+      "queryFile": "queries/WQ18.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ19",
+      "description": "Match many nodes and set properties on all with ={} (no limit)",
+      "queryFile": "queries/WQ19.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ20",
+      "description": "Match many nodes and set properties on all with +={} (no limit)",
+      "queryFile": "queries/WQ20.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ21",
+      "description": "Match friends and delete them",
+      "queryFile": "queries/WQ21.cypher",
+      "warmupQueryFile": "queries/WQ21.cypher",
+      "parameters": {
+        "file": "parameters/names.txt"
+      },
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ22",
+      "description": "Match friends, delete and re-create the relationship",
+      "queryFile": "queries/WQ22.cypher",
+      "parameters": {
+        "file": "parameters/names.txt"
+      },
+      "isMutating": true
+    }
+  ]
+}

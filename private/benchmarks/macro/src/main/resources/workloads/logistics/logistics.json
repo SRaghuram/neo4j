@@ -1,0 +1,22 @@
+{
+  "name": "logistics",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Logistics parcel routing using cypher reduce (orig. varlength path)",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/locations.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "Logistics parcel routing using cypher reduce (no varlength paths)",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/locations.txt"
+      }
+    }
+  ]
+}

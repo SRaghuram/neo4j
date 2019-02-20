@@ -1,0 +1,63 @@
+{
+  "name": "qmul_read",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Pathological query from customer with actual input",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/Q1.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "Less severe, faster due to lower cardinality",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/Q2.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "Pathological query forced long chain",
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/Q3.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "description": "Less severe query forced long chain",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/Q4.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "Low cardinality exists(prop)",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "description": "High cardinality exists(prop)",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q11",
+      "description": "Low cardinality string range seek",
+      "queryFile": "queries/Q11.cypher"
+    },
+    {
+      "name": "Q12",
+      "description": "High cardinality string range seek",
+      "queryFile": "queries/Q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "description": "Low cardinality numerical range seek",
+      "queryFile": "queries/Q13.cypher"
+    }
+  ]
+}

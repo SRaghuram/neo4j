@@ -1,0 +1,440 @@
+QUERY 1
+
+MATCH path=(person:Person {id:{1}})-[:KNOWS*1..3]-(friend)
+WHERE friend.firstName={2} AND NOT person=friend
+WITH friend, min(length(path)) AS distance
+ORDER BY distance ASC, friend.lastName ASC, friend.id ASC
+LIMIT {3}
+MATCH (friend)-[:PERSON_IS_LOCATED_IN]->(friendCity:City)
+OPTIONAL MATCH (friend)-[studyAt:STUDY_AT]->(uni:University)-[:ORGANISATION_IS_LOCATED_IN]->(uniCity:City)
+WITH friend,
+     collect( CASE
+                WHEN uni IS NULL THEN null
+                ELSE [uni.name, studyAt.classYear, uniCity.name]
+              END ) AS unis,
+     friendCity,
+     distance
+OPTIONAL MATCH (friend)-[worksAt:WORKS_AT]->(company:Company)-[:ORGANISATION_IS_LOCATED_IN]->(country:Country)
+WITH friend,
+     collect( CASE
+                WHEN company IS NULL THEN null
+                ELSE [company.name, worksAt.workFrom, country.name]
+              END ) AS companies,
+     unis,
+     friendCity,
+     distance
+RETURN friend.id AS id,
+       friend.lastName AS lastName,
+       distance,
+       friend.birthday AS birthday,
+       friend.creationDate AS creationDate,
+       friend.gender AS gender,
+       friend.browserUsed AS browser,
+       friend.locationIP AS locationIp,
+       friend.email AS emails,
+       friend.languages AS languages,
+       friendCity.name AS cityName,
+       unis,
+       companies
+ORDER BY distance ASC, friend.lastName ASC, friend.id ASC
+
+
+QUERY 2
+
+MATCH (:Person {id:{1}})-[:KNOWS]-(friend),
+      (friend)<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
+WHERE message.creationDate <= {2}
+RETURN friend.id AS personId,
+       friend.firstName AS personFirstName,
+       friend.lastName AS personLastName,
+       message.id AS messageId,
+       coalesce(message.content, message.imageFile) AS messageContent,
+       message.creationDate AS messageDate
+ORDER BY messageDate DESC, messageId ASC
+LIMIT {3}
+
+
+QUERY 3
+
+MATCH (countryX:Country {name:{2}}),
+      (countryY:Country{name:{3}}),
+      (person:Person {id:{1}})
+WITH person, countryX, countryY
+LIMIT 1
+MATCH (city:City)-[:IS_PART_OF]->(country:Country)
+WHERE country IN [countryX, countryY]
+WITH person, countryX, countryY, collect(city) AS cities
+MATCH (person)-[:KNOWS*1..2]-(friend)-[:PERSON_IS_LOCATED_IN]->(city)
+WHERE NOT person=friend AND NOT city IN cities
+WITH DISTINCT friend, countryX, countryY
+MATCH (friend)<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message),
+      (message)-[:POST_IS_LOCATED_IN|COMMENT_IS_LOCATED_IN]->(country)
+WHERE {5}>message.creationDate>={4} AND
+      country IN [countryX, countryY]
+WITH friend,
+     CASE WHEN country=countryX THEN 1 ELSE 0 END AS messageX,
+     CASE WHEN country=countryY THEN 1 ELSE 0 END AS messageY
+WITH friend, sum(messageX) AS xCount, sum(messageY) AS yCount
+WHERE xCount>0 AND yCount>0
+RETURN friend.id AS friendId,
+       friend.firstName AS friendFirstName,
+       friend.lastName AS friendLastName,
+       xCount,
+       yCount,
+       xCount + yCount AS xyCount
+ORDER BY xyCount DESC, friendId ASC
+LIMIT {6}
+
+
+QUERY 4
+
+MATCH (person:Person {id:{1}})-[:KNOWS]-(friend),
+      (friend)<-[:POST_HAS_CREATOR]-(post)-[:POST_HAS_TAG]->(tag)
+WITH DISTINCT tag, post
+WITH tag,
+     CASE
+       WHEN {3} > post.creationDate >= {2} THEN 1
+       ELSE 0
+     END AS valid,
+     CASE
+       WHEN {2} > post.creationDate THEN 1
+       ELSE 0
+     END AS inValid
+WITH tag, sum(valid) AS postCount, sum(inValid) AS inValidPostCount
+WHERE postCount>0 AND inValidPostCount=0
+RETURN tag.name AS tagName, postCount
+ORDER BY postCount DESC, tagName ASC
+LIMIT {4}
+
+
+QUERY 5
+
+MATCH (person:Person {id:{1}})-[:KNOWS*1..2]-(friend)
+WHERE NOT person=friend
+WITH DISTINCT friend
+MATCH (friend)<-[membership:HAS_MEMBER]-(forum)
+WHERE membership.joinDate>{2}
+WITH forum, collect(friend) AS friends
+OPTIONAL MATCH (friend)<-[:POST_HAS_CREATOR]-(post)<-[:CONTAINER_OF]-(forum)
+WHERE friend IN friends
+WITH forum, count(post) AS postCount
+RETURN forum.title AS forumName, postCount
+ORDER BY postCount DESC, forum.id ASC
+LIMIT {3}
+
+
+QUERY 6
+
+MATCH (knownTag:Tag {name:{2}})
+MATCH (person:Person {id:{1}})-[:KNOWS*1..2]-(friend)
+WHERE NOT person=friend
+WITH DISTINCT friend, knownTag
+MATCH (friend)<-[:POST_HAS_CREATOR]-(post)
+WHERE (post)-[:POST_HAS_TAG]->(knownTag)
+WITH post, knownTag
+MATCH (post)-[:POST_HAS_TAG]->(commonTag)
+WHERE NOT commonTag=knownTag
+WITH commonTag, count(post) AS postCount
+RETURN commonTag.name AS tagName, postCount
+ORDER BY postCount DESC, tagName ASC
+LIMIT {3}
+
+
+QUERY 7
+
+MATCH (person:Person {id:{1}})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message),
+      (message)<-[like:LIKES_POST|LIKES_COMMENT]-(liker)
+WITH liker, message, like.creationDate AS likeTime, person
+ORDER BY likeTime DESC, message.id ASC
+WITH liker,
+     head(collect(message)) AS message,
+     head(collect(likeTime)) AS likeTime,
+     person
+RETURN
+ liker.id AS personId,
+ liker.firstName AS personFirstName,
+ liker.lastName AS personLastName,
+ likeTime,
+ not((liker)-[:KNOWS]-(person)) AS isNew,
+ message.id AS messageId,
+ coalesce(message.content,message.imageFile) AS messageContent,
+ message.creationDate AS messageCreationDate
+ORDER BY likeTime DESC, personId ASC
+LIMIT {2}
+
+
+QUERY 8
+
+MATCH (start:Person {id:{1}})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message),
+      (message)<-[:REPLY_OF_POST|REPLY_OF_COMMENT]-(comment)-[:COMMENT_HAS_CREATOR]->(person)
+RETURN
+ person.id AS personId,
+ person.firstName AS personFirstName,
+ person.lastName AS personLastName,
+ comment.id AS commentId,
+ comment.creationDate AS commentCreationDate,
+ comment.content AS commentContent
+ORDER BY commentCreationDate DESC, commentId ASC
+LIMIT {2}
+
+
+QUERY 9
+
+MATCH (person:Person {id:{1}})-[:KNOWS*1..2]-(friend)
+WHERE NOT person=friend
+WITH DISTINCT friend
+MATCH (friend)<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
+WHERE message.creationDate < {2}
+WITH friend, message
+ORDER BY message.creationDate DESC, message.id ASC
+LIMIT {3}
+RETURN message.id AS messageId,
+       coalesce(message.content,message.imageFile) AS messageContent,
+       message.creationDate AS messageCreationDate,
+       friend.id AS personId,
+       friend.firstName AS personFirstName,
+       friend.lastName AS personLastName
+
+
+QUERY 10
+
+MATCH (person:Person {id:{1}})-[:KNOWS*2..2]-(friend),
+       (friend)-[:PERSON_IS_LOCATED_IN]->(city)
+WHERE NOT friend=person AND
+      NOT (friend)-[:KNOWS]-(person) AND
+      ( (friend.birthday_month={2} AND friend.birthday_day>=21) OR
+        (friend.birthday_month=({2}%12)+1 AND friend.birthday_day<22) )
+WITH DISTINCT friend, city, person
+OPTIONAL MATCH (friend)<-[:POST_HAS_CREATOR]-(post)
+WITH friend, city, collect(post) AS posts, person
+WITH friend,
+     city,
+     length(posts) AS postCount,
+     length([p IN posts WHERE (p)-[:POST_HAS_TAG]->()<-[:HAS_INTEREST]-(person)]) AS commonPostCount
+RETURN friend.id AS personId,
+       friend.firstName AS personFirstName,
+       friend.lastName AS personLastName,
+       friend.gender AS personGender,
+       city.name AS personCityName,
+       commonPostCount - (postCount - commonPostCount) AS commonInterestScore
+ORDER BY commonInterestScore DESC, personId ASC
+LIMIT {4}
+
+
+QUERY 11
+
+MATCH (country:Country {name:{3}})
+MATCH (person:Person {id:{1}})-[:KNOWS*1..2]-(friend)
+WHERE NOT person=friend
+WITH DISTINCT friend, country
+MATCH (friend)-[worksAt:WORKS_AT]->(company)-[:ORGANISATION_IS_LOCATED_IN]->(country)
+WHERE worksAt.workFrom<{2}
+RETURN
+ friend.id AS friendId,
+ friend.firstName AS friendFirstName,
+ friend.lastName AS friendLastName,
+ worksAt.workFrom AS workFromYear,
+ company.name AS companyName
+ORDER BY workFromYear ASC, friendId ASC, companyName DESC
+LIMIT {4}
+
+
+QUERY 12
+
+MATCH (:Person {id:{1}})-[:KNOWS]-(friend:Person),
+      (friend)<-[:COMMENT_HAS_CREATOR]-(comment:Comment),
+      (comment)-[:REPLY_OF_POST]->(post:Post),
+      (post)-[:POST_HAS_TAG]->(tag:Tag),
+      (tag)-[:HAS_TYPE|IS_SUBCLASS_OF*0..]->(:TagClass{name:{2}})
+RETURN
+ friend.id AS friendId,
+ friend.firstName AS friendFirstName,
+ friend.lastName AS friendLastName,
+ collect(DISTINCT tag.name) AS tagNames,
+ count(DISTINCT comment) AS count
+ORDER BY count DESC, friendId ASC
+LIMIT {3}
+
+
+QUERY 13
+
+MATCH (person1:Person {id:{1}}), (person2:Person {id:{2}})
+OPTIONAL MATCH path = shortestPath((person1)-[:KNOWS*0..]-(person2))
+RETURN CASE path IS NULL WHEN true THEN -1 ELSE length(path) END AS pathLength
+
+
+QUERY 14
+
+MATCH path = allShortestPaths((person1:Person {id:{1}})-[:KNOWS*0..]-(person2:Person {id:{2}}))
+RETURN
+ extract(n IN nodes(path) | n.id) AS pathNodeIds,
+ reduce(weight=0.0, r IN rels(path) |
+            weight +
+            length(()-[r]->()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()-[r]->())*1.0 +
+            length(()<-[r]-()<-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_POST]->(:Post)-[:POST_HAS_CREATOR]->()<-[r]-())*1.0 +
+            length(()<-[r]-()-[:COMMENT_HAS_CREATOR]-(:Comment)-[:REPLY_OF_COMMENT]-(:Comment)-[:COMMENT_HAS_CREATOR]-()<-[r]-())*0.5
+ ) AS weight
+ORDER BY weight DESC
+
+
+UPDATE 1
+
+MATCH (city:City {id:{2}})
+OPTIONAL MATCH (tag:Tag) WHERE tag.id IN {3}
+WITH city, collect(tag) AS tags
+CREATE (person:Person {1})-[:PERSON_IS_LOCATED_IN]->(city)
+FOREACH (tag IN tags | CREATE (person)-[:HAS_INTEREST]->(tag))
+FOREACH (studyAt IN {4} |
+   MERGE (university:University {id:studyAt[0]})
+   CREATE (person)-[:STUDY_AT {classYear:studyAt[1]}]->(university))
+FOREACH (workAt IN {5} |
+   MERGE (company:Company {id:workAt[0]})
+   CREATE (person)-[:WORKS_AT {workFrom:workAt[1]}]->(company))
+
+
+UPDATE 2
+
+MATCH (person:Person {id:{1}}), (post:Message {id:{2}})
+CREATE (person)-[:LIKES_POST {creationDate:{3}}]->(post)
+
+
+UPDATE 3
+
+MATCH (person:Person {id:{1}}), (comment:Message {id:{2}})
+CREATE (person)-[:LIKES_COMMENT {creationDate:{3}}]->(comment)
+
+
+UPDATE 4
+
+MATCH (moderator:Person {id:{2}})
+OPTIONAL MATCH (tag:Tag) WHERE tag.id IN {3}
+WITH moderator, collect(tag) AS tags
+CREATE (forum:Forum {1})-[:HAS_MODERATOR]->(moderator)
+FOREACH (tag IN tags | CREATE (forum)-[:FORUM_HAS_TAG]->(tag))
+
+
+UPDATE 5
+
+MATCH (person:Person {id:{2}}), (forum:Forum {id:{1}})
+CREATE (forum)-[:HAS_MEMBER {joinDate:{3}}]->(person)
+
+
+UPDATE 6
+
+MATCH (person:Person {id:{2}}), (forum:Forum {id:{3}}), (country:Country {id:{4}})
+OPTIONAL MATCH (tag:Tag) WHERE tag.id IN {5}
+WITH person, forum, country, collect(tag) AS tags
+CREATE (forum)-[:CONTAINER_OF]->(post:Post:Message {1})-[:POST_HAS_CREATOR]->(person), (post)-[:POST_IS_LOCATED_IN]->(country)
+FOREACH (tag IN tags | CREATE (post)-[:POST_HAS_TAG]->(tag))
+
+
+UPDATE 7
+
+MATCH (person:Person {id:{2}}), (country:Country {id:{3}}), (message :Message {id:{4}})
+OPTIONAL MATCH (tag:Tag) WHERE tag.id IN {6}
+WITH person, country, message, collect(tag) AS tags
+CREATE (comment:Comment:Message {1})
+CREATE (comment)-[:COMMENT_HAS_CREATOR]->(person)
+CREATE (comment)-[:COMMENT_IS_LOCATED_IN]->(country)
+FOREACH (flag IN [f IN [{5}] WHERE f=true] | CREATE (comment)-[:REPLY_OF_POST]->(message))
+FOREACH (flag IN [f IN [{5}] WHERE f=false] | CREATE (comment)-[:REPLY_OF_COMMENT]->(message))
+FOREACH (tag IN tags | CREATE (comment)-[:COMMENT_HAS_TAG]->(tag))
+
+
+UPDATE 8
+
+MATCH (person1:Person {id:{1}}), (person2:Person {id:{2}})
+CREATE (person1)-[:KNOWS {creationDate:{3}}]->(person2)
+
+
+SHORT READ 1
+
+MATCH (person:Person {id:{1}})-[:PERSON_IS_LOCATED_IN]->(city)
+RETURN
+ person.firstName AS firstName,
+ person.lastName AS lastName,
+ person.birthday AS birthday,
+ person.locationIP AS locationIp,
+ person.browserUsed AS browserUsed,
+ person.gender AS gender,
+ person.creationDate AS creationDate,
+ city.id AS cityId
+
+
+SHORT READ 2
+
+MATCH (:Person {id:{1}})<-[:POST_HAS_CREATOR|COMMENT_HAS_CREATOR]-(message)
+WITH
+ message,
+ message.id AS messageId,
+ message.creationDate AS messageCreationDate
+ORDER BY messageCreationDate DESC, messageId ASC
+LIMIT {2}
+MATCH (message)-[:REPLY_OF_COMMENT|REPLY_OF_POST*0..]->(post:Post),
+      (post)-[:POST_HAS_CREATOR]->(person)
+RETURN
+ messageId,
+ messageCreationDate,
+ coalesce(message.imageFile,message.content) AS messageContent,
+ post.id AS postId,
+ person.id AS personId,
+ person.firstName AS personFirstName,
+ person.lastName AS personLastName
+ORDER BY messageCreationDate DESC, messageId ASC
+
+
+SHORT READ 3
+
+MATCH (:Person {id:{1}})-[knows:KNOWS]-(friend)
+RETURN
+ friend.id AS friendId,
+ friend.firstName AS friendFirstName,
+ friend.lastName AS friendLastName,
+ knows.creationDate AS knowsCreationDate
+ORDER BY knows.creationDate DESC, friend.id ASC
+
+
+SHORT READ 4
+
+MATCH (message:Message {id:{1}})
+RETURN
+ message.creationDate AS messageCreationDate,
+ coalesce(message.imageFile,message.content) AS messageContent
+
+
+SHORT READ 5
+
+MATCH (message:Message {id:{1}})-[:COMMENT_HAS_CREATOR|POST_HAS_CREATOR]->(person)
+RETURN
+ person.id AS personId,
+ person.firstName AS personFirstName,
+ person.lastName AS personLastName
+
+
+SHORT READ 6
+
+MATCH (post:Post)<-[:REPLY_OF_POST|REPLY_OF_COMMENT*0..]-(:Message {id:{1}}),
+      (moderator)<-[:HAS_MODERATOR]-(forum)-[:CONTAINER_OF]->(post)
+RETURN
+ forum.id AS forumId,
+ forum.title AS forumTitle,
+ moderator.id AS moderatorId,
+ moderator.firstName AS moderatorFirstName,
+ moderator.lastName AS moderatorLastName
+LIMIT 1
+
+
+SHORT READ 7
+
+MATCH (author)<-[:COMMENT_HAS_CREATOR|POST_HAS_CREATOR]-(message:Message {id:{1}}),
+      (message)<-[:REPLY_OF_COMMENT|REPLY_OF_POST]-(reply),
+      (reply)-[:COMMENT_HAS_CREATOR]->(replyAuthor)
+RETURN
+ replyAuthor.id AS replyAuthorId,
+ replyAuthor.firstName AS replyAuthorFirstName,
+ replyAuthor.lastName AS replyAuthorLastName,
+ reply.id AS replyId,
+ reply.content AS replyContent,
+ reply.creationDate AS replyCreationDate,
+ exists((author)-[:KNOWS]-(replyAuthor)) AS replyAuthorKnowsAuthor
+ORDER BY replyCreationDate DESC, replyAuthorId ASC

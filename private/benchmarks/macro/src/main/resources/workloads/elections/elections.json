@@ -1,0 +1,51 @@
+{
+  "name": "elections",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Presidential campaign committees 2012",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "description": "First 10 committees, contributions and recipients",
+      "queryFile": "queries/Q2.cypher"
+    },
+    {
+      "name": "Q3",
+      "description": "First 10 contributions made from committees to some recipient; altered orig query",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "description": "All presidential candidates for 2012",
+      "queryFile": "queries/Q4.cypher"
+    },
+    {
+      "name": "Q5",
+      "description": "Top 10 Presidential candidates according to number of campaign committees",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "description": "10 top individual contributions to Obama",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "description": "find the shortest path of funding between Obama and Cain",
+      "queryFile": "queries/Q7.cypher"
+    },
+    {
+      "name": "Q8",
+      "description": "High cardinality numeric range seek",
+      "queryFile": "queries/Q8.cypher"
+    },
+    {
+      "name": "Q9",
+      "description": "Map from node to id and back",
+      "queryFile": "queries/Q9.cypher"
+    }
+  ]
+}

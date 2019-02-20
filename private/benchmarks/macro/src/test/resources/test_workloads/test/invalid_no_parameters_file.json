@@ -1,0 +1,12 @@
+{
+  "name": "invalid_no_parameters_file",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+      }
+    }
+  ]
+}

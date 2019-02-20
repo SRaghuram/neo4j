@@ -1,0 +1,151 @@
+{
+  "name": "generatedmusicdata_read",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "queryFile": "queries/Q1.cypher"
+    },
+    {
+      "name": "Q2",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/album.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "queryFile": "queries/Q3.cypher"
+    },
+    {
+      "name": "Q4",
+      "queryFile": "queries/Q4.cypher"
+    },
+    {
+      "name": "Q5",
+      "queryFile": "queries/Q5.cypher"
+    },
+    {
+      "name": "Q6",
+      "queryFile": "queries/Q6.cypher"
+    },
+    {
+      "name": "Q7",
+      "queryFile": "queries/Q7.cypher"
+    },
+    {
+      "name": "Q8",
+      "queryFile": "queries/Q8.cypher",
+      "parameters": {
+        "file": "parameters/relationship.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "queryFile": "queries/Q9.cypher"
+    },
+    {
+      "name": "Q10",
+      "queryFile": "queries/Q10.cypher"
+    },
+    {
+      "name": "Q11",
+      "queryFile": "queries/Q11.cypher"
+    },
+    {
+      "name": "Q12",
+      "queryFile": "queries/Q12.cypher"
+    },
+    {
+      "name": "Q13",
+      "queryFile": "queries/Q13.cypher"
+    },
+    {
+      "name": "Q14",
+      "queryFile": "queries/Q14.cypher"
+    },
+    {
+      "name": "Q15",
+      "queryFile": "queries/Q15.cypher"
+    },
+    {
+      "name": "Q17",
+      "queryFile": "queries/Q17.cypher"
+    },
+    {
+      "name": "Q19",
+      "queryFile": "queries/Q19.cypher"
+    },
+    {
+      "name": "Q20",
+      "queryFile": "queries/Q20.cypher"
+    },
+    {
+      "name": "Q21",
+      "queryFile": "queries/Q21.cypher"
+    },
+    {
+      "name": "Q22",
+      "queryFile": "queries/Q22.cypher"
+    },
+    {
+      "name": "Q23",
+      "queryFile": "queries/Q23.cypher"
+    },
+    {
+      "name": "Q25",
+      "queryFile": "queries/Q25.cypher",
+      "parameters": {
+        "file": "parameters/artist.txt"
+      }
+    },
+    {
+      "name": "Q26",
+      "queryFile": "queries/Q26.cypher",
+      "parameters": {
+        "file": "parameters/artist_pair.txt"
+      }
+    },
+    {
+      "name": "Q27",
+      "queryFile": "queries/Q27.cypher"
+    },
+    {
+      "name": "Q28",
+      "queryFile": "queries/Q28.cypher",
+      "parameters": {
+        "file": "parameters/album_title.txt"
+      }
+    },
+    {
+      "name": "Q30",
+      "queryFile": "queries/Q30.cypher",
+      "parameters": {
+        "file": "parameters/worked_with.txt"
+      }
+    },
+    {
+      "name": "Q31",
+      "queryFile": "queries/Q31.cypher",
+      "parameters": {
+        "file": "parameters/artist_name.txt"
+      }
+    },
+    {
+      "name": "Q32",
+      "queryFile": "queries/Q32.cypher"
+    },
+    {
+      "name": "Q33",
+      "queryFile": "queries/Q33.cypher"
+    },
+    {
+      "name": "Q34",
+      "queryFile": "queries/Q34.cypher"
+    },
+    {
+      "name": "Q35",
+      "queryFile": "queries/Q35.cypher"
+    }
+  ]
+}

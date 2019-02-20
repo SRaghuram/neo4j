@@ -1,0 +1,94 @@
+{
+  "name": "socialnetwork",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Friend-of-a-friend with interest",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/users_topics.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "Friend-of-a-friend with multiple interests (dependant on rand)",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/users_multi_topics.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "Friend worked with friend with interests (dependant on rand)",
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/users_multi_topics.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "description": "Shared interests all companies",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/users.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "Shared interests also interested in topic",
+      "queryFile": "queries/Q5.cypher",
+      "parameters": {
+        "file": "parameters/users_topics.txt"
+      }
+    },
+    {
+      "name": "Q6",
+      "description": "Shared interests same company",
+      "queryFile": "queries/Q6.cypher",
+      "parameters": {
+        "file": "parameters/users.txt"
+      }
+    },
+    {
+      "name": "Q7",
+      "description": "Friend-of-a-friend with interest (orig. varlength path)",
+      "queryFile": "queries/Q7.cypher",
+      "parameters": {
+        "file": "parameters/users_topics.txt"
+      }
+    },
+    {
+      "name": "Q8",
+      "description": "Friend-of-a-friend with multiple interest (orig. varlength path)",
+      "queryFile": "queries/Q8.cypher",
+      "parameters": {
+        "file": "parameters/users_multi_topics.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "description": "Friend worked with friend with interests (orig. varlength path)",
+      "queryFile": "queries/Q9.cypher",
+      "parameters": {
+        "file": "parameters/users_multi_topics.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "The users who worked with most people share an interest with people they optionally have worked with",
+      "queryFile": "queries/Q10.cypher",
+      "parameters": {
+        "file": "parameters/dense_user_nodes_worked_with.txt"
+      }
+    },
+    {
+      "name": "Q11",
+      "description": "The users who worked with most people share an interest with people they have worked with",
+      "queryFile": "queries/Q11.cypher",
+      "parameters": {
+        "file": "parameters/dense_user_nodes_worked_with.txt"
+      }
+    }
+  ]
+}

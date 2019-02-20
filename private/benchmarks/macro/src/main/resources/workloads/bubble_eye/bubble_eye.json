@@ -1,0 +1,54 @@
+{
+  "name": "bubble_eye",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "original similar apps",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/apps.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "simple single pattern expression",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/apps.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "without app label",
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/apps.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "description": "without app or tag label",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/apps.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "Michael: Order by Degree",
+      "queryFile": "queries/Q5.cypher",
+      "parameters": {
+        "file": "parameters/apps.txt"
+      }
+    },
+    {
+      "name": "Q6",
+      "description": "Michael: Order by Degree plus ExpandInto",
+      "queryFile": "queries/Q6.cypher",
+      "parameters": {
+        "file": "parameters/apps.txt"
+      }
+    }
+  ]
+}

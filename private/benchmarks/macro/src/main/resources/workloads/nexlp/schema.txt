@@ -1,0 +1,3 @@
+INDEX ON :Entity(Id)
+INDEX ON :Segment(Id)
+INDEX ON :Thread(Id)
