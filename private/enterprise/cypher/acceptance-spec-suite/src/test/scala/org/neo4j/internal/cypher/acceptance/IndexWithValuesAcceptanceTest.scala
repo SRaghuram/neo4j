@@ -255,7 +255,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct with renaming of node") {
-    val config = Configs.InterpretedAndSlotted + Configs.Version3_4
+    val config = Configs.InterpretedAndSlotted
     val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH DISTINCT n as m RETURN m.prop1"
     val result = executeWith(config, query, executeBefore = createSomeNodes)
 
@@ -268,7 +268,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct with two renamed nodes") {
-    val config = Configs.InterpretedAndSlotted + Configs.Version3_4
+    val config = Configs.InterpretedAndSlotted
     val query =
       """
         |PROFILE
@@ -293,7 +293,6 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     )
   }
 
-
   test("should pass cached property through distinct single node with renaming of node and reuse of old name") {
     val setup = "MATCH (n:Awesome {prop1: 40}) CREATE (n)-[:R]->(:Label {prop1: 42})"
     executeSingle(setup)
@@ -306,7 +305,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |RETURN n1.prop1, n2.prop1, n3.prop2, n.prop1
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_4, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexSeek")
@@ -330,7 +329,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |RETURN n1.prop1, n2.prop1, n3.prop2, n.prop1
       """.stripMargin
 
-    val result = executeWith(Configs.UpdateConf, query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexSeek")
