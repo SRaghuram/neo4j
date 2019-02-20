@@ -1,0 +1,86 @@
+{
+  "name": "levelstory",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "project activity",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/Q1.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "task history",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/Q2.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "user alerts",
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/Q3.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "description": "user projects",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/Q4.txt"
+      }
+    },
+    {
+      "name": "Q5",
+      "description": "user projects files",
+      "queryFile": "queries/Q5.cypher",
+      "parameters": {
+        "file": "parameters/Q5.txt"
+      }
+    },
+    {
+      "name": "Q6",
+      "description": "user project invoices",
+      "queryFile": "queries/Q6.cypher",
+      "parameters": {
+        "file": "parameters/Q6.txt"
+      }
+    },
+    {
+      "name": "Q7",
+      "description": "user project materials",
+      "queryFile": "queries/Q7.cypher",
+      "parameters": {
+        "file": "parameters/Q7.txt"
+      }
+    },
+    {
+      "name": "Q8",
+      "description": "user project tasks",
+      "queryFile": "queries/Q8.cypher",
+      "parameters": {
+        "file": "parameters/Q8.txt"
+      }
+    },
+    {
+      "name": "Q9",
+      "description": "user project tasks with OPTIONAL MATCH",
+      "queryFile": "queries/Q9.cypher",
+      "parameters": {
+        "file": "parameters/Q9.txt"
+      }
+    },
+    {
+      "name": "Q10",
+      "description": "user schedules",
+      "queryFile": "queries/Q10.cypher",
+      "parameters": {
+        "file": "parameters/Q10.txt"
+      }
+    }
+  ]
+}

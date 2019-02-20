@@ -1,0 +1,666 @@
+OpenJDK 64-Bit Server VM (25.172-b01) for linux-amd64 JRE (1.8.0_172-b01), built on Apr 18 2018 12:57:33 by "zulu_re" with gcc 4.4.7 20120313 (Red Hat 4.4.7-3)
+Memory: 4k page, physical 16303688k(4799540k free), swap 4193984k(4193984k free)
+CommandLine flags: -XX:InitialHeapSize=260859008 -XX:MaxHeapSize=4173744128 -XX:+PrintGC -XX:+PrintGCApplicationConcurrentTime -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDateStamps -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintTenuringDistribution -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseParallelGC 
+2018-10-04T12:26:56.215+0200: 0,100: Application time: 0,0377344 seconds
+2018-10-04T12:26:56.215+0200: 0,100: [GC (Allocation Failure) 
+Desired survivor size 10485760 bytes, new threshold 7 (max 15)
+[PSYoungGen: 64512K->8882K(74752K)] 64512K->8890K(245760K), 0,0020479 secs] [Times: user=0,00 sys=0,01, real=0,00 secs] 
+2018-10-04T12:26:56.217+0200: 0,102: Total time for which application threads were stopped: 0,0023330 seconds, Stopping threads took: 0,0001657 seconds
+2018-10-04T12:26:56.221+0200: 0,106: Application time: 0,0038683 seconds
+2018-10-04T12:26:56.221+0200: 0,107: [GC (Allocation Failure) 
+Desired survivor size 10485760 bytes, new threshold 7 (max 15)
+[PSYoungGen: 73394K->10237K(139264K)] 73402K->19579K(310272K), 0,0040637 secs] [Times: user=0,00 sys=0,02, real=0,01 secs] 
+2018-10-04T12:26:56.226+0200: 0,111: Total time for which application threads were stopped: 0,0044414 seconds, Stopping threads took: 0,0002077 seconds
+2018-10-04T12:26:56.237+0200: 0,123: Application time: 0,0117801 seconds
+2018-10-04T12:26:56.237+0200: 0,123: [GC (Allocation Failure) 
+Desired survivor size 10485760 bytes, new threshold 7 (max 15)
+[PSYoungGen: 139261K->10221K(139264K)] 148603K->32858K(310272K), 0,0041903 secs] [Times: user=0,00 sys=0,03, real=0,00 secs] 
+2018-10-04T12:26:56.242+0200: 0,127: Total time for which application threads were stopped: 0,0043291 seconds, Stopping threads took: 0,0000353 seconds
+2018-10-04T12:26:56.251+0200: 0,136: Application time: 0,0091085 seconds
+2018-10-04T12:26:56.251+0200: 0,136: [GC (Allocation Failure) 
+Desired survivor size 10485760 bytes, new threshold 7 (max 15)
+[PSYoungGen: 139245K->10211K(268288K)] 161882K->61268K(439296K), 0,0049737 secs] [Times: user=0,02 sys=0,01, real=0,01 secs] 
+2018-10-04T12:26:56.256+0200: 0,141: Total time for which application threads were stopped: 0,0051277 seconds, Stopping threads took: 0,0000408 seconds
+2018-10-04T12:26:56.273+0200: 0,158: Application time: 0,0173349 seconds
+2018-10-04T12:26:56.273+0200: 0,159: [GC (Allocation Failure) 
+Desired survivor size 19398656 bytes, new threshold 6 (max 15)
+[PSYoungGen: 268259K->10222K(268288K)] 319316K->120215K(439296K), 0,0106483 secs] [Times: user=0,05 sys=0,01, real=0,01 secs] 
+2018-10-04T12:26:56.284+0200: 0,169: Total time for which application threads were stopped: 0,0108456 seconds, Stopping threads took: 0,0000824 seconds
+2018-10-04T12:26:56.301+0200: 0,186: Application time: 0,0167364 seconds
+2018-10-04T12:26:56.301+0200: 0,186: [GC (Allocation Failure) 
+Desired survivor size 22544384 bytes, new threshold 5 (max 15)
+[PSYoungGen: 268266K->18931K(531968K)] 378259K->178167K(702976K), 0,0087029 secs] [Times: user=0,02 sys=0,04, real=0,01 secs] 
+2018-10-04T12:26:56.310+0200: 0,195: [Full GC (Ergonomics) [PSYoungGen: 18931K->0K(531968K)] [ParOldGen: 159236K->69154K(215552K)] 178167K->69154K(747520K), [Metaspace: 3264K->3264K(1056768K)], 0,0139487 secs] [Times: user=0,07 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:56.324+0200: 0,209: Total time for which application threads were stopped: 0,0231900 seconds, Stopping threads took: 0,0003107 seconds
+2018-10-04T12:26:56.357+0200: 0,242: Application time: 0,0329094 seconds
+2018-10-04T12:26:56.357+0200: 0,242: [GC (Allocation Failure) 
+Desired survivor size 25690112 bytes, new threshold 4 (max 15)
+[PSYoungGen: 513002K->21987K(535040K)] 582156K->164178K(750592K), 0,0109021 secs] [Times: user=0,08 sys=0,01, real=0,01 secs] 
+2018-10-04T12:26:56.368+0200: 0,253: [Full GC (Ergonomics) [PSYoungGen: 21987K->0K(535040K)] [ParOldGen: 142191K->96016K(286208K)] 164178K->96016K(821248K), [Metaspace: 3264K->3264K(1056768K)], 0,0122940 secs] [Times: user=0,07 sys=0,00, real=0,01 secs] 
+2018-10-04T12:26:56.381+0200: 0,266: Total time for which application threads were stopped: 0,0235901 seconds, Stopping threads took: 0,0001664 seconds
+2018-10-04T12:26:56.413+0200: 0,298: Application time: 0,0324576 seconds
+2018-10-04T12:26:56.413+0200: 0,298: [GC (Allocation Failure) 
+Desired survivor size 29360128 bytes, new threshold 3 (max 15)
+[PSYoungGen: 513024K->25075K(865280K)] 609040K->188531K(1151488K), 0,0095377 secs] [Times: user=0,06 sys=0,02, real=0,00 secs] 
+2018-10-04T12:26:56.423+0200: 0,308: Total time for which application threads were stopped: 0,0098445 seconds, Stopping threads took: 0,0001368 seconds
+2018-10-04T12:26:56.482+0200: 0,367: Application time: 0,0588095 seconds
+2018-10-04T12:26:56.482+0200: 0,367: [GC (Allocation Failure) 
+Desired survivor size 33554432 bytes, new threshold 2 (max 15)
+[PSYoungGen: 865267K->28644K(945152K)] 1028723K->340362K(1257984K), 0,0215985 secs] [Times: user=0,06 sys=0,09, real=0,03 secs] 
+2018-10-04T12:26:56.504+0200: 0,389: [Full GC (Ergonomics) [PSYoungGen: 28644K->0K(945152K)] [ParOldGen: 311717K->177338K(438272K)] 340362K->177338K(1383424K), [Metaspace: 3267K->3267K(1056768K)], 0,0263311 secs] [Times: user=0,15 sys=0,01, real=0,02 secs] 
+2018-10-04T12:26:56.530+0200: 0,415: Total time for which application threads were stopped: 0,0483551 seconds, Stopping threads took: 0,0001188 seconds
+2018-10-04T12:26:56.593+0200: 0,478: Application time: 0,0625349 seconds
+2018-10-04T12:26:56.595+0200: 0,481: [GC (Allocation Failure) 
+Desired survivor size 37748736 bytes, new threshold 1 (max 15)
+[PSYoungGen: 916480K->32737K(1191936K)] 1093818K->338233K(1630208K), 0,0215397 secs] [Times: user=0,12 sys=0,02, real=0,02 secs] 
+2018-10-04T12:26:56.617+0200: 0,502: [Full GC (Ergonomics) [PSYoungGen: 32737K->0K(1191936K)] [ParOldGen: 305495K->177326K(489984K)] 338233K->177326K(1681920K), [Metaspace: 3267K->3267K(1056768K)], 0,0208387 secs] [Times: user=0,13 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:56.638+0200: 0,523: Total time for which application threads were stopped: 0,0452875 seconds, Stopping threads took: 0,0025877 seconds
+2018-10-04T12:26:56.715+0200: 0,600: Application time: 0,0767698 seconds
+2018-10-04T12:26:56.716+0200: 0,602: [GC (Allocation Failure) 
+Desired survivor size 42991616 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1159168K->36862K(1196032K)] 1336494K->411131K(1686016K), 0,0244332 secs] [Times: user=0,12 sys=0,05, real=0,02 secs] 
+2018-10-04T12:26:56.741+0200: 0,626: [Full GC (Ergonomics) [PSYoungGen: 36862K->0K(1196032K)] [ParOldGen: 374268K->234323K(617472K)] 411131K->234323K(1813504K), [Metaspace: 3267K->3267K(1056768K)], 0,0305055 secs] [Times: user=0,18 sys=0,01, real=0,03 secs] 
+2018-10-04T12:26:56.771+0200: 0,657: Total time for which application threads were stopped: 0,0568107 seconds, Stopping threads took: 0,0016112 seconds
+2018-10-04T12:26:56.846+0200: 0,731: Application time: 0,0746217 seconds
+2018-10-04T12:26:56.848+0200: 0,733: [GC (Allocation Failure) 
+Desired survivor size 48758784 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1159168K->41961K(1305600K)] 1393491K->460095K(1923072K), 0,0273829 secs] [Times: user=0,14 sys=0,03, real=0,03 secs] 
+2018-10-04T12:26:56.875+0200: 0,761: [Full GC (Ergonomics) [PSYoungGen: 41961K->0K(1305600K)] [ParOldGen: 418134K->256681K(704000K)] 460095K->256681K(2009600K), [Metaspace: 3267K->3267K(1056768K)], 0,0321254 secs] [Times: user=0,22 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:56.908+0200: 0,793: Total time for which application threads were stopped: 0,0614197 seconds, Stopping threads took: 0,0015550 seconds
+2018-10-04T12:26:56.993+0200: 0,878: Application time: 0,0857095 seconds
+2018-10-04T12:26:56.994+0200: 0,879: [GC (Allocation Failure) 
+Desired survivor size 55574528 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1263616K->47586K(1311232K)] 1520297K->486796K(2015232K), 0,0270708 secs] [Times: user=0,16 sys=0,02, real=0,02 secs] 
+2018-10-04T12:26:57.021+0200: 0,906: Total time for which application threads were stopped: 0,0276406 seconds, Stopping threads took: 0,0003604 seconds
+2018-10-04T12:26:57.094+0200: 0,980: Application time: 0,0735404 seconds
+2018-10-04T12:26:57.096+0200: 0,981: [GC (Allocation Failure) 
+Desired survivor size 61341696 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1311202K->47590K(1286656K)] 1750412K->695561K(1990656K), 0,0307461 secs] [Times: user=0,10 sys=0,11, real=0,03 secs] 
+2018-10-04T12:26:57.127+0200: 1,012: [Full GC (Ergonomics) [PSYoungGen: 47590K->0K(1286656K)] [ParOldGen: 647970K->256870K(783872K)] 695561K->256870K(2070528K), [Metaspace: 3267K->3267K(1056768K)], 0,0348786 secs] [Times: user=0,23 sys=0,01, real=0,03 secs] 
+2018-10-04T12:26:57.162+0200: 1,047: Total time for which application threads were stopped: 0,0675412 seconds, Stopping threads took: 0,0015726 seconds
+2018-10-04T12:26:57.244+0200: 1,129: Application time: 0,0818605 seconds
+2018-10-04T12:26:57.247+0200: 1,132: [GC (Allocation Failure) 
+Desired survivor size 70254592 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1239040K->59873K(1298944K)] 1495910K->513311K(2082816K), 0,0315512 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:57.278+0200: 1,163: Total time for which application threads were stopped: 0,0343390 seconds, Stopping threads took: 0,0024673 seconds
+2018-10-04T12:26:57.366+0200: 1,251: Application time: 0,0879194 seconds
+2018-10-04T12:26:57.367+0200: 1,252: [GC (Allocation Failure) 
+Desired survivor size 77594624 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1298913K->59875K(1267200K)] 1752351K->709661K(2051072K), 0,0304198 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:57.397+0200: 1,282: [Full GC (Ergonomics) [PSYoungGen: 59875K->0K(1267200K)] [ParOldGen: 649785K->256657K(844800K)] 709661K->256657K(2112000K), [Metaspace: 3272K->3272K(1056768K)], 0,0325145 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:57.430+0200: 1,315: Total time for which application threads were stopped: 0,0635384 seconds, Stopping threads took: 0,0000943 seconds
+2018-10-04T12:26:57.510+0200: 1,395: Application time: 0,0801799 seconds
+2018-10-04T12:26:57.512+0200: 1,397: [GC (Allocation Failure) 
+Desired survivor size 89128960 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1207294K->75756K(1283072K)] 1463951K->513097K(2127872K), 0,0292562 secs] [Times: user=0,20 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:57.542+0200: 1,427: Total time for which application threads were stopped: 0,0317415 seconds, Stopping threads took: 0,0021267 seconds
+2018-10-04T12:26:57.614+0200: 1,499: Application time: 0,0727255 seconds
+2018-10-04T12:26:57.615+0200: 1,501: [GC (Allocation Failure) 
+Desired survivor size 98566144 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1283052K->75756K(1242112K)] 1720393K->693750K(2086912K), 0,0289103 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:57.644+0200: 1,530: [Full GC (Ergonomics) [PSYoungGen: 75756K->0K(1242112K)] [ParOldGen: 617993K->256938K(878080K)] 693750K->256938K(2120192K), [Metaspace: 3272K->3272K(1056768K)], 0,0302532 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:57.675+0200: 1,560: Total time for which application threads were stopped: 0,0604138 seconds, Stopping threads took: 0,0008339 seconds
+2018-10-04T12:26:57.747+0200: 1,633: Application time: 0,0727111 seconds
+2018-10-04T12:26:57.752+0200: 1,638: [GC (Allocation Failure) 
+Desired survivor size 113770496 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1166336K->96235K(1262592K)] 1423274K->505906K(2140672K), 0,0284318 secs] [Times: user=0,21 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:57.781+0200: 1,666: Total time for which application threads were stopped: 0,0334891 seconds, Stopping threads took: 0,0047959 seconds
+2018-10-04T12:26:57.848+0200: 1,733: Application time: 0,0669531 seconds
+2018-10-04T12:26:57.857+0200: 1,742: [GC (Allocation Failure) 
+Desired survivor size 125829120 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1262571K->96235K(1209344K)] 1672242K->666455K(2087424K), 0,0293066 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:57.886+0200: 1,771: Total time for which application threads were stopped: 0,0383209 seconds, Stopping threads took: 0,0087030 seconds
+2018-10-04T12:26:57.954+0200: 1,839: Application time: 0,0678341 seconds
+2018-10-04T12:26:57.954+0200: 1,839: [GC (Allocation Failure) 
+Desired survivor size 145752064 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1209303K->122873K(1235968K)] 1779523K->826347K(2114048K), 0,0291014 secs] [Times: user=0,19 sys=0,02, real=0,02 secs] 
+2018-10-04T12:26:57.983+0200: 1,869: [Full GC (Ergonomics) [PSYoungGen: 122873K->0K(1235968K)] [ParOldGen: 703474K->256657K(872960K)] 826347K->256657K(2108928K), [Metaspace: 3273K->3273K(1056768K)], 0,0309659 secs] [Times: user=0,20 sys=0,00, real=0,04 secs] 
+2018-10-04T12:26:58.014+0200: 1,900: Total time for which application threads were stopped: 0,0603335 seconds, Stopping threads took: 0,0000349 seconds
+2018-10-04T12:26:58.082+0200: 1,967: Application time: 0,0677255 seconds
+2018-10-04T12:26:58.083+0200: 1,969: [GC (Allocation Failure) 
+Desired survivor size 161480704 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1113088K->122873K(1166336K)] 1369745K->513191K(2039296K), 0,0284687 secs] [Times: user=0,21 sys=0,00, real=0,04 secs] 
+2018-10-04T12:26:58.112+0200: 1,997: Total time for which application threads were stopped: 0,0297361 seconds, Stopping threads took: 0,0010495 seconds
+2018-10-04T12:26:58.170+0200: 2,055: Application time: 0,0580885 seconds
+2018-10-04T12:26:58.170+0200: 2,056: [GC (Allocation Failure) 
+Desired survivor size 186646528 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1166329K->157672K(1201152K)] 1556647K->635658K(2074112K), 0,0293641 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.200+0200: 2,085: Total time for which application threads were stopped: 0,0299155 seconds, Stopping threads took: 0,0003472 seconds
+2018-10-04T12:26:58.259+0200: 2,144: Application time: 0,0591046 seconds
+2018-10-04T12:26:58.260+0200: 2,145: [GC (Allocation Failure) 
+Desired survivor size 207093760 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1201128K->157672K(1112064K)] 1679114K->734239K(1985024K), 0,0300004 secs] [Times: user=0,19 sys=0,01, real=0,03 secs] 
+2018-10-04T12:26:58.290+0200: 2,175: Total time for which application threads were stopped: 0,0308605 seconds, Stopping threads took: 0,0006668 seconds
+2018-10-04T12:26:58.349+0200: 2,234: Application time: 0,0587784 seconds
+2018-10-04T12:26:58.352+0200: 2,237: [GC (Allocation Failure) 
+Desired survivor size 240123904 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1112021K->202226K(1156608K)] 1688588K->824409K(2029568K), 0,0278892 secs] [Times: user=0,19 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:58.380+0200: 2,265: [Full GC (Ergonomics) [PSYoungGen: 202226K->0K(1156608K)] [ParOldGen: 622183K->256907K(872448K)] 824409K->256907K(2029056K), [Metaspace: 3273K->3273K(1056768K)], 0,0320560 secs] [Times: user=0,21 sys=0,01, real=0,04 secs] 
+2018-10-04T12:26:58.412+0200: 2,298: Total time for which application threads were stopped: 0,0638021 seconds, Stopping threads took: 0,0034952 seconds
+2018-10-04T12:26:58.465+0200: 2,350: Application time: 0,0528589 seconds
+2018-10-04T12:26:58.468+0200: 2,353: [GC (Allocation Failure) 
+Desired survivor size 266862592 bytes, new threshold 1 (max 15)
+[PSYoungGen: 954357K->202226K(1039872K)] 1211264K->513285K(1912320K), 0,0286051 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.497+0200: 2,382: Total time for which application threads were stopped: 0,0313787 seconds, Stopping threads took: 0,0024442 seconds
+2018-10-04T12:26:58.548+0200: 2,433: Application time: 0,0516389 seconds
+2018-10-04T12:26:58.549+0200: 2,434: [GC (Allocation Failure) 
+Desired survivor size 299368448 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1039858K->233648K(1071616K)] 1350917K->567437K(1944064K), 0,0301830 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.579+0200: 2,464: Total time for which application threads were stopped: 0,0304931 seconds, Stopping threads took: 0,0001102 seconds
+2018-10-04T12:26:58.629+0200: 2,514: Application time: 0,0503230 seconds
+2018-10-04T12:26:58.630+0200: 2,515: [GC (Allocation Failure) 
+Desired survivor size 333971456 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1071280K->256378K(993792K)] 1405069K->590229K(1866240K), 0,0294505 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.660+0200: 2,545: Total time for which application threads were stopped: 0,0305839 seconds, Stopping threads took: 0,0007457 seconds
+2018-10-04T12:26:58.704+0200: 2,589: Application time: 0,0445808 seconds
+2018-10-04T12:26:58.705+0200: 2,590: [GC (Allocation Failure) 
+Desired survivor size 359137280 bytes, new threshold 1 (max 15)
+[PSYoungGen: 962921K->251281K(957952K)] 1296773K->590386K(1830400K), 0,0293206 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.734+0200: 2,620: Total time for which application threads were stopped: 0,0300863 seconds, Stopping threads took: 0,0005907 seconds
+2018-10-04T12:26:58.776+0200: 2,661: Application time: 0,0415073 seconds
+2018-10-04T12:26:58.776+0200: 2,661: [GC (Allocation Failure) 
+Desired survivor size 367001600 bytes, new threshold 1 (max 15)
+[PSYoungGen: 957841K->220860K(992768K)] 1296946K->595294K(1865216K), 0,0296538 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.806+0200: 2,691: Total time for which application threads were stopped: 0,0300690 seconds, Stopping threads took: 0,0001715 seconds
+2018-10-04T12:26:58.845+0200: 2,730: Application time: 0,0387335 seconds
+2018-10-04T12:26:58.846+0200: 2,732: [GC (Allocation Failure) 
+Desired survivor size 380633088 bytes, new threshold 1 (max 15)
+[PSYoungGen: 862907K->242965K(885248K)] 1237341K->630625K(1757696K), 0,0291878 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.876+0200: 2,761: Total time for which application threads were stopped: 0,0310743 seconds, Stopping threads took: 0,0016134 seconds
+2018-10-04T12:26:58.915+0200: 2,800: Application time: 0,0392606 seconds
+2018-10-04T12:26:58.915+0200: 2,800: [GC (Allocation Failure) 
+Desired survivor size 390594560 bytes, new threshold 1 (max 15)
+[PSYoungGen: 885010K->245028K(967680K)] 1272670K->643975K(1840128K), 0,0295311 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:58.945+0200: 2,830: Total time for which application threads were stopped: 0,0298911 seconds, Stopping threads took: 0,0001535 seconds
+2018-10-04T12:26:58.978+0200: 2,864: Application time: 0,0335259 seconds
+2018-10-04T12:26:58.979+0200: 2,864: [GC (Allocation Failure) 
+Desired survivor size 389545984 bytes, new threshold 1 (max 15)
+[PSYoungGen: 840996K->223142K(977408K)] 1239943K->655137K(1849856K), 0,0307741 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.010+0200: 2,895: Total time for which application threads were stopped: 0,0311190 seconds, Stopping threads took: 0,0001594 seconds
+2018-10-04T12:26:59.044+0200: 2,929: Application time: 0,0345684 seconds
+2018-10-04T12:26:59.044+0200: 2,930: [GC (Allocation Failure) 
+Desired survivor size 395313152 bytes, new threshold 1 (max 15)
+[PSYoungGen: 819104K->245028K(967168K)] 1251099K->688310K(1839616K), 0,0295444 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.074+0200: 2,959: Total time for which application threads were stopped: 0,0298906 seconds, Stopping threads took: 0,0001521 seconds
+2018-10-04T12:26:59.109+0200: 2,994: Application time: 0,0349014 seconds
+2018-10-04T12:26:59.112+0200: 2,997: [GC (Allocation Failure) 
+Desired survivor size 396886016 bytes, new threshold 1 (max 15)
+[PSYoungGen: 831765K->241964K(828928K)] 1275046K->699440K(1701376K), 0,0279796 secs] [Times: user=0,21 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:59.140+0200: 3,025: Total time for which application threads were stopped: 0,0310288 seconds, Stopping threads took: 0,0027926 seconds
+2018-10-04T12:26:59.175+0200: 3,060: Application time: 0,0351281 seconds
+2018-10-04T12:26:59.175+0200: 3,061: [GC (Allocation Failure) 
+Desired survivor size 401080320 bytes, new threshold 1 (max 15)
+[PSYoungGen: 828705K->251844K(963072K)] 1286181K->713604K(1835520K), 0,0317652 secs] [Times: user=0,20 sys=0,01, real=0,03 secs] 
+2018-10-04T12:26:59.207+0200: 3,092: Total time for which application threads were stopped: 0,0321343 seconds, Stopping threads took: 0,0000611 seconds
+2018-10-04T12:26:59.242+0200: 3,128: Application time: 0,0351316 seconds
+2018-10-04T12:26:59.242+0200: 3,128: [GC (Allocation Failure) 
+Desired survivor size 397410304 bytes, new threshold 1 (max 15)
+[PSYoungGen: 827332K->237900K(967168K)] 1289092K->717887K(1839616K), 0,0298295 secs] [Times: user=0,20 sys=0,00, real=0,04 secs] 
+2018-10-04T12:26:59.272+0200: 3,158: Total time for which application threads were stopped: 0,0300612 seconds, Stopping threads took: 0,0000224 seconds
+2018-10-04T12:26:59.307+0200: 3,192: Application time: 0,0343056 seconds
+2018-10-04T12:26:59.308+0200: 3,193: [GC (Allocation Failure) 
+Desired survivor size 387448832 bytes, new threshold 1 (max 15)
+[PSYoungGen: 813387K->223705K(947200K)] 1293374K->728549K(1819648K), 0,0290818 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.337+0200: 3,222: Total time for which application threads were stopped: 0,0301851 seconds, Stopping threads took: 0,0008785 seconds
+2018-10-04T12:26:59.370+0200: 3,255: Application time: 0,0326876 seconds
+2018-10-04T12:26:59.370+0200: 3,255: [GC (Allocation Failure) 
+Desired survivor size 384827392 bytes, new threshold 1 (max 15)
+[PSYoungGen: 802777K->241589K(957440K)] 1307621K->761096K(1829888K), 0,0294782 secs] [Times: user=0,20 sys=0,01, real=0,03 secs] 
+2018-10-04T12:26:59.400+0200: 3,285: Total time for which application threads were stopped: 0,0299894 seconds, Stopping threads took: 0,0002893 seconds
+2018-10-04T12:26:59.435+0200: 3,320: Application time: 0,0356774 seconds
+2018-10-04T12:26:59.436+0200: 3,321: [GC (Allocation Failure) 
+Desired survivor size 386400256 bytes, new threshold 1 (max 15)
+[PSYoungGen: 820650K->256096K(979968K)] 1340157K->775666K(1852416K), 0,0301952 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.466+0200: 3,351: Total time for which application threads were stopped: 0,0307365 seconds, Stopping threads took: 0,0002948 seconds
+2018-10-04T12:26:59.502+0200: 3,387: Application time: 0,0356327 seconds
+2018-10-04T12:26:59.502+0200: 3,387: [GC (Allocation Failure) 
+Desired survivor size 374341632 bytes, new threshold 1 (max 15)
+[PSYoungGen: 860231K->223674K(827904K)] 1379801K->775760K(1700352K), 0,0307674 secs] [Times: user=0,20 sys=0,00, real=0,04 secs] 
+2018-10-04T12:26:59.533+0200: 3,418: Total time for which application threads were stopped: 0,0311170 seconds, Stopping threads took: 0,0000847 seconds
+2018-10-04T12:26:59.568+0200: 3,453: Application time: 0,0351339 seconds
+2018-10-04T12:26:59.568+0200: 3,453: [GC (Allocation Failure) 
+Desired survivor size 369623040 bytes, new threshold 1 (max 15)
+[PSYoungGen: 827812K->240307K(975872K)] 1379898K->808338K(1848320K), 0,0298426 secs] [Times: user=0,22 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.598+0200: 3,483: Total time for which application threads were stopped: 0,0302712 seconds, Stopping threads took: 0,0001455 seconds
+2018-10-04T12:26:59.631+0200: 3,516: Application time: 0,0328238 seconds
+2018-10-04T12:26:59.632+0200: 3,517: [GC (Allocation Failure) 
+Desired survivor size 363331584 bytes, new threshold 1 (max 15)
+[PSYoungGen: 850611K->236774K(971264K)] 1418642K->821251K(1843712K), 0,0287209 secs] [Times: user=0,20 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:59.661+0200: 3,546: Total time for which application threads were stopped: 0,0295273 seconds, Stopping threads took: 0,0006266 seconds
+2018-10-04T12:26:59.695+0200: 3,580: Application time: 0,0347118 seconds
+2018-10-04T12:26:59.696+0200: 3,581: [GC (Allocation Failure) 
+Desired survivor size 356515840 bytes, new threshold 1 (max 15)
+[PSYoungGen: 847078K->237024K(991232K)] 1431555K->840980K(1863680K), 0,0304788 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.726+0200: 3,611: Total time for which application threads were stopped: 0,0308767 seconds, Stopping threads took: 0,0001779 seconds
+2018-10-04T12:26:59.763+0200: 3,649: Application time: 0,0373014 seconds
+2018-10-04T12:26:59.764+0200: 3,649: [GC (Allocation Failure) 
+Desired survivor size 349175808 bytes, new threshold 1 (max 15)
+[PSYoungGen: 875994K->233085K(987136K)] 1479950K->860083K(1859584K), 0,0302824 secs] [Times: user=0,22 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.794+0200: 3,679: Total time for which application threads were stopped: 0,0305873 seconds, Stopping threads took: 0,0001211 seconds
+2018-10-04T12:26:59.832+0200: 3,717: Application time: 0,0377572 seconds
+2018-10-04T12:26:59.832+0200: 3,717: [GC (Allocation Failure) 
+Desired survivor size 342360064 bytes, new threshold 1 (max 15)
+[PSYoungGen: 872061K->235273K(1004032K)] 1499059K->883095K(1876480K), 0,0297063 secs] [Times: user=0,21 sys=0,00, real=0,02 secs] 
+2018-10-04T12:26:59.862+0200: 3,747: Total time for which application threads were stopped: 0,0301215 seconds, Stopping threads took: 0,0002084 seconds
+2018-10-04T12:26:59.899+0200: 3,784: Application time: 0,0368204 seconds
+2018-10-04T12:26:59.900+0200: 3,785: [GC (Allocation Failure) 
+Desired survivor size 343932928 bytes, new threshold 1 (max 15)
+[PSYoungGen: 900337K->256315K(999424K)] 1548158K->904136K(1871872K), 0,0296874 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.929+0200: 3,815: Total time for which application threads were stopped: 0,0307550 seconds, Stopping threads took: 0,0008475 seconds
+2018-10-04T12:26:59.967+0200: 3,853: Application time: 0,0378508 seconds
+2018-10-04T12:26:59.968+0200: 3,853: [GC (Allocation Failure) 
+Desired survivor size 341311488 bytes, new threshold 1 (max 15)
+[PSYoungGen: 921386K->248061K(1021952K)] 1569207K->903980K(1894400K), 0,0309426 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:26:59.999+0200: 3,884: Total time for which application threads were stopped: 0,0313641 seconds, Stopping threads took: 0,0001938 seconds
+2018-10-04T12:27:00.037+0200: 3,922: Application time: 0,0378801 seconds
+2018-10-04T12:27:00.039+0200: 3,925: [GC (Allocation Failure) 
+Desired survivor size 333447168 bytes, new threshold 1 (max 15)
+[PSYoungGen: 936189K->234679K(923136K)] 1592108K->912172K(1795584K), 0,0366635 secs] [Times: user=0,23 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:00.076+0200: 3,961: Total time for which application threads were stopped: 0,0394544 seconds, Stopping threads took: 0,0025751 seconds
+2018-10-04T12:27:00.115+0200: 4,000: Application time: 0,0389868 seconds
+2018-10-04T12:27:00.115+0200: 4,001: [GC (Allocation Failure) 
+Desired survivor size 332922880 bytes, new threshold 1 (max 15)
+[PSYoungGen: 922784K->252876K(1017856K)] 1600276K->933807K(1890304K), 0,0300008 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:00.146+0200: 4,031: Total time for which application threads were stopped: 0,0305150 seconds, Stopping threads took: 0,0003491 seconds
+2018-10-04T12:27:00.183+0200: 4,068: Application time: 0,0372263 seconds
+2018-10-04T12:27:00.183+0200: 4,068: [GC (Allocation Failure) 
+Desired survivor size 332398592 bytes, new threshold 1 (max 15)
+[PSYoungGen: 945100K->255283K(1017344K)] 1626031K->937184K(1889792K), 0,0297460 secs] [Times: user=0,20 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:00.213+0200: 4,098: Total time for which application threads were stopped: 0,0302269 seconds, Stopping threads took: 0,0002451 seconds
+2018-10-04T12:27:00.254+0200: 4,139: Application time: 0,0407757 seconds
+2018-10-04T12:27:00.254+0200: 4,139: [GC (Allocation Failure) 
+Desired survivor size 324534272 bytes, new threshold 1 (max 15)
+[PSYoungGen: 947505K->225769K(1019392K)] 1629406K->938153K(1891840K), 0,0285313 secs] [Times: user=0,19 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:00.283+0200: 4,168: Total time for which application threads were stopped: 0,0288633 seconds, Stopping threads took: 0,0001677 seconds
+2018-10-04T12:27:00.319+0200: 4,204: Application time: 0,0363323 seconds
+2018-10-04T12:27:00.320+0200: 4,205: [GC (Allocation Failure) 
+Desired survivor size 325058560 bytes, new threshold 1 (max 15)
+[PSYoungGen: 934884K->256284K(1026048K)] 1647269K->968669K(1898496K), 0,0345831 secs] [Times: user=0,23 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:00.355+0200: 4,240: Total time for which application threads were stopped: 0,0355319 seconds, Stopping threads took: 0,0006139 seconds
+2018-10-04T12:27:00.396+0200: 4,281: Application time: 0,0413854 seconds
+2018-10-04T12:27:00.396+0200: 4,282: [GC (Allocation Failure) 
+Desired survivor size 323485696 bytes, new threshold 1 (max 15)
+[PSYoungGen: 965404K->253876K(1039360K)] 1677789K->968700K(1911808K), 0,0318992 secs] [Times: user=0,18 sys=0,01, real=0,03 secs] 
+2018-10-04T12:27:00.428+0200: 4,314: Total time for which application threads were stopped: 0,0323992 seconds, Stopping threads took: 0,0002831 seconds
+2018-10-04T12:27:00.470+0200: 4,355: Application time: 0,0413811 seconds
+2018-10-04T12:27:00.470+0200: 4,355: [GC (Allocation Failure) 
+Desired survivor size 319291392 bytes, new threshold 1 (max 15)
+[PSYoungGen: 978327K->246310K(971264K)] 1693150K->971139K(1843712K), 0,0312802 secs] [Times: user=0,18 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:00.501+0200: 4,387: Total time for which application threads were stopped: 0,0317051 seconds, Stopping threads took: 0,0002608 seconds
+2018-10-04T12:27:00.543+0200: 4,428: Application time: 0,0415101 seconds
+2018-10-04T12:27:00.543+0200: 4,429: [GC (Allocation Failure) 
+Desired survivor size 312999936 bytes, new threshold 1 (max 15)
+[PSYoungGen: 970790K->240776K(1046016K)] 1695618K->981050K(1918464K), 0,0304925 secs] [Times: user=0,19 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:00.574+0200: 4,459: Total time for which application threads were stopped: 0,0310725 seconds, Stopping threads took: 0,0003658 seconds
+2018-10-04T12:27:00.613+0200: 4,498: Application time: 0,0390666 seconds
+2018-10-04T12:27:00.616+0200: 4,501: [GC (Allocation Failure) 
+Desired survivor size 310902784 bytes, new threshold 1 (max 15)
+[PSYoungGen: 974975K->250500K(1039872K)] 1715249K->996620K(1912320K), 0,0331202 secs] [Times: user=0,17 sys=0,02, real=0,03 secs] 
+2018-10-04T12:27:00.649+0200: 4,534: Total time for which application threads were stopped: 0,0360446 seconds, Stopping threads took: 0,0027159 seconds
+2018-10-04T12:27:00.690+0200: 4,575: Application time: 0,0411058 seconds
+2018-10-04T12:27:00.691+0200: 4,576: [GC (Allocation Failure) 
+Desired survivor size 306708480 bytes, new threshold 1 (max 15)
+[PSYoungGen: 984708K->224862K(1049088K)] 1730828K->1002561K(1921536K), 0,0318372 secs] [Times: user=0,18 sys=0,01, real=0,03 secs] 
+2018-10-04T12:27:00.722+0200: 4,608: Total time for which application threads were stopped: 0,0322441 seconds, Stopping threads took: 0,0002480 seconds
+2018-10-04T12:27:00.763+0200: 4,648: Application time: 0,0405694 seconds
+2018-10-04T12:27:00.771+0200: 4,657: [GC (Allocation Failure) 
+Desired survivor size 306708480 bytes, new threshold 1 (max 15)
+[PSYoungGen: 970334K->255096K(1044992K)] 1748033K->1033764K(1917440K), 0,0315956 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:00.803+0200: 4,688: Total time for which application threads were stopped: 0,0401368 seconds, Stopping threads took: 0,0082562 seconds
+2018-10-04T12:27:00.847+0200: 4,733: Application time: 0,0441576 seconds
+2018-10-04T12:27:00.852+0200: 4,737: [GC (Allocation Failure) 
+Desired survivor size 304087040 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1000568K->247936K(1056768K)] 1779236K->1035108K(1929216K), 0,0309695 secs] [Times: user=0,19 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:00.883+0200: 4,768: Total time for which application threads were stopped: 0,0355521 seconds, Stopping threads took: 0,0043520 seconds
+2018-10-04T12:27:00.930+0200: 4,815: Application time: 0,0467936 seconds
+2018-10-04T12:27:00.930+0200: 4,815: [GC (Allocation Failure) 
+Desired survivor size 300941312 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1006195K->225018K(1055232K)] 1793367K->1043362K(1927680K), 0,0316887 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:00.962+0200: 4,847: [Full GC (Ergonomics) [PSYoungGen: 225018K->0K(1055232K)] [ParOldGen: 818343K->256813K(695808K)] 1043362K->256813K(1751040K), [Metaspace: 3273K->3273K(1056768K)], 0,0418688 secs] [Times: user=0,21 sys=0,01, real=0,05 secs] 
+2018-10-04T12:27:01.004+0200: 4,889: Total time for which application threads were stopped: 0,0738951 seconds, Stopping threads took: 0,0000602 seconds
+2018-10-04T12:27:01.045+0200: 4,930: Application time: 0,0416728 seconds
+2018-10-04T12:27:01.046+0200: 4,931: [GC (Allocation Failure) 
+Desired survivor size 300941312 bytes, new threshold 1 (max 15)
+[PSYoungGen: 758272K->253220K(1057280K)] 1015085K->510033K(1753088K), 0,0294175 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.075+0200: 4,960: Total time for which application threads were stopped: 0,0298738 seconds, Stopping threads took: 0,0001877 seconds
+2018-10-04T12:27:01.118+0200: 5,004: Application time: 0,0432212 seconds
+2018-10-04T12:27:01.119+0200: 5,004: [GC (Allocation Failure) 
+Desired survivor size 297795584 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1016594K->225518K(1057280K)] 1273407K->513128K(1753088K), 0,0316557 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.150+0200: 5,036: Total time for which application threads were stopped: 0,0320206 seconds, Stopping threads took: 0,0001778 seconds
+2018-10-04T12:27:01.195+0200: 5,080: Application time: 0,0443782 seconds
+2018-10-04T12:27:01.196+0200: 5,081: [GC (Allocation Failure) 
+Desired survivor size 293601280 bytes, new threshold 1 (max 15)
+[PSYoungGen: 988904K->241151K(1059840K)] 1276514K->544050K(1755648K), 0,0322217 secs] [Times: user=0,22 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.228+0200: 5,113: Total time for which application threads were stopped: 0,0332119 seconds, Stopping threads took: 0,0008316 seconds
+2018-10-04T12:27:01.272+0200: 5,157: Application time: 0,0440227 seconds
+2018-10-04T12:27:01.276+0200: 5,161: [GC (Allocation Failure) 
+Desired survivor size 295174144 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1015295K->255721K(1060864K)] 1318194K->559308K(1756672K), 0,0309958 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.307+0200: 5,192: Total time for which application threads were stopped: 0,0349187 seconds, Stopping threads took: 0,0037501 seconds
+2018-10-04T12:27:01.349+0200: 5,234: Application time: 0,0418673 seconds
+2018-10-04T12:27:01.352+0200: 5,237: [GC (Allocation Failure) 
+Desired survivor size 292552704 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1029851K->247217K(1068544K)] 1333438K->559933K(1764352K), 0,0320524 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.384+0200: 5,269: Total time for which application threads were stopped: 0,0354203 seconds, Stopping threads took: 0,0031026 seconds
+2018-10-04T12:27:01.429+0200: 5,314: Application time: 0,0443952 seconds
+2018-10-04T12:27:01.430+0200: 5,315: [GC (Allocation Failure) 
+Desired survivor size 288358400 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1031089K->238494K(1069568K)] 1343805K->568938K(1765376K), 0,0321404 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.462+0200: 5,347: Total time for which application threads were stopped: 0,0332685 seconds, Stopping threads took: 0,0008540 seconds
+2018-10-04T12:27:01.503+0200: 5,388: Application time: 0,0412254 seconds
+2018-10-04T12:27:01.504+0200: 5,389: [GC (Allocation Failure) 
+Desired survivor size 289931264 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1022349K->210636K(1068544K)] 1352792K->586665K(1764352K), 0,0347817 secs] [Times: user=0,16 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.539+0200: 5,424: Total time for which application threads were stopped: 0,0356079 seconds, Stopping threads took: 0,0005711 seconds
+2018-10-04T12:27:01.581+0200: 5,466: Application time: 0,0419916 seconds
+2018-10-04T12:27:01.583+0200: 5,468: [GC (Allocation Failure) 
+Desired survivor size 290979840 bytes, new threshold 1 (max 15)
+[PSYoungGen: 997578K->253251K(1070080K)] 1373607K->632438K(1765888K), 0,0318217 secs] [Times: user=0,18 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:01.615+0200: 5,500: Total time for which application threads were stopped: 0,0341834 seconds, Stopping threads took: 0,0021508 seconds
+2018-10-04T12:27:01.661+0200: 5,546: Application time: 0,0462254 seconds
+2018-10-04T12:27:01.662+0200: 5,547: [GC (Allocation Failure) 
+Desired survivor size 286785536 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1040173K->236243K(1068544K)] 1419360K->635502K(1764352K), 0,0410458 secs] [Times: user=0,25 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:01.703+0200: 5,588: Total time for which application threads were stopped: 0,0418253 seconds, Stopping threads took: 0,0005921 seconds
+2018-10-04T12:27:01.746+0200: 5,632: Application time: 0,0434102 seconds
+2018-10-04T12:27:01.748+0200: 5,633: [GC (Allocation Failure) 
+Desired survivor size 283115520 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1027765K->239776K(1071616K)] 1427024K->655543K(1767424K), 0,0304822 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.779+0200: 5,664: Total time for which application threads were stopped: 0,0321396 seconds, Stopping threads took: 0,0014460 seconds
+2018-10-04T12:27:01.824+0200: 5,709: Application time: 0,0451691 seconds
+2018-10-04T12:27:01.828+0200: 5,713: [GC (Allocation Failure) 
+Desired survivor size 282591232 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1031326K->221110K(1078272K)] 1447094K->672052K(1774080K), 0,0332527 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.861+0200: 5,746: Total time for which application threads were stopped: 0,0373836 seconds, Stopping threads took: 0,0039618 seconds
+2018-10-04T12:27:01.905+0200: 5,790: Application time: 0,0435321 seconds
+2018-10-04T12:27:01.908+0200: 5,793: [GC (Allocation Failure) 
+Desired survivor size 285736960 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1023414K->256253K(1078272K)] 1474356K->707538K(1774080K), 0,0315533 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:01.940+0200: 5,825: Total time for which application threads were stopped: 0,0351600 seconds, Stopping threads took: 0,0033914 seconds
+2018-10-04T12:27:01.985+0200: 5,871: Application time: 0,0455986 seconds
+2018-10-04T12:27:01.988+0200: 5,873: [GC (Allocation Failure) 
+Desired survivor size 287834112 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1058557K->256471K(1075712K)] 1509842K->708038K(1771520K), 0,0322585 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.020+0200: 5,905: Total time for which application threads were stopped: 0,0345851 seconds, Stopping threads took: 0,0021441 seconds
+2018-10-04T12:27:02.066+0200: 5,952: Application time: 0,0464978 seconds
+2018-10-04T12:27:02.067+0200: 5,952: [GC (Allocation Failure) 
+Desired survivor size 289931264 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1053128K->256346K(1053184K)] 1504695K->708101K(1748992K), 0,0329374 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.100+0200: 5,985: Total time for which application threads were stopped: 0,0335046 seconds, Stopping threads took: 0,0003534 seconds
+2018-10-04T12:27:02.142+0200: 6,027: Application time: 0,0419749 seconds
+2018-10-04T12:27:02.143+0200: 6,028: [GC (Allocation Failure) 
+Desired survivor size 286785536 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1053002K->235367K(1078784K)] 1504756K->708163K(1774592K), 0,0314687 secs] [Times: user=0,20 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:02.174+0200: 6,059: Total time for which application threads were stopped: 0,0321134 seconds, Stopping threads took: 0,0004679 seconds
+2018-10-04T12:27:02.215+0200: 6,101: Application time: 0,0413774 seconds
+2018-10-04T12:27:02.216+0200: 6,101: [GC (Allocation Failure) 
+Desired survivor size 285736960 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1031005K->248780K(1044480K)] 1503801K->729236K(1740288K), 0,0310427 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.247+0200: 6,133: Total time for which application threads were stopped: 0,0319116 seconds, Stopping threads took: 0,0006224 seconds
+2018-10-04T12:27:02.292+0200: 6,177: Application time: 0,0444029 seconds
+2018-10-04T12:27:02.293+0200: 6,178: [GC (Allocation Failure) 
+Desired survivor size 287309824 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1044428K->256346K(1073152K)] 1524884K->737053K(1768960K), 0,0308533 secs] [Times: user=0,19 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:02.323+0200: 6,209: Total time for which application threads were stopped: 0,0317033 seconds, Stopping threads took: 0,0006483 seconds
+2018-10-04T12:27:02.369+0200: 6,254: Application time: 0,0454437 seconds
+2018-10-04T12:27:02.370+0200: 6,255: [GC (Allocation Failure) 
+Desired survivor size 283639808 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1050444K->241464K(1074688K)] 1531150K->737209K(1770496K), 0,0313906 secs] [Times: user=0,18 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.401+0200: 6,286: Total time for which application threads were stopped: 0,0322327 seconds, Stopping threads took: 0,0006655 seconds
+2018-10-04T12:27:02.446+0200: 6,331: Application time: 0,0443714 seconds
+2018-10-04T12:27:02.448+0200: 6,333: [GC (Allocation Failure) 
+Desired survivor size 281018368 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1035555K->239525K(1075200K)] 1531300K->752310K(1771008K), 0,0354180 secs] [Times: user=0,22 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.483+0200: 6,368: Total time for which application threads were stopped: 0,0376053 seconds, Stopping threads took: 0,0020015 seconds
+2018-10-04T12:27:02.526+0200: 6,411: Application time: 0,0426625 seconds
+2018-10-04T12:27:02.527+0200: 6,412: [GC (Allocation Failure) 
+Desired survivor size 280494080 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1040805K->249906K(1075712K)] 1553590K->769288K(1771520K), 0,0319683 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.559+0200: 6,444: Total time for which application threads were stopped: 0,0329347 seconds, Stopping threads took: 0,0007902 seconds
+2018-10-04T12:27:02.603+0200: 6,488: Application time: 0,0441214 seconds
+2018-10-04T12:27:02.603+0200: 6,488: [GC (Allocation Failure) 
+Desired survivor size 279969792 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1051166K->249968K(1083392K)] 1570548K->775885K(1779200K), 0,0446974 secs] [Times: user=0,29 sys=0,00, real=0,05 secs] 
+2018-10-04T12:27:02.648+0200: 6,533: Total time for which application threads were stopped: 0,0450716 seconds, Stopping threads took: 0,0001816 seconds
+2018-10-04T12:27:02.694+0200: 6,580: Application time: 0,0464382 seconds
+2018-10-04T12:27:02.695+0200: 6,580: [GC (Allocation Failure) 
+Desired survivor size 277348352 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1060435K->241401K(1052160K)] 1586352K->782638K(1747968K), 0,0302416 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.725+0200: 6,610: Total time for which application threads were stopped: 0,0308262 seconds, Stopping threads took: 0,0003881 seconds
+2018-10-04T12:27:02.768+0200: 6,653: Application time: 0,0429882 seconds
+2018-10-04T12:27:02.769+0200: 6,654: [GC (Allocation Failure) 
+Desired survivor size 279445504 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1051897K->256440K(1081344K)] 1593134K->797990K(1777152K), 0,0303032 secs] [Times: user=0,22 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.799+0200: 6,684: Total time for which application threads were stopped: 0,0309202 seconds, Stopping threads took: 0,0003545 seconds
+2018-10-04T12:27:02.844+0200: 6,729: Application time: 0,0449969 seconds
+2018-10-04T12:27:02.844+0200: 6,730: [GC (Allocation Failure) 
+Desired survivor size 280494080 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1066936K->256253K(1083392K)] 1608486K->798208K(1779200K), 0,0294302 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.874+0200: 6,759: Total time for which application threads were stopped: 0,0298564 seconds, Stopping threads took: 0,0002285 seconds
+2018-10-04T12:27:02.919+0200: 6,804: Application time: 0,0446717 seconds
+2018-10-04T12:27:02.920+0200: 6,805: [GC (Allocation Failure) 
+Desired survivor size 281542656 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1066748K->256409K(1082880K)] 1608704K->798677K(1778688K), 0,0293096 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:02.949+0200: 6,834: Total time for which application threads were stopped: 0,0302532 seconds, Stopping threads took: 0,0007456 seconds
+2018-10-04T12:27:02.997+0200: 6,882: Application time: 0,0482436 seconds
+2018-10-04T12:27:02.997+0200: 6,882: [GC (Allocation Failure) 
+Desired survivor size 280494080 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1065344K->252219K(1083904K)] 1607612K->798302K(1779712K), 0,0292998 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.027+0200: 6,912: Total time for which application threads were stopped: 0,0295268 seconds, Stopping threads took: 0,0000496 seconds
+2018-10-04T12:27:03.073+0200: 6,958: Application time: 0,0464985 seconds
+2018-10-04T12:27:03.073+0200: 6,959: [GC (Allocation Failure) 
+Desired survivor size 281018368 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1061164K->256128K(1083392K)] 1607247K->802210K(1779200K), 0,0299626 secs] [Times: user=0,20 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:03.103+0200: 6,989: Total time for which application threads were stopped: 0,0302198 seconds, Stopping threads took: 0,0001116 seconds
+2018-10-04T12:27:03.149+0200: 7,034: Application time: 0,0451693 seconds
+2018-10-04T12:27:03.149+0200: 7,034: [GC (Allocation Failure) 
+Desired survivor size 281018368 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1065598K->256190K(1083904K)] 1611680K->802273K(1779712K), 0,0294386 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.178+0200: 7,064: Total time for which application threads were stopped: 0,0297698 seconds, Stopping threads took: 0,0001709 seconds
+2018-10-04T12:27:03.221+0200: 7,106: Application time: 0,0426854 seconds
+2018-10-04T12:27:03.221+0200: 7,106: [GC (Allocation Failure) 
+Desired survivor size 279445504 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1065648K->246435K(1081344K)] 1611731K->802242K(1777152K), 0,0298114 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.251+0200: 7,136: Total time for which application threads were stopped: 0,0300784 seconds, Stopping threads took: 0,0000966 seconds
+2018-10-04T12:27:03.297+0200: 7,182: Application time: 0,0456611 seconds
+2018-10-04T12:27:03.300+0200: 7,185: [GC (Allocation Failure) 
+Desired survivor size 279445504 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1056419K->256346K(1082880K)] 1612226K->812153K(1778688K), 0,0288980 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.329+0200: 7,214: Total time for which application threads were stopped: 0,0319884 seconds, Stopping threads took: 0,0029218 seconds
+2018-10-04T12:27:03.377+0200: 7,262: Application time: 0,0484168 seconds
+2018-10-04T12:27:03.379+0200: 7,264: [GC (Allocation Failure) 
+Desired survivor size 277872640 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1066329K->247248K(1082880K)] 1622136K->812278K(1778688K), 0,0290340 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.408+0200: 7,293: Total time for which application threads were stopped: 0,0306151 seconds, Stopping threads took: 0,0014268 seconds
+2018-10-04T12:27:03.453+0200: 7,338: Application time: 0,0453297 seconds
+2018-10-04T12:27:03.456+0200: 7,341: [GC (Allocation Failure) 
+Desired survivor size 276299776 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1060281K->251094K(1084416K)] 1625311K->821376K(1780224K), 0,0295828 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.486+0200: 7,371: Total time for which application threads were stopped: 0,0324468 seconds, Stopping threads took: 0,0026102 seconds
+2018-10-04T12:27:03.532+0200: 7,417: Application time: 0,0462839 seconds
+2018-10-04T12:27:03.534+0200: 7,419: [GC (Allocation Failure) 
+Desired survivor size 276824064 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1064133K->256534K(1086976K)] 1634415K->826848K(1782784K), 0,0298224 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.564+0200: 7,449: Total time for which application threads were stopped: 0,0320361 seconds, Stopping threads took: 0,0019040 seconds
+2018-10-04T12:27:03.609+0200: 7,494: Application time: 0,0452889 seconds
+2018-10-04T12:27:03.609+0200: 7,495: [GC (Allocation Failure) 
+Desired survivor size 276824064 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1073658K->256159K(1087488K)] 1643972K->826535K(1783296K), 0,0292663 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.639+0200: 7,524: Total time for which application threads were stopped: 0,0295930 seconds, Stopping threads took: 0,0001119 seconds
+2018-10-04T12:27:03.684+0200: 7,569: Application time: 0,0452690 seconds
+2018-10-04T12:27:03.688+0200: 7,573: [GC (Allocation Failure) 
+Desired survivor size 276824064 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1073297K->256409K(1088512K)] 1643673K->826785K(1784320K), 0,0294776 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.717+0200: 7,603: Total time for which application threads were stopped: 0,0332473 seconds, Stopping threads took: 0,0035733 seconds
+2018-10-04T12:27:03.763+0200: 7,648: Application time: 0,0457433 seconds
+2018-10-04T12:27:03.764+0200: 7,649: [GC (Allocation Failure) 
+Desired survivor size 277348352 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1074585K->237962K(1056256K)] 1644961K->826598K(1752064K), 0,0294389 secs] [Times: user=0,20 sys=0,01, real=0,03 secs] 
+2018-10-04T12:27:03.793+0200: 7,679: Total time for which application threads were stopped: 0,0302999 seconds, Stopping threads took: 0,0006891 seconds
+2018-10-04T12:27:03.843+0200: 7,728: Application time: 0,0492458 seconds
+2018-10-04T12:27:03.843+0200: 7,728: [GC (Allocation Failure) 
+Desired survivor size 279969792 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1056138K->222048K(1082880K)] 1644774K->844982K(1778688K), 0,0291822 secs] [Times: user=0,22 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:03.872+0200: 7,758: Total time for which application threads were stopped: 0,0297701 seconds, Stopping threads took: 0,0004243 seconds
+2018-10-04T12:27:03.920+0200: 7,806: Application time: 0,0480920 seconds
+2018-10-04T12:27:03.921+0200: 7,806: [GC (Allocation Failure) 
+Desired survivor size 279445504 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1034080K->236555K(1085440K)] 1657014K->879249K(1781248K), 0,0285988 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:03.949+0200: 7,835: Total time for which application threads were stopped: 0,0288900 seconds, Stopping threads took: 0,0001386 seconds
+2018-10-04T12:27:03.992+0200: 7,877: Application time: 0,0426004 seconds
+2018-10-04T12:27:03.992+0200: 7,877: [GC (Allocation Failure) 
+Desired survivor size 278396928 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1048559K->237993K(1082880K)] 1691252K->898915K(1778688K), 0,0303917 secs] [Times: user=0,20 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:04.023+0200: 7,908: [Full GC (Ergonomics) [PSYoungGen: 237993K->0K(1082880K)] [ParOldGen: 660921K->256750K(683520K)] 898915K->256750K(1766400K), [Metaspace: 3273K->3273K(1056768K)], 0,0303702 secs] [Times: user=0,19 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:04.053+0200: 7,938: Total time for which application threads were stopped: 0,0611665 seconds, Stopping threads took: 0,0001806 seconds
+2018-10-04T12:27:04.094+0200: 7,979: Application time: 0,0404142 seconds
+2018-10-04T12:27:04.094+0200: 7,979: [GC (Allocation Failure) 
+Desired survivor size 277872640 bytes, new threshold 1 (max 15)
+[PSYoungGen: 812544K->252063K(1084416K)] 1069294K->508814K(1767936K), 0,0283754 secs] [Times: user=0,20 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:04.122+0200: 8,008: Total time for which application threads were stopped: 0,0288374 seconds, Stopping threads took: 0,0003146 seconds
+2018-10-04T12:27:04.167+0200: 8,053: Application time: 0,0449603 seconds
+2018-10-04T12:27:04.168+0200: 8,053: [GC (Allocation Failure) 
+Desired survivor size 275775488 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1064607K->246623K(1082368K)] 1321358K->513066K(1765888K), 0,0298201 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.198+0200: 8,083: Total time for which application threads were stopped: 0,0302462 seconds, Stopping threads took: 0,0002240 seconds
+2018-10-04T12:27:04.242+0200: 8,127: Application time: 0,0439870 seconds
+2018-10-04T12:27:04.242+0200: 8,127: [GC (Allocation Failure) 
+Desired survivor size 274726912 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1062214K->250062K(1084928K)] 1328657K->522727K(1768448K), 0,0288815 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.271+0200: 8,156: Total time for which application threads were stopped: 0,0292607 seconds, Stopping threads took: 0,0001647 seconds
+2018-10-04T12:27:04.315+0200: 8,200: Application time: 0,0439586 seconds
+2018-10-04T12:27:04.317+0200: 8,202: [GC (Allocation Failure) 
+Desired survivor size 273678336 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1065659K->249312K(1086464K)] 1338324K->529199K(1769984K), 0,0293779 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.346+0200: 8,232: Total time for which application threads were stopped: 0,0315700 seconds, Stopping threads took: 0,0020472 seconds
+2018-10-04T12:27:04.392+0200: 8,277: Application time: 0,0454656 seconds
+2018-10-04T12:27:04.393+0200: 8,278: [GC (Allocation Failure) 
+Desired survivor size 275251200 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1070541K->256253K(1088512K)] 1350428K->536328K(1772032K), 0,0287581 secs] [Times: user=0,21 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:04.421+0200: 8,307: Total time for which application threads were stopped: 0,0294742 seconds, Stopping threads took: 0,0005569 seconds
+2018-10-04T12:27:04.466+0200: 8,351: Application time: 0,0447391 seconds
+2018-10-04T12:27:04.467+0200: 8,352: [GC (Allocation Failure) 
+Desired survivor size 274726912 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1077479K->236399K(1090560K)] 1357554K->536453K(1774080K), 0,0291272 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.496+0200: 8,381: Total time for which application threads were stopped: 0,0296241 seconds, Stopping threads took: 0,0003110 seconds
+2018-10-04T12:27:04.542+0200: 8,428: Application time: 0,0467862 seconds
+2018-10-04T12:27:04.543+0200: 8,428: [GC (Allocation Failure) 
+Desired survivor size 275251200 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1058159K->233616K(1090048K)] 1358213K->555056K(1773568K), 0,0292458 secs] [Times: user=0,22 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:04.572+0200: 8,457: Total time for which application threads were stopped: 0,0297403 seconds, Stopping threads took: 0,0003295 seconds
+2018-10-04T12:27:04.618+0200: 8,503: Application time: 0,0460560 seconds
+2018-10-04T12:27:04.624+0200: 8,509: [GC (Allocation Failure) 
+Desired survivor size 276824064 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1055376K->256315K(1086976K)] 1376816K->577911K(1770496K), 0,0291599 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.653+0200: 8,538: Total time for which application threads were stopped: 0,0348570 seconds, Stopping threads took: 0,0054725 seconds
+2018-10-04T12:27:04.699+0200: 8,585: Application time: 0,0461490 seconds
+2018-10-04T12:27:04.699+0200: 8,585: [GC (Allocation Failure) 
+Desired survivor size 275251200 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1074464K->242965K(1088512K)] 1396060K->577692K(1772032K), 0,0295026 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.729+0200: 8,614: Total time for which application threads were stopped: 0,0297546 seconds, Stopping threads took: 0,0000409 seconds
+2018-10-04T12:27:04.773+0200: 8,658: Application time: 0,0435148 seconds
+2018-10-04T12:27:04.773+0200: 8,658: [GC (Allocation Failure) 
+Desired survivor size 273154048 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1061124K->242246K(1084416K)] 1395851K->591011K(1767936K), 0,0297287 secs] [Times: user=0,20 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:04.803+0200: 8,688: Total time for which application threads were stopped: 0,0302623 seconds, Stopping threads took: 0,0003512 seconds
+2018-10-04T12:27:04.849+0200: 8,734: Application time: 0,0457969 seconds
+2018-10-04T12:27:04.849+0200: 8,734: [GC (Allocation Failure) 
+Desired survivor size 275251200 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1061956K->256190K(1086464K)] 1410721K->604956K(1769984K), 0,0284753 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.877+0200: 8,763: Total time for which application threads were stopped: 0,0286981 seconds, Stopping threads took: 0,0000666 seconds
+2018-10-04T12:27:04.920+0200: 8,806: Application time: 0,0431227 seconds
+2018-10-04T12:27:04.921+0200: 8,806: [GC (Allocation Failure) 
+Desired survivor size 276824064 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1075898K->256221K(1086976K)] 1424664K->604987K(1770496K), 0,0290775 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:04.950+0200: 8,835: Total time for which application threads were stopped: 0,0294879 seconds, Stopping threads took: 0,0001669 seconds
+2018-10-04T12:27:04.991+0200: 8,876: Application time: 0,0411534 seconds
+2018-10-04T12:27:04.991+0200: 8,877: [GC (Allocation Failure) 
+Desired survivor size 275251200 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1074397K->242121K(1088512K)] 1423163K->605112K(1772032K), 0,0290428 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.021+0200: 8,906: Total time for which application threads were stopped: 0,0294242 seconds, Stopping threads took: 0,0001917 seconds
+2018-10-04T12:27:05.067+0200: 8,952: Application time: 0,0463691 seconds
+2018-10-04T12:27:05.067+0200: 8,952: [GC (Allocation Failure) 
+Desired survivor size 274726912 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1060297K->238650K(1087488K)] 1423288K->619338K(1771008K), 0,0315480 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.099+0200: 8,984: Total time for which application threads were stopped: 0,0319571 seconds, Stopping threads took: 0,0002301 seconds
+2018-10-04T12:27:05.141+0200: 9,026: Application time: 0,0423991 seconds
+2018-10-04T12:27:05.142+0200: 9,027: [GC (Allocation Failure) 
+Desired survivor size 274726912 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1058362K->252282K(1088000K)] 1439050K->637034K(1771520K), 0,0291086 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.171+0200: 9,056: Total time for which application threads were stopped: 0,0296295 seconds, Stopping threads took: 0,0003244 seconds
+2018-10-04T12:27:05.216+0200: 9,101: Application time: 0,0453407 seconds
+2018-10-04T12:27:05.217+0200: 9,102: [GC (Allocation Failure) 
+Desired survivor size 273678336 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1071990K->250343K(1088512K)] 1456742K->641349K(1772032K), 0,0303017 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.247+0200: 9,132: Total time for which application threads were stopped: 0,0309068 seconds, Stopping threads took: 0,0003481 seconds
+2018-10-04T12:27:05.290+0200: 9,175: Application time: 0,0425395 seconds
+2018-10-04T12:27:05.291+0200: 9,176: [GC (Allocation Failure) 
+Desired survivor size 272629760 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1072586K->242777K(1089536K)] 1463591K->647571K(1773056K), 0,0296463 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.321+0200: 9,206: Total time for which application threads were stopped: 0,0309370 seconds, Stopping threads took: 0,0011200 seconds
+2018-10-04T12:27:05.367+0200: 9,252: Application time: 0,0465624 seconds
+2018-10-04T12:27:05.367+0200: 9,253: [GC (Allocation Failure) 
+Desired survivor size 274202624 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1065047K->255909K(1089536K)] 1469841K->660921K(1773056K), 0,0294422 secs] [Times: user=0,19 sys=0,01, real=0,03 secs] 
+2018-10-04T12:27:05.397+0200: 9,282: Total time for which application threads were stopped: 0,0296232 seconds, Stopping threads took: 0,0000247 seconds
+2018-10-04T12:27:05.442+0200: 9,327: Application time: 0,0453909 seconds
+2018-10-04T12:27:05.443+0200: 9,328: [GC (Allocation Failure) 
+Desired survivor size 275251200 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1079180K->256534K(1080320K)] 1484193K->661546K(1763840K), 0,0291325 secs] [Times: user=0,21 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:05.472+0200: 9,357: Total time for which application threads were stopped: 0,0296355 seconds, Stopping threads took: 0,0002842 seconds
+2018-10-04T12:27:05.516+0200: 9,401: Application time: 0,0438729 seconds
+2018-10-04T12:27:05.516+0200: 9,401: [GC (Allocation Failure) 
+Desired survivor size 275775488 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1079830K->254908K(1089024K)] 1484842K->661359K(1772544K), 0,0290044 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.545+0200: 9,430: Total time for which application threads were stopped: 0,0294806 seconds, Stopping threads took: 0,0002208 seconds
+2018-10-04T12:27:05.589+0200: 9,474: Application time: 0,0438280 seconds
+2018-10-04T12:27:05.590+0200: 9,475: [GC (Allocation Failure) 
+Desired survivor size 274202624 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1075132K->250625K(1071104K)] 1481583K->662828K(1754624K), 0,0295343 secs] [Times: user=0,19 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.619+0200: 9,504: Total time for which application threads were stopped: 0,0301947 seconds, Stopping threads took: 0,0004021 seconds
+2018-10-04T12:27:05.666+0200: 9,551: Application time: 0,0468652 seconds
+2018-10-04T12:27:05.668+0200: 9,553: [GC (Allocation Failure) 
+Desired survivor size 272629760 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1070849K->248561K(1090048K)] 1483052K->668425K(1773568K), 0,0297557 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.697+0200: 9,583: Total time for which application threads were stopped: 0,0312564 seconds, Stopping threads took: 0,0012895 seconds
+2018-10-04T12:27:05.742+0200: 9,628: Application time: 0,0450366 seconds
+2018-10-04T12:27:05.743+0200: 9,628: [GC (Allocation Failure) 
+Desired survivor size 271056896 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1070818K->249030K(1088512K)] 1490681K->676304K(1772032K), 0,0295052 secs] [Times: user=0,21 sys=0,00, real=0,04 secs] 
+2018-10-04T12:27:05.773+0200: 9,658: Total time for which application threads were stopped: 0,0300843 seconds, Stopping threads took: 0,0004186 seconds
+2018-10-04T12:27:05.818+0200: 9,703: Application time: 0,0453559 seconds
+2018-10-04T12:27:05.819+0200: 9,704: [GC (Allocation Failure) 
+Desired survivor size 272105472 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1071301K->256440K(1088512K)] 1498574K->683807K(1772032K), 0,0287416 secs] [Times: user=0,21 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:05.848+0200: 9,733: Total time for which application threads were stopped: 0,0300032 seconds, Stopping threads took: 0,0010663 seconds
+2018-10-04T12:27:05.890+0200: 9,776: Application time: 0,0425609 seconds
+2018-10-04T12:27:05.891+0200: 9,777: [GC (Allocation Failure) 
+Desired survivor size 271581184 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1080248K->252344K(1089536K)] 1507615K->683839K(1773056K), 0,0289646 secs] [Times: user=0,19 sys=0,01, real=0,03 secs] 
+2018-10-04T12:27:05.920+0200: 9,806: Total time for which application threads were stopped: 0,0299827 seconds, Stopping threads took: 0,0008061 seconds
+2018-10-04T12:27:05.964+0200: 9,849: Application time: 0,0431318 seconds
+2018-10-04T12:27:05.964+0200: 9,849: [GC (Allocation Failure) 
+Desired survivor size 272105472 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1076142K->255971K(1092608K)] 1507636K->687622K(1776128K), 0,0274533 secs] [Times: user=0,20 sys=0,00, real=0,02 secs] 
+2018-10-04T12:27:05.991+0200: 9,876: Total time for which application threads were stopped: 0,0276859 seconds, Stopping threads took: 0,0000248 seconds
+2018-10-04T12:27:06.040+0200: 9,925: Application time: 0,0484619 seconds
+2018-10-04T12:27:06.040+0200: 9,925: [GC (Allocation Failure) 
+Desired survivor size 272629760 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1083337K->256159K(1083904K)] 1514987K->687809K(1767424K), 0,0284869 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:06.069+0200: 9,954: Total time for which application threads were stopped: 0,0289210 seconds, Stopping threads took: 0,0002469 seconds
+2018-10-04T12:27:06.116+0200: 10,001: Application time: 0,0474706 seconds
+2018-10-04T12:27:06.116+0200: 10,002: [GC (Allocation Failure) 
+Desired survivor size 272629760 bytes, new threshold 1 (max 15)
+[PSYoungGen: 1083530K->255318K(1092608K)] 1515180K->687781K(1776128K), 0,0299832 secs] [Times: user=0,20 sys=0,00, real=0,03 secs] 
+2018-10-04T12:27:06.146+0200: 10,032: Total time for which application threads were stopped: 0,0302533 seconds, Stopping threads took: 0,0000849 seconds
+Heap
+ PSYoungGen      total 1092608K, used 269347K [0x000000076d100000, 0x00000007c0000000, 0x00000007c0000000)
+  eden space 826368K, 1% used [0x000000076d100000,0x000000076dec3060,0x000000079f800000)
+  from space 266240K, 95% used [0x00000007afc00000,0x00000007bf555820,0x00000007c0000000)
+  to   space 266240K, 0% used [0x000000079f800000,0x000000079f800000,0x00000007afc00000)
+ ParOldGen       total 683520K, used 432463K [0x00000006c7200000, 0x00000006f0d80000, 0x000000076d100000)
+  object space 683520K, 63% used [0x00000006c7200000,0x00000006e1853e70,0x00000006f0d80000)
+ Metaspace       used 3281K, capacity 4600K, committed 4864K, reserved 1056768K
+  class space    used 354K, capacity 424K, committed 512K, reserved 1048576K
+2018-10-04T12:27:06.147+0200: 10,032: Application time: 0,0008356 seconds

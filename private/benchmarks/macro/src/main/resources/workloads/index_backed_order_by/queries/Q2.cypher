@@ -1,0 +1,3 @@
+MATCH (n:PROFILES)
+WHERE exists(n.pets)
+RETURN n.pets LIMIT 10000

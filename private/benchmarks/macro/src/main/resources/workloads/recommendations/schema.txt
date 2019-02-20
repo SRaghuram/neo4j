@@ -1,0 +1,2 @@
+INDEX ON :Person(name)
+INDEX ON :Product(name)

@@ -1,0 +1,265 @@
+{
+  "name": "pokec_write",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "WQ1",
+      "description": "Ensure a certain user exists",
+      "queryFile": "queries/WQ1.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ1.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ2",
+      "description": "Ensure that specific PROFILES exist",
+      "queryFile": "queries/WQ2.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ2.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ3",
+      "description": "Ensure relationships exist between some nodes and people who like Slovenian food",
+      "queryFile": "queries/WQ3.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ3.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ4",
+      "description": "Copy a bunch of nodes",
+      "queryFile": "queries/WQ4.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ4.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ5",
+      "description": "Create copies for some nodes, and add some labels",
+      "queryFile": "queries/WQ5.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ5.cypher",
+      "parameters": {
+        "file": "parameters/profiles.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ6",
+      "description": "Many, many merges",
+      "queryFile": "queries/WQ6.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ7",
+      "description": "Create copies and relate with them",
+      "queryFile": "queries/WQ7.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ7.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ8",
+      "description": "Relate perfect matches",
+      "queryFile": "queries/WQ8.cypher",
+      "isMutating": true
+    },
+    {
+      "name": "WQ9",
+      "description": "Find two nodes, create a third and a relationship (eager even in new code)",
+      "queryFile": "queries/WQ9.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ9.cypher",
+      "parameters": {
+        "file": "parameters/profiles_pairs.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ10",
+      "description": "Delete existing PROFILES",
+      "queryFile": "queries/WQ10.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ10.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ11",
+      "description": "Remove labels from existing PROFILES",
+      "queryFile": "queries/WQ11.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ11.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ12",
+      "description": "Remove property from existing PROFILES",
+      "queryFile": "queries/WQ12.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ12.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ13",
+      "description": "Replace labels from existing PROFILES",
+      "queryFile": "queries/WQ13.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ13.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ14",
+      "description": "Replace properties from existing PROFILES",
+      "queryFile": "queries/WQ14.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ14.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ15",
+      "description": "Delete relationships",
+      "queryFile": "queries/WQ15.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ15.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ16",
+      "description": "Replace relationships",
+      "queryFile": "queries/WQ16.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ16.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ17",
+      "description": "Delete paths and make shortcut relationships",
+      "queryFile": "queries/WQ17.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ17.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ18",
+      "description": "Merge pattern of length 1",
+      "queryFile": "queries/WQ18.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ18.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ19",
+      "description": "Merge pattern of length 2 using one bound node",
+      "queryFile": "queries/WQ19.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ19.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ20",
+      "description": "Merge cyclic pattern of length 2 with both ends the same bound node",
+      "queryFile": "queries/WQ20.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ20.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ21",
+      "description": "Merge pattern of length 2 between two bound nodes",
+      "queryFile": "queries/WQ21.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ21.cypher",
+      "parameters": {
+        "file": "parameters/age_gender_eye_color_hair_color.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ22",
+      "description": "Collect related profiles, add a property, and make shortcut relationships",
+      "queryFile": "queries/WQ22.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ22.cypher",
+      "parameters": {
+        "file": "parameters/dense_nodes.txt"
+      },
+      "isMutating": true
+    },
+    {
+      "name": "WQ23",
+      "description": "Create category nodes per age and link profiles to them (by foreach create)",
+      "queryFile": "queries/WQ23.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ23.cypher",
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ24",
+      "description": "Create category nodes per age and link profiles to them (by foreach merge)",
+      "queryFile": "queries/WQ24.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ24.cypher",
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ25",
+      "description": "Create category nodes per age and link profiles to them and remove the property on the profile (by foreach create)",
+      "queryFile": "queries/WQ25.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ25.cypher",
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ26",
+      "description": "Create category nodes per age and link profiles to them and remove the property on the profile (by foreach merge)",
+      "queryFile": "queries/WQ26.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ26.cypher",
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ27",
+      "description": "Create category nodes per age and remove the property on the profile (by foreach)",
+      "queryFile": "queries/WQ27.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ27.cypher",
+      "isSingleShot": true,
+      "isMutating": true
+    },
+    {
+      "name": "WQ28",
+      "description": "Replace PROFILES with Profile",
+      "queryFile": "queries/WQ28.cypher",
+      "warmupQueryFile": "queries/WARMUP-WQ28.cypher",
+      "isMutating": true
+    }
+  ]
+}

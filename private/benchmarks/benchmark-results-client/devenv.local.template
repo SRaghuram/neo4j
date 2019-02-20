@@ -1,0 +1,6 @@
+# Copy this template as `devenv.local` and fill out the value.
+
+ARTIFACTORY_USERNAME=
+ARTIFACTORY_PASSWORD=
+
+# vim: set ts=2 sw=2:

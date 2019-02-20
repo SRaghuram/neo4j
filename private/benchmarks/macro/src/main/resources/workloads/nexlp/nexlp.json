@@ -1,0 +1,38 @@
+{
+  "name": "nexlp",
+  "schema": "schema.txt",
+  "queries": [
+    {
+      "name": "Q1",
+      "description": "Entity List",
+      "queryFile": "queries/Q1.cypher",
+      "parameters": {
+        "file": "parameters/entities.txt"
+      }
+    },
+    {
+      "name": "Q2",
+      "description": "Thread Count (with labels)",
+      "queryFile": "queries/Q2.cypher",
+      "parameters": {
+        "file": "parameters/entities.txt"
+      }
+    },
+    {
+      "name": "Q3",
+      "description": "Similar Writers",
+      "queryFile": "queries/Q3.cypher",
+      "parameters": {
+        "file": "parameters/entities.txt"
+      }
+    },
+    {
+      "name": "Q4",
+      "description": "Thread Count",
+      "queryFile": "queries/Q4.cypher",
+      "parameters": {
+        "file": "parameters/entities.txt"
+      }
+    }
+  ]
+}

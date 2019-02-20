@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+if [ $# -lt 2 ] ; then
+    echo "Expected at least 2 arguments, but got $#"
+    echo "usage: ./upgrade-all-stores.sh new_neo4j_version old_neo4j_version"
+    exit -1
+fi
+
+new_neo4j_version="${1}"
+old_neo4j_version="${2}"
+
+db_and_workloads=(
+ "accesscontrol;accesscontrol"
+ "bubble_eye;bubble_eye"
+ "cineasts;cineasts"
+ "cineasts_csv;cineasts_csv"
+ "elections;elections"
+ "generatedmusicdata;generatedmusicdata_read"
+ "grid;grid"
+ "ldbc_sf001;ldbc_sf001"
+ "ldbc_sf010;ldbc_sf010"
+ "levelstory;levelstory"
+ "logistics;logistics"
+ "musicbrainz;musicbrainz"
+ "nexlp;nexlp"
+ "pokec;pokec_read"
+ "qmul;qmul_read"
+ "recommendations;recommendations"
+ "socialnetwork;socialnetwork"
+ "osmnodes;osmnodes")
+
+for i in "${db_and_workloads[@]}"; do
+
+    # shellcheck disable=SC2206
+    arr=(${i//;/ })
+    db_name=${arr[0]}
+    workload=${arr[1]}
+    zip_file=${db_name}.tgz
+    echo "---------------"
+    echo Working on file: "${zip_file}"
+    echo With workload: "${workload}"
+    aws s3 cp s3://benchmarking.neo4j.com/datasets/macro/"${old_neo4j_version}"-enterprise-datasets/"${zip_file}" ./ --no-progress
+    rm -rf old
+    mkdir old
+    tar xzvf "${zip_file}" -C old
+    rm "${zip_file}"
+
+    java -jar target/macro.jar upgrade-store \
+                               --original-db old/"${db_name}"/ \
+                               --upgraded-db "${db_name}"/ \
+                               --workload "${workload}" \
+                               --db-edition ENTERPRISE
+
+    tar -cvzf "${zip_file}" "${db_name}"
+
+    aws s3 cp "${zip_file}" s3://benchmarking.neo4j.com/datasets/macro/"${new_neo4j_version}"-enterprise-datasets/"${zip_file}" --no-progress
+    rm "${zip_file}"
+    rm -r "${db_name}"
+done
