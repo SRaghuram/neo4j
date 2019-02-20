@@ -40,7 +40,6 @@ import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
 import org.neo4j.bolt.v1.messaging.response.RecordMessage;
 import org.neo4j.bolt.v1.packstream.PackOutput;
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
@@ -214,19 +213,38 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         private boolean doOnRecords( BoltResult boltResult, long size ) throws Exception
         {
             return boltResult.handleRecords(
-                    new BoltResult.Visitor()
+                    new BoltResult.Subscriber()
                     {
+                        private AnyValue[] fields;
+
                         @Override
-                        public void visit( QueryResult.Record record ) throws Exception
+                        public void onResult( int numberOfFields )
                         {
-                            writer.write( new RecordMessage( record ) );
-                            out.reset();
+                            fields = new AnyValue[numberOfFields];
+                        }
+
+                        @Override
+                        public void onRecord()
+                        {
+                            //do nothing
+                        }
+
+                        @Override
+                        public void onField( int offset, AnyValue value )
+                        {
+                            fields[offset] = value;
+                        }
+
+                        @Override
+                        public void onRecordCompleted() throws Exception
+                        {
+                            writer.write( new RecordMessage( fields ) );
                         }
 
                         @Override
                         public void addMetadata( String key, AnyValue value )
                         {
-
+                            //do nothing
                         }
                     },
                     size );

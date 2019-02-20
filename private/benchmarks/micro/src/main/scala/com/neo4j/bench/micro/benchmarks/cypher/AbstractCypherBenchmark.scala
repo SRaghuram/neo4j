@@ -36,6 +36,7 @@ import org.neo4j.kernel.api.Statement
 import org.neo4j.kernel.api.query.ExecutingQuery
 import org.neo4j.kernel.impl.core.{EmbeddedProxySPI, ThreadToStatementContextBridge}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, TransactionalContext}
 import org.neo4j.kernel.impl.util.DefaultValueMapper
 import org.neo4j.kernel.internal.GraphDatabaseAPI
@@ -227,7 +228,7 @@ case class ExecutablePlan(executionPlan: ExecutionPlan, newQueryContext: Interna
   def execute(params: MapValue = VirtualValues.EMPTY_MAP, tx: InternalTransaction): RuntimeResult = {
     val queryContext = newQueryContext(tx)
 
-    executionPlan.run(queryContext, doProfile = false, params, prePopulateResults = false, input = NoInput)
+    executionPlan.run(queryContext, doProfile = false, params, prePopulateResults = false, input = NoInput, NOT_A_SUBSCRIBER)
   }
 }
 
