@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.test.TestEnterpriseGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import org.neo4j.test.GraphDatabaseFactoryOnEphemeralFileSystemTest;
 import org.neo4j.test.TestGraphDatabaseFactory;
@@ -15,6 +15,6 @@ class EnterpriseGraphDatabaseFactoryOnEphemeralFileSystemTest extends GraphDatab
     @Override
     protected TestGraphDatabaseFactory createGraphDatabaseFactory()
     {
-        return new TestEnterpriseGraphDatabaseFactory();
+        return new TestCommercialGraphDatabaseFactory();
     }
 }

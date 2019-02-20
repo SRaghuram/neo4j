@@ -13,7 +13,6 @@ import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.control.LoggingService;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiCypherQueries;
 import com.neo4j.bench.ldbc.business_intelligence.SnbBiEmbeddedCypherRegularCommands;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
@@ -25,6 +24,7 @@ import com.neo4j.bench.ldbc.interactive.SnbInteractiveEmbeddedCypherRegularComma
 import com.neo4j.bench.ldbc.interactive.SnbInteractiveRemoteCypherRegularCommands;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -422,7 +422,7 @@ public class Neo4jDb extends Db
 
     private static GraphDatabaseBuilder newDbBuilder( File dbDir, File configFile )
     {
-        GraphDatabaseBuilder builder = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbDir );
+        GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbDir );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );

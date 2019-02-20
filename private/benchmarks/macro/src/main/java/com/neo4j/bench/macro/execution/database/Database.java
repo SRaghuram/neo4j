@@ -6,10 +6,10 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Lists;
-import com.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import com.neo4j.bench.client.database.Store;
 import com.neo4j.bench.client.model.Edition;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -134,7 +134,7 @@ public class Database implements AutoCloseable
         case COMMUNITY:
             return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
         case ENTERPRISE:
-            return new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
+            return new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
         default:
             throw new RuntimeException( "Unrecognized edition: " + edition );
         }
