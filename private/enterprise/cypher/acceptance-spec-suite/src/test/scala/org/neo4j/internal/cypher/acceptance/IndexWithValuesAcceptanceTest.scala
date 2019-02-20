@@ -250,6 +250,91 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     result.toList should equal(List(Map("n.prop1" -> 40)))
   }
 
+  test("should pass cached property through distinct with renaming of node") {
+    val config = Configs.InterpretedAndSlotted + Configs.Version3_4
+    val query = "PROFILE MATCH (n:Awesome) WHERE n.prop1 = 40 WITH DISTINCT n as m RETURN m.prop1"
+    val result = executeWith(config, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should (
+      not(includeSomewhere.aPlan("Projection")
+        .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
+        .withExactVariables("n", "cached[n.prop1]"))
+
+    result.toList should equal(List(Map("m.prop1" -> 40), Map("m.prop1" -> 40)))
+  }
+
+  test("should pass cached property through distinct with two renamed nodes") {
+    val config = Configs.InterpretedAndSlotted + Configs.Version3_4
+    val query =
+      """
+        |PROFILE
+        |MATCH (a:Awesome {prop1: 40}), (n:Awesome {prop1: 42})
+        |WITH DISTINCT a as n, n as m
+        |RETURN n.prop1, m.prop1
+      """.stripMargin
+    val result = executeWith(config, query, executeBefore = createSomeNodes)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("Projection")
+        .withDBHits(0)
+        .containingArgument("{n.prop1 : cached[a.prop1], m.prop1 : cached[n.prop1]}")
+
+    result.toList should equal(
+      List(
+        Map("n.prop1" -> 40, "m.prop1" -> 42),
+        Map("n.prop1" -> 40, "m.prop1" -> 42),
+        Map("n.prop1" -> 40, "m.prop1" -> 42),
+        Map("n.prop1" -> 40, "m.prop1" -> 42)
+      )
+    )
+  }
+
+
+  test("should pass cached property through distinct single node with renaming of node and reuse of old name") {
+    val setup = "MATCH (n:Awesome {prop1: 40}) CREATE (n)-[:R]->(:Label {prop1: 42})"
+    executeSingle(setup)
+
+    val query =
+      """
+        |MATCH (n:Awesome)-->(a:Label)
+        |WHERE n.prop1 = 40
+        |WITH DISTINCT n as n1, n as n2, n as n3, a as n
+        |RETURN n1.prop1, n2.prop1, n3.prop2, n.prop1
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Version3_4, query)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexSeek")
+        .withExactVariables("  n@7", "cached[  n@7.prop1]")
+
+    result.toList should equal(List(Map("n1.prop1" -> 40, "n2.prop1" -> 40, "n3.prop2" -> 5, "n.prop1" -> 42)))
+  }
+
+  test("Should handle complicated cached node property with distinct and renames") {
+    val setup = "MATCH (n:Awesome {prop1: 43}) CREATE (n)-[:R]->(:Label {prop1: 'HAT'})"
+    executeSingle(setup)
+
+    val query =
+      """
+        |MATCH (n:Awesome)-->(a:Label)
+        |WHERE n.prop1 = 43
+        |MATCH (m:Awesome)-->(:Label)
+        |WHERE m.prop1 = 43
+        |SET m.prop1 = 'BUNNY'
+        |WITH DISTINCT n as n1, n as n2, n as n3, a as n
+        |RETURN n1.prop1, n2.prop1, n3.prop2, n.prop1
+      """.stripMargin
+
+    val result = executeWith(Configs.UpdateConf, query)
+
+    result.executionPlanDescription() should
+      includeSomewhere.aPlan("NodeIndexSeek")
+        .withExactVariables("  n@7", "cached[  n@7.prop1]")
+
+    result.toList should equal(List(Map("n1.prop1" -> "BUNNY", "n2.prop1" -> "BUNNY", "n3.prop2" -> 1, "n.prop1" -> "HAT")))
+  }
+
   test("should plan exists with GetValue when the property is projected") {
     val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE exists(n.prop3) RETURN n.prop3", executeBefore = createSomeNodes)
 
