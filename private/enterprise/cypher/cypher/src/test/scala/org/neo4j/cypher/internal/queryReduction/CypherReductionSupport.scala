@@ -33,6 +33,7 @@ import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.configuration.Config
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContextFactory}
 import org.neo4j.kernel.monitoring.Monitors
 import org.neo4j.logging.NullLog
@@ -203,7 +204,8 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
 
     val queryContext = new TransactionBoundQueryContext(txContextWrapper)(CypherReductionSupport.searchMonitor)
 
-    val runtimeResult = executionPlan.run(queryContext, doProfile = false, ValueConversion.asValues(baseState.extractedParams()), false, NoInput)
+    val runtimeResult = executionPlan.run(queryContext, doProfile = false, ValueConversion.asValues(baseState.extractedParams()),
+                                          prePopulateResults = false, NoInput, NOT_A_SUBSCRIBER)
     RewindableExecutionResult(runtimeResult, queryContext)
   }
 

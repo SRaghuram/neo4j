@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.v4_0.util.Eagerly
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
 
 class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
@@ -52,11 +53,12 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
                     execMode: ExecutionMode,
                     tracer: Option[ProfilingTracer],
                     params: MapValue,
-                    prePopulateResults: Boolean): RuntimeResult = {
+                    prePopulateResults: Boolean,
+                    subscriber: QuerySubscriber): RuntimeResult = {
 
             val execution: GeneratedQueryExecution = query.query.execute(queryContext,
                                                                          tracer.getOrElse(QueryExecutionTracer.NONE), params)
-            new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults)
+            new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults, subscriber)
           }
 
           def metadata: Seq[Argument] = query.code

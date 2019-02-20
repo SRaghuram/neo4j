@@ -18,16 +18,17 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, Pipeline, PipelineBuilder}
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedPipelineBreakingPolicy, SlottedPipeMapper}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedPipeMapper, SlottedPipelineBreakingPolicy}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.cypher.result.{NaiveRuntimeResult, QueryProfile, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
 
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
@@ -111,7 +112,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                      doProfile: Boolean,
                      params: MapValue,
                      prePopulateResults: Boolean,
-                     input: InputDataStream): RuntimeResult = {
+                     input: InputDataStream,
+                     subscriber: QuerySubscriber): RuntimeResult = {
 
       if (queryIndexes.hasLabelScan)
         queryContext.transactionalContext.dataRead.prepareForLabelScans()
@@ -124,7 +126,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                               fieldNames,
                               dispatcher,
                               schedulerTracer,
-                              input)
+                              input, subscriber)
     }
 
     override def runtimeName: RuntimeName = MorselRuntimeName
@@ -143,7 +145,8 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             override val fieldNames: Array[String],
                             dispatcher: Dispatcher,
                             schedulerTracer: SchedulerTracer,
-                            input: InputDataStream) extends RuntimeResult {
+                            input: InputDataStream,
+                            subscriber: QuerySubscriber) extends NaiveRuntimeResult(subscriber) {
 
     private var resultRequested = false
 

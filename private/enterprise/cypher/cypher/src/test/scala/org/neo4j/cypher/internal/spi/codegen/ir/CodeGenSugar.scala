@@ -32,6 +32,7 @@ import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
+import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.time.Clocks
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -58,7 +59,8 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
         contextFactory.newContext( tx, "no query text exists for this test", EMPTY_MAP))
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
-      val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP, false)
+      val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
+                                                        prePopulateResults = false, NOT_A_SUBSCRIBER)
       result.accept(new QueryResultVisitor[Exception] {
         override def visit(row: QueryResult.Record): Boolean = true
       })
@@ -100,7 +102,8 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
                                   tracer.getOrElse(QueryExecutionTracer.NONE),
                                   params)
 
-    val runtimeResult = new CompiledExecutionResult(queryContext, generated, tracer.getOrElse(QueryProfile.NONE), false)
+    val runtimeResult = new CompiledExecutionResult(queryContext, generated, tracer.getOrElse(QueryProfile.NONE),
+                                                    prePopulateResults = false, subscriber = NOT_A_SUBSCRIBER)
     RewindableExecutionResult(runtimeResult, queryContext)
   }
 

@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration,
 import org.neo4j.cypher.internal.runtime.compiled.{CompiledPlan, projectIndexProperties}
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
 
 object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
@@ -40,14 +41,15 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                      doProfile: Boolean,
                      params: MapValue,
                      prePopulateResults: Boolean,
-                     input: InputDataStream): RuntimeResult = {
+                     input: InputDataStream,
+                     subscriber: QuerySubscriber): RuntimeResult = {
 
       val executionMode = if (doProfile) ProfileMode else NormalMode
       val tracer =
         if (doProfile) Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
         else None
 
-      compiled.executionResultBuilder(queryContext, executionMode, tracer, params, prePopulateResults)
+      compiled.executionResultBuilder(queryContext, executionMode, tracer, params, prePopulateResults, subscriber)
     }
 
     override val runtimeName: RuntimeName = CompiledRuntimeName

@@ -11,8 +11,9 @@ import org.neo4j.cypher.internal.executionplan.GeneratedQueryExecution
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
+import org.neo4j.cypher.result.{NaiveRuntimeResult, QueryProfile, QueryResult, RuntimeResult}
 import org.neo4j.graphdb.ResourceIterator
+import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
   * Main class for compiled runtime results.
@@ -20,8 +21,9 @@ import org.neo4j.graphdb.ResourceIterator
 class CompiledExecutionResult(context: QueryContext,
                               compiledCode: GeneratedQueryExecution,
                               override val queryProfile: QueryProfile,
-                              prePopulateResults: Boolean)
-  extends RuntimeResult {
+                              prePopulateResults: Boolean,
+                              subscriber: QuerySubscriber)
+  extends NaiveRuntimeResult(subscriber) {
 
   private var resultRequested = false
 

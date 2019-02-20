@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext}
 import org.neo4j.cypher.result.RuntimeResult
+import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
 
 case class CompiledPlan(updating: Boolean,
@@ -20,7 +21,8 @@ trait RunnablePlan {
             execMode: ExecutionMode,
             tracer: Option[ProfilingTracer],
             params: MapValue,
-            prePopulateResults: Boolean): RuntimeResult
+            prePopulateResults: Boolean,
+            subscriber: QuerySubscriber): RuntimeResult
 
   def metadata: Seq[Argument]
 }
