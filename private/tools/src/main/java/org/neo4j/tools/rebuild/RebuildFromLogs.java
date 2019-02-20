@@ -52,6 +52,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLog;
 
@@ -269,8 +270,10 @@ class RebuildFromLogs
 
     private static GraphDatabaseAPI startTemporaryDb( File targetDirectory, PageCache pageCache )
     {
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
         return (GraphDatabaseAPI) new CommercialGraphDatabaseFactory()
-                .setPageCache( new ExternallyManagedPageCache( pageCache ) )
+                .setExternalDependencies( dependencies )
                 .newEmbeddedDatabaseBuilder( targetDirectory )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();

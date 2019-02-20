@@ -19,6 +19,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.ignore_store_lock;
@@ -30,8 +31,10 @@ public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFact
     @Override
     public TemporaryDatabase startTemporaryDatabase( PageCache pageCache, File rootDirectory, Map<String,String> params )
     {
+        Dependencies dependencies = new Dependencies();
+        dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
         GraphDatabaseService db = new CommercialGraphDatabaseFactory()
-                .setUserLogProvider( NullLogProvider.getInstance() ).setPageCache( new ExternallyManagedPageCache( pageCache ) )
+                .setUserLogProvider( NullLogProvider.getInstance() ).setExternalDependencies( dependencies )
                 .newEmbeddedDatabaseBuilder( rootDirectory )
                 .setConfig( augmentParams( params, rootDirectory ) ).newGraphDatabase();
 
