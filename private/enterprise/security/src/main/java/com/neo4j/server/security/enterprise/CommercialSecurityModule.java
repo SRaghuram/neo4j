@@ -149,7 +149,7 @@ public class CommercialSecurityModule extends SecurityModule
         globalProcedures.registerComponent( SecurityLog.class, ctx -> securityLog, false );
         globalProcedures.registerComponent( CommercialAuthManager.class, ctx -> authManager, false );
         globalProcedures.registerComponent( CommercialSecurityContext.class,
-                ctx -> asEnterprise( ctx.securityContext() ), true );
+                ctx -> asCommercialEdition( ctx.securityContext() ), true );
 
         if ( securityConfig.nativeAuthEnabled )
         {
@@ -231,14 +231,14 @@ public class CommercialSecurityModule extends SecurityModule
         } );
     }
 
-    private CommercialSecurityContext asEnterprise( SecurityContext securityContext )
+    private CommercialSecurityContext asCommercialEdition( SecurityContext securityContext )
     {
         if ( securityContext instanceof CommercialSecurityContext )
         {
             return (CommercialSecurityContext) securityContext;
         }
         // TODO: better handling of this possible cast failure
-        throw new RuntimeException( "Expected CommercialSecurityContext, got " + securityContext.getClass().getName() );
+        throw new RuntimeException( "Expected " + CommercialSecurityContext.class.getName() + ", got " + securityContext.getClass().getName() );
     }
 
     CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
