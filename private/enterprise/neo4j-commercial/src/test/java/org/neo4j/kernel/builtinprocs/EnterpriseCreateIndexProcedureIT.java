@@ -41,7 +41,6 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
-import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
@@ -134,7 +133,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         ProcedureException e = assertThrows( ProcedureException.class, () -> callIndexProcedure( pattern, null ) );
 
         // then
-        assertThat( e.getMessage(), containsString( format("Failed to invoke procedure `db.%s`", indexProcedureName )) );
+        assertThat( e.getMessage(), containsString( "Could not create index with specified index provider being null" ) );
         commit();
     }
 
