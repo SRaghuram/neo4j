@@ -27,6 +27,9 @@ import static com.neo4j.bench.micro.config.Validation.ValidationError.CONFIGURED
 import static com.neo4j.bench.micro.config.Validation.ValidationError.CONFIGURED_VALUE_IS_NOT_ALLOWED;
 import static com.neo4j.bench.micro.config.Validation.ValidationError.DUPLICATE_ALLOWED_VALUE;
 import static com.neo4j.bench.micro.config.Validation.ValidationError.DUPLICATE_BASE_VALUE;
+
+import static java.util.Collections.emptyMap;
+import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -36,9 +39,6 @@ import static org.junit.Assert.fail;
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
 import static org.openjdk.jmh.annotations.Mode.SampleTime;
 import static org.openjdk.jmh.annotations.Mode.Throughput;
-
-import static java.util.Collections.emptyMap;
-import static java.util.stream.Collectors.toMap;
 
 public class BenchmarkDescriptionTest
 {

@@ -21,6 +21,8 @@
         <junit.platform.version>1.2.0</junit.platform.version>
         <neo4j-java-driver.version>1.4.4</neo4j-java-driver.version>
         <license-text.header>build/license-header.txt</license-text.header>
+        <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
+        <maven.javadoc.skip>true</maven.javadoc.skip>
     </properties>
 
     <licenses>
@@ -151,10 +153,19 @@
     </build>
 
     <repositories>
-        <repository>
-            <id>ldbc</id>
-            <name>LDBC SNB</name>
-            <url>https://dl.bintray.com/ldbc/snb/</url>
-        </repository>
+      <repository>
+        <id>docs-maven-local</id>
+        <name>Docs Maven Local</name>
+        <url>https://neo.jfrog.io/neo/docs-maven-local/</url>
+        <snapshots>
+          <enabled>true</enabled>
+        </snapshots>
+      </repository>
+      <repository>
+        <id>ldbc</id>
+        <name>LDBC SNB</name>
+        <url>https://dl.bintray.com/ldbc/snb/</url>
+      </repository>
     </repositories>
+
 </project>

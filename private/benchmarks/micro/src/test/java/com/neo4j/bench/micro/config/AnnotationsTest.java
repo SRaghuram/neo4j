@@ -15,12 +15,11 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 import static com.google.common.collect.Sets.newHashSet;
+import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
-import static java.util.stream.Collectors.toSet;
 
 public class AnnotationsTest
 {

@@ -1,3 +1,9 @@
+====
+    Copyright (c) 2002-2019 "Neo4j,"
+    Neo4j Sweden AB [http://neo4j.com]
+    This file is part of Neo4j internal tooling.
+====
+
 eId
 72f15a3793704010b50051a4af521327
 4e9b4e31a6334be495d2cc74df50ab6c
