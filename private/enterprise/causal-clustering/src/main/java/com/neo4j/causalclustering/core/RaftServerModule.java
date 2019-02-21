@@ -64,12 +64,12 @@ public class RaftServerModule
     private final MessageLogger<MemberId> messageLogger;
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
-    private CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider;
+    private CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
 
     private RaftServerModule( GlobalModule globalModule, ConsensusModule consensusModule, IdentityModule identityModule,
             CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
-            CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider,
+            CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider,
             ApplicationSupportedProtocols supportedApplicationProtocol, Collection<ModifierSupportedProtocols> supportedModifierProtocols,
             ChannelInboundHandler installedProtocolsHandler, String activeDatabaseName, Panicker panicker )
     {
@@ -90,7 +90,7 @@ public class RaftServerModule
 
     static void createAndStart( GlobalModule globalModule, ConsensusModule consensusModule, IdentityModule identityModule,
             CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
-            CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider addressProvider, ApplicationSupportedProtocols supportedApplicationProtocol,
+            CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider addressProvider, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, ChannelInboundHandler installedProtocolsHandler,
             String activeDatabaseName, Panicker panicker )
     {

@@ -268,8 +268,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         UpstreamDatabaseStrategySelector catchupStrategySelector =
                 createUpstreamDatabaseStrategySelector( identityModule.myself(), globalConfig, logProvider, topologyService, defaultStrategy );
 
-        CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider =
-                new CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
+        CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider =
+                new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
                         catchupStrategySelector );
         RaftServerModule.createAndStart( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilders.server(), messageLogger,
                 catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, activeDatabaseName, panicService );

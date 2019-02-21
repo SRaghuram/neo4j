@@ -26,12 +26,12 @@ public class RaftMessageApplier implements LifecycleMessageHandler<RaftMessages.
     private final RaftMachine raftMachine;
     private final CoreDownloaderService downloadService;
     private final CommandApplicationProcess applicationProcess;
-    private CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider;
+    private CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
     private final Panicker panicker;
     private boolean stopped;
 
     public RaftMessageApplier( LogProvider logProvider, RaftMachine raftMachine, CoreDownloaderService downloadService,
-            CommandApplicationProcess applicationProcess, CatchupAddressProvider.PrioritisingUpstreamStrategyBasedAddressProvider catchupAddressProvider,
+            CommandApplicationProcess applicationProcess, CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider,
             Panicker panicker )
     {
         this.log = logProvider.getLog( getClass() );

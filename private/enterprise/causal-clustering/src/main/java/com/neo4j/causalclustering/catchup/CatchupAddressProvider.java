@@ -59,16 +59,38 @@ public interface CatchupAddressProvider
         }
     }
 
+    class UpstreamStrategyBasedAddressProvider implements CatchupAddressProvider
+    {
+        private final UpstreamStrategyAddressSupplier upstreamAddressSupplier;
+
+        public UpstreamStrategyBasedAddressProvider( TopologyService topologyService, UpstreamDatabaseStrategySelector strategySelector )
+        {
+            upstreamAddressSupplier = new UpstreamStrategyAddressSupplier( strategySelector, topologyService );
+        }
+
+        @Override
+        public AdvertisedSocketAddress primary() throws CatchupAddressResolutionException
+        {
+            return upstreamAddressSupplier.get();
+        }
+
+        @Override
+        public AdvertisedSocketAddress secondary() throws CatchupAddressResolutionException
+        {
+            return upstreamAddressSupplier.get();
+        }
+    }
+
     /**
      * Uses leader address as primary and given upstream strategy as secondary address.
      */
-    class PrioritisingUpstreamStrategyBasedAddressProvider implements CatchupAddressProvider
+    class LeaderOrUpstreamStrategyBasedAddressProvider implements CatchupAddressProvider
     {
         private final LeaderLocator leaderLocator;
         private final TopologyService topologyService;
         private UpstreamStrategyAddressSupplier secondaryUpstreamStrategyAddressSupplier;
 
-        public PrioritisingUpstreamStrategyBasedAddressProvider( LeaderLocator leaderLocator, TopologyService topologyService,
+        public LeaderOrUpstreamStrategyBasedAddressProvider( LeaderLocator leaderLocator, TopologyService topologyService,
                 UpstreamDatabaseStrategySelector strategySelector )
         {
             this.leaderLocator = leaderLocator;

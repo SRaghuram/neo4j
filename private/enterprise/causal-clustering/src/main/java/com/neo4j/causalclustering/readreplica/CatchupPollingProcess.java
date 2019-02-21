@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider.SingleAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider.UpstreamStrategyBasedAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.DatabaseService;
 import com.neo4j.causalclustering.common.LocalDatabase;
-import com.neo4j.causalclustering.core.state.snapshot.TopologyLookupException;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
@@ -320,12 +319,10 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            MemberId source = selectionStrategy.bestUpstreamDatabase();
-            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( source );
-            storeCopyProcess.replaceWithStoreFrom( new SingleAddressProvider( fromAddress ), localDatabase.storeId() );
+            storeCopyProcess.replaceWithStoreFrom( new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategy ), localDatabase.storeId() );
             transitionToTxPulling();
         }
-        catch ( IOException | StoreCopyFailedException | UpstreamDatabaseSelectionException | TopologyLookupException e )
+        catch ( IOException | StoreCopyFailedException e )
         {
             log.warn( "Error copying store. Will retry shortly.", e );
         }
