@@ -21,7 +21,8 @@ import org.neo4j.values.virtual.MapValue
   * [[QueryExecutor]] implementation which uses a fixed number (n) of workers to execute
   * query work.
   */
-class FixedWorkersQueryExecutor(threadFactory: ThreadFactory,
+class FixedWorkersQueryExecutor(morselSize: Int,
+                                threadFactory: ThreadFactory,
                                 val numberOfWorkers: Int,
                                 transactionBinder: TransactionBinder,
                                 queryResourceFactory: () => QueryResources) extends QueryExecutor {
@@ -50,7 +51,7 @@ class FixedWorkersQueryExecutor(threadFactory: ThreadFactory,
 
     val queryState = QueryState(params,
                                 visitor,
-                                morselSize = 4,
+                                morselSize,
                                 queryIndexes,
                                 transactionBinder,
                                 numberOfWorkers = 1,

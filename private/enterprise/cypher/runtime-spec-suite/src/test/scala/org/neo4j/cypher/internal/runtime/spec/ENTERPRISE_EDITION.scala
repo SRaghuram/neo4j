@@ -15,9 +15,9 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 
-object ENTERPRISE_SINGLE_THREAD extends EnterpriseEdition(RuntimeConfig.DEFAULT.copy(workers = 1))
+object ENTERPRISE_SINGLE_THREAD extends EnterpriseEdition(RuntimeConfig.DEFAULT.copy(workers = 1, morselSize = 4))
 
-object ENTERPRISE_PARALLEL extends EnterpriseEdition(RuntimeConfig.DEFAULT.copy(workers = 0)) {
+object ENTERPRISE_PARALLEL extends EnterpriseEdition(RuntimeConfig.DEFAULT.copy(workers = 0, morselSize = 4)) {
   val HasEvidenceOfParallelism: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](
       context =>

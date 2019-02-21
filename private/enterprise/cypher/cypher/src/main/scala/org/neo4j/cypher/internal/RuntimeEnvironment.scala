@@ -56,12 +56,12 @@ object RuntimeEnvironment {
                           txBridge: ThreadToStatementContextBridge): QueryExecutor =
     config.scheduler match {
       case SingleThreaded =>
-        new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER)
+        new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER)
       case Simple | LockFree =>
         val threadFactory = jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER)
         val numberOfThreads = if (config.workers == 0) java.lang.Runtime.getRuntime.availableProcessors() else config.workers
         val txBinder = new TxBridgeTransactionBinder(txBridge)
-        new FixedWorkersQueryExecutor(threadFactory, numberOfThreads, txBinder, () => new QueryResources(cursors))
+        new FixedWorkersQueryExecutor(config.morselSize, threadFactory, numberOfThreads, txBinder, () => new QueryResources(cursors))
     }
 
   def createTracer(config: CypherRuntimeConfiguration, jobScheduler: JobScheduler): SchedulerTracer = {

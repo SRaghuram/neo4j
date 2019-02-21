@@ -20,7 +20,7 @@ import org.neo4j.values.virtual.MapValue
   * the thread which calls execute, without any synchronization with other queries
   * or any parallel execution.
   */
-class CallingThreadQueryExecutor(transactionBinder: TransactionBinder) extends QueryExecutor {
+class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: TransactionBinder) extends QueryExecutor {
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,
@@ -34,7 +34,7 @@ class CallingThreadQueryExecutor(transactionBinder: TransactionBinder) extends Q
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
     val queryState = QueryState(params,
                                 visitor,
-                                morselSize = 4,
+                                morselSize,
                                 queryIndexes,
                                 transactionBinder,
                                 numberOfWorkers = 1,
