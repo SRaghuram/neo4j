@@ -5,9 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
+import java.util.concurrent.{Callable, Executors, TimeUnit}
+
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, Descending}
+import org.neo4j.cypher.result.RuntimeResult
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE_SINGLE_THREAD)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE_PARALLEL)
@@ -97,5 +100,37 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
 
     // then
     runtimeResult should beColumns("x", "y", "z").withRows(groupedBy("x", "y").asc("z"))
+  }
+
+  test("should deal with concurrent queries") {
+    // given
+    val nodes = nodeGraph(10)
+    val executor = Executors.newFixedThreadPool(8)
+    val QUERIES_PER_THREAD = 50
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .allNodeScan("x")
+      .build()
+
+    val futureResultSets = (0 until 8).map(_ =>
+      executor.submit(new Callable[Seq[RuntimeResult]] {
+        override def call(): Seq[RuntimeResult] = {
+          for (i <- 0 until QUERIES_PER_THREAD) yield execute(logicalQuery, runtime)
+        }
+      })
+    )
+
+    // then
+    for (futureResultSet <- futureResultSets) {
+
+      val resultSet = futureResultSet.get(1, TimeUnit.MINUTES)
+      resultSet.size should be(QUERIES_PER_THREAD)
+      for (result <- resultSet) {
+        result should beColumns("x").withRows(singleColumn(nodes))
+      }
+    }
+
   }
 }

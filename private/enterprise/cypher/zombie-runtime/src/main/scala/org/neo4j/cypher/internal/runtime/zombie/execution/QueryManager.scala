@@ -22,7 +22,7 @@ class QueryManager {
   def nextQueryToWorkOn(workerId: Int): ExecutingQuery = {
     var query = runningQueries.peek()
     while (query != null && query.executionState.isCompleted) {
-      runningQueries.poll()
+      runningQueries.remove(query)
       query = runningQueries.peek()
     }
     query
