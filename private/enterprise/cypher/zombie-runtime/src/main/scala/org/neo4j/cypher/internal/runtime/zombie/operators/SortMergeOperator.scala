@@ -78,10 +78,8 @@ class SortMergeOperator(val planId: Id,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-//      Zombie.debug("SortMerge start")
-
       if (completedArguments == null) {
-        argumentStateMap.updateAndConsume(inputMorsel)
+        argumentStateMap.update(inputMorsel)
         completedArguments = argumentStateMap.consumeCompleted()
       }
 
@@ -106,8 +104,6 @@ class SortMergeOperator(val planId: Id,
       }
 
       outputRow.finishedWriting()
-
-//      Zombie.debug("SortMerge end")
     }
 
     override def canContinue: Boolean = !sortedInputPerArgument.isEmpty || completedArguments.hasNext

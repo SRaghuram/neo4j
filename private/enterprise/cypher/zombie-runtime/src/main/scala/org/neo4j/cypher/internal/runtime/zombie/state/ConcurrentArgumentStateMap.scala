@@ -24,7 +24,7 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
 
   private val accumulatorControllers = new java.util.concurrent.ConcurrentHashMap[Long, AccumulatorController[T]]()
 
-  override def updateAndConsume(morsel: MorselExecutionContext): Unit = {
+  override def update(morsel: MorselExecutionContext): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,

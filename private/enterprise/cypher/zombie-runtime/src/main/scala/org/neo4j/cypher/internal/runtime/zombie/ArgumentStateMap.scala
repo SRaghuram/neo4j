@@ -29,7 +29,7 @@ trait ArgumentStateMap[T <: MorselAccumulator] {
     * the argument counter. Also remove the [[owningPlanId]] counter
     * from `morsel`.
     */
-  def updateAndConsume(morsel: MorselExecutionContext)
+  def update(morsel: MorselExecutionContext): Unit
 
   /**
     * Consume the MorselAccumulators of all complete arguments. The MorselAccumulators will
