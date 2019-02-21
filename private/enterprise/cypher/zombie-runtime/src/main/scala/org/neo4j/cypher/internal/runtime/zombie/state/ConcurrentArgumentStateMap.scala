@@ -10,7 +10,7 @@ import java.util.function.BiConsumer
 
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator, Zombie}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
@@ -56,7 +56,9 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
   }
 
   override def initiate(argument: Long): Unit = {
-    accumulatorControllers.put(argument, new AccumulatorController(constructor()))
+    val id = if (Zombie.DEBUG) s"Accumulator[plan=$owningPlanId, rowId=$argument]" else "Accumulator[...]"
+    val newController = new AccumulatorController(id, constructor())
+    accumulatorControllers.put(argument, newController)
   }
 
   override def increment(argument: Long): Unit = {
@@ -75,9 +77,9 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
   * Controller which knows when a [[MorselAccumulator]] has completed accumulation,
   * and protects it from concurrent access.
   */
-class AccumulatorController[T <: MorselAccumulator](accumulator: T) {
+class AccumulatorController[T <: MorselAccumulator](id: String, accumulator: T) {
   private val count = new AtomicLong(1)
-  private val lock = new ConcurrentLock(-1)
+  private val lock = new ConcurrentLock(id)
 
   def increment(): Long = count.incrementAndGet()
   def decrement(): Long = count.decrementAndGet()

@@ -45,7 +45,7 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
 
   private val pipelineLocks =
     for (pipeline <- pipelines.toArray) yield {
-      stateFactory.newLock(pipeline.id.x)
+      stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
     }
 
   private val buffers: Array[MorselBuffer] =

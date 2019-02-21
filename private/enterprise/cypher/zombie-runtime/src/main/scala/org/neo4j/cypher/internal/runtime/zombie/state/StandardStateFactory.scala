@@ -18,7 +18,7 @@ object StandardStateFactory extends StateFactory {
 
   override def newIdAllocator(): IdAllocator = new StandardIdAllocator
 
-  override def newLock(id: Int): Lock = new NoLock(id)
+  override def newLock(id: String): Lock = new NoLock(id)
 
   override def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
                                                            argumentSlotOffset: Int,

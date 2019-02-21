@@ -34,13 +34,13 @@ trait Lock {
   *
   * @param id some id that can be used to identify this lock instance
   */
-class NoLock(val id: Int) extends Lock {
+class NoLock(val id: String) extends Lock {
 
   private var isLocked = false
 
   override def tryLock(): Boolean = {
     if (isLocked)
-      throw new IllegalStateException("NoLock is already locked")
+      throw new IllegalStateException(s"$name is already locked")
     isLocked = true
     isLocked
   }
@@ -49,9 +49,12 @@ class NoLock(val id: Int) extends Lock {
 
   override def unlock(): Unit = {
     if (!isLocked)
-      throw new IllegalStateException("NoLock is not locked")
+      throw new IllegalStateException(s"$name is not locked")
     isLocked = false
   }
+
+  private def name: String = s"${getClass.getSimpleName}[$id]"
+  override def toString: String = s"$name: Locked=$isLocked"
 }
 
 /**
@@ -59,7 +62,7 @@ class NoLock(val id: Int) extends Lock {
   *
   * @param id some id that can be used to identify this lock instance
   */
-class ConcurrentLock(val id: Int) extends Lock {
+class ConcurrentLock(val id: String) extends Lock {
   private val isLocked = new AtomicBoolean(false)
 
   override def tryLock(): Boolean =
@@ -70,9 +73,10 @@ class ConcurrentLock(val id: Int) extends Lock {
 
   override def unlock(): Unit = {
     if (!isLocked.compareAndSet(true, false)) {
-      throw new IllegalStateException("Tried to release a lock that was not acquired")
+      throw new IllegalStateException(s"Tried to release $name that was not acquired")
     }
   }
 
-  override def toString: String = s"${getClass.getSimpleName}[$id]: Locked=${isLocked.get()}"
+  private def name: String = s"${getClass.getSimpleName}[$id]"
+  override def toString: String = s"$name: Locked=${isLocked.get()}"
 }

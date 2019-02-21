@@ -15,7 +15,7 @@ trait StateFactory {
   def newBuffer[T <: AnyRef](): Buffer[T]
   def newTracker(): Tracker
   def newIdAllocator(): IdAllocator
-  def newLock(id: Int): Lock
+  def newLock(id: String): Lock
   def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
                                                   argumentSlotOffset: Int,
                                                   constructor: () => T): ArgumentStateMap[T]
