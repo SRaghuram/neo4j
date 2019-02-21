@@ -19,7 +19,7 @@ class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
                                                        val argumentSlotOffset: Int,
                                                        constructor: () => T) extends ArgumentStateMap[T] {
   private val arguments = mutable.Map[Long, T]()
-  private val counters = mutable.Map[Long, Long]().withDefaultValue(0)
+  private val counters = mutable.Map[Long, Long]().withDefaultValue(1)
 
   override def updateAndConsume(morsel: MorselExecutionContext): Unit = {
     ArgumentStateMap.foreachArgument(

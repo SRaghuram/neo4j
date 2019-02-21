@@ -7,15 +7,15 @@ package org.neo4j.cypher.internal.runtime.spec.compiled
 
 import org.neo4j.cypher.internal.runtime.spec.compiled.CompiledSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests.{AllNodeScanTestBase, ExpandAllTestBase, LabelScanTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase}
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_EDITION, LogicalQueryBuilder, RuntimeTestSuite}
+import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_SINGLE_THREAD, LogicalQueryBuilder, RuntimeTestSuite}
 import org.neo4j.cypher.internal.{CompiledRuntime, EnterpriseRuntimeContext}
 
 object CompiledSpecSuite {
   val SIZE_HINT = 200
 }
 
-class CompiledAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_EDITION, CompiledRuntime, SIZE_HINT)
-class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE_EDITION, CompiledRuntime) {
+class CompiledAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_SINGLE_THREAD, CompiledRuntime, SIZE_HINT)
+class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE_SINGLE_THREAD, CompiledRuntime) {
   // Compiled only supports count, thus not extending AggregationTestBase
   test("should count(n.prop)") {
     // given
@@ -36,7 +36,7 @@ class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE_EDITION, Compi
     runtimeResult should beColumns("c").withRow(5000)
   }
 }
-class CompiledExpandAllTest extends ExpandAllTestBase(ENTERPRISE_EDITION, CompiledRuntime, SIZE_HINT)
-class CompiledLabelScanTest extends LabelScanTestBase(ENTERPRISE_EDITION, CompiledRuntime, SIZE_HINT)
-class CompiledNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE_EDITION, CompiledRuntime, SIZE_HINT)
+class CompiledExpandAllTest extends ExpandAllTestBase(ENTERPRISE_SINGLE_THREAD, CompiledRuntime, SIZE_HINT)
+class CompiledLabelScanTest extends LabelScanTestBase(ENTERPRISE_SINGLE_THREAD, CompiledRuntime, SIZE_HINT)
+class CompiledNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE_SINGLE_THREAD, CompiledRuntime, SIZE_HINT)
                                 with NodeLockingUniqueIndexSeekTestBase[EnterpriseRuntimeContext]

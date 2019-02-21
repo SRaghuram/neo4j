@@ -99,7 +99,7 @@ class RuntimeEnvironment(config: CypherRuntimeConfiguration,
 
   def getQueryExecutor(debugOptions: Set[String]): QueryExecutor =
     if (MorselOptions.singleThreaded(debugOptions) && !isAlreadySingleThreaded)
-      new CallingThreadQueryExecutor(NO_TRANSACTION_BINDER)
+      new CallingThreadQueryExecutor(config.morselSize, NO_TRANSACTION_BINDER)
     else
       queryExecutor
 

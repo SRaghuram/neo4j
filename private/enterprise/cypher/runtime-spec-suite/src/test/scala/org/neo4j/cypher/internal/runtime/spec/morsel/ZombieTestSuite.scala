@@ -5,11 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
-import org.neo4j.cypher.internal.ZombieRuntime
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_EDITION, LogicalQueryBuilder, RuntimeTestSuite}
+import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
+import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, Descending}
 
-class ZombieTestSuite extends RuntimeTestSuite(ENTERPRISE_EDITION, ZombieRuntime) {
+class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE_SINGLE_THREAD)
+class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE_PARALLEL)
+
+abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, ZombieRuntime) {
 
   test("should handle expand") {
     // given
