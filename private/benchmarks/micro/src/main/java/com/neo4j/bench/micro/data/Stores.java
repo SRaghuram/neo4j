@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.micro.data;
 
-import com.neo4j.bench.micro.benchmarks.Kaboom;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
@@ -15,6 +14,7 @@ import com.neo4j.bench.client.results.BenchmarkDirectory;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.micro.benchmarks.Kaboom;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -39,7 +39,6 @@ import static com.neo4j.bench.client.util.BenchmarkUtil.bytesToString;
 import static com.neo4j.bench.client.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.client.util.BenchmarkUtil.forceRecreateFile;
 import static com.neo4j.bench.client.util.BenchmarkUtil.tryMkDir;
-
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
@@ -133,7 +132,7 @@ public class Stores
         else if ( topLevelDirs.size() == 1 )
         {
             Path topLevelDir = topLevelDirs.get( 0 );
-            Path neo4jConfig = getOrCreateNeo4jConfigFor( topLevelDir, benchmarkName );
+            Path neo4jConfig = getOrCreateNeo4jConfigFor( topLevelDir, benchmarkName, config.neo4jConfig() );
 
             // if configs are identical in all ways except re-usability, make persisted config not-reusable
             // saves time (only generate once) & saves space (only one permanent store per equivalent config)
@@ -376,14 +375,14 @@ public class Stores
         }
     }
 
-    private Path getOrCreateNeo4jConfigFor( Path topLevelDir, FullBenchmarkName benchmarkName )
+    private Path getOrCreateNeo4jConfigFor( Path topLevelDir, FullBenchmarkName benchmarkName, Neo4jConfig neo4jConfig )
     {
-        Path neo4jConfig = topLevelDir.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX );
-        if ( !Files.exists( neo4jConfig ) )
+        Path neo4jConfigFile = topLevelDir.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX );
+        if ( !Files.exists( neo4jConfigFile ) )
         {
-            forceRecreateFile( neo4jConfig );
+            writeNeo4jConfig( neo4jConfig, benchmarkName, topLevelDir );
         }
-        return neo4jConfig;
+        return neo4jConfigFile;
     }
 
     private List<String> namesOfBenchmarksThatUseStore( Path topLevelDir )
