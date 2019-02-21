@@ -7,15 +7,15 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.net.PooledChannel;
+import io.netty.channel.ChannelFutureListener;
 
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
 
 public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
 {
@@ -31,43 +31,54 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
     @Override
     public void send( AdvertisedSocketAddress to, Message message, boolean block )
     {
-        PooledChannel pooledChannel = loggingBlock( to, channels.acquire( to ) );
-        if ( pooledChannel == null )
-        {
-            return;
-        }
+        CompletableFuture<Void> future = channels.acquire( to ).thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
         if ( block )
         {
             try
             {
-                loggingBlock( to, pooledChannel.channel().writeAndFlush( message ).addListener( CLOSE_ON_FAILURE ) );
+                future.get();
             }
-            finally
+            catch ( ExecutionException e )
             {
-                loggingBlock( to, pooledChannel.release() );
+                log.error( "Exception while sending to: " + to, e );
             }
-        }
-        else
-        {
-            pooledChannel.channel().writeAndFlush( message ).addListeners( future -> pooledChannel.release(), CLOSE_ON_FAILURE );
+            catch ( InterruptedException e )
+            {
+                future.cancel( true );
+                log.info( "Interrupted while sending", e );
+            }
         }
     }
 
-    private <V> V loggingBlock( AdvertisedSocketAddress to, Future<V> future )
+    private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, Message message )
     {
-        try
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        completableFuture.whenComplete( ( ignore, throwable ) ->
         {
-            return future.get();
-        }
-        catch ( ExecutionException e )
+            if ( throwable instanceof CancellationException )
+            {
+                pooledChannel.channel().close();
+            }
+        } );
+        pooledChannel
+                .channel()
+                .writeAndFlush( message )
+                .addListener( (ChannelFutureListener) writeFuture -> pooledChannel.release().addListener( releaseFuture ->
         {
-            log.error( "Exception while sending to: " + to, e );
-        }
-        catch ( InterruptedException e )
-        {
-            future.cancel( true );
-            log.info( "Interrupted while sending", e );
-        }
-        return null;
+            if ( !releaseFuture.isSuccess() )
+            {
+                log.warn( "Failed to release channel to pool", releaseFuture.cause() );
+            }
+            if ( !writeFuture.isSuccess() )
+            {
+                writeFuture.channel().close();
+                completableFuture.completeExceptionally( writeFuture.cause() );
+            }
+            else
+            {
+                completableFuture.complete( null );
+            }
+        } ) );
+        return completableFuture;
     }
 }
