@@ -31,7 +31,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
-import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
@@ -82,8 +81,7 @@ public class BackupSupportingClassesFactory
 
     private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, Config config, OnlineBackupRequiredArguments arguments )
     {
-        LifeSupport lifeSupport = new LifeSupport();
-        CatchupClientFactory catchUpClient = catchUpClient( config, arguments ).build( lifeSupport::add );
+        CatchupClientFactory catchUpClient = catchUpClient( config, arguments );
         String databaseName = arguments.getDatabaseName().orElse( DEFAULT_DATABASE_NAME );
 
         TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseName, () -> monitors, logProvider );
@@ -94,7 +92,7 @@ public class BackupSupportingClassesFactory
         RemoteStore remoteStore = new RemoteStore( logProvider, fileSystemAbstraction, pageCache, storeCopyClient,
                 txPullClient, transactionLogCatchUpFactory, config, monitors, storageEngineFactory );
 
-        return backupDelegator( remoteStore, storeCopyClient, lifeSupport );
+        return backupDelegator( remoteStore, catchUpClient, storeCopyClient );
     }
 
     protected PipelineWrapper createPipelineWrapper( Config config )
@@ -102,7 +100,7 @@ public class BackupSupportingClassesFactory
         return new VoidPipelineWrapperFactory().forClient( config, null, logProvider, OnlineBackupSettings.ssl_policy );
     }
 
-    private CatchupClientBuilder.AcceptsOptionalParams catchUpClient( Config config, OnlineBackupRequiredArguments arguments )
+    private CatchupClientFactory catchUpClient( Config config, OnlineBackupRequiredArguments arguments )
     {
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
         ApplicationSupportedProtocols supportedCatchupProtocols = getSupportedCatchupProtocols( arguments, supportedProtocolCreator );
@@ -116,7 +114,9 @@ public class BackupSupportingClassesFactory
                 .scheduler( jobScheduler )
                 .bootstrapConfig( BootstrapConfiguration.clientConfig( config ) )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
-                .clock( clock ).debugLogProvider( logProvider ).userLogProvider( logProvider );
+                .clock( clock )
+                .debugLogProvider( logProvider )
+                .userLogProvider( logProvider ).build();
     }
 
     private ApplicationSupportedProtocols getSupportedCatchupProtocols( OnlineBackupRequiredArguments arguments,
@@ -134,11 +134,10 @@ public class BackupSupportingClassesFactory
         return catchupProtocol;
     }
 
-    private static BackupDelegator backupDelegator( RemoteStore remoteStore, StoreCopyClient storeCopyClient, LifeSupport lifeSupport )
+    private static BackupDelegator backupDelegator(
+            RemoteStore remoteStore, CatchupClientFactory catchUpClient, StoreCopyClient storeCopyClient )
     {
-        BackupDelegator backupDelegator = new BackupDelegator( remoteStore, storeCopyClient );
-        backupDelegator.add( lifeSupport );
-        return backupDelegator;
+        return new BackupDelegator( remoteStore, catchUpClient, storeCopyClient );
     }
 
     private static PageCache createPageCache( FileSystemAbstraction fileSystemAbstraction, Config config, JobScheduler jobScheduler )

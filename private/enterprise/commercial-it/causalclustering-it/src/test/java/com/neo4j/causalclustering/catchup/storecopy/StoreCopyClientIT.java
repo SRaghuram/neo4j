@@ -44,7 +44,6 @@ import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.DuplicatingLogProvider;
@@ -85,7 +84,6 @@ public class StoreCopyClientIT
     private StoreCopyClient subject;
     private Server catchupServer;
     private FakeCatchupServer serverHandler;
-    LifeSupport lifeSupport = new LifeSupport();
 
     private static void writeContents( FileSystemAbstraction fileSystemAbstraction, File file, String contents )
     {
@@ -115,11 +113,10 @@ public class StoreCopyClientIT
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
         catchupServer = CausalClusteringTestHelpers.getCatchupServer( serverHandler, listenAddress, scheduler );
-        lifeSupport.add( catchupServer );
+        catchupServer.start();
 
-        CatchupClientFactory catchUpClient = CausalClusteringTestHelpers.getCatchupClient( logProvider, scheduler, lifeSupport::add );
-
-        lifeSupport.start();
+        CatchupClientFactory catchUpClient = CausalClusteringTestHelpers.getCatchupClient( logProvider, scheduler );
+        catchUpClient.start();
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
@@ -129,7 +126,7 @@ public class StoreCopyClientIT
     @After
     public void shutdown() throws Throwable
     {
-        lifeSupport.stop();
+        catchupServer.stop();
         scheduler.shutdown();
     }
 

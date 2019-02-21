@@ -5,6 +5,14 @@
  */
 package org.neo4j.backup.impl;
 
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+
+import java.io.File;
+import java.io.IOException;
+
+import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
@@ -13,13 +21,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClient;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.identity.StoreId;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-
-import java.io.File;
-import java.io.IOException;
-
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
 
@@ -33,9 +34,10 @@ import static org.mockito.Mockito.when;
 public class BackupDelegatorTest
 {
     private RemoteStore remoteStore;
+    private CatchupClientFactory catchUpClient;
     private StoreCopyClient storeCopyClient;
 
-    private BackupDelegator subject;
+    BackupDelegator subject;
 
     private final AdvertisedSocketAddress anyAddress = new AdvertisedSocketAddress( "any.address", 1234 );
 
@@ -43,8 +45,9 @@ public class BackupDelegatorTest
     public void setup()
     {
         remoteStore = mock( RemoteStore.class );
+        catchUpClient = mock( CatchupClientFactory.class );
         storeCopyClient = mock( StoreCopyClient.class );
-        subject = new BackupDelegator( remoteStore, storeCopyClient );
+        subject = new BackupDelegator( remoteStore, catchUpClient, storeCopyClient );
     }
 
     @Test
@@ -61,6 +64,26 @@ public class BackupDelegatorTest
         // then
         verify( remoteStore ).tryCatchingUp( any( CatchupAddressProvider.SingleAddressProvider.class ), eq( expectedStoreId ), eq( databaseLayout ), eq( true ),
                 eq( true ) );
+    }
+
+    @Test
+    public void startDelegatesToCatchUpClient()
+    {
+        // when
+        subject.start();
+
+        // then
+        verify( catchUpClient ).start();
+    }
+
+    @Test
+    public void stopDelegatesToCatchUpClient()
+    {
+        // when
+        subject.stop();
+
+        // then
+        verify( catchUpClient ).stop();
     }
 
     @Test

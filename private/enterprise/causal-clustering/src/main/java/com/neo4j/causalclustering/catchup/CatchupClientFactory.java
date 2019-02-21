@@ -8,9 +8,10 @@ package com.neo4j.causalclustering.catchup;
 import java.time.Duration;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 
-public class CatchupClientFactory
+public class CatchupClientFactory implements Lifecycle
 {
     private final CatchupChannelPoolService pool;
     private final String defaultDatabaseName;
@@ -26,5 +27,29 @@ public class CatchupClientFactory
     public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream, Log log )
     {
         return new CatchupClient( pool.acquire( upstream ).thenApply( CatchupChannel::new ), defaultDatabaseName, inactivityTimeout, log );
+    }
+
+    @Override
+    public void init()
+    {
+        pool.init();
+    }
+
+    @Override
+    public void start()
+    {
+        pool.start();
+    }
+
+    @Override
+    public void stop()
+    {
+        pool.stop();
+    }
+
+    @Override
+    public void shutdown()
+    {
+        pool.shutdown();
     }
 }

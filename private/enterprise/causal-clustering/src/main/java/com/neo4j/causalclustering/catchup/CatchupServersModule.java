@@ -81,7 +81,7 @@ public abstract class CatchupServersModule
 
     private CatchupClientFactory createCatchupClient()
     {
-        return CatchupClientBuilder.builder()
+        CatchupClientFactory catchupClient = CatchupClientBuilder.builder()
                 .defaultDatabaseName( globalConfig.get( GraphDatabaseSettings.active_database ) )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
@@ -92,7 +92,9 @@ public abstract class CatchupServersModule
                 .handShakeTimeout( globalConfig.get( CausalClusteringSettings.handshake_timeout ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( userLogProvider )
-                .build( globalLife::add );
+                .build();
+        globalLife.add( catchupClient );
+        return catchupClient;
     }
 
     protected final Server createCatchupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler,
