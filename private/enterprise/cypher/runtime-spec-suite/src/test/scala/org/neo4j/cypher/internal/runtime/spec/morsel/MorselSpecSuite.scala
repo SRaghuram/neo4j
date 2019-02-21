@@ -285,6 +285,22 @@ class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInp
     )
 }
 
+// ARGUMENT
+
+// FIXME broken in Morsel
+//class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE_EDITION, MorselRuntime, SIZE_HINT)
+
+//class MorselArgumentStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
+//  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
+//    RHSOfApplyLeafTD(
+//      _.projection(s"$nodeArgument AS $variable").|.argument(variable),
+//      rowsComingIntoTheOperator =>
+//        for {
+//          Array(x) <- rowsComingIntoTheOperator
+//        } yield Array(x, x)
+//    )
+//}
+
 // INPUT
 
 class MorselInputTest extends InputTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) {

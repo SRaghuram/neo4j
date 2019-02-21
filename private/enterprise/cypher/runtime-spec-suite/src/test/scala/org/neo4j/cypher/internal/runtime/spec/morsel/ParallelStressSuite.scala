@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.runtime.spec.morsel.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_PARALLEL, LogicalQueryBuilder, RuntimeTestSuite, RuntimeTestSupport}
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime, SlottedRuntime}
+import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
 import org.neo4j.graphdb.Node
 
 object ParallelStressSuite {
