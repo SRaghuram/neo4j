@@ -41,6 +41,7 @@ import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -85,15 +86,15 @@ public class BoltProceduresIT
             session.run( "CREATE (n1 :Person {name: $name1}), (n2 :Person {name: $name2}) RETURN n1, n2", params ).consume();
 
             StatementResult result = session.run( "CALL test.readNodesReturnThemAndTerminateTheTransaction() YIELD node" );
-
-            assertTrue( result.hasNext() );
-            Record record = result.next();
-            assertEquals( "Person", Iterables.single( record.get( 0 ).asNode().labels() ) );
-            assertNotNull( record.get( 0 ).asNode().get( "name" ) );
-
+            //we cannot know for sure when the error occurs since it depends on whether the result is being materialized
+            //or not in the runtime
             try
             {
-                result.hasNext();
+                assertTrue( result.hasNext() );
+                Record record = result.next();
+                assertEquals( "Person", Iterables.single( record.get( 0 ).asNode().labels() ) );
+                assertNotNull( record.get( 0 ).asNode().get( "name" ) );
+                assertFalse( result.hasNext() );
                 fail( "Exception expected" );
             }
             catch ( TransientException e )
