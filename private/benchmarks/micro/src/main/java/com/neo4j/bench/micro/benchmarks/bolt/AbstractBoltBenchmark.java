@@ -218,15 +218,9 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                         private AnyValue[] fields;
 
                         @Override
-                        public void onResult( int numberOfFields )
+                        public void onStart( int numberOfFields )
                         {
                             fields = new AnyValue[numberOfFields];
-                        }
-
-                        @Override
-                        public void onRecord()
-                        {
-                            //do nothing
                         }
 
                         @Override
@@ -236,7 +230,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                         }
 
                         @Override
-                        public void onRecordCompleted() throws Exception
+                        public void onCompleted() throws Exception
                         {
                             writer.write( new RecordMessage( fields ) );
                         }
