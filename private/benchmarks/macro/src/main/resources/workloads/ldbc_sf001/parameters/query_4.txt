@@ -1,9 +1,3 @@
-====
-    Copyright (c) 2002-2019 "Neo4j,"
-    Neo4j Sweden AB [http://neo4j.com]
-    This file is part of Neo4j internal tooling.
-====
-
 Person:Long|Date0:Long|Duration:Integer
 13194139539258|1330560000000|42
 16492674423114|1346457600000|30
