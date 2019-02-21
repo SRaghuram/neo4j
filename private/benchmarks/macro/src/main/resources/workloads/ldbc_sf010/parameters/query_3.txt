@@ -1,3 +1,9 @@
+====
+    Copyright (c) 2002-2019 "Neo4j,"
+    Neo4j Sweden AB [http://neo4j.com]
+    This file is part of Neo4j internal tooling.
+====
+
 Person:Long|Date0:Long|Duration:Integer|Country1|Country2
 13194139600223|1335830400000|39|Croatia|Slovakia
 8796093060382|1298937600000|29|Dominican_Republic|New_Zealand
