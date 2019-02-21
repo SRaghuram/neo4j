@@ -16,8 +16,9 @@ import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.SimpleChannelPool;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
@@ -25,18 +26,19 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 
+import static java.util.Collections.unmodifiableCollection;
+
 class SimpleChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddress,SimpleChannelPool>
 {
     private final Bootstrap baseBootstrap;
-    private final ChannelPoolHandlers poolHandlers = new ChannelPoolHandlers();
+    private final ChannelPoolHandlers poolHandlers;
     private final InstalledProtocolsTracker protocolsTracker;
 
-    SimpleChannelPoolMap( Bootstrap baseBootstrap, ChannelPoolHandler poolHandlers )
+    SimpleChannelPoolMap( Bootstrap baseBootstrap, ChannelPoolHandler poolHandler )
     {
         this.baseBootstrap = baseBootstrap;
         this.protocolsTracker = new InstalledProtocolsTracker();
-        this.poolHandlers.add( poolHandlers );
-        this.poolHandlers.add( protocolsTracker );
+        this.poolHandlers = new ChannelPoolHandlers( Arrays.asList( poolHandler, protocolsTracker ) );
     }
 
     Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols()
@@ -74,7 +76,13 @@ class SimpleChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddres
 
     private static final class ChannelPoolHandlers implements ChannelPoolHandler
     {
-        private final Collection<ChannelPoolHandler> poolHandlers = new ArrayList<>();
+        private final Collection<ChannelPoolHandler> poolHandlers;
+
+        ChannelPoolHandlers( Collection<ChannelPoolHandler> poolHandlers )
+        {
+            Objects.requireNonNull( poolHandlers );
+            this.poolHandlers = unmodifiableCollection( poolHandlers );
+        }
 
         @Override
         public void channelReleased( Channel ch )
@@ -101,11 +109,6 @@ class SimpleChannelPoolMap extends AbstractChannelPoolMap<AdvertisedSocketAddres
             {
                 poolHandlers.forEach( chh -> errorHandler.execute( () -> chh.channelCreated( ch ) ) );
             }
-        }
-
-        public void add( ChannelPoolHandler poolHandler )
-        {
-            poolHandlers.add( poolHandler );
         }
     }
 }
