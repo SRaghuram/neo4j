@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.util.Preconditions
 
 /**
   * Implementation of [[ExecutionState]].
@@ -26,6 +27,16 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
 
   private val tracker = stateFactory.newTracker()
   private val asms = new ArgumentStateMaps
+
+  // Verify that IDs and offsets match
+
+  for (i <- pipelines.indices)
+    Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
+
+  for (i <- bufferDefinitions.indices)
+    Preconditions.checkState(i == bufferDefinitions(i).id.x, "Buffer definition id does not match offset!")
+
+  // Build state
 
   private val pipelineStates =
     for (pipeline <- pipelines.toArray) yield {
@@ -57,6 +68,8 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
 
   private val continuations =
     new Array[Buffer[PipelineTask]](pipelines.size).map(i => stateFactory.newBuffer[PipelineTask]())
+
+  // Methods
 
   override def produceMorsel(bufferId: BufferId,
                              output: MorselExecutionContext): Unit = buffers(bufferId.x).produce(output)
