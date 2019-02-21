@@ -187,7 +187,7 @@
                     </execution>
                 </executions>
             </plugin>
-
+            
             <!-- 2. Compile Scala sources -->
             <plugin>
                 <groupId>net.alchim31.maven</groupId>

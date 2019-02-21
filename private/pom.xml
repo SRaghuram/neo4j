@@ -111,4 +111,30 @@
     </pluginManagement>
   </build>
 
+  <profiles>
+  <!-- Only generate NOTICE and LICENSES files for projects with src/ directory -->
+    <profile>
+      <id>has-sources</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <file>
+          <exists>src</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.neo4j.build.plugins</groupId>
+            <artifactId>licensing-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.neo4j.build.plugins</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+
 </project>

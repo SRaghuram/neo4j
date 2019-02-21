@@ -178,7 +178,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
     private static GBPTree<AdaptableKey,AdaptableValue> createGBPTree(
             PageCache pageCache,
             File indexFile,
-            AdaptableLayout layout )
+            AdaptableLayout layout ) throws IOException
     {
         return new GBPTree<>(
                 pageCache,

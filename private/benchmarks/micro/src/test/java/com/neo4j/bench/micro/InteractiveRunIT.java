@@ -8,6 +8,7 @@ package com.neo4j.bench.micro;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.micro.benchmarks.core.ConcurrentReadWriteLabelsV2;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
+import com.neo4j.bench.micro.benchmarks.cypher.AllNodesScan;
 import com.neo4j.bench.micro.benchmarks.test.AlwaysCrashes;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataConstantAugment;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataVariableAugment;
@@ -15,8 +16,8 @@ import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.bench.micro.data.Stores;
@@ -35,10 +36,10 @@ import java.util.stream.Stream;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.micro.config.BenchmarkDescription.of;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class InteractiveRunIT
 {
@@ -63,7 +64,7 @@ public class InteractiveRunIT
     @Test
     public void shouldRunAllMethodsOfBenchmarkClass() throws Exception
     {
-        Class benchmark = ReadById.class;
+        Class benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters DO NOT affect store content, in this benchmark

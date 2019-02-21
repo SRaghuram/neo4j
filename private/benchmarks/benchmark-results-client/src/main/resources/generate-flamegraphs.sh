@@ -1,4 +1,10 @@
 #!/bin/bash -e
+#
+# Copyright (c) 2002-2019 "Neo4j,"
+# Neo4j Sweden AB [http://neo4j.com]
+# This file is part of Neo4j internal tooling.
+#
+
 # shellcheck disable=SC2154,SC1117
 if [ -z "$JFR_FLAMEGRAPH" ] ; then
     echo "JFR_FLAMEGRAPH is not set"
