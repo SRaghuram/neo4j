@@ -206,6 +206,7 @@
                             <arguments>
                                 <argument>${project.basedir}/target/classes/</argument>
                                 <argument>${project.basedir}/target/generated-sources/jmh/</argument>
+                                <argument>${project.basedir}/target/classes/</argument>
                                 <argument>${jmh.generator}</argument>
                             </arguments>
                         </configuration>
