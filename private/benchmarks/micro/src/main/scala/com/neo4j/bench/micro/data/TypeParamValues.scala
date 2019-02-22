@@ -42,17 +42,17 @@ object TypeParamValues {
   final val STR_SML_ARR = "small_string[]"
   final val STR_BIG_ARR = "big_string[]"
 
-  def randomListOf(valueType: String, valueCount: Int, distinctCount: Int): util.List[_] = {
+  def randomListOf[T](valueType: String, valueCount: Int, distinctCount: Int): util.List[T] = {
     val rng = RNGState.newRandom(42)
     val valuesFun = valuesFunFor(valueType, distinctCount)
     // wrap in ArrayList because whatever asJava returns does not support shuffling
     valueType match {
       case LNG =>
-        new util.ArrayList[Long](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[Long]).asJava)
+        new util.ArrayList[Long](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[Long]).asJava).asInstanceOf[util.List[T]]
       case DBL =>
-        new util.ArrayList[Double](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[Double]).asJava)
+        new util.ArrayList[Double](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[Double]).asJava).asInstanceOf[util.List[T]]
       case STR_SML =>
-        new util.ArrayList[String](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[String]).asJava)
+        new util.ArrayList[String](List.range(0, valueCount).map(_ => valuesFun.next(rng).asInstanceOf[String]).asJava).asInstanceOf[util.List[T]]
       case _ => throw new IllegalArgumentException(s"Invalid type: $valueType")
     }
   }
