@@ -69,22 +69,29 @@
             <artifactId>neo4j-cypher-physical-planning</artifactId>
             <version>${project.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-ast-4.0</artifactId>
             <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-util-4.0</artifactId>
             <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
         </dependency>
-
+        <dependency>
+          <groupId>org.neo4j</groupId>
+          <artifactId>neo4j-util-4.0</artifactId>
+          <version>${project.version}</version>
+          <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.neo4j</groupId>
+          <artifactId>kernel-api-test-utils</artifactId>
+          <version>${project.version}</version>
+          <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>
