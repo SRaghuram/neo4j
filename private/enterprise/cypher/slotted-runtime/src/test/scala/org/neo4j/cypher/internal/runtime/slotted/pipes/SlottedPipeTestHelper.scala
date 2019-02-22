@@ -18,7 +18,7 @@ trait SlottedPipeTestHelper extends CypherFunSuite {
       slots.foreachSlot({
         case (column, LongSlot(offset, _, _)) => build.put(column, in.getLongAt(offset))
         case (column, RefSlot(offset, _, _)) => build.put(column, in.getRefAt(offset))
-      }, cachedNodeProp => null)
+      }, cachedNodeProp => {})
       build.toMap
     }
   }

@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption._
-import org.neo4j.cypher.internal.compatibility._
-import org.neo4j.cypher.internal.runtime.scheduling._
 import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, NO_TRANSACTION_BINDER, QueryResources}
+import org.neo4j.cypher.internal.runtime.scheduling._
+import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.scheduler.{Group, JobScheduler}
@@ -56,6 +56,7 @@ object RuntimeEnvironment {
         config.schedulerTracing match {
           case StdOutSchedulerTracing => new CsvStdOutDataWriter
           case FileSchedulerTracing(file) => new CsvFileDataWriter(file)
+          case tracing => throw new InternalException(s"Unknown schedular tracing: $tracing")
         }
 
       val dataTracer = new SingleConsumerDataBuffers()

@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.v4_0.logical.plans.{CachedNodeProperty, LogicalPlan}
+import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
@@ -109,33 +109,34 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   private def replaceExistingSlot(key: String, existingSlot: Slot, modifiedSlot: Slot): Unit = {
     slots.put(key, modifiedSlot)
-    val existingAliases = slotAliases.get(existingSlot).get
+    val existingAliases = slotAliases(existingSlot)
     assert(existingAliases.contains(key))
     slotAliases.put(modifiedSlot, existingAliases)
     slotAliases.remove(existingSlot)
   }
 
-  private def unifyTypeAndNullability(key: String, existingSlot: Slot, newSlot: Slot) = {
+  private def unifyTypeAndNullability(key: String, existingSlot: Slot, newSlot: Slot): Unit = {
     val updateNullable = !existingSlot.nullable && newSlot.nullable
     val updateTyp = existingSlot.typ != newSlot.typ && !existingSlot.typ.isAssignableFrom(newSlot.typ)
     assert(!updateTyp || newSlot.typ.isAssignableFrom(existingSlot.typ))
     if (updateNullable || updateTyp) {
       val modifiedSlot = (existingSlot, updateNullable, updateTyp) match {
         // We are conservative about nullability and increase it to true
-        case ((LongSlot(offset, _, _), true, true)) =>
-          LongSlot(offset, true, newSlot.typ)
-        case ((RefSlot(offset, _, _), true, true)) =>
-          RefSlot(offset, true, newSlot.typ)
-        case ((LongSlot(offset, _, typ), true, false)) =>
-          LongSlot(offset, true, typ)
-        case ((RefSlot(offset, _, typ), true, false)) =>
-          RefSlot(offset, true, typ)
-        case ((LongSlot(offset, nullable, _), false, true)) =>
+        case (LongSlot(offset, _, _), true, true) =>
+          LongSlot(offset, nullable = true, newSlot.typ)
+        case (RefSlot(offset, _, _), true, true) =>
+          RefSlot(offset, nullable = true, newSlot.typ)
+        case (LongSlot(offset, _, typ), true, false) =>
+          LongSlot(offset, nullable = true, typ)
+        case (RefSlot(offset, _, typ), true, false) =>
+          RefSlot(offset, nullable = true, typ)
+        case (LongSlot(offset, nullable, _), false, true) =>
           LongSlot(offset, nullable, newSlot.typ)
-        case ((RefSlot(offset, nullable, _), false, true)) =>
+        case (RefSlot(offset, nullable, _), false, true) =>
           RefSlot(offset, nullable, newSlot.typ)
+        case config => throw new InternalException(s"Unxpected slot configuration: $config")
       }
-      replaceExistingSlot(key, existingSlot, modifiedSlot);
+      replaceExistingSlot(key, existingSlot, modifiedSlot)
     }
   }
 

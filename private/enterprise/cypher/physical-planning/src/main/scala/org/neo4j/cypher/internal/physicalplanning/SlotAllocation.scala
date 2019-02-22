@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ArgumentSizes, ApplyPlans, SlotConfigurations}
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.ir.v4_0.{HasHeaders, NoHeaders, ShortestPathPattern}
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, SlotConfigurations}
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.v4_0.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions._
@@ -620,7 +620,7 @@ object SlotAllocation {
         }, {
           case (key, _) if rhs.hasCachedPropertySlot(key) =>
             result.newCachedProperty(key)
-          case _ => null
+          case _ => //do nothing
         })
         result
 

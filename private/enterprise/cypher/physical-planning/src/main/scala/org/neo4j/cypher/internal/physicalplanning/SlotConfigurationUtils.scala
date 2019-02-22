@@ -296,6 +296,6 @@ object SlotConfigurationUtils {
             None
 
         slots.updateAccessorFunctions(key, getter, setter, primitiveNodeSetter, primitiveRelationshipSetter)
-    }, notDoingForCachedNodePropertiesYet => null)
+    }, notDoingForCachedNodePropertiesYet => {})
   }
 }

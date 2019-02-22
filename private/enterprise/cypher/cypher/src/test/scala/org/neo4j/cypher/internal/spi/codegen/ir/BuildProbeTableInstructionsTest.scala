@@ -18,7 +18,9 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, JoinTableMethod, Variable}
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
-import org.neo4j.cypher.internal.spi.codegen.ir.CodeGenSugar
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.function.ThrowingBiConsumer
 import org.neo4j.graphdb.Node
 import org.neo4j.internal.kernel.api._
@@ -28,9 +30,6 @@ import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 import org.neo4j.values.virtual.{ListValue, MapValue, NodeValue}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 import scala.collection.{JavaConverters, mutable}
 
