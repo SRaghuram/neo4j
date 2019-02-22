@@ -114,7 +114,6 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
                 .add( "hnd_res_file_chunk", new FileChunkHandler( protocol, handler ) )
                 .add( "hnd_res_store_id", new GetStoreIdResponseHandler( protocol, handler ) )
                 .add( "hnd_res_store_listing", new StoreListingResponseHandler( protocol, handler ))
-                .onClose( handler::onClose )
                 .install();
     }
 
