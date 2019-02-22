@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_PARALLEL.HasEvidenceOfParallelism
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_PARALLEL, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
 
@@ -104,7 +104,7 @@ class MorselNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE_PARALLEL,
 class MorselIndexScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(prop)", paramExpr = Some(varFor(propArgument)), argumentIds = Set(propArgument)),
+      _.nodeIndexOperator(s"$variable:Label(prop)", argumentIds = Set(propArgument)),
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator
@@ -116,6 +116,21 @@ class MorselIndexScanStressTest extends ParallelStressSuite with RHSOfApplyLeafS
     RHSOfCartesianLeafTD(
       _.nodeIndexOperator(s"$variable:Label(prop)"),
       () => nodes.map(Array(_))
+    )
+}
+
+// INDEX CONTAINS SCAN
+class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+
+class MorselIndexContainsScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
+  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
+    RHSOfApplyLeafTD(
+      _.nodeIndexOperator(s"$variable:Label(text CONTAINS ???)", paramExpr = Some(toString(varFor(propArgument))), argumentIds = Set(propArgument)),
+      rowsComingIntoTheOperator =>
+        for {
+          Array(x) <- rowsComingIntoTheOperator
+          y <- nodes.filter(_.getProperty("text").asInstanceOf[String].contains(x.getId.toString))
+        } yield Array(x, y)
     )
 }
 
@@ -288,7 +303,7 @@ class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInp
 // ARGUMENT
 
 // FIXME broken in Morsel
-//class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE_EDITION, MorselRuntime, SIZE_HINT)
+//class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
 
 //class MorselArgumentStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
 //  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =

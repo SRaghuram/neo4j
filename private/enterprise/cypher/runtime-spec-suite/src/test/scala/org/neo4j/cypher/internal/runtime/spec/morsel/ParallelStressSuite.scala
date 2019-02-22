@@ -50,9 +50,10 @@ abstract class ParallelStressSuite() extends RuntimeTestSuite(ENTERPRISE_PARALLE
 
   def init(): Unit = {
     nodes = nodePropertyGraph(graphSize, {
-      case i => Map("prop" -> i)
+      case i => Map("prop" -> i, "text" -> i.toString)
     }, "Label")
     index("Label", "prop")
+    index("Label", "text")
     val relTuples = (for (i <- nodes.indices) yield {
       Seq(
         (i, (i + 1) % nodes.length, "NEXT"),

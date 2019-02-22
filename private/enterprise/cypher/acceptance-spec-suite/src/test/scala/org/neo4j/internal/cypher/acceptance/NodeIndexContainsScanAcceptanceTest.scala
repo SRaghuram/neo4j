@@ -14,49 +14,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithA
  * [[org.neo4j.cypher.internal.compiler.v4_0.planner.logical.LeafPlanningIntegrationTest]]
  */
 class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport{
-  test("should be case sensitive for CONTAINS with indexes") {
-    val london = createLabeledNode(Map("name" -> "London"), "Location")
-    createLabeledNode(Map("name" -> "LONDON"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
-    }
-
-    graph.createIndex("Location", "name")
-
-    val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' RETURN l"
-
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
-
-    result.toList should equal(List(Map("l" -> london)))
-  }
-
-  test("should be case sensitive for CONTAINS with unique indexes") {
-    val london = createLabeledNode(Map("name" -> "London"), "Location")
-    createLabeledNode(Map("name" -> "LONDON"), "Location")
-    graph.inTx {
-      (1 to 100).foreach { _ =>
-        createLabeledNode("Location")
-      }
-      (1 to 300).map { i =>
-        createLabeledNode(Map("name" -> i.toString), "Location")
-      }
-    }
-
-    graph.createUniqueConstraint("Location", "name")
-
-    val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' RETURN l"
-
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
-
-    result.toList should equal(List(Map("l" -> london)))
-  }
 
   test("should be case sensitive for CONTAINS with multiple indexes and predicates") {
     val london = createLabeledNode(Map("name" -> "London", "country" -> "UK"), "Location")
