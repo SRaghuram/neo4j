@@ -125,7 +125,7 @@ class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTE
 class MorselIndexContainsScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
     RHSOfApplyLeafTD(
-      _.nodeIndexOperator(s"$variable:Label(text CONTAINS ???)", paramExpr = Some(toString(varFor(propArgument))), argumentIds = Set(propArgument)),
+      _.nodeIndexOperator(s"$variable:Label(text CONTAINS ???)", paramExpr = Some(function("toString", varFor(propArgument))), argumentIds = Set(propArgument)),
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator

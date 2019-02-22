@@ -136,7 +136,7 @@ trait RHSOfApplyOneChildStressSuite {
                                   resultColumns: Seq[String] = Seq.empty)
 
   /**
-    * Provide a test definition for the operator. The operator gets
+    * Provide a test definition for the operator.
     *
     * @param variable a node variable available on the RHS
     * @return a test definition
@@ -298,7 +298,7 @@ trait OnTopOfParallelInputStressTest {
                                     resultColumns: Seq[String] = Seq.empty)
 
   /**
-    * Provide a test definition for the operator. The operator gets
+    * Provide a test definition for the operator.
     *
     * @param variable a node variable available
     * @param propVariable an integer property of the node
@@ -330,8 +330,3 @@ trait OnTopOfParallelInputStressTest {
     runtimeResult should beColumns(resultColumns: _*).withRows(expectedResult(rowsComingIntoTheOperator))
   }
 }
-
-// TODO
-// * ProduceResults immediately following a reduce
-// * ProduceResults immediately following a streaming
-

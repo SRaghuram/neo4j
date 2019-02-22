@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.{InputCursor, InputDataStream, QueryCon
 import org.neo4j.values.virtual.NodeValue
 
 class InputOperator(val workIdentity: WorkIdentity,
-                    longOffsets: Array[Int],
+                    nodeOffsets: Array[Int],
                     refOffsets: Array[Int]) extends StreamingOperator {
 
   override def init(queryContext: QueryContext,
@@ -40,8 +40,8 @@ class InputOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.isValidRow && nextInput()) {
         var i = 0
-        while (i < longOffsets.length) {
-          outputRow.setLongAt(longOffsets(i), cursor.value(i).asInstanceOf[NodeValue].id())
+        while (i < nodeOffsets.length) {
+          outputRow.setLongAt(nodeOffsets(i), cursor.value(i).asInstanceOf[NodeValue].id())
           i += 1
         }
         i = 0
