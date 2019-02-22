@@ -7,9 +7,7 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
-import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy, CypherVersion}
-import org.neo4j.cypher.internal.compatibility._
-import org.neo4j.cypher.internal.compatibility.v3_5.Cypher3_5Planner
+import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateStrategy}
 import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
@@ -43,33 +41,18 @@ class EnterpriseCompilerFactory(community: CommunityCompilerFactory,
     RuntimeEnvironment.of(runtimeConfig, jobScheduler, kernel.cursors(), txBridge)
   }
 
-  override def createCompiler(cypherVersion: CypherVersion,
-                              cypherPlanner: CypherPlannerOption,
+  override def createCompiler(cypherPlanner: CypherPlannerOption,
                               cypherRuntime: CypherRuntimeOption,
                               cypherUpdateStrategy: CypherUpdateStrategy): Compiler = {
 
     val log = logProvider.getLog(getClass)
-    val planner = cypherVersion match {
-      case CypherVersion.`v3_5` =>
-        Cypher3_5Planner(
-          plannerConfig,
-          MasterCompiler.CLOCK,
-          kernelMonitors,
-          log,
-          cypherPlanner,
-          cypherUpdateStrategy,
-          LastCommittedTxIdProvider(graph))
-
-      case CypherVersion.v4_0 =>
-        Cypher4_0Planner(
-          plannerConfig,
-          MasterCompiler.CLOCK,
-          kernelMonitors,
-          log,
-          cypherPlanner,
-          cypherUpdateStrategy,
-          LastCommittedTxIdProvider(graph))
-    }
+    val planner = Cypher4_0Planner(plannerConfig,
+                                   MasterCompiler.CLOCK,
+                                   kernelMonitors,
+                                   log,
+                                   cypherPlanner,
+                                   cypherUpdateStrategy,
+                                   LastCommittedTxIdProvider(graph))
 
     CypherCurrentCompiler(
       planner,
