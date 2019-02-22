@@ -1,9 +1,3 @@
-====
-    Copyright (c) 2002-2019 "Neo4j,"
-    Neo4j Sweden AB [http://neo4j.com]
-    This file is part of Neo4j internal tooling.
-====
-
 person|country|tagClass|minPathDistance|maxPathDistance
 497|Germany|MusicalArtist|3|5
 6597069768929|Germany|MusicalArtist|3|6
