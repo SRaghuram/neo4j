@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_PARALLEL.HasEvidenceOfParallelism
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, ProjectionTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, ProjectionTestBase, UnwindTestBase}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_PARALLEL, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
 
@@ -139,7 +139,7 @@ class MorselExpandAllTest extends ExpandAllTestBase(ENTERPRISE_PARALLEL, MorselR
 
 class MorselExpandStressTest extends ParallelStressSuite with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite with OnTopOfParallelInputStressTest {
 
-  override def onTopOfParallelInputOperator(variable: String): OnTopOfParallelInputTD =
+  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
       _.expand(s"($variable)-[:NEXT]->(next)"),
       rowsComingIntoTheOperator =>
@@ -179,11 +179,11 @@ class MorselAggregationTest extends AggregationTestBase(ENTERPRISE_PARALLEL, Mor
 
 class MorselAggregationStressTest extends ParallelStressSuite /*with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite*/ with OnTopOfParallelInputStressTest {
 
-  override def onTopOfParallelInputOperator(variable: String): OnTopOfParallelInputTD =
+  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
       _.aggregation(
-        Map("g" -> modulo(prop("x", "prop"), literalInt(2))),
-        Map("amount" -> sum(prop("x", "prop")))),
+        Map("g" -> modulo(varFor(propVariable), literalInt(2))),
+        Map("amount" -> sum(varFor(propVariable)))),
       rowsComingIntoTheOperator =>
         for {
           (g, rowsForX) <- rowsComingIntoTheOperator.groupBy(_ (0).getId.toInt % 2) // group by x.prop % 2
@@ -289,7 +289,7 @@ class MorselFilterTest extends FilterTestBase(ENTERPRISE_PARALLEL, MorselRuntime
 
 class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
 
-  override def onTopOfParallelInputOperator(variable: String): OnTopOfParallelInputTD =
+  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
       _.filter(Seq(lessThan(varFor("prop"), literalInt(10)))),
       rowsComingIntoTheOperator =>
@@ -305,7 +305,7 @@ class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE_PARALLEL, Morse
 
 class MorselProjectionStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
 
-  override def onTopOfParallelInputOperator(variable: String): OnTopOfParallelInputTD =
+  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
       _.projection("prop * 2 AS j"),
       rowsComingIntoTheOperator =>
@@ -313,6 +313,23 @@ class MorselProjectionStressTest extends ParallelStressSuite with OnTopOfParalle
           Array(x) <- rowsComingIntoTheOperator
         } yield Array(x, x.getId * 2),
       Seq("x", "j")
+    )
+}
+
+// UNWIND
+class MorselUnwindTest extends UnwindTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+
+class MorselUnwindStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
+
+  override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
+    OnTopOfParallelInputTD(
+      _.unwind(s"[$propVariable, 2 * $propVariable] AS i"),
+      rowsComingIntoTheOperator =>
+        for {
+          Array(x) <- rowsComingIntoTheOperator
+          f <- 1 to 2
+        } yield Array(x.getId * f),
+      Seq("i")
     )
 }
 

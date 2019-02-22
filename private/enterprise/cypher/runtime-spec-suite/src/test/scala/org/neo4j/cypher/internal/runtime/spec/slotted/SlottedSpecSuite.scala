@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.slotted
 
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_SINGLE_THREAD
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ArgumentTestBase, ExpandAllTestBase, ExpandAllWithOptionalTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase, PartialSortTestBase, PartialTop1TestBase, PartialTopNTestBase, ProjectionTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ArgumentTestBase, ExpandAllTestBase, ExpandAllWithOptionalTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, NodeLockingUniqueIndexSeekTestBase, PartialSortTestBase, PartialTop1TestBase, PartialTopNTestBase, ProjectionTestBase, UnwindTestBase}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, SlottedRuntime}
 
 object SlottedSpecSuite {
@@ -31,3 +31,4 @@ class SlottedPartialTop1Test extends PartialTop1TestBase(ENTERPRISE_SINGLE_THREA
 class SlottedFilterTest extends FilterTestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)
 class SlottedArgumentTest extends ArgumentTestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)
 class SlottedProjectionTest extends ProjectionTestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)
+class SlottedUnwindTest extends UnwindTestBase(ENTERPRISE_SINGLE_THREAD, SlottedRuntime, SIZE_HINT)

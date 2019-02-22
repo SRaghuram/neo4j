@@ -301,9 +301,10 @@ trait OnTopOfParallelInputStressTest {
     * Provide a test definition for the operator. The operator gets
     *
     * @param variable a node variable available
+    * @param propVariable an integer property of the node
     * @return a test definition
     */
-  def onTopOfParallelInputOperator(variable: String): OnTopOfParallelInputTD
+  def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD
 
   test("should work on top of input with parallelism") {
     // given
@@ -311,7 +312,7 @@ trait OnTopOfParallelInputStressTest {
 
     val input = allNodesNTimes(10)
 
-    val OnTopOfParallelInputTD(op, expectedResult, resultColumns) = onTopOfParallelInputOperator("x")
+    val OnTopOfParallelInputTD(op, expectedResult, resultColumns) = onTopOfParallelInputOperator("x", "prop")
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
