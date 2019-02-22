@@ -26,11 +26,10 @@ object TestConfiguration {
     TestConfiguration(scenarios.toSet)
   }
 
-  def apply(versions: Versions, planners: Planners, runtimes: Runtimes): TestConfiguration = {
-    val scenarios = for (v <- versions.versions;
-                         p <- planners.planners;
+  def apply(planners: Planners, runtimes: Runtimes): TestConfiguration = {
+    val scenarios = for (p <- planners.planners;
                          r <- runtimes.runtimes)
-      yield TestScenario(v, p, r)
+      yield TestScenario(p, r)
     TestConfiguration(scenarios.toSet)
   }
 
@@ -42,10 +41,9 @@ object TestConfiguration {
         empty
       } else {
         val args = stringDescription.split(" ")
-        val versions = Versions.definedBy(args)
         val planners = Planners.definedBy(args)
         val runtimes = Runtimes.definedBy(args)
-        TestConfiguration(versions, planners, runtimes)
+        TestConfiguration(planners, runtimes)
       }
     }.reduceOption(_ + _).getOrElse(Configs.Empty)
   }

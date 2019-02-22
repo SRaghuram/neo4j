@@ -11,29 +11,21 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Interpret
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.MorselSingleThreaded
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Slotted
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.SlottedWithCompiledExpressions
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_5
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V4_0
 
 object Configs {
 
   // Configurations with runtimes
-  def Compiled: TestConfiguration = TestConfiguration(V3_5 -> V4_0, Planners.all, Runtimes(CompiledSource, CompiledBytecode))
+  def Compiled: TestConfiguration = TestConfiguration(Planners.all, Runtimes(CompiledSource, CompiledBytecode))
 
-  def Morsel: TestConfiguration = TestConfiguration(V3_5 -> V4_0, Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
+  def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
 
-  def InterpretedRuntime: TestConfiguration =
-    TestConfiguration(Versions.all, Planners.all, Runtimes(Interpreted))
+  def InterpretedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Interpreted))
 
-  def SlottedRuntime: TestConfiguration = TestConfiguration(V3_5 -> V4_0, Planners.all, Runtimes(Slotted, SlottedWithCompiledExpressions))
+  def SlottedRuntime: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Slotted, SlottedWithCompiledExpressions))
 
   def InterpretedAndSlotted: TestConfiguration = InterpretedRuntime + SlottedRuntime
 
   def InterpretedAndSlottedAndMorsel: TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-
-  // Configurations for versions
-  def Version3_5: TestConfiguration = TestConfiguration(V3_5, Planners.all, Runtimes.all)
-
-  def Version4_0: TestConfiguration = TestConfiguration(V4_0, Planners.all, Runtimes.all)
 
   /**
     * These are all configurations that will be executed even if not explicitly expected to succeed or fail.
@@ -41,11 +33,9 @@ object Configs {
     * test coverage is kept up-to-date with new features.
     */
   def All: TestConfiguration = {
-    val all =
-      TestConfiguration(Versions.all, Planners.all, Runtimes.all) -
-      TestConfiguration(V3_5, Planners.all, Runtimes(Runtimes.Morsel, MorselSingleThreaded))
+    val all = TestConfiguration(Planners.all, Runtimes.all)
     if (runOnlySafeScenarios) {
-      all - TestConfiguration(V4_0, Planners.all, Runtimes(Runtimes.Morsel))
+      all - TestConfiguration(Planners.all, Runtimes(Runtimes.Morsel))
     } else {
       all
     }

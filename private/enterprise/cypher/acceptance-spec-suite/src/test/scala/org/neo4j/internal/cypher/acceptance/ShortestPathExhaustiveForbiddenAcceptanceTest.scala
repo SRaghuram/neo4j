@@ -39,7 +39,7 @@ class ShortestPathExhaustiveForbiddenAcceptanceTest extends ExecutionEngineFunSu
 
     // then
     result.notifications.toSeq should equal(
-      Seq(EXHAUSTIVE_SHORTEST_PATH.notification(new org.neo4j.graphdb.InputPosition(62, 1, 63))
+      Seq(EXHAUSTIVE_SHORTEST_PATH.notification(new org.neo4j.graphdb.InputPosition(58, 1, 59))
       )
     )
   }

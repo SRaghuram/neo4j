@@ -27,10 +27,8 @@ object Runtimes {
 
   object Interpreted extends Runtime(Set("INTERPRETED", "PROCEDURE"), "runtime=interpreted")
 
-  // Only 4.0 version is included in `all`
   object Morsel extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel")
 
-  // Only 4.0 version is included in `all`
   object MorselSingleThreaded extends Runtime(Set("MORSEL", "PROCEDURE"), "runtime=morsel debug=singlethreaded")
 
 }

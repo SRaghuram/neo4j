@@ -33,9 +33,6 @@ class LoadCsvAcceptanceTest
     with RunWithConfigTestSupport
     with ResourceTracking {
 
-  private val expectedToFail = Configs.InterpretedAndSlotted
-  private val interpretedAndSlotted4_0 = Configs.InterpretedAndSlotted - Configs.Version3_5
-
   override protected def initTest(): Unit = {
     super.initTest()
     trackResources(graph)
@@ -132,7 +129,7 @@ class LoadCsvAcceptanceTest
         writer.println("Baz")
     })
 
-    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$url' AS line CREATE (a {name: line[0]}) RETURN a.name, linenumber()")
+    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line CREATE (a {name: line[0]}) RETURN a.name, linenumber()")
     resourceMonitor.assertClosedAndClear(1)
     assertStats(result, nodesCreated = 3, propertiesWritten = 3)
     result.toList should equal(List(
@@ -149,13 +146,13 @@ class LoadCsvAcceptanceTest
         writer.println("Baz")
     })
 
-    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$url' AS line WITH count(line) as linecount RETURN linecount, linenumber(), filename()")
+    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line WITH count(line) as linecount RETURN linecount, linenumber(), filename()")
     resourceMonitor.assertClosedAndClear(1)
     result.toList should equal(List(Map("linecount" -> 3, "linenumber()" -> null, "filename()" -> null)))
   }
 
   test("should return no linenumber or filename without load csv") {
-    val result = executeWith(interpretedAndSlotted4_0, "RETURN linenumber(), filename()")
+    val result = executeWith(Configs.InterpretedAndSlotted, "RETURN linenumber(), filename()")
     result.toList should equal(List(Map("linenumber()" -> null, "filename()" -> null)))
   }
 
@@ -166,7 +163,7 @@ class LoadCsvAcceptanceTest
     assert(Files.exists(path))
 
     val filePathForQuery = path.normalize().toUri
-    val result = executeWith(interpretedAndSlotted4_0, s"LOAD CSV FROM '$filePathForQuery' AS line CREATE (a {name: line[0]}) RETURN a.name, filename()")
+    val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$filePathForQuery' AS line CREATE (a {name: line[0]}) RETURN a.name, filename()")
     assertStats(result, nodesCreated = 1, propertiesWritten = 1)
     resourceMonitor.assertClosedAndClear(1)
     result.toList should equal(List(Map("a.name" -> "foo", "filename()" -> filePathForQuery.getPath)))
@@ -458,7 +455,7 @@ class LoadCsvAcceptanceTest
   }
 
   test("should fail gracefully when loading missing file") {
-    failWithError(expectedToFail, "LOAD CSV FROM 'file:///./these_are_not_the_droids_you_are_looking_for.csv' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'file:///./these_are_not_the_droids_you_are_looking_for.csv' AS line CREATE (a {name:line[0]})",
       List("Couldn't load the external resource at: file:/./these_are_not_the_droids_you_are_looking_for.csv"))
     resourceMonitor.assertClosedAndClear(0)
   }
@@ -480,46 +477,46 @@ class LoadCsvAcceptanceTest
   }
 
   test("should fail gracefully when getting 404") {
-    failWithError(expectedToFail, s"LOAD CSV FROM 'http://127.0.0.1:$port/these_are_not_the_droids_you_are_looking_for/' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'http://127.0.0.1:$port/these_are_not_the_droids_you_are_looking_for/' AS line CREATE (a {name:line[0]})",
       List("Couldn't load the external resource at"))
     resourceMonitor.assertClosedAndClear(0)
   }
 
   test("should fail gracefully when loading non existent (local) site") {
-    failWithError(expectedToFail, "LOAD CSV FROM 'http://127.0.0.1:9999/these_are_not_the_droids_you_are_looking_for/' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'http://127.0.0.1:9999/these_are_not_the_droids_you_are_looking_for/' AS line CREATE (a {name:line[0]})",
       List("Couldn't load the external resource at"))
     resourceMonitor.assertClosedAndClear(0)
   }
 
   test("should reject URLs that are not valid") {
 
-    failWithError(expectedToFail, s"LOAD CSV FROM 'morsecorba://sos' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'morsecorba://sos' AS line CREATE (a {name:line[0]})",
       List("Invalid URL 'morsecorba://sos': unknown protocol: morsecorba"))
     resourceMonitor.assertClosedAndClear(0)
 
-    failWithError(expectedToFail, s"LOAD CSV FROM '://' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '://' AS line CREATE (a {name:line[0]})",
       List("Invalid URL '://': no protocol: ://"))
     resourceMonitor.assertClosedAndClear(0)
 
-    failWithError(expectedToFail, s"LOAD CSV FROM 'foo.bar' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'foo.bar' AS line CREATE (a {name:line[0]})",
       List("Invalid URL 'foo.bar': no protocol: foo.bar"))
     resourceMonitor.assertClosedAndClear(0)
 
-    failWithError(expectedToFail, s"LOAD CSV FROM 'jar:file:///tmp/bar.jar' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'jar:file:///tmp/bar.jar' AS line CREATE (a {name:line[0]})",
       List("Invalid URL 'jar:file:///tmp/bar.jar': no !/ in spec"))
     resourceMonitor.assertClosedAndClear(0)
 
-    failWithError(expectedToFail, "LOAD CSV FROM 'file://./blah.csv' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'file://./blah.csv' AS line CREATE (a {name:line[0]})",
       List("Cannot load from URL 'file://./blah.csv': file URL may not contain an authority section (i.e. it should be 'file:///')"))
     resourceMonitor.assertClosedAndClear(0)
 
-    failWithError(expectedToFail, "LOAD CSV FROM 'file:///tmp/blah.csv?q=foo' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, "LOAD CSV FROM 'file:///tmp/blah.csv?q=foo' AS line CREATE (a {name:line[0]})",
       List("Cannot load from URL 'file:///tmp/blah.csv?q=foo': file URL may not contain a query component"))
     resourceMonitor.assertClosedAndClear(0)
   }
 
   test("should deny URLs for blocked protocols") {
-    failWithError(expectedToFail, s"LOAD CSV FROM 'jar:file:///tmp/bar.jar!/blah/foo.csv' AS line CREATE (a {name:line[0]})",
+    failWithError(Configs.InterpretedAndSlotted, s"LOAD CSV FROM 'jar:file:///tmp/bar.jar!/blah/foo.csv' AS line CREATE (a {name:line[0]})",
       List("Cannot load from URL 'jar:file:///tmp/bar.jar!/blah/foo.csv': loading resources via protocol 'jar' is not permitted"))
     resourceMonitor.assertClosedAndClear(0)
   }

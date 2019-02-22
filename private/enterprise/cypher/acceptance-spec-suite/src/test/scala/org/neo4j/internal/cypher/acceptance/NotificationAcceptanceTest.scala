@@ -162,7 +162,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeWith(Configs.InterpretedAndSlotted,
       "explain match (a) where a.name='Alice' return length((a)-->()-->())")
 
-    result.notifications should contain(LENGTH_ON_NON_PATH.notification(new graphdb.InputPosition(97, 1, 98)))
+    result.notifications should contain(LENGTH_ON_NON_PATH.notification(new graphdb.InputPosition(93, 1, 94)))
   }
 
   test("do warn when using length on a string") {
@@ -249,7 +249,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     resultWithoutExplain.notifications.toList shouldBe empty
     resultWithExplain.notifications.toList should equal(
-      List(CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(52, 1, 53), cartesianProduct(Set("c", "d").asJava))))
+      List(CARTESIAN_PRODUCT.notification(new graphdb.InputPosition(48, 1, 49), cartesianProduct(Set("c", "d").asJava))))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label") {

@@ -22,7 +22,7 @@ import org.neo4j.values.virtual.MapValue
 import scala.util.{Failure, Success, Try}
 
 /**
-  * Will run a query across versions and configurations, making sure they all agree on the results and/or errors.
+  * Will run a query across configurations, making sure they all agree on the results and/or errors.
   *
   * For every query tested using `executeWith`, the query will be run against all configurations. Every configuration
   * is expected to either succeed or fail. When new features are added that enable queries in new configurations,
@@ -129,7 +129,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
             fail("Unexpectedly Succeeded in " + thisScenario.name)
           }
         // It was not expected to fail with the specified error message, do nothing
-        case Failure(e: Throwable) =>  {
+        case Failure(e: Throwable) =>
           val actualErrorType = e.toString
           if (expectedToFailWithSpecificMessage) {
             if (!correctError(actualErrorType, errorType)) {
@@ -143,46 +143,22 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
               fail("Unexpectedly (but correctly!) failed in " + thisScenario.name + " with the correct error. Did you forget to add this config?", e)
             }
           }
-        }
       }
     }
   }
 
   /**
-    * Execute query on all compatibility versions and dump the result into a string.
-    *
-    * Asserts that the same string is created by all versions and return that string. No other preparser
-    * options are given except for the version.
+    * Execute query and dump the result into a string.
     */
   protected def dumpToString(query: String,
                              params: Map[String, Any] = Map.empty): String = {
-
-    case class DumpResult(maybeResult:Try[String], version: Version)
-
     val paramValue = ExecutionEngineHelper.asMapValue(params)
-    val results: Seq[DumpResult] =
-      Versions.orderedVersions.map {
-        version => {
-          val queryText = s"CYPHER ${version.name} $query"
-          val txContext = transactionalContext(queryText -> params)
-          val maybeResult =
-            Try(eengineExecute(queryText, paramValue, txContext).resultAsString())
-          DumpResult(maybeResult, version)
-        }
-      }
+    val txContext = transactionalContext(query -> params)
+    val result = Try(eengineExecute(query, paramValue, txContext).resultAsString())
 
-    val successes = results.filter(_.maybeResult.isSuccess)
-    if (successes.isEmpty) {
-      fail(s"No compatibility mode managed to execute ´$query´")
-    }
+    if (!result.isSuccess) fail(s"Failed to execute ´$query´")
 
-    val reference = successes.head.maybeResult.get
-    for (result <- results) {
-      withClue(s"Failed with version '${result.version.name}'") {
-        result.maybeResult.get should equal(reference)
-      }
-    }
-    reference
+    result.get
   }
 
   /**
@@ -208,8 +184,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)
       val explicitlyRequestedExperimentalScenarios = expectSucceed.scenarios intersect Configs.Experimental.scenarios
 
-      val allConfigs = Configs.All
-      val positiveResults = ((allConfigs.scenarios ++ explicitlyRequestedExperimentalScenarios) - baseScenario).flatMap {
+      val positiveResults = ((Configs.All.scenarios ++ explicitlyRequestedExperimentalScenarios) - baseScenario).flatMap {
         thisScenario =>
           executeScenario(thisScenario,
                           query,
@@ -257,7 +232,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
         fail("At least one scenario must be expected to succeed to be able to compare plans")
       }
 
-      val baseScenario = TestScenario(Versions.V4_0, Planners.Cost, Runtimes.Interpreted)
+      val baseScenario = TestScenario(Planners.Cost, Runtimes.Interpreted)
       executeBefore()
       val baseResult = innerExecute(s"CYPHER ${baseScenario.preparserOptions} $query", params)
       baseResult
@@ -284,7 +259,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     if (scenariosToChooseFrom.scenarios.isEmpty) {
       fail("At least one scenario must be expected to succeed, to be comparable with plan and result")
     }
-    val preferredScenario = TestScenario(Versions.V4_0, Planners.Cost, Runtimes.Interpreted)
+    val preferredScenario = TestScenario(Planners.Cost, Runtimes.Interpreted)
     if (scenariosToChooseFrom.containsScenario(preferredScenario)) {
       preferredScenario
     } else {

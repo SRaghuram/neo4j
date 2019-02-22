@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 import cypher.features.Phase
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.plandescription.Arguments.{Planner => IPDPlanner, PlannerVersion => IPDPlannerVersion, Runtime => IPDRuntime, RuntimeVersion => IPDRuntimeVersion}
+import org.neo4j.cypher.internal.plandescription.Arguments.{Planner => IPDPlanner, Runtime => IPDRuntime}
 import org.scalatest.Assertions
 
 import scala.util.{Failure, Success, Try}
@@ -16,29 +16,24 @@ import scala.util.{Failure, Success, Try}
 /**
   * A single scenario, which can be composed to configurations.
   */
-case class TestScenario(version: Version, planner: Planner, runtime: Runtime) extends Assertions {
+case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
 
   override def toString: String = name
 
   def name: String = {
-    val versionName = version.name
     val plannerName = planner.preparserOption
     val runtimeName = runtime.preparserOption
-    s"$versionName $plannerName $runtimeName"
+    s"$plannerName $runtimeName"
   }
 
-  def preparserOptions: String = List(version.name, planner.preparserOption, runtime.preparserOption).mkString(" ")
+  def preparserOptions: String = List(planner.preparserOption, runtime.preparserOption).mkString(" ")
 
   def checkResultForSuccess(query: String, internalExecutionResult: RewindableExecutionResult): Unit = {
-    val ScenarioConfig(reportedRuntime, reportedPlanner, reportedVersion, reportedPlannerVersion) = extractConfiguration(internalExecutionResult)
+    val ScenarioConfig(reportedRuntime, reportedPlanner) = extractConfiguration(internalExecutionResult)
     if (!runtime.acceptedRuntimeNames.contains(reportedRuntime))
       fail(s"did not use ${runtime.acceptedRuntimeNames} runtime - instead $reportedRuntime was used. Scenario $name")
     if (!planner.acceptedPlannerNames.contains(reportedPlanner))
       fail(s"did not use ${planner.acceptedPlannerNames} planner - instead $reportedPlanner was used. Scenario $name")
-    if (!version.acceptedRuntimeVersionNames.contains(reportedVersion))
-      fail(s"did not use ${version.acceptedRuntimeVersionNames} runtime version - instead $reportedVersion was used. Scenario $name")
-    if (!version.acceptedPlannerVersionNames.contains(reportedPlannerVersion))
-      fail(s"did not use ${version.acceptedPlannerVersionNames} planner version - instead $reportedPlannerVersion was used. Scenario $name")
   }
 
   def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult], maybePhase: Option[String]): Unit = {
@@ -56,16 +51,15 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
                 |(NOTE: This test is marked as expected to fail, but failing at $phase is not ok)
                 |""".stripMargin, e)
       case Success(result) =>
-        val ScenarioConfig(reportedRuntimeName, reportedPlannerName, reportedVersionName, reportedPlannerVersionName) = extractConfiguration(result)
+        val ScenarioConfig(reportedRuntimeName, reportedPlannerName) = extractConfiguration(result)
 
         if (runtime.acceptedRuntimeNames.contains(reportedRuntimeName)
-          && planner.acceptedPlannerNames.contains(reportedPlannerName)
-          && version.acceptedRuntimeVersionNames.contains(reportedVersionName)) {
+          && planner.acceptedPlannerNames.contains(reportedPlannerName)) {
           fail(s"""Unexpectedly succeeded using $name for query:
                   |
                   |$query
                   |
-                  |(Actually executed with $reportedVersionName $reportedRuntimeName runtime and $reportedPlannerVersionName $reportedPlannerName planner)
+                  |(Actually executed with $reportedRuntimeName runtime and $reportedPlannerName planner)
                   |""".stripMargin)
         }
     }
@@ -81,16 +75,10 @@ case class TestScenario(version: Version, planner: Planner, runtime: Runtime) ex
     val reportedPlanner = arguments.collectFirst {
       case IPDPlanner(reported) => reported
     }
-    val reportedVersion = arguments.collectFirst {
-      case IPDRuntimeVersion(reported) => reported
-    }
-    val reportedPlannerVersion = arguments.collectFirst {
-      case IPDPlannerVersion(reported) => reported
-    }
-    ScenarioConfig(reportedRuntime.get, reportedPlanner.get, reportedVersion.get, reportedPlannerVersion.get)
+    ScenarioConfig(reportedRuntime.get, reportedPlanner.get)
   }
 
   def +(other: TestConfiguration): TestConfiguration = other + this
 }
 
-case class ScenarioConfig(runtime: String, planner: String, runtimeVersion: String, plannerVersion: String)
+case class ScenarioConfig(runtime: String, planner: String)

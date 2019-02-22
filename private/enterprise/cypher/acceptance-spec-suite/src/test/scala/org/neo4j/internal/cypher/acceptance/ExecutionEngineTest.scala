@@ -103,16 +103,6 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.toList should equal(List(Map("n1" -> n1, "n2" -> n2)))
   }
 
-  test("executionResultTextualOutput") {
-    val n1: Node = createNode()
-    val n2: Node = createNode()
-    val n3: Node = createNode()
-    relate(n1, n2, "KNOWS")
-    relate(n1, n3, "KNOWS")
-
-    dumpToString(s"match (node)-[rel:KNOWS]->(x) where id(node) = ${n1.getId} return x, node")
-  }
-
   test("shouldHandleOrFilters") {
     val n1 = createNode(Map("name" -> "boy"))
     val n2 = createNode(Map("name" -> "girl"))

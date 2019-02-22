@@ -164,8 +164,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop CONTAINS b.prop2)"),
-        expectPlansToFail = Configs.Version3_5))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":Foo(prop CONTAINS b.prop2)")))
 
     result.columnAs[Node]("a").toSet should equal(Set(aNodes(12), aNodes(120), aNodes(121), aNodes(122), aNodes(123), aNodes(124), aNodes(125)))
   }
@@ -180,8 +179,7 @@ class IndexNestedLoopJoinAcceptanceTest extends ExecutionEngineFunSuite with Cyp
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":FOO(prop ENDS WITH b.prop2)"),
-        expectPlansToFail = Configs.Version3_5))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":FOO(prop ENDS WITH b.prop2)")))
 
     result.columnAs[Node]("a").toSet should equal(Set(aNodes(12), aNodes(120), aNodes(121), aNodes(122), aNodes(123), aNodes(124), aNodes(125)))
   }

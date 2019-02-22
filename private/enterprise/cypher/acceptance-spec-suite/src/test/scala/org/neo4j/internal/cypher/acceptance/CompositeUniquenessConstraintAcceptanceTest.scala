@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.{V3_5, V4_0}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 class CompositeUniquenessConstraintAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {

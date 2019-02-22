@@ -77,9 +77,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // When
     val query = s"MATCH (n:Awesome) RETURN n.prop1, n.prop2, n.prop3"
 
-    // NodeIndexScan is not supported in the compiled runtime
-    val supportedConfig = Configs.InterpretedAndSlottedAndMorsel + Configs.Version3_5
-    val result = executeWith(supportedConfig, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     // Then
     result.executionPlanDescription() should (
@@ -204,10 +202,7 @@ class ConstraintsWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   private def assertIndexScan(expectedResult: Seq[Map[String, Int]], labels: String*): Unit = {
     val query = s"MATCH (n:${labels.mkString(":")}) RETURN n.prop1"
 
-    // NodeIndexScan is not supported in the compiled runtime
-    val supportedConfig = Configs.InterpretedAndSlottedAndMorsel + Configs.Version3_5
-
-    val result = executeWith(supportedConfig, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and

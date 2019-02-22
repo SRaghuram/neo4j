@@ -6,7 +6,6 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_5
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 /**
@@ -61,7 +60,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
         plan should includeSomewhere.aPlan("Union")
     }))
@@ -81,10 +80,10 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeekByRange"))
         plan should includeSomewhere.aPlan("Union")
-      }, expectPlansToFail = Configs.Version3_5))
+      }))
 
     result.columnAs("c").toSet should be(Set(nodes(1), nodes(11)))
   }
@@ -101,7 +100,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeekByRange"))
         plan should includeSomewhere.aPlan("Union")
       }))
@@ -121,7 +120,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexScan"))
         plan should includeSomewhere.aPlan("Union")
       }))
@@ -139,7 +138,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexScan"))
         plan should includeSomewhere.aPlan("Union")
       }))
@@ -169,7 +168,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.All, "unwind [1,2,3] as x match (n:Prop) where n.id = x return n;",
-      planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.aPlan("NodeIndexSeek")
       }))
 
@@ -185,7 +184,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         createLabeledNode(Map("l" -> i), "L")
       }
 
-      val rs = (1 to 100).map { i =>
+      val rs = (1 to 100).map { _ =>
         createLabeledNode(Map("r" -> 23), "R")
       }
 
@@ -245,8 +244,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
-        planDescription.toString() shouldNot include("index")
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription.toString shouldNot include("index")
       }))
 
     // Then
@@ -272,8 +271,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion((planDescription) => {
-        planDescription.toString() shouldNot include("index")
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription.toString shouldNot include("index")
       }))
 
     // Then
@@ -383,7 +382,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Label2", "prop1")
     graph.createIndex("Label2", "prop2")
 
-    for( i <- 1 to 10 ) {
+    for( _ <- 1 to 10 ) {
       graph.execute("CREATE(:Label1 {prop1: 'val', prop2: 'val'})" )
       graph.execute("CREATE(:Label2 {prop1: 'val', prop2: 'val'})" )
     }

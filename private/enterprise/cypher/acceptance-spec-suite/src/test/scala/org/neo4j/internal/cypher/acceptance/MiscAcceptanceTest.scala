@@ -26,7 +26,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   test("should be able to compare booleans") {
     val query = "WITH true AS t, false AS f RETURN t<f, t>f"
 
-    val result = executeWith(Configs.Version4_0 - Configs.Compiled, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
     result.toList should equal(List(Map("t<f" -> false, "t>f" -> true)))
   }
 

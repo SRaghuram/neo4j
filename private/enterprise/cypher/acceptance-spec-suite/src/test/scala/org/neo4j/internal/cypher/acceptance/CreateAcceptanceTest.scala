@@ -18,9 +18,6 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
 
   private val BIG_TIMEOUT = 15 minutes
   private val BIG_N = 1000
-  private val BIG_CREATE_CONFIGS =
-    TestConfiguration(Versions.V4_0, Planners.all, Runtimes(Runtimes.Interpreted, Runtimes.Slotted)) +
-    TestConfiguration(Versions.V3_5, Planners.all, Runtimes(Runtimes.Interpreted))
 
   test("handle big CREATE clause") {
     var query = "CREATE (x)"
@@ -28,7 +25,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
       query += s" ,(a$i)-[:R]->(b$i)"
     }
 
-    val futureResult = Future(executeWith(BIG_CREATE_CONFIGS, query, executeExpectedFailures = false))
+    val futureResult = Future(executeWith(Configs.InterpretedAndSlotted, query, executeExpectedFailures = false))
     val result = Await.result(futureResult, BIG_TIMEOUT)
     assertStats(result, nodesCreated = BIG_N * 2 + 1, relationshipsCreated = BIG_N)
   }
@@ -39,7 +36,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
       query += s" CREATE (a$i)-[:R]->(b$i)"
     }
 
-    val futureResult = Future(executeWith(BIG_CREATE_CONFIGS, query, executeExpectedFailures = false))
+    val futureResult = Future(executeWith(Configs.InterpretedAndSlotted, query, executeExpectedFailures = false))
     val result = Await.result(futureResult, BIG_TIMEOUT)
     assertStats(result, nodesCreated = BIG_N * 2 + 1, relationshipsCreated = BIG_N)
   }
@@ -50,7 +47,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
       query += s" ,(a$i)-[:R]->(b$i)"
     }
 
-    val futureResult = Future(executeWith(BIG_CREATE_CONFIGS, query, executeExpectedFailures = false))
+    val futureResult = Future(executeWith(Configs.InterpretedAndSlotted, query, executeExpectedFailures = false))
     val result = Await.result(futureResult, BIG_TIMEOUT)
     assertStats(result, nodesCreated = BIG_N * 2 + 1, relationshipsCreated = BIG_N)
 
@@ -67,7 +64,7 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
       query += s" CREATE (a$i)-[:R]->(b$i)"
     }
 
-    val futureResult = Future(executeWith(BIG_CREATE_CONFIGS, query, executeExpectedFailures = false))
+    val futureResult = Future(executeWith(Configs.InterpretedAndSlotted, query, executeExpectedFailures = false))
     val result = Await.result(futureResult, BIG_TIMEOUT)
     assertStats(result, nodesCreated = BIG_N * 2 + 1, relationshipsCreated = BIG_N)
 

@@ -13,8 +13,6 @@ import org.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.cypher.ShortestPathCommonEndNodesForbiddenException
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V3_5
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Versions.V4_0
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.values.virtual.VirtualValues
 
