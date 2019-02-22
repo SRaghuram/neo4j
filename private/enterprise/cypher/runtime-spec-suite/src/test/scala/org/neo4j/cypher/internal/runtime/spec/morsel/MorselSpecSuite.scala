@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_PARALLEL.HasEvidenceOfParallelism
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase}
+import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, ProjectionTestBase}
 import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_PARALLEL, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
 
@@ -297,6 +297,22 @@ class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInp
           Array(x) <- rowsComingIntoTheOperator if x.getId < 10
         } yield Array(x),
       Seq("x")
+    )
+}
+
+// PROJECTION
+class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+
+class MorselProjectionStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
+
+  override def onTopOfParallelInputOperator(variable: String): OnTopOfParallelInputTD =
+    OnTopOfParallelInputTD(
+      _.projection("prop * 2 AS j"),
+      rowsComingIntoTheOperator =>
+        for {
+          Array(x) <- rowsComingIntoTheOperator
+        } yield Array(x, x.getId * 2),
+      Seq("x", "j")
     )
 }
 
