@@ -21,8 +21,8 @@ import org.neo4j.cypher.internal.v4_0.logical.plans.{ASTCachedNodeProperty, Coer
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
 import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, InternalException}
 import org.neo4j.cypher.operations._
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
-import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, RelationshipScanCursor}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.kernel.impl.util.ValueUtils.asAnyValue
@@ -102,11 +102,11 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     val getKeyOps = groupingsOrdered.map(_._1).map {
       case LongSlot(offset, nullable, CTNode) =>
-        val getter = invokeStatic(method[VirtualValues, NodeValue, Long]("node"), getLongAt(offset, None))
+        val getter = invokeStatic(method[VirtualValues, NodeReference, Long]("node"), getLongAt(offset, None))
         if (nullable) ternary(equal(getLongAt(offset, None), constant(-1L)), noValue, getter)
         else getter
       case LongSlot(offset, nullable, CTRelationship) =>
-        val getter = invokeStatic(method[VirtualValues, RelationshipValue, Long]("relationship"), getLongAt(offset, None))
+        val getter = invokeStatic(method[VirtualValues, RelationshipReference, Long]("relationship"), getLongAt(offset, None))
         if (nullable) ternary(equal(getLongAt(offset, None), constant(-1L)), noValue, getter)
         else getter
       case RefSlot(offset, _, _) => getRefAt(offset, None)
