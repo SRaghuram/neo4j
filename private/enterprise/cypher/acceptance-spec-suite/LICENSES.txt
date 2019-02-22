@@ -31,7 +31,6 @@ Apache Software License, Version 2.0
   Caffeine cache
   config
   Data Mapper for Jackson
-  Graphite Integration for Metrics
   hazelcast-all
   Jackson
   Jetty :: Asynchronous HTTP Client
@@ -45,18 +44,12 @@ Apache Software License, Version 2.0
   Lucene Core
   Lucene QueryParsers
   LZ4 and xxHash
-  Metrics Core
-  Metrics Integration with JMX
   Netty
   Netty/All-in-One
   org.apiguardian:apiguardian-api
   org.opentest4j:opentest4j
   parboiled-core
   parboiled-scala
-  Prometheus Java Simpleclient
-  Prometheus Java Simpleclient Common
-  Prometheus Java Simpleclient Dropwizard
-  Prometheus Java Simpleclient Httpserver
   ssl-config-core
   WMI4Java
 ------------------------------------------------------------------------------

@@ -7,8 +7,8 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -41,8 +41,13 @@ public class UserManagementProceduresLoggingTest
     private CommercialSecurityContext matsContext;
     private EnterpriseUserManager generalUserManager;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Throwable
+    {
+        init();
+    }
+
+    protected void init() throws Throwable
     {
         log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
@@ -84,7 +89,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogCreatingUser() throws Throwable
+    void shouldLogCreatingUser() throws Throwable
     {
         authProcedures.createUser( "andres", "el password", true );
         authProcedures.createUser( "mats", "el password", false );
@@ -96,7 +101,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToCreateUser()
+    void shouldLogFailureToCreateUser()
     {
         catchInvalidArguments( () -> authProcedures.createUser( null, "pw", true ) );
         catchInvalidArguments( () -> authProcedures.createUser( "", "pw", true ) );
@@ -114,7 +119,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedCreatingUser()
+    void shouldLogUnauthorizedCreatingUser()
     {
         setSubject( matsContext );
         catchAuthorizationViolation( () -> authProcedures.createUser( "andres", "", true ) );
@@ -123,7 +128,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogDeletingUser() throws Throwable
+    void shouldLogDeletingUser() throws Throwable
     {
         authProcedures.createUser( "andres", "el password", false );
         authProcedures.deleteUser( "andres" );
@@ -134,7 +139,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogDeletingNonExistentUser()
+    void shouldLogDeletingNonExistentUser()
     {
         catchInvalidArguments( () -> authProcedures.deleteUser( "andres" ) );
 
@@ -142,7 +147,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedDeleteUser()
+    void shouldLogUnauthorizedDeleteUser()
     {
         setSubject( matsContext );
         catchAuthorizationViolation( () -> authProcedures.deleteUser( ADMIN ) );
@@ -151,7 +156,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogAddingRoleToUser() throws Throwable
+    void shouldLogAddingRoleToUser() throws Throwable
     {
         authProcedures.createUser( "mats", "neo4j", false );
         authProcedures.addRoleToUser( ARCHITECT, "mats" );
@@ -162,7 +167,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToAddRoleToUser() throws Throwable
+    void shouldLogFailureToAddRoleToUser() throws Throwable
     {
         authProcedures.createUser( "mats", "neo4j", false );
         catchInvalidArguments( () -> authProcedures.addRoleToUser( "null", "mats" ) );
@@ -173,7 +178,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedAddingRole()
+    void shouldLogUnauthorizedAddingRole()
     {
         setSubject( matsContext );
         catchAuthorizationViolation( () -> authProcedures.addRoleToUser( ADMIN, "mats" ) );
@@ -182,7 +187,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogRemovalOfRoleFromUser() throws Throwable
+    void shouldLogRemovalOfRoleFromUser() throws Throwable
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", false );
@@ -197,7 +202,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToRemoveRoleFromUser() throws Throwable
+    void shouldLogFailureToRemoveRoleFromUser() throws Throwable
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", false );
@@ -216,7 +221,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedRemovingRole()
+    void shouldLogUnauthorizedRemovingRole()
     {
         setSubject( matsContext );
         catchAuthorizationViolation( () -> authProcedures.removeRoleFromUser( ADMIN, ADMIN ) );
@@ -225,7 +230,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUserPasswordChanges() throws IOException, InvalidArgumentsException
+    void shouldLogUserPasswordChanges() throws IOException, InvalidArgumentsException
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", true );
@@ -252,7 +257,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToChangeUserPassword() throws Throwable
+    void shouldLogFailureToChangeUserPassword() throws Throwable
     {
         // Given
         authProcedures.createUser( "andres", "neo4j", true );
@@ -275,7 +280,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToChangeOwnPassword() throws Throwable
+    void shouldLogFailureToChangeOwnPassword() throws Throwable
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", true );
@@ -301,7 +306,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedChangePassword() throws Throwable
+    void shouldLogUnauthorizedChangePassword() throws Throwable
     {
         // Given
         authProcedures.createUser( "andres", "neo4j", true );
@@ -318,7 +323,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogSuspendUser() throws Throwable
+    void shouldLogSuspendUser() throws Throwable
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", false );
@@ -336,7 +341,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToSuspendUser() throws Throwable
+    void shouldLogFailureToSuspendUser() throws Throwable
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", false );
@@ -354,7 +359,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedSuspendUser()
+    void shouldLogUnauthorizedSuspendUser()
     {
         // Given
         setSubject( matsContext );
@@ -369,7 +374,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogActivateUser() throws Throwable
+    void shouldLogActivateUser() throws Throwable
     {
         // Given
         authProcedures.createUser( "mats", "neo4j", false );
@@ -388,7 +393,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToActivateUser()
+    void shouldLogFailureToActivateUser()
     {
         // When
         catchInvalidArguments( () -> authProcedures.activateUser( "notMats", false ) );
@@ -402,7 +407,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedActivateUser()
+    void shouldLogUnauthorizedActivateUser()
     {
         // Given
         setSubject( matsContext );
@@ -417,7 +422,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogCreatingRole() throws Throwable
+    void shouldLogCreatingRole() throws Throwable
     {
         // When
         authProcedures.createRole( "role" );
@@ -427,7 +432,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToCreateRole() throws Throwable
+    void shouldLogFailureToCreateRole() throws Throwable
     {
         // Given
         authProcedures.createRole( "role" );
@@ -450,7 +455,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedCreateRole()
+    void shouldLogUnauthorizedCreateRole()
     {
         // Given
         setSubject( matsContext );
@@ -463,7 +468,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogDeletingRole() throws Exception
+    void shouldLogDeletingRole() throws Exception
     {
         // Given
         authProcedures.createRole( "foo" );
@@ -477,7 +482,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToDeleteRole()
+    void shouldLogFailureToDeleteRole()
     {
         // When
         catchInvalidArguments( () -> authProcedures.deleteRole( null ) );
@@ -495,7 +500,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedDeletingRole()
+    void shouldLogUnauthorizedDeletingRole()
     {
         // Given
         setSubject( matsContext );
@@ -508,7 +513,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogIfUnexpectedErrorTerminatingTransactions() throws Exception
+    void shouldLogIfUnexpectedErrorTerminatingTransactions() throws Exception
     {
         // Given
         authProcedures.createUser( "johan", "neo4j", false );
@@ -527,7 +532,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedListUsers()
+    void shouldLogUnauthorizedListUsers()
     {
         // Given
         setSubject( matsContext );
@@ -539,7 +544,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedListRoles()
+    void shouldLogUnauthorizedListRoles()
     {
         // Given
         setSubject( matsContext );
@@ -551,7 +556,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToListRolesForUser()
+    void shouldLogFailureToListRolesForUser()
     {
         // Given
 
@@ -568,7 +573,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedListRolesForUser()
+    void shouldLogUnauthorizedListRolesForUser()
     {
         // Given
         setSubject( matsContext );
@@ -580,7 +585,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogFailureToListUsersForRole()
+    void shouldLogFailureToListUsersForRole()
     {
         // Given
 
@@ -597,7 +602,7 @@ public class UserManagementProceduresLoggingTest
     }
 
     @Test
-    public void shouldLogUnauthorizedListUsersForRole()
+    void shouldLogUnauthorizedListUsersForRole()
     {
         // Given
         setSubject( matsContext );
