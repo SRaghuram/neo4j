@@ -33,7 +33,7 @@ class CompiledAggregationTest extends RuntimeTestSuite(ENTERPRISE_SINGLE_THREAD,
     val runtimeResult = execute(logicalQuery, runtime)
 
     // then
-    runtimeResult should beColumns("c").withRow(5000)
+    runtimeResult should beColumns("c").withSingleRow(5000)
   }
 }
 class CompiledExpandAllTest extends ExpandAllTestBase(ENTERPRISE_SINGLE_THREAD, CompiledRuntime, SIZE_HINT)

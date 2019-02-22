@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
-import org.neo4j.cypher.internal.runtime.slotted.pipes
+import org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans._
@@ -75,7 +75,7 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
       case plans.Sort(_, sortItems) =>
         val argumentDepth = physicalPlan.applyPlans(id)
         val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
-        val argumentOrdering = pipes.Ascending(LongSlot(argumentSlot, nullable = false, CTInteger))
+        val argumentOrdering = slotted.Ascending(LongSlot(argumentSlot, nullable = false, CTInteger))
         val ordering = argumentOrdering +: sortItems.map(translateColumnOrder(slots, _))
         Some(new SortPreOperator(WorkIdentity.fromPlan(plan),
                                  ordering))
