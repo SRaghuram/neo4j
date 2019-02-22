@@ -18,7 +18,6 @@ public class PooledChannel
 {
     private final Channel channel;
     private final ChannelPool pool;
-    private volatile boolean released;
 
     /**
      * Channel that belongs to a {@link ChannelPool}. Should always be released after finished using.
@@ -73,7 +72,6 @@ public class PooledChannel
      */
     public Future<Void> release()
     {
-        released = true;
         return pool.release( channel );
     }
 }
