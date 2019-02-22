@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.monitoring.tracing;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -25,14 +25,14 @@ import org.neo4j.time.FakeClock;
 
 import static org.mockito.Mockito.mock;
 
-public class VerbosePageCacheTracerTest
+class VerbosePageCacheTracerTest
 {
     private AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private Log log = logProvider.getLog( getClass() );
     private FakeClock clock = Clocks.fakeClock();
 
     @Test
-    public void traceFileMap()
+    void traceFileMap()
     {
         VerbosePageCacheTracer tracer = createTracer();
         tracer.mappedFile( new File( "mapFile" ) );
@@ -40,7 +40,7 @@ public class VerbosePageCacheTracerTest
     }
 
     @Test
-    public void traceUnmapFile()
+    void traceUnmapFile()
     {
         VerbosePageCacheTracer tracer = createTracer();
         tracer.unmappedFile( new File( "unmapFile" ) );
@@ -48,7 +48,7 @@ public class VerbosePageCacheTracerTest
     }
 
     @Test
-    public void traceSinglePageCacheFlush()
+    void traceSinglePageCacheFlush()
     {
         VerbosePageCacheTracer tracer = createTracer();
         try ( MajorFlushEvent majorFlushEvent = tracer.beginCacheFlush() )
@@ -65,7 +65,7 @@ public class VerbosePageCacheTracerTest
     }
 
     @Test
-    public void evictionDoesNotInfluenceFlushNumbers()
+    void evictionDoesNotInfluenceFlushNumbers()
     {
         VerbosePageCacheTracer tracer = createTracer();
         try ( MajorFlushEvent majorFlushEvent = tracer.beginCacheFlush() )
@@ -94,7 +94,7 @@ public class VerbosePageCacheTracerTest
     }
 
     @Test
-    public void traceFileFlush()
+    void traceFileFlush()
     {
         VerbosePageCacheTracer tracer = createTracer();
         PageSwapper swapper = mock( PageSwapper.class );

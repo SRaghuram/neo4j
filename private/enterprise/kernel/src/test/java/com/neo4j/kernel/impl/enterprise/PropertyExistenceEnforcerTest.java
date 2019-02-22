@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
@@ -19,15 +19,15 @@ import org.neo4j.kernel.api.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.schema.ConstraintDescriptor;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-public class PropertyExistenceEnforcerTest
+class PropertyExistenceEnforcerTest
 {
     @Test
-    public void constraintPropertyIdsNotUpdatedByConstraintEnforcer()
+    void constraintPropertyIdsNotUpdatedByConstraintEnforcer()
     {
         UniquenessConstraintDescriptor uniquenessConstraint = ConstraintDescriptorFactory.uniqueForLabel( 1, 1, 70, 8 );
         NodeKeyConstraintDescriptor nodeKeyConstraint = ConstraintDescriptorFactory.nodeKeyForLabel( 2, 12, 7, 13 );
@@ -40,12 +40,9 @@ public class PropertyExistenceEnforcerTest
 
         PropertyExistenceEnforcer.getOrCreatePropertyExistenceEnforcerFrom( storageReader );
 
-        assertArrayEquals( "Property ids should remain untouched.", new int[]{1, 70, 8},
-                uniquenessConstraint.schema().getPropertyIds() );
-        assertArrayEquals( "Property ids should remain untouched.", new int[]{12, 7, 13},
-                nodeKeyConstraint.schema().getPropertyIds() );
-        assertArrayEquals( "Property ids should remain untouched.", new int[]{5, 13, 8},
-                relTypeConstraint.schema().getPropertyIds() );
+        assertArrayEquals( new int[]{1, 70, 8}, uniquenessConstraint.schema().getPropertyIds(), "Property ids should remain untouched." );
+        assertArrayEquals( new int[]{12, 7, 13}, nodeKeyConstraint.schema().getPropertyIds(), "Property ids should remain untouched." );
+        assertArrayEquals( new int[]{5, 13, 8}, relTypeConstraint.schema().getPropertyIds(), "Property ids should remain untouched." );
     }
 
     @SuppressWarnings( "unchecked" )

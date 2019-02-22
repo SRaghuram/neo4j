@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.enterprise.builtinprocs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,16 +28,17 @@ import org.neo4j.time.Clocks;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.isEmptyString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyString;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class TransactionDependenciesResolverTest
+class TransactionDependenciesResolverTest
 {
     @Test
-    public void detectIndependentTransactionsAsNotBlocked()
+    void detectIndependentTransactionsAsNotBlocked()
     {
         HashMap<KernelTransactionHandle,List<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
@@ -52,7 +53,7 @@ public class TransactionDependenciesResolverTest
     }
 
     @Test
-    public void detectBlockedTransactionsByExclusiveLock()
+    void detectBlockedTransactionsByExclusiveLock()
     {
         HashMap<KernelTransactionHandle,List<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 0,
@@ -68,7 +69,7 @@ public class TransactionDependenciesResolverTest
     }
 
     @Test
-    public void detectBlockedTransactionsBySharedLock()
+    void detectBlockedTransactionsBySharedLock()
     {
         HashMap<KernelTransactionHandle,List<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 0,
@@ -84,7 +85,7 @@ public class TransactionDependenciesResolverTest
     }
 
     @Test
-    public void blockingChainDescriptionForIndependentTransactionsIsEmpty()
+    void blockingChainDescriptionForIndependentTransactionsIsEmpty()
     {
         HashMap<KernelTransactionHandle,List<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction() );
@@ -94,12 +95,12 @@ public class TransactionDependenciesResolverTest
         map.put( handle2, singletonList( createQuerySnapshot( 2 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
-        assertThat( resolver.describeBlockingTransactions( handle1 ), isEmptyString() );
-        assertThat( resolver.describeBlockingTransactions( handle2 ), isEmptyString() );
+        assertThat( resolver.describeBlockingTransactions( handle1 ), is( emptyString() ) );
+        assertThat( resolver.describeBlockingTransactions( handle2 ), is( emptyString() ) );
     }
 
     @Test
-    public void blockingChainDescriptionForDirectlyBlockedTransaction()
+    void blockingChainDescriptionForDirectlyBlockedTransaction()
     {
         HashMap<KernelTransactionHandle,List<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 3,
@@ -110,12 +111,12 @@ public class TransactionDependenciesResolverTest
         map.put( handle2, singletonList( createQuerySnapshotWaitingForLock( 2, false, ResourceTypes.NODE, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
-        assertThat( resolver.describeBlockingTransactions( handle1 ), isEmptyString() );
+        assertThat( resolver.describeBlockingTransactions( handle1 ), is( emptyString() ) );
         assertEquals( "[transaction-3]", resolver.describeBlockingTransactions( handle2 ) );
     }
 
     @Test
-    public void blockingChainDescriptionForChainedBlockedTransaction()
+    void blockingChainDescriptionForChainedBlockedTransaction()
     {
         HashMap<KernelTransactionHandle,List<QuerySnapshot>> map = new HashMap<>();
         TestKernelTransactionHandle handle1 = new TestKernelTransactionHandleWithLocks( new StubKernelTransaction(), 4,
@@ -129,7 +130,7 @@ public class TransactionDependenciesResolverTest
         map.put( handle3, singletonList( createQuerySnapshotWaitingForLock( 3, true, ResourceTypes.NODE, 2 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
-        assertThat( resolver.describeBlockingTransactions( handle1 ), isEmptyString() );
+        assertThat( resolver.describeBlockingTransactions( handle1 ), is( emptyString() ) );
         assertEquals( "[transaction-4]", resolver.describeBlockingTransactions( handle2 ) );
         assertEquals( "[transaction-4, transaction-5]", resolver.describeBlockingTransactions( handle3 ) );
     }

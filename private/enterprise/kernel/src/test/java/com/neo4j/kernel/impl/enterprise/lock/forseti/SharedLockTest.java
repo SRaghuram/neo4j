@@ -5,18 +5,18 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class SharedLockTest
+class SharedLockTest
 {
 
     @Test
-    public void shouldUpgradeToUpdateLock()
+    void shouldUpgradeToUpdateLock()
     {
         // Given
         ForsetiClient clientA = mock( ForsetiClient.class );
@@ -34,7 +34,7 @@ public class SharedLockTest
     }
 
     @Test
-    public void shouldReleaseSharedLock()
+    void shouldReleaseSharedLock()
     {
         // Given
         ForsetiClient clientA = mock( ForsetiClient.class );

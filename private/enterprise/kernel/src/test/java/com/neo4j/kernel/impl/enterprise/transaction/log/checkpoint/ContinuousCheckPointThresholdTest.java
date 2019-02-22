@@ -5,17 +5,17 @@
  */
 package com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ContinuousCheckPointThresholdTest
+class ContinuousCheckPointThresholdTest
 {
     @Test
-    public void continuousCheckPointMustReachThresholdOnEveryCommit()
+    void continuousCheckPointMustReachThresholdOnEveryCommit()
     {
         ContinuousCheckPointThreshold threshold = new ContinuousCheckPointThreshold();
         threshold.initialize( 10 );
@@ -27,7 +27,7 @@ public class ContinuousCheckPointThresholdTest
     }
 
     @Test
-    public void continuousThresholdMustNotBusySpin()
+    void continuousThresholdMustNotBusySpin()
     {
         ContinuousCheckPointThreshold threshold = new ContinuousCheckPointThreshold();
         assertThat( threshold.checkFrequencyMillis(), greaterThan( 0L ) );

@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.monitoring.tracing;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -13,19 +13,19 @@ import org.neo4j.logging.BufferingLog;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.time.Clocks;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class VerboseTracerFactoryTest
+class VerboseTracerFactoryTest
 {
 
     @Test
-    public void verboseTracerFactoryRegisterTracerWithCodeNameVerbose()
+    void verboseTracerFactoryRegisterTracerWithCodeNameVerbose()
     {
         assertEquals( "verbose", tracerFactory().getImplementationName() );
     }
 
     @Test
-    public void verboseFactoryCreateVerboseTracer()
+    void verboseFactoryCreateVerboseTracer()
     {
         BufferingLog msgLog = new BufferingLog();
         PageCacheTracer pageCacheTracer = tracerFactory().createPageCacheTracer( new Monitors(),

@@ -5,24 +5,24 @@
  */
 package com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointThreshold;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointThresholdTestSupport;
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruning;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.lessThan;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSupport
 {
     private boolean haveLogsToPrune;
 
-    @Before
+    @BeforeEach
     @Override
     public void setUp()
     {
@@ -32,7 +32,7 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
             @Override
             public void pruneLogs( long currentVersion )
             {
-                fail( "Check point threshold must never call out to prune logs directly." );
+                Assertions.fail( "Check point threshold must never call out to prune logs directly." );
             }
 
             @Override
@@ -44,7 +44,7 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
     }
 
     @Test
-    public void checkPointIsNeededIfWeMightHaveLogsToPrune()
+    void checkPointIsNeededIfWeMightHaveLogsToPrune()
     {
         withPolicy( "volumetric" );
         haveLogsToPrune = true;
@@ -56,7 +56,7 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
     }
 
     @Test
-    public void checkPointIsInitiallyNotNeededIfWeHaveNoLogsToPrune()
+    void checkPointIsInitiallyNotNeededIfWeHaveNoLogsToPrune()
     {
         withPolicy( "volumetric" );
         haveLogsToPrune = false;
@@ -66,9 +66,8 @@ public class EnterpriseCheckPointThresholdTest extends CheckPointThresholdTestSu
         verifyNoMoreTriggers();
     }
 
-    @SuppressWarnings( "ConstantConditions" )
     @Test
-    public void continuousPolicyMustTriggerCheckPointsAfterAnyWriteTransaction()
+    void continuousPolicyMustTriggerCheckPointsAfterAnyWriteTransaction()
     {
         withPolicy( "continuous" );
         CheckPointThreshold threshold = createThreshold();

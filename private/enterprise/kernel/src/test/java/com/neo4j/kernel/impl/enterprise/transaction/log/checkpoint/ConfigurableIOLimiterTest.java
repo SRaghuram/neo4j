@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.Flushable;
 import java.util.Map;
@@ -17,12 +17,12 @@ import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.configuration.Config;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-public class ConfigurableIOLimiterTest
+class ConfigurableIOLimiterTest
 {
     private static final String ORIGIN = "test";
     private ConfigurableIOLimiter limiter;
@@ -30,22 +30,8 @@ public class ConfigurableIOLimiterTest
     private AtomicLong pauseNanosCounter;
     private static final Flushable FLUSHABLE = () -> {};
 
-    private void createIOLimiter( Config config )
-    {
-        this.config = config;
-        pauseNanosCounter = new AtomicLong();
-        ObjLongConsumer<Object> pauseNanos = ( blocker, nanos ) -> pauseNanosCounter.getAndAdd( nanos );
-        limiter = new ConfigurableIOLimiter( config, pauseNanos );
-    }
-
-    private void createIOLimiter( int limit )
-    {
-        Map<String,String> settings = stringMap( GraphDatabaseSettings.check_point_iops_limit.name(), "" + limit );
-        createIOLimiter( Config.defaults( settings ) );
-    }
-
     @Test
-    public void mustPutDefaultLimitOnIOWhenNoLimitIsConfigured()
+    void mustPutDefaultLimitOnIOWhenNoLimitIsConfigured()
     {
         createIOLimiter( Config.defaults() );
 
@@ -59,21 +45,14 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void mustNotPutLimitOnIOWhenConfiguredToBeUnlimited()
+    void mustNotPutLimitOnIOWhenConfiguredToBeUnlimited()
     {
         createIOLimiter( -1 );
         assertUnlimited();
     }
 
-    private void assertUnlimited()
-    {
-        long pauseTime = pauseNanosCounter.get();
-        repeatedlyCallMaybeLimitIO( limiter, IOLimiter.INITIAL_STAMP, 1000000 );
-        assertThat( pauseNanosCounter.get(), is( pauseTime ) );
-    }
-
     @Test
-    public void mustNotPutLimitOnIOWhenLimitingIsDisabledAndNoLimitIsConfigured()
+    void mustNotPutLimitOnIOWhenLimitingIsDisabledAndNoLimitIsConfigured()
     {
         createIOLimiter( Config.defaults() );
         limiter.disableLimit();
@@ -97,7 +76,7 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void mustRestrictIORateToConfiguredLimit()
+    void mustRestrictIORateToConfiguredLimit()
     {
         createIOLimiter( 100 );
 
@@ -110,17 +89,8 @@ public class ConfigurableIOLimiterTest
         assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );
     }
 
-    private long repeatedlyCallMaybeLimitIO( IOLimiter ioLimiter, long stamp, int iosPerIteration )
-    {
-        for ( int i = 0; i < 100; i++ )
-        {
-            stamp = ioLimiter.maybeLimitIO( stamp, iosPerIteration, FLUSHABLE );
-        }
-        return stamp;
-    }
-
     @Test
-    public void mustNotRestrictIOToConfiguredRateWhenLimitIsDisabled()
+    void mustNotRestrictIOToConfiguredRateWhenLimitIsDisabled()
     {
         createIOLimiter( 100 );
 
@@ -150,7 +120,7 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void dynamicConfigurationUpdateMustBecomeVisible()
+    void dynamicConfigurationUpdateMustBecomeVisible()
     {
         // Create initially unlimited
         createIOLimiter( 0 );
@@ -173,7 +143,7 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void dynamicConfigurationUpdateEnablingLimiterMustNotDisableLimiter()
+    void dynamicConfigurationUpdateEnablingLimiterMustNotDisableLimiter()
     {
         // Create initially unlimited
         createIOLimiter( 0 );
@@ -192,7 +162,7 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void dynamicConfigurationUpdateDisablingLimiterMustNotDisableLimiter()
+    void dynamicConfigurationUpdateDisablingLimiterMustNotDisableLimiter()
     {
         // Create initially limited
         createIOLimiter( 100 );
@@ -214,7 +184,7 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void configuredLimitMustReflectCurrentState()
+    void configuredLimitMustReflectCurrentState()
     {
         createIOLimiter( 100 );
 
@@ -224,7 +194,7 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void configuredDisabledLimitShouldBeUnlimited()
+    void configuredDisabledLimitShouldBeUnlimited()
     {
         createIOLimiter( -1 );
 
@@ -234,7 +204,7 @@ public class ConfigurableIOLimiterTest
     }
 
     @Test
-    public void unlimitedShouldAlwaysBeUnlimited()
+    void unlimitedShouldAlwaysBeUnlimited()
     {
         IOLimiter limiter = IOLimiter.UNLIMITED;
 
@@ -251,6 +221,36 @@ public class ConfigurableIOLimiterTest
         {
             limiter.disableLimit();
         }
+    }
+
+    private void createIOLimiter( Config config )
+    {
+        this.config = config;
+        pauseNanosCounter = new AtomicLong();
+        ObjLongConsumer<Object> pauseNanos = ( blocker, nanos ) -> pauseNanosCounter.getAndAdd( nanos );
+        limiter = new ConfigurableIOLimiter( config, pauseNanos );
+    }
+
+    private void createIOLimiter( int limit )
+    {
+        Map<String,String> settings = stringMap( GraphDatabaseSettings.check_point_iops_limit.name(), "" + limit );
+        createIOLimiter( Config.defaults( settings ) );
+    }
+
+    private void assertUnlimited()
+    {
+        long pauseTime = pauseNanosCounter.get();
+        repeatedlyCallMaybeLimitIO( limiter, IOLimiter.INITIAL_STAMP, 1000000 );
+        assertThat( pauseNanosCounter.get(), is( pauseTime ) );
+    }
+
+    private long repeatedlyCallMaybeLimitIO( IOLimiter ioLimiter, long stamp, int iosPerIteration )
+    {
+        for ( int i = 0; i < 100; i++ )
+        {
+            stamp = ioLimiter.maybeLimitIO( stamp, iosPerIteration, FLUSHABLE );
+        }
+        return stamp;
     }
 
     private static void multipleDisableShouldReportUnlimited( IOLimiter limiter )

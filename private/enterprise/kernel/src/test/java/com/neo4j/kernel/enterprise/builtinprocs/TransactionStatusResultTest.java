@@ -11,6 +11,7 @@ import java.net.InetSocketAddress;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -139,7 +140,7 @@ class TransactionStatusResultTest
     {
         assertEquals( "transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
-        assertEquals( emptyMap(), statusResult.metaData );
+        assertEquals( stringObjectEmptyMap(), statusResult.metaData );
         assertEquals( "1970-01-01T00:00:01.984Z", statusResult.startTime );
         assertEquals( "https", statusResult.protocol );
         assertEquals( "https-42", statusResult.connectionId );
@@ -149,7 +150,7 @@ class TransactionStatusResultTest
         assertEquals( EMPTY, statusResult.currentQuery );
         assertEquals( 1, statusResult.activeLockCount );
         assertEquals( "Running", statusResult.status );
-        assertEquals( emptyMap(), statusResult.resourceInformation );
+        assertEquals( stringObjectEmptyMap(), statusResult.resourceInformation );
         assertEquals( 1810L, statusResult.elapsedTimeMillis );
         assertEquals( Long.valueOf( 1L ), statusResult.cpuTimeMillis );
         assertEquals( 0L, statusResult.waitTimeMillis );
@@ -164,7 +165,7 @@ class TransactionStatusResultTest
     {
         assertEquals( "transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
-        assertEquals( emptyMap(), statusResult.metaData );
+        assertEquals( stringObjectEmptyMap(), statusResult.metaData );
         assertEquals( startTime, statusResult.startTime );
         assertEquals( "https", statusResult.protocol );
         assertEquals( "https-42", statusResult.connectionId );
@@ -174,7 +175,7 @@ class TransactionStatusResultTest
         assertEquals( currentQuery, statusResult.currentQuery );
         assertEquals( 1, statusResult.activeLockCount );
         assertEquals( "Running", statusResult.status );
-        assertEquals( emptyMap(), statusResult.resourceInformation );
+        assertEquals( stringObjectEmptyMap(), statusResult.resourceInformation );
         assertEquals( 1810, statusResult.elapsedTimeMillis );
         assertEquals( Long.valueOf( 1 ), statusResult.cpuTimeMillis );
         assertEquals( 0L, statusResult.waitTimeMillis );
@@ -183,6 +184,11 @@ class TransactionStatusResultTest
         assertEquals( Long.valueOf( 0 ), statusResult.allocatedDirectBytes );
         assertEquals( 0, statusResult.pageHits );
         assertEquals( 0, statusResult.pageFaults );
+    }
+
+    private static Map<String,Object> stringObjectEmptyMap()
+    {
+        return emptyMap();
     }
 
     private static QuerySnapshot createQuerySnapshot( long queryId )
@@ -194,7 +200,7 @@ class TransactionStatusResultTest
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
         return new ExecutingQuery( queryId, getTestConnectionInfo(), "testUser", "testQuery", VirtualValues.EMPTY_MAP,
-                emptyMap(), () -> 1L, PageCursorTracer.NULL,
+                stringObjectEmptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 new CountingNanoClock(), new CountingCpuClock(), new CountingHeapAllocation() );
     }

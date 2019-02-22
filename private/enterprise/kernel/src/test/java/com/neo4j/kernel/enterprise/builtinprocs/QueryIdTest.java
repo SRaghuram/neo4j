@@ -5,66 +5,57 @@
  */
 package com.neo4j.kernel.enterprise.builtinprocs;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static com.neo4j.kernel.enterprise.builtinprocs.QueryId.fromExternalString;
 import static com.neo4j.kernel.enterprise.builtinprocs.QueryId.ofInternalId;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class QueryIdTest
+class QueryIdTest
 {
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @Test
-    public void printsQueryIds() throws InvalidArgumentsException
+    void printsQueryIds() throws InvalidArgumentsException
     {
         assertThat( ofInternalId( 12L ).toString(), equalTo( "query-12" ) );
     }
 
     @Test
-    public void doesNotConstructNegativeQueryIds() throws InvalidArgumentsException
+    void doesNotConstructNegativeQueryIds()
     {
-        thrown.expect( InvalidArgumentsException.class );
-        ofInternalId( -15L );
+        assertThrows( InvalidArgumentsException.class, () -> ofInternalId( -15L ) );
     }
 
     @Test
-    public void parsesQueryIds() throws InvalidArgumentsException
+    void parsesQueryIds() throws InvalidArgumentsException
     {
         assertThat( fromExternalString( "query-14" ), equalTo( ofInternalId( 14L ) ) );
     }
 
     @Test
-    public void doesNotParseNegativeQueryIds() throws InvalidArgumentsException
+    void doesNotParseNegativeQueryIds()
     {
-        thrown.expect( InvalidArgumentsException.class );
-        fromExternalString( "query--12" );
+        assertThrows( InvalidArgumentsException.class, () -> fromExternalString( "query--12" ) );
     }
 
     @Test
-    public void doesNotParseRandomText() throws InvalidArgumentsException
+    void doesNotParseRandomText()
     {
-        thrown.expect( InvalidArgumentsException.class );
-        fromExternalString( "blarglbarf" );
+        assertThrows( InvalidArgumentsException.class, () -> fromExternalString( "blarglbarf" ) );
     }
 
     @Test
-    public void doesNotParseTrailingRandomText() throws InvalidArgumentsException
+    void doesNotParseTrailingRandomText()
     {
-        thrown.expect( InvalidArgumentsException.class );
-        fromExternalString( "query-12  " );
+        assertThrows( InvalidArgumentsException.class, () -> fromExternalString( "query-12  " ) );
     }
 
     @Test
-    public void doesNotParseEmptyText() throws InvalidArgumentsException
+    void doesNotParseEmptyText()
     {
-        thrown.expect( InvalidArgumentsException.class );
-        fromExternalString( "" );
+        assertThrows( InvalidArgumentsException.class, () -> fromExternalString( "" ) );
     }
 }
