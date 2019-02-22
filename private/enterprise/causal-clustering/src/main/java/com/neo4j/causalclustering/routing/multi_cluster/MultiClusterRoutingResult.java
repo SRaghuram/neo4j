@@ -5,33 +5,31 @@
  */
 package com.neo4j.causalclustering.routing.multi_cluster;
 
-import com.neo4j.causalclustering.routing.Endpoint;
-import com.neo4j.causalclustering.routing.RoutingResult;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.helpers.AdvertisedSocketAddress;
+
 /**
  * Simple struct containing the the result of multi-cluster routing procedure execution.
  */
-public class MultiClusterRoutingResult implements RoutingResult
+public class MultiClusterRoutingResult
 {
-    private final Map<String,List<Endpoint>> routers;
+    private final Map<String,List<AdvertisedSocketAddress>> routers;
     private final long timeToLiveMillis;
 
-    public MultiClusterRoutingResult( Map<String,List<Endpoint>> routers, long timeToLiveMillis )
+    public MultiClusterRoutingResult( Map<String,List<AdvertisedSocketAddress>> routers, long timeToLiveMillis )
     {
         this.routers = routers;
         this.timeToLiveMillis = timeToLiveMillis;
     }
 
-    public Map<String,List<Endpoint>> routers()
+    public Map<String,List<AdvertisedSocketAddress>> routers()
     {
         return routers;
     }
 
-    @Override
     public long ttlMillis()
     {
         return timeToLiveMillis;

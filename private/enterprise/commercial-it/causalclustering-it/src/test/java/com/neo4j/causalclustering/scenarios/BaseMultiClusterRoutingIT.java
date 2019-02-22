@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.routing.Endpoint;
 import com.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.MultiClusterRoutingResultFormat;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames;
@@ -35,6 +34,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Result;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -105,7 +105,7 @@ public abstract class BaseMultiClusterRoutingIT
         boolean consistentResults = results.stream().distinct().count() == 1;
         assertThat( "The results should be the same, regardless of which database the procedure is executed against.", consistentResults );
 
-        Function<Map<String,List<Endpoint>>, Integer> countHosts = m -> m.values().stream().mapToInt( List::size ).sum();
+        Function<Map<String,List<AdvertisedSocketAddress>>,Integer> countHosts = m -> m.values().stream().mapToInt( List::size ).sum();
         int resultsAllCores = results.stream().findFirst().map(r -> countHosts.apply( r.routers() ) ).orElse( 0 );
         assertEquals( numCores, resultsAllCores, "The results of the procedure should return all core hosts in the topology." );
     }
@@ -144,7 +144,7 @@ public abstract class BaseMultiClusterRoutingIT
 
         CoreGraphDatabase db = cluster.getMemberWithAnyRole( dbName, Role.FOLLOWER, Role.LEADER ).database();
 
-        Function<CoreGraphDatabase, Set<Endpoint>> getResult = database ->
+        Function<CoreGraphDatabase,Set<AdvertisedSocketAddress>> getResult = database ->
         {
             Optional<MultiClusterRoutingResult> optResult = callProcedure( database, GET_ROUTERS_FOR_ALL_DATABASES, Collections.emptyMap() );
 
@@ -158,8 +158,8 @@ public abstract class BaseMultiClusterRoutingIT
         assertEventually( "The procedure should return one fewer routers when a core member has been removed.",
                 () -> getResult.apply( db ).size(), is(numCores - 1 ), 15, TimeUnit.SECONDS );
 
-        BiPredicate<Set<Endpoint>, CoreClusterMember> containsFollower = ( rs, f ) ->
-                rs.stream().anyMatch( r -> r.address().toString().equals( f.boltAdvertisedAddress() ) );
+        BiPredicate<Set<AdvertisedSocketAddress>,CoreClusterMember> containsFollower = ( rs, f ) ->
+                rs.stream().anyMatch( r -> r.toString().equals( f.boltAdvertisedAddress() ) );
 
         assertEventually( "The procedure should not return a host as a router after it has been removed from the cluster",
                 () -> containsFollower.test( getResult.apply( db ), follower ), is( false ), 15, TimeUnit.SECONDS );
@@ -187,7 +187,7 @@ public abstract class BaseMultiClusterRoutingIT
         Optional<MultiClusterRoutingResult> routingResult = Optional.empty();
         try (
                 InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED );
-                Result result = db.execute( tx, "CALL " + procedure.callName(), ValueUtils.asMapValue( params )) )
+                Result result = db.execute( tx, "CALL " + procedure.fullyQualifiedName(), ValueUtils.asMapValue( params ) ) )
         {
             if ( result.hasNext() )
             {

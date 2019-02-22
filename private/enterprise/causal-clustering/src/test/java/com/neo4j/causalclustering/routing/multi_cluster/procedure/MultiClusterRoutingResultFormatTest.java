@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.routing.multi_cluster.procedure;
 
-import com.neo4j.causalclustering.routing.Endpoint;
 import com.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 import org.junit.Test;
 
@@ -25,19 +24,19 @@ public class MultiClusterRoutingResultFormatTest
     @Test
     public void shouldSerializeToAndFromRecordFormat()
     {
-        List<Endpoint> fooRouters = asList(
-                Endpoint.route( new AdvertisedSocketAddress( "host1", 1 ) ),
-                Endpoint.route( new AdvertisedSocketAddress( "host2", 1 ) ),
-                Endpoint.route( new AdvertisedSocketAddress( "host3", 1 ) )
+        List<AdvertisedSocketAddress> fooRouters = asList(
+                new AdvertisedSocketAddress( "host1", 1 ),
+                new AdvertisedSocketAddress( "host2", 1 ),
+                new AdvertisedSocketAddress( "host3", 1 )
         );
 
-        List<Endpoint> barRouters = asList(
-                Endpoint.route( new AdvertisedSocketAddress( "host4", 1 ) ),
-                Endpoint.route( new AdvertisedSocketAddress( "host5", 1 ) ),
-                Endpoint.route( new AdvertisedSocketAddress( "host6", 1 ) )
+        List<AdvertisedSocketAddress> barRouters = asList(
+                new AdvertisedSocketAddress( "host4", 1 ),
+                new AdvertisedSocketAddress( "host5", 1 ),
+                new AdvertisedSocketAddress( "host6", 1 )
         );
 
-        Map<String,List<Endpoint>> routers = new HashMap<>();
+        Map<String,List<AdvertisedSocketAddress>> routers = new HashMap<>();
         routers.put( "foo", fooRouters );
         routers.put( "bar", barRouters );
 

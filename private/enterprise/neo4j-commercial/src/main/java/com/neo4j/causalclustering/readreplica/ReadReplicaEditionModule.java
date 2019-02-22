@@ -49,6 +49,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
@@ -191,6 +192,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     @Override
     public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
     {
+        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
+        ReadReplicaRoutingProcedureInstaller routingProcedureInstaller = new ReadReplicaRoutingProcedureInstaller( portRegister, globaConfig );
+        routingProcedureInstaller.install( globalProcedures );
+
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ReadReplicaRoleProcedure() );

@@ -149,6 +149,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
+    @Override
     public String boltAdvertisedAddress()
     {
         return boltAdvertisedSocketAddress;

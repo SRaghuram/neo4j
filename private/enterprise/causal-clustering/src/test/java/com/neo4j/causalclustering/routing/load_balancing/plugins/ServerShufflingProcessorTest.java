@@ -5,16 +5,15 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.plugins;
 
-import com.neo4j.causalclustering.routing.Endpoint;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
-import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Arrays.asList;
@@ -34,21 +33,21 @@ public class ServerShufflingProcessorTest
         // given
         LoadBalancingProcessor delegate = mock( LoadBalancingPlugin.class );
 
-        List<Endpoint> routers = asList(
-                Endpoint.route( new AdvertisedSocketAddress( "route", 1 ) ),
-                Endpoint.route( new AdvertisedSocketAddress( "route", 2 ) ) );
-        List<Endpoint> writers = asList(
-                Endpoint.write( new AdvertisedSocketAddress( "write", 3 ) ),
-                Endpoint.write( new AdvertisedSocketAddress( "write", 4 ) ),
-                Endpoint.write( new AdvertisedSocketAddress( "write", 5 ) ) );
-        List<Endpoint> readers = asList(
-                Endpoint.read( new AdvertisedSocketAddress( "read", 6 ) ),
-                Endpoint.read( new AdvertisedSocketAddress( "read", 7 ) ),
-                Endpoint.read( new AdvertisedSocketAddress( "read", 8 ) ),
-                Endpoint.read( new AdvertisedSocketAddress( "read", 9 ) ) );
+        List<AdvertisedSocketAddress> routers = asList(
+                new AdvertisedSocketAddress( "route", 1 ),
+                new AdvertisedSocketAddress( "route", 2 ) );
+        List<AdvertisedSocketAddress> writers = asList(
+                new AdvertisedSocketAddress( "write", 3 ),
+                new AdvertisedSocketAddress( "write", 4 ),
+                new AdvertisedSocketAddress( "write", 5 ) );
+        List<AdvertisedSocketAddress> readers = asList(
+                new AdvertisedSocketAddress( "read", 6 ),
+                new AdvertisedSocketAddress( "read", 7 ),
+                new AdvertisedSocketAddress( "read", 8 ),
+                new AdvertisedSocketAddress( "read", 9 ) );
 
         long ttl = 1000;
-        LoadBalancingProcessor.Result result = new LoadBalancingResult(
+        RoutingResult result = new RoutingResult(
                 new ArrayList<>( routers ),
                 new ArrayList<>( writers ),
                 new ArrayList<>( readers ),
@@ -62,7 +61,7 @@ public class ServerShufflingProcessorTest
         for ( int i = 0; i < 1000; i++ ) // we try many times to make false negatives extremely unlikely
         {
             // when
-            LoadBalancingProcessor.Result shuffledResult = plugin.run( VirtualValues.EMPTY_MAP );
+            RoutingResult shuffledResult = plugin.run( VirtualValues.EMPTY_MAP );
 
             // then: should still contain the same endpoints
             assertThat( shuffledResult.routeEndpoints(), containsInAnyOrder( routers.toArray() ) );

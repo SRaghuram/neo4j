@@ -7,13 +7,11 @@ package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 
-import org.neo4j.collection.RawIterator;
+import java.util.List;
+
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
-import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
-import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.proc.CallableProcedure;
-import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.kernel.builtinprocs.routing.BaseGetRoutingTableProcedure;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 
@@ -24,40 +22,28 @@ import org.neo4j.values.virtual.MapValue;
  * key-value pairs to be supplied to and used by the concrete load
  * balancing strategies.
  */
-public class GetServersProcedureForMultiDC implements CallableProcedure
+public class GetServersProcedureForMultiDC extends BaseGetRoutingTableProcedure
 {
-    private final String DESCRIPTION = "Returns cluster endpoints and their capabilities.";
-
-    private final ProcedureSignature procedureSignature =
-            ProcedureSignature.procedureSignature( ProcedureNames.GET_SERVERS_V2.fullyQualifiedProcedureName() )
-                    .in( ParameterNames.CONTEXT.parameterName(), Neo4jTypes.NTMap )
-                    .out( ParameterNames.TTL.parameterName(), Neo4jTypes.NTInteger )
-                    .out( ParameterNames.SERVERS.parameterName(), Neo4jTypes.NTList( Neo4jTypes.NTMap ) )
-                    .description( DESCRIPTION )
-                    .build();
+    private static final String DESCRIPTION = "Returns cluster endpoints and their capabilities.";
 
     private final LoadBalancingProcessor loadBalancingProcessor;
 
-    public GetServersProcedureForMultiDC( LoadBalancingProcessor loadBalancingProcessor )
+    public GetServersProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor )
     {
+        super( namespace );
         this.loadBalancingProcessor = loadBalancingProcessor;
     }
 
     @Override
-    public ProcedureSignature signature()
+    protected String description()
     {
-        return procedureSignature;
+        return DESCRIPTION;
     }
 
     @Override
-    public RawIterator<AnyValue[],ProcedureException> apply(
-            Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
+    protected RoutingResult invoke( AnyValue[] input ) throws ProcedureException
     {
-        @SuppressWarnings( "unchecked" )
         MapValue clientContext = (MapValue) input[0];
-
-        LoadBalancingProcessor.Result result = loadBalancingProcessor.run( clientContext );
-
-        return RawIterator.<AnyValue[],ProcedureException>of( ResultFormatV1.build( result ) );
+        return loadBalancingProcessor.run( clientContext );
     }
 }

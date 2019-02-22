@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
@@ -168,7 +169,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public Result run( MapValue context )
+        public RoutingResult run( MapValue context )
         {
             return null;
         }

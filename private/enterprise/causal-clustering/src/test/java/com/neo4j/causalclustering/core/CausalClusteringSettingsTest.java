@@ -5,20 +5,27 @@
  */
 package com.neo4j.causalclustering.core;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.BaseSetting;
+import org.neo4j.logging.AssertableLogProvider;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
-public class CausalClusteringSettingsTest
+class CausalClusteringSettingsTest
 {
     @Test
-    public void shouldValidatePrefixBasedKeys()
+    void shouldValidatePrefixBasedKeys()
     {
         // given
         BaseSetting<String> setting = Settings.prefixSetting( "foo", Settings.STRING, "" );
@@ -37,7 +44,7 @@ public class CausalClusteringSettingsTest
     }
 
     @Test
-    public void shouldValidateMultiplePrefixBasedKeys()
+    void shouldValidateMultiplePrefixBasedKeys()
     {
         // given
         BaseSetting<String> setting = Settings.prefixSetting( "foo", Settings.STRING, "" );
@@ -57,7 +64,7 @@ public class CausalClusteringSettingsTest
     }
 
     @Test
-    public void shouldValidateLoadBalancingServerPolicies()
+    void shouldValidateLoadBalancingServerPolicies()
     {
         // given
         Map<String, String> rawConfig = new HashMap<>();
@@ -74,7 +81,7 @@ public class CausalClusteringSettingsTest
     }
 
     @Test
-    public void shouldBeInvalidIfPrefixDoesNotMatch()
+    void shouldBeInvalidIfPrefixDoesNotMatch()
     {
         // given
         BaseSetting<String> setting = Settings.prefixSetting( "bar", Settings.STRING, "" );
@@ -88,5 +95,35 @@ public class CausalClusteringSettingsTest
 
         // then
         assertEquals( 0, validConfig.size() );
+    }
+
+    @Test
+    void shouldMigrateOldRoutingTtlSetting()
+    {
+        testRoutingTtlSettingMigration( "42m", Duration.ofMinutes( 42 ) );
+    }
+
+    @Test
+    void shouldNotMigrateOldRoutingTtlSettingWhenEmpty()
+    {
+        testRoutingTtlSettingMigration( "", Duration.ofSeconds( 300 ) );
+    }
+
+    private void testRoutingTtlSettingMigration( String rawValue, Duration expectedValue )
+    {
+        Config config = Config.builder()
+                .withSetting( "causal_clustering.cluster_routing_ttl", rawValue )
+                .build();
+
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        config.setLogger( logProvider.getLog( Config.class ) );
+
+        assertFalse( config.getRaw( "causal_clustering.cluster_routing_ttl" ).isPresent(), "Old TTL setting should be absent" );
+        assertEquals( expectedValue, config.get( GraphDatabaseSettings.routing_ttl ) );
+
+        logProvider.assertAtLeastOnce(
+                inLog( Config.class ).warn( containsString( "Deprecated configuration options used" ) ) );
+        logProvider.assertAtLeastOnce(
+                inLog( Config.class ).warn( containsString( "causal_clustering.cluster_routing_ttl has been replaced with dbms.routing_ttl" ) ) );
     }
 }

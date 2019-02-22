@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.multi_cluster.procedure;
 
-import com.neo4j.causalclustering.routing.procedure.ProcedureNamesEnum;
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
 
 /**
  * This is part of the cluster / driver interface specification and
@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.routing.procedure.ProcedureNamesEnum;
  * The intention is for this class to eventually move over to a support package
  * which can be included by driver software.
  */
-public enum ProcedureNames implements ProcedureNamesEnum
+public enum ProcedureNames
 {
     GET_ROUTERS_FOR_DATABASE( "getRoutersForDatabase" ),
     GET_ROUTERS_FOR_ALL_DATABASES( "getRoutersForAllDatabases" );
@@ -30,16 +30,8 @@ public enum ProcedureNames implements ProcedureNamesEnum
         this.name = name;
     }
 
-    @Override
-    public String procedureName()
+    public QualifiedName fullyQualifiedName()
     {
-        return name;
+        return new QualifiedName( nameSpace, name );
     }
-
-    @Override
-    public String[] procedureNameSpace()
-    {
-        return nameSpace;
-    }
-
 }

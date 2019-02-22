@@ -16,9 +16,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.neo4j.configuration.ConfigurationMigrator;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.LoadableConfig;
+import org.neo4j.configuration.Migrator;
 import org.neo4j.configuration.ReplacedBy;
 import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.config.Setting;
@@ -435,14 +437,10 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Duration> read_replica_time_to_live =
             buildSetting( "causal_clustering.read_replica_time_to_live", DURATION, "1m" ).constraint( min( Duration.ofSeconds( 60 ) ) ).build();
 
-    @Description( "How long drivers should cache the data from the `dbms.cluster.routing.getServers()` procedure." )
-    public static final Setting<Duration> cluster_routing_ttl =
-            buildSetting( "causal_clustering.cluster_routing_ttl", DURATION, "300s" ).constraint( min( Duration.ofSeconds( 1 ) ) ).build();
-
-    @Description( "Configure if the `dbms.cluster.routing.getServers()` procedure should include followers as read " +
-            "endpoints or return only read replicas. Note: if there are no read replicas in the cluster, followers " +
-            "are returned as read end points regardless the value of this setting. Defaults to true so that followers " +
-            "are available for read-only queries in a typical heterogeneous setup." )
+    @Description( "Configure if the `dbms.routing.getRoutingTable()` procedure should include followers as read " +
+                  "endpoints or return only read replicas. Note: if there are no read replicas in the cluster, followers " +
+                  "are returned as read end points regardless the value of this setting. Defaults to true so that followers " +
+                  "are available for read-only queries in a typical heterogeneous setup." )
     public static final Setting<Boolean> cluster_allow_reads_on_followers =
             setting( "causal_clustering.cluster_allow_reads_on_followers", BOOLEAN, TRUE );
 
@@ -609,4 +607,8 @@ public class CausalClusteringSettings implements LoadableConfig
             LZ4 + "," + LZ4_HIGH_COMPRESSION + "," + LZ_VALIDATING + "," + LZ4_HIGH_COMPRESSION_VALIDATING + "]" )
     public static final Setting<List<String>> compression_implementations =
             setting( "causal_clustering.protocol_implementations.compression", STRING_LIST, "");
+
+    @SuppressWarnings( "unused" ) // accessed by reflection
+    @Migrator
+    private static final ConfigurationMigrator migrator = new CausalClusteringSettingsMigrator();
 }

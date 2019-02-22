@@ -52,6 +52,8 @@ public interface ClusterMember<T extends GraphDatabaseAPI>
 
     int serverId();
 
+    String boltAdvertisedAddress();
+
     default void updateConfig( Setting<?> setting, String value )
     {
         config().augment( setting, value );

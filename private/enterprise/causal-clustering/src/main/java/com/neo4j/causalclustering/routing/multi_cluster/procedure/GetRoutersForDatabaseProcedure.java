@@ -5,21 +5,21 @@
  */
 package com.neo4j.causalclustering.routing.multi_cluster.procedure;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.routing.Endpoint;
-import com.neo4j.causalclustering.routing.Util;
 import com.neo4j.causalclustering.routing.multi_cluster.MultiClusterRoutingResult;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
@@ -29,15 +29,22 @@ import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
+import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
+import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.DATABASE;
+import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.ROUTERS;
+import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames.GET_ROUTERS_FOR_DATABASE;
+import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
+import static org.neo4j.kernel.builtinprocs.routing.ParameterNames.TTL;
+
 public class GetRoutersForDatabaseProcedure implements CallableProcedure
 {
     private static final String DESCRIPTION = "Returns router capable endpoints for a specific database in a multi-cluster.";
 
     private final ProcedureSignature procedureSignature =
-            ProcedureSignature.procedureSignature( ProcedureNames.GET_ROUTERS_FOR_DATABASE.fullyQualifiedProcedureName() )
-                    .in( ParameterNames.DATABASE.parameterName(), Neo4jTypes.NTString )
-                    .out( ParameterNames.TTL.parameterName(), Neo4jTypes.NTInteger )
-                    .out( ParameterNames.ROUTERS.parameterName(), Neo4jTypes.NTList( Neo4jTypes.NTMap ) )
+            procedureSignature( GET_ROUTERS_FOR_DATABASE.fullyQualifiedName() )
+                    .in( DATABASE.parameterName(), Neo4jTypes.NTString )
+                    .out( TTL.parameterName(), Neo4jTypes.NTInteger )
+                    .out( ROUTERS.parameterName(), Neo4jTypes.NTList( Neo4jTypes.NTMap ) )
                     .description( DESCRIPTION )
                     .build();
 
@@ -47,7 +54,7 @@ public class GetRoutersForDatabaseProcedure implements CallableProcedure
     public GetRoutersForDatabaseProcedure( TopologyService topologyService, Config config )
     {
         this.topologyService = topologyService;
-        this.timeToLiveMillis = config.get( CausalClusteringSettings.cluster_routing_ttl ).toMillis();
+        this.timeToLiveMillis = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
     }
 
     @Override
@@ -59,22 +66,21 @@ public class GetRoutersForDatabaseProcedure implements CallableProcedure
     @Override
     public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
     {
-        @SuppressWarnings( "unchecked" )
         String dbName = ((TextValue) input[0]).stringValue();
-        List<Endpoint> routers = routeEndpoints( dbName );
+        List<AdvertisedSocketAddress> routers = routeEndpoints( dbName );
 
-        HashMap<String,List<Endpoint>> routerMap = new HashMap<>();
+        Map<String,List<AdvertisedSocketAddress>> routerMap = new HashMap<>();
         routerMap.put( dbName, routers );
 
         MultiClusterRoutingResult result = new MultiClusterRoutingResult( routerMap, timeToLiveMillis );
         return RawIterator.<AnyValue[], ProcedureException>of( MultiClusterRoutingResultFormat.build( result ) );
     }
 
-    private List<Endpoint> routeEndpoints( String dbName )
+    private List<AdvertisedSocketAddress> routeEndpoints( String dbName )
     {
         CoreTopology filtered = topologyService.allCoreServers().filterTopologyByDb( dbName );
         Stream<CoreServerInfo> filteredCoreMemberInfo = filtered.members().values().stream();
 
-        return filteredCoreMemberInfo.map( Util.extractBoltAddress() ).map( Endpoint::route ).collect( Collectors.toList() );
+        return filteredCoreMemberInfo.map( extractBoltAddress() ).collect( Collectors.toList() );
     }
 }

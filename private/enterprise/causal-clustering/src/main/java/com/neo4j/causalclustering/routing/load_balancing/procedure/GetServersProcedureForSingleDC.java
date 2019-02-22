@@ -5,15 +5,11 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.routing.Endpoint;
-import com.neo4j.causalclustering.routing.Util;
-import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -21,22 +17,19 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.RawIterator;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
-import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
-import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.proc.CallableProcedure;
-import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.kernel.builtinprocs.routing.BaseGetRoutingTableProcedure;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.values.AnyValue;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
+import static com.neo4j.causalclustering.routing.Util.asList;
+import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Stream.concat;
 
 /**
  * Returns endpoints and their capabilities.
@@ -45,26 +38,19 @@ import static java.util.stream.Stream.concat;
  * key-value pairs to be supplied to and used by the concrete load
  * balancing strategies.
  */
-public class GetServersProcedureForSingleDC implements CallableProcedure
+public class GetServersProcedureForSingleDC extends BaseGetRoutingTableProcedure
 {
-    private final String DESCRIPTION = "Returns cluster endpoints and their capabilities for single data center setup.";
-
-    private final ProcedureSignature procedureSignature =
-            ProcedureSignature.procedureSignature( ProcedureNames.GET_SERVERS_V2.fullyQualifiedProcedureName() )
-                    .in( ParameterNames.CONTEXT.parameterName(), Neo4jTypes.NTMap )
-                    .out( ParameterNames.TTL.parameterName(), Neo4jTypes.NTInteger )
-                    .out( ParameterNames.SERVERS.parameterName(), Neo4jTypes.NTList( Neo4jTypes.NTMap ) )
-                    .description( DESCRIPTION )
-                    .build();
+    private static final String DESCRIPTION = "Returns cluster endpoints and their capabilities for single data center setup.";
 
     private final TopologyService topologyService;
     private final LeaderLocator leaderLocator;
     private final Config config;
     private final Log log;
 
-    public GetServersProcedureForSingleDC( TopologyService topologyService, LeaderLocator leaderLocator,
+    public GetServersProcedureForSingleDC( List<String> namespace, TopologyService topologyService, LeaderLocator leaderLocator,
             Config config, LogProvider logProvider )
     {
+        super( namespace );
         this.topologyService = topologyService;
         this.leaderLocator = leaderLocator;
         this.config = config;
@@ -72,22 +58,21 @@ public class GetServersProcedureForSingleDC implements CallableProcedure
     }
 
     @Override
-    public ProcedureSignature signature()
+    protected String description()
     {
-        return procedureSignature;
+        return DESCRIPTION;
     }
 
     @Override
-    public RawIterator<AnyValue[],ProcedureException> apply(
-            Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
+    protected RoutingResult invoke( AnyValue[] input )
     {
-        List<Endpoint> routeEndpoints = routeEndpoints();
-        List<Endpoint> writeEndpoints = writeEndpoints();
-        List<Endpoint> readEndpoints = readEndpoints();
+        List<AdvertisedSocketAddress> routeEndpoints = routeEndpoints();
+        List<AdvertisedSocketAddress> writeEndpoints = writeEndpoints();
+        List<AdvertisedSocketAddress> readEndpoints = readEndpoints();
 
-        return RawIterator.<AnyValue[],ProcedureException>of( ResultFormatV1.build(
-                new LoadBalancingResult( routeEndpoints, writeEndpoints, readEndpoints,
-                        config.get( CausalClusteringSettings.cluster_routing_ttl ).toMillis() ) ) );
+        long timeToLiveMillis = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
+
+        return new RoutingResult( routeEndpoints, writeEndpoints, readEndpoints, timeToLiveMillis );
     }
 
     private Optional<AdvertisedSocketAddress> leaderBoltAddress()
@@ -103,31 +88,34 @@ public class GetServersProcedureForSingleDC implements CallableProcedure
             return Optional.empty();
         }
 
-        return topologyService.localCoreServers().find( leader ).map( Util.extractBoltAddress() );
+        return topologyService.localCoreServers().find( leader ).map( extractBoltAddress() );
     }
 
-    private List<Endpoint> routeEndpoints()
+    private List<AdvertisedSocketAddress> routeEndpoints()
     {
-        Stream<AdvertisedSocketAddress> routers = topologyService.localCoreServers()
-                .members().values().stream().map( Util.extractBoltAddress() );
-        List<Endpoint> routeEndpoints = routers.map( Endpoint::route ).collect( toList() );
-        Collections.shuffle( routeEndpoints );
-        return routeEndpoints;
+        List<AdvertisedSocketAddress> routers = topologyService.localCoreServers()
+                .members()
+                .values()
+                .stream()
+                .map( extractBoltAddress() )
+                .collect( toList() );
+
+        Collections.shuffle( routers );
+        return routers;
     }
 
-    private List<Endpoint> writeEndpoints()
+    private List<AdvertisedSocketAddress> writeEndpoints()
     {
-        return Util.asList( leaderBoltAddress().map( Endpoint::write ) );
+        return asList( leaderBoltAddress() );
     }
 
-    private List<Endpoint> readEndpoints()
+    private List<AdvertisedSocketAddress> readEndpoints()
     {
         List<AdvertisedSocketAddress> readReplicas = topologyService.localReadReplicas().allMemberInfo().stream()
-                .map( Util.extractBoltAddress() ).collect( toList() );
+                .map( extractBoltAddress() ).collect( toList() );
         boolean addFollowers = readReplicas.isEmpty() || config.get( cluster_allow_reads_on_followers );
         Stream<AdvertisedSocketAddress> readCore = addFollowers ? coreReadEndPoints() : Stream.empty();
-        List<Endpoint> readEndPoints =
-                concat( readReplicas.stream(), readCore ).map( Endpoint::read ).collect( toList() );
+        List<AdvertisedSocketAddress> readEndPoints = Stream.concat( readReplicas.stream(), readCore ).collect( toList() );
         Collections.shuffle( readEndPoints );
         return readEndPoints;
     }
@@ -137,7 +125,7 @@ public class GetServersProcedureForSingleDC implements CallableProcedure
         Optional<AdvertisedSocketAddress> leader = leaderBoltAddress();
         Collection<CoreServerInfo> coreServerInfo = topologyService.localCoreServers().members().values();
         Stream<AdvertisedSocketAddress> boltAddresses = topologyService.localCoreServers()
-                .members().values().stream().map( Util.extractBoltAddress() );
+                .members().values().stream().map( extractBoltAddress() );
 
         // if the leader is present and it is not alone filter it out from the read end points
         if ( leader.isPresent() && coreServerInfo.size() > 1 )

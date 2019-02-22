@@ -6,89 +6,107 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.impl.coreapi.InternalTransaction;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.collection.Iterators;
+import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.kernel.enterprise.api.security.CommercialLoginContext.AUTH_DISABLED;
-import static org.junit.Assert.assertTrue;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonMap;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 
-public class CausalClusteringProceduresIT
+@ClusterExtension
+class CausalClusteringProceduresIT
 {
-    @ClassRule
-    public static final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 2 )
-            .withNumberOfReadReplicas( 1 );
+    private static final String[] PROCEDURES_WITHOUT_PARAMS = {
+            "dbms.cluster.role",
+            "dbms.cluster.overview",
+            "dbms.procedures",
+            "dbms.listQueries"
+    };
+
+    private static final String[] PROCEDURES_WITH_CONTEXT_PARAM = {
+            "dbms.routing.getRoutingTable",
+            "dbms.cluster.routing.getRoutingTable",
+    };
+
+    @Inject
+    private static ClusterFactory clusterFactory;
 
     private static Cluster<?> cluster;
 
-    @BeforeClass
-    public static void setup() throws Exception
+    @BeforeAll
+    void setup() throws Exception
     {
-        cluster = clusterRule.startCluster();
+        cluster = clusterFactory.createCluster( clusterConfig().withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 1 ) );
+        cluster.start();
     }
 
     @Test
-    public void coreProceduresShouldBeAvailable()
+    void coreProceduresShouldBeAvailable()
     {
-        String[] coreProcs = new String[]{
-                "dbms.cluster.role", // Server role
-                "dbms.cluster.routing.getServers", // Discover the cluster topology
-                "dbms.cluster.overview", // Discover appropriate discovery service
-                "dbms.procedures", // Kernel built procedures
-//                "dbms.security.listUsers", // Security procedure from community
-                "dbms.listQueries" // Built in procedure from enterprise
-        };
+        testProcedureExistence( PROCEDURES_WITHOUT_PARAMS, cluster.coreMembers(), false );
+    }
 
-        for ( String procedure : coreProcs )
+    @Test
+    void coreProceduresWithContextParamShouldBeAvailable()
+    {
+        testProcedureExistence( PROCEDURES_WITH_CONTEXT_PARAM, cluster.coreMembers(), true );
+    }
+
+    @Test
+    void readReplicaProceduresShouldBeAvailable()
+    {
+        testProcedureExistence( PROCEDURES_WITHOUT_PARAMS, cluster.readReplicas(), false );
+    }
+
+    @Test
+    void readReplicaProceduresWithContextParamShouldBeAvailable()
+    {
+        testProcedureExistence( PROCEDURES_WITH_CONTEXT_PARAM, cluster.readReplicas(), true );
+    }
+
+    private static void testProcedureExistence( String[] procedures, Collection<? extends ClusterMember<?>> members, boolean withContextParameter )
+    {
+        for ( String procedure : procedures )
         {
-            Optional<CoreClusterMember> firstCore = cluster.coreMembers().stream().findFirst();
-            assert firstCore.isPresent();
-            CoreGraphDatabase database = firstCore.get().database();
-            InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED );
-            Result coreResult = database.execute( "CALL " + procedure + "()" );
-            assertTrue( "core with procedure " + procedure, coreResult.hasNext() );
-            coreResult.close();
-            tx.close();
+            for ( ClusterMember<?> member : members )
+            {
+                GraphDatabaseService db = member.database();
+                try ( Transaction tx = db.beginTx();
+                      Result result = invokeProcedure( db, procedure, withContextParameter ) )
+                {
+                    List<Map<String,Object>> records = Iterators.asList( result );
+                    assertThat( records, hasSize( greaterThanOrEqualTo( 1 ) ) );
+                    tx.success();
+                }
+            }
         }
     }
 
-    @Test
-    public void readReplicaProceduresShouldBeAvailable()
+    private static Result invokeProcedure( GraphDatabaseService db, String name, boolean withContextParameter )
     {
-        // given
-        String[] readReplicaProcs = new String[]{
-                "dbms.cluster.role", // Server role
-                "dbms.procedures", // Kernel built procedures
-//                "dbms.security.listUsers", // Security procedure from community
-                "dbms.listQueries" // Built in procedure from enterprise
-        };
-
-        // when
-        for ( String procedure : readReplicaProcs )
+        if ( withContextParameter )
         {
-            Optional<ReadReplica> firstReadReplica = cluster.readReplicas().stream().findFirst();
-            assert firstReadReplica.isPresent();
-            ReadReplicaGraphDatabase database = firstReadReplica.get().database();
-            InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, AUTH_DISABLED );
-            Result readReplicaResult = database.execute( "CALL " + procedure + "()" );
-
-            // then
-            assertTrue( "read replica with procedure " + procedure, readReplicaResult.hasNext() );
-            readReplicaResult.close();
-            tx.close();
+            return db.execute( "CALL " + name + "($value)", singletonMap( "value", emptyMap() ) );
+        }
+        else
+        {
+            return db.execute( "CALL " + name + "()" );
         }
     }
 }
-

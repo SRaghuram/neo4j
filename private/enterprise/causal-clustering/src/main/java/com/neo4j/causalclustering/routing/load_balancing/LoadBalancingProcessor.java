@@ -5,12 +5,8 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing;
 
-import com.neo4j.causalclustering.routing.Endpoint;
-import com.neo4j.causalclustering.routing.RoutingResult;
-
-import java.util.List;
-
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
 public interface LoadBalancingProcessor
@@ -22,23 +18,5 @@ public interface LoadBalancingProcessor
      * @param context The client supplied context.
      * @return The result of invoking the procedure.
      */
-    Result run( MapValue context ) throws ProcedureException;
-
-    interface Result extends RoutingResult
-    {
-        /**
-         * @return List of ROUTE-capable endpoints.
-         */
-        List<Endpoint> routeEndpoints();
-
-        /**
-         * @return List of WRITE-capable endpoints.
-         */
-        List<Endpoint> writeEndpoints();
-
-        /**
-         * @return List of READ-capable endpoints.
-         */
-        List<Endpoint> readEndpoints();
-    }
+    RoutingResult run( MapValue context ) throws ProcedureException;
 }

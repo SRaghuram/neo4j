@@ -13,10 +13,7 @@ import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.routing.Endpoint;
-import com.neo4j.causalclustering.routing.Util;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
-import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,13 +21,19 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.InvalidSettingException;
+import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.values.virtual.MapValue;
 
+import static com.neo4j.causalclustering.routing.Util.asList;
+import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
 import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toList;
 
 /**
  * The server policies plugin defines policies on the server-side which
@@ -67,7 +70,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     {
         this.topologyService = topologyService;
         this.leaderLocator = leaderLocator;
-        this.timeToLive = config.get( CausalClusteringSettings.cluster_routing_ttl ).toMillis();
+        this.timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
         this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
         this.policies = FilteringPolicyLoader.load( config, PLUGIN_NAME, logProvider.getLog( getClass() ) );
     }
@@ -79,24 +82,27 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public Result run( MapValue context ) throws ProcedureException
+    public RoutingResult run( MapValue context ) throws ProcedureException
     {
         Policy policy = policies.selectFor( context );
 
         CoreTopology coreTopology = topologyService.localCoreServers();
         ReadReplicaTopology rrTopology = topologyService.localReadReplicas();
 
-        return new LoadBalancingResult( routeEndpoints( coreTopology ), writeEndpoints( coreTopology ),
+        return new RoutingResult( routeEndpoints( coreTopology, rrTopology ), writeEndpoints( coreTopology ),
                 readEndpoints( coreTopology, rrTopology, policy ), timeToLive );
     }
 
-    private List<Endpoint> routeEndpoints( CoreTopology cores )
+    private List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology, ReadReplicaTopology readReplicaTopology )
     {
-        return cores.members().values().stream().map( Util.extractBoltAddress() )
-                .map( Endpoint::route ).collect( Collectors.toList() );
+        return coreTopology.members()
+                .values()
+                .stream()
+                .map( extractBoltAddress() )
+                .collect( toList() );
     }
 
-    private List<Endpoint> writeEndpoints( CoreTopology cores )
+    private List<AdvertisedSocketAddress> writeEndpoints( CoreTopology cores )
     {
 
         MemberId leader;
@@ -109,14 +115,10 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
             return emptyList();
         }
 
-        Optional<Endpoint> endPoint = cores.find( leader )
-                .map( Util.extractBoltAddress() )
-                .map( Endpoint::write );
-
-        return Util.asList( endPoint );
+        return asList( cores.find( leader ).map( extractBoltAddress() ) );
     }
 
-    private List<Endpoint> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy )
+    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy )
     {
 
         Set<ServerInfo> possibleReaders = rrTopology.members().entrySet().stream()
@@ -147,6 +149,6 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         }
 
         Set<ServerInfo> readers = policy.apply( possibleReaders );
-        return readers.stream().map( r -> Endpoint.read( r.boltAddress() ) ).collect( Collectors.toList() );
+        return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
     }
 }

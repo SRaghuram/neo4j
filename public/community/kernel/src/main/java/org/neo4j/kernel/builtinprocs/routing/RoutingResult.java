@@ -1,28 +1,42 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.causalclustering.routing.load_balancing;
-
-import com.neo4j.causalclustering.routing.Endpoint;
+package org.neo4j.kernel.builtinprocs.routing;
 
 import java.util.List;
 import java.util.Objects;
+
+import org.neo4j.helpers.AdvertisedSocketAddress;
 
 /**
  * The outcome of applying a load balancing plugin, which will be used by client
  * software for scheduling work at the endpoints.
  */
-public class LoadBalancingResult implements LoadBalancingProcessor.Result
+public class RoutingResult
 {
-    private final List<Endpoint> routeEndpoints;
-    private final List<Endpoint> writeEndpoints;
-    private final List<Endpoint> readEndpoints;
+    private final List<AdvertisedSocketAddress> routeEndpoints;
+    private final List<AdvertisedSocketAddress> writeEndpoints;
+    private final List<AdvertisedSocketAddress> readEndpoints;
     private final long timeToLiveMillis;
 
-    public LoadBalancingResult( List<Endpoint> routeEndpoints, List<Endpoint> writeEndpoints,
-            List<Endpoint> readEndpoints, long timeToLiveMillis )
+    public RoutingResult( List<AdvertisedSocketAddress> routeEndpoints, List<AdvertisedSocketAddress> writeEndpoints,
+            List<AdvertisedSocketAddress> readEndpoints, long timeToLiveMillis )
     {
         this.routeEndpoints = routeEndpoints;
         this.writeEndpoints = writeEndpoints;
@@ -30,26 +44,22 @@ public class LoadBalancingResult implements LoadBalancingProcessor.Result
         this.timeToLiveMillis = timeToLiveMillis;
     }
 
-    @Override
     public long ttlMillis()
     {
         return timeToLiveMillis;
     }
 
-    @Override
-    public List<Endpoint> routeEndpoints()
+    public List<AdvertisedSocketAddress> routeEndpoints()
     {
         return routeEndpoints;
     }
 
-    @Override
-    public List<Endpoint> writeEndpoints()
+    public List<AdvertisedSocketAddress> writeEndpoints()
     {
         return writeEndpoints;
     }
 
-    @Override
-    public List<Endpoint> readEndpoints()
+    public List<AdvertisedSocketAddress> readEndpoints()
     {
         return readEndpoints;
     }
@@ -65,7 +75,7 @@ public class LoadBalancingResult implements LoadBalancingProcessor.Result
         {
             return false;
         }
-        LoadBalancingResult that = (LoadBalancingResult) o;
+        RoutingResult that = (RoutingResult) o;
         return timeToLiveMillis == that.timeToLiveMillis &&
                Objects.equals( routeEndpoints, that.routeEndpoints ) &&
                Objects.equals( writeEndpoints, that.writeEndpoints ) &&
@@ -81,7 +91,7 @@ public class LoadBalancingResult implements LoadBalancingProcessor.Result
     @Override
     public String toString()
     {
-        return "LoadBalancingResult{" +
+        return "RoutingResult{" +
                "routeEndpoints=" + routeEndpoints +
                ", writeEndpoints=" + writeEndpoints +
                ", readEndpoints=" + readEndpoints +

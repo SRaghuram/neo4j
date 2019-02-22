@@ -13,14 +13,17 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.routing.Role;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
@@ -35,6 +39,10 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.FieldSignature;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
+import org.neo4j.internal.kernel.api.procs.QualifiedName;
+import org.neo4j.kernel.api.proc.CallableProcedure;
+import org.neo4j.kernel.builtinprocs.routing.Role;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.LongValue;
 import org.neo4j.values.storable.TextValue;
@@ -42,7 +50,6 @@ import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_routing_ttl;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForReadReplica;
 import static com.neo4j.causalclustering.discovery.TestTopology.readReplicaInfoMap;
@@ -50,42 +57,42 @@ import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTInteger;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
-import static org.neo4j.logging.NullLogProvider.getInstance;
+import static org.neo4j.kernel.builtinprocs.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 import static org.neo4j.values.storable.Values.longValue;
 
-@RunWith( Parameterized.class )
-public class GetServersProcedureV1Test
+class GetServersProcedureForSingleDCTest
 {
     private final ClusterId clusterId = new ClusterId( UUID.randomUUID() );
 
-    @Parameterized.Parameter( 0 )
-    public String description;
-    @Parameterized.Parameter( 1 )
-    public Config config;
-    @Parameterized.Parameter( 2 )
-    public boolean expectFollowersAsReadEndPoints;
-
-    @Parameterized.Parameters( name = "{0}" )
-    public static Collection<Object[]> params()
+    @Target( ElementType.METHOD )
+    @Retention( RetentionPolicy.RUNTIME )
+    @ParameterizedTest( name = "{0}" )
+    @MethodSource( "routingConfigs" )
+    private @interface RoutingConfigsTest
     {
-        return Arrays.asList(
-                new Object[]{"with followers as read end points", Config.defaults(
-                        cluster_allow_reads_on_followers, Settings.TRUE ), true },
-                new Object[]{"no followers as read end points", Config.defaults(
-                        cluster_allow_reads_on_followers, Settings.FALSE ), false }
+    }
+
+    private static Stream<Arguments> routingConfigs()
+    {
+        return Stream.of(
+                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, Settings.TRUE ) ),
+                Arguments.of( Config.defaults( cluster_allow_reads_on_followers, Settings.FALSE ) )
         );
     }
 
-    @Test
-    public void ttlShouldBeInSeconds() throws Exception
+    @RoutingConfigsTest
+    void ttlShouldBeInSeconds( Config config ) throws Exception
     {
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
@@ -97,10 +104,9 @@ public class GetServersProcedureV1Test
         when( coreTopologyService.localReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
         // set the TTL in minutes
-        config.augment( cluster_routing_ttl, "10m" );
+        config.augment( routing_ttl, "10m" );
 
-        final LegacyGetServersProcedure proc =
-                new LegacyGetServersProcedure( coreTopologyService, leaderLocator, config, getInstance() );
+        CallableProcedure proc = newProcedure( coreTopologyService, leaderLocator, config );
 
         // when
         List<AnyValue[]> results = asList( proc.apply( null, new AnyValue[0], null ) );
@@ -111,11 +117,11 @@ public class GetServersProcedureV1Test
         assertEquals( longValue( 600 ), ttlInSeconds );
     }
 
-    @Test
-    public void shouldHaveCorrectSignature()
+    @RoutingConfigsTest
+    void shouldHaveCorrectSignature( Config config )
     {
         // given
-        final LegacyGetServersProcedure proc = new LegacyGetServersProcedure( null, null, config, getInstance() );
+        CallableProcedure proc = newProcedure( null, null, config );
 
         // when
         ProcedureSignature signature = proc.signature();
@@ -126,8 +132,8 @@ public class GetServersProcedureV1Test
                 FieldSignature.outputField( "servers", NTList( NTMap ) ) ) );
     }
 
-    @Test
-    public void shouldProvideReaderAndRouterForSingleCoreSetup() throws Exception
+    @RoutingConfigsTest
+    void shouldProvideReaderAndRouterForSingleCoreSetup( Config config ) throws Exception
     {
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
@@ -141,11 +147,10 @@ public class GetServersProcedureV1Test
         when( coreTopologyService.localCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.localReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
-        final LegacyGetServersProcedure proc =
-                new LegacyGetServersProcedure( coreTopologyService, leaderLocator, config, getInstance() );
+        CallableProcedure proc = newProcedure( coreTopologyService, leaderLocator, config );
 
         // when
-        ClusterView clusterView = run( proc );
+        ClusterView clusterView = run( proc, config );
 
         // then
         ClusterView.Builder builder = new ClusterView.Builder();
@@ -155,8 +160,8 @@ public class GetServersProcedureV1Test
         assertEquals( builder.build(), clusterView );
     }
 
-    @Test
-    public void shouldReturnCoreServersWithRouteAllCoresButLeaderAsReadAndSingleWriteActions() throws Exception
+    @RoutingConfigsTest
+    void shouldReturnCoreServersWithRouteAllCoresButLeaderAsReadAndSingleWriteActions( Config config ) throws Exception
     {
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
@@ -173,11 +178,10 @@ public class GetServersProcedureV1Test
         when( coreTopologyService.localCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.localReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
-        final LegacyGetServersProcedure proc =
-                new LegacyGetServersProcedure( coreTopologyService, leaderLocator, config, getInstance() );
+        CallableProcedure proc = newProcedure( coreTopologyService, leaderLocator, config );
 
         // when
-        ClusterView clusterView = run( proc );
+        ClusterView clusterView = run( proc, config );
 
         // then
         ClusterView.Builder builder = new ClusterView.Builder();
@@ -191,8 +195,8 @@ public class GetServersProcedureV1Test
         assertEquals( builder.build(), clusterView );
     }
 
-    @Test
-    public void shouldReturnSelfIfOnlyMemberOfTheCluster() throws Exception
+    @RoutingConfigsTest
+    void shouldReturnSelfIfOnlyMemberOfTheCluster( Config config ) throws Exception
     {
         // given
         final CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
@@ -207,11 +211,10 @@ public class GetServersProcedureV1Test
         when( coreTopologyService.localCoreServers() ).thenReturn( clusterTopology );
         when( coreTopologyService.localReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
 
-        final LegacyGetServersProcedure proc =
-                new LegacyGetServersProcedure( coreTopologyService, leaderLocator, config, getInstance() );
+        CallableProcedure proc = newProcedure( coreTopologyService, leaderLocator, config );
 
         // when
-        ClusterView clusterView = run( proc );
+        ClusterView clusterView = run( proc, config );
 
         // then
         ClusterView.Builder builder = new ClusterView.Builder();
@@ -222,8 +225,8 @@ public class GetServersProcedureV1Test
         assertEquals( builder.build(), clusterView );
     }
 
-    @Test
-    public void shouldReturnTheCoreLeaderForWriteAndReadReplicasAndCoresForReads() throws Exception
+    @RoutingConfigsTest
+    void shouldReturnTheCoreLeaderForWriteAndReadReplicasAndCoresForReads( Config config ) throws Exception
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
@@ -238,27 +241,30 @@ public class GetServersProcedureV1Test
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenReturn( theLeader );
 
-        LegacyGetServersProcedure procedure =
-                new LegacyGetServersProcedure( topologyService, leaderLocator, config, getInstance() );
+        CallableProcedure procedure = newProcedure( topologyService, leaderLocator, config );
 
         // when
-        ClusterView clusterView = run( procedure );
+        ClusterView clusterView = run( procedure, config );
 
         // then
+        AdvertisedSocketAddress coreBoltAddress = addressesForCore( 0, false ).connectors().boltAddress();
+        AdvertisedSocketAddress readReplicaBoltAddress = addressesForReadReplica( 1 ).connectors().boltAddress();
+
         ClusterView.Builder builder = new ClusterView.Builder();
-        builder.writeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
-        if ( expectFollowersAsReadEndPoints )
+        builder.writeAddress( coreBoltAddress );
+        if ( config.get( cluster_allow_reads_on_followers ) )
         {
-            builder.readAddress( addressesForCore( 0, false ).connectors().boltAddress() );
+            builder.readAddress( coreBoltAddress );
         }
-        builder.readAddress( addressesForReadReplica( 1 ).connectors().boltAddress() );
-        builder.routeAddress( addressesForCore( 0, false ).connectors().boltAddress() );
+
+        builder.readAddress( readReplicaBoltAddress );
+        builder.routeAddress( coreBoltAddress );
 
         assertEquals( builder.build(), clusterView );
     }
 
-    @Test
-    public void shouldReturnCoreMemberAsReadServerIfNoReadReplicasAvailable() throws Exception
+    @RoutingConfigsTest
+    void shouldReturnCoreMemberAsReadServerIfNoReadReplicasAvailable( Config config ) throws Exception
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
@@ -273,11 +279,10 @@ public class GetServersProcedureV1Test
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenReturn( theLeader );
 
-        LegacyGetServersProcedure procedure =
-                new LegacyGetServersProcedure( topologyService, leaderLocator, config, getInstance() );
+        CallableProcedure procedure = newProcedure( topologyService, leaderLocator, config );
 
         // when
-        ClusterView clusterView = run( procedure );
+        ClusterView clusterView = run( procedure, config );
 
         // then
         ClusterView.Builder builder = new ClusterView.Builder();
@@ -288,8 +293,8 @@ public class GetServersProcedureV1Test
         assertEquals( builder.build(), clusterView );
     }
 
-    @Test
-    public void shouldReturnNoWriteEndpointsIfThereIsNoLeader() throws Exception
+    @RoutingConfigsTest
+    void shouldReturnNoWriteEndpointsIfThereIsNoLeader( Config config ) throws Exception
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
@@ -303,11 +308,10 @@ public class GetServersProcedureV1Test
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
 
-        LegacyGetServersProcedure procedure =
-                new LegacyGetServersProcedure( topologyService, leaderLocator, config, getInstance() );
+        CallableProcedure procedure = newProcedure( topologyService, leaderLocator, config );
 
         // when
-        ClusterView clusterView = run( procedure );
+        ClusterView clusterView = run( procedure, config );
 
         // then
         ClusterView.Builder builder = new ClusterView.Builder();
@@ -317,8 +321,8 @@ public class GetServersProcedureV1Test
         assertEquals( builder.build(), clusterView );
     }
 
-    @Test
-    public void shouldReturnNoWriteEndpointsIfThereIsNoAddressForTheLeader() throws Exception
+    @RoutingConfigsTest
+    void shouldReturnNoWriteEndpointsIfThereIsNoAddressForTheLeader( Config config ) throws Exception
     {
         // given
         final CoreTopologyService topologyService = mock( CoreTopologyService.class );
@@ -332,11 +336,10 @@ public class GetServersProcedureV1Test
         LeaderLocator leaderLocator = mock( LeaderLocator.class );
         when( leaderLocator.getLeader() ).thenReturn( member( 1 ) );
 
-        LegacyGetServersProcedure procedure =
-                new LegacyGetServersProcedure( topologyService, leaderLocator, config, getInstance() );
+        CallableProcedure procedure = newProcedure( topologyService, leaderLocator, config );
 
         // when
-        ClusterView clusterView = run( procedure );
+        ClusterView clusterView = run( procedure, config );
 
         // then
 
@@ -347,12 +350,104 @@ public class GetServersProcedureV1Test
         assertEquals( builder.build(), clusterView );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private ClusterView run( LegacyGetServersProcedure proc ) throws ProcedureException
+    @Test
+    void shouldReturnEndpointsInDifferentOrders() throws Exception
+    {
+        // given
+        Config config = Config.defaults();
+        CoreTopologyService coreTopologyService = mock( CoreTopologyService.class );
+
+        LeaderLocator leaderLocator = mock( LeaderLocator.class );
+        when( leaderLocator.getLeader() ).thenReturn( member( 0 ) );
+
+        Map<MemberId,CoreServerInfo> coreMembers = new HashMap<>();
+        coreMembers.put( member( 0 ), addressesForCore( 0, false ) );
+        coreMembers.put( member( 1 ), addressesForCore( 1, false ) );
+        coreMembers.put( member( 2 ), addressesForCore( 2, false ) );
+
+        CoreTopology clusterTopology = new CoreTopology( clusterId, false, coreMembers );
+        when( coreTopologyService.localCoreServers() ).thenReturn( clusterTopology );
+        when( coreTopologyService.localReadReplicas() ).thenReturn( new ReadReplicaTopology( emptyMap() ) );
+
+        CallableProcedure proc = newProcedure( coreTopologyService, leaderLocator, config );
+
+        // when
+        Object[] endpoints = getEndpoints( proc );
+
+        //then
+        Object[] endpointsInDifferentOrder = getEndpoints( proc );
+        for ( int i = 0; i < 100; i++ )
+        {
+            if ( Arrays.deepEquals( endpointsInDifferentOrder, endpoints ) )
+            {
+                endpointsInDifferentOrder = getEndpoints( proc );
+            }
+            else
+            {
+                //Different order of servers, no need to retry.
+                break;
+            }
+        }
+        assertThat( endpoints, not( equalTo( endpointsInDifferentOrder ) ) );
+    }
+
+    @Test
+    void shouldHaveCorrectSignature()
+    {
+        // given
+        CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        LeaderLocator leaderLocator = mock( LeaderLocator.class );
+        CallableProcedure proc = newProcedure( topologyService, leaderLocator, Config.defaults() );
+
+        // when
+        ProcedureSignature signature = proc.signature();
+
+        // then
+        assertThat( signature.inputSignature(), containsInAnyOrder(
+                FieldSignature.inputField( "context", NTMap ) ) );
+
+        assertThat( signature.outputSignature(), containsInAnyOrder(
+                FieldSignature.outputField( "ttl", NTInteger ),
+                FieldSignature.outputField( "servers", NTList( NTMap ) ) ) );
+    }
+
+    @Test
+    void shouldHaveCorrectNamespace()
+    {
+        // given
+        CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        LeaderLocator leaderLocator = mock( LeaderLocator.class );
+        Config config = Config.defaults();
+
+        CallableProcedure proc = newProcedure( topologyService, leaderLocator, config );
+
+        // when
+        QualifiedName name = proc.signature().name();
+
+        // then
+        assertEquals( new QualifiedName( new String[]{"dbms", "routing"}, "getRoutingTable" ), name );
+    }
+
+    private Object[] getEndpoints( CallableProcedure proc ) throws ProcedureException
+    {
+        List<AnyValue[]> results = asList( proc.apply( null, new AnyValue[0], null ) );
+        AnyValue[] rows = results.get( 0 );
+        AnyValue[] servers = ((ListValue) rows[1]).asArray();
+        MapValue readEndpoints = (MapValue) servers[1];
+        MapValue routeEndpoints = (MapValue) servers[2];
+        return new Object[]{readEndpoints.get( "addresses" ), routeEndpoints.get( "addresses" )};
+    }
+
+    private ClusterView run( CallableProcedure proc, Config config ) throws ProcedureException
     {
         final AnyValue[] rows = asList( proc.apply( null, new AnyValue[0], null ) ).get( 0 );
-        assertEquals( longValue( config.get( cluster_routing_ttl ).getSeconds() ), /* ttl */(LongValue) rows[0] );
+        assertEquals( longValue( config.get( routing_ttl ).getSeconds() ), /* ttl */rows[0] );
         return ClusterView.parse( (ListValue) rows[1] );
+    }
+
+    private CallableProcedure newProcedure( CoreTopologyService coreTopologyService, LeaderLocator leaderLocator, Config config )
+    {
+        return new GetServersProcedureForSingleDC( DEFAULT_NAMESPACE, coreTopologyService, leaderLocator, config, NullLogProvider.getInstance() );
     }
 
     private static class ClusterView

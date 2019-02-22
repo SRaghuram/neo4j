@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.DefaultDatabaseService;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.consensus.ConsensusModule;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolClientInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
@@ -62,9 +63,6 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForMultiDC;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForSingleDC;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.LegacyGetServersProcedure;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.GetRoutersForAllDatabasesProcedure;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.GetRoutersForDatabaseProcedure;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
@@ -288,23 +286,16 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     {
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-        //noinspection deprecation
-        globalProcedures.register( new LegacyGetServersProcedure( topologyService, consensusModule.raftMachine(), globalConfig, logProvider ) );
 
-        if ( globalConfig.get( CausalClusteringSettings.multi_dc_license ) )
-        {
-            globalProcedures.register( new GetServersProcedureForMultiDC( getLoadBalancingProcessor() ) );
-        }
-        else
-        {
-            globalProcedures.register( new GetServersProcedureForSingleDC( topologyService, consensusModule.raftMachine(),
-                    globalConfig, logProvider ) );
-        }
+        RaftMachine raftMachine = consensusModule.raftMachine();
+
+        CoreRoutingProcedureInstaller routingProcedureInstaller = new CoreRoutingProcedureInstaller( topologyService, raftMachine, globalConfig, logProvider );
+        routingProcedureInstaller.install( globalProcedures );
 
         globalProcedures.register( new GetRoutersForAllDatabasesProcedure( topologyService, globalConfig ) );
         globalProcedures.register( new GetRoutersForDatabaseProcedure( topologyService, globalConfig ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
-        globalProcedures.register( new CoreRoleProcedure( consensusModule.raftMachine() ) );
+        globalProcedures.register( new CoreRoleProcedure( raftMachine ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
         globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );

@@ -44,7 +44,6 @@ import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.TransactionWork;
 import org.neo4j.driver.v1.exceptions.ClientException;
-import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.v1.exceptions.SessionExpiredException;
 import org.neo4j.driver.v1.summary.ServerInfo;
 import org.neo4j.helpers.collection.Iterators;
@@ -55,7 +54,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -82,7 +80,7 @@ class BoltCausalClusteringIT
         cluster = clusterFactory.createCluster( ClusterConfig
                 .clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withSharedCoreParams( stringMap( CausalClusteringSettings.cluster_routing_ttl.name(), "3s" ) ) );
+                .withSharedCoreParams( stringMap( GraphDatabaseSettings.routing_ttl.name(), "3s" ) ) );
         cluster.start();
     }
 
@@ -352,23 +350,6 @@ class BoltCausalClusteringIT
             leaderSwitcher.stop();
             assertTrue( leaderSwitcher.hadLeaderSwitch() );
             assertThat( seenAddresses.size(), greaterThanOrEqualTo( 2 ) );
-        }
-    }
-
-    @Test
-    void sessionCreationShouldFailIfCallingDiscoveryProcedureOnEdgeServer()
-    {
-        // given
-        ReadReplica readReplica = cluster.getReadReplicaById( 0 );
-        try
-        {
-            GraphDatabase.driver( readReplica.routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );
-            fail( "Should have thrown an exception using a read replica address for routing" );
-        }
-        catch ( ServiceUnavailableException ex )
-        {
-            // then
-            MatcherAssert.assertThat(ex.getMessage(), startsWith( "Failed to run"));
         }
     }
 

@@ -12,18 +12,15 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.routing.Endpoint;
-import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.Policies;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.ParameterNames;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.ResultFormatV1;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import org.eclipse.collections.impl.factory.Sets;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,31 +34,37 @@ import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.builtinprocs.routing.ParameterNames;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
+import org.neo4j.kernel.builtinprocs.routing.RoutingResultFormat;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.util.ValueUtils;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.virtual.MapValueBuilder;
 
-import static com.neo4j.causalclustering.routing.load_balancing.procedure.ProcedureNames.GET_SERVERS_V2;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-public class ServerPoliciesLoadBalancingIT
+@ExtendWith( {TestDirectoryExtension.class, DefaultFileSystemExtension.class} )
+class ServerPoliciesLoadBalancingIT
 {
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDir;
+    @Inject
+    private FileSystemAbstraction fs;
 
     private Cluster<?> cluster;
 
-    @After
-    public void after()
+    @AfterEach
+    void AfterEach()
     {
         if ( cluster != null )
         {
@@ -70,31 +73,23 @@ public class ServerPoliciesLoadBalancingIT
     }
 
     @Test
-    public void defaultBehaviour() throws Exception
+    void defaultBehaviour() throws Exception
     {
-        cluster = new DefaultCluster( testDir.directory( "cluster" ), 3, 3, new HazelcastDiscoveryServiceFactory(), emptyMap(),
-                emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
-
-        cluster.start();
+        cluster = startCluster( 3, 3, emptyMap(), emptyMap(), emptyMap() );
 
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 2, 3 ) );
     }
 
     @Test
-    public void defaultBehaviourWithAllowReadsOnFollowers() throws Exception
+    void defaultBehaviourWithAllowReadsOnFollowers() throws Exception
     {
-        cluster = new DefaultCluster( testDir.directory( "cluster" ), 3, 3,
-                new HazelcastDiscoveryServiceFactory(),
-                stringMap( CausalClusteringSettings.cluster_allow_reads_on_followers.name(), "true" ),
-                emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
-
-        cluster.start();
+        cluster = startCluster( 3, 3, emptyMap(), emptyMap(), emptyMap() );
 
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 2, 3 ) );
     }
 
     @Test
-    public void shouldFallOverBetweenRules() throws Exception
+    void shouldFallOverBetweenRules() throws Exception
     {
         Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
         instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core" + id + ",core" );
@@ -108,11 +103,8 @@ public class ServerPoliciesLoadBalancingIT
                 CausalClusteringSettings.load_balancing_config.name() + ".server_policies.default", defaultPolicy,
                 CausalClusteringSettings.multi_dc_license.name(), "true");
 
-        cluster = new DefaultCluster( testDir.directory( "cluster" ), 5, 5,
-                new HazelcastDiscoveryServiceFactory(), coreParams, instanceCoreParams,
-                emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
+        cluster = startCluster( 5, 5, coreParams, instanceCoreParams, instanceReplicaParams );
 
-        cluster.start();
         // should use the first rule: only cores for reading
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 5, 1, 4, 0 ) );
 
@@ -138,7 +130,7 @@ public class ServerPoliciesLoadBalancingIT
     }
 
     @Test
-    public void shouldSupportSeveralPolicies() throws Exception
+    void shouldSupportSeveralPolicies() throws Exception
     {
         Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
         instanceCoreParams.put( CausalClusteringSettings.server_groups.name(), id -> "core" + id + ",core" );
@@ -161,11 +153,8 @@ public class ServerPoliciesLoadBalancingIT
                 CausalClusteringSettings.multi_dc_license.name(), "true"
         );
 
-        cluster = new DefaultCluster( testDir.directory( "cluster" ), 3, 3,
-                new HazelcastDiscoveryServiceFactory(), coreParams, instanceCoreParams,
-                emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
+        cluster = startCluster( 3, 3, coreParams, instanceCoreParams, instanceReplicaParams );
 
-        cluster.start();
         assertGetServersEventuallyMatchesOnAllCores( new CountsMatcher( 3, 1, 2, 3 ), policyContext( "all" ) );
         // all cores have observed the full topology, now specific policies should all return the same result
 
@@ -180,17 +169,29 @@ public class ServerPoliciesLoadBalancingIT
         }
     }
 
+    private Cluster<?> startCluster( int cores, int readReplicas, Map<String,String> sharedCoreParams, Map<String,IntFunction<String>> instanceCoreParams,
+            Map<String,IntFunction<String>> instanceReplicaParams ) throws Exception
+    {
+        Cluster<?> cluster = new DefaultCluster( testDir.directory( "cluster" ), cores, readReplicas,
+                new HazelcastDiscoveryServiceFactory(), sharedCoreParams, instanceCoreParams,
+                emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
+
+        cluster.start();
+
+        return cluster;
+    }
+
     private Map<String,String> policyContext( String policyName )
     {
         return stringMap( Policies.POLICY_KEY, policyName );
     }
 
-    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<LoadBalancingResult> matcher ) throws InterruptedException
+    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher ) throws InterruptedException
     {
         assertGetServersEventuallyMatchesOnAllCores( matcher, emptyMap() );
     }
 
-    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<LoadBalancingResult> matcher,
+    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher,
             Map<String,String> context ) throws InterruptedException
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
@@ -205,13 +206,13 @@ public class ServerPoliciesLoadBalancingIT
         }
     }
 
-    private LoadBalancingResult getServers( CoreGraphDatabase db, Map<String,String> context )
+    private RoutingResult getServers( CoreGraphDatabase db, Map<String,String> context )
     {
-        LoadBalancingResult lbResult = null;
+        RoutingResult lbResult = null;
         try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.explicit, CommercialLoginContext.AUTH_DISABLED ) )
         {
             Map<String,Object> parameters = MapUtil.map( ParameterNames.CONTEXT.parameterName(), context );
-            try ( Result result = db.execute( tx, "CALL " + GET_SERVERS_V2.callName(), ValueUtils.asMapValue( parameters )) )
+            try ( Result result = db.execute( tx, "CALL dbms.routing.getRoutingTable", ValueUtils.asMapValue( parameters ) ) )
             {
                 while ( result.hasNext() )
                 {
@@ -219,7 +220,7 @@ public class ServerPoliciesLoadBalancingIT
                     MapValueBuilder builder = new MapValueBuilder();
                     next.forEach( ( k, v ) -> builder.add( k, ValueUtils.of( v ) ) );
 
-                    lbResult = ResultFormatV1.parse( builder.build() );
+                    lbResult = RoutingResultFormat.parse( builder.build() );
                 }
             }
         }
@@ -232,7 +233,7 @@ public class ServerPoliciesLoadBalancingIT
         org.neo4j.test.assertion.Assert.assertEventually( "", actual, matcher, 120, SECONDS );
     }
 
-    class CountsMatcher extends BaseMatcher<LoadBalancingResult>
+    class CountsMatcher extends BaseMatcher<RoutingResult>
     {
         private final int nRouters;
         private final int nWriters;
@@ -250,7 +251,7 @@ public class ServerPoliciesLoadBalancingIT
         @Override
         public boolean matches( Object item )
         {
-            LoadBalancingResult result = (LoadBalancingResult) item;
+            RoutingResult result = (RoutingResult) item;
 
             if ( result.routeEndpoints().size() != nRouters ||
                  result.writeEndpoints().size() != nWriters )
@@ -263,7 +264,6 @@ public class ServerPoliciesLoadBalancingIT
                     .collect( Collectors.toSet() );
 
             Set<AdvertisedSocketAddress> returnedCoreReaders = result.readEndpoints().stream()
-                    .map( Endpoint::address )
                     .filter( allCoreBolts::contains )
                     .collect( Collectors.toSet() );
 
@@ -277,7 +277,6 @@ public class ServerPoliciesLoadBalancingIT
                     .collect( Collectors.toSet() );
 
             Set<AdvertisedSocketAddress> returnedReplicaReaders = result.readEndpoints().stream()
-                    .map( Endpoint::address )
                     .filter( allReplicaBolts::contains )
                     .collect( Collectors.toSet() );
 
@@ -294,21 +293,18 @@ public class ServerPoliciesLoadBalancingIT
                 return false;
             }
 
-            Set<AdvertisedSocketAddress> returnedWriters = result.writeEndpoints().stream()
-                    .map( Endpoint::address )
-                    .collect( Collectors.toSet() );
+            Set<AdvertisedSocketAddress> returnedWriters = new HashSet<>( result.writeEndpoints() );
 
             if ( !allCoreBolts.containsAll( returnedWriters ) )
             {
                 return false;
             }
 
-            Set<AdvertisedSocketAddress> returnedRouters = result.routeEndpoints().stream()
-                    .map( Endpoint::address )
-                    .collect( Collectors.toSet() );
+            Set<AdvertisedSocketAddress> allBolts = Sets.union( allCoreBolts, allReplicaBolts );
+            Set<AdvertisedSocketAddress> returnedRouters = new HashSet<>( result.routeEndpoints() );
 
             //noinspection RedundantIfStatement
-            if ( !allCoreBolts.containsAll( returnedRouters ) )
+            if ( !allBolts.containsAll( returnedRouters ) )
             {
                 return false;
             }
@@ -326,7 +322,7 @@ public class ServerPoliciesLoadBalancingIT
         }
     }
 
-    class SpecificReplicasMatcher extends BaseMatcher<LoadBalancingResult>
+    class SpecificReplicasMatcher extends BaseMatcher<RoutingResult>
     {
         private final Set<Integer> replicaIds;
 
@@ -338,11 +334,9 @@ public class ServerPoliciesLoadBalancingIT
         @Override
         public boolean matches( Object item )
         {
-            LoadBalancingResult result = (LoadBalancingResult) item;
+            RoutingResult result = (RoutingResult) item;
 
-            Set<AdvertisedSocketAddress> returnedReaders = result.readEndpoints().stream()
-                    .map( Endpoint::address )
-                    .collect( Collectors.toSet() );
+            Set<AdvertisedSocketAddress> returnedReaders = new HashSet<>( result.readEndpoints() );
 
             Set<AdvertisedSocketAddress> expectedBolts = cluster.readReplicas().stream()
                     .filter( r -> replicaIds.contains( r.serverId() ) )
