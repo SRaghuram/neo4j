@@ -1,9 +1,3 @@
-====
-    Copyright (c) 2002-2019 "Neo4j,"
-    Neo4j Sweden AB [http://neo4j.com]
-    This file is part of Neo4j internal tooling.
-====
-
 startLocation|endLocation|intervalStart:Long|intervalEnd:Long
 DeliveryArea-1610|DeliveryArea-1974|1350604800000|1350864000000
 DeliveryArea-6414|DeliveryArea-2628|1350259200000|1350518400000
