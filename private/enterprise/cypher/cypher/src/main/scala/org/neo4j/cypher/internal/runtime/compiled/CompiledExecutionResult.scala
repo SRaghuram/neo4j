@@ -23,7 +23,7 @@ class CompiledExecutionResult(context: QueryContext,
                               override val queryProfile: QueryProfile,
                               prePopulateResults: Boolean,
                               subscriber: QuerySubscriber)
-  extends NaiveQuerySubscription(subscriber) {
+  extends NaiveQuerySubscription(subscriber) with RuntimeResult {
 
   private var resultRequested = false
 
