@@ -213,24 +213,10 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         private boolean doOnRecords( BoltResult boltResult, long size ) throws Exception
         {
             return boltResult.handleRecords(
-                    new BoltResult.Subscriber()
+                    new BoltResult.RecordConsumer()
                     {
-                        private AnyValue[] fields;
-
                         @Override
-                        public void onStart( int numberOfFields )
-                        {
-                            fields = new AnyValue[numberOfFields];
-                        }
-
-                        @Override
-                        public void onField( int offset, AnyValue value )
-                        {
-                            fields[offset] = value;
-                        }
-
-                        @Override
-                        public void onCompleted() throws Exception
+                        public void accept( AnyValue[] fields ) throws IOException
                         {
                             writer.write( new RecordMessage( fields ) );
                         }
