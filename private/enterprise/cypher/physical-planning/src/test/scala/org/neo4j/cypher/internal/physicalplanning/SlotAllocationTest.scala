@@ -214,7 +214,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     val allNodesScan = AllNodesScan("x", Set.empty)
     val varLength = VarPatternLength(1, Some(15))
     val expand = VarExpand(allNodesScan, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty, "z", "r",
-      varLength, ExpandAll, "r_NODES", "r_EDGES", trueLiteral, trueLiteral, Seq.empty)
+      varLength, ExpandAll, varFor("r_NODES"), varFor("r_EDGES"), trueLiteral, trueLiteral, Seq.empty)
 
     // when
     val allocations = SlotAllocation.allocateSlots(expand, semanticTable, breakFor(expand)).slotConfigurations
@@ -243,7 +243,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     val expand = Expand(allNodesScan, "x", SemanticDirection.OUTGOING, Seq.empty, "y", "r", ExpandAll)
     val varLength = VarPatternLength(1, Some(15))
     val varExpand = VarExpand(expand, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty, "y", "r2",
-      varLength, ExpandInto, "r_NODES", "r_EDGES", trueLiteral, trueLiteral, Seq.empty)
+      varLength, ExpandInto, varFor("r_NODES"), varFor("r_EDGES"), trueLiteral, trueLiteral, Seq.empty)
 
     // when
     val allocations = SlotAllocation.allocateSlots(varExpand, semanticTable, breakFor(expand, varExpand)).slotConfigurations

@@ -403,8 +403,8 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                        _) =>
         // We allocate these on the incoming pipeline after cloning it, since we don't need these slots in
         // the produced rows
-        source.newLong(tempNode, nullable = false, CTNode)
-        source.newLong(tempEdge, nullable = false, CTRelationship)
+        source.newLong(tempNode.name, nullable = false, CTNode)
+        source.newLong(tempEdge.name, nullable = false, CTRelationship)
 
         if (expansionMode == ExpandAll) {
           slots.newLong(to, nullable, CTNode)

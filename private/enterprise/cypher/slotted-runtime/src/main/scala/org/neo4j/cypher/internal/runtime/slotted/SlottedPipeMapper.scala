@@ -118,7 +118,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
                                       predicate.map(convertExpressions))(id)
 
       case VarExpand(sourcePlan, fromName, dir, projectedDir, types, toName, relName,
-      VarPatternLength(min, max), expansionMode, tempNode, tempEdge, nodePredicate,
+      VarPatternLength(min, max), expansionMode, tempNode, tempRelationship, nodePredicate,
       relationshipPredicate, _) =>
         val shouldExpandAll = expansionMode match {
           case ExpandAll => true
@@ -130,8 +130,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // The node/edge predicates are evaluated on the source pipeline, not the produced one
         val sourceSlots = physicalPlan.slotConfigurations(sourcePlan.id)
-        val tempNodeOffset = sourceSlots.getLongOffsetFor(tempNode)
-        val tempRelationshipOffset = sourceSlots.getLongOffsetFor(tempEdge)
+        val tempNodeOffset = sourceSlots.getLongOffsetFor(tempNode.name)
+        val tempRelationshipOffset = sourceSlots.getLongOffsetFor(tempRelationship.name)
         val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs - 2, sourceSlots.numberOfReferences)
         VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, LazyTypes(types.toArray), min,
                                    max, shouldExpandAll, slots,
