@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption.SingleThreaded
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime._
@@ -20,7 +19,6 @@ import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, Pipeline, PipelineB
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedPipeMapper, SlottedPipelineBreakingPolicy}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -35,10 +33,10 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   override def name: String = "morsel"
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
-    val (logicalPlan, physicalPlan) = PhysicalPlanner.plan(context.tokenContext,
-                                                           query.logicalPlan,
-                                                           query.semanticTable,
-                                                           SlottedPipelineBreakingPolicy)
+    val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
+                                            query.logicalPlan,
+                                            query.semanticTable,
+                                            SlottedPipelineBreakingPolicy)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -57,7 +55,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     // We can use lazy slotted pipes as a fallback for some missing operators. This also converts nested logical plans
     val (slottedPipeMapper: SlottedPipeMapper, logicalPlanWithConvertedNestedPlans: LogicalPlan) =
-      createSlottedPipeFallback(query, context, logicalPlan, physicalPlan, converters, queryIndexes)
+      createSlottedPipeFallback(query, context, physicalPlan, converters, queryIndexes)
 
     val operatorBuilder = new PipelineBuilder(physicalPlan, converters, query.readOnly, queryIndexes, slottedPipeMapper)
 
@@ -71,7 +69,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     MorselExecutionPlan(operators,
                         physicalPlan.slotConfigurations,
                         queryIndexes,
-                        logicalPlan,
+                        physicalPlan.logicalPlan,
                         fieldNames,
                         dispatcher,
                         tracer,
@@ -80,14 +78,13 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   private def createSlottedPipeFallback(query: LogicalQuery,
                                         context: EnterpriseRuntimeContext,
-                                        logicalPlan: LogicalPlan,
                                         physicalPlan: PhysicalPlan,
                                         converters: ExpressionConverters,
                                         queryIndexes: QueryIndexes): (SlottedPipeMapper, LogicalPlan) = {
     val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
     val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
     val pipeTreeBuilder = PipeTreeBuilder(slottedPipeMapper)
-    val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
+    val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, physicalPlan.logicalPlan)
     (slottedPipeMapper, logicalPlanWithConvertedNestedPlans)
   }
 

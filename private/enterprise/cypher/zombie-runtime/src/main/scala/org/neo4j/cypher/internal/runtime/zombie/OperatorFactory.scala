@@ -5,8 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, PhysicalPlan}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.zombie.operators._

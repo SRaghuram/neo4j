@@ -35,7 +35,7 @@ object SlotAllocation {
 
   case class SlotsAndArgument(slotConfiguration: SlotConfiguration, argumentSize: Size, applyPlan: Id)
 
-  case class PhysicalPlan(slotConfigurations: SlotConfigurations,
+  case class SlotMetaData(slotConfigurations: SlotConfigurations,
                           argumentSizes: ArgumentSizes,
                           applyPlans: ApplyPlans)
 
@@ -51,8 +51,8 @@ object SlotAllocation {
   def allocateSlots(lp: LogicalPlan,
                     semanticTable: SemanticTable,
                     breakingPolicy: PipelineBreakingPolicy,
-                    allocateArgumentSlots: Boolean = false): PhysicalPlan =
-    new SingleQuerySlotAllocator(allocateArgumentSlots, breakingPolicy).allocateSlots(lp, semanticTable)
+                    allocateArgumentSlots: Boolean = false): SlotMetaData =
+    new SingleQuerySlotAllocator(allocateArgumentSlots, breakingPolicy).allocateSlots(lp, semanticTable, None)
 }
 
 /**
@@ -76,7 +76,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
     */
   def allocateSlots(lp: LogicalPlan,
                     semanticTable: SemanticTable,
-                    initialSlotsAndArgument: Option[SlotsAndArgument] = None): PhysicalPlan = {
+                    initialSlotsAndArgument: Option[SlotsAndArgument]): SlotMetaData = {
 
     val planStack = new mutable.Stack[(Boolean, LogicalPlan)]()
     val resultStack = new mutable.Stack[SlotConfiguration]()
@@ -172,7 +172,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       comingFrom = current
     }
 
-    PhysicalPlan(allocations, argumentSizes, applyPlans)
+    SlotMetaData(allocations, argumentSizes, applyPlans)
   }
 
   // NOTE: If we find a NestedPlanExpression within the given LogicalPlan, the slotConfigurations and argumentSizes maps will be updated

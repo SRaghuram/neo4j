@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, SlotConfigurations}
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
@@ -19,7 +19,7 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
   test("should log unexpected errors") {
     // Given
     val log = new BufferingLog
-    val converter = new CompiledExpressionConverter(log, PhysicalPlan(new SlotConfigurations, new ArgumentSizes, new ApplyPlans), TokenContext.EMPTY, neverFail = true)
+    val converter = new CompiledExpressionConverter(log, PhysicalPlan(null, 0, new SlotConfigurations, new ArgumentSizes, new ApplyPlans), TokenContext.EMPTY, neverFail = true)
 
     // When
     //There is a limit of 65535 on the length of a String literal, so by exceeding that limit

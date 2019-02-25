@@ -6,17 +6,14 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
-import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedPipelineBreakingPolicy, SlottedExecutionResultBuilderFactory, SlottedPipeMapper}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper, SlottedPipelineBreakingPolicy}
 import org.neo4j.cypher.internal.v4_0.util.CypherException
 
 object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
@@ -42,13 +39,13 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         printPlanInfo(query)
       }
 
-      val (logicalPlan, physicalPlan) = PhysicalPlanner.plan(context.tokenContext,
-                                                             query.logicalPlan,
-                                                             query.semanticTable,
-                                                             SlottedPipelineBreakingPolicy)
+      val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
+                                              query.logicalPlan,
+                                              query.semanticTable,
+                                              SlottedPipelineBreakingPolicy)
 
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
-        printRewrittenPlanInfo(logicalPlan)
+        printRewrittenPlanInfo(physicalPlan.logicalPlan)
       }
 
       val converters =
@@ -67,7 +64,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val fallback = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
       val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
       val pipeTreeBuilder = PipeTreeBuilder(pipeBuilder)
-      val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, logicalPlan)
+      val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, physicalPlan.logicalPlan)
       val pipe = pipeTreeBuilder.build(logicalPlanWithConvertedNestedPlans)
       val columns = query.resultColumns
       val resultBuilderFactory =
@@ -75,7 +72,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
                                                  queryIndexes,
                                                  query.readOnly,
                                                  columns,
-                                                 logicalPlan,
+                                                 physicalPlan.logicalPlan,
                                                  physicalPlan.slotConfigurations,
                                                  context.config.lenientCreateRelationship,
                                                  query.hasLoadCSV)
@@ -84,7 +81,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         if (!PRINT_PLAN_INFO_EARLY) {
           // Print after execution plan building to see any occurring exceptions first
           printPlanInfo(query)
-          printRewrittenPlanInfo(logicalPlan)
+          printRewrittenPlanInfo(physicalPlan.logicalPlan)
         }
         printPipe(physicalPlan.slotConfigurations, pipe)
       }

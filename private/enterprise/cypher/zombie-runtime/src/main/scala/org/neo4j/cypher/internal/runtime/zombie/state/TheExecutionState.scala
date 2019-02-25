@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._

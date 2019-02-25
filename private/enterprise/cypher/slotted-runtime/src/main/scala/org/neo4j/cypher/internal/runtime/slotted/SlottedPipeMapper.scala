@@ -6,11 +6,11 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.ir.v4_0.VarPatternLength
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.physicalplanning.ast.{NodeFromSlot, RelationshipFromSlot}
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{AggregationExpression, Expression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{Predicate, True}
