@@ -310,9 +310,4 @@ public class CatchupPollingProcessTest
         assertEquals( TX_PULLING, txPuller.state() );
     }
 
-    @Test
-    public void shouldBeAbleToStoreCopyAsLongAsSecondaryProvidesAtLeastOneValidAddress()
-    {
-
-    }
 }
