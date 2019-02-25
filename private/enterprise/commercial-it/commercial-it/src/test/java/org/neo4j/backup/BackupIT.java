@@ -1158,9 +1158,11 @@ class BackupIT
 
     private void executeBackup( OnlineBackupContext context, Monitors monitors ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
+        FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
+
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
-                .withOutputStream( System.out )
-                .withLogProvider( FormattedLogProvider.toOutputStream( System.out ) )
+                .withUserLogProvider( logProvider )
+                .withInternalLogProvider( logProvider )
                 .withMonitors( monitors )
                 .build();
 

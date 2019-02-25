@@ -7,7 +7,6 @@ package org.neo4j.backup.impl;
 
 import com.neo4j.causalclustering.catchup.tx.TransactionLogCatchUpFactory;
 
-import java.io.OutputStream;
 import java.time.Clock;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -20,7 +19,6 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class BackupModule
 {
-    private final OutputStream outputStream;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final Monitors monitors;
@@ -32,15 +30,12 @@ public class BackupModule
     /**
      * Dependencies that can be resolved immediately after launching the backup tool
      *
-     * @param outputStream output streams for backup monitoring
      * @param fs the file system for backup
      * @param logProvider made available to subsequent dependency resolution classes
      * @param monitors will become shared across all resolved dependencies
      */
-    public BackupModule( OutputStream outputStream, FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors,
-            StorageEngineFactory storageEngineFactory )
+    public BackupModule( FileSystemAbstraction fs, LogProvider logProvider, Monitors monitors, StorageEngineFactory storageEngineFactory )
     {
-        this.outputStream = outputStream;
         this.logProvider = logProvider;
         this.monitors = monitors;
         this.storageEngineFactory = storageEngineFactory;
@@ -73,11 +68,6 @@ public class BackupModule
     public TransactionLogCatchUpFactory getTransactionLogCatchUpFactory()
     {
         return transactionLogCatchUpFactory;
-    }
-
-    public OutputStream getOutputStream()
-    {
-        return outputStream;
     }
 
     public JobScheduler jobScheduler()

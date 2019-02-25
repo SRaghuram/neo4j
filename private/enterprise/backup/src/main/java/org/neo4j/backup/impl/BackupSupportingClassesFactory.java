@@ -22,7 +22,6 @@ import com.neo4j.causalclustering.protocol.Protocol.CatchupProtocolFeatures;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
-import java.io.OutputStream;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +50,6 @@ public class BackupSupportingClassesFactory
     protected final Monitors monitors;
     protected final FileSystemAbstraction fileSystemAbstraction;
     protected final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
-    protected final OutputStream outputStream;
     private final JobScheduler jobScheduler;
     private final StorageEngineFactory storageEngineFactory;
 
@@ -63,7 +61,6 @@ public class BackupSupportingClassesFactory
         this.fileSystemAbstraction = backupModule.getFileSystem();
         this.transactionLogCatchUpFactory = backupModule.getTransactionLogCatchUpFactory();
         this.jobScheduler = backupModule.jobScheduler();
-        this.outputStream = backupModule.getOutputStream();
         this.storageEngineFactory = backupModule.getStorageEngineFactory();
     }
 

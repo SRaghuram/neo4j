@@ -17,6 +17,7 @@ import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.String.format;
 
@@ -66,18 +67,28 @@ public class OnlineBackupCommandProvider extends AdminCommand.Provider
     @Nonnull
     public AdminCommand create( Path homeDir, Path configDir, OutsideWorld outsideWorld )
     {
-        boolean debug = System.getenv().get( "NEO4J_DEBUG") != null;
-        LogProvider logProvider = FormattedLogProvider.withDefaultLogLevel( debug ? Level.DEBUG : Level.NONE ).toOutputStream( outsideWorld.outStream() );
+        LogProvider userLogProvider = FormattedLogProvider.toOutputStream( outsideWorld.outStream() );
+        LogProvider internalLogProvider = buildInternalLogProvider( outsideWorld );
 
         OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( homeDir, configDir );
 
         OnlineBackupExecutor backupExecutor = OnlineBackupExecutor.builder()
-                .withOutputStream( outsideWorld.outStream() )
                 .withFileSystem( outsideWorld.fileSystem() )
-                .withLogProvider( logProvider )
+                .withUserLogProvider( userLogProvider )
+                .withInternalLogProvider( internalLogProvider )
                 .withProgressMonitorFactory( ProgressMonitorFactory.textual( outsideWorld.errorStream() ) )
                 .build();
 
         return new OnlineBackupCommand( outsideWorld, contextBuilder, backupExecutor );
+    }
+
+    private LogProvider buildInternalLogProvider( OutsideWorld outsideWorld )
+    {
+        boolean debug = System.getenv().get( "NEO4J_DEBUG" ) != null;
+        if ( debug )
+        {
+            return FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( outsideWorld.outStream() );
+        }
+        return NullLogProvider.getInstance();
     }
 }

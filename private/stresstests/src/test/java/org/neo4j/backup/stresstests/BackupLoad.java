@@ -103,10 +103,12 @@ class BackupLoad extends Workload
                 .withConsistencyCheckPropertyOwners( true )
                 .build();
 
+        FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( outputStream );
+
         OnlineBackupExecutor executor = OnlineBackupExecutor.builder()
-                .withOutputStream( outputStream )
                 .withProgressMonitorFactory( ProgressMonitorFactory.textual( outputStream ) )
-                .withLogProvider( FormattedLogProvider.toOutputStream( outputStream ) )
+                .withUserLogProvider( logProvider )
+                .withInternalLogProvider( logProvider )
                 .build();
 
         executor.executeBackup( context );

@@ -240,12 +240,12 @@ class BackupRetriesIT
         Monitors monitors = new Monitors();
         monitors.addMonitorListener( channelBreakingMonitor );
 
-        BackupModule backupModule = new BackupModule( System.out, fs, logProvider, monitors, storageEngineFactory );
+        BackupModule backupModule = new BackupModule( fs, logProvider, monitors, storageEngineFactory );
         BackupSupportingClassesFactory backupSupportingClassesFactory = new ChannelTrackingBackupSupportingClassesFactory( backupModule, channels );
 
         return OnlineBackupExecutor.builder()
-                .withOutputStream( System.out )
-                .withLogProvider( logProvider )
+                .withUserLogProvider( logProvider )
+                .withInternalLogProvider( logProvider )
                 .withProgressMonitorFactory( ProgressMonitorFactory.textual( System.out ) )
                 .withMonitors( monitors )
                 .withSupportingClassesFactory( backupSupportingClassesFactory )
