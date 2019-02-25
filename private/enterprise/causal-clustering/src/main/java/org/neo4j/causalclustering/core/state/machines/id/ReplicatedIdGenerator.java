@@ -78,7 +78,7 @@ class ReplicatedIdGenerator implements IdGenerator
     }
 
     @Override
-    public synchronized void setHighId( long id )
+    public void setHighId( long id )
     {
         this.highId = max( this.highId, id );
     }
