@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import static com.neo4j.bench.client.util.BenchmarkUtil.deleteDir;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class Store implements AutoCloseable
 {
@@ -78,12 +79,12 @@ public class Store implements AutoCloseable
         {
             throw new RuntimeException( "Could not find any store in: " + topLevelDir );
         }
-        if ( paths.size() > 2 && paths.stream().anyMatch( path -> path.endsWith( "system.db" ) ) )
+        if ( paths.size() > 2 && paths.stream().anyMatch( path -> path.endsWith( SYSTEM_DATABASE_NAME ) ) )
         {
             String pathNames = paths.stream().map( Path::toString ).collect( Collectors.joining( "\n" ) );
             throw new RuntimeException( "Found more than one store in: " + topLevelDir + "\n" + pathNames );
         }
-        return paths.stream().filter( path -> !( path.endsWith( "system.db" )) ).findFirst().get();
+        return paths.stream().filter( path -> !(path.endsWith( SYSTEM_DATABASE_NAME )) ).findFirst().get();
     }
 
     private static List<Path> discoverGraphDbs( Path topLevelDir )
