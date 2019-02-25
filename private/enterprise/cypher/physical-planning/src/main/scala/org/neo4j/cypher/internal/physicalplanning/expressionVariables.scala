@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.physicalplanning.ast.ExpressionVariable
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{LogicalVariable, ScopeExpression}
 import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, PruningVarExpand, VarExpand}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Attribute
@@ -25,7 +24,7 @@ object expressionVariables {
 
   class ExpressionSlots() extends Attribute[Int]
 
-  def replace(lp: LogicalPlan, semanticTable: SemanticTable): (LogicalPlan, SemanticTable) = {
+  def replace(lp: LogicalPlan): LogicalPlan = {
 
     val globalMapping = mutable.Map[String, Int]()
 
@@ -67,6 +66,6 @@ object expressionVariables {
           ExpressionVariable(globalMapping(x.name), x.name)
       })
 
-    (lp.endoRewrite(rewriter), semanticTable)
+    lp.endoRewrite(rewriter)
   }
 }

@@ -28,7 +28,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = Selection(List(varFor("x")), Argument())
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(plan)
@@ -40,7 +40,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = projectPlan(expr)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(projectPlan(withExpressionVariables(expr, ExpressionVariable(0, "x"))))
@@ -54,7 +54,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = projectPlan(exprX, exprY, exprZ)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(projectPlan(
@@ -70,7 +70,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = projectPlan(expr)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(projectPlan(withExpressionVariables(expr,
@@ -84,7 +84,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = projectPlan(expr)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(projectPlan(withExpressionVariables(expr,
@@ -98,7 +98,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = projectPlan(expr)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(projectPlan(withExpressionVariables(expr,
@@ -121,7 +121,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
                                                   Argument())))
 
     // when
-    val (newPlan, _) = expressionVariables.replace(selection, semanticTable)
+    val newPlan = expressionVariables.replace(selection)
 
     // then
     newPlan should be(Selection(List(withExpressionVariables(exprZ, ExpressionVariable(0, "z"))),
@@ -174,7 +174,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val outerPlan = projectPlan(outerExpression)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(outerPlan, semanticTable)
+    val newPlan = expressionVariables.replace(outerPlan)
 
     // then
     newPlan should be(projectPlan(withExpressionVariables(outerExpression,
@@ -189,7 +189,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = projectPlan(expr)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(projectPlan(withExpressionVariables(expr,
@@ -203,7 +203,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = projectPlan(expr)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     newPlan should be(projectPlan(withExpressionVariables(expr,
@@ -217,7 +217,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = varLengthPlan(varFor("tempNode"), varFor("tempEdge"), nodePred, edgePred)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     val tempNode = ExpressionVariable(0, "tempNode")
@@ -240,7 +240,7 @@ class expressionVariablesTest extends CypherFunSuite with LogicalPlanningTestSup
     val plan = pruningVarLengthPlan(varFor("tempNode"), varFor("tempEdge"), nodePred, edgePred)
 
     // when
-    val (newPlan, _) = expressionVariables.replace(plan, semanticTable)
+    val newPlan = expressionVariables.replace(plan)
 
     // then
     val tempNode = ExpressionVariable(0, "tempNode")
