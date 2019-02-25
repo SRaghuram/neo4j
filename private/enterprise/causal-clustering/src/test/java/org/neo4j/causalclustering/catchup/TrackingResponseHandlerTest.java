@@ -7,7 +7,6 @@ package org.neo4j.causalclustering.catchup;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -20,9 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TrackingResponseHandlerTest
 {
     @Test
-    void shouldResetTimeStampWhenNewHandlerIsRegisterd() throws IOException
+    void shouldResetTimeStampWhenNewHandlerIsRegisterd()
     {
-        CatchUpResponseAdaptor catchUpResponseAdaptor = new CatchUpResponseAdaptor()
+        CatchupResponseAdaptor catchUpResponseAdaptor = new CatchupResponseAdaptor()
         {
             @Override
             public boolean onFileContent( CompletableFuture signal, FileChunk response )
@@ -33,7 +32,8 @@ class TrackingResponseHandlerTest
 
         FakeClock fakeClock = Clocks.fakeClock();
 
-        TrackingResponseHandler trackingResponseHandler = new TrackingResponseHandler( catchUpResponseAdaptor, fakeClock );
+        TrackingResponseHandler trackingResponseHandler = new TrackingResponseHandler( fakeClock );
+        trackingResponseHandler.setResponseHandler( catchUpResponseAdaptor, new CompletableFuture<>() );
 
         assertEquals( Optional.empty(), trackingResponseHandler.lastResponseTime() );
 
