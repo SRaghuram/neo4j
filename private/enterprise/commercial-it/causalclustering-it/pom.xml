@@ -11,7 +11,7 @@
     <artifactId>commercial-causalclustering-it</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
-    <name>Neo4j - Causal Clustering Integration Tests</name>
+    <name>Neo4j - Commercial Causal Clustering Integration Tests</name>
     <packaging>jar</packaging>
     <description>Neo4j Commercial Edition Causal Clustering Integration Tests.</description>
 
