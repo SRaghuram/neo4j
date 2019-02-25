@@ -66,6 +66,7 @@ public class EnterpriseSanityCheckTest
         String runtime = (String) result.getExecutionPlanDescription().getArguments().get( "runtime" );
         assertThat( planner.toLowerCase(), equalTo( "cost" ) );
         assertThat( runtime.toLowerCase(), equalTo( expectedRuntime ) );
+        db.shutdown();
     }
 
     private File configFile() throws IOException
