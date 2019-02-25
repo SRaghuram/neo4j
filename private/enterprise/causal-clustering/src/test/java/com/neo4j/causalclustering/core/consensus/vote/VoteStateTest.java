@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.consensus.vote;
 
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.UUID;
@@ -15,6 +14,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class VoteStateTest
 {
@@ -88,7 +88,7 @@ public class VoteStateTest
         {
             // when
             voteState.update( member2, 0 );
-            Assert.fail( "Should have thrown IllegalArgumentException" );
+            fail( "Should have thrown IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
         {
@@ -109,7 +109,7 @@ public class VoteStateTest
         {
             // when
             voteState.update( null, 0 );
-            Assert.fail( "Should have thrown IllegalArgumentException" );
+            fail( "Should have thrown IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
         {

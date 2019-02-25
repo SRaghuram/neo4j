@@ -11,7 +11,6 @@ import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -247,12 +246,12 @@ public class TransactionGuardIT
 
         HTTP.Response response =
                 HTTP.POST( transactionEndPoint, quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        Assert.assertEquals( "Response should be successful.", 200, response.status() );
+        assertEquals( "Response should be successful.", 200, response.status() );
 
         HTTP.Response commitResponse = HTTP.POST( transactionEndPoint + "/commit" );
-        Assert.assertEquals( "Transaction should be already closed and not found.", 404, commitResponse.status() );
+        assertEquals( "Transaction should be already closed and not found.", 404, commitResponse.status() );
 
-        Assert.assertEquals( "Transaction should be forcefully closed.", TransactionNotFound.code().serialize(),
+        assertEquals( "Transaction should be forcefully closed.", TransactionNotFound.code().serialize(),
                 commitResponse.get( "errors" ).findValue( "code" ).asText() );
         assertDatabaseDoesNotHaveNodes( database );
     }
@@ -269,26 +268,26 @@ public class TransactionGuardIT
                 .withHeaders( HttpHeaderUtils.MAX_EXECUTION_TIME_HEADER, String.valueOf( customTimeout ) )
                 .POST( transactionUri( neoServer ),
                         quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        Assert.assertEquals( "Response should be successful.", 201, beginResponse.status() );
+        assertEquals( "Response should be successful.", 201, beginResponse.status() );
 
         String transactionEndPoint = beginResponse.location();
         fakeClock.forward( 3, TimeUnit.SECONDS );
 
         HTTP.Response response =
                 HTTP.POST( transactionEndPoint, quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        Assert.assertEquals( "Response should be successful.", 200, response.status() );
+        assertEquals( "Response should be successful.", 200, response.status() );
 
         fakeClock.forward( 11, TimeUnit.SECONDS );
         timeoutMonitor.run();
 
         response =
                 HTTP.POST( transactionEndPoint, quotedJson( "{ 'statements': [ { 'statement': 'CREATE (n)' } ] }" ) );
-        Assert.assertEquals( "Response should be successful.", 200, response.status() );
+        assertEquals( "Response should be successful.", 200, response.status() );
 
         HTTP.Response commitResponse = HTTP.POST( transactionEndPoint + "/commit" );
-        Assert.assertEquals( "Transaction should be already closed and not found.", 404, commitResponse.status() );
+        assertEquals( "Transaction should be already closed and not found.", 404, commitResponse.status() );
 
-        Assert.assertEquals( "Transaction should be forcefully closed.", TransactionNotFound.code().serialize(),
+        assertEquals( "Transaction should be forcefully closed.", TransactionNotFound.code().serialize(),
                 commitResponse.get( "errors" ).findValue( "code" ).asText() );
         assertDatabaseDoesNotHaveNodes( database );
     }

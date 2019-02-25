@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
 import com.neo4j.causalclustering.identity.StoreId;
 import io.netty.buffer.ByteBufAllocator;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -111,11 +110,11 @@ public class ChunkedTransactionStreamTest
         for ( int txId = firstTxId; txId <= lastTxId; txId++ )
         {
             assertEquals( ResponseMessageType.TX, txStream.readChunk( allocator ) );
-            Assert.assertEquals( new TxPullResponse( storeId, txs.get( txId - firstTxId ) ), txStream.readChunk( allocator ) );
+            assertEquals( new TxPullResponse( storeId, txs.get( txId - firstTxId ) ), txStream.readChunk( allocator ) );
         }
 
         assertEquals( ResponseMessageType.TX_STREAM_FINISHED, txStream.readChunk( allocator ) );
-        Assert.assertEquals( new TxStreamFinishedResponse( expectedResult, lastTxId ), txStream.readChunk( allocator ) );
+        assertEquals( new TxStreamFinishedResponse( expectedResult, lastTxId ), txStream.readChunk( allocator ) );
 
         assertTrue( txStream.isEndOfInput() );
 

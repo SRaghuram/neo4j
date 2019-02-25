@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogHelper;
 import com.neo4j.causalclustering.core.consensus.log.cache.ConsecutiveInFlightCache;
 import com.neo4j.causalclustering.core.consensus.log.cache.InFlightCache;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.neo4j.logging.Log;
@@ -41,9 +40,9 @@ public class BatchAppendLogEntriesTest
         batchAppendLogEntries.applyTo( raftLog, log );
 
         // then
-        Assert.assertEquals( entryA, RaftLogHelper.readLogEntry( raftLog, 0 ) );
-        Assert.assertEquals( entryB, RaftLogHelper.readLogEntry( raftLog, 1 ) );
-        Assert.assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 2 ) );
+        assertEquals( entryA, RaftLogHelper.readLogEntry( raftLog, 0 ) );
+        assertEquals( entryB, RaftLogHelper.readLogEntry( raftLog, 1 ) );
+        assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 2 ) );
         assertEquals( 2, raftLog.appendIndex() );
     }
 
@@ -59,8 +58,8 @@ public class BatchAppendLogEntriesTest
         batchAppendLogEntries.applyTo( raftLog, log );
 
         // then
-        Assert.assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 0 ) );
-        Assert.assertEquals( entryD, RaftLogHelper.readLogEntry( raftLog, 1 ) );
+        assertEquals( entryC, RaftLogHelper.readLogEntry( raftLog, 0 ) );
+        assertEquals( entryD, RaftLogHelper.readLogEntry( raftLog, 1 ) );
         assertEquals( 1, raftLog.appendIndex() );
     }
 

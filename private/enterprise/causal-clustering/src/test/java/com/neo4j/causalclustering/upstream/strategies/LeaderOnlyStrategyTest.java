@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -19,6 +18,8 @@ import java.util.UUID;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 public class LeaderOnlyStrategyTest
 {
@@ -48,7 +49,7 @@ public class LeaderOnlyStrategyTest
         Optional<MemberId> resolved = leaderOnlyStrategy.upstreamDatabase();
 
         // then
-        Assert.assertTrue( resolved.isPresent() );
-        Assert.assertNotEquals( myself, resolved.get() );
+        assertTrue( resolved.isPresent() );
+        assertNotEquals( myself, resolved.get() );
     }
 }

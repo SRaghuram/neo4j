@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.catchup.storecopy;
 
 import io.netty.buffer.ByteBufAllocator;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -63,7 +62,7 @@ public class FileSenderTest
 
         // when + then
         assertFalse( fileSender.isEndOfInput() );
-        Assert.assertEquals( FileChunk.create( new byte[0], true ), fileSender.readChunk( allocator ) );
+        assertEquals( FileChunk.create( new byte[0], true ), fileSender.readChunk( allocator ) );
         assertNull( fileSender.readChunk( allocator ) );
         assertTrue( fileSender.isEndOfInput() );
     }

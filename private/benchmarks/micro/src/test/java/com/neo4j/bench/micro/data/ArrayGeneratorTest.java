@@ -36,12 +36,11 @@ import static com.neo4j.bench.micro.data.NumberGenerator.randShort;
 import static com.neo4j.bench.micro.data.StringGenerator.SMALL_STRING_LENGTH;
 import static com.neo4j.bench.micro.data.StringGenerator.intString;
 import static com.neo4j.bench.micro.data.StringGenerator.randShortUtf8;
+import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.lessThan;
-
-import static java.lang.String.format;
 
 public class ArrayGeneratorTest
 {

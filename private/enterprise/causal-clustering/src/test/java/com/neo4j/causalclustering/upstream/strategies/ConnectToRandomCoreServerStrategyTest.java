@@ -12,7 +12,6 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -25,6 +24,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.core.AnyOf.anyOf;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -71,8 +71,8 @@ public class ConnectToRandomCoreServerStrategyTest
         Optional<MemberId> found = connectToRandomCoreServerStrategy.upstreamDatabase();
 
         // then
-        Assert.assertTrue( found.isPresent() );
-        Assert.assertNotEquals( myself, found );
+        assertTrue( found.isPresent() );
+        assertNotEquals( myself, found );
     }
 
     static CoreTopology fakeCoreTopology( MemberId... memberIds )

@@ -18,13 +18,13 @@ import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogIndex;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
 
 import java.util.function.Consumer;
 
 import static java.lang.Math.max;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -129,7 +129,7 @@ public class CoreStateMachinesTest
             }
 
             // then
-            Assert.assertEquals( expected, coreStateMachines.getLastAppliedIndex() );
+            assertEquals( expected, coreStateMachines.getLastAppliedIndex() );
         }
     }
 

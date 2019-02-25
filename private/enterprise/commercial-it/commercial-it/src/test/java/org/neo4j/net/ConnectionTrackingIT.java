@@ -8,7 +8,6 @@ package org.neo4j.net;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -414,7 +413,7 @@ public class ConnectionTrackingIT
         Response response = withBasicAuth( "neo4j", "neo4j" )
                 .POST( changePasswordUri, quotedJson( "{'password':'" + newPassword + "'}" ) );
 
-        Assert.assertEquals( 200, response.status() );
+        assertEquals( 200, response.status() );
     }
 
     private static void createNewUser( String username, String password )
@@ -423,11 +422,11 @@ public class ConnectionTrackingIT
 
         Response response1 = withBasicAuth( "neo4j", NEO4J_USER_PWD )
                 .POST( uri, query( "CALL dbms.security.createUser(\\\"" + username + "\\\", \\\"" + password + "\\\", false)" ) );
-        Assert.assertEquals( 200, response1.status() );
+        assertEquals( 200, response1.status() );
 
         Response response2 = withBasicAuth( "neo4j", NEO4J_USER_PWD )
                 .POST( uri, query( "CALL dbms.security.addRoleToUser(\\\"admin\\\", \\\"" + username + "\\\")" ) );
-        Assert.assertEquals( 200, response2.status() );
+        assertEquals( 200, response2.status() );
     }
 
     private static long createDummyNode()

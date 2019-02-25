@@ -8,7 +8,6 @@ package org.neo4j.bolt;
 import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import org.hamcrest.Matchers;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -36,6 +35,7 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.rule.TestDirectory;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 
@@ -90,19 +90,19 @@ public class BoltSnapshotQueryExecutionIT
                 StatementResult statementResult = tx.run( "MATCH (n) RETURN n.name, n.profession, n.planet, n.city ORDER BY n.name" );
                 List<String> fields = Arrays.asList( "n.name", "n.profession", "n.planet", "n.city" );
                 Record amy = statementResult.next();
-                Assert.assertEquals( amy.keys(), fields );
+                assertEquals( amy.keys(), fields );
                 assertPairs( amy.fields(), "n.name", "Amy",
                                    "n.profession", "Student",
                                    "n.planet", "Mars",
                                    "n.city", "null");
                 Record fry = statementResult.next();
-                Assert.assertEquals( fry.keys(), fields );
+                assertEquals( fry.keys(), fields );
                 assertPairs( fry.fields(), "n.name", "Fry",
                         "n.profession", "Delivery Boy",
                         "n.planet", "Earth",
                         "n.city", "New York");
                 Record lila = statementResult.next();
-                Assert.assertEquals( lila.keys(), fields );
+                assertEquals( lila.keys(), fields );
                 assertPairs( lila.fields(), "n.name", "Lila",
                         "n.profession", "Pilot",
                         "n.planet", "Earth",
@@ -152,8 +152,8 @@ public class BoltSnapshotQueryExecutionIT
 
     private void validatePair( Pair<String,Value> pair, String key, String value )
     {
-        Assert.assertEquals( key, pair.key() );
-        Assert.assertEquals( value, pair.value().asString() );
+        assertEquals( key, pair.key() );
+        assertEquals( value, pair.value().asString() );
     }
 
     private URI boltURI()

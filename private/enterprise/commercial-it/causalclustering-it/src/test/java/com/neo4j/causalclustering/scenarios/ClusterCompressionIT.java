@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.helpers.DataCreator;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
 import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,6 +26,7 @@ import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.compression_implementations;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
 import static org.neo4j.graphdb.Label.label;
 
 @RunWith( Parameterized.class )
@@ -64,7 +64,7 @@ public class ClusterCompressionIT
                 () -> Pair.of( "foobar", format( "baz_bat%s", UUID.randomUUID() ) ) );
 
         // then
-        Assert.assertEquals( numberOfNodes, DataCreator.countNodes( leader ) );
+        assertEquals( numberOfNodes, DataCreator.countNodes( leader ) );
         dataMatchesEventually( leader, cluster.coreMembers() );
     }
 }

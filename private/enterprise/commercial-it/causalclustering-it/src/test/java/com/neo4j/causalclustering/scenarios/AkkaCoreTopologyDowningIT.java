@@ -39,9 +39,10 @@ import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.assertion.Assert;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
+
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.
 // ClusterShuttingDown will be detected and acted upon.
@@ -196,7 +197,7 @@ public class AkkaCoreTopologyDowningIT
 
     private void assertEventuallyHasTopologySize( TopologyServiceComponents services, int expected ) throws InterruptedException
     {
-        Assert.assertEventually( () -> services.topologyService().allCoreServers().members().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
+        assertEventually( () -> services.topologyService().allCoreServers().members().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
     }
 
     private TopologyServiceComponents createAndStartListResolver( int myPort, int... otherPorts ) throws Throwable

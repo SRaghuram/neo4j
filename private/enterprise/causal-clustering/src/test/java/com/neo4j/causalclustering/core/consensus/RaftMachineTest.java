@@ -19,7 +19,6 @@ import com.neo4j.causalclustering.core.state.snapshot.RaftCoreState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder;
 import com.neo4j.causalclustering.messaging.Inbound;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.neo4j.time.Clocks;
@@ -307,7 +306,7 @@ public class RaftMachineTest
         raft.handle( voteResponse().from( member1 ).term( 1 ).grant().build() );
 
         // Then
-        Assert.assertEquals( new NewLeaderBarrier(), RaftLogHelper.readLogEntry( raftLog, raftLog.appendIndex() ).content() );
+        assertEquals( new NewLeaderBarrier(), RaftLogHelper.readLogEntry( raftLog, raftLog.appendIndex() ).content() );
     }
 
     @Test

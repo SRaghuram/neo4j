@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,6 +38,8 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.backup.clusteringsupport.BackupUtil.restoreFromBackup;
 
 @RunWith( Parameterized.class )
 public class ClusterSeedingIT
@@ -114,8 +115,8 @@ public class ClusterSeedingIT
             for ( CoreClusterMember coreClusterMember : cluster.coreMembers() )
             {
                 DefaultDatabasesBackup backups = backupsOpt.get();
-                BackupUtil.restoreFromBackup( backups.systemDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-                BackupUtil.restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+                restoreFromBackup( backups.systemDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+                restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), coreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
             }
         }
 
@@ -132,6 +133,6 @@ public class ClusterSeedingIT
             Config config = Config.defaults( GraphDatabaseSettings.active_database, backups.defaultDb().getName() );
             dataMatchesEventually( DbRepresentation.of( backups.defaultDb(), config ), cluster.coreMembers() );
         }
-        Assert.assertEquals( shouldStoreCopy, fileCopyDetector.hasDetectedAnyFileCopied() );
+        assertEquals( shouldStoreCopy, fileCopyDetector.hasDetectedAnyFileCopied() );
     }
 }

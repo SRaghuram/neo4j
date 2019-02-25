@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -67,7 +66,7 @@ public class BackupReadReplicaIT
         String backupAddress = transactionAddress( readReplica );
 
         String[] args = BackupUtil.backupArguments( backupAddress, backupPath, "readreplica" );
-        Assert.assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( clusterRule.clusterDirectory(), args ) );
+        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( clusterRule.clusterDirectory(), args ) );
 
         // Add some new data
         DbRepresentation afterChange = DbRepresentation.of( BackupUtil.createSomeData( cluster ) );

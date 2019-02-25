@@ -5,7 +5,6 @@
  */
 package org.neo4j.bolt;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -64,7 +63,7 @@ public class CypherOverBoltIT
                 {
                     Node node = result.next().get( 0 ).asNode();
                     assertTrue( node.hasLabel( "Label1" ) );
-                    Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                    assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                     countOfNodes++;
                 }
                 assertEquals( lineCountInCSV, countOfNodes );
@@ -86,7 +85,7 @@ public class CypherOverBoltIT
             {
                 Node node = result.next().get( 0 ).asNode();
                 assertTrue( node.hasLabel( "Label1" ) );
-                Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                 countOfNodes++;
             }
             assertEquals( lineCountInCSV, countOfNodes );
@@ -106,7 +105,7 @@ public class CypherOverBoltIT
             {
                 Node node = result.next().get( 0 ).asNode();
                 assertTrue( node.hasLabel( "Label1" ) );
-                Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                 countOfNodes++;
             }
             assertEquals( lineCountInCSV, countOfNodes );
@@ -129,7 +128,7 @@ public class CypherOverBoltIT
                 {
                     Node node = (Node) iterator.next();
                     assertTrue( node.hasLabel( "Label2" ) );
-                    Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                    assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                     countOfNodes++;
                 }
             }
@@ -155,7 +154,7 @@ public class CypherOverBoltIT
                 {
                     Node node = (Node) iterator.next();
                     assertTrue( node.hasLabel( "Label3" ) );
-                    Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                    assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                     countOfNodes++;
                 }
             }
@@ -181,7 +180,7 @@ public class CypherOverBoltIT
                     assertEquals( "node", entry.getKey() );
                     Node node = (Node) entry.getValue();
                     assertTrue( node.hasLabel( "Label4" ) );
-                    Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                    assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                     countOfNodes++;
                 }
             }
@@ -209,7 +208,7 @@ public class CypherOverBoltIT
                     assertEquals( "node", entry.getKey() );
                     Node node = (Node) entry.getValue();
                     assertTrue( node.hasLabel( "Label5" ) );
-                    Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                    assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                     countOfNodes++;
                 }
             }
@@ -236,7 +235,7 @@ public class CypherOverBoltIT
                 {
                     Node node = (Node) iterator.next();
                     assertTrue( node.hasLabel( "Label6" ) );
-                    Assert.assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
+                    assertEquals( String.valueOf( countOfNodes ), node.get( "uuid" ).asString() );
                     countOfNodes++;
                 }
             }

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -21,7 +20,9 @@ import org.neo4j.logging.NullLogProvider;
 import static co.unruly.matchers.OptionalMatchers.contains;
 import static com.neo4j.causalclustering.upstream.strategies.UserDefinedConfigurationStrategyTest.memberIDs;
 import static org.hamcrest.Matchers.isIn;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class ConnectRandomlyWithinServerGroupStrategyTest
 {
@@ -64,7 +65,7 @@ public class ConnectRandomlyWithinServerGroupStrategyTest
         Optional<MemberId> result = connectRandomlyWithinServerGroupStrategy.upstreamDatabase();
 
         // then
-        Assert.assertTrue( result.isPresent() );
-        Assert.assertNotEquals( myself, result.get() );
+        assertTrue( result.isPresent() );
+        assertNotEquals( myself, result.get() );
     }
 }

@@ -13,7 +13,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.localserver.LocalServerTestBase;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -182,7 +181,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        Assert.assertEquals( "unit-testing", handler.getQueryMap().get( SOURCE ) );
+        assertEquals( "unit-testing", handler.getQueryMap().get( SOURCE ) );
     }
 
     @Test
@@ -193,7 +192,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        Assert.assertEquals( "single", handler.getQueryMap().get( DATABASE_MODE ) );
+        assertEquals( "single", handler.getQueryMap().get( DATABASE_MODE ) );
     }
 
     private void blockUntilServerAvailable( final URL url ) throws Exception
@@ -238,7 +237,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        Assert.assertEquals( "unreg", handler.getQueryMap().get( REGISTRATION ) );
+        assertEquals( "unreg", handler.getQueryMap().get( REGISTRATION ) );
     }
 
     @Test
@@ -249,7 +248,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        Assert.assertEquals( "test,appserver,web", handler.getQueryMap().get( TAGS ) );
+        assertEquals( "test,appserver,web", handler.getQueryMap().get( TAGS ) );
     }
 
     @Test
@@ -260,7 +259,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        Assert.assertEquals( Edition.COMMERCIAL.toString(), handler.getQueryMap().get( EDITION ) );
+        assertEquals( Edition.COMMERCIAL.toString(), handler.getQueryMap().get( EDITION ) );
     }
 
     @Test
@@ -274,7 +273,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        Assert.assertEquals( "test/1.0", handler.getQueryMap().get( USER_AGENTS ) );
+        assertEquals( "test/1.0", handler.getQueryMap().get( USER_AGENTS ) );
     }
 
     @Test
@@ -314,8 +313,8 @@ public class UdcExtensionImplIT extends LocalServerTestBase
             {
                 graphdb = createDatabase( config );
                 assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-                Assert.assertEquals( "udc-property", handler.getQueryMap().get( "test" ) );
-                Assert.assertEquals( "os-property", handler.getQueryMap().get( "os.test" ) );
+                assertEquals( "udc-property", handler.getQueryMap().get( "test" ) );
+                assertEquals( "os-property", handler.getQueryMap().get( "os.test" ) );
                 return null;
             } );
             return null;
@@ -329,7 +328,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
         {
             graphdb = createDatabase( config );
             assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-            Assert.assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
+            assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
             return null;
         } );
     }
@@ -344,7 +343,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
         graphdb = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
 
-        Assert.assertEquals( DefaultUdcInformationCollector.searchForPackageSystems(), handler.getQueryMap().get( "dist" ) );
+        assertEquals( DefaultUdcInformationCollector.searchForPackageSystems(), handler.getQueryMap().get( "dist" ) );
     }
 
     @Test
@@ -354,7 +353,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
         {
             graphdb = createDatabase( config );
             assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-            Assert.assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
+            assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
             return null;
         } );
     }

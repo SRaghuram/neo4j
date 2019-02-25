@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.helper;
 
 import com.neo4j.causalclustering.helper.SuspendableLifecycleStateTestHelpers.LifeCycleState;
 import com.neo4j.causalclustering.helper.SuspendableLifecycleStateTestHelpers.SuspendedState;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,6 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.logging.NullLogProvider;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith( Parameterized.class )
 public class SuspendableLifeCycleSuspendedStateChangeTest
@@ -71,7 +72,7 @@ public class SuspendableLifeCycleSuspendedStateChangeTest
     public void changeSuspendedState() throws Throwable
     {
         toSuspendedState.set( lifeCycle );
-        Assert.assertEquals( shouldEndInState, lifeCycle.status );
+        assertEquals( shouldEndInState, lifeCycle.status );
     }
 
     private static LifeCycleState expectedResult( LifeCycleState fromState, SuspendedState fromSuspendedState, SuspendedState toSuspendedState )

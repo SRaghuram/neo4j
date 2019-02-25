@@ -8,7 +8,6 @@ package org.neo4j.bolt;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -100,7 +99,7 @@ public class BoltProceduresIT
             }
             catch ( TransientException e )
             {
-                Assert.assertEquals( Status.Transaction.Terminated.code().serialize(), e.code() );
+                assertEquals( Status.Transaction.Terminated.code().serialize(), e.code() );
             }
         }
     }
