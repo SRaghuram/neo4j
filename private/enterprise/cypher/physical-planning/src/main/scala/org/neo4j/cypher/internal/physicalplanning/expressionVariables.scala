@@ -8,12 +8,19 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.physicalplanning.ast.ExpressionVariable
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{LogicalVariable, ScopeExpression}
-import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, VarExpand}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, PruningVarExpand, VarExpand}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Attribute
 import org.neo4j.cypher.internal.v4_0.util.{Rewriter, topDown}
 
 import scala.collection.mutable
 
+/**
+  * Piece of physical planning which
+  *
+  *   1) identifies variables that have expression scope (expression variables)
+  *   2) allocates slots for these in the expression slot space (separate from ExecutionContext longs and refs)
+  *   3) rewrites instances of these variables to [[ExpressionVariable]]s with the correct slots offset
+  */
 object expressionVariables {
 
   class ExpressionSlots() extends Attribute[Int]
@@ -35,12 +42,24 @@ object expressionVariables {
 
       case x: VarExpand =>
         prevNumExpressionVariables => {
-          globalMapping += x.tempNode.name -> prevNumExpressionVariables
-          globalMapping += x.tempEdge.name -> (prevNumExpressionVariables+1)
-          (prevNumExpressionVariables+2, Some(_ => prevNumExpressionVariables))
+          var slot = prevNumExpressionVariables
+          for (varPred <- x.nodePredicate ++ x.edgePredicate) {
+            globalMapping += varPred.variable.name -> slot
+            slot += 1
+          }
+          (slot, Some(_ => prevNumExpressionVariables))
+        }
+
+      case x: PruningVarExpand =>
+        prevNumExpressionVariables => {
+          var slot = prevNumExpressionVariables
+          for (varPred <- x.nodePredicate ++ x.edgePredicate) {
+            globalMapping += varPred.variable.name -> slot
+            slot += 1
+          }
+          (slot, Some(_ => prevNumExpressionVariables))
         }
     }
-
 
     val rewriter =
       topDown( Rewriter.lift {
