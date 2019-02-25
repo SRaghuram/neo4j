@@ -80,24 +80,6 @@ class ChannelPoolServiceIT
     }
 
     @Test
-    void shouldNotReleaseMoreThanOnce() throws InterruptedException, ExecutionException, TimeoutException
-    {
-        PooledChannel pooledChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
-
-        pooledChannel.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
-        assertThrows( IllegalStateException.class, () -> pooledChannel.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT ) );
-    }
-
-    @Test
-    void shouldNotAllowGettingChannelIfItHasBeenScheduledForReleased() throws InterruptedException, ExecutionException, TimeoutException
-    {
-        PooledChannel pooledChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
-
-        pooledChannel.release();
-        assertThrows( IllegalStateException.class, pooledChannel::channel );
-    }
-
-    @Test
     void shouldNotCreateAdditionalChannelIfCurrentHasBeenReleased() throws InterruptedException, ExecutionException, TimeoutException
     {
         PooledChannel pooledChannel;
