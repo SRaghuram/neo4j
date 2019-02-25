@@ -109,11 +109,8 @@ class VarExpandWithPredicates extends AbstractCypherBenchmark {
         min = VarExpandWithPredicates_minDepth,
         max = Some(VarExpandWithPredicates_minDepth + VarExpandWithPredicates_length)),
       ExpandAll,
-      tempNode.name,
-      "r_RELS",
-      nodePredicate = tempNodePropertyPredicate,
-      relationshipPredicate = True()(Pos),
-      Seq.empty)(IdGen)
+      nodePredicate = Some(VariablePredicate(tempNode, tempNodePropertyPredicate)),
+      relationshipPredicate = None)(IdGen)
 
     val resultColumns = List(startNode.name, endNode.name)
     val produceResults = plans.ProduceResult(expand, columns = resultColumns)(IdGen)

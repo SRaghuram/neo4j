@@ -81,10 +81,10 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
             val relationshipIsUniqueInPath = !rels.contains(relationship)
 
             if (relationshipIsUniqueInPath) {
-              row.setLongAt(tempRelationshipOffset, relId)
-              row.setLongAt(tempNodeOffset, relationship.otherNodeId(fromNode))
               // Before expanding, check that both the edge and node in question fulfil the predicate
-              if ((relationshipPredicate(row, state) eq Values.TRUE) && (nodePredicate(row, state) eq Values.TRUE)) {
+              if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, relId) &&
+                  predicateIsTrue(row, state, tempNodeOffset, nodePredicate, relationship.otherNodeId(fromNode))
+              ) {
                 // TODO: This call creates an intermediate NodeProxy which should not be necessary
                 stack.push((relationship.otherNodeId(fromNode), rels.append(relationship)))
               }
@@ -121,10 +121,8 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
           Iterator(resultRow)
         }
         else {
-          // We set the fromNode on the temp node offset as well, to be able to run our node predicate and make sure
-          // the start node is valid
-          inputRow.setLongAt(tempNodeOffset, fromNode)
-          if (nodePredicate(inputRow, state) eq Values.TRUE) {
+          // Ensure that the start-node also adheres to the node predicate
+          if (predicateIsTrue(inputRow, state, tempNodeOffset, nodePredicate, fromNode)) {
 
             val paths: Iterator[(LNode, RelationshipContainer)] = varLengthExpand(fromNode, state, inputRow)
             paths collect {
@@ -143,6 +141,16 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
         }
     }
   }
+
+  private def predicateIsTrue(row: ExecutionContext,
+                              state: QueryState,
+                              tempOffset: Int,
+                              predicate: Expression,
+                              entity: Long): Boolean =
+    tempOffset == -1 || {
+      row.setLongAt(tempOffset, entity)
+      predicate(row, state) eq Values.TRUE
+    }
 
   private def isToNodeValid(row: ExecutionContext, node: LNode): Boolean =
     shouldExpandAll || getToNodeFunction(row) == node

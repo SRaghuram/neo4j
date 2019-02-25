@@ -5,22 +5,21 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.ir.v4_0.VarPatternLength
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.physicalplanning.ast.{NodeFromSlot, RelationshipFromSlot}
-import org.neo4j.cypher.internal.ir.v4_0.VarPatternLength
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandExpressions}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{AggregationExpression, Expression}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{Predicate, True}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.{KeyTokenResolver, expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionForIdentifier, createProjectionsForResult}
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.v4_0.logical.plans
@@ -117,9 +116,17 @@ class SlottedPipeMapper(fallback: PipeMapper,
         OptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, LazyTypes(types.toArray), slots,
                                       predicate.map(convertExpressions))(id)
 
-      case VarExpand(sourcePlan, fromName, dir, projectedDir, types, toName, relName,
-      VarPatternLength(min, max), expansionMode, tempNode, tempRelationship, nodePredicate,
-      relationshipPredicate, _) =>
+      case VarExpand(sourcePlan,
+                     fromName,
+                     dir,
+                     projectedDir,
+                     types,
+                     toName,
+                     relName,
+                     VarPatternLength(min, max),
+                     expansionMode,
+                     nodePredicate,
+                     relationshipPredicate) =>
         val shouldExpandAll = expansionMode match {
           case ExpandAll => true
           case ExpandInto => false
@@ -130,16 +137,17 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // The node/edge predicates are evaluated on the source pipeline, not the produced one
         val sourceSlots = physicalPlan.slotConfigurations(sourcePlan.id)
-        val tempNodeOffset = sourceSlots.getLongOffsetFor(tempNode.name)
-        val tempRelationshipOffset = sourceSlots.getLongOffsetFor(tempRelationship.name)
-        val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs - 2, sourceSlots.numberOfReferences)
+        val tempNodeOffset = nodePredicate.map(x => sourceSlots.getLongOffsetFor(x.variable.name)).getOrElse(-1)
+        val tempRelationshipOffset = relationshipPredicate.map(x => sourceSlots.getLongOffsetFor(x.variable.name)).getOrElse(-1)
+        val numTemps = (nodePredicate ++ relationshipPredicate).size
+        val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs - numTemps, sourceSlots.numberOfReferences)
         VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, LazyTypes(types.toArray), min,
-                                   max, shouldExpandAll, slots,
-                                   tempNodeOffset = tempNodeOffset,
-                                   tempRelationshipOffset = tempRelationshipOffset,
-                                   nodePredicate = expressionConverters.toCommandExpression(id, nodePredicate),
-                                   relationshipPredicate =  expressionConverters.toCommandExpression(id, relationshipPredicate),
-                                   argumentSize = argumentSize)(id)
+          max, shouldExpandAll, slots,
+          tempNodeOffset = tempNodeOffset,
+          tempRelationshipOffset = tempRelationshipOffset,
+          nodePredicate = nodePredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+          relationshipPredicate = relationshipPredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+          argumentSize = argumentSize)(id)
 
       case Optional(inner, symbols) =>
         val nullableKeys = inner.availableSymbols -- symbols

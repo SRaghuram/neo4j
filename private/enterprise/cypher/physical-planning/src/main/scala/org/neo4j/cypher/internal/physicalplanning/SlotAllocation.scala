@@ -396,32 +396,34 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
                        edge,
                        _,
                        expansionMode,
-                       tempNode,
-                       tempEdge,
-                       _,
-                       _,
-                       _) =>
+                       maybeNodePredicate,
+                       maybeEdgePredicate) =>
         // We allocate these on the incoming pipeline after cloning it, since we don't need these slots in
         // the produced rows
-        source.newLong(tempNode.name, nullable = false, CTNode)
-        source.newLong(tempEdge.name, nullable = false, CTRelationship)
+        maybeNodePredicate.foreach(x => source.newLong(x.variable.name, nullable = false, CTNode))
+        maybeEdgePredicate.foreach(x => source.newLong(x.variable.name, nullable = false, CTRelationship))
 
         if (expansionMode == ExpandAll) {
           slots.newLong(to, nullable, CTNode)
         }
         slots.newReference(edge, nullable, CTList(CTRelationship))
 
-      case PruningVarExpand(_, from, _, _, to, _, _, predicates) =>
-        predicates.foreach {
-          case (node, _) if semanticTable.isNode(node) =>
-            source.newLong(node.name, false, CTNode)
-            slots.newLong(node.name, false, CTNode)
-
-          case (rel, _) if semanticTable.isRelationship(rel) =>
-            source.newLong(rel.name, false, CTRelationship)
-            slots.newLong(rel.name, false, CTRelationship)
-
-          case _ => throw new IllegalArgumentException
+      case PruningVarExpand(_,
+                            from,
+                            _,
+                            _,
+                            to,
+                            _,
+                            _,
+                            maybeNodePredicate,
+                            maybeEdgePredicate) =>
+        maybeNodePredicate.foreach { x =>
+          source.newLong(x.variable.name, false, CTNode)
+          slots.newLong(x.variable.name, false, CTNode)
+        }
+        maybeEdgePredicate.foreach { x =>
+          source.newLong(x.variable.name, false, CTRelationship)
+          slots.newLong(x.variable.name, false, CTRelationship)
         }
         slots.newLong(from, nullable, CTNode)
         slots.newLong(to, nullable, CTNode)

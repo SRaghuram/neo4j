@@ -60,13 +60,12 @@ class SlottedRewriter(tokenContext: TokenContext) {
         val incomingSlotConfiguration = slotConfigurations(oldPlan.source.id)
         val rewriter = rewriteCreator(incomingSlotConfiguration, oldPlan, slotConfigurations)
 
-        val newNodePredicate = oldPlan.nodePredicate.endoRewrite(rewriter)
-        val newEdgePredicate = oldPlan.relationshipPredicate.endoRewrite(rewriter)
+        val newNodePredicate = oldPlan.nodePredicate.map(x => VariablePredicate(x.variable, x.predicate.endoRewrite(rewriter)))
+        val newRelationshipPredicate = oldPlan.relationshipPredicate.map(x => VariablePredicate(x.variable, x.predicate.endoRewrite(rewriter)))
 
         val newPlan = oldPlan.copy(
           nodePredicate = newNodePredicate,
-          relationshipPredicate = newEdgePredicate,
-          legacyPredicates = Seq.empty // If we use the legacy predicates, we are not on the slotted runtime
+          relationshipPredicate = newRelationshipPredicate
         )(SameId(oldPlan.id))
 
         /*

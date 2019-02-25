@@ -97,11 +97,8 @@ class VarExpand extends AbstractCypherBenchmark {
       relName,
       VarPatternLength(VarExpand_minDepth, Some(VarExpand_minDepth + VarExpand_length)),
       ExpandAll,
-      "r_NODES",
-      "r_RELS",
-      nodePredicate = True()(Pos),
-      relationshipPredicate = True()(Pos),
-      Seq.empty)(IdGen)
+      nodePredicate = None,
+      relationshipPredicate = None)(IdGen)
 
     val resultColumns = List(startNode.name, endNode.name)
     val produceResults = plans.ProduceResult(expand, columns = resultColumns)(IdGen)

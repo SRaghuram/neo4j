@@ -346,22 +346,18 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val allNodesScan = AllNodesScan("x", Set.empty)
     val varLength = VarPatternLength(1, Some(15))
     val expand = VarExpand(allNodesScan, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
-      "z", "r", varLength, ExpandAll, "r_NODES", "r_EDGES", trueLiteral, trueLiteral, Seq())
+      "z", "r", varLength, ExpandAll)
 
     // when
     val pipe = build(expand)
 
     // then
     val xNodeSlot = LongSlot(0, nullable = false, CTNode)
-    val tempNodeSlot = LongSlot(1, nullable = false, CTNode)
-    val tempRelSlot = LongSlot(2, nullable = false, CTRelationship)
     val zNodeSlot = LongSlot(1, nullable = false, CTNode)
     val rRelSlot = RefSlot(0, nullable = false, CTList(CTRelationship))
 
     val allNodeScanSlots = SlotConfiguration(Map(
-      "x" -> xNodeSlot,
-      "r_NODES" -> tempNodeSlot,
-      "r_EDGES" -> tempRelSlot), numberOfLongs = 3, numberOfReferences = 0)
+      "x" -> xNodeSlot), numberOfLongs = 1, numberOfReferences = 0)
 
     val varExpandSlots = SlotConfiguration(Map(
       "x" -> xNodeSlot,
@@ -374,7 +370,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       SemanticDirection.INCOMING, SemanticDirection.INCOMING,
       LazyTypes.empty, varLength.min, varLength.max, shouldExpandAll = true,
       varExpandSlots,
-      tempNodeSlot.offset, tempRelSlot.offset,
+      -1, -1,
       commands.predicates.True(), commands.predicates.True(), Size(1, 0)
     )())
   }
@@ -385,7 +381,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val expand = Expand(allNodesScan, "x", SemanticDirection.OUTGOING, Seq.empty, "z", "r", ExpandAll)
     val varLength = VarPatternLength(1, Some(15))
     val varExpand = VarExpand(expand, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
-      "z", "r2", varLength, ExpandInto, "r_NODES", "r_EDGES", trueLiteral, trueLiteral, Seq())
+      "z", "r2", varLength, ExpandInto)
 
     // when
     val pipe = build(varExpand)
@@ -394,8 +390,6 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val xNodeSlot = LongSlot(0, nullable = false, CTNode)
     val rRelSlot = LongSlot(1, nullable = false, CTRelationship)
     val zNodeSlot = LongSlot(2, nullable = false, CTNode)
-    val tempNodeSlot = LongSlot(3, nullable = false, CTNode)
-    val tempRelSlot = LongSlot(4, nullable = false, CTRelationship)
     val r2RelSlot = RefSlot(0, nullable = false, CTList(CTRelationship))
 
     val allNodeScanSlots =
@@ -407,10 +401,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       SlotConfiguration(Map(
         "x" -> LongSlot(0, nullable = false, CTNode),
         "r" -> LongSlot(1, nullable = false, CTRelationship),
-        "z" -> LongSlot(2, nullable = false, CTNode),
-        "r_NODES" -> LongSlot(3, nullable = false, CTNode),
-        "r_EDGES" -> LongSlot(4, nullable = false, CTRelationship)),
-        numberOfLongs = 5, numberOfReferences = 0)
+        "z" -> LongSlot(2, nullable = false, CTNode)),
+        numberOfLongs = 3, numberOfReferences = 0)
 
     val varExpandSlots =
       SlotConfiguration(Map(
@@ -432,7 +424,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         SemanticDirection.INCOMING, SemanticDirection.INCOMING,
         LazyTypes.empty, varLength.min, varLength.max, shouldExpandAll = false,
         varExpandSlots,
-        tempNodeSlot.offset, tempRelSlot.offset,
+        -1, -1,
         commands.predicates.True(), commands.predicates.True(), Size(3, 0))()
     )
   }
@@ -445,7 +437,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val edgePredicate = not(propLessThan("r_EDGES", "propertyKey", 4))
 
     val expand = VarExpand(allNodesScan, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
-      "z", "r", varLength, ExpandAll, "r_NODES", "r_EDGES", nodePredicate, edgePredicate, Seq())
+      "z", "r", varLength, ExpandAll, Some(VariablePredicate(varFor("r_NODES"), nodePredicate)), Some(VariablePredicate(varFor("r_EDGES"), edgePredicate)))
 
     // when
     val pipe = build(expand)
@@ -735,7 +727,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val leaf = NodeByLabelScan("x", label, Set.empty)
     val varLength = VarPatternLength(1, Some(15))
     val expand = VarExpand(leaf, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
-      "z", "r", varLength, ExpandAll, "r_NODES", "r_EDGES", trueLiteral, trueLiteral, Seq())
+      "z", "r", varLength, ExpandAll)
 
     // must be  at least 6 grouping expressions to trigger slotted bug
     val groupingExpressions = Map("x1" -> varFor("x"), "z" -> varFor("z"), "x2" -> varFor("x"), "x3" -> varFor("x"), "x4" -> varFor("x"), "x5" -> varFor("x"))
