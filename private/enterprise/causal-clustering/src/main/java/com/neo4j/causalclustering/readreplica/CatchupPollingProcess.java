@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider.UpstreamStrategyBasedAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
@@ -16,13 +17,9 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.DatabaseService;
 import com.neo4j.causalclustering.common.LocalDatabase;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.StoreId;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -60,15 +57,14 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final LocalDatabase localDatabase;
     //TODO: It makes no sense to take both localDatabase and databaseService here. When localDatabase objects can stop and start it won't be needed
     private final DatabaseService databaseService;
+    private final CatchupAddressProvider catchupAddressProvider;
     private final Log log;
     private final Suspendable enableDisableOnStoreCopy;
     private final StoreCopyProcess storeCopyProcess;
     private final CatchupClientFactory catchUpClient;
     private final Panicker panicker;
-    private final UpstreamDatabaseStrategySelector selectionStrategy;
     private final BatchingTxApplier applier;
     private final PullRequestMonitor pullRequestMonitor;
-    private final TopologyService topologyService;
     private final Executor executor;
 
     private volatile State state = TX_PULLING;
@@ -76,20 +72,19 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private volatile long latestTxIdOfUpStream;
 
     public CatchupPollingProcess( Executor executor, String databaseName, DatabaseService databaseService, Suspendable enableDisableOnSoreCopy,
-            CatchupClientFactory catchUpClient, UpstreamDatabaseStrategySelector selectionStrategy, BatchingTxApplier applier, Monitors monitors,
-            StoreCopyProcess storeCopyProcess, TopologyService topologyService, LogProvider logProvider,  Panicker panicker )
+            CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors, StoreCopyProcess storeCopyProcess, LogProvider logProvider,
+            Panicker panicker, CatchupAddressProvider catchupAddressProvider )
 
     {
         this.databaseName = databaseName;
         this.databaseService = databaseService;
+        this.catchupAddressProvider = catchupAddressProvider;
         this.localDatabase = databaseService.get( databaseName ).orElseThrow( IllegalStateException::new );
         this.enableDisableOnStoreCopy = enableDisableOnSoreCopy;
         this.catchUpClient = catchUpClient;
-        this.selectionStrategy = selectionStrategy;
         this.applier = applier;
         this.pullRequestMonitor = monitors.newMonitor( PullRequestMonitor.class );
         this.storeCopyProcess = storeCopyProcess;
-        this.topologyService = topologyService;
         this.log = logProvider.getLog( getClass() );
         this.panicker = panicker;
         this.executor = executor;
@@ -168,12 +163,12 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     private void pullTransactions()
     {
-        MemberId upstream;
+        AdvertisedSocketAddress address;
         try
         {
-            upstream = selectionStrategy.bestUpstreamDatabase();
+            address = catchupAddressProvider.primary();
         }
-        catch ( UpstreamDatabaseSelectionException e )
+        catch ( CatchupAddressResolutionException e )
         {
             log.warn( "Could not find upstream database from which to pull.", e );
             return;
@@ -185,7 +180,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         int batchCount = 1;
         while ( moreToPull )
         {
-            moreToPull = pullAndApplyBatchOfTransactions( upstream, batchCount, localStoreId );
+            moreToPull = pullAndApplyBatchOfTransactions( address, batchCount, localStoreId );
             batchCount++;
         }
     }
@@ -224,11 +219,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private boolean pullAndApplyBatchOfTransactions( MemberId upstream, int batchCount, StoreId localStoreId )
+    private boolean pullAndApplyBatchOfTransactions( AdvertisedSocketAddress address, int batchCount, StoreId localStoreId )
     {
         long lastQueuedTxId = applier.lastQueuedTxId();
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
-        log.debug( "Pull transactions from %s where tx id > %d [batch #%d]", upstream, lastQueuedTxId, batchCount );
+        log.debug( "Pull transactions from %s where tx id > %d [batch #%d]", address, lastQueuedTxId, batchCount );
 
         CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<TxStreamFinishedResponse>()
         {
@@ -249,8 +244,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         TxStreamFinishedResponse result;
         try
         {
-            AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( upstream );
-            result = catchUpClient.getClient( fromAddress )
+            result = catchUpClient.getClient( address )
                     .v1( c -> c.pullTransactions( localStoreId, lastQueuedTxId ) )
                     .v2( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
                     .v3( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
@@ -319,7 +313,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            storeCopyProcess.replaceWithStoreFrom( new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategy ), localDatabase.storeId() );
+            storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, localDatabase.storeId() );
             transitionToTxPulling();
         }
         catch ( IOException | StoreCopyFailedException e )
@@ -340,7 +334,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
         else
         {
-            return format( "%s is %s", databaseName, state.name() );
+            return String.format( "%s is %s", databaseName, state.name() );
         }
     }
 }

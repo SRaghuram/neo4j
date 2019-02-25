@@ -18,14 +18,11 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import com.neo4j.causalclustering.common.LocalDatabase;
 import com.neo4j.causalclustering.common.StubLocalDatabaseService;
-import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helpers.FakeExecutor;
-import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
-import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -37,7 +34,7 @@ import java.util.concurrent.Future;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
-import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
@@ -53,20 +50,18 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 public class CatchupPollingProcessTest
 {
-    private final UpstreamDatabaseStrategySelector strategyPipeline = mock( UpstreamDatabaseStrategySelector.class );
-    private final MemberId coreMemberId = mock( MemberId.class );
     private final CatchupClientFactory catchupClientFactory = mock( CatchupClientFactory.class );
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
     private final Executor executor = new FakeExecutor();
     private final BatchingTxApplier txApplier = mock( BatchingTxApplier.class );
     private final LocalDatabase localDatabase = mock( LocalDatabase.class );
-    private final TopologyService topologyService = mock( TopologyService.class );
     private final StoreCopyProcess storeCopy = mock( StoreCopyProcess.class );
     private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
     private final StubLocalDatabaseService databaseService = spy( new StubLocalDatabaseService() );
@@ -79,6 +74,7 @@ public class CatchupPollingProcessTest
     private final CatchupClientV2 v2Client = Mockito.spy( new MockCatchupClient.MockClientV2( clientResponses ) );
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses ) );
     private final Panicker panicker = mock( Panicker.class );
+    private CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
 
     private CatchupPollingProcess txPuller;
     private MockCatchupClient catchupClient;
@@ -88,14 +84,14 @@ public class CatchupPollingProcessTest
     {
         databaseService.registerDatabase( databaseName, localDatabase );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
-        when( strategyPipeline.bestUpstreamDatabase() ).thenReturn( coreMemberId );
         when( localDatabase.storeId() ).thenReturn( storeId );
-        when( topologyService.findCatchupAddress( coreMemberId ) ).thenReturn( coreMemberAddress );
+        when( catchupAddressProvider.primary() ).thenReturn( coreMemberAddress );
+        when( catchupAddressProvider.secondary() ).thenReturn( coreMemberAddress );
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client, v3Client );
         when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
-        txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory,
-                strategyPipeline, txApplier, new Monitors(), storeCopy, topologyService, NullLogProvider.getInstance(), panicker );
+        txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory, txApplier, new Monitors(),
+                storeCopy, FormattedLogProvider.toOutputStream( System.out ), panicker, catchupAddressProvider );
     }
 
     @Test
@@ -114,6 +110,7 @@ public class CatchupPollingProcessTest
         // then
         verify( v1Client ).pullTransactions( storeId, lastAppliedTxId );
         verify( v2Client ).pullTransactions( storeId, lastAppliedTxId, databaseName );
+        verify( catchupAddressProvider, times( 2 ) ).primary();
     }
 
     @Test
@@ -134,6 +131,7 @@ public class CatchupPollingProcessTest
         // then
         verify( v1Client ).pullTransactions( any( StoreId.class ), anyLong() );
         verify( v2Client ).pullTransactions( any( StoreId.class ), anyLong(), anyString() );
+        verify( catchupAddressProvider, times( 2 ) ).primary();
     }
 
     // TODO:  Come up with a way of avoiding V1/V2 versions of these tests.  I tried to parameterize instead but that wasn't much better re: clarity.
@@ -170,6 +168,28 @@ public class CatchupPollingProcessTest
 
         // then
         assertEquals( STORE_COPYING, txPuller.state() );
+    }
+
+    @Test
+    public void shouldUseProvidedCatchupAddressProviderWhenStoreCopying() throws Exception
+    {
+        // given
+        when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        txPuller.start();
+        catchupClient.setProtocol( ApplicationProtocols.CATCHUP_2 );
+
+        // when
+        txPuller.tick().get();
+
+        // then
+        assertEquals( STORE_COPYING, txPuller.state() );
+
+        // when
+        txPuller.tick().get();
+
+        // then
+        verify( storeCopy ).replaceWithStoreFrom( catchupAddressProvider, storeId );
     }
 
     @Test
@@ -288,5 +308,11 @@ public class CatchupPollingProcessTest
 
         // then
         assertEquals( TX_PULLING, txPuller.state() );
+    }
+
+    @Test
+    public void shouldBeAbleToStoreCopyAsLongAsSecondaryProvidesAtLeastOneValidAddress()
+    {
+
     }
 }

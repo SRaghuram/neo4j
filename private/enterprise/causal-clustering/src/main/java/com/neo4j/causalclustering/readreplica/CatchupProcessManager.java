@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider.UpstreamStrategyBasedAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabaseCatchupComponents;
@@ -187,8 +188,8 @@ public class CatchupProcessManager extends SafeLifecycle
                 writableCommitProcess, localDatabase.monitors(), pageCursorTracerSupplier, versionContextSupplier, commandIndexTracker, logProvider );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, localDatabase.databaseName(), databaseService, servicesToStopOnStoreCopy,
-                catchupClient, selectionStrategyPipeline, batchingTxApplier, localDatabase.monitors(),
-                dbCatchupComponents.storeCopyProcess(), topologyService, logProvider, this::panic );
+                catchupClient, batchingTxApplier, localDatabase.monitors(), dbCatchupComponents.storeCopyProcess(), logProvider, this::panic,
+                new UpstreamStrategyBasedAddressProvider( topologyService, selectionStrategyPipeline ) );
 
         localDatabase.dependencies().satisfyDependencies( catchupProcess );
         txPulling.add( batchingTxApplier );
