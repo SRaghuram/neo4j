@@ -35,7 +35,10 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   override def name: String = "morsel"
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
-    val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
+    val (logicalPlan, physicalPlan) = PhysicalPlanner.plan(context.tokenContext,
+                                                           query.logicalPlan,
+                                                           query.semanticTable,
+                                                           SlottedPipelineBreakingPolicy)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -73,14 +76,6 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                         dispatcher,
                         tracer,
                         maybeThreadSafeCursors)
-  }
-
-  private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan,
-                          semanticTable: SemanticTable) = {
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedPipelineBreakingPolicy, allocateArgumentSlots = false)
-    val slottedRewriter = new SlottedRewriter(context.tokenContext)
-    val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
-    (logicalPlan, physicalPlan)
   }
 
   private def createSlottedPipeFallback(query: LogicalQuery,

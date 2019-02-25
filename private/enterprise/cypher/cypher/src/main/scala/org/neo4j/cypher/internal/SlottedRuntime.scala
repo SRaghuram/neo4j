@@ -42,7 +42,10 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         printPlanInfo(query)
       }
 
-      val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
+      val (logicalPlan, physicalPlan) = PhysicalPlanner.plan(context.tokenContext,
+                                                             query.logicalPlan,
+                                                             query.semanticTable,
+                                                             SlottedPipelineBreakingPolicy)
 
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printRewrittenPlanInfo(logicalPlan)
@@ -102,12 +105,5 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
         }
         throw e
     }
-  }
-
-  private def rewritePlan(context: EnterpriseRuntimeContext, beforeRewrite: LogicalPlan, semanticTable: SemanticTable): (LogicalPlan, PhysicalPlan) = {
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, SlottedPipelineBreakingPolicy, allocateArgumentSlots = false)
-    val slottedRewriter = new SlottedRewriter(context.tokenContext)
-    val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
-    (logicalPlan, physicalPlan)
   }
 }

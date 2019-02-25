@@ -33,7 +33,10 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   val ENABLED = false
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
-    val (logicalPlan, physicalPlan) = rewritePlan(context, query.logicalPlan, query.semanticTable)
+    val (logicalPlan, physicalPlan) = PhysicalPlanner.plan(context.tokenContext,
+                                                           query.logicalPlan,
+                                                           query.semanticTable,
+                                                           ZombiePipelineBreakingPolicy)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -81,15 +84,6 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                         query.resultColumns,
                         executor,
                         context.runtimeEnvironment.tracer)
-  }
-
-  private def rewritePlan(context: EnterpriseRuntimeContext,
-                          beforeRewrite: LogicalPlan,
-                          semanticTable: SemanticTable) = {
-    val physicalPlan: PhysicalPlan = SlotAllocation.allocateSlots(beforeRewrite, semanticTable, ZombiePipelineBreakingPolicy, allocateArgumentSlots = true)
-    val slottedRewriter = new SlottedRewriter(context.tokenContext)
-    val logicalPlan = slottedRewriter(beforeRewrite, physicalPlan.slotConfigurations)
-    (logicalPlan, physicalPlan)
   }
 
   case class ZombieExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
