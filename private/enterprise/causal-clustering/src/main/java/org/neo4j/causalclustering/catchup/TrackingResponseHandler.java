@@ -51,6 +51,7 @@ class TrackingResponseHandler implements CatchupResponseHandler
     {
         this.delegate = responseHandler;
         this.requestOutcomeSignal = requestOutcomeSignal;
+        this.lastResponseTime = null;
     }
 
     @Override
