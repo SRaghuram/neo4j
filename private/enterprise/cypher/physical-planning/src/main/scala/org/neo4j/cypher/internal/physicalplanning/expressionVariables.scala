@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.physicalplanning.ast.ExpressionVariable
 import org.neo4j.cypher.internal.v4_0.expressions.{LogicalVariable, ScopeExpression}
 import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, PruningVarExpand, VarExpand}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Attribute
 import org.neo4j.cypher.internal.v4_0.util.{Rewriter, topDown}
 
 import scala.collection.mutable
@@ -22,9 +21,7 @@ import scala.collection.mutable
   */
 object expressionVariables {
 
-  class ExpressionSlots() extends Attribute[Int]
-
-  def replace(lp: LogicalPlan): LogicalPlan = {
+  def replace(lp: LogicalPlan): (LogicalPlan, Int) = {
 
     val globalMapping = mutable.Map[String, Int]()
 
@@ -66,6 +63,6 @@ object expressionVariables {
           ExpressionVariable(globalMapping(x.name), x.name)
       })
 
-    lp.endoRewrite(rewriter)
+    (lp.endoRewrite(rewriter), globalMapping.values.reduceOption(math.max).map(_ + 1).getOrElse(0))
   }
 }
