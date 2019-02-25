@@ -10,6 +10,7 @@ import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
@@ -21,11 +22,11 @@ final class ConsistencyHelper
     {
     }
 
-    static void assertStoreConsistent( FileSystemAbstraction fs, DatabaseLayout databaseLayout ) throws Exception
+    static void assertStoreConsistent( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache ) throws Exception
     {
         ConsistencyCheckService.Result result =
                 new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(), ProgressMonitorFactory.NONE,
-                        NullLogProvider.getInstance(), fs, false, CONSISTENCY_FLAGS );
+                        NullLogProvider.getInstance(), fs, pageCache, false, CONSISTENCY_FLAGS );
 
         if ( !result.isSuccessful() )
         {
