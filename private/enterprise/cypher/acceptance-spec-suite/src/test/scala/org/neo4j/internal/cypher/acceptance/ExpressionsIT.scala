@@ -11,7 +11,6 @@ import java.util.concurrent.ThreadLocalRandom
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, SlotConfigurations}
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{ast, _}
 import org.neo4j.cypher.internal.runtime._
@@ -3701,7 +3700,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
                                        Array.empty)
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
-    val plan = PhysicalPlan(new SlotConfigurations, new ArgumentSizes, new ApplyPlans)
+    val plan = PhysicalPlan(null, 0, new SlotConfigurations, new ArgumentSizes, new ApplyPlans)
     val id = Id(0)
     plan.slotConfigurations.set(id, slots)
     val converters = new ExpressionConverters(SlottedExpressionConverters(plan),

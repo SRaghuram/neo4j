@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.ast.{RuntimeProperty, RuntimeVariable}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, functions => frontendFunctions, _}
 import org.neo4j.cypher.internal.v4_0.logical.plans

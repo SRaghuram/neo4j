@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
+import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
 
 case class PrimitiveEquals(a: Expression, b: Expression) extends RuntimeExpression

@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.compiler.v4_0.ExperimentalFeatureNotification
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
@@ -16,7 +15,6 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpression
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
@@ -33,10 +31,10 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   val ENABLED = false
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext): ExecutionPlan = {
-    val (logicalPlan, physicalPlan) = PhysicalPlanner.plan(context.tokenContext,
-                                                           query.logicalPlan,
-                                                           query.semanticTable,
-                                                           ZombiePipelineBreakingPolicy)
+    val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
+                                            query.logicalPlan,
+                                            query.semanticTable,
+                                            ZombiePipelineBreakingPolicy)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -56,7 +54,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val stateDefinition = new StateDefinition(physicalPlan)
     val pipelineBuilder = new PipelineBuilder(ZombiePipelineBreakingPolicy, stateDefinition, physicalPlan.slotConfigurations)
 
-    pipelineBuilder.build(logicalPlan)
+    pipelineBuilder.build(physicalPlan.logicalPlan)
     val operatorFactory = new OperatorFactory(physicalPlan, converters, true, queryIndexes)
 
     val executablePipelines =
@@ -80,7 +78,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     ZombieExecutionPlan(executablePipelines,
                         stateDefinition,
                         queryIndexes,
-                        logicalPlan,
+                        physicalPlan.logicalPlan,
                         query.resultColumns,
                         executor,
                         context.runtimeEnvironment.tracer)

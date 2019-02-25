@@ -5,4 +5,6 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
+import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
+
 case class IdFromSlot(offset: Int) extends RuntimeExpression

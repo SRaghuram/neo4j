@@ -5,4 +5,6 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
+import org.neo4j.cypher.internal.runtime.ast.RuntimeVariable
+
 case class ReferenceFromSlot(offset: Int, override val name: String) extends RuntimeVariable(name = name)

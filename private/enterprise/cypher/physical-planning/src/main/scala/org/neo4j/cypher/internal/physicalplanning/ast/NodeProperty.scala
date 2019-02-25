@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
+import org.neo4j.cypher.internal.runtime.ast.{RuntimeExpression, RuntimeProperty}
 import org.neo4j.cypher.internal.v4_0.logical.plans.ASTCachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.expressions.Property
 
