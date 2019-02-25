@@ -78,12 +78,12 @@ public class Store implements AutoCloseable
         {
             throw new RuntimeException( "Could not find any store in: " + topLevelDir );
         }
-        if ( paths.size() > 2 )
+        if ( paths.size() > 2 && paths.stream().anyMatch( path -> path.endsWith( "system.db" ) ) )
         {
             String pathNames = paths.stream().map( Path::toString ).collect( Collectors.joining( "\n" ) );
             throw new RuntimeException( "Found more than one store in: " + topLevelDir + "\n" + pathNames );
         }
-        return paths.get( 0 );
+        return paths.stream().filter( path -> !( path.endsWith( "system.db" )) ).findFirst().get();
     }
 
     private static List<Path> discoverGraphDbs( Path topLevelDir )
