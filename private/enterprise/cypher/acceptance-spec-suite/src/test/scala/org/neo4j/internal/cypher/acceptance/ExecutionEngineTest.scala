@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer.QueryEvent
 import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer.CompilationPhase
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.WindowsStringSafe
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.factory.GraphDatabaseSettings
@@ -49,7 +50,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("shouldFilterOnRegexp") {
     val n1 = createNode(Map("name" -> "Andres"))
-    val n2 = createNode(Map("name" -> "Jim"))
+    createNode(Map("name" -> "Jim"))
 
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
       s"match(node) where node.name =~ 'And.*' return node"
@@ -101,6 +102,27 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     )
 
     result.toList should equal(List(Map("n1" -> n1, "n2" -> n2)))
+  }
+
+  test("executionResultTextualOutput") {
+    implicit val windowsSafe: WindowsStringSafe.type = WindowsStringSafe
+    val n1: Node = createNode()
+    val n2: Node = createNode()
+    val n3: Node = createNode()
+    relate(n1, n2, "KNOWS")
+    relate(n1, n3, "KNOWS")
+
+    val result = dumpToString(s"match (node)-[rel:KNOWS]->(x) where id(node) = ${n1.getId} return x, node")
+    val expected =
+      """+-----------------------+
+        || x         | node      |
+        |+-----------------------+
+        || Node[2]{} | Node[0]{} |
+        || Node[1]{} | Node[0]{} |
+        |+-----------------------+
+        |2 rows
+        |""".stripMargin
+    result should equal(expected)
   }
 
   test("shouldHandleOrFilters") {
@@ -400,13 +422,13 @@ order by a.COL1""".format(a, b))
                             .newImpermanentDatabaseBuilder(new File("target/engineWithSpecifiedParser"))
                             .setConfig(GraphDatabaseSettings.cypher_parser_version, "3.5")
                             .newGraphDatabase()
-    val engine = createEngine(db)
+    createEngine(db)
 
     try {
       // This syntax is valid today, but should give an exception in 1.5
       execute("CREATE a")
     } catch {
-      case x: SyntaxException =>
+      case _: SyntaxException =>
       case _: Throwable => fail("expected exception")
     } finally {
       db.shutdown()
@@ -538,7 +560,7 @@ order by a.COL1""".format(a, b))
 
   test("syntax errors should not leave dangling transactions") {
 
-    val engine = createEngine(graph)
+    createEngine(graph)
 
     intercept[Throwable](execute("BABY START SMILING, YOU KNOW THE SUN IS SHINING."))
 
@@ -666,7 +688,7 @@ order by a.COL1""".format(a, b))
   test("read only database can process has label predicates") {
     //GIVEN
     readOnlyEngine() {
-      engine =>
+      _ =>
         //WHEN
         val result = executeOfficial("MATCH (n) WHERE n:NonExistingLabel RETURN n")
 
