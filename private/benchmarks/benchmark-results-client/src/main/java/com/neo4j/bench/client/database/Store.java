@@ -78,7 +78,7 @@ public class Store implements AutoCloseable
         {
             throw new RuntimeException( "Could not find any store in: " + topLevelDir );
         }
-        if ( paths.size() > 1 )
+        if ( paths.size() > 2 )
         {
             String pathNames = paths.stream().map( Path::toString ).collect( Collectors.joining( "\n" ) );
             throw new RuntimeException( "Found more than one store in: " + topLevelDir + "\n" + pathNames );
