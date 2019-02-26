@@ -127,7 +127,8 @@
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_2.11</artifactId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+            <version>3.0.5</version>
             <exclusions>
                 <exclusion>
                     <artifactId>scala-library</artifactId>

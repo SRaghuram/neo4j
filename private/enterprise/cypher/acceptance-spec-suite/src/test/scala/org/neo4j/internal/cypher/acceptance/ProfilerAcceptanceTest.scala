@@ -346,7 +346,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode(Map("x" -> 1), "Label")
     val result = profileWithExecute(Configs.InterpretedAndSlottedAndMorsel, "match (a:Label {x: 1}) optional match (a)-[:REL]->(b) return a.x as A, b.x as B").toList.head
     result("A") should equal(1)
-    result("B") should equal(null.asInstanceOf[Int])
+    result("B") should equal(null)
   }
 
   test("should support profiling optional match and with") {
