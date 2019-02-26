@@ -31,11 +31,13 @@ public class ChannelPoolService implements Lifecycle
     private final JobScheduler scheduler;
     private final Group group;
     private final ChannelPoolHandler poolHandler;
+
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock.WriteLock exclusiveService = lock.writeLock();
     private final ReentrantReadWriteLock.ReadLock sharedService = lock.readLock();
-    private CompletableFuture<PooledChannel> lifeCompletionStage;
-    private SimpleChannelPoolMap poolMap;
+    private CompletableFuture<PooledChannel> endOfLife;
+
+    private SimpleChannelPoolMap poolMap; // used as "is stopped" flag, stopped when null
     private EventLoopGroup eventLoopGroup;
 
     public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, Group group,
@@ -57,7 +59,7 @@ public class ChannelPoolService implements Lifecycle
                 return failedFuture( new IllegalStateException( "Channel pool service is not in a started state." ) );
             }
             SimpleChannelPool channelPool = poolMap.get( advertisedSocketAddress );
-            return PooledChannel.future( channelPool.acquire(), channelPool ).applyToEither( lifeCompletionStage, pooledChannel -> pooledChannel );
+            return PooledChannel.future( channelPool.acquire(), channelPool ).applyToEither( endOfLife, pooledChannel -> pooledChannel );
         }
         finally
         {
@@ -77,7 +79,7 @@ public class ChannelPoolService implements Lifecycle
         exclusiveService.lock();
         try
         {
-            lifeCompletionStage = new CompletableFuture<>();
+            endOfLife = new CompletableFuture<>();
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( group ) );
             Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
             poolMap = new SimpleChannelPoolMap( baseBootstrap, poolHandler );
@@ -91,15 +93,19 @@ public class ChannelPoolService implements Lifecycle
     @Override
     public void stop()
     {
+        sharedService.lock();
+        // usages of the pool should have been stopped before this point, hence illegal state exception
+        endOfLife.completeExceptionally( new IllegalStateException( "Pool is closed. Lifecycle issue?" ) );
+        sharedService.unlock();
+
         exclusiveService.lock();
         try
         {
-            lifeCompletionStage.completeExceptionally( new IllegalStateException( "Lifecycle has stopped" ) );
             if ( poolMap != null )
             {
                 poolMap.close();
+                poolMap = null;
             }
-            poolMap = null;
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
         }
         finally
