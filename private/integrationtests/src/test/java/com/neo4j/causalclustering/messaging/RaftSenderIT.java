@@ -79,7 +79,7 @@ class RaftSenderIT
 
     @ParameterizedTest
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "^RAFT_\\d" )
-    void shouldSendAndReceiveNoneBlocking( ApplicationProtocols clientProtocol ) throws Throwable
+    void shouldSendAndReceiveNonBlocking( ApplicationProtocols clientProtocol ) throws Throwable
     {
         shouldSendAndReceive( clientProtocol, false );
     }

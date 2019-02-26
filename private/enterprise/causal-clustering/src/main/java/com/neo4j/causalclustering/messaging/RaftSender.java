@@ -9,11 +9,11 @@ import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.net.PooledChannel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.util.concurrent.Future;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
@@ -33,12 +33,14 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
     @Override
     public void send( AdvertisedSocketAddress to, Message message, boolean block )
     {
-        CompletableFuture<Void> fRelease = channels.acquire( to ).thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
+        Future<Void> fOperation = channels.acquire( to )
+                .thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
+
         if ( block )
         {
             try
             {
-                fRelease.get();
+                fOperation.get();
             }
             catch ( ExecutionException e )
             {
@@ -46,7 +48,7 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
             }
             catch ( InterruptedException e )
             {
-                fRelease.cancel( true );
+                fOperation.cancel( true );
                 log.info( "Interrupted while sending", e );
             }
         }
@@ -54,39 +56,44 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
 
     private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, Message message )
     {
-        CompletableFuture<Void> fRelease = new CompletableFuture<>();
-        fRelease.whenComplete( ( ignore, throwable ) ->
+        CompletableFuture<Void> fOperation; // write + release
+        try
         {
-            if ( throwable instanceof CancellationException )
+            fOperation = new CompletableFuture<>();
+            fOperation.whenComplete( ( ignore, ex ) ->
             {
-                pooledChannel.channel().close();
-            }
-        } );
-
-        ChannelFuture fWrite = pooledChannel.channel().writeAndFlush( message );
-
-        fWrite.addListener( (ChannelFutureListener) writeComplete ->
-        {
-            Future<Void> releaseFuture = pooledChannel.release();
-
-            releaseFuture.addListener( releaseComplete ->
-            {
-                if ( !releaseComplete.isSuccess() )
+                if ( ex instanceof CancellationException )
                 {
-                    log.warn( "Failed to release channel to pool", releaseComplete.cause() );
-                }
-                if ( !writeComplete.isSuccess() )
-                {
-                    writeComplete.channel().close();
-                    fRelease.completeExceptionally( writeComplete.cause() );
-                }
-                else
-                {
-                    fRelease.complete( null );
+                    pooledChannel.dispose();
                 }
             } );
-        } );
 
-        return fRelease;
+            ChannelFuture fWrite = pooledChannel.channel().writeAndFlush( message );
+            fWrite.addListener( (ChannelFutureListener) writeComplete ->
+            {
+                if ( !writeComplete.isSuccess() )
+                {
+                    pooledChannel.dispose();
+                    fOperation.completeExceptionally( writeComplete.cause() );
+                    return;
+                }
+
+                try
+                {
+                    pooledChannel.release().addListener( f -> fOperation.complete( null ) );
+                }
+                catch ( Throwable e )
+                {
+                    fOperation.complete( null );
+                }
+            } );
+        }
+        catch ( Throwable e )
+        {
+            pooledChannel.dispose();
+            throw e;
+        }
+
+        return fOperation;
     }
 }

@@ -46,4 +46,15 @@ public class PooledChannel
     {
         return pool.release( channel );
     }
+
+    /**
+     * Disposes the {@link Channel} so that it cannot be reused.
+     *
+     * @return {@link Future} which is completed when the channel has been disposed.
+     */
+    public Future<Void> dispose()
+    {
+        channel.close();
+        return pool.release( channel );
+    }
 }
