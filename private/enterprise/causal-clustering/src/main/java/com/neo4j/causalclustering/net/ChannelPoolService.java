@@ -11,12 +11,9 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -26,6 +23,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
+import static com.neo4j.causalclustering.net.NettyUtil.toCompletableFuture;
 import static org.neo4j.util.concurrent.Futures.failedFuture;
 
 public class ChannelPoolService implements Lifecycle
@@ -73,23 +71,6 @@ public class ChannelPoolService implements Lifecycle
     {
         SimpleChannelPool pool = poolMap.get( address );
         return toCompletableFuture( pool.acquire(), channel -> new PooledChannel( channel, pool ) );
-    }
-
-    private static <T, R> CompletableFuture<R> toCompletableFuture( Future<T> nettyFuture, Function<T,R> conversion )
-    {
-        CompletableFuture<R> javaFuture = new CompletableFuture<>();
-        nettyFuture.addListener( (GenericFutureListener<Future<T>>) f ->
-        {
-            if ( f.isSuccess() )
-            {
-                javaFuture.complete( conversion.apply( f.get() ) );
-            }
-            else
-            {
-                javaFuture.completeExceptionally( f.cause() );
-            }
-        } );
-        return javaFuture;
     }
 
     @Override
