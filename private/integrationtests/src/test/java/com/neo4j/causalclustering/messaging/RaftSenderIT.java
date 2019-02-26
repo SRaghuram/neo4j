@@ -70,11 +70,6 @@ class RaftSenderIT
     private final ModifierProtocolRepository modifierProtocolRepository =
             new ModifierProtocolRepository( ModifierProtocols.values(), supportedModifierProtocols );
 
-    private static Collection<ApplicationProtocols> clientRepositories()
-    {
-        return Arrays.asList( ApplicationProtocols.RAFT_1, ApplicationProtocols.RAFT_2 );
-    }
-
     @ParameterizedTest
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "^RAFT_\\d" )
     void shouldSendAndReceiveBlocking( ApplicationProtocols clientProtocol ) throws Throwable
@@ -105,10 +100,10 @@ class RaftSenderIT
         raftServer.start();
 
         // given: raft messaging service
-        RaftChannelPoolService raftPooLService = raftPooLService( clientProtocol );
-        raftPooLService.start();
+        RaftChannelPoolService raftPoolService = raftPoolService( clientProtocol );
+        raftPoolService.start();
 
-        RaftSender sender = new RaftSender( logProvider, raftPooLService );
+        RaftSender sender = new RaftSender( logProvider, raftPoolService );
 
         // when
         AdvertisedSocketAddress to = new AdvertisedSocketAddress( raftServer.address().getHostname(), raftServer.address().getPort() );
@@ -124,7 +119,7 @@ class RaftSenderIT
         assertTrue( messageReceived.tryAcquire( 15, SECONDS ) );
 
         // cleanup
-        raftPooLService.stop();
+        raftPoolService.stop();
         raftServer.stop();
     }
 
@@ -148,7 +143,7 @@ class RaftSenderIT
                 BootstrapConfiguration.serverConfig( Config.defaults() ) );
     }
 
-    private RaftChannelPoolService raftPooLService( ApplicationProtocols clientProtocol )
+    private RaftChannelPoolService raftPoolService( ApplicationProtocols clientProtocol )
     {
         NettyPipelineBuilderFactory pipelineFactory = new NettyPipelineBuilderFactory( VOID_WRAPPER );
 
