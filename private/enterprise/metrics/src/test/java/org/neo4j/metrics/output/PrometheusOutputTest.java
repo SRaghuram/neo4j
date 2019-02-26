@@ -17,7 +17,7 @@ import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.function.LongConsumer;
 
-import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.logging.Log;
 

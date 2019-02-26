@@ -56,8 +56,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;

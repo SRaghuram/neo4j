@@ -15,9 +15,9 @@ import org.mockito.InOrder;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.layout.DatabaseLayout;

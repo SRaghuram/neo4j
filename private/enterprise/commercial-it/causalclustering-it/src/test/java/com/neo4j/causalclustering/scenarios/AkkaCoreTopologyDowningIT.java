@@ -34,8 +34,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;

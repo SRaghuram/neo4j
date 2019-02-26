@@ -16,7 +16,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;

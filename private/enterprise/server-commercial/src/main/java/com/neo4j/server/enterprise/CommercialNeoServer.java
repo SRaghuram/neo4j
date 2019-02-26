@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.exceptions.UnsatisfiedDependencyException;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.logging.Log;

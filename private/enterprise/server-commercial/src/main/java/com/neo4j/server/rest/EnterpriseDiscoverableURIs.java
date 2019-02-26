@@ -9,7 +9,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.server.enterprise.CommercialServerSettings;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.server.rest.discovery.DiscoverableURIs;
 
 import static org.neo4j.server.rest.discovery.CommunityDiscoverableURIs.communityDiscoverableURIs;

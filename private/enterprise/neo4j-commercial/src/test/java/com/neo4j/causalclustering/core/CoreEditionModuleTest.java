@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 
-import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.logging.LogProvider;

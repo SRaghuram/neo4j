@@ -24,10 +24,10 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.HttpConnector;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
 import org.neo4j.harness.junit.Neo4j;

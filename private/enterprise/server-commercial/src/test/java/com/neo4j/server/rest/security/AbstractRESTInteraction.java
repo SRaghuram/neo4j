@@ -26,9 +26,9 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import javax.ws.rs.core.HttpHeaders;
 
-import org.neo4j.configuration.BoltConnector;
-import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.HostnamePort;
@@ -51,7 +51,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.configuration.BoltConnector.EncryptionLevel.OPTIONAL;
+import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.kernel.api.security.AuthToken.newBasicAuthToken;
 
 abstract class AbstractRESTInteraction extends CommunityServerTestBase implements NeoInteractionLevel<RESTSubject>

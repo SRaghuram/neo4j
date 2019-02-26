@@ -26,11 +26,11 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
-import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.HttpConnector;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;

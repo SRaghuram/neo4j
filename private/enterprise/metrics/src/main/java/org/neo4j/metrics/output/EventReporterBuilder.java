@@ -9,7 +9,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.jmx.JmxReporter;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.extension.context.ExtensionContext;

@@ -18,7 +18,7 @@ import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

@@ -29,7 +29,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-import org.neo4j.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;

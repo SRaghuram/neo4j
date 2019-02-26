@@ -12,9 +12,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.graphdb.facade.ExternalDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.logging.LogProvider;
