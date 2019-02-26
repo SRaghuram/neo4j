@@ -12,7 +12,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSession;
 
-import org.neo4j.configuration.ClientAuth;
+import org.neo4j.configuration.ssl.ClientAuth;
 import org.neo4j.ssl.ClientSideHostnameVerificationEngineModification;
 import org.neo4j.ssl.EssentialEngineModifications;
 import org.neo4j.ssl.SslPolicy;

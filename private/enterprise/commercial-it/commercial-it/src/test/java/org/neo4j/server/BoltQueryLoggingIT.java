@@ -19,8 +19,8 @@ import java.util.List;
 
 import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.LegacySslPolicyConfig;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.server.configuration.ServerSettings;
 

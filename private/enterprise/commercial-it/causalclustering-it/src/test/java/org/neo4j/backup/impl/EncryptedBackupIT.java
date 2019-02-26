@@ -43,7 +43,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.IntSupplier;
 
-import org.neo4j.configuration.SslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;

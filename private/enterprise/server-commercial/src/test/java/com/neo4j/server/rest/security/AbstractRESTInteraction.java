@@ -29,7 +29,7 @@ import javax.ws.rs.core.HttpHeaders;
 import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.LegacySslPolicyConfig;
+import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.LoginContext;

@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.SslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;

@@ -15,7 +15,7 @@ import java.security.GeneralSecurityException;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.SslPolicyConfig;
+import org.neo4j.configuration.ssl.SslPolicyConfig;
 import org.neo4j.test.rule.TestDirectory;
 
 public class HostnameVerificationHelper

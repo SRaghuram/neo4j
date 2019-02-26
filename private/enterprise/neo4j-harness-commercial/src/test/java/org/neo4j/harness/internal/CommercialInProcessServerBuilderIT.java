@@ -13,8 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.util.Arrays;
 
-import org.neo4j.configuration.LegacySslPolicyConfig;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;

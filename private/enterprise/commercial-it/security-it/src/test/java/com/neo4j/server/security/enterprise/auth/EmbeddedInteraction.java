@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.ConnectorPortRegister;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.LegacySslPolicyConfig;
+import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
