@@ -22,14 +22,6 @@ public class SecurityProcedures extends AuthProceduresBase
     @Context
     public CommercialAuthManager authManager;
 
-    @Deprecated
-    @Description( "Show the current user. Deprecated by dbms.showCurrentUser." )
-    @Procedure( name = "dbms.security.showCurrentUser", mode = DBMS, deprecatedBy = "dbms.showCurrentUser" )
-    public Stream<UserManagementProcedures.UserResult> showCurrentUserDeprecated()
-    {
-        return showCurrentUser();
-    }
-
     @Description( "Show the current user." )
     @Procedure( name = "dbms.showCurrentUser", mode = DBMS )
     public Stream<UserManagementProcedures.UserResult> showCurrentUser()

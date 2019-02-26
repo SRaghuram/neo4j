@@ -33,16 +33,6 @@ public class UserManagementProcedures extends AuthProceduresBase
         userManager.newUser( username, password != null ? UTF8.encode( password ) : null, requirePasswordChange );
     }
 
-    @Deprecated
-    @Description( "Change the current user's password. Deprecated by dbms.security.changePassword." )
-    @Procedure( name = "dbms.changePassword", mode = DBMS, deprecatedBy = "dbms.security.changePassword" )
-    public void changePasswordDeprecated( @Name( "password" ) String password )
-            throws InvalidArgumentsException, IOException
-    {
-        // TODO: Deprecate this and create a new procedure that takes password as a byte[]
-        changePassword( password, false );
-    }
-
     @Description( "Change the current user's password." )
     @Procedure( name = "dbms.security.changePassword", mode = DBMS )
     public void changePassword( @Name( "password" ) String password,
