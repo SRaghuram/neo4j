@@ -83,14 +83,7 @@ public class ChannelPoolService implements Lifecycle
             }
             else
             {
-                if ( f.cause() != null )
-                {
-                    pooledChannelFuture.completeExceptionally( f.cause() );
-                }
-                else
-                {
-                    pooledChannelFuture.completeExceptionally( new IllegalStateException( "Failed to acquire channel from pool." ) );
-                }
+                pooledChannelFuture.completeExceptionally( f.cause() );
             }
         } );
         return pooledChannelFuture;
