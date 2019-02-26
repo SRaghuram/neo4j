@@ -5,21 +5,19 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.RelationshipIterator
-import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyTypes, Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
-import org.neo4j.storageengine.api.RelationshipVisitor
-import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{ListValue, RelationshipValue, VirtualValues}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, RelationshipContainer, RelationshipIterator}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.values.virtual.VirtualValues.EMPTY_LIST
+import org.neo4j.storageengine.api.RelationshipVisitor
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.RelationshipValue
 
 import scala.collection.mutable
 
@@ -58,14 +56,14 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
 
   private def varLengthExpand(node: LNode,
                               state: QueryState,
-                              row: ExecutionContext): Iterator[(LNode, ListValue)] = {
-    val stack = new mutable.Stack[(LNode, ListValue)]
-    stack.push((node, EMPTY_LIST))
+                              row: ExecutionContext): Iterator[(LNode, RelationshipContainer)] = {
+    val stack = new mutable.Stack[(LNode, RelationshipContainer)]
+    stack.push((node, RelationshipContainer.EMPTY))
 
-    new Iterator[(LNode, ListValue)] {
-      override def next(): (LNode, ListValue) = {
+    new Iterator[(LNode, RelationshipContainer)] {
+      override def next(): (LNode, RelationshipContainer) = {
         val (fromNode, rels) = stack.pop()
-        if (rels.length < maxDepth.getOrElse(Int.MaxValue)) {
+        if (rels.size < maxDepth.getOrElse(Int.MaxValue)) {
           val relationships: RelationshipIterator = state.query.getRelationshipsForIdsPrimitive(fromNode, dir, types.types(state.query))
 
           var relationship: RelationshipValue = null
@@ -128,15 +126,15 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
           inputRow.setLongAt(tempNodeOffset, fromNode)
           if (nodePredicate.isTrue(inputRow, state)) {
 
-            val paths: Iterator[(LNode, ListValue)] = varLengthExpand(fromNode, state, inputRow)
+            val paths: Iterator[(LNode, RelationshipContainer)] = varLengthExpand(fromNode, state, inputRow)
             paths collect {
-              case (toNode: LNode, rels: ListValue)
-                if rels.length >= min && isToNodeValid(inputRow, toNode) =>
+              case (toNode: LNode, rels: RelationshipContainer)
+                if rels.size >= min && isToNodeValid(inputRow, toNode) =>
                 val resultRow = SlottedExecutionContext(slots)
                 resultRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
                 if (shouldExpandAll)
                   resultRow.setLongAt(toOffset, toNode)
-                resultRow.setRefAt(relOffset, rels)
+                resultRow.setRefAt(relOffset, rels.asList)
                 resultRow
             }
           }
