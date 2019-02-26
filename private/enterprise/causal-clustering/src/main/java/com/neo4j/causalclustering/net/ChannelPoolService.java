@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.net;
 
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.SimpleChannelPool;
@@ -17,6 +16,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -72,21 +72,24 @@ public class ChannelPoolService implements Lifecycle
     private CompletableFuture<PooledChannel> acquire0( AdvertisedSocketAddress address )
     {
         SimpleChannelPool pool = poolMap.get( address );
-        Future<Channel> fChannel = pool.acquire();
+        return toCompletableFuture( pool.acquire(), channel -> new PooledChannel( channel, pool ) );
+    }
 
-        CompletableFuture<PooledChannel> pooledChannelFuture = new CompletableFuture<>();
-        fChannel.addListener( (GenericFutureListener<Future<Channel>>) f ->
+    private static <T, R> CompletableFuture<R> toCompletableFuture( Future<T> nettyFuture, Function<T,R> conversion )
+    {
+        CompletableFuture<R> javaFuture = new CompletableFuture<>();
+        nettyFuture.addListener( (GenericFutureListener<Future<T>>) f ->
         {
             if ( f.isSuccess() )
             {
-                pooledChannelFuture.complete( new PooledChannel( f.get(), pool ) );
+                javaFuture.complete( conversion.apply( f.get() ) );
             }
             else
             {
-                pooledChannelFuture.completeExceptionally( f.cause() );
+                javaFuture.completeExceptionally( f.cause() );
             }
         } );
-        return pooledChannelFuture;
+        return javaFuture;
     }
 
     @Override
