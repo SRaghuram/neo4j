@@ -7,10 +7,13 @@ package com.neo4j.causalclustering.net;
 
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -49,7 +52,7 @@ public class ChannelPoolService implements Lifecycle
         this.poolHandler = channelPoolHandler;
     }
 
-    public CompletableFuture<PooledChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
+    public CompletableFuture<PooledChannel> acquire( AdvertisedSocketAddress address )
     {
         sharedService.lock();
         try
@@ -58,13 +61,39 @@ public class ChannelPoolService implements Lifecycle
             {
                 return failedFuture( new IllegalStateException( "Channel pool service is not in a started state." ) );
             }
-            SimpleChannelPool channelPool = poolMap.get( advertisedSocketAddress );
-            return PooledChannel.future( channelPool.acquire(), channelPool ).applyToEither( endOfLife, pooledChannel -> pooledChannel );
+            return acquire0( address ).applyToEither( endOfLife, pooledChannel -> pooledChannel );
         }
         finally
         {
             sharedService.unlock();
         }
+    }
+
+    private CompletableFuture<PooledChannel> acquire0( AdvertisedSocketAddress address )
+    {
+        SimpleChannelPool pool = poolMap.get( address );
+        Future<Channel> fChannel = pool.acquire();
+
+        CompletableFuture<PooledChannel> pooledChannelFuture = new CompletableFuture<>();
+        fChannel.addListener( (GenericFutureListener<Future<Channel>>) f ->
+        {
+            if ( f.isSuccess() )
+            {
+                pooledChannelFuture.complete( new PooledChannel( f.get(), pool ) );
+            }
+            else
+            {
+                if ( f.cause() != null )
+                {
+                    pooledChannelFuture.completeExceptionally( f.cause() );
+                }
+                else
+                {
+                    pooledChannelFuture.completeExceptionally( new IllegalStateException( "Failed to acquire channel from pool." ) );
+                }
+            }
+        } );
+        return pooledChannelFuture;
     }
 
     @Override

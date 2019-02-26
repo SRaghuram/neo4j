@@ -7,12 +7,8 @@ package com.neo4j.causalclustering.net;
 
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
-
-import java.util.concurrent.CompletableFuture;
 
 public class PooledChannel
 {
@@ -29,30 +25,6 @@ public class PooledChannel
     {
         this.channel = channel;
         this.pool = pool;
-    }
-
-    static CompletableFuture<PooledChannel> future( Future<Channel> acquire, SimpleChannelPool channelPool )
-    {
-        CompletableFuture<PooledChannel> pooledChannelFuture = new CompletableFuture<>();
-        acquire.addListener( (GenericFutureListener<Future<Channel>>) future ->
-        {
-            if ( future.isSuccess() )
-            {
-                pooledChannelFuture.complete( new PooledChannel( future.getNow(), channelPool ) );
-            }
-            else
-            {
-                if ( future.cause() != null )
-                {
-                    pooledChannelFuture.completeExceptionally( future.cause() );
-                }
-                else
-                {
-                    pooledChannelFuture.completeExceptionally( new IllegalStateException( "Failed to acquire channel from pool." ) );
-                }
-            }
-        } );
-        return pooledChannelFuture;
     }
 
     public <ATTR> ATTR getAttribute( AttributeKey<ATTR> key )
