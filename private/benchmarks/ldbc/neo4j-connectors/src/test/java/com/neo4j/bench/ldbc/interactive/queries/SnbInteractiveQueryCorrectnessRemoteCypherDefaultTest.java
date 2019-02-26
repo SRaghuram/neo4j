@@ -101,7 +101,7 @@ import java.util.List;
 
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.ports.PortAuthority;
+import org.neo4j.com.ports.allocation.PortAuthority;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 
