@@ -51,4 +51,10 @@ public class GetStoreIdRequest implements DatabaseCatchupRequest
     {
         return Objects.hash( databaseName );
     }
+
+    @Override
+    public String toString()
+    {
+        return "GetStoreIdRequest{databaseName='" + databaseName + "'}";
+    }
 }

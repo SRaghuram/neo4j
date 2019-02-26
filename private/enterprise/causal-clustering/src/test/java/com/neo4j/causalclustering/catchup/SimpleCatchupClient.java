@@ -35,7 +35,7 @@ class SimpleCatchupClient implements AutoCloseable
     private final FileSystemAbstraction fsa;
     private final CatchupClientFactory catchUpClientFactory;
     private final TestCatchupServer catchupServer;
-    private final String correctDatabaseName;
+    private final String databaseName;
 
     private final AdvertisedSocketAddress from;
     private final StoreId correctStoreId;
@@ -52,7 +52,7 @@ class SimpleCatchupClient implements AutoCloseable
         this.fsa = fileSystemAbstraction;
         this.catchUpClientFactory = catchUpClientFactory;
         this.catchupServer = catchupServer;
-        this.correctDatabaseName = databaseName;
+        this.databaseName = databaseName;
 
         from = getCatchupServerAddress();
         correctStoreId = getStoreIdFromKernelStoreId( graphDb );
@@ -65,7 +65,7 @@ class SimpleCatchupClient implements AutoCloseable
 
     public PrepareStoreCopyResponse requestListOfFilesFromServer() throws Exception
     {
-        return requestListOfFilesFromServer( correctStoreId, correctDatabaseName );
+        return requestListOfFilesFromServer( correctStoreId, databaseName );
     }
 
     public PrepareStoreCopyResponse requestListOfFilesFromServer( StoreId expectedStoreId, String expectedDatabaseName ) throws Exception
@@ -74,14 +74,15 @@ class SimpleCatchupClient implements AutoCloseable
                 StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( streamToDiskProvider, logProvider.getLog( SimpleCatchupClient.class ) );
         return catchUpClientFactory.getClient( from, log )
                 .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
-                .v2( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) ).v3( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
+                .v2( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
+                .v3( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }
 
     public StoreCopyFinishedResponse requestIndividualFile( File file ) throws Exception
     {
-        return requestIndividualFile( file, correctStoreId, correctDatabaseName );
+        return requestIndividualFile( file, correctStoreId, databaseName );
     }
 
     public StoreCopyFinishedResponse requestIndividualFile( File file, StoreId expectedStoreId, String expectedDatabaseName ) throws Exception
@@ -104,8 +105,8 @@ class SimpleCatchupClient implements AutoCloseable
 
         return catchUpClientFactory.getClient( from, log )
                 .v1( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId ) )
-                .v2( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, correctDatabaseName ) )
-                .v3( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, correctDatabaseName ) )
+                .v2( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, databaseName ) )
+                .v3( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, databaseName ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }

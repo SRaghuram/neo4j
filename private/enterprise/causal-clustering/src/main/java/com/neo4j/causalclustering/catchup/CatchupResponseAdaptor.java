@@ -73,7 +73,7 @@ public class CatchupResponseAdaptor<T> implements CatchupResponseCallback<T>
     public void onCatchupErrorResponse( CompletableFuture<T> signal, CatchupErrorResponse catchupErrorResponse )
     {
         signal.completeExceptionally( new RuntimeException(
-                format( "Request failed [ResponseStatus: '%s' Message: '%s']", catchupErrorResponse.status().name(), catchupErrorResponse.message() ) ) );
+                format( "Request failed [ResponseStatus: '%s' Message: '%s']", catchupErrorResponse.status(), catchupErrorResponse.message() ) ) );
     }
 
     private <U> void unimplementedMethod( CompletableFuture<T> signal, U response )

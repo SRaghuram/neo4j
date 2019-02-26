@@ -36,4 +36,10 @@ public class PrepareStoreCopyRequest implements DatabaseCatchupRequest
     {
         return databaseName;
     }
+
+    @Override
+    public String toString()
+    {
+        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseName + "'}";
+    }
 }

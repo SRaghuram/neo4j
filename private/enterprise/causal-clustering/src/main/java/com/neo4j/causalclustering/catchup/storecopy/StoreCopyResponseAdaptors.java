@@ -102,6 +102,16 @@ public abstract class StoreCopyResponseAdaptors<T> extends CatchupResponseAdapto
             signal.complete( response );
         }
 
+        /**
+         * Method overridden to avoid failing the outcome future and throwing exceptions.
+         * This is needed because all file copy requests can be retried.
+         * Throwing exceptions in this case is just an overhead.
+         * <p>
+         * See retry logic in {@link StoreCopyClient} for more details.
+         *
+         * @param signal the outcome future.
+         * @param catchupErrorResponse the response.
+         */
         @Override
         public void onCatchupErrorResponse( CompletableFuture<StoreCopyFinishedResponse> signal, CatchupErrorResponse catchupErrorResponse )
         {

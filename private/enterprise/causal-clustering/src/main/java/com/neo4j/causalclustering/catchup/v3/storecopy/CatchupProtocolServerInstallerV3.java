@@ -18,6 +18,7 @@ import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponseEncoder;
 import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponseEncoder;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseEncoder;
+import com.neo4j.causalclustering.catchup.v2.storecopy.CatchupErrorResponseEncoder;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetIndexFilesRequestMarshalV2;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestDecoderV2;
@@ -65,7 +66,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
     private final LogProvider logProvider;
     private final CatchupServerHandler catchupServerHandler;
 
-    private CatchupProtocolServerInstallerV3( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
+    public CatchupProtocolServerInstallerV3( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
             LogProvider logProvider, CatchupServerHandler catchupServerHandler )
     {
         this.pipelineBuilderFactory = pipelineBuilderFactory;
@@ -97,6 +98,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
                 .add( "enc_snapshot", new CoreSnapshotEncoder() )
                 .add( "enc_file_chunk", new FileChunkEncoder() )
                 .add( "enc_file_header", new FileHeaderEncoder() )
+                .add( "enc_catchup_error", new CatchupErrorResponseEncoder() )
                 .add( "in_req_type", serverMessageHandler( state ) )
                 .add( "dec_req_dispatch", requestDecoders( state ) )
                 .add( "out_chunked_write", new ChunkedWriteHandler() )

@@ -9,12 +9,13 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.identity.StoreId;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.LongSet;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +31,8 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.database.Database;
@@ -40,70 +42,74 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreFileMetadata;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.E_DATABASE_UNKNOWN;
 import static java.util.stream.Collectors.toList;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCauseMessage;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.io.fs.FileUtils.relativePath;
 
-// TODO - actually update tests for potential database name related issues.
-public class CatchupServerIT
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+class CatchupServerIT
 {
-    private static final String EXISTING_FILE_NAME = "neostore.nodestore.db";
+    private static final String EXISTING_FILE_NAME = DatabaseFile.NODE_STORE.getName();
+    private static final String UNKNOWN_DB_NAME = "unknown.db";
     private static final StoreId WRONG_STORE_ID = new StoreId( 123, 221, 3131, 45678 );
     private static final LogProvider LOG_PROVIDER = NullLogProvider.getInstance();
 
     private static final String PROP_NAME = "name";
     private static final String PROP = "prop";
-    public static final Label LABEL = label( "MyLabel" );
+    private static final Label LABEL = label( "MyLabel" );
 
-    private GraphDatabaseAPI graphDb;
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
+
+    private GraphDatabaseAPI db;
     private TestCatchupServer catchupServer;
     private File temporaryDirectory;
     private ExecutorService executor;
-
     private PageCache pageCache;
-
-    @Rule
-    public DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemRule );
     private CatchupClientFactory catchupClient;
-    private DefaultFileSystemAbstraction fsa = fileSystemRule.get();
 
-    @Before
-    public void startDb() throws Throwable
+    @BeforeEach
+    void startDb() throws Throwable
     {
         temporaryDirectory = testDirectory.directory( "temp" );
-        graphDb = (GraphDatabaseAPI) new TestGraphDatabaseFactory().setFileSystem( fsa ).newEmbeddedDatabase( testDirectory.databaseDir() );
+        db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).newEmbeddedDatabase( testDirectory.databaseDir() );
         createPropertyIndex();
-        addData( graphDb );
+        addData( db );
 
         executor = Executors.newCachedThreadPool();
-        catchupServer = new TestCatchupServer( fsa, graphDb, LOG_PROVIDER, executor );
+        catchupServer = new TestCatchupServer( fs, db, LOG_PROVIDER, executor );
         catchupServer.start();
         catchupClient = CausalClusteringTestHelpers.getCatchupClient( LOG_PROVIDER, new ThreadPoolJobScheduler( executor ) );
         catchupClient.start();
-        pageCache = graphDb.getDependencyResolver().resolveDependency( PageCache.class );
+        pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
     }
 
-    @After
-    public void stopDb() throws Throwable
+    @AfterEach
+    void stopDb() throws Throwable
     {
         pageCache.flushAndForce();
-        if ( graphDb != null )
+        if ( db != null )
         {
-            graphDb.shutdown();
+            db.shutdown();
         }
         if ( catchupClient != null )
         {
@@ -117,12 +123,11 @@ public class CatchupServerIT
     }
 
     @Test
-    public void shouldListExpectedFilesCorrectly() throws Exception
+    void shouldListExpectedFilesCorrectly() throws Exception
     {
         // given (setup) required runtime subject dependencies
-        Database database = getDatabase( graphDb );
-        SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
-                catchupServer, temporaryDirectory, LOG_PROVIDER );
+        Database database = getDatabase( db );
+        SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
 
         // when
         PrepareStoreCopyResponse prepareStoreCopyResponse = simpleCatchupClient.requestListOfFilesFromServer();
@@ -142,17 +147,16 @@ public class CatchupServerIT
         assertTransactionIdMatches( prepareStoreCopyResponse.lastCheckPointedTransactionId() );
 
         //and
-        assertTrue( "Expected an empty set of ids. Found size " + prepareStoreCopyResponse.getIndexIds().size(),
-                prepareStoreCopyResponse.getIndexIds().isEmpty() );
+        assertTrue( prepareStoreCopyResponse.getIndexIds().isEmpty(),
+                "Expected an empty set of ids. Found size " + prepareStoreCopyResponse.getIndexIds().size() );
     }
 
     @Test
-    public void shouldCommunicateErrorIfStoreIdDoesNotMatchRequest() throws Exception
+    void shouldCommunicateErrorIfStoreIdDoesNotMatchRequest() throws Exception
     {
         // given (setup) required runtime subject dependencies
-        addData( graphDb );
-        SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
-                catchupServer, temporaryDirectory, LOG_PROVIDER );
+        addData( db );
+        SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
 
         // when the list of files are requested from the server with the wrong storeId
         PrepareStoreCopyResponse prepareStoreCopyResponse = simpleCatchupClient.requestListOfFilesFromServer( WRONG_STORE_ID, DEFAULT_DATABASE_NAME );
@@ -167,15 +171,14 @@ public class CatchupServerIT
     }
 
     @Test
-    public void individualFileCopyWorks() throws Exception
+    void individualFileCopyWorks() throws Exception
     {
         // given a file exists on the server
-        addData( graphDb );
+        addData( db );
         File existingFile = new File( temporaryDirectory, EXISTING_FILE_NAME );
 
         // and
-        SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
-                catchupServer, temporaryDirectory, LOG_PROVIDER );
+        SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
 
         // when we copy that file
         pageCache.flushAndForce();
@@ -190,18 +193,17 @@ public class CatchupServerIT
     }
 
     @Test
-    public void individualIndexSnapshotCopyWorks() throws Exception
+    void individualIndexSnapshotCopyWorks() throws Exception
     {
 
         // given
-        Database database = getDatabase( graphDb );
+        Database database = getDatabase( db );
         List<File> expectingFiles = database.getDatabaseFileListing().builder().excludeAll().includeSchemaIndexStoreFiles().build().stream().map(
                 StoreFileMetadata::file ).collect( toList() );
         // this test only tests the indexes, not the statistics store
         File indexStatisticsStoreFile = database.getDatabaseLayout().indexStatisticsStore();
         expectingFiles.removeIf( file -> file.equals( indexStatisticsStoreFile ) );
-        SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
-                catchupServer, temporaryDirectory, LOG_PROVIDER );
+        SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
 
         // and
         LongIterator indexIds = getExpectedIndexIds( database ).longIterator();
@@ -220,15 +222,14 @@ public class CatchupServerIT
     }
 
     @Test
-    public void individualFileCopyFailsIfStoreIdMismatch() throws Exception
+    void individualFileCopyFailsIfStoreIdMismatch() throws Exception
     {
         // given a file exists on the server
-        addData( graphDb );
-        File expectedExistingFile = graphDb.databaseLayout().file( EXISTING_FILE_NAME );
+        addData( db );
+        File expectedExistingFile = db.databaseLayout().file( EXISTING_FILE_NAME );
 
         // and
-        SimpleCatchupClient simpleCatchupClient = new SimpleCatchupClient( graphDb, DEFAULT_DATABASE_NAME, fsa, catchupClient,
-                catchupServer, temporaryDirectory, LOG_PROVIDER );
+        SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
 
         // when we copy that file using a different storeId
         StoreCopyFinishedResponse storeCopyFinishedResponse =
@@ -239,9 +240,41 @@ public class CatchupServerIT
         assertEquals( StoreCopyFinishedResponse.Status.E_STORE_ID_MISMATCH, storeCopyFinishedResponse.status() );
     }
 
+    @Test
+    void shouldFailWithGoodErrorWhenListingFilesForDatabaseThatDoesNotExist() throws Exception
+    {
+        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_NAME ) )
+        {
+            Exception error = assertThrows( Exception.class, simpleCatchupClient::requestListOfFilesFromServer );
+            assertThat( getRootCauseMessage( error ), containsString( UNKNOWN_DB_NAME + " does not exist" ) );
+        }
+    }
+
+    @Test
+    void shouldReturnCorrectStatusWhenRequestingFileForDatabaseThatDoesNotExist() throws Exception
+    {
+        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_NAME ) )
+        {
+            // individual file request does not throw when error response is received, it returns a status instead
+            StoreCopyFinishedResponse response = simpleCatchupClient.requestIndividualFile( new File( EXISTING_FILE_NAME ) );
+            assertEquals( E_DATABASE_UNKNOWN, response.status() );
+        }
+    }
+
+    @Test
+    void shouldReturnCorrectStatusWhenRequestingIndexSnapshotForDatabaseThatDoesNotExist() throws Exception
+    {
+        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_NAME ) )
+        {
+            // index snapshot request does not throw when error response is received, it returns a status instead
+            StoreCopyFinishedResponse response = simpleCatchupClient.requestIndexSnapshot( 42 );
+            assertEquals( E_DATABASE_UNKNOWN, response.status() );
+        }
+    }
+
     private void assertTransactionIdMatches( long lastTxId )
     {
-        long expectedTransactionId = getCheckPointer( graphDb ).lastCheckPointedTransactionId();
+        long expectedTransactionId = getCheckPointer( db ).lastCheckPointedTransactionId();
         assertEquals( expectedTransactionId, lastTxId);
     }
 
@@ -269,8 +302,7 @@ public class CatchupServerIT
     {
         assertNotEquals( fileA.getPath(), fileB.getPath() );
         String message = String.format( "Expected file: %s\ndoes not match actual file: %s", fileA, fileB );
-        assertEquals( message, CausalClusteringTestHelpers.fileContent( fileA, fsa ),
-                CausalClusteringTestHelpers.fileContent( fileB, fsa ) );
+        assertEquals( CausalClusteringTestHelpers.fileContent( fileA, fs ), CausalClusteringTestHelpers.fileContent( fileB, fs ), message );
     }
 
     private void listOfDownloadedFilesMatchesServer( Database database, File[] files )
@@ -308,6 +340,16 @@ public class CatchupServerIT
         }
     }
 
+    private SimpleCatchupClient newSimpleCatchupClient()
+    {
+        return newSimpleCatchupClient( DEFAULT_DATABASE_NAME );
+    }
+
+    private SimpleCatchupClient newSimpleCatchupClient( String databaseName )
+    {
+        return new SimpleCatchupClient( db, databaseName, fs, catchupClient, catchupServer, temporaryDirectory, LOG_PROVIDER );
+    }
+
     private static Predicate<StoreFileMetadata> isCountFile( DatabaseLayout databaseLayout )
     {
         return storeFileMetadata -> databaseLayout.countStoreA().equals( storeFileMetadata.file() ) ||
@@ -329,9 +371,9 @@ public class CatchupServerIT
 
     private void createPropertyIndex()
     {
-        try ( Transaction tx = graphDb.beginTx() )
+        try ( Transaction tx = db.beginTx() )
         {
-            graphDb.schema().indexFor( LABEL ).on( PROP_NAME ).create();
+            db.schema().indexFor( LABEL ).on( PROP_NAME ).create();
             tx.success();
         }
     }

@@ -5,17 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import io.netty.channel.embedded.EmbeddedChannel;
-import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-
 import com.neo4j.causalclustering.catchup.storecopy.FileChunk;
 import com.neo4j.causalclustering.catchup.storecopy.FileHeader;
 import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponse;
@@ -28,6 +17,8 @@ import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
+import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolClientInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.common.StubLocalDatabaseService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
@@ -35,6 +26,17 @@ import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
+import io.netty.channel.embedded.EmbeddedChannel;
+import org.hamcrest.CoreMatchers;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -101,9 +103,12 @@ abstract class CommercialCatchupTest
 
     static Function<DatabaseManager,RequestResponse> storeId()
     {
-        return databaseManager ->
-
-                new RequestResponse( new GetStoreIdRequest( DEFAULT_DB ), new ResponseAdaptor()
+        return new Function<DatabaseManager,RequestResponse>()
+        {
+            @Override
+            public RequestResponse apply( DatabaseManager databaseManager )
+            {
+                return new RequestResponse( new GetStoreIdRequest( DEFAULT_DB ), new ResponseAdaptor()
                 {
                     @Override
                     public void onGetStoreIdResponse( GetStoreIdResponse response )
@@ -117,13 +122,25 @@ abstract class CommercialCatchupTest
                                 .orElseThrow( IllegalStateException::new ), response.storeId() );
                     }
                 } );
+            }
+
+            @Override
+            public String toString()
+            {
+                // implemented to give parameterized tests nicer names
+                return "storeId";
+            }
+        };
     }
 
     static Function<DatabaseManager,RequestResponse> wrongDb()
     {
-        return databaseManager ->
-
-                new RequestResponse( new GetStoreIdRequest( "WRONG_DB_NAME" ), new ResponseAdaptor()
+        return new Function<DatabaseManager,RequestResponse>()
+        {
+            @Override
+            public RequestResponse apply( DatabaseManager databaseManager )
+            {
+                return new RequestResponse( new GetStoreIdRequest( "WRONG_DB_NAME" ), new ResponseAdaptor()
                 {
                     @Override
                     public void onCatchupErrorResponse( CatchupErrorResponse catchupErrorResponse )
@@ -133,6 +150,15 @@ abstract class CommercialCatchupTest
                         assertThat( catchupErrorResponse.message(), CoreMatchers.containsString( "database WRONG_DB_NAME does not exist on this machine." ) );
                     }
                 } );
+            }
+
+            @Override
+            public String toString()
+            {
+                // implemented to give parameterized tests nicer names
+                return "wrongDb";
+            }
+        };
     }
 
     static class RequestResponse
@@ -160,6 +186,11 @@ abstract class CommercialCatchupTest
         {
             new CatchupProtocolClientInstallerV2( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
             new CatchupProtocolServerInstallerV2( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, responseHandler ).install( server );
+        }
+        else if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_3 )
+        {
+            new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
+            new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, responseHandler ).install( server );
         }
         else
         {

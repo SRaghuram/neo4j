@@ -25,6 +25,7 @@ import com.neo4j.causalclustering.catchup.tx.TxPullResponseHandler;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseDecoder;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponseHandler;
 import com.neo4j.causalclustering.catchup.v2.storecopy.CatchupErrorResponseDecoder;
+import com.neo4j.causalclustering.catchup.v2.storecopy.CatchupErrorResponseHandler;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetIndexFilesRequestMarshalV2;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreFileRequestMarshalV2;
 import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestEncoderV2;
@@ -64,7 +65,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
     private final NettyPipelineBuilderFactory pipelineBuilder;
     private final CatchupResponseHandler handler;
 
-    private CatchupProtocolClientInstallerV3( NettyPipelineBuilderFactory pipelineBuilder, List<ModifierProtocolInstaller<Orientation.Client>> modifiers,
+    public CatchupProtocolClientInstallerV3( NettyPipelineBuilderFactory pipelineBuilder, List<ModifierProtocolInstaller<Orientation.Client>> modifiers,
             LogProvider logProvider, CatchupResponseHandler handler )
     {
         this.modifiers = modifiers;
@@ -114,6 +115,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
                 .add( "hnd_res_file_chunk", new FileChunkHandler( protocol, handler ) )
                 .add( "hnd_res_store_id", new GetStoreIdResponseHandler( protocol, handler ) )
                 .add( "hnd_res_store_listing", new StoreListingResponseHandler( protocol, handler ))
+                .add( "hnd_res_catchup_error", new CatchupErrorResponseHandler( protocol, handler ) )
                 .install();
     }
 
