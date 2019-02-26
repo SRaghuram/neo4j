@@ -87,25 +87,6 @@
             </dependency>
           </dependencies>
         </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <configuration>
-            <!-- Integration tests spend significant time waiting, so we can run more things in parallel here-->
-            <forkCount>1C</forkCount>
-            <trimStackTrace>false</trimStackTrace>
-            <!-- Misha says it is not safe to run tests with more than one thread per JVM -->
-            <!-- He also said he'd fix that! -->
-            <threadCount>1</threadCount>
-            <!-- slowest test class takes up to 10 minutes, so let's cater for that, with contingency -->
-            <parallelTestsTimeoutInSeconds>1200</parallelTestsTimeoutInSeconds>
-            <parallelTestsTimeoutForcedInSeconds>1800</parallelTestsTimeoutForcedInSeconds>
-            <systemPropertyVariables>
-              <!-- coordination on ports between forks -->
-              <port.authority.directory>${user.dir}/target/port-authority-${maven.build.timestamp}</port.authority.directory>
-            </systemPropertyVariables>
-          </configuration>
-        </plugin>
       </plugins>
     </pluginManagement>
   </build>
@@ -127,7 +108,7 @@
             <artifactId>licensing-maven-plugin</artifactId>
           </plugin>
           <plugin>
-            <groupId>org.neo4j.build.plugins</groupId>
+            <groupId>com.mycila</groupId>
             <artifactId>license-maven-plugin</artifactId>
           </plugin>
         </plugins>
