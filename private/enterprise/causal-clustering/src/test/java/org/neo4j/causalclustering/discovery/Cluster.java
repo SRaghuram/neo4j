@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -161,6 +162,15 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
     {
         int newReplicaServerId = ++highestReplicaServerId;
         return addReadReplicaWithId( newReplicaServerId );
+    }
+
+    public CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams, Map<String,IntFunction<String>> instanceExtraParams )
+    {
+        HashMap<String,String> coreParams = new HashMap<>( this.coreParams );
+        coreParams.putAll( extraParams );
+        HashMap<String,IntFunction<String>> instanceCoreParams = new HashMap<>( this.instanceCoreParams );
+        instanceCoreParams.putAll( instanceExtraParams );
+        return addCoreMemberWithId( memberId, coreParams, instanceCoreParams, recordFormat );
     }
 
     private CoreClusterMember addCoreMemberWithId( int memberId, Map<String,String> extraParams,
