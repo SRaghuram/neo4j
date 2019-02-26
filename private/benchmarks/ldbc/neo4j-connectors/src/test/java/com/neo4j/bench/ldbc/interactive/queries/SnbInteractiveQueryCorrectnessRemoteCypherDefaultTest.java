@@ -101,6 +101,7 @@ import java.util.List;
 
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 
@@ -144,7 +145,7 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
     {
         try
         {
-            int port = 7687;
+            int port = PortAuthority.allocatePort();
             String boltAddressWithoutPort = "localhost";
             return new Neo4jConnectionState(
                     Neo4jDb.newDbBuilderForBolt(
