@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.imports;
 
+import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -15,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.graphdb.index.IndexPopulationProgress;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
@@ -25,7 +26,7 @@ public class CreateIndex
 {
     private void run( String storeDir, List<String> indexPatterns )
     {
-        GraphDatabaseService db = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabase( new File( storeDir ) );
+        GraphDatabaseService db = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( storeDir ) );
         try
         {
             Map<IndexDefinition,Integer> indexes = new HashMap<>();
