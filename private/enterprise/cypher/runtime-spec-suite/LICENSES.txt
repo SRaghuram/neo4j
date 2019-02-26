@@ -278,7 +278,6 @@ BSD License
   asm-util
   JLine
   Scala Compiler
-  scala-parser-combinators
   scala-xml
   Scalap
 ------------------------------------------------------------------------------
