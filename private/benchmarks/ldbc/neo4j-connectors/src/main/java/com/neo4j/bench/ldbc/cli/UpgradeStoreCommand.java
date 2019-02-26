@@ -145,7 +145,10 @@ public class UpgradeStoreCommand implements Runnable
             neo4jConfigMap.put( allow_upgrade.name(), "true" );
             neo4jConfigMap.put( pagecache_memory.name(), storeSizeInMb + "m" );
             Properties neo4jConfigProperties = MapUtils.mapToProperties( neo4jConfigMap );
-            neo4jConfigProperties.store( new FileOutputStream( neo4jConfigFile ), null );
+            try ( FileOutputStream stream = new FileOutputStream( neo4jConfigFile ) )
+            {
+                neo4jConfigProperties.store( stream, null );
+            }
             return neo4jConfigFile;
         }
         catch ( Exception e )

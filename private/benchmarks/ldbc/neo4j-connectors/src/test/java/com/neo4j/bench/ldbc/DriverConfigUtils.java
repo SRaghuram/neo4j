@@ -25,7 +25,10 @@ public class DriverConfigUtils
             Map<String,String> config = MapUtils.loadPropertiesToMap( getResource( "/neo4j/neo4j_sf001.conf" ) );
             // nothing to change for 2.3+
             File tempConfigFile = File.createTempFile( "temp_neo4j_sf001", "conf" );
-            MapUtils.mapToProperties( config ).store( new FileOutputStream( tempConfigFile ), "Test Config" );
+            try ( FileOutputStream stream = new FileOutputStream( tempConfigFile ) )
+            {
+                MapUtils.mapToProperties( config ).store( stream, "Test Config" );
+            }
             return tempConfigFile;
         }
         catch ( Exception e )

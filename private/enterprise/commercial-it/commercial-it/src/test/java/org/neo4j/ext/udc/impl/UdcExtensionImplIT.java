@@ -222,7 +222,7 @@ public class UdcExtensionImplIT extends LocalServerTestBase
             }
         } );
 
-        t.run();
+        t.start();
 
         assertTrue( latch.await( 1000, TimeUnit.MILLISECONDS ) );
 

@@ -279,7 +279,7 @@ public class UserDefinedConfigurationStrategyTest
 
     private Set<String> noEastGroupGenerator( MemberId memberId )
     {
-        int index = Math.abs( memberId.hashCode() ) % noEastGroup.size();
+        int index = Math.abs( memberId.hashCode() % noEastGroup.size() );
         return asSet( noEastGroup.get( index ) );
     }
 }

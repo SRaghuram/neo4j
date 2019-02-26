@@ -23,7 +23,6 @@ import org.neo4j.graphdb.Result;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
-
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
 
 public class EnterpriseSanityCheckTest
@@ -75,7 +74,10 @@ public class EnterpriseSanityCheckTest
         Map<String,String> neo4jConfigMap = new HashMap<>();
         neo4jConfigMap.put( record_format.name(), "high_limit" );
         Properties neo4jConfigProperties = MapUtils.mapToProperties( neo4jConfigMap );
-        neo4jConfigProperties.store( new FileOutputStream( neo4jConfigFile ), null );
+        try ( FileOutputStream stream = new FileOutputStream( neo4jConfigFile ) )
+        {
+            neo4jConfigProperties.store( stream, null );
+        }
         return neo4jConfigFile;
     }
 

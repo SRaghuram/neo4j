@@ -23,11 +23,10 @@ import java.util.Map;
 
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class SerializationTest
 {
@@ -72,12 +71,13 @@ public class SerializationTest
     {
         // given
         File benchmarkConfig = temporaryFolder.newFile();
-        FileWriter fileWriter = new FileWriter( benchmarkConfig );
-        fileWriter.append( "key1=value1" );
-        fileWriter.append( "\n" );
-        fileWriter.append( "key2=value2" );
-        fileWriter.flush();
-        fileWriter.close();
+        try ( FileWriter fileWriter = new FileWriter( benchmarkConfig ) )
+        {
+            fileWriter.append( "key1=value1" );
+            fileWriter.append( "\n" );
+            fileWriter.append( "key2=value2" );
+            fileWriter.flush();
+        }
 
         BenchmarkConfig before = BenchmarkConfig.from( benchmarkConfig.toPath() );
         // then
@@ -239,12 +239,13 @@ public class SerializationTest
     {
         // given
         File neo4jConfig = temporaryFolder.newFile();
-        FileWriter fileWriter = new FileWriter( neo4jConfig );
-        fileWriter.append( "key1=value1" );
-        fileWriter.append( "\n" );
-        fileWriter.append( "key2=value2" );
-        fileWriter.flush();
-        fileWriter.close();
+        try ( FileWriter fileWriter = new FileWriter( neo4jConfig ) )
+        {
+            fileWriter.append( "key1=value1" );
+            fileWriter.append( "\n" );
+            fileWriter.append( "key2=value2" );
+            fileWriter.flush();
+        }
 
         Neo4jConfig before = Neo4jConfig.fromFile( neo4jConfig );
         // then
