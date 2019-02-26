@@ -100,8 +100,10 @@ import java.net.URI;
 import java.util.List;
 
 import org.neo4j.driver.v1.AuthTokens;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.com.ports.allocation.PortAuthority;
+import org.neo4j.kernel.configuration.ConnectorPortRegister;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 
@@ -145,16 +147,17 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
     {
         try
         {
-            int port = PortAuthority.allocatePort();
             String boltAddressWithoutPort = "localhost";
+            GraphDatabaseService graphDatabase = Neo4jDb.newDbBuilderForBolt(
+                    new File( path ),
+                    getResource( "/neo4j/neo4j_sf001.conf" ),
+                    boltAddressWithoutPort,
+                    0
+            ).newGraphDatabase();
+            ConnectorPortRegister portRegister = ((GraphDatabaseAPI) graphDatabase).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
             return new Neo4jConnectionState(
-                    Neo4jDb.newDbBuilderForBolt(
-                            new File( path ),
-                            getResource( "/neo4j/neo4j_sf001.conf" ),
-                            boltAddressWithoutPort,
-                            port
-                    ).newGraphDatabase(),
-                    URI.create( "bolt://" + boltAddressWithoutPort + ":" + port ),
+                    graphDatabase,
+                    URI.create( "bolt://" + portRegister.getLocalAddress( "bolt" ) ),
                     AuthTokens.none(),
                     new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
                     SnbInteractiveCypherQueries.createWith( PlannerType.DEFAULT, RuntimeType.DEFAULT ),
