@@ -147,11 +147,10 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
     {
         try
         {
-            String boltAddressWithoutPort = "localhost";
             GraphDatabaseService graphDatabase = Neo4jDb.newDbBuilderForBolt(
                     new File( path ),
                     getResource( "/neo4j/neo4j_sf001.conf" ),
-                    boltAddressWithoutPort,
+                    "localhost",
                     0
             ).newGraphDatabase();
             ConnectorPortRegister portRegister = ((GraphDatabaseAPI) graphDatabase).getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
