@@ -7,7 +7,9 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.net.PooledChannel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.util.concurrent.Future;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -31,12 +33,12 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
     @Override
     public void send( AdvertisedSocketAddress to, Message message, boolean block )
     {
-        CompletableFuture<Void> future = channels.acquire( to ).thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
+        CompletableFuture<Void> fRelease = channels.acquire( to ).thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
         if ( block )
         {
             try
             {
-                future.get();
+                fRelease.get();
             }
             catch ( ExecutionException e )
             {
@@ -44,7 +46,7 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
             }
             catch ( InterruptedException e )
             {
-                future.cancel( true );
+                fRelease.cancel( true );
                 log.info( "Interrupted while sending", e );
             }
         }
@@ -52,33 +54,39 @@ public class RaftSender implements Outbound<AdvertisedSocketAddress,Message>
 
     private CompletableFuture<Void> sendMessage( PooledChannel pooledChannel, Message message )
     {
-        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-        completableFuture.whenComplete( ( ignore, throwable ) ->
+        CompletableFuture<Void> fRelease = new CompletableFuture<>();
+        fRelease.whenComplete( ( ignore, throwable ) ->
         {
             if ( throwable instanceof CancellationException )
             {
                 pooledChannel.channel().close();
             }
         } );
-        pooledChannel
-                .channel()
-                .writeAndFlush( message )
-                .addListener( (ChannelFutureListener) writeFuture -> pooledChannel.release().addListener( releaseFuture ->
+
+        ChannelFuture fWrite = pooledChannel.channel().writeAndFlush( message );
+
+        fWrite.addListener( (ChannelFutureListener) writeComplete ->
         {
-            if ( !releaseFuture.isSuccess() )
+            Future<Void> releaseFuture = pooledChannel.release();
+
+            releaseFuture.addListener( releaseComplete ->
             {
-                log.warn( "Failed to release channel to pool", releaseFuture.cause() );
-            }
-            if ( !writeFuture.isSuccess() )
-            {
-                writeFuture.channel().close();
-                completableFuture.completeExceptionally( writeFuture.cause() );
-            }
-            else
-            {
-                completableFuture.complete( null );
-            }
-        } ) );
-        return completableFuture;
+                if ( !releaseComplete.isSuccess() )
+                {
+                    log.warn( "Failed to release channel to pool", releaseComplete.cause() );
+                }
+                if ( !writeComplete.isSuccess() )
+                {
+                    writeComplete.channel().close();
+                    fRelease.completeExceptionally( writeComplete.cause() );
+                }
+                else
+                {
+                    fRelease.complete( null );
+                }
+            } );
+        } );
+
+        return fRelease;
     }
 }
