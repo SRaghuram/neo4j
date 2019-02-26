@@ -54,13 +54,13 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_id_batch_size;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
 @PageCacheExtension

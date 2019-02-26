@@ -92,7 +92,7 @@ import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.toBenchmarkGroupName;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @Command(
         name = "run-export",

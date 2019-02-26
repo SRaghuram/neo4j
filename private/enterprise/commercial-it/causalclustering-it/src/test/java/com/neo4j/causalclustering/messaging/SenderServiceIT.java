@@ -58,7 +58,7 @@ import static com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory.VOI
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
 @RunWith( Parameterized.class )

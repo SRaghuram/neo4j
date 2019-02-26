@@ -7,12 +7,12 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.io.PrintWriter
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.csv.reader.MissingEndQuoteException
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper, RunWithConfigTestSupport}
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.values.virtual.VirtualValues
 
 class LoadCsvWithQuotesAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CreateTempFileTestSupport {

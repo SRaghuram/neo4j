@@ -10,7 +10,7 @@ import java.time.ZoneId;
 import javax.management.NotCompliantMBeanException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;

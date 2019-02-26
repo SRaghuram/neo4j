@@ -5,14 +5,13 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
 import org.neo4j.cypher.internal.StringCacheMonitor
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.helpers.collection.Pair
 import org.neo4j.kernel.monitoring.Monitors
-import org.scalatest.Assertion
 
 /**
   * These tests are similar with the tests in LeafPlanningIntegrationTest, but

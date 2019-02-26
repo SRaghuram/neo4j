@@ -27,7 +27,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_reader_pool_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.consensus.log.RaftLogHelper.readLogEntry;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 

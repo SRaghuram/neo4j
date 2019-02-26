@@ -12,7 +12,6 @@ import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -21,27 +20,25 @@ import org.junit.rules.TemporaryFolder;
 import java.time.Instant;
 import java.util.List;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.configuration.Settings;
 
 import static com.neo4j.bench.client.model.Annotation.AUTHOR;
 import static com.neo4j.bench.client.model.Annotation.COMMENT;
 import static com.neo4j.bench.client.model.Annotation.DATE;
 import static com.neo4j.bench.client.model.Annotation.EVENT_ID;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
-
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-
-import static java.util.concurrent.TimeUnit.MINUTES;
 
 public class CreateAnnotationsTest
 {

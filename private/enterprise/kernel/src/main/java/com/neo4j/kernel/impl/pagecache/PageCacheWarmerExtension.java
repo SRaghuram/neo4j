@@ -8,7 +8,7 @@ package com.neo4j.kernel.impl.pagecache;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitor;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;

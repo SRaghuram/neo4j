@@ -9,7 +9,7 @@ import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
 
 import java.io.IOException;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.NeoServerRestartTestIT;
 import org.neo4j.server.helpers.CommunityServerBuilder;

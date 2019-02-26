@@ -27,9 +27,9 @@ import org.neo4j.graphdb.GraphDatabaseService;
 
 import static com.neo4j.bench.ldbc.cli.RunCommand.discoverSchema;
 import static java.lang.String.format;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @Command(
         name = "upgrade-store",

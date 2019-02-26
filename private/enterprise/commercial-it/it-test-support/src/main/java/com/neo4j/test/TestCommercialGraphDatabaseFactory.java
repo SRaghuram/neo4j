@@ -12,12 +12,11 @@ import java.io.File;
 
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.TestGraphDatabaseFactory;

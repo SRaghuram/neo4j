@@ -6,9 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.PathImpl
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.{Node, Path}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 

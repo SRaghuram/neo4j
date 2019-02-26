@@ -17,8 +17,8 @@ import org.neo4j.test.rule.DbmsRule;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.plugin_dir;
+import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
+import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 
 public class SetConfigValueProcedureTest
 {

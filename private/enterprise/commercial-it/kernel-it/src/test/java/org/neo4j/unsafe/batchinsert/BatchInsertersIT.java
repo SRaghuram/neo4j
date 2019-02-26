@@ -11,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.extension.ExtensionFactory;
@@ -20,7 +20,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.default_schema_provider;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_schema_provider;
 import static org.neo4j.unsafe.batchinsert.BatchInserters.inserter;
 
 @ExtendWith( TestDirectoryExtension.class )

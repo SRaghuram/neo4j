@@ -28,9 +28,9 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -57,10 +57,10 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static java.lang.System.currentTimeMillis;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.active_database;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.active_database;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN;
 import static org.neo4j.kernel.impl.store.id.IdType.LABEL_TOKEN_NAME;

@@ -45,20 +45,19 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
-
-import static org.hamcrest.io.FileMatchers.anExistingFile;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.io.FileMatchers.anExistingFile;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EndToEndIT
 {

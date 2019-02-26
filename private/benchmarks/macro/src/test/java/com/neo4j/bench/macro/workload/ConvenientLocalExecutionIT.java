@@ -30,7 +30,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
 import static java.lang.String.format;

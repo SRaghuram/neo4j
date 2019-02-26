@@ -68,7 +68,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgRecord;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
 import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.auth_enabled;
+import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.helpers.collection.Iterators.single;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;

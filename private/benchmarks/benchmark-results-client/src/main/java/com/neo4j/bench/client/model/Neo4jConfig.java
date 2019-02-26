@@ -15,15 +15,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.tx_state_memory_allocation;
+import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
+import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allocation;
 
 public class Neo4jConfig
 {

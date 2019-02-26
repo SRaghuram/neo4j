@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Level;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.internal.logging.JULogging;
 import org.neo4j.driver.v1.AccessMode;
 import org.neo4j.driver.v1.AuthTokens;
@@ -46,7 +47,6 @@ import org.neo4j.driver.v1.exceptions.ClientException;
 import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.v1.exceptions.SessionExpiredException;
 import org.neo4j.driver.v1.summary.ServerInfo;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;

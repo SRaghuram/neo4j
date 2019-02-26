@@ -16,7 +16,7 @@ import java.util.Scanner;
 import java.util.TimeZone;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogTimeZone;

@@ -56,7 +56,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.stridingFor;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
+import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 
 @BenchmarkEnabled( false )
 public class CreateRelationshipWithMandatoryProperties extends AbstractKernelBenchmark

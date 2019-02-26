@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.Test;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;

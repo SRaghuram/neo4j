@@ -13,7 +13,7 @@ import org.junit.Test;
 
 import java.nio.file.Path;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.rule.TestDirectory;

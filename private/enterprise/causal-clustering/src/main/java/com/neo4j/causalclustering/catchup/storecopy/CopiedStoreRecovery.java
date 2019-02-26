@@ -22,7 +22,7 @@ import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.storageengine.migration.UpgradeNotAllowedException;
 
 import static java.lang.String.format;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 
 public class CopiedStoreRecovery extends LifecycleAdapter

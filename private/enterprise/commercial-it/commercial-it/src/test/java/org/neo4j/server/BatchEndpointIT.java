@@ -9,9 +9,9 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.LegacySslPolicyConfig;
 import org.neo4j.configuration.Settings;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.server.configuration.ServerSettings;
 

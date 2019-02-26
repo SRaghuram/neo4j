@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -26,7 +26,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( true )
 public class ReadById extends AbstractCoreBenchmark

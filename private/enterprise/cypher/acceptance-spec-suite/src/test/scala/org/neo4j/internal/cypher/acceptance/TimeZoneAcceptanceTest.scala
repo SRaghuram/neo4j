@@ -7,14 +7,14 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.time.{ZoneId, ZonedDateTime}
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.storable.DurationValue
 import org.neo4j.values.utils.TemporalParseException
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
 abstract class TimeZoneAcceptanceTest(timezone: String) extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 

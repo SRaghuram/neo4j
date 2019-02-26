@@ -17,7 +17,7 @@ import com.neo4j.bench.macro.workload.Query;
 import java.nio.file.Path;
 import java.util.List;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.neo4j.bench.macro.execution.Options.ExecutionMode.PLAN;
 

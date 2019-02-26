@@ -27,11 +27,11 @@ import java.util.function.IntFunction;
 
 import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.HttpConnector;
 import org.neo4j.configuration.HttpConnector.Encryption;
 import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;

@@ -7,12 +7,12 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.util
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.graphalgo.impl.path.ShortestPath
 import org.neo4j.graphalgo.impl.path.ShortestPath.DataMonitor
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.{Node, Path}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.neo4j.kernel.monitoring.Monitors

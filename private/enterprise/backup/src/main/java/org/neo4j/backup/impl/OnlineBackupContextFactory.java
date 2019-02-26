@@ -25,9 +25,9 @@ import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.impl.util.Converters;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 
 class OnlineBackupContextFactory
 {

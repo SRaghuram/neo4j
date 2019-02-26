@@ -21,9 +21,9 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.data_directory;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.database_path;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
+import static org.neo4j.configuration.GraphDatabaseSettings.database_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 
 public class ServerManagementIT
 {

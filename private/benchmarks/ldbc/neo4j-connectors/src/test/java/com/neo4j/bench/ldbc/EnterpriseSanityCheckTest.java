@@ -23,7 +23,7 @@ import org.neo4j.graphdb.Result;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 public class EnterpriseSanityCheckTest
 {

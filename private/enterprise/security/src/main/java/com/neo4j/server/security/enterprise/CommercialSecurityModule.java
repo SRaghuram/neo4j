@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
 import org.neo4j.cypher.result.QueryResult;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
@@ -53,7 +54,6 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -80,7 +80,7 @@ import org.neo4j.time.Clocks;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.COMMERCIAL_SECURITY_MODULE_ID;
 import static java.lang.String.format;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class CommercialSecurityModule extends SecurityModule
 {

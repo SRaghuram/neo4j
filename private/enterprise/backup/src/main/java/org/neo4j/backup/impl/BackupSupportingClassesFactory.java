@@ -28,7 +28,7 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
@@ -37,7 +37,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * The dependencies for the backup strategies require a valid configuration for initialisation.

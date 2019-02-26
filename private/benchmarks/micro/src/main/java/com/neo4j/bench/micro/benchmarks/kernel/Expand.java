@@ -5,6 +5,14 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.benchmarks.RNGState;
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGenerator.Order;
+import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -19,15 +27,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.SplittableRandom;
 import java.util.stream.Stream;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-import com.neo4j.bench.micro.data.DataGenerator.Order;
-import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
-
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
@@ -35,10 +34,8 @@ import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.Expand.NODE_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.Expand.RELATIONSHIP_DEFINITIONS;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )

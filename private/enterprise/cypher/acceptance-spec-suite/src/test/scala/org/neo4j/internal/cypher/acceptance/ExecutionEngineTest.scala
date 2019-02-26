@@ -8,6 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.{File, PrintWriter}
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.ExecutionEngine
@@ -18,7 +19,6 @@ import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer.Com
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.WindowsStringSafe
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.io.fs.FileUtils

@@ -7,13 +7,13 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.nio.file.Files
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 
-import scala.collection.{Map, mutable}
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.{Map, mutable}
 import scala.io.Source
 import scala.reflect.io.File
 

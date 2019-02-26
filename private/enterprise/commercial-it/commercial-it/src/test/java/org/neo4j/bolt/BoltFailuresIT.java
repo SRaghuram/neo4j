@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
 import org.neo4j.configuration.BoltConnector;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -25,7 +26,6 @@ import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.test.rule.TestDirectory;

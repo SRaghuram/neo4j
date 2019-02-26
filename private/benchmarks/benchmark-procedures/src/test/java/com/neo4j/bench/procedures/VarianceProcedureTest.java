@@ -12,6 +12,7 @@ import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
 import com.neo4j.bench.procedures.detection.VarianceProcedure;
+import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -19,15 +20,14 @@ import org.junit.Test;
 
 import java.util.List;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.configuration.Settings;
 
 import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;

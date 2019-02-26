@@ -5,13 +5,6 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import org.junit.Test;
-import org.mockito.InOrder;
-
-import java.util.Arrays;
-import java.util.UUID;
-import java.util.function.Consumer;
-
 import com.neo4j.causalclustering.SessionTracker;
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
@@ -29,7 +22,14 @@ import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.error_handling.Panicker;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.junit.Test;
+import org.mockito.InOrder;
+
+import java.util.Arrays;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 

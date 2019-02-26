@@ -34,8 +34,8 @@ import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.data.NumberGenerator.stridingLong;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.dense_node_threshold;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( true )
 public class CreateRelationships extends AbstractKernelBenchmark

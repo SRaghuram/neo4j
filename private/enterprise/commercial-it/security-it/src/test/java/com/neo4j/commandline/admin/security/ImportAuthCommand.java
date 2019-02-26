@@ -26,9 +26,9 @@ import org.neo4j.commandline.arguments.Arguments;
 import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifespan;
@@ -41,7 +41,7 @@ import static com.neo4j.server.security.enterprise.CommercialSecurityModule.IMPO
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_IMPORT_FILENAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_STORE_FILENAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.USER_IMPORT_FILENAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.server.security.auth.CommunitySecurityModule.USER_STORE_FILENAME;
 
 public class ImportAuthCommand implements AdminCommand

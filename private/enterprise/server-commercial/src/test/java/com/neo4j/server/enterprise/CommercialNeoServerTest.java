@@ -14,8 +14,8 @@ import java.nio.file.Paths;
 
 import org.neo4j.configuration.BoltConnector;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;

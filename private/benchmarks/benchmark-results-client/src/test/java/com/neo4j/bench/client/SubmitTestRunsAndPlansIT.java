@@ -51,9 +51,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.driver.v1.Session;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import static com.google.common.collect.Lists.newArrayList;

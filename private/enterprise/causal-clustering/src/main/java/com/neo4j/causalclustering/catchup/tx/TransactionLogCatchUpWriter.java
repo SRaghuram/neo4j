@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.LongRange;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -32,8 +32,8 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_log_rotation_threshold;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeader.LOG_HEADER_SIZE;
 
 public class TransactionLogCatchUpWriter implements TxPullResponseListener, AutoCloseable

@@ -40,7 +40,7 @@ import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCa
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TestCatchupServer extends Server
 {

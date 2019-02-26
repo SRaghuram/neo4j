@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.benchmarks.TxBatch;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.benchmarks.TxBatch;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import org.neo4j.graphdb.Label;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( true )
 public class CreateNodes extends AbstractCoreBenchmark

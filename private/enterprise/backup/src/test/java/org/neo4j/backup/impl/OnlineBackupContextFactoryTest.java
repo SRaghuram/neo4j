@@ -38,9 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.backup.impl.OnlineBackupContextFactory.DEFAULT_BACKUP_HOSTNAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_memory;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.pagecache_warmup_enabled;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class OnlineBackupContextFactoryTest

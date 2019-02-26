@@ -14,17 +14,17 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.NullLogProvider;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.ignore_store_lock;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.configuration.Settings.TRUE;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.ignore_store_lock;
 
 public class CommercialTemporaryDatabaseFactory implements TemporaryDatabaseFactory
 {

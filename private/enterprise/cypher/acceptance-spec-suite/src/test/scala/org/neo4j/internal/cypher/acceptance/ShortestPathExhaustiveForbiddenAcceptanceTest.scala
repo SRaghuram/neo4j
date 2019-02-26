@@ -5,13 +5,13 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.v4_0.util.{ExhaustiveShortestPathForbiddenException => InternalExhaustiveShortestPathForbiddenException}
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.impl.notification.NotificationCode.EXHAUSTIVE_SHORTEST_PATH
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.cypher.internal.v4_0.util.{ExhaustiveShortestPathForbiddenException => InternalExhaustiveShortestPathForbiddenException}
 
 import scala.collection.mutable
 

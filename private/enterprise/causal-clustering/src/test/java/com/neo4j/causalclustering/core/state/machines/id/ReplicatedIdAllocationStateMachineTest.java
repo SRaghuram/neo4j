@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import java.util.UUID;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.store.id.IdType;
 
 import static org.junit.Assert.assertEquals;

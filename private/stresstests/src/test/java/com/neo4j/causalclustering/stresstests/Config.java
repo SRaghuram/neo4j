@@ -5,14 +5,15 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.discovery.DiscoveryImplementation;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 

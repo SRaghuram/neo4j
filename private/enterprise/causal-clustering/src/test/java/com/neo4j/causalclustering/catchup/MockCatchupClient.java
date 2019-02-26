@@ -31,7 +31,7 @@ import org.neo4j.util.concurrent.Futures;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_2;
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_3;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class MockCatchupClient implements VersionedCatchupClients
 {

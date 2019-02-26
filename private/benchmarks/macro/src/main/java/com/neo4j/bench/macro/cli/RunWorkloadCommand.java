@@ -56,12 +56,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 
 import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.load_csv_file_url_root;
+import static org.neo4j.configuration.GraphDatabaseSettings.load_csv_file_url_root;
 
 @Command( name = "run-workload", description = "runs all queries for a single workload" )
 public class RunWorkloadCommand implements Runnable

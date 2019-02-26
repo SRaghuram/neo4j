@@ -36,10 +36,10 @@ import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
+import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.Settings.TRUE;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.keep_logical_logs;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.helper.StressTestingHelper.fromEnv;
 
 /**

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.bolt.v1.transport.integration.AuthenticationIT;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
 public class EnterpriseAuthenticationIT extends AuthenticationIT

@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.kernel.api.exceptions.Status
 
 import scala.collection.JavaConverters._

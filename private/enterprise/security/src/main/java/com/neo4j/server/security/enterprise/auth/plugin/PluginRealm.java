@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.Version;
 import org.neo4j.logging.Log;

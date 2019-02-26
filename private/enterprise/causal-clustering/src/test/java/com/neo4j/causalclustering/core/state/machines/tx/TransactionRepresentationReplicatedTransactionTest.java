@@ -22,7 +22,7 @@ import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class TransactionRepresentationReplicatedTransactionTest
 {

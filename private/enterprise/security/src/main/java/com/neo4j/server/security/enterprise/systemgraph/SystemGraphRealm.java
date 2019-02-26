@@ -43,7 +43,7 @@ import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * Shiro realm using a Neo4j graph to store users and roles

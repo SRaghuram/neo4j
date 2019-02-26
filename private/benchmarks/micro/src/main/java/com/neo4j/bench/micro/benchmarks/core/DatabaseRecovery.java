@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
-import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
@@ -23,11 +23,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.SplittableRandom;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
@@ -43,8 +43,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 public class DatabaseRecovery extends AbstractCoreBenchmark
 {

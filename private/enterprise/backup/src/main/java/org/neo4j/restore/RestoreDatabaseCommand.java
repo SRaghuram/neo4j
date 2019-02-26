@@ -19,8 +19,8 @@ import org.neo4j.kernel.impl.util.Validators;
 import static java.lang.String.format;
 import static org.neo4j.commandline.Util.checkLock;
 import static org.neo4j.commandline.Util.isSameOrChildFile;
+import static org.neo4j.configuration.GraphDatabaseSettings.database_path;
 import static org.neo4j.configuration.LayoutConfig.of;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.database_path;
 
 public class RestoreDatabaseCommand
 {

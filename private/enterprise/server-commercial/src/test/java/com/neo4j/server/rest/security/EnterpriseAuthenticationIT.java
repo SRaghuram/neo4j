@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.server.rest.security.AuthenticationIT;
 import org.neo4j.test.server.HTTP;
 

@@ -56,7 +56,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;

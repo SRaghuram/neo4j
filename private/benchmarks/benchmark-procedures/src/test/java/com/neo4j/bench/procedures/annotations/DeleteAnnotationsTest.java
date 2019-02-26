@@ -12,17 +12,16 @@ import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.configuration.Settings;
 
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
 import static org.hamcrest.CoreMatchers.equalTo;

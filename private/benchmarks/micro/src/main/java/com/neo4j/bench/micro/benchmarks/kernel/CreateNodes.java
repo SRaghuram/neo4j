@@ -5,6 +5,11 @@
  */
 package com.neo4j.bench.micro.benchmarks.kernel;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
+import com.neo4j.bench.micro.config.BenchmarkEnabled;
+import com.neo4j.bench.micro.config.ParamValues;
+import com.neo4j.bench.micro.data.DataGeneratorConfig;
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -14,19 +19,12 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.micro.config.BenchmarkEnabled;
-import com.neo4j.bench.micro.config.ParamValues;
-import com.neo4j.bench.micro.data.DataGeneratorConfig;
-import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
-
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.InvalidTransactionTypeKernelException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 
 import static com.neo4j.bench.micro.Main.run;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( true )
 public class CreateNodes extends AbstractKernelBenchmark

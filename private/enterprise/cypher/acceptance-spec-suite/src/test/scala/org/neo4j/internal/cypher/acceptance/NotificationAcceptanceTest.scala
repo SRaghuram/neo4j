@@ -5,12 +5,12 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.compiler.v4_0.PlannerUnsupportedNotification
 import org.neo4j.cypher.internal.javacompat.DeprecationAcceptanceTest.ChangedResults
 import org.neo4j.graphdb
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.factory.GraphDatabaseSettings
 import org.neo4j.graphdb.impl.notification.NotificationCode._
 import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory._
 import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail}

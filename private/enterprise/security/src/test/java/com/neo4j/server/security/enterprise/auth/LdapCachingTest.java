@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.ToIntFunction;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;

@@ -18,8 +18,8 @@ import com.neo4j.bench.client.model.Neo4jConfig;
 import java.io.File;
 import java.util.regex.Pattern;
 
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 class ResultReportingUtil
 {

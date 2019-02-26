@@ -29,7 +29,7 @@ import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStore;
 import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStoreWithoutTransactionLogs;
 import org.neo4j.backup.clusteringsupport.backup_stores.NoStore;
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;

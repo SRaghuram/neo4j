@@ -24,8 +24,8 @@ import java.util.function.IntFunction;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.pool.Pool;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.LockAcquisitionTimeoutException;

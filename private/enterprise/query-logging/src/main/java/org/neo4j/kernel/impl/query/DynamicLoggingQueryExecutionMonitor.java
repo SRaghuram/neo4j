@@ -12,8 +12,8 @@ import java.io.OutputStream;
 import java.time.ZoneId;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;

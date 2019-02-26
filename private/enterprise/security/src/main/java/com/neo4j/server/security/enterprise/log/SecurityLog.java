@@ -14,7 +14,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;

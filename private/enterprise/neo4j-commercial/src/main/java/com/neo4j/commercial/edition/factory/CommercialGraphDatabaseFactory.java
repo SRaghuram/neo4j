@@ -11,11 +11,11 @@ import java.io.File;
 
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 
 public class CommercialGraphDatabaseFactory extends GraphDatabaseFactory
 {

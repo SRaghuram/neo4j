@@ -93,10 +93,10 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -126,7 +126,7 @@ import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
 import static java.util.Arrays.asList;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services

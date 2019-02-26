@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;

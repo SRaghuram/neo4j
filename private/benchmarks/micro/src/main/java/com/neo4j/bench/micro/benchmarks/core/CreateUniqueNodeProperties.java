@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.micro.benchmarks.core;
 
+import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
-import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.config.BenchmarkEnabled;
 import com.neo4j.bench.micro.config.ParamValues;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -51,8 +51,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridingFor;
-
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @BenchmarkEnabled( true )
 public class CreateUniqueNodeProperties extends AbstractCoreBenchmark

@@ -12,7 +12,7 @@ import org.mockito.stubbing.Answer;
 
 import java.time.Clock;
 
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.availability.AvailabilityListener;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;

@@ -21,8 +21,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static java.lang.String.format;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.allow_upgrade;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @Command( name = "upgrade-store", description = "Upgrades a Neo4j store, including rebuilding of indexes." )
 public class UpgradeStoreCommand implements Runnable

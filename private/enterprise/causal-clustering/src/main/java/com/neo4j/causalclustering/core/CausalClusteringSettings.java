@@ -32,6 +32,7 @@ import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Imp
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.LZ_VALIDATING;
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.SNAPPY;
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols.Implementations.SNAPPY_VALIDATING;
+import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.configuration.Settings.ADVERTISED_SOCKET_ADDRESS;
 import static org.neo4j.configuration.Settings.BOOLEAN;
 import static org.neo4j.configuration.Settings.BYTES;
@@ -53,7 +54,6 @@ import static org.neo4j.configuration.Settings.min;
 import static org.neo4j.configuration.Settings.optionsIgnoreCase;
 import static org.neo4j.configuration.Settings.prefixSetting;
 import static org.neo4j.configuration.Settings.setting;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 
 @Description( "Settings for Causal Clustering" )
 public class CausalClusteringSettings implements LoadableConfig

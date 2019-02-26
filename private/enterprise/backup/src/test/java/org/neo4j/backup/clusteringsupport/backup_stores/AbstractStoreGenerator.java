@@ -18,8 +18,8 @@ import java.util.UUID;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 
 import static org.neo4j.backup.clusteringsupport.BackupUtil.createBackupFromCore;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public abstract class AbstractStoreGenerator implements BackupStore
 {

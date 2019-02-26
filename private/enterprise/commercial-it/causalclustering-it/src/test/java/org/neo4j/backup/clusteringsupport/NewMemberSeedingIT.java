@@ -31,7 +31,7 @@ import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStore;
 import org.neo4j.backup.clusteringsupport.cluster_load.ClusterLoad;
 import org.neo4j.backup.clusteringsupport.cluster_load.NoLoad;
 import org.neo4j.backup.clusteringsupport.cluster_load.SmallBurst;
-import org.neo4j.graphdb.factory.GraphDatabaseSettings;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;

@@ -50,7 +50,7 @@ import org.neo4j.logging.FormattedLogProvider;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * Warning! This test ensures that all raft protocol work as expected in their current implementation. However, it does not know about changes to the

@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 import static com.neo4j.bench.client.util.BenchmarkUtil.deleteDir;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class Store implements AutoCloseable
 {

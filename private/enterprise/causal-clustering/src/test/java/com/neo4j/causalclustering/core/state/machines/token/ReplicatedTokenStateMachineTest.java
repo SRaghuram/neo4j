@@ -32,7 +32,7 @@ import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeader
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ReplicatedTokenStateMachineTest
 {
