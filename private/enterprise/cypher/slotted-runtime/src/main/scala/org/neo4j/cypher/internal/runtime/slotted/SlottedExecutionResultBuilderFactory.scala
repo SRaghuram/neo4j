@@ -11,10 +11,12 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.{BaseExecutionResultBuilderFactory, ExecutionResultBuilder}
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 import org.neo4j.cypher.result.QueryResult
+import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
 class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                            queryIndexes: QueryIndexes,
+                                           nExpressionSlots: Int,
                                            readOnly: Boolean,
                                            columns: Seq[String],
                                            logicalPlan: LogicalPlan,
@@ -34,6 +36,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                             params,
                             cursors,
                             queryIndexes.indexes.map(index => queryContext.transactionalContext.dataRead.indexReadSession(index)),
+                            new Array[AnyValue](nExpressionSlots),
                             pipeDecorator,
                             lenientCreateRelationship = lenientCreateRelationship,
                             prePopulateResults = prePopulateResults,

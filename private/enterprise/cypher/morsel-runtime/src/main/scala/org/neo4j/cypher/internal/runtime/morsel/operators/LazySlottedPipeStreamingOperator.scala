@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, ExpressionCursors, Q
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
 trait LazySlottedPipeStreamingOperator extends StreamingOperator with InitialComposableOperator[Pipe] {
@@ -38,30 +39,34 @@ class LazySlottedPipeComposableOperator(val workIdentity: WorkIdentity,
 object LazySlottedPipeStreamingOperator {
   private val pipeDecorator: PipeDecorator = NullPipeDecorator // TODO: Support monitoring etc.
 
-  def createSlottedQueryState(queryContext: QueryContext, morselQueryState: QueryState, cursors: ExpressionCursors): SlottedQueryState = {
+  def createSlottedQueryState(queryContext: QueryContext,
+                              morselQueryState: QueryState,
+                              resources: QueryResources): SlottedQueryState = {
     val externalResource: ExternalCSVResource = new CSVResources(queryContext.resources)
     new SlottedQueryState(queryContext,
-      externalResource,
-      morselQueryState.params,
-      cursors,
-      morselQueryState.queryIndexes,
-      pipeDecorator,
-      lenientCreateRelationship = false)
+                          externalResource,
+                          morselQueryState.params,
+                          resources.expressionCursors,
+                          morselQueryState.queryIndexes,
+                          resources.expressionSlots(morselQueryState.nExpressionSlots),
+                          pipeDecorator,
+                          lenientCreateRelationship = false)
   }
 
   def createFeedPipeQueryState(inputMorsel: MorselExecutionContext,
                                queryContext: QueryContext,
                                morselQueryState: QueryState,
-                               cursors: ExpressionCursors): FeedPipeQueryState = {
+                               resources: QueryResources): FeedPipeQueryState = {
     val externalResource: ExternalCSVResource = new CSVResources(queryContext.resources)
     new FeedPipeQueryState(queryContext,
-      externalResource,
-      morselQueryState.params,
-      cursors,
-      morselQueryState.queryIndexes,
-      pipeDecorator,
-      lenientCreateRelationship = false,
-      inputMorsel = inputMorsel)
+                           externalResource,
+                           morselQueryState.params,
+                           resources.expressionCursors,
+                           morselQueryState.queryIndexes,
+                           resources.expressionSlots(morselQueryState.nExpressionSlots),
+                           pipeDecorator,
+                           lenientCreateRelationship = false,
+                           inputMorsel = inputMorsel)
   }
 }
 
@@ -70,17 +75,18 @@ class FeedPipeQueryState(query: QueryContext,
                          params: MapValue,
                          cursors: ExpressionCursors,
                          queryIndexes: Array[IndexReadSession],
+                         expressionSlots: Array[AnyValue],
                          decorator: PipeDecorator = NullPipeDecorator,
                          initialContext: Option[ExecutionContext] = None,
                          cachedIn: SingleThreadedLRUCache[Any, InCheckContainer] = new SingleThreadedLRUCache(maxSize = 16),
                          lenientCreateRelationship: Boolean = false,
                          var inputMorsel: MorselExecutionContext = null)
-  extends SlottedQueryState(query, resources, params, cursors, queryIndexes, decorator, initialContext, cachedIn, lenientCreateRelationship) {
+  extends SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, initialContext, cachedIn, lenientCreateRelationship) {
 
   var isNextRowReady: Boolean = false
 
   override def withInitialContext(initialContext: ExecutionContext): FeedPipeQueryState = {
-    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, decorator, Some(initialContext), cachedIn, lenientCreateRelationship, inputMorsel)
+    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, Some(initialContext), cachedIn, lenientCreateRelationship, inputMorsel)
   }
 }
 

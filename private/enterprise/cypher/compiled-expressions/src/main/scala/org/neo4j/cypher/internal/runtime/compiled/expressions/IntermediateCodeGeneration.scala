@@ -621,8 +621,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[ExecutionContext](innerContext),
-          assign(innerContext,
-                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
+          assign(innerContext, loadContext(currentContext)),
+//                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
           declare[Value](isMatch),
           assign(isMatch, truthValue),
           // Iterator<AnyValue> listIterator = list.iterator();

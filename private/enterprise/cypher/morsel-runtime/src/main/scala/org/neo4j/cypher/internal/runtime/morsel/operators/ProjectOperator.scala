@@ -36,7 +36,8 @@ class ProjectOperator(val workIdentity: WorkIdentity,
                                        resources = null,
                                        params = state.params,
                                        resources.expressionCursors,
-                                       Array.empty[IndexReadSession])
+                                       Array.empty[IndexReadSession],
+                                       resources.expressionSlots(state.nExpressionSlots))
 
     while (currentRow.isValidRow) {
       project.foreach(p => p(currentRow, queryState))

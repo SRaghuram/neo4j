@@ -403,7 +403,6 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     result.toList should equal(List(Map("size" -> 3)))
   }
 
-  // FAIL: Ouch, no suitable slot for key   UNNAMED58 = -[0]-
   test("pattern comprehension inside list comprehension") {
     val a = createLabeledNode("X", "A")
     val m1 = createLabeledNode("Y")

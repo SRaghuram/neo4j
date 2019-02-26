@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans.{AbstractSelectOrSemiApply, AbstractSemiApply, Aggregation, AllNodesScan, AntiConditionalApply, Apply, Argument, AssertSameNode, CartesianProduct, ConditionalApply, Create, DeleteExpression, DeleteNode, DeletePath, DeleteRelationship, DetachDeleteExpression, DetachDeleteNode, DetachDeletePath, Distinct, DropResult, Eager, EmptyResult, ErrorPlan, Expand, ExpandAll, ExpandInto, ForeachApply, IncludeTies, Limit, LockNodes, LogicalPlan, MergeCreateNode, MergeCreateRelationship, NodeByLabelScan, NodeHashJoin, NodeIndexScan, NodeIndexSeek, NodeUniqueIndexSeek, Optional, OptionalExpand, ProduceResult, Projection, RemoveLabels, RollUpApply, Selection, SetLabels, SetNodePropertiesFromMap, SetNodeProperty, SetProperty, SetRelationshipPropertiesFromMap, SetRelationshipProperty, Skip, Sort, Top, Union, UnwindCollection, ValueHashJoin, VarExpand}
+import org.neo4j.cypher.internal.v4_0.logical.plans.{AbstractSelectOrSemiApply, AbstractSemiApply, Aggregation, AllNodesScan, AntiConditionalApply, Apply, Argument, AssertSameNode, CartesianProduct, ConditionalApply, Create, DeleteExpression, DeleteNode, DeletePath, DeleteRelationship, DetachDeleteExpression, DetachDeleteNode, DetachDeletePath, Distinct, DropResult, Eager, EmptyResult, ErrorPlan, Expand, ExpandAll, ExpandInto, ForeachApply, IncludeTies, Limit, LockNodes, LogicalPlan, MergeCreateNode, MergeCreateRelationship, NodeByLabelScan, NodeHashJoin, NodeIndexScan, NodeIndexSeek, NodeUniqueIndexSeek, Optional, OptionalExpand, ProduceResult, Projection, RemoveLabels, RollUpApply, Selection, SetLabels, SetNodePropertiesFromMap, SetNodeProperty, SetProperty, SetRelationshipPropertiesFromMap, SetRelationshipProperty, Skip, Sort, Top, Union, UnwindCollection, ValueHashJoin, VarExpand, VariablePredicate}
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -73,7 +73,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onLeaf(plan)
     }
-    pipe.setExecutionContextFactory(SlottedExecutionContextFactory(slots))
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
     pipe
   }
 
@@ -137,10 +137,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // The node/edge predicates are evaluated on the source pipeline, not the produced one
         val sourceSlots = physicalPlan.slotConfigurations(sourcePlan.id)
-        val tempNodeOffset = nodePredicate.map(x => sourceSlots.getLongOffsetFor(x.variable.name)).getOrElse(-1)
-        val tempRelationshipOffset = relationshipPredicate.map(x => sourceSlots.getLongOffsetFor(x.variable.name)).getOrElse(-1)
-        val numTemps = (nodePredicate ++ relationshipPredicate).size
-        val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs - numTemps, sourceSlots.numberOfReferences)
+        val tempNodeOffset = expressionSlotForPredicate(nodePredicate)
+        val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)
+        val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs, sourceSlots.numberOfReferences)
         VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, LazyTypes(types.toArray), min,
           max, shouldExpandAll, slots,
           tempNodeOffset = tempNodeOffset,
@@ -312,9 +311,17 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onOneChildPlan(plan, source)
     }
-    pipe.setExecutionContextFactory(SlottedExecutionContextFactory(slots))
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
     pipe
   }
+
+  private def expressionSlotForPredicate(predicate: Option[VariablePredicate]): Int =
+    predicate match {
+      case None => -1
+      case Some(VariablePredicate(ExpressionVariable(offset, _), _)) => offset
+      case Some(VariablePredicate(v, _)) =>
+        throw new InternalException(s"Failure during slotted physical planning: the expression slot of variable $v has not been allocated.")
+    }
 
   private def refSlotAndNotAlias(slots: SlotConfiguration, k: String) = {
     !slots.isAlias(k) &&
@@ -455,7 +462,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _ =>
         fallback.onTwoChildPlan(plan, lhs, rhs)
     }
-    pipe.setExecutionContextFactory(SlottedExecutionContextFactory(slots))
+    pipe.executionContextFactory = SlottedExecutionContextFactory(slots)
     pipe
   }
 

@@ -5,9 +5,10 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.ir.v4_0.{HasHeaders, NoHeaders, ShortestPathPattern}
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
+import org.neo4j.cypher.internal.ir.v4_0.{HasHeaders, NoHeaders, ShortestPathPattern}
+import org.neo4j.cypher.internal.runtime.expressionVariables.AvailableExpressionVariables
 import org.neo4j.cypher.internal.v4_0.ast.ProcedureResultItem
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions._
@@ -51,8 +52,11 @@ object SlotAllocation {
   def allocateSlots(lp: LogicalPlan,
                     semanticTable: SemanticTable,
                     breakingPolicy: PipelineBreakingPolicy,
+                    availableExpressionVariables: AvailableExpressionVariables,
                     allocateArgumentSlots: Boolean = false): SlotMetaData =
-    new SingleQuerySlotAllocator(allocateArgumentSlots, breakingPolicy).allocateSlots(lp, semanticTable, None)
+    new SingleQuerySlotAllocator(allocateArgumentSlots,
+                                 breakingPolicy,
+                                 availableExpressionVariables).allocateSlots(lp, semanticTable, None)
 }
 
 /**
@@ -60,7 +64,8 @@ object SlotAllocation {
   */
 //noinspection NameBooleanParameters,RedundantDefaultArgument
 class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: Boolean,
-                                                         breakingPolicy: PipelineBreakingPolicy) {
+                                                         breakingPolicy: PipelineBreakingPolicy,
+                                                         availableExpressionVariables: AvailableExpressionVariables) {
 
   import SlotAllocation._
 
@@ -208,7 +213,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       //-----------------------------------------------------
       // Logical plans
       //-----------------------------------------------------
-      case p: LogicalPlan if p.id != planId =>
+      case otherPlan: LogicalPlan if otherPlan.id != planId =>
         acc: Accumulator => (acc, DO_NOT_TRAVERSE_INTO_CHILDREN) // Do not traverse the logical plan tree! We are only looking at the given lp
 
       case ValueHashJoin(_, _, Equals(_, rhsExpression)) if shouldAllocateLhs =>
@@ -227,30 +232,21 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       //-----------------------------------------------------
       // Expressions
       //-----------------------------------------------------
-      case e: ScopeExpression =>
-        acc: Accumulator => {
-          if (acc.doNotTraverseExpression == e)
-            (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
-          else {
-            e.introducedVariables.foreach {
-              case Variable(name) =>
-                slots.newReference(name, true, CTAny)
-            }
-            (acc, TRAVERSE_INTO_CHILDREN)
-          }
-        }
-
       case e: NestedPlanExpression =>
         acc: Accumulator => {
           if (acc.doNotTraverseExpression.contains(e))
             (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
           else {
             val argumentSlotConfiguration = breakingPolicy.invokeOnNestedPlan(slots)
+            availableExpressionVariables(e.plan.id).foreach { expVar =>
+              argumentSlotConfiguration.newReference(expVar.name, nullable = true, CTAny)
+            }
+
             val slotsAndArgument = SlotsAndArgument(argumentSlotConfiguration, argumentSlotConfiguration.size(), applyPlans(planId))
 
             // Allocate slots for nested plan
             // Pass in mutable attributes to be modified by recursive call
-            val nestedPhysicalPlan = allocateSlots(e.plan, semanticTable, initialSlotsAndArgument = Some(slotsAndArgument))
+            val nestedPhysicalPlan = allocateSlots(e.plan, semanticTable, Some(slotsAndArgument))
 
             // Allocate slots for the projection expression, based on the resulting slot configuration
             // from the inner plan
@@ -387,44 +383,13 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // we do not need to record the argument here.
         slots.newLong(rel, nullable = true, CTRelationship)
 
-      case VarExpand(_,
-                       _,
-                       _,
-                       _,
-                       _,
-                       to,
-                       edge,
-                       _,
-                       expansionMode,
-                       maybeNodePredicate,
-                       maybeEdgePredicate) =>
-        // We allocate these on the incoming pipeline after cloning it, since we don't need these slots in
-        // the produced rows
-        maybeNodePredicate.foreach(x => source.newLong(x.variable.name, nullable = false, CTNode))
-        maybeEdgePredicate.foreach(x => source.newLong(x.variable.name, nullable = false, CTRelationship))
-
+      case VarExpand(_, _, _, _, _, to, edge, _, expansionMode, _, _) =>
         if (expansionMode == ExpandAll) {
           slots.newLong(to, nullable, CTNode)
         }
         slots.newReference(edge, nullable, CTList(CTRelationship))
 
-      case PruningVarExpand(_,
-                            from,
-                            _,
-                            _,
-                            to,
-                            _,
-                            _,
-                            maybeNodePredicate,
-                            maybeEdgePredicate) =>
-        maybeNodePredicate.foreach { x =>
-          source.newLong(x.variable.name, false, CTNode)
-          slots.newLong(x.variable.name, false, CTNode)
-        }
-        maybeEdgePredicate.foreach { x =>
-          source.newLong(x.variable.name, false, CTRelationship)
-          slots.newLong(x.variable.name, false, CTRelationship)
-        }
+      case PruningVarExpand(_, from, _, _, to, _, _, _, _) =>
         slots.newLong(from, nullable, CTNode)
         slots.newLong(to, nullable, CTNode)
 

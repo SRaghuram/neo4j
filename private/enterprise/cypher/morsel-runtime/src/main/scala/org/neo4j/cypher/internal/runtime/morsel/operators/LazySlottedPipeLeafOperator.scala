@@ -17,7 +17,7 @@ class LazySlottedPipeLeafOperator(val workIdentity: WorkIdentity, val initialSou
   extends LazySlottedPipeStreamingOperator {
 
   override def init(context: QueryContext, state: QueryState, inputMorsel: MorselExecutionContext, resources: QueryResources): IndexedSeq[ContinuableOperatorTask] = {
-    val slottedQueryState: SlottedQueryState = LazySlottedPipeStreamingOperator.createSlottedQueryState(context, state, resources.expressionCursors)
+    val slottedQueryState: SlottedQueryState = LazySlottedPipeStreamingOperator.createSlottedQueryState(context, state, resources)
     IndexedSeq(new OTask(inputMorsel, slottedQueryState))
   }
 

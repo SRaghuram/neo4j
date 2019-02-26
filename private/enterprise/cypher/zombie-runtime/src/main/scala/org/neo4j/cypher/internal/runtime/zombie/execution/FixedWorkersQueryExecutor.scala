@@ -47,6 +47,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        params: MapValue,
                                        schedulerTracer: SchedulerTracer,
                                        queryIndexes: Array[IndexReadSession],
+                                       nExpressionSlots: Int,
                                        visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle = {
 
     val queryState = QueryState(params,
@@ -55,6 +56,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 queryIndexes,
                                 transactionBinder,
                                 numberOfWorkers = 1,
+                                nExpressionSlots,
                                 inputDataStream)
 
     val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory)

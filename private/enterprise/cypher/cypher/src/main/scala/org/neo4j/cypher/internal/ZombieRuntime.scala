@@ -34,7 +34,8 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
                                             query.semanticTable,
-                                            ZombiePipelineBreakingPolicy)
+                                            ZombiePipelineBreakingPolicy,
+                                            allocateArgumentSlots = true)
 
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
@@ -78,6 +79,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     ZombieExecutionPlan(executablePipelines,
                         stateDefinition,
                         queryIndexes,
+                        physicalPlan.nExpressionSlots,
                         physicalPlan.logicalPlan,
                         query.resultColumns,
                         executor,
@@ -87,6 +89,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   case class ZombieExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
                                  stateDefinition: StateDefinition,
                                  queryIndexes: QueryIndexes,
+                                 nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
                                  fieldNames: Array[String],
                                  queryExecutor: QueryExecutor,
@@ -105,6 +108,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
       new ZombieRuntimeResult(executablePipelines,
                               stateDefinition,
                               queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
+                              nExpressionSlots,
                               inputDataStream,
                               logicalPlan,
                               queryContext,
@@ -126,6 +130,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
   class ZombieRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
                             stateDefinition: StateDefinition,
                             queryIndexes: Array[IndexReadSession],
+                            nExpressionSlots: Int,
                             inputDataStream: InputDataStream,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
@@ -145,6 +150,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                                   params,
                                                   schedulerTracer,
                                                   queryIndexes,
+                                                  nExpressionSlots,
                                                   visitor)
 
       executionHandle.await()

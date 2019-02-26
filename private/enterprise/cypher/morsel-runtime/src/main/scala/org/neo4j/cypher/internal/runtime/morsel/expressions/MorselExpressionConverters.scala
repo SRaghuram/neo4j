@@ -60,7 +60,9 @@ object MorselExpressionConverters extends ExpressionConverter {
     // We need to convert NestedPipeExpression here so we can register a noop dummy pipe as owner
     // TODO: Later we may want to establish a connection with the id of the operator for proper PROFILE support
     case e: NestedPipeExpression =>
-      val ce = commandexpressions.NestedPipeExpression(e.pipe, self.toCommandExpression(id, e.projection))
+      val ce = commandexpressions.NestedPipeExpression(e.pipe,
+                                                       self.toCommandExpression(id, e.projection),
+                                                       e.availableExpressionVariables.map(exp => commandexpressions.ExpressionVariable(exp.offset, exp.name)))
       ce.registerOwningPipe(new NoPipe)
       Some(ce)
 

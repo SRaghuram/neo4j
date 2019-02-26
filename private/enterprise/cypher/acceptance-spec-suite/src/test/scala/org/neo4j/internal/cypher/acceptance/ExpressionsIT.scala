@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{ast, _}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
+import org.neo4j.cypher.internal.runtime.expressionVariables.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -3692,15 +3693,16 @@ class InterpretedExpressionIT extends ExpressionsIT {
   }
 
 
-  private def state(dbAccess: DbAccess, params: MapValue, cursors: ExpressionCursors) = new QueryState(dbAccess
-                                         .asInstanceOf[QueryContext],
-                                       null,
-                                       params,
-                                       cursors,
-                                       Array.empty)
+  private def state(dbAccess: DbAccess, params: MapValue, cursors: ExpressionCursors) =
+    new QueryState(dbAccess.asInstanceOf[QueryContext],
+                   null,
+                   params,
+                   cursors,
+                   Array.empty,
+                   Array.empty[AnyValue])
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
-    val plan = PhysicalPlan(null, 0, new SlotConfigurations, new ArgumentSizes, new ApplyPlans)
+    val plan = PhysicalPlan(null, 0, new SlotConfigurations, new ArgumentSizes, new ApplyPlans, new AvailableExpressionVariables)
     val id = Id(0)
     plan.slotConfigurations.set(id, slots)
     val converters = new ExpressionConverters(SlottedExpressionConverters(plan),

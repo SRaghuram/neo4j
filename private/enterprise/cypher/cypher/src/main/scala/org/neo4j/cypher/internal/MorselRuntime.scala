@@ -69,6 +69,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     MorselExecutionPlan(operators,
                         physicalPlan.slotConfigurations,
                         queryIndexes,
+                        physicalPlan.nExpressionSlots,
                         physicalPlan.logicalPlan,
                         fieldNames,
                         dispatcher,
@@ -84,13 +85,14 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val interpretedPipeMapper = InterpretedPipeMapper(query.readOnly, converters, context.tokenContext, queryIndexes)(query.semanticTable)
     val slottedPipeMapper = new SlottedPipeMapper(interpretedPipeMapper, converters, physicalPlan, query.readOnly, queryIndexes)(query.semanticTable, context.tokenContext)
     val pipeTreeBuilder = PipeTreeBuilder(slottedPipeMapper)
-    val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, physicalPlan.logicalPlan)
+    val logicalPlanWithConvertedNestedPlans = NestedPipeExpressions.build(pipeTreeBuilder, physicalPlan.logicalPlan, physicalPlan.availableExpressionVariables)
     (slottedPipeMapper, logicalPlanWithConvertedNestedPlans)
   }
 
   case class MorselExecutionPlan(operators: Pipeline,
                                  slots: SlotConfigurations,
                                  queryIndexes: QueryIndexes,
+                                 nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
                                  fieldNames: Array[String],
                                  dispatcher: Dispatcher,
@@ -112,6 +114,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
       new MorselRuntimeResult(operators,
                               queryIndexes.indexes.map(x => queryContext.transactionalContext.dataRead.indexReadSession(x)),
+                              nExpressionSlots,
                               logicalPlan,
                               queryContext,
                               params,
@@ -131,6 +134,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
   class MorselRuntimeResult(operators: Pipeline,
                             queryIndexes: Array[IndexReadSession],
+                            nExpressionSlots: Int,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
                             params: MapValue,
@@ -143,7 +147,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     private var resultRequested = false
 
     override def accept[E <: Exception](visitor: QueryResultVisitor[E]): Unit = {
-      dispatcher.execute(operators, queryContext, params, schedulerTracer, queryIndexes, input)(visitor)
+      dispatcher.execute(operators, queryContext, params, schedulerTracer, queryIndexes, nExpressionSlots, input)(visitor)
       resultRequested = true
     }
 

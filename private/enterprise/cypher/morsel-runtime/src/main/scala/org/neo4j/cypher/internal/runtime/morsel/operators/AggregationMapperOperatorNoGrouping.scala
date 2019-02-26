@@ -31,7 +31,8 @@ class AggregationMapperOperatorNoGrouping(val workIdentity: WorkIdentity,
                                        resources = null,
                                        params = state.params,
                                        resources.expressionCursors,
-                                       Array.empty[IndexReadSession])
+                                       Array.empty[IndexReadSession],
+                                       resources.expressionSlots(state.nExpressionSlots))
 
     val hasInput = currentRow.isValidRow
 

@@ -40,10 +40,11 @@ class AggregationReduceOperator(val workIdentity: WorkIdentity,
                          resources: QueryResources): Unit = {
 
       val queryState = new OldQueryState(context,
-        resources = null,
-        params = state.params,
-        resources.expressionCursors,
-        Array.empty[IndexReadSession])
+                                         resources = null,
+                                         params = state.params,
+                                         resources.expressionCursors,
+                                         Array.empty[IndexReadSession],
+                                         resources.expressionSlots(state.nExpressionSlots))
 
       if (null == aggregates) {
         aggregates = aggregateInputs(inputMorsels, queryState)

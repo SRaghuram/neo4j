@@ -19,6 +19,7 @@ case class QueryState(params: MapValue,
                       queryIndexes: Array[IndexReadSession],
                       transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeProxy logic
                       numberOfWorkers: Int,
+                      nExpressionSlots: Int,
                       input: InputDataStream,
                       reduceCollector: Option[ReduceCollector] = None) {
 

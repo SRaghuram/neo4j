@@ -29,6 +29,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                        params: MapValue,
                                        schedulerTracer: SchedulerTracer,
                                        queryIndexes: Array[IndexReadSession],
+                                       nExpressionSlots: Int,
                                        visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle = {
 
     val resources = new QueryResources(queryContext.transactionalContext.cursors)
@@ -38,6 +39,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                 queryIndexes,
                                 transactionBinder,
                                 numberOfWorkers = 1,
+                                nExpressionSlots,
                                 inputDataStream)
 
     val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory)

@@ -17,7 +17,9 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.{RelationshipValue, VirtualValues}
+import org.neo4j.values.AnyValue
+import org.neo4j.values.virtual.VirtualValues.EMPTY_LIST
 
 import scala.collection.mutable
 
@@ -82,8 +84,8 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
 
             if (relationshipIsUniqueInPath) {
               // Before expanding, check that both the edge and node in question fulfil the predicate
-              if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, relId) &&
-                  predicateIsTrue(row, state, tempNodeOffset, nodePredicate, relationship.otherNodeId(fromNode))
+              if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, VirtualValues.relationship(relId)) &&
+                  predicateIsTrue(row, state, tempNodeOffset, nodePredicate, VirtualValues.node(relationship.otherNodeId(fromNode)))
               ) {
                 // TODO: This call creates an intermediate NodeProxy which should not be necessary
                 stack.push((relationship.otherNodeId(fromNode), rels.append(relationship)))
@@ -122,7 +124,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
         }
         else {
           // Ensure that the start-node also adheres to the node predicate
-          if (predicateIsTrue(inputRow, state, tempNodeOffset, nodePredicate, fromNode)) {
+          if (predicateIsTrue(inputRow, state, tempNodeOffset, nodePredicate, VirtualValues.node(fromNode))) {
 
             val paths: Iterator[(LNode, RelationshipContainer)] = varLengthExpand(fromNode, state, inputRow)
             paths collect {
@@ -146,9 +148,9 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                               state: QueryState,
                               tempOffset: Int,
                               predicate: Expression,
-                              entity: Long): Boolean =
+                              entity: AnyValue): Boolean =
     tempOffset == -1 || {
-      row.setLongAt(tempOffset, entity)
+      state.expressionSlots(tempOffset) = entity
       predicate(row, state) eq Values.TRUE
     }
 
