@@ -31,7 +31,9 @@ public class ChannelPoolService implements Lifecycle
     private final JobScheduler scheduler;
     private final Group group;
     private final ChannelPoolHandler poolHandler;
-    private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock.WriteLock exclusiveService = lock.writeLock();
+    private final ReentrantReadWriteLock.ReadLock sharedService = lock.readLock();
     private CompletableFuture<PooledChannel> lifeCompletionStage;
     private SimpleChannelPoolMap poolMap;
     private EventLoopGroup eventLoopGroup;
@@ -47,7 +49,7 @@ public class ChannelPoolService implements Lifecycle
 
     public CompletableFuture<PooledChannel> acquire( AdvertisedSocketAddress advertisedSocketAddress )
     {
-        readWriteLock.readLock().lock();
+        sharedService.lock();
         try
         {
             if ( poolMap == null )
@@ -59,7 +61,7 @@ public class ChannelPoolService implements Lifecycle
         }
         finally
         {
-            readWriteLock.readLock().unlock();
+            sharedService.unlock();
         }
     }
 
@@ -72,7 +74,7 @@ public class ChannelPoolService implements Lifecycle
     @Override
     public void start()
     {
-        readWriteLock.writeLock().lock();
+        exclusiveService.lock();
         try
         {
             lifeCompletionStage = new CompletableFuture<>();
@@ -82,14 +84,14 @@ public class ChannelPoolService implements Lifecycle
         }
         finally
         {
-            readWriteLock.writeLock().unlock();
+            exclusiveService.unlock();
         }
     }
 
     @Override
     public void stop()
     {
-        readWriteLock.writeLock().lock();
+        exclusiveService.lock();
         try
         {
             lifeCompletionStage.completeExceptionally( new IllegalStateException( "Lifecycle has stopped" ) );
@@ -102,7 +104,7 @@ public class ChannelPoolService implements Lifecycle
         }
         finally
         {
-            readWriteLock.writeLock().unlock();
+            exclusiveService.unlock();
         }
     }
 
@@ -114,14 +116,14 @@ public class ChannelPoolService implements Lifecycle
 
     public Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols()
     {
-        readWriteLock.readLock().lock();
+        sharedService.lock();
         try
         {
             return poolMap == null ? Stream.empty() : poolMap.installedProtocols();
         }
         finally
         {
-            readWriteLock.readLock().unlock();
+            sharedService.unlock();
         }
     }
 }
