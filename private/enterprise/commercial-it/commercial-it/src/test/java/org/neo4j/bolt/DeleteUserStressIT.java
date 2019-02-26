@@ -47,7 +47,7 @@ public class DeleteUserStressIT
         try ( Session session = adminDriver.session();
               Transaction tx = session.beginTransaction() )
         {
-            tx.run( "CALL dbms.changePassword('abc')" ).consume();
+            tx.run( "CALL dbms.security.changePassword('abc')" ).consume();
             tx.success();
         }
         adminDriver.close();
