@@ -61,6 +61,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class StoreCopyClientIT
 {
@@ -313,7 +314,7 @@ public class StoreCopyClientIT
         }
         catch ( StoreCopyFailedException e )
         {
-            assertableLogProvider.containsMatchingLogCall( AssertableLogProvider.inLog( StoreCopyClient.class )
+            assertableLogProvider.containsMatchingLogCall( inLog( StoreCopyClient.class )
                     .warn( any( String.class ), equalTo( "Connection refused: localhost/127.0.0.1:" + port ) ) );
         }
     }

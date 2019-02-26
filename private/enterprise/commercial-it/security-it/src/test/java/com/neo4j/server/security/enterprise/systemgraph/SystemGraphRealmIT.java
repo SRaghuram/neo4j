@@ -568,11 +568,11 @@ class SystemGraphRealmIT
         // Try twice to rule out differences if authentication info has been cached or not
         for ( int i = 0; i < 2; i++ )
         {
-            assertThrows( AuthenticationException.class, () -> assertNull( realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) ) );
+            assertThrows( AuthenticationException.class, () -> realm.getAuthenticationInfo( testAuthenticationToken( username, username ) ) );
         }
 
         // Also test the non-cached result explicitly
-        assertThrows( AuthenticationException.class, () -> assertNull( realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) ) );
+        assertThrows( AuthenticationException.class, () -> realm.doGetAuthenticationInfo( testAuthenticationToken( username, username ) ) );
     }
 
     private static void assertAuthenticationFailsWithTooManyAttempts( SystemGraphRealm realm, String username, int attempts )

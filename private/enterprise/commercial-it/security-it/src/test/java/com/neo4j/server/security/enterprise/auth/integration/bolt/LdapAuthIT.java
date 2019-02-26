@@ -27,7 +27,6 @@ import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.ldap.handlers.extended.StartTlsHandler;
 import org.apache.shiro.realm.ldap.JndiLdapContextFactory;
-import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -154,9 +153,9 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
 
             // then
             // Assuming showCurrentUser has fields username, roles, flags
-            MatcherAssert.assertThat( record.get( 0 ).asString(), equalTo( "smith" ) );
-            MatcherAssert.assertThat( record.get( 1 ).asList(), equalTo( Collections.emptyList() ) );
-            MatcherAssert.assertThat( record.get( 2 ).asList(), equalTo( Collections.emptyList() ) );
+            assertThat( record.get( 0 ).asString(), equalTo( "smith" ) );
+            assertThat( record.get( 1 ).asList(), equalTo( Collections.emptyList() ) );
+            assertThat( record.get( 2 ).asList(), equalTo( Collections.emptyList() ) );
         }
     }
 
@@ -208,7 +207,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
                 try ( Transaction tx = session.beginTransaction() )
                 {
                     tx.run( "CALL dbms.security.clearAuthCache()" );
-                    MatcherAssert.assertThat( tx.run( "MATCH (n) RETURN count(n)" ).single().get( 0 ).asInt(), greaterThanOrEqualTo( 0 ) );
+                    assertThat( tx.run( "MATCH (n) RETURN count(n)" ).single().get( 0 ).asInt(), greaterThanOrEqualTo( 0 ) );
                     tx.success();
                 }
             }
@@ -219,7 +218,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
     public void shouldKeepAuthorizationForLifetimeOfTransaction() throws Throwable
     {
         assertKeepAuthorizationForLifetimeOfTransaction( "neo",
-                tx -> MatcherAssert.assertThat( tx.run( "MATCH (n) RETURN count(n)" ).single().get( 0 ).asInt(), greaterThanOrEqualTo( 0 ) ) );
+                tx -> assertThat( tx.run( "MATCH (n) RETURN count(n)" ).single().get( 0 ).asInt(), greaterThanOrEqualTo( 0 ) ) );
     }
 
     @Test
@@ -228,7 +227,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         restartServerWithOverriddenSettings( SecuritySettings.ldap_authorization_group_to_role_mapping.name(), "503=admin;504=role1" );
         dbRule.resolveDependency( GlobalProcedures.class ).registerProcedure( ProcedureInteractionTestBase.ClassWithProcedures.class );
         assertKeepAuthorizationForLifetimeOfTransaction( "smith",
-                tx -> MatcherAssert.assertThat( tx.run( "CALL test.staticReadProcedure()" ).single().get( 0 ).asString(), equalTo( "static" ) ) );
+                tx -> assertThat( tx.run( "CALL test.staticReadProcedure()" ).single().get( 0 ).asString(), equalTo( "static" ) ) );
     }
 
     private void assertKeepAuthorizationForLifetimeOfTransaction( String username, Consumer<Transaction> assertion ) throws Throwable
@@ -286,7 +285,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         }
         catch ( TransientException e )
         {
-            MatcherAssert.assertThat( e.getMessage(), equalTo( LdapRealm.LDAP_CONNECTION_REFUSED_CLIENT_MESSAGE ) );
+            assertThat( e.getMessage(), equalTo( LdapRealm.LDAP_CONNECTION_REFUSED_CLIENT_MESSAGE ) );
         }
     }
 
@@ -350,7 +349,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
             }
             catch ( TransientException e )
             {
-                MatcherAssert.assertThat( e.getMessage(), equalTo( LdapRealm.LDAP_READ_TIMEOUT_CLIENT_MESSAGE ) );
+                assertThat( e.getMessage(), equalTo( LdapRealm.LDAP_READ_TIMEOUT_CLIENT_MESSAGE ) );
             }
         }
     }
@@ -482,7 +481,7 @@ public class LdapAuthIT extends EnterpriseAuthenticationTestBase
         }
         catch ( TransientException e )
         {
-            MatcherAssert.assertThat( e.getMessage(), equalTo( LdapRealm.LDAP_CONNECTION_REFUSED_CLIENT_MESSAGE ) );
+            assertThat( e.getMessage(), equalTo( LdapRealm.LDAP_CONNECTION_REFUSED_CLIENT_MESSAGE ) );
         }
 
         assertSecurityLogContains( "ERROR" );

@@ -8,7 +8,6 @@ package com.neo4j.commandline.admin.security;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
-import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,7 +33,11 @@ import org.neo4j.server.security.auth.LegacyCredential;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.commandline.admin.security.ImportAuthCommand.COMMAND_NAME;
 import static com.neo4j.commandline.admin.security.ImportAuthCommand.IMPORT_SYSTEM_DATABASE_NAME;
+import static com.neo4j.commandline.admin.security.ImportAuthCommand.OFFLINE_ARG_NAME;
+import static com.neo4j.commandline.admin.security.ImportAuthCommand.ROLE_ARG_NAME;
+import static com.neo4j.commandline.admin.security.ImportAuthCommand.USER_ARG_NAME;
 import static com.neo4j.server.security.enterprise.CommercialSecurityModule.ROLE_STORE_FILENAME;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -90,7 +93,7 @@ public class ImportAuthCommandIT
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME );
 
         // Then
         assertUserImportFileContainsOnly( "jane", "alice", "bob", "jim" );
@@ -110,8 +113,8 @@ public class ImportAuthCommandIT
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME );
 
         // Then
         assertUserImportFileContainsOnly( "jane", "alice", "bob", "jim" );
@@ -130,8 +133,8 @@ public class ImportAuthCommandIT
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker", "bob" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
 
         // Then
         assertUserImportFileContainsOnly( "alice", "bob" );
@@ -149,9 +152,9 @@ public class ImportAuthCommandIT
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker", "bob" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
-                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
 
         // Then
         assertUserImportFileContainsOnly( "alice", "bob" );
@@ -172,7 +175,7 @@ public class ImportAuthCommandIT
         assertNoRoleImportFile();
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME );
 
         // Then
         assertUserImportFileContainsOnly( "jim", "john" );
@@ -185,9 +188,9 @@ public class ImportAuthCommandIT
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "duct_taper", "alice" );
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker", "bob" );
 
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
-                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME );
 
         // Then
         assertUserImportFileContainsOnly( "alice", "bob" );
@@ -203,8 +206,8 @@ public class ImportAuthCommandIT
         insertRole( ROLE_STORE_FILENAME, "taskmaster" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.USER_ARG_NAME, "this_file_does_not_exist" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + USER_ARG_NAME, "this_file_does_not_exist" );
 
         // Then
         verify( out ).stdErrLine( "command failed: " + getFile( "this_file_does_not_exist" ).getAbsolutePath() );
@@ -219,8 +222,8 @@ public class ImportAuthCommandIT
         insertUsers( USER_STORE_FILENAME, "alice" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.ROLE_ARG_NAME, "this_file_does_not_exist" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + ROLE_ARG_NAME, "this_file_does_not_exist" );
 
         // Then
         verify( out ).stdErrLine( "command failed: " + getFile( "this_file_does_not_exist" ).getAbsolutePath() );
@@ -234,7 +237,7 @@ public class ImportAuthCommandIT
         // Given no default user or role store files
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME );
 
         // Then
         verify( out ).stdErrLine( "command failed: " + getFile( USER_STORE_FILENAME ).getAbsolutePath() );
@@ -252,8 +255,8 @@ public class ImportAuthCommandIT
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + OFFLINE_ARG_NAME, "true" );
 
         // Then
         assertSuccessfulOutputMessageForOfflineMode();
@@ -270,8 +273,8 @@ public class ImportAuthCommandIT
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + OFFLINE_ARG_NAME, "true" );
 
         // Then
         assertSuccessfulOutputMessageForOfflineMode();
@@ -281,10 +284,10 @@ public class ImportAuthCommandIT
         insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "mia" );
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker", "mia" );
 
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
-                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
-                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
+                "--" + OFFLINE_ARG_NAME, "true" );
 
         // Then
         assertSuccessfulOutputMessageForOfflineMode( 2 );
@@ -301,8 +304,8 @@ public class ImportAuthCommandIT
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + OFFLINE_ARG_NAME, "true" );
 
         // Then
         assertSuccessfulOutputMessageForOfflineMode();
@@ -312,10 +315,10 @@ public class ImportAuthCommandIT
         insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "alice" ); // Already exists
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker" ); // Does not yet exist
 
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
-                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
-                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
+                "--" + OFFLINE_ARG_NAME, "true" );
 
         // Then
         verify( out ).stdErrLine( "command failed: The specified user 'alice' already exists." );
@@ -333,8 +336,8 @@ public class ImportAuthCommandIT
         insertRole( ROLE_STORE_FILENAME, "taskmaster", "alice" );
 
         // When
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true" );
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + OFFLINE_ARG_NAME, "true" );
 
         // Then
         assertSuccessfulOutputMessageForOfflineMode();
@@ -344,10 +347,10 @@ public class ImportAuthCommandIT
         insertUsers( ALTERNATIVE_USER_STORE_FILENAME, "alice" ); // Already exists
         insertRole( ALTERNATIVE_ROLE_STORE_FILENAME, "box_ticker" ); // Does not yet exist
 
-        tool.execute( homeDir.toPath(), confDir.toPath(), ImportAuthCommand.COMMAND_NAME,
-                "--" + ImportAuthCommand.USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
-                "--" + ImportAuthCommand.ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
-                "--" + ImportAuthCommand.OFFLINE_ARG_NAME, "true",
+        tool.execute( homeDir.toPath(), confDir.toPath(), COMMAND_NAME,
+                "--" + USER_ARG_NAME, ALTERNATIVE_USER_STORE_FILENAME,
+                "--" + ROLE_ARG_NAME, ALTERNATIVE_ROLE_STORE_FILENAME,
+                "--" + OFFLINE_ARG_NAME, "true",
                 "--" + ImportAuthCommand.RESET_ARG_NAME, "true" );
 
         // Then
@@ -411,7 +414,7 @@ public class ImportAuthCommandIT
         roleRepository.start();
         for ( String username : withOnlyUsernames )
         {
-            MatcherAssert.assertThat( roleRepository.getRoleNamesByUsername( username ), containsInAnyOrder( roleName ) );
+            assertThat( roleRepository.getRoleNamesByUsername( username ), containsInAnyOrder( roleName ) );
         }
     }
 

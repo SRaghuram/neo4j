@@ -17,6 +17,7 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.kernel.configuration.Settings;
+import org.neo4j.metrics.MetricsTestHelper.TimerField;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -66,11 +67,11 @@ public class RaftMessageProcessingMetricIT
 
         assertEventually( "message timer count eventually recorded",
                 () -> readTimerLongValueAndAssert( metricsCsv( coreMetricsDir, "neo4j.causal_clustering.core.message_processing_timer" ),
-                        ( newValue, currentValue ) -> newValue >= currentValue, MetricsTestHelper.TimerField.COUNT ), greaterThan( 0L ), TIMEOUT,
+                        ( newValue, currentValue ) -> newValue >= currentValue, TimerField.COUNT ), greaterThan( 0L ), TIMEOUT,
                 TimeUnit.SECONDS );
 
         assertEventually( "message timer max eventually recorded",
                 () -> readTimerDoubleValue( metricsCsv( coreMetricsDir, "neo4j.causal_clustering.core.message_processing_timer" ),
-                        MetricsTestHelper.TimerField.MAX ), greaterThanOrEqualTo( 0d ), TIMEOUT, TimeUnit.SECONDS );
+                        TimerField.MAX ), greaterThanOrEqualTo( 0d ), TIMEOUT, TimeUnit.SECONDS );
     }
 }

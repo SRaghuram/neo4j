@@ -47,6 +47,8 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.helpers.collection.Iterators.asList;
+import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 import static org.neo4j.values.storable.Values.stringValue;
 
 public class GlobalMetricsExtensionFactoryIT
@@ -87,11 +89,11 @@ public class GlobalMetricsExtensionFactoryIT
         addNodes( 100 );
 
         // wait for the file to be written before shutting down the cluster
-        File threadTotalFile = MetricsTestHelper.metricsCsv( outputPath, "neo4j.vm.thread.total" );
-        File threadCountFile = MetricsTestHelper.metricsCsv( outputPath, "neo4j.vm.thread.count" );
+        File threadTotalFile = metricsCsv( outputPath, "neo4j.vm.thread.total" );
+        File threadCountFile = metricsCsv( outputPath, "neo4j.vm.thread.count" );
 
-        long threadTotalResult = MetricsTestHelper.readLongGaugeAndAssert( threadTotalFile, ( newValue, currentValue ) -> newValue >= 0 );
-        long threadCountResult = MetricsTestHelper.readLongGaugeAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long threadTotalResult = readLongGaugeAndAssert( threadTotalFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long threadCountResult = readLongGaugeAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
         assertThat( threadTotalResult, greaterThanOrEqualTo( 0L ) );

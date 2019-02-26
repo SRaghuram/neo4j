@@ -42,7 +42,6 @@ import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
 import org.neo4j.driver.v1.TransactionWork;
-import org.neo4j.driver.v1.Values;
 import org.neo4j.driver.v1.exceptions.ClientException;
 import org.neo4j.driver.v1.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.v1.exceptions.SessionExpiredException;
@@ -62,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.driver.v1.Values.parameters;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -176,7 +176,7 @@ class BoltCausalClusteringIT
             }
             catch ( ClientException ex )
             {
-                Assertions.assertEquals( "Write queries cannot be performed in READ access mode.", ex.getMessage() );
+                assertEquals( "Write queries cannot be performed in READ access mode.", ex.getMessage() );
                 return true;
             }
         }, is( true ), 30, SECONDS );
@@ -197,7 +197,7 @@ class BoltCausalClusteringIT
 
             SessionExpiredException sep =
                     Assertions.assertThrows( SessionExpiredException.class, () -> session.run( "CREATE (n:Person {name: 'Mark'})" ).consume() );
-            Assertions.assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
+            assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
         }
     }
 
@@ -390,22 +390,22 @@ class BoltCausalClusteringIT
             inExpirableSession( driver, Driver::session, session ->
             {
                 // execute a write/read query
-                session.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Jim" ) );
+                session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
                 Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                Assertions.assertEquals( 1, record.get( "count" ).asInt() );
+                assertEquals( 1, record.get( "count" ).asInt() );
 
                 // change leader
 
                 try
                 {
                     switchLeader( leader );
-                    session.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Mark" ) ).consume();
+                    session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Mark" ) ).consume();
                     fail( "Should have thrown an exception as the leader went away mid session" );
                 }
                 catch ( SessionExpiredException sep )
                 {
                     // then
-                    Assertions.assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
+                    assertEquals( String.format( "Server at %s no longer accepts writes", leader.boltAdvertisedAddress() ), sep.getMessage() );
                 }
                 catch ( InterruptedException e )
                 {
@@ -417,9 +417,9 @@ class BoltCausalClusteringIT
             inExpirableSession( driver, Driver::session, session ->
             {
                 // execute a write/read query
-                session.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Jim" ) );
+                session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
                 Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                Assertions.assertEquals( 2, record.get( "count" ).asInt() );
+                assertEquals( 2, record.get( "count" ).asInt() );
                 return null;
             } );
         }
@@ -438,7 +438,7 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
-                    tx.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Alistair" ) );
+                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
                     tx.success();
                 }
 
@@ -450,7 +450,7 @@ class BoltCausalClusteringIT
             try ( Session session = driver.session( bookmark ); Transaction tx = session.beginTransaction() )
             {
                 Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                Assertions.assertEquals( 1, record.get( "count" ).asInt() );
+                assertEquals( 1, record.get( "count" ).asInt() );
                 tx.success();
             }
         }
@@ -466,7 +466,7 @@ class BoltCausalClusteringIT
         {
             inExpirableSession( driver, d -> d.session( AccessMode.WRITE ), session ->
             {
-                session.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Jim" ) );
+                session.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
                 return null;
             } );
 
@@ -488,7 +488,7 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
-                    tx.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Alistair" ) );
+                    tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
                     tx.success();
                 }
 
@@ -498,7 +498,7 @@ class BoltCausalClusteringIT
             try ( Session session = driver.session() )
             {
                 Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                Assertions.assertEquals( 2, record.get( "count" ).asInt() );
+                assertEquals( 2, record.get( "count" ).asInt() );
             }
         }
     }
@@ -518,10 +518,10 @@ class BoltCausalClusteringIT
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                tx.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Jim" ) );
-                tx.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Alistair" ) );
-                tx.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Mark" ) );
-                tx.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Chris" ) );
+                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
+                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Alistair" ) );
+                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Mark" ) );
+                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Chris" ) );
                 tx.success();
             }
 
@@ -539,7 +539,7 @@ class BoltCausalClusteringIT
             {
                 Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
                 tx.success();
-                Assertions.assertEquals( 4, record.get( "count" ).asInt() );
+                assertEquals( 4, record.get( "count" ).asInt() );
             }
         }
     }
@@ -555,7 +555,7 @@ class BoltCausalClusteringIT
         {
             try ( Transaction tx = session.beginTransaction() )
             {
-                tx.run( "CREATE (p:Person {name: {name} })", Values.parameters( "name", "Jim" ) );
+                tx.run( "CREATE (p:Person {name: {name} })", parameters( "name", "Jim" ) );
                 tx.success();
             }
 
@@ -589,7 +589,7 @@ class BoltCausalClusteringIT
                     {
                         StatementResult result = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" );
 
-                        Assertions.assertEquals( 1, result.next().get( "count" ).asInt() );
+                        assertEquals( 1, result.next().get( "count" ).asInt() );
 
                         readReplicas.remove( result.summary().server().address() );
 
@@ -621,7 +621,7 @@ class BoltCausalClusteringIT
                 {
                     switchLeader( leader );
 
-                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", Values.parameters( "name", "Webber", "title", "Mr" ) );
+                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", parameters( "name", "Webber", "title", "Mr" ) );
                     tx.success();
                 }
                 catch ( SessionExpiredException ignored )
@@ -634,7 +634,7 @@ class BoltCausalClusteringIT
             {
                 try ( Transaction tx = s.beginTransaction() )
                 {
-                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", Values.parameters( "name", "Webber", "title", "Mr" ) );
+                    tx.run( "CREATE (person:Person {name: {name}, title: {title}})", parameters( "name", "Webber", "title", "Mr" ) );
                     tx.success();
                 }
                 return s.lastBookmark();
@@ -647,7 +647,7 @@ class BoltCausalClusteringIT
                 {
                     Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
                     tx.success();
-                    Assertions.assertEquals( 1, record.get( "count" ).asInt() );
+                    assertEquals( 1, record.get( "count" ).asInt() );
                 }
             }
         }
@@ -692,7 +692,7 @@ class BoltCausalClusteringIT
                 writeSession.writeTransaction( tx ->
                 {
 
-                    tx.run( "UNWIND range(1, {nodesToCreate}) AS i CREATE (n:Person {name: 'Jim'})", Values.parameters( "nodesToCreate", nodesToCreate ) );
+                    tx.run( "UNWIND range(1, {nodesToCreate}) AS i CREATE (n:Person {name: 'Jim'})", parameters( "nodesToCreate", nodesToCreate ) );
                     return null;
                 } );
 
@@ -729,7 +729,7 @@ class BoltCausalClusteringIT
         try ( Transaction tx = session.beginTransaction() )
         {
             Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-            Assertions.assertEquals( 1, record.get( "count" ).asInt() );
+            assertEquals( 1, record.get( "count" ).asInt() );
         }
     }
 

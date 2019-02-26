@@ -18,7 +18,6 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -207,7 +206,7 @@ class CausalClusterStatusEndpointIT
         assertThat( msg, Long.valueOf( statusDescription.get( "lastAppliedRaftIndex" ).toString() ), greaterThan( 0L ) );
         assertVotingMembers( statusDescription );
         assertParticipatingInRaftGroup( statusDescription, isCore );
-        Assertions.assertTrue( StringUtils.isNotEmpty( statusDescription.get( "memberId" ).toString() ), msg );
+        assertTrue( StringUtils.isNotEmpty( statusDescription.get( "memberId" ).toString() ), msg );
         assertMillisSinceLastLeaderMessage( statusDescription, isCore );
         assertTrue( Boolean.valueOf( statusDescription.get( "healthy" ).toString() ), msg );
         assertFalse( Boolean.valueOf( statusDescription.get( "leader" ).toString() ), msg );
@@ -305,7 +304,7 @@ class CausalClusterStatusEndpointIT
         ClientResponse r = client.resource( address ).accept( APPLICATION_JSON ).get( ClientResponse.class );
         if ( expectedStatus != null )
         {
-            Assertions.assertEquals( expectedStatus.intValue(), r.getStatus() );
+            assertEquals( expectedStatus.intValue(), r.getStatus() );
         }
         return r.getEntity( String.class );
     }

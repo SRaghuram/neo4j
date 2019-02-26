@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.ssl.SslContextFactory.SslParameters.protocols;
+import static org.neo4j.ssl.SslContextFactory.makeSslPolicy;
+import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
 @RunWith( Parameterized.class )
 public class SslNegotiationTest
@@ -154,13 +156,13 @@ public class SslNegotiationTest
     @Test
     public void shouldNegotiateCorrectly() throws Exception
     {
-        SslResource sslServerResource = SslResourceBuilder.selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
-        SslResource sslClientResource = SslResourceBuilder.selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
+        SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
+        SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
 
-        server = new SecureServer( SslContextFactory.makeSslPolicy( sslServerResource, setup.serverParams ) );
+        server = new SecureServer( makeSslPolicy( sslServerResource, setup.serverParams ) );
 
         server.start();
-        client = new SecureClient( SslContextFactory.makeSslPolicy( sslClientResource, setup.clientParams ) );
+        client = new SecureClient( makeSslPolicy( sslClientResource, setup.clientParams ) );
         client.connect( server.port() );
 
         try

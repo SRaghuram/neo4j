@@ -40,6 +40,7 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertFalse;
+import static org.neo4j.backup.clusteringsupport.BackupUtil.restoreFromBackup;
 
 @RunWith( Parameterized.class )
 public class NewMemberSeedingIT
@@ -126,8 +127,8 @@ public class NewMemberSeedingIT
         if ( backupsOpt.isPresent() )
         {
             DefaultDatabasesBackup backups = backupsOpt.get();
-            BackupUtil.restoreFromBackup( backups.systemDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-            BackupUtil.restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+            restoreFromBackup( backups.systemDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+            restoreFromBackup( backups.defaultDb(), fileSystemRule.get(), newCoreClusterMember, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         }
 
         // we want the new instance to seed from backup and not delete and re-download the store

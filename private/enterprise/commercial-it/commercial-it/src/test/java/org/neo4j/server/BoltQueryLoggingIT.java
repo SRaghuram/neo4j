@@ -24,10 +24,12 @@ import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.server.configuration.ServerSettings;
 
+import static java.lang.Character.digit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries_filename;
 
 public class BoltQueryLoggingIT
 {
@@ -98,7 +100,7 @@ public class BoltQueryLoggingIT
 
         // *** THEN ***
 
-        Path queriesLog = neo4j.getConfig().get( GraphDatabaseSettings.log_queries_filename ).toPath();
+        Path queriesLog = neo4j.getConfig().get( log_queries_filename ).toPath();
         List<String> lines = Files.readAllLines( queriesLog );
         assertThat( lines, hasSize( 5 ) );
         for ( String line : lines )
@@ -163,8 +165,8 @@ public class BoltQueryLoggingIT
 
     private static byte hexByte( String s )
     {
-        int hi = Character.digit( s.charAt( 0 ), 16 ) << 4;
-        int lo = Character.digit( s.charAt( 1 ), 16 );
+        int hi = digit( s.charAt( 0 ), 16 ) << 4;
+        int lo = digit( s.charAt( 1 ), 16 );
         return (byte) ( hi | lo );
     }
 

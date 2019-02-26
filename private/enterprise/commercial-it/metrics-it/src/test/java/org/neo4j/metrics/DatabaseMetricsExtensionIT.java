@@ -43,6 +43,9 @@ import static org.junit.Assert.assertThat;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.record_id_batch_size;
+import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
+import static org.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
+import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 
 public class DatabaseMetricsExtensionIT
 {
@@ -83,11 +86,11 @@ public class DatabaseMetricsExtensionIT
 
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = MetricsTestHelper.metricsCsv( outputPath, "neo4j.graph.db.transaction.committed" );
+        File metricsFile = metricsCsv( outputPath, "neo4j.graph.db.transaction.committed" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
-        long committedTransactions = MetricsTestHelper.readLongCounterAndAssert( metricsFile,
+        long committedTransactions = readLongCounterAndAssert( metricsFile,
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
@@ -101,11 +104,11 @@ public class DatabaseMetricsExtensionIT
         // GIVEN
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = MetricsTestHelper.metricsCsv( outputPath, "neo4j.graph.db.ids_in_use.node" );
+        File metricsFile = metricsCsv( outputPath, "neo4j.graph.db.ids_in_use.node" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
-        long committedTransactions = MetricsTestHelper.readLongGaugeAndAssert( metricsFile,
+        long committedTransactions = readLongGaugeAndAssert( metricsFile,
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
@@ -136,8 +139,8 @@ public class DatabaseMetricsExtensionIT
             addNodes( 1 );
         }
 
-        File replanCountMetricFile = MetricsTestHelper.metricsCsv( outputPath, "neo4j.graph.db.cypher.replan_events" );
-        File replanWaitMetricFile = MetricsTestHelper.metricsCsv( outputPath, "neo4j.graph.db.cypher.replan_wait_time" );
+        File replanCountMetricFile = metricsCsv( outputPath, "neo4j.graph.db.cypher.replan_events" );
+        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j.graph.db.cypher.replan_wait_time" );
 
         // THEN see that the replan metric have pickup up at least one replan event
         // since reporting happens in an async fashion then give it some time and check now and then
@@ -145,8 +148,8 @@ public class DatabaseMetricsExtensionIT
         long events = 0;
         while ( currentTimeMillis() < endTime && events == 0 )
         {
-            MetricsTestHelper.readLongCounterAndAssert( replanWaitMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
-            events = MetricsTestHelper.readLongCounterAndAssert( replanCountMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
+            readLongCounterAndAssert( replanWaitMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
+            events = readLongCounterAndAssert( replanCountMetricFile, ( newValue, currentValue ) -> newValue >= currentValue );
             if ( events == 0 )
             {
                 Thread.sleep( 300 );
@@ -166,9 +169,9 @@ public class DatabaseMetricsExtensionIT
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
-        File metricFile = MetricsTestHelper.metricsCsv( outputPath, "neo4j.graph.db.check_point.duration" );
+        File metricFile = metricsCsv( outputPath, "neo4j.graph.db.check_point.duration" );
 
-        long result = MetricsTestHelper.readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
+        long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
         assertThat( result, greaterThanOrEqualTo( 0L ) );

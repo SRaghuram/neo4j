@@ -10,7 +10,6 @@ import com.neo4j.server.security.enterprise.auth.ProcedureInteractionTestBase;
 import com.neo4j.test.rule.CommercialDbmsRule;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Rule;
@@ -28,7 +27,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.driver.v1.AuthToken;
-import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -56,6 +54,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.fail;
 import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
+import static org.neo4j.driver.v1.AuthTokens.basic;
+import static org.neo4j.driver.v1.AuthTokens.custom;
 import static org.neo4j.kernel.configuration.BoltConnector.EncryptionLevel.OPTIONAL;
 import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 
@@ -127,7 +127,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
                 Session session = driver.session() )
         {
             Value single = session.run( "RETURN 1" ).single().get( 0 );
-            MatcherAssert.assertThat( single.asLong(), CoreMatchers.equalTo( 1L ) );
+            assertThat( single.asLong(), CoreMatchers.equalTo( 1L ) );
         }
     }
 
@@ -137,7 +137,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
                 Session session = driver.session() )
         {
             Value single = session.run( "RETURN 1" ).single().get( 0 );
-            MatcherAssert.assertThat( single.asLong(), CoreMatchers.equalTo( 1L ) );
+            assertThat( single.asLong(), CoreMatchers.equalTo( 1L ) );
         }
     }
 
@@ -154,7 +154,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         }
         catch ( AuthenticationException e )
         {
-            MatcherAssert.assertThat( e.code(), CoreMatchers.equalTo( "Neo.ClientError.Security.Unauthorized" ) );
+            assertThat( e.code(), CoreMatchers.equalTo( "Neo.ClientError.Security.Unauthorized" ) );
         }
     }
 
@@ -163,7 +163,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         try ( Session session = driver.session() )
         {
             Value single = session.run( "MATCH (n) RETURN count(n)" ).single().get( 0 );
-            MatcherAssert.assertThat( single.asLong(), Matchers.greaterThanOrEqualTo( 0L ) );
+            assertThat( single.asLong(), Matchers.greaterThanOrEqualTo( 0L ) );
         }
     }
 
@@ -184,7 +184,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         }
         catch ( ClientException e )
         {
-            MatcherAssert.assertThat( e.getMessage(), containsString( "Read operations are not allowed for user " ) );
+            assertThat( e.getMessage(), containsString( "Read operations are not allowed for user " ) );
         }
     }
 
@@ -193,7 +193,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         try ( Session session = driver.session() )
         {
             StatementResult result = session.run( "CREATE ()" );
-            MatcherAssert.assertThat( result.summary().counters().nodesCreated(), CoreMatchers.equalTo( 1 ) );
+            assertThat( result.summary().counters().nodesCreated(), CoreMatchers.equalTo( 1 ) );
         }
     }
 
@@ -206,7 +206,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         }
         catch ( ClientException e )
         {
-            MatcherAssert.assertThat( e.getMessage(), containsString( "Write operations are not allowed for user " ) );
+            assertThat( e.getMessage(), containsString( "Write operations are not allowed for user " ) );
         }
     }
 
@@ -215,7 +215,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         try ( Session session = driver.session() )
         {
             Value single = session.run( "CALL test.staticReadProcedure()" ).single().get( 0 );
-            MatcherAssert.assertThat( single.asString(), CoreMatchers.equalTo( "static" ) );
+            assertThat( single.asString(), CoreMatchers.equalTo( "static" ) );
         }
     }
 
@@ -258,18 +258,18 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         AuthToken token;
         if ( realm == null || realm.isEmpty() )
         {
-            token = AuthTokens.basic( username, password );
+            token = basic( username, password );
         }
         else
         {
-            token = AuthTokens.basic( username, password, realm );
+            token = basic( username, password, realm );
         }
         return connectDriver( token, username, password );
     }
 
     Driver connectDriverWithParameters( String username, String password, Map<String,Object> parameterMap )
     {
-        AuthToken token = AuthTokens.custom( username, password, null, "basic", parameterMap );
+        AuthToken token = custom( username, password, null, "basic", parameterMap );
         return connectDriver( token, username, password );
     }
 
@@ -300,7 +300,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
         try ( Session session = driver.session() )
         {
             Record record = session.run( "CALL dbms.showCurrentUser() YIELD roles" ).single();
-            MatcherAssert.assertThat( record.get( "roles" ).asList(), containsInAnyOrder( roles ) );
+            assertThat( record.get( "roles" ).asList(), containsInAnyOrder( roles ) );
         }
     }
 

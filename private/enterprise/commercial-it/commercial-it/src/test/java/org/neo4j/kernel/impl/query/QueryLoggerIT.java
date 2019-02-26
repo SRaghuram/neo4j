@@ -48,7 +48,6 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.test.rule.TestDirectory;
@@ -488,14 +487,14 @@ public class QueryLoggerIT
 
     private EnterpriseUserManager getUserManager()
     {
-        DependencyResolver dependencyResolver = ((GraphDatabaseAPI) db).getDependencyResolver();
+        DependencyResolver dependencyResolver = db.getDependencyResolver();
         CommercialAuthAndUserManager commercialAuthManager = dependencyResolver.resolveDependency( CommercialAuthAndUserManager.class );
         return commercialAuthManager.getUserManager();
     }
 
     private CommercialAuthManager getAuthManager()
     {
-        return ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( CommercialAuthManager.class );
+        return db.getDependencyResolver().resolveDependency( CommercialAuthManager.class );
     }
 
     private static String connectionAndUserDetails()

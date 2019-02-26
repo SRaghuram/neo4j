@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
-import org.hamcrest.MatcherAssert;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,6 +51,7 @@ import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;
 
 import static io.netty.channel.local.LocalAddress.ANY;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.helpers.collection.MapUtil.map;
@@ -165,7 +165,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
                 .send( util.chunk( new InitMessage( "TestClient/1.1",
                         map( REALM_KEY, NATIVE_REALM, PRINCIPAL, username, CREDENTIALS, password,
                                 SCHEME_KEY, BASIC_SCHEME ) ) ) );
-        MatcherAssert.assertThat( subject.client, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
+        assertThat( subject.client, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
         subject.setLoginResult( util.receiveOneResponseMessage( subject.client ) );
         return subject;
     }
@@ -222,7 +222,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     @Override
     public void assertSessionKilled( BoltSubject subject )
     {
-        MatcherAssert.assertThat( subject.client, util.eventuallyDisconnects() );
+        assertThat( subject.client, util.eventuallyDisconnects() );
     }
 
     @Override

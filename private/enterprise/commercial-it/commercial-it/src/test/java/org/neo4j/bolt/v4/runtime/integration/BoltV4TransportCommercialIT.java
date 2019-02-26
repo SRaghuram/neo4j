@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.not;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgRecord;
 import static org.neo4j.bolt.v1.messaging.util.MessageMatchers.msgSuccess;
 import static org.neo4j.bolt.v1.runtime.spi.StreamMatchers.eqRecord;
+import static org.neo4j.bolt.v1.transport.integration.TransportTestUtil.eventuallyReceives;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newMessageEncoder;
 import static org.neo4j.bolt.v4.BoltProtocolV4ComponentFactory.newNeo4jPack;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.auth_enabled;
@@ -293,7 +294,7 @@ public class BoltV4TransportCommercialIT
     private void negotiateBoltV4() throws Exception
     {
         connection.connect( address ).send( util.acceptedVersions( 4, 0, 0, 0 ) );
-        assertThat( connection, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 4} ) );
+        assertThat( connection, eventuallyReceives( new byte[]{0, 0, 0, 4} ) );
 
         connection.send( util.chunk( new HelloMessage( map( "user_agent", USER_AGENT ) ) ) );
         assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
