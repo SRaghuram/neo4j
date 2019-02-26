@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.imports;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.model.Benchmark;
@@ -28,6 +26,8 @@ import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 import io.airlift.airline.SingleCommand;
+import org.apache.commons.compress.utils.Lists;
+import org.apache.commons.compress.utils.Sets;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +53,12 @@ public class Main
     private static final String ARG_NEO4J_BRANCH = "--neo4j_branch";
     private static final String ARG_BRANCH_OWNER = "--branch_owner";
     private static final String CSV_LOCATION = "/mnt/ssds/csv/";
+
+    @Option( type = OptionType.COMMAND,
+            name = {"--csv_location"},
+            description = "Location for csv files",
+            title = "Csv location" )
+    private String csvLocation = CSV_LOCATION;
     @Option( type = OptionType.COMMAND,
              name = {"--results_store_user"},
              description = "Username for Neo4j database server that stores benchmarking results",
@@ -146,37 +152,63 @@ public class Main
     private void run() throws IOException, InterruptedException
     {
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-        BenchmarkGroup group = new BenchmarkGroup( "Import" );
+        BenchmarkGroup importGroup = new BenchmarkGroup( "Import" );
+        BenchmarkGroup indexGroup = new BenchmarkGroup( "Index" );
         Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
-        long starttime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
 
         String[] sizes = {"100m", "1bn", "10bn", "100bn"};
         for ( String size : sizes )
         {
-            runImport( size, benchmarkGroupBenchmarkMetrics, group, neo4jConfig );
+            int exitCode = runImport( size, benchmarkGroupBenchmarkMetrics, importGroup, neo4jConfig );
+            if ( exitCode == 0 )
+            {
+                createIndexes( size, benchmarkGroupBenchmarkMetrics, indexGroup, neo4jConfig );
+            }
         }
 
-        report( starttime, System.currentTimeMillis() - starttime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
+        report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
     }
 
-    private void runImport( String size, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig )
+    // nodes.csv header - :ID,:LABEL,name:string,nr:int,date:long,rank:string,other:int
+    private int createIndexes( String size, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig )
+            throws IOException, InterruptedException
+    {
+        String name = "indexCreate" + size;
+        Benchmark benchmark = Benchmark.benchmarkFor( "Index population on large store", name, name, Benchmark.Mode.SINGLE_SHOT, new HashMap<>() );
+        String[] indexCreateArgs = (String.format( "--storeDir %s %s", size, "Label1:name" )).split( " " );
+        Class<CreateIndex> targetClass = CreateIndex.class;
+        return runProcess( metrics, group, neo4jConfig, benchmark, indexCreateArgs, targetClass );
+    }
+
+    private int runImport( String size, BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig )
             throws IOException, InterruptedException
     {
         Benchmark benchmark = Benchmark.benchmarkFor( "import benchmark", size, size + "import", Benchmark.Mode.SINGLE_SHOT, new HashMap<>() );
-        String[] importArgs = ("import --nodes " + CSV_LOCATION + size + "/nodes.csv --relationships " + CSV_LOCATION + size +
-                               "/relationships.csv --bad-tolerance true --skip-bad-relationships true --skip-duplicate-nodes true --additional-config " +
-                               CSV_LOCATION + size +
-                               "/additional.conf --into " + size).split( " " );
-        long starttime = System.currentTimeMillis();
-        String[] pbArgs = {ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(), ImportTool.class.getCanonicalName()};
+        String[] importArgs = ("import --nodes " + csvLocation + size + "/nodes.csv --relationships " + csvLocation + size +
+                "/relationships.csv --bad-tolerance true --skip-bad-relationships true --skip-duplicate-nodes true --additional-config " + csvLocation + size +
+                "/additional.conf --into " + size ).split( " " ); // todo set --high-io true
+        Class<ImportTool> targetClass = ImportTool.class;
+        return runProcess( metrics, group, neo4jConfig, benchmark, importArgs, targetClass );
+    }
+
+    private int runProcess( BenchmarkGroupBenchmarkMetrics metrics, BenchmarkGroup group, Neo4jConfig neo4jConfig, Benchmark benchmark, String[] importArgs,
+            Class<?> targetClass ) throws IOException, InterruptedException
+    {
+        long startTime = System.currentTimeMillis();
+        String[] pbArgs = {ProcessUtil.getJavaExecutable().toString(), "-cp", ProcessUtil.getClassPath(), targetClass.getCanonicalName()};
         ProcessBuilder pb = new ProcessBuilder( Stream.of( pbArgs, importArgs ).flatMap( Stream::of ).toArray( String[]::new ) );
         pb.inheritIO();
         Process process = pb.start();
-        process.waitFor();
-        long time = System.currentTimeMillis() - starttime;
-        Metrics runMetrics = new Metrics( TimeUnit.MILLISECONDS, time, time, time, 0, 1, 1, time, time, time, time, time, time, time );
+        int exitCode = process.waitFor();
+        if ( exitCode == 0 )
+        {
+            long time = System.currentTimeMillis() - startTime;
+            Metrics runMetrics = new Metrics( TimeUnit.MILLISECONDS, time, time, time, 0, 1, 1, time, time, time, time, time, time, time );
 
-        metrics.add( group, benchmark, runMetrics, neo4jConfig );
+            metrics.add( group, benchmark, runMetrics, neo4jConfig );
+        }
+        return exitCode;
     }
 
     private void report( long start, long time, Neo4jConfig neo4jConfig, BenchmarkGroupBenchmarkMetrics metrics )
@@ -197,7 +229,7 @@ public class Main
             TestRun testRun = new TestRun( id, time, start, build, parentBuild, "import-benchmark" );
             TestRunReport report =
                     new TestRunReport( testRun, new BenchmarkConfig(), Sets.newHashSet( neo4j ), neo4jConfig, Environment.current(), metrics, tool, java,
-                                       Lists.newArrayList() );
+                            Lists.newArrayList() );
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
 
             new QueryRetrier().execute( client, submitTestRun );
