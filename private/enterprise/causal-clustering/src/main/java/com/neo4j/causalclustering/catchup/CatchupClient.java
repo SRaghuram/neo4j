@@ -364,9 +364,12 @@ class CatchupClient implements VersionedCatchupClients
             // we do not care to block for release to finish.
             if ( throwable != null )
             {
+                catchUpChannel.dispose();
+            }
+            else
+            {
                 catchUpChannel.release();
             }
-            catchUpChannel.release();
         }
     }
 

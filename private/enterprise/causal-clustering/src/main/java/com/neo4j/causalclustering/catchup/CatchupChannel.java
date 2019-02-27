@@ -66,6 +66,6 @@ class CatchupChannel
 
     void dispose()
     {
-        pooledChannel.channel().close();
+        pooledChannel.dispose();
     }
 }
