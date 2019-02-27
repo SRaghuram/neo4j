@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.client.model;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -14,6 +15,7 @@ import static java.util.stream.Collectors.toList;
 
 public class BenchmarkGroupBenchmarkMetricsPrinter
 {
+    private static final DecimalFormat MEAN_FORMAT = new DecimalFormat( "###,###,##0.00" );
     private final boolean verbose;
 
     public BenchmarkGroupBenchmarkMetricsPrinter( boolean verbose )
@@ -87,7 +89,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
                                 group.name(),
                                 benchmark.name(),
                                 metrics.toMap().get( Metrics.SAMPLE_SIZE ),
-                                metrics.toMap().get( Metrics.MEAN ),
+                                MEAN_FORMAT.format( metrics.toMap().get( Metrics.MEAN ) ),
                                 ((Number) metrics.toMap().get( Metrics.MIN )).longValue(),
                                 ((Number) metrics.toMap().get( Metrics.PERCENTILE_50 )).longValue(),
                                 ((Number) metrics.toMap().get( Metrics.PERCENTILE_90 )).longValue(),
@@ -97,7 +99,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
                                 group.name(),
                                 benchmark.name(),
                                 metrics.toMap().get( Metrics.SAMPLE_SIZE ),
-                                metrics.toMap().get( Metrics.MEAN ),
+                                MEAN_FORMAT.format( metrics.toMap().get( Metrics.MEAN ) ),
                                 metrics.toMap().get( Metrics.UNIT ) );
     }
 
