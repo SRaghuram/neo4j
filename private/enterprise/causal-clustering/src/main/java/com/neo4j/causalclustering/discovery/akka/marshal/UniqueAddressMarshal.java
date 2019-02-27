@@ -61,7 +61,7 @@ public class UniqueAddressMarshal extends SafeChannelMarshal<UniqueAddress>
         }
         if ( address.port().isDefined() )
         {
-            channel.putInt( Int.unbox( address.port().get() ) );
+            channel.putInt( (Integer) address.port().get() );
         }
         else
         {
