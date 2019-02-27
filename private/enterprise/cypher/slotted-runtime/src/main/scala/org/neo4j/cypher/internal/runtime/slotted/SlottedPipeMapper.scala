@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{Predicate, True}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{KeyTokenResolver, expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
@@ -110,14 +110,13 @@ class SlottedPipeMapper(fallback: PipeMapper,
         OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, LazyTypes(types.toArray), slots,
                                      predicate.map(convertExpressions))(id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicates) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(toName)
-        val predicate = predicates.map(buildPredicate(id, _)).reduceOption(_ andWith _).getOrElse(True())
 
-        OptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, LazyTypes(types.toArray), predicate,
-          slots)(id)
+        OptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, LazyTypes(types.toArray), slots,
+                                      predicate.map(convertExpressions))(id)
 
       case VarExpand(sourcePlan, fromName, dir, projectedDir, types, toName, relName,
       VarPatternLength(min, max), expansionMode, tempNode, tempEdge, nodePredicate,
