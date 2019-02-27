@@ -9,6 +9,7 @@
     </parent>
 
     <artifactId>micro</artifactId>
+    <name>Neo4j - Micro benchmarks</name>
 
     <properties>
         <jmh.version>1.21</jmh.version>
@@ -20,7 +21,6 @@
         <scala.version>2.11.8</scala.version>
         <scalatest.version>2.2.5</scalatest.version>
         <mockito.version>1.10.19</mockito.version>
-        <scala.maven.plugin.version>3.2.2</scala.maven.plugin.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
@@ -186,15 +186,18 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <version>${scala.maven.plugin.version}</version>
                 <configuration>
                     <recompileMode>incremental</recompileMode>
                     <scalaVersion>${scala.version}</scalaVersion>
                     <target>${maven.compiler.target}</target>
                     <source>${maven.compiler.target}</source>
+                    <args>
+                      <arg>-target:jvm-${maven.compiler.target}</arg>
+                    </args>
                 </configuration>
                 <executions>
                     <execution>
+                        <id>scala-compile</id>
                         <phase>process-sources</phase>
                         <goals>
                             <goal>compile</goal>
