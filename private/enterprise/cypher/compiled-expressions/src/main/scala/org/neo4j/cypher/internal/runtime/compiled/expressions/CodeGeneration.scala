@@ -221,6 +221,14 @@ object CodeGeneration {
     //new ArrayValue[]{p1, p2,...}
     case ArrayLiteral(typ, values) => newInitializedArray(typ, values.map(v => compileExpression(v, block)): _*)
 
+    // array[offset] = value
+    case ArraySet(array, offset, value) =>
+      block.expression(Expression.arraySet(compileExpression(array, block), constant(offset), compileExpression(value, block)))
+      Expression.EMPTY
+
+    // array[offset]
+    case ArrayLoad(array, offset) => Expression.arrayLoad(compileExpression(array, block), constant(offset))
+
     //Foo.BAR
     case GetStatic(owner, typ, name) => getStatic(staticField(owner.getOrElse(block.owner()), typ, name))
 

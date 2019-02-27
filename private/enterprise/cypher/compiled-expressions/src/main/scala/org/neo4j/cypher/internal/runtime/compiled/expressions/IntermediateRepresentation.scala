@@ -101,6 +101,23 @@ case class Constant(value: Any) extends IntermediateRepresentation
 case class ArrayLiteral(typ: TypeReference, values: Array[IntermediateRepresentation]) extends IntermediateRepresentation
 
 /**
+  * Load a value from an array
+  *
+  * @param array array to load from
+  * @param offset offset to load from
+  */
+case class ArrayLoad(array: IntermediateRepresentation, offset: Int) extends IntermediateRepresentation
+
+/**
+  * Set a value in an array at the given offset
+  *
+  * @param array array to set value in
+  * @param offset offset to set at
+  * @param value value to set
+  */
+case class ArraySet(array: IntermediateRepresentation, offset: Int, value: IntermediateRepresentation) extends IntermediateRepresentation
+
+/**
   * Defines ternary expression, i.e. {{{condition ? onTrue : onFalse}}}
   *
   * @param condition the condition to test
@@ -457,6 +474,12 @@ object IntermediateRepresentation {
 
   def arrayOf[T](values: IntermediateRepresentation*)(implicit t: Manifest[T]): IntermediateRepresentation =
     ArrayLiteral(typeRef(t), values.toArray)
+
+  def arrayLoad(array: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    ArrayLoad(array, offset)
+
+  def arraySet(array: IntermediateRepresentation, offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+    ArraySet(array, offset, value)
 
   def ternary(condition: IntermediateRepresentation,
               onTrue: IntermediateRepresentation,
