@@ -171,13 +171,14 @@ class CatchupClient implements VersionedCatchupClients
                 Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest, Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest,
                 ApplicationProtocol protocol ) throws Exception
         {
+            PreparedRequest<RESULT> request;
             if ( specificVersionRequest != null )
             {
-                return withProgressMonitor( specificVersionRequest.apply( client ).execute( responseHandler ) ).get( log );
+                request = specificVersionRequest.apply( client );
             }
             else if ( allVersionsRequest != null )
             {
-                return withProgressMonitor( allVersionsRequest.apply( client ).execute( responseHandler ) ).get( log );
+                request = allVersionsRequest.apply( client );
             }
             else
             {
@@ -185,6 +186,8 @@ class CatchupClient implements VersionedCatchupClients
                 log.error( message );
                 throw new Exception( message );
             }
+
+            return withProgressMonitor( request.execute( responseHandler ) ).get( log );
         }
 
         private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
