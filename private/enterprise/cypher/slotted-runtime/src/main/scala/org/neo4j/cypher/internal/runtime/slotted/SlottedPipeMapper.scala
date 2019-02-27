@@ -103,13 +103,12 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val toSlot = slots(to)
         ExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, LazyTypes(types.toArray), slots)(id)
 
-      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicates) =>
+      case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandAll, predicate) =>
         val fromSlot = slots(fromName)
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(toName)
-        val predicate: Predicate = predicates.map(buildPredicate(id, _)).reduceOption(_ andWith _).getOrElse(True())
-        OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, LazyTypes(types.toArray), predicate,
-          slots)(id)
+        OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, LazyTypes(types.toArray), slots,
+                                     predicate.map(convertExpressions))(id)
 
       case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicates) =>
         val fromSlot = slots(fromName)

@@ -6,13 +6,13 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.api.iterator.LongIterator
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
@@ -43,7 +43,7 @@ case class OptionalExpandIntoSlottedPipe(source: Pipe,
     val relCache = new PrimitiveRelationshipsCache(CACHE_SIZE)
 
     input.flatMap {
-      (inputRow: ExecutionContext) =>
+      inputRow: ExecutionContext =>
         val fromNode = getFromNodeFunction(inputRow)
         val toNode = getToNodeFunction(inputRow)
 

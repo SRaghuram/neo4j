@@ -5,27 +5,28 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper, RelationshipIterator}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
-import org.neo4j.storageengine.api.RelationshipVisitor
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper, RelationshipIterator}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.storageengine.api.RelationshipVisitor
+import org.neo4j.values.storable.Values
 
-case class OptionalExpandAllSlottedPipe(source: Pipe,
-                                        fromSlot: Slot,
-                                        relOffset: Int,
-                                        toOffset: Int,
-                                        dir: SemanticDirection,
-                                        types: LazyTypes,
-                                        predicate: Predicate,
-                                        slots: SlotConfiguration)
-                                       (val id: Id = Id.INVALID_ID) extends PipeWithSource(source) with Pipe {
+abstract class OptionalExpandAllSlottedPipe(source: Pipe,
+                                            fromSlot: Slot,
+                                            relOffset: Int,
+                                            toOffset: Int,
+                                            dir: SemanticDirection,
+                                            types: LazyTypes,
+                                            slots: SlotConfiguration,
+                                            val id: Id)
+  extends PipeWithSource(source) with Pipe {
 
   //===========================================================================
   // Compile-time initializations
@@ -37,7 +38,7 @@ case class OptionalExpandAllSlottedPipe(source: Pipe,
   //===========================================================================
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.flatMap {
-      (inputRow: ExecutionContext) =>
+      inputRow: ExecutionContext =>
         val fromNode = getFromNodeFunction(inputRow)
 
         if (NullChecker.entityIsNull(fromNode)) {
@@ -61,7 +62,7 @@ case class OptionalExpandAllSlottedPipe(source: Pipe,
             outputRow.setLongAt(relOffset, relId)
             outputRow.setLongAt(toOffset, otherSide)
             outputRow
-          }).filter(ctx => predicate.isTrue(ctx, state))
+          })
 
           if (matchIterator.isEmpty)
             Iterator(withNulls(inputRow))
@@ -71,6 +72,12 @@ case class OptionalExpandAllSlottedPipe(source: Pipe,
     }
   }
 
+  def findMatchIterator(inputRow: ExecutionContext,
+                        state: QueryState,
+                        relationships: RelationshipIterator,
+                        relVisitor: RelationshipVisitor[InternalException],
+                        otherSide: Long): Iterator[SlottedExecutionContext]
+
   private def withNulls(inputRow: ExecutionContext) = {
     val outputRow = SlottedExecutionContext(slots)
     inputRow.copyTo(outputRow)
@@ -79,4 +86,75 @@ case class OptionalExpandAllSlottedPipe(source: Pipe,
     outputRow
   }
 
+}
+
+object OptionalExpandAllSlottedPipe {
+
+  def apply(source: Pipe,
+            fromSlot: Slot,
+            relOffset: Int,
+            toOffset: Int,
+            dir: SemanticDirection,
+            types: LazyTypes,
+            slots: SlotConfiguration,
+            maybePredicate: Option[Expression])
+           (id: Id = Id.INVALID_ID): OptionalExpandAllSlottedPipe = maybePredicate match {
+    case Some(predicate) => new FilteringOptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, types,
+                                                                      slots, id, predicate)
+    case None => new NonFilteringOptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, types, slots,
+                                                              id)
+  }
+}
+
+class NonFilteringOptionalExpandAllSlottedPipe(source: Pipe,
+                                               fromSlot: Slot,
+                                               relOffset: Int,
+                                               toOffset: Int,
+                                               dir: SemanticDirection,
+                                               types: LazyTypes,
+                                               slots: SlotConfiguration,
+                                               id: Id)
+  extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots, id) {
+
+  override def findMatchIterator(inputRow: ExecutionContext,
+                                 state: QueryState,
+                                 relationships: RelationshipIterator,
+                                 relVisitor: RelationshipVisitor[InternalException],
+                                 otherSide: Long): Iterator[SlottedExecutionContext] = {
+    PrimitiveLongHelper.map(relationships, relId => {
+      relationships.relationshipVisit(relId, relVisitor)
+      val outputRow = SlottedExecutionContext(slots)
+      inputRow.copyTo(outputRow)
+      outputRow.setLongAt(relOffset, relId)
+      outputRow.setLongAt(toOffset, otherSide)
+      outputRow
+    })
+  }
+}
+
+class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
+                                            fromSlot: Slot,
+                                            relOffset: Int,
+                                            toOffset: Int,
+                                            dir: SemanticDirection,
+                                            types: LazyTypes,
+                                            slots: SlotConfiguration,
+                                            id: Id,
+                                            predicate: Expression)
+  extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots, id) {
+
+  override def findMatchIterator(inputRow: ExecutionContext,
+                                 state: QueryState,
+                                 relationships: RelationshipIterator,
+                                 relVisitor: RelationshipVisitor[InternalException],
+                                 otherSide: Long): Iterator[SlottedExecutionContext] = {
+    PrimitiveLongHelper.map(relationships, relId => {
+      relationships.relationshipVisit(relId, relVisitor)
+      val outputRow = SlottedExecutionContext(slots)
+      inputRow.copyTo(outputRow)
+      outputRow.setLongAt(relOffset, relId)
+      outputRow.setLongAt(toOffset, otherSide)
+      outputRow
+    }).filter(ctx => predicate(ctx, state) eq Values.TRUE)
+  }
 }

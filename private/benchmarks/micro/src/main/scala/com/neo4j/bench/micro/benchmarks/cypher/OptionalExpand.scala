@@ -59,7 +59,7 @@ class OptionalExpand extends AbstractCypherBenchmark {
       n2.name,
       r.name,
       plans.ExpandAll,
-      Seq(equals))(IdGen)
+      Some(equals))(IdGen)
     val resultColumns = List(n1.name, n2.name, r.name)
     val produceResults = plans.ProduceResult(optionalExpand, columns = resultColumns)(IdGen)
 
