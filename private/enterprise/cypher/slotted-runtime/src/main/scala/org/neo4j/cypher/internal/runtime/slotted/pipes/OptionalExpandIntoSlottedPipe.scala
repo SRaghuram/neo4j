@@ -23,8 +23,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
                                              toSlot: Slot,
                                              dir: SemanticDirection,
                                              lazyTypes: LazyTypes,
-                                             slots: SlotConfiguration,
-                                             val id: Id)
+                                             slots: SlotConfiguration)
   extends PipeWithSource(source) with PrimitiveCachingExpandInto {
   self =>
 
@@ -87,21 +86,20 @@ object OptionalExpandIntoSlottedPipe {
             slots: SlotConfiguration,
             maybePredicate: Option[Expression])
            (id: Id = Id.INVALID_ID): OptionalExpandIntoSlottedPipe = maybePredicate match {
-    case Some(predicate) => new FilteringOptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, lazyTypes,
-                                                                      slots, id, predicate)
-    case None => new NonFilteringOptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, lazyTypes, slots, id)
+    case Some(predicate) => FilteringOptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, lazyTypes,
+                                                                   slots, predicate)(id)
+    case None => NonFilteringOptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, lazyTypes, slots)(id)
   }
 }
 
-class NonFilteringOptionalExpandIntoSlottedPipe(source: Pipe,
-                                                fromSlot: Slot,
-                                                relOffset: Int,
-                                                toSlot: Slot,
-                                                dir: SemanticDirection,
-                                                lazyTypes: LazyTypes,
-                                                slots: SlotConfiguration,
-                                                id: Id)
-  extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots, id) {
+case class NonFilteringOptionalExpandIntoSlottedPipe(source: Pipe,
+                                                     fromSlot: Slot,
+                                                     relOffset: Int,
+                                                     toSlot: Slot,
+                                                     dir: SemanticDirection,
+                                                     lazyTypes: LazyTypes,
+                                                     slots: SlotConfiguration)(val id: Id)
+  extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots) {
 
   override def findMatchIterator(inputRow: ExecutionContext,
                                  state: QueryState,
@@ -115,16 +113,15 @@ class NonFilteringOptionalExpandIntoSlottedPipe(source: Pipe,
   }
 }
 
-class FilteringOptionalExpandIntoSlottedPipe(source: Pipe,
+case class FilteringOptionalExpandIntoSlottedPipe(source: Pipe,
                                              fromSlot: Slot,
                                              relOffset: Int,
                                              toSlot: Slot,
                                              dir: SemanticDirection,
                                              lazyTypes: LazyTypes,
                                              slots: SlotConfiguration,
-                                            id: Id,
-                                            predicate: Expression)
-  extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots, id) {
+                                             predicate: Expression)(val id: Id)
+  extends OptionalExpandIntoSlottedPipe(source: Pipe, fromSlot, relOffset, toSlot, dir, lazyTypes, slots) {
 
   override def findMatchIterator(inputRow: ExecutionContext,
                                  state: QueryState,

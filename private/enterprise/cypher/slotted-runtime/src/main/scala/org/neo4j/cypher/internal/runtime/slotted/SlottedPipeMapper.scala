@@ -15,8 +15,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexes}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
-import org.neo4j.cypher.internal.runtime.interpreted.commands.{KeyTokenResolver, expressions => commandExpressions}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
@@ -327,12 +326,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
         case None => throw new InternalException(s"Did not find `$name` in the slot configuration")
       }
   }
-
-  private def buildPredicate(id: Id, expr: frontEndAst.Expression): Predicate =
-    expressionConverters
-      .toCommandPredicate(id, expr)
-      .rewrite(KeyTokenResolver.resolveExpressions(_, tokenContext))
-      .asInstanceOf[Predicate]
 
   override def onTwoChildPlan(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe = {
 
