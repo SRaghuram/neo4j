@@ -28,7 +28,6 @@ import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
-import org.neo4j.util.concurrent.Futures;
 
 class CatchupClient implements VersionedCatchupClients
 {
@@ -162,7 +161,9 @@ class CatchupClient implements VersionedCatchupClients
             }
             else
             {
-                return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+                String message = "Unrecognised protocol " + protocol;
+                log.error( message );
+                throw new Exception( message );
             }
         }
 
@@ -180,7 +181,9 @@ class CatchupClient implements VersionedCatchupClients
             }
             else
             {
-                return retrying( Futures.failedFuture( new Exception( "No action specified for protocol " + protocol ) ) ).get( log );
+                String message = "No action specified for protocol " + protocol;
+                log.error( message );
+                throw new Exception( message );
             }
         }
 
