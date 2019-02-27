@@ -152,39 +152,35 @@ class CatchupClient implements VersionedCatchupClients
         {
             if ( protocol.equals( ApplicationProtocols.CATCHUP_1 ) )
             {
-                V1 v1 = new CatchupClient.V1( channel, pool, defaultDatabaseName );
-                if ( v1Request != null )
-                {
-                    return retrying( v1Request.apply( v1 ).execute( responseHandler ) ).get( log );
-                }
-                else if ( allVersionsRequest != null )
-                {
-                    return retrying( allVersionsRequest.apply( v1 ).execute( responseHandler ) ).get( log );
-                }
-                else
-                {
-                    return retrying( Futures.failedFuture( new Exception( "No V1 action specified" ) ) ).get( log );
-                }
+                CatchupClient.V1 client = new CatchupClient.V1( channel, pool, defaultDatabaseName );
+                return timeoutRetrier( log, client, v1Request, allVersionsRequest, protocol );
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
-                V2 v2 = new CatchupClient.V2( channel, pool );
-                if ( v2Request != null )
-                {
-                    return retrying( v2Request.apply( v2 ).execute( responseHandler ) ).get( log );
-                }
-                else if ( allVersionsRequest != null )
-                {
-                    return retrying( allVersionsRequest.apply( v2 ).execute( responseHandler ) ).get( log );
-                }
-                else
-                {
-                    return retrying( Futures.failedFuture( new Exception( "No V2 action specified" ) ) ).get( log );
-                }
+                CatchupClient.V2 client = new CatchupClient.V2( channel, pool );
+                return timeoutRetrier( log, client, v2Request, allVersionsRequest, protocol );
             }
             else
             {
                 return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+            }
+        }
+
+        private <CLIENT extends CatchupClientCommon> RESULT timeoutRetrier( Log log, CLIENT client,
+                Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest, Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest,
+                ApplicationProtocol protocol ) throws Exception
+        {
+            if ( specificVersionRequest != null )
+            {
+                return retrying( specificVersionRequest.apply( client ).execute( responseHandler ) ).get( log );
+            }
+            else if ( allVersionsRequest != null )
+            {
+                return retrying( allVersionsRequest.apply( client ).execute( responseHandler ) ).get( log );
+            }
+            else
+            {
+                return retrying( Futures.failedFuture( new Exception( "No action specified for protocol " + protocol ) ) ).get( log );
             }
         }
 
