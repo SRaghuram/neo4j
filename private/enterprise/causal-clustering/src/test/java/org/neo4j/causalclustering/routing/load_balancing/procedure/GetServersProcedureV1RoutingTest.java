@@ -28,7 +28,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.configuration.Config;
 
 import static java.util.Collections.emptyMap;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.runners.Parameterized.Parameters;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -74,13 +74,13 @@ public class GetServersProcedureV1RoutingTest
                 new LegacyGetServersProcedure( coreTopologyService, leaderLocator, config, getInstance() );
 
         // when
-        Object[] endpoints = getEndpoints( proc );
+        List<String> endpoints = getEndpoints( proc );
 
         //then
-        Object[] endpointsInDifferentOrder = getEndpoints( proc );
+        List<String> endpointsInDifferentOrder = getEndpoints( proc );
         for ( int i = 0; i < 100; i++ )
         {
-            if ( Arrays.deepEquals( endpointsInDifferentOrder, endpoints ) )
+            if ( endpointsInDifferentOrder.equals( endpoints ) )
             {
                 endpointsInDifferentOrder = getEndpoints( proc );
             }
@@ -90,16 +90,17 @@ public class GetServersProcedureV1RoutingTest
                 break;
             }
         }
-        assertFalse( Arrays.deepEquals( endpoints, endpointsInDifferentOrder ) );
+        assertNotEquals( endpoints, endpointsInDifferentOrder );
     }
 
-    private Object[] getEndpoints( LegacyGetServersProcedure proc )
+    private List<String> getEndpoints( LegacyGetServersProcedure proc )
             throws ProcedureException
     {
         List<Object[]> results = asList( proc.apply( null, new Object[0], null ) );
         Object[] rows = results.get( 0 );
-        List<Map<String,Object[]>> servers = (List<Map<String,Object[]>>) rows[1];
-        Map<String,Object[]> endpoints = servers.get( serverClass );
+        @SuppressWarnings( "unchecked" )
+        List<Map<String,List<String>>> servers = (List<Map<String,List<String>>>) rows[1];
+        Map<String,List<String>> endpoints = servers.get( serverClass );
         return endpoints.get( "addresses" );
     }
 }

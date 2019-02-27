@@ -34,13 +34,13 @@ public class MultiClusterRoutingResultFormat
 
     static Object[] build( MultiClusterRoutingResult result )
     {
-        Function<List<Endpoint>, Object[]> stringifyAddresses = es ->
-                es.stream().map( e -> e.address().toString() ).toArray();
+        Function<List<Endpoint>, List<String>> stringifyAddresses = es ->
+                es.stream().map( e -> e.address().toString() ).collect( Collectors.toList() );
 
         List<Map<String,Object>> response = result.routers().entrySet().stream().map( entry ->
         {
             String dbName = entry.getKey();
-            Object[] addresses = stringifyAddresses.apply( entry.getValue() );
+            List<String> addresses = stringifyAddresses.apply( entry.getValue() );
 
             Map<String,Object> responseRow = new TreeMap<>();
 
@@ -75,8 +75,9 @@ public class MultiClusterRoutingResultFormat
     private static Map<String,List<Endpoint>> parseRouters( List<Map<String,Object>> responseRows )
     {
         Function<Map<String,Object>,String> dbNameFromRow = row -> (String) row.get( DB_NAME_KEY );
+        @SuppressWarnings( "unchecked" )
         Function<Map<String,Object>,List<Endpoint>> endpointsFromRow =
-                row -> parseEndpoints( (Object[]) row.get( ADDRESSES_KEY ), Role.ROUTE );
+                row -> parseEndpoints( (List<String>) row.get( ADDRESSES_KEY ), Role.ROUTE );
         return responseRows.stream().collect( Collectors.toMap( dbNameFromRow, endpointsFromRow ) );
     }
 }

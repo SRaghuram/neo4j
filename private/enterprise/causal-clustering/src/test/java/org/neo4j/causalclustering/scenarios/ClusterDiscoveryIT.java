@@ -60,6 +60,7 @@ public class ClusterDiscoveryIT
     @Rule
     public final ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 );
 
+    @SuppressWarnings( "unchecked" )
     @Test
     public void shouldFindReadWriteAndRouteServers() throws Exception
     {
@@ -75,13 +76,13 @@ public class ClusterDiscoveryIT
             List<Map<String,Object>> members = getMembers( cluster.getCoreMemberById( i ).database() );
 
             assertEquals( 1, members.stream().filter( x -> x.get( "role" ).equals( "WRITE" ) )
-                    .flatMap( x -> Arrays.stream( (Object[]) x.get( "addresses" ) ) ).count() );
+                    .mapToLong( x -> ((List<String>) x.get( "addresses" )).size() ).sum() );
 
             assertEquals( readEndPoints, members.stream().filter( x -> x.get( "role" ).equals( "READ" ) )
-                    .flatMap( x -> Arrays.stream( (Object[]) x.get( "addresses" ) ) ).count() );
+                    .mapToLong( x -> ((List<String>) x.get( "addresses" )).size() ).sum() );
 
             assertEquals( cores, members.stream().filter( x -> x.get( "role" ).equals( "ROUTE" ) )
-                    .flatMap( x -> Arrays.stream( (Object[]) x.get( "addresses" ) ) ).count() );
+                    .mapToLong( x -> ((List<String>) x.get( "addresses" )).size() ).sum() );
         }
     }
 
