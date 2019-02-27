@@ -78,8 +78,6 @@
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
             <version>${hamcrest.version}</version>
-            <!-- TODO had to change scope -->
-            <scope>compile</scope>
         </dependency>
 
         <dependency>
