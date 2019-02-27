@@ -12,7 +12,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.neo4j.bench</groupId>
-    <artifactId>benchmark</artifactId>
+    <artifactId>benchmarks</artifactId>
     <packaging>pom</packaging>
     <name>Neo4j - Benchmarks</name>
 
