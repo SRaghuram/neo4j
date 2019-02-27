@@ -76,7 +76,7 @@ public interface VersionedCatchupClients extends AutoCloseable
     /** {@link CatchupRequestBuilder} Final step */
     interface IsPrepared<RESULT>
     {
-        RESULT request( Log log ) throws Exception;
+        RESULT request() throws Exception;
     }
 
     /* Interfaces for CatchupClients (and their helper return type, PreparedRequest) below here. These

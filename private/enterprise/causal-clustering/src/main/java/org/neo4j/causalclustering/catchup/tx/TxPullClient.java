@@ -13,6 +13,7 @@ import org.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 public class TxPullClient
@@ -55,11 +56,12 @@ public class TxPullClient
 
         pullRequestMonitor.get().txPullRequest( previousTxId );
 
-        return catchUpClient.getClient( fromAddress )
+        Log log = logProvider.getLog( getClass() );
+        return catchUpClient.getClient( fromAddress, log )
                 .v1( c -> c.pullTransactions( storeId, previousTxId ) )
                 .v2( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
                 .withResponseHandler( responseHandler )
-                .request( logProvider.getLog( this.getClass() ) );
+                .request();
     }
 
     private class PullRequestMonitor

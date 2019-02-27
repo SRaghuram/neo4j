@@ -36,15 +36,17 @@ class CatchupClient implements VersionedCatchupClients
     private final CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool;
     private final String defaultDatabaseName;
     private final Duration inactivityTimeout;
+    private final Log log;
 
     CatchupClient( AdvertisedSocketAddress upstream, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool, String defaultDatabaseName,
-            Duration inactivityTimeout ) throws Exception
+            Duration inactivityTimeout, Log log ) throws Exception
     {
         this.inactivityTimeout = inactivityTimeout;
         this.channel = pool.acquire( upstream );
         this.protocol = channel.protocol().get();
         this.pool = pool;
         this.defaultDatabaseName = defaultDatabaseName;
+        this.log = log;
     }
 
     private static <RESULT> CompletableFuture<RESULT> makeBlockingRequest( CatchupProtocolMessage request,
@@ -75,14 +77,14 @@ class CatchupClient implements VersionedCatchupClients
     @Override
     public <RESULT> NeedsV2Handler<RESULT> v1( Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName );
+        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName, log );
         return reqBuilder.v1( v1Request );
     }
 
     @Override
     public <RESULT> NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName );
+        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName, log );
         return reqBuilder.any( allVersionsRequest );
     }
 
@@ -104,18 +106,20 @@ class CatchupClient implements VersionedCatchupClients
         private final CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool;
         private final ApplicationProtocol protocol;
         private final String defaultDatabaseName;
+        private final Log log;
         private Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request;
         private Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request;
         private Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest;
         private CatchupResponseCallback<RESULT> responseHandler;
 
         private Builder( CatchupClientFactory.CatchupChannel channel, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool,
-                ApplicationProtocol protocol, String defaultDatabaseName )
+                ApplicationProtocol protocol, String defaultDatabaseName, Log log )
         {
             this.channel = channel;
             this.pool = pool;
             this.protocol = protocol;
             this.defaultDatabaseName = defaultDatabaseName;
+            this.log = log;
         }
 
         @Override
@@ -147,17 +151,17 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public RESULT request( Log log ) throws Exception
+        public RESULT request() throws Exception
         {
             if ( protocol.equals( ApplicationProtocols.CATCHUP_1 ) )
             {
                 CatchupClient.V1 client = new CatchupClient.V1( channel, pool, defaultDatabaseName );
-                return performRequest( log, client, v1Request, allVersionsRequest, protocol );
+                return performRequest( client, v1Request, allVersionsRequest, protocol );
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
                 CatchupClient.V2 client = new CatchupClient.V2( channel, pool );
-                return performRequest( log, client, v2Request, allVersionsRequest, protocol );
+                return performRequest( client, v2Request, allVersionsRequest, protocol );
             }
             else
             {
@@ -167,9 +171,8 @@ class CatchupClient implements VersionedCatchupClients
             }
         }
 
-        private <CLIENT extends CatchupClientCommon> RESULT performRequest( Log log, CLIENT client,
-                Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest, Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest,
-                ApplicationProtocol protocol ) throws Exception
+        private <CLIENT extends CatchupClientCommon> RESULT performRequest( CLIENT client, Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest,
+                Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest, ApplicationProtocol protocol ) throws Exception
         {
             PreparedRequest<RESULT> request;
             if ( specificVersionRequest != null )
@@ -187,12 +190,12 @@ class CatchupClient implements VersionedCatchupClients
                 throw new Exception( message );
             }
 
-            return withProgressMonitor( request.execute( responseHandler ) ).get( log );
+            return withProgressMonitor( request.execute( responseHandler ) ).get();
         }
 
         private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
         {
-            return OperationProgressMonitor.of( request, inactivityTimeout.toMillis(), channel::millisSinceLastResponse );
+            return OperationProgressMonitor.of( request, inactivityTimeout.toMillis(), channel::millisSinceLastResponse, log );
         }
     }
 

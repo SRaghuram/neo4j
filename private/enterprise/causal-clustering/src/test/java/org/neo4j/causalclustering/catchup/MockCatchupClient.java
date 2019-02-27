@@ -25,6 +25,7 @@ import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.NullLog;
 import org.neo4j.util.concurrent.Futures;
 
 import static org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;
@@ -85,6 +86,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         private Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request;
         private CatchupClientV1 v1Client;
         private CatchupClientV2 v2Client;
+        private Log log = NullLog.getInstance();
 
         Builder( CatchupClientV1 v1Client, CatchupClientV2 v2Client )
         {
@@ -128,22 +130,22 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public RESULT request( Log log ) throws Exception
+        public RESULT request() throws Exception
         {
             if ( protocol.equals( CATCHUP_1 ) )
             {
-                return withProgressMonitor( v1Request.apply( v1Client ).execute( null ) ).get( log );
+                return withProgressMonitor( v1Request.apply( v1Client ).execute( null ) ).get();
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
-                return withProgressMonitor( v2Request.apply( v2Client ).execute( null ) ).get( log );
+                return withProgressMonitor( v2Request.apply( v2Client ).execute( null ) ).get();
             }
-            return withProgressMonitor( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+            return withProgressMonitor( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get();
         }
 
         private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
         {
-            return OperationProgressMonitor.of( request, 1, () -> Optional.of( 0L ) );
+            return OperationProgressMonitor.of( request, 1, () -> Optional.of( 0L ), log );
         }
     }
 

@@ -14,6 +14,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,6 +35,7 @@ class OperationProgressMonitorTest
     private final Supplier<Optional<Long>> zeroMillisSinceLastResponse = () -> Optional.of( 0L );
     private final Supplier<Optional<Long>> incrementingMillisSinceLastResponse = new IncrementingLastResponseTimer( 0 );
     private final Supplier<Optional<Long>> foreverSinceLastResponse = new IncrementingLastResponseTimer();
+    private final Log log = NullLog.getInstance();
 
     @Test
     void getShouldBeCalledMultipleTimesThenSucceed() throws Throwable
@@ -46,10 +48,10 @@ class OperationProgressMonitorTest
                 .thenThrow( TimeoutException.class )
                 .thenReturn( "expected" );
 
-        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse, log );
 
         // when
-        Object actual = monitoredFuture.get( NullLog.getInstance() );
+        Object actual = monitoredFuture.get();
 
         // then
         verify( future, atLeast( 2 ) ).get( anyLong(), any() );
@@ -66,7 +68,7 @@ class OperationProgressMonitorTest
         when( future.get( anyLong(), any() ) )
                 .thenThrow( TimeoutException.class );
 
-        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, incrementingMillisSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, incrementingMillisSinceLastResponse, log );
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         // when
@@ -93,7 +95,7 @@ class OperationProgressMonitorTest
         when( future.get( anyLong(), any() ) )
                 .thenThrow( ExecutionException.class );
 
-        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse, log );
 
         // when
         try
@@ -119,7 +121,7 @@ class OperationProgressMonitorTest
                 .thenThrow( InterruptedException.class )
                 .thenThrow( TimeoutException.class );
 
-        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, foreverSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, foreverSinceLastResponse, log );
 
         for ( int i = 0; i < 3; i++ )
         {

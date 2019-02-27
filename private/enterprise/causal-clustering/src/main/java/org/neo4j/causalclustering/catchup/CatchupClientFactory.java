@@ -16,7 +16,6 @@ import java.net.ConnectException;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Function;
@@ -55,9 +54,9 @@ public class CatchupClientFactory extends LifecycleAdapter
         this.inactivityTimeout = inactivityTimeout;
     }
 
-    public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream ) throws Exception
+    public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream, Log log ) throws Exception
     {
-        return new CatchupClient( upstream, pool, defaultDatabaseName, inactivityTimeout );
+        return new CatchupClient( upstream, pool, defaultDatabaseName, inactivityTimeout, log );
     }
 
     class CatchupChannel implements CatchupChannelPool.Channel

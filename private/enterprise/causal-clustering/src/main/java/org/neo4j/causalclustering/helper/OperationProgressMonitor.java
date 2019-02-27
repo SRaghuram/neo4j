@@ -20,17 +20,20 @@ public final class OperationProgressMonitor<T>
     private final Future<T> future;
     private final long inactivityTimeoutMillis;
     private final Supplier<Optional<Long>> millisSinceLastResponseSupplier;
+    private final Log log;
 
-    private OperationProgressMonitor( Future<T> future, long inactivityTimeoutMillis, Supplier<Optional<Long>> millisSinceLastResponseSupplier )
+    private OperationProgressMonitor( Future<T> future, long inactivityTimeoutMillis, Supplier<Optional<Long>> millisSinceLastResponseSupplier, Log log )
     {
         this.future = future;
         this.inactivityTimeoutMillis = inactivityTimeoutMillis;
         this.millisSinceLastResponseSupplier = millisSinceLastResponseSupplier;
+        this.log = log;
     }
 
-    public static <T> OperationProgressMonitor<T> of( Future<T> future, long inactivityTimeoutMillis, Supplier<Optional<Long>> millisSinceLastResponseSupplier )
+    public static <T> OperationProgressMonitor<T> of( Future<T> future, long inactivityTimeoutMillis,
+            Supplier<Optional<Long>> millisSinceLastResponseSupplier, Log log )
     {
-        return new OperationProgressMonitor<>( future, inactivityTimeoutMillis, millisSinceLastResponseSupplier );
+        return new OperationProgressMonitor<>( future, inactivityTimeoutMillis, millisSinceLastResponseSupplier, log );
     }
 
     public Future<T> future()
@@ -38,12 +41,12 @@ public final class OperationProgressMonitor<T>
         return future;
     }
 
-    public T get( Log log ) throws Exception
+    public T get() throws Exception
     {
-        return get( "Operation timed out.", log );
+        return get( "Operation timed out." );
     }
 
-    public T get( String message, Log log ) throws Exception
+    public T get( String message ) throws Exception
     {
         return get( e ->  new Exception( message, e ), log );
     }

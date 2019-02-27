@@ -71,11 +71,11 @@ class SimpleCatchupClient implements AutoCloseable
     {
         CatchupResponseAdaptor<PrepareStoreCopyResponse> responseHandler =
                 StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( streamToDiskProvider, logProvider.getLog( SimpleCatchupClient.class ) );
-        return catchUpClientFactory.getClient( from )
+        return catchUpClientFactory.getClient( from, log )
                 .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
                 .v2( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
-                .request( log );
+                .request();
     }
 
     public StoreCopyFinishedResponse requestIndividualFile( File file ) throws Exception
@@ -87,11 +87,11 @@ class SimpleCatchupClient implements AutoCloseable
     {
         long lastTransactionId = getCheckPointer( graphDb ).lastCheckPointedTransactionId();
         CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );
-        return catchUpClientFactory.getClient( from )
+        return catchUpClientFactory.getClient( from, log )
                 .v1( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId ) )
                 .v2( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
-                .request( log );
+                .request();
     }
 
     public StoreCopyFinishedResponse requestIndexSnapshot( long indexId ) throws Exception
@@ -100,11 +100,11 @@ class SimpleCatchupClient implements AutoCloseable
         StoreId storeId = getStoreIdFromKernelStoreId( graphDb );
         CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );
 
-        return catchUpClientFactory.getClient( from )
+        return catchUpClientFactory.getClient( from, log )
                 .v1( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId ) )
                 .v2( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, correctDatabaseName ) )
                 .withResponseHandler( responseHandler )
-                .request( log );
+                .request();
     }
 
     @Override

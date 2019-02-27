@@ -250,11 +250,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
         try
         {
             AdvertisedSocketAddress fromAddress = topologyService.findCatchupAddress( upstream );
-            result = catchUpClient.getClient( fromAddress )
+            result = catchUpClient.getClient( fromAddress, log )
                     .v1( c -> c.pullTransactions( localStoreId, lastQueuedTxId ) )
                     .v2( c -> c.pullTransactions( localStoreId, lastQueuedTxId, databaseName ) )
                     .withResponseHandler( responseHandler )
-                    .request( log );
+                    .request();
         }
         catch ( Exception e )
         {
