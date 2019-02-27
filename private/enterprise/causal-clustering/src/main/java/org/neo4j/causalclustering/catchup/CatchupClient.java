@@ -163,7 +163,7 @@ class CatchupClient implements VersionedCatchupClients
                 }
                 else
                 {
-                    retrying( Futures.failedFuture( new Exception( "No V1 action specified" ) ) );
+                    return retrying( Futures.failedFuture( new Exception( "No V1 action specified" ) ) ).get( log );
                 }
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
@@ -182,8 +182,10 @@ class CatchupClient implements VersionedCatchupClients
                     return retrying( Futures.failedFuture( new Exception( "No V2 action specified" ) ) ).get( log );
                 }
             }
-
-            return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+            else
+            {
+                return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+            }
         }
 
         private TimeoutRetrier<RESULT> retrying( CompletableFuture<RESULT> request )
