@@ -5,12 +5,12 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
-import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
 import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.FullBenchmarkName;
 import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
 import com.neo4j.bench.micro.data.Stores;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMarshalV2;
@@ -20,17 +20,17 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Stack;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.facade.GraphDatabaseFacadeFactory;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.CommunityEditionModule;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.NoAuthSecurityProvider;
-import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.proc.GlobalProcedures;
 
 public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBenchmark
 {

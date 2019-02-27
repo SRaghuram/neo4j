@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
-import org.neo4j.kernel.impl.proc.GlobalProcedures
+import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.kernel.impl.util.ValueUtils
 
 import scala.collection.JavaConverters._

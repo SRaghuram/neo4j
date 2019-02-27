@@ -13,8 +13,8 @@ import org.neo4j.helpers.collection.MapUtil.map
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs.{FieldSignature, Neo4jTypes}
 import org.neo4j.kernel.api.ResourceTracker
-import org.neo4j.kernel.api.proc.CallableProcedure.BasicProcedure
-import org.neo4j.kernel.api.proc.Context
+import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
+import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.stringValue
 

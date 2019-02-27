@@ -24,9 +24,9 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.proc.CallableProcedure;
-import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.procedure.Mode;
+import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
@@ -35,7 +35,7 @@ import static com.neo4j.causalclustering.routing.multi_cluster.procedure.Paramet
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.ROUTERS;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames.GET_ROUTERS_FOR_DATABASE;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
-import static org.neo4j.kernel.builtinprocs.routing.ParameterNames.TTL;
+import static org.neo4j.procedure.builtin.routing.ParameterNames.TTL;
 
 public class GetRoutersForDatabaseProcedure implements CallableProcedure
 {

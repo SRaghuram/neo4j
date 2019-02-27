@@ -35,8 +35,8 @@ import org.neo4j.graphdb.Relationship
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
 import org.neo4j.internal.kernel.api.security.LoginContext
-import org.neo4j.kernel.api.proc.CallableUserFunction.BasicUserFunction
-import org.neo4j.kernel.api.proc.Context
+import org.neo4j.kernel.api.procedure.CallableUserFunction.BasicUserFunction
+import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContext}
 import org.neo4j.kernel.impl.util.ValueUtils

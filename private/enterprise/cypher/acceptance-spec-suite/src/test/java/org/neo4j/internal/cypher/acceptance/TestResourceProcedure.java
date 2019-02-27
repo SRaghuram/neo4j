@@ -9,8 +9,9 @@ import java.util.Iterator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.neo4j.function.ThrowingFunction;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.impl.proc.ComponentRegistry;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
@@ -74,7 +75,7 @@ public class TestResourceProcedure
         }
     }
 
-    public static ComponentRegistry.Provider<Counters> countersProvider( Counters counters )
+    public static ThrowingFunction<org.neo4j.kernel.api.procedure.Context,Counters,ProcedureException> countersProvider( Counters counters )
     {
         return context -> counters;
     }

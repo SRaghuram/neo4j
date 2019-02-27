@@ -24,16 +24,16 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.proc.CallableProcedure;
-import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.procedure.Mode;
+import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.values.AnyValue;
 
 import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.ROUTERS;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames.GET_ROUTERS_FOR_ALL_DATABASES;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
-import static org.neo4j.kernel.builtinprocs.routing.ParameterNames.TTL;
+import static org.neo4j.procedure.builtin.routing.ParameterNames.TTL;
 
 public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
 {
@@ -64,7 +64,7 @@ public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
     }
 
     @Override
-    public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
+    public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker )
     {
         Map<String,List<AdvertisedSocketAddress>> routersPerDb = routeEndpoints();
         MultiClusterRoutingResult result = new MultiClusterRoutingResult( routersPerDb, timeToLiveMillis );

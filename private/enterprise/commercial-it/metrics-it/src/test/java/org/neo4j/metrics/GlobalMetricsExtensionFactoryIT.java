@@ -34,10 +34,8 @@ import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
-import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.StubResourceManager;
-import org.neo4j.kernel.builtinprocs.JmxQueryProcedure;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.procedure.builtin.JmxQueryProcedure;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.values.AnyValue;
@@ -47,6 +45,7 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.helpers.collection.Iterators.asList;
+import static org.neo4j.kernel.api.ResourceManager.EMPTY_RESOURCE_MANAGER;
 import static org.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static org.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -61,7 +60,6 @@ public class GlobalMetricsExtensionFactoryIT
 
     private File outputPath;
     private GraphDatabaseAPI db;
-    private final ResourceTracker resourceTracker = new StubResourceManager();
 
     @Before
     public void setup()
@@ -134,7 +132,7 @@ public class GlobalMetricsExtensionFactoryIT
         JmxQueryProcedure procedure = new JmxQueryProcedure( qualifiedName, mBeanServer );
 
         TextValue jmxQuery = stringValue( "neo4j.metrics:*" );
-        RawIterator<AnyValue[],ProcedureException> result = procedure.apply( null, new AnyValue[]{jmxQuery}, resourceTracker );
+        RawIterator<AnyValue[],ProcedureException> result = procedure.apply( null, new AnyValue[]{jmxQuery}, EMPTY_RESOURCE_MANAGER );
 
         List<AnyValue[]> queryResult = asList( result );
         assertThat( queryResult, hasItem( new MetricsRecordMatcher() ) );

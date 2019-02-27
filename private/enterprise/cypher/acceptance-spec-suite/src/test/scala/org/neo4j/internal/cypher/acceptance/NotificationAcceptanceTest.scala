@@ -15,7 +15,7 @@ import org.neo4j.graphdb.impl.notification.NotificationCode._
 import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory._
 import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.kernel.impl.proc.GlobalProcedures
+import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.procedure.Procedure
 
 import scala.collection.JavaConverters._

@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Arrays.asList;

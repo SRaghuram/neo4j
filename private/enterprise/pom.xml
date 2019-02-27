@@ -40,6 +40,7 @@
         <module>neo4j-harness-commercial</module>
         <module>record-storage-engine</module>
         <module>commercial-it</module>
+        <module>procedure</module>
     </modules>
 
     <profiles>

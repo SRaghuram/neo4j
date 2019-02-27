@@ -30,10 +30,10 @@ import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.Transaction.Type;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.builtinprocs.routing.Role;
 import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
 import org.neo4j.kernel.impl.util.DefaultValueMapper;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.ListValue;
@@ -49,9 +49,9 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.helpers.collection.Iterators.asList;
-import static org.neo4j.kernel.builtinprocs.routing.Role.READ;
-import static org.neo4j.kernel.builtinprocs.routing.Role.ROUTE;
-import static org.neo4j.kernel.builtinprocs.routing.Role.WRITE;
+import static org.neo4j.procedure.builtin.routing.Role.READ;
+import static org.neo4j.procedure.builtin.routing.Role.ROUTE;
+import static org.neo4j.procedure.builtin.routing.Role.WRITE;
 
 @ClusterExtension
 @TestInstance( Lifecycle.PER_METHOD )

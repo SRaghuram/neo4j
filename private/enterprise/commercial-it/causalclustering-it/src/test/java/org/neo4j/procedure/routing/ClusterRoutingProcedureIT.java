@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;

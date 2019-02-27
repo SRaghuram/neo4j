@@ -8,7 +8,7 @@ package com.neo4j.kernel.impl.proc;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.impl.proc.ProcedureConfig;
+import org.neo4j.procedure.impl.ProcedureConfig;
 
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.default_allowed;
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.procedure_roles;
@@ -17,8 +17,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_whitelist;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.kernel.impl.proc.ProcedureConfig.PROC_ALLOWED_SETTING_DEFAULT_NAME;
-import static org.neo4j.kernel.impl.proc.ProcedureConfig.PROC_ALLOWED_SETTING_ROLES;
+import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_DEFAULT_NAME;
+import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_ROLES;
 
 class ProcedureConfigTest
 {

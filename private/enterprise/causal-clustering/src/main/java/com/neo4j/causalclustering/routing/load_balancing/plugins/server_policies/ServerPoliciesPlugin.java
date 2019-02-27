@@ -25,9 +25,9 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.config.InvalidSettingException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
 import static com.neo4j.causalclustering.routing.Util.asList;

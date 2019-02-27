@@ -28,7 +28,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
-import org.neo4j.kernel.impl.proc.GlobalProcedures;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.test.rule.DbmsRule;
 
 import static org.junit.Assert.assertNotNull;

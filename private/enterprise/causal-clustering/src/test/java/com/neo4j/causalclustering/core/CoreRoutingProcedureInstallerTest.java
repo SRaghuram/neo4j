@@ -13,12 +13,13 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
-import org.neo4j.configuration.Config;
-import org.neo4j.kernel.impl.proc.GlobalProcedures;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static java.util.stream.Collectors.toSet;
 import static org.eclipse.collections.impl.set.mutable.UnifiedSet.newSetWith;
@@ -35,7 +36,7 @@ class CoreRoutingProcedureInstallerTest
     void shouldRegisterSingleDCProcedures() throws Exception
     {
         Config config = newConfig( false );
-        GlobalProcedures procedures = spy( new GlobalProcedures() );
+        GlobalProcedures procedures = spy( new GlobalProceduresRegistry() );
 
         installRoutingProcedures( config, procedures );
 
@@ -47,7 +48,7 @@ class CoreRoutingProcedureInstallerTest
     void shouldRegisterMultiDCProcedures() throws Exception
     {
         Config config = newConfig( true );
-        GlobalProcedures procedures = spy( new GlobalProcedures() );
+        GlobalProcedures procedures = spy( new GlobalProceduresRegistry() );
 
         installRoutingProcedures( config, procedures );
 

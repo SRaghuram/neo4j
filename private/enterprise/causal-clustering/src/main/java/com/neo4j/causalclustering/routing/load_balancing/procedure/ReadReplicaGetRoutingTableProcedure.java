@@ -10,8 +10,8 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.builtinprocs.routing.CommunityGetRoutingTableProcedure;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
+import org.neo4j.procedure.builtin.routing.CommunityGetRoutingTableProcedure;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;

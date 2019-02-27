@@ -7,14 +7,14 @@ package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
 import java.util.List;
 
-import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.builtinprocs.routing.CommunityGetRoutingTableProcedure;
-import org.neo4j.kernel.builtinprocs.routing.CommunityGetRoutingTableProcedureTest;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.procedure.builtin.routing.CommunityGetRoutingTableProcedure;
+import org.neo4j.procedure.builtin.routing.CommunityGetRoutingTableProcedureTest;
 
 import static java.util.Collections.emptyList;
-import static org.neo4j.kernel.builtinprocs.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
+import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 
 class ReadReplicaGetRoutingTableProcedureTest extends CommunityGetRoutingTableProcedureTest
 {

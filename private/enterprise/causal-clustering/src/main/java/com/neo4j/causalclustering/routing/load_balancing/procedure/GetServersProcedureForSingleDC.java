@@ -20,10 +20,10 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.builtinprocs.routing.BaseGetRoutingTableProcedure;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_allow_reads_on_followers;

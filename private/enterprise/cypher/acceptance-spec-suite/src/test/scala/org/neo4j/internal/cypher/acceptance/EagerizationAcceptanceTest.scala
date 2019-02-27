@@ -15,8 +15,8 @@ import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, Relat
 import org.neo4j.internal.kernel.api.procs
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature}
 import org.neo4j.kernel.api.ResourceTracker
-import org.neo4j.kernel.api.proc.CallableProcedure.BasicProcedure
-import org.neo4j.kernel.api.proc.Context
+import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
+import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.procedure.Mode
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values

@@ -11,8 +11,8 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.kernel.api.proc.CallableProcedure;
-import org.neo4j.kernel.builtinprocs.routing.CommunityRoutingProcedureInstaller;
+import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.procedure.builtin.routing.CommunityRoutingProcedureInstaller;
 
 public class ReadReplicaRoutingProcedureInstaller extends CommunityRoutingProcedureInstaller
 {

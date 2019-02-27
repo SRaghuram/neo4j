@@ -23,7 +23,7 @@ import org.neo4j.values.virtual.MapValueBuilder;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.neo4j.kernel.builtinprocs.routing.RoutingResultFormat.parseEndpoints;
+import static org.neo4j.procedure.builtin.routing.RoutingResultFormat.parseEndpoints;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
 

@@ -21,7 +21,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
-import org.neo4j.kernel.impl.proc.GlobalProcedures;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;

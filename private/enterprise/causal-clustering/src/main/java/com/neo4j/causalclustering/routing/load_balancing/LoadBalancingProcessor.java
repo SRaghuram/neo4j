@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.routing.load_balancing;
 
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
 public interface LoadBalancingProcessor

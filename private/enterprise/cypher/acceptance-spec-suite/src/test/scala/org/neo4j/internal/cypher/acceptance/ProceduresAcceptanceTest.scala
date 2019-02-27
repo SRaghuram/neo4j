@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
-import org.neo4j.kernel.impl.proc.GlobalProcedures
+import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 

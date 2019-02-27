@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 import java.util.List;
 
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.kernel.builtinprocs.routing.BaseGetRoutingTableProcedure;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
+import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 

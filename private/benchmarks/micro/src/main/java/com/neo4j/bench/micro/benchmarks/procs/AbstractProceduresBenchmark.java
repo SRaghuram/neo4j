@@ -11,9 +11,9 @@ import org.openjdk.jmh.annotations.State;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.proc.BasicContext;
-import org.neo4j.kernel.api.proc.Context;
-import org.neo4j.kernel.impl.proc.GlobalProcedures;
+import org.neo4j.kernel.api.procedure.BasicContext;
+import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.values.ValueMapper;
 

@@ -15,9 +15,9 @@ import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersPro
 import java.util.List;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.api.proc.CallableProcedure;
-import org.neo4j.kernel.builtinprocs.routing.BaseRoutingProcedureInstaller;
+import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 
 public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
 {

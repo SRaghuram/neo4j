@@ -13,9 +13,9 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
-import org.neo4j.internal.kernel.api.procs.{FieldSignature, Neo4jTypes, ProcedureSignature, QualifiedName}
+import org.neo4j.internal.kernel.api.procs._
 import org.neo4j.kernel.api.ResourceTracker
-import org.neo4j.kernel.api.proc._
+import org.neo4j.kernel.api.procedure.{CallableProcedure, Context}
 import org.neo4j.procedure.Mode
 import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.AnyValue

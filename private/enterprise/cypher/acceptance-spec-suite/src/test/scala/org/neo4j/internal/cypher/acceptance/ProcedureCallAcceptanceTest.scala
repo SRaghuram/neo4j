@@ -12,10 +12,10 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature.functionSignature
 import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature, UserAggregator}
 import org.neo4j.kernel.api.ResourceTracker
-import org.neo4j.kernel.api.proc.CallableProcedure.BasicProcedure
-import org.neo4j.kernel.api.proc.CallableUserAggregationFunction.BasicUserAggregationFunction
-import org.neo4j.kernel.api.proc.CallableUserFunction.BasicUserFunction
-import org.neo4j.kernel.api.proc.Context
+import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
+import org.neo4j.kernel.api.procedure.CallableUserAggregationFunction.BasicUserAggregationFunction
+import org.neo4j.kernel.api.procedure.CallableUserFunction.BasicUserFunction
+import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
 

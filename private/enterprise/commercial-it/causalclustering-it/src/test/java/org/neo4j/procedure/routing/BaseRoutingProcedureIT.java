@@ -21,8 +21,8 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.Iterators;
-import org.neo4j.kernel.builtinprocs.routing.Role;
-import org.neo4j.kernel.builtinprocs.routing.RoutingResult;
+import org.neo4j.procedure.builtin.routing.Role;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;

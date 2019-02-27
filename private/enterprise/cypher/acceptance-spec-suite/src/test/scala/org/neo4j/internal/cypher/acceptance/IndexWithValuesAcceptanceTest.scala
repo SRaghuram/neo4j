@@ -10,7 +10,7 @@ import org.neo4j.cypher._
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
-import org.neo4j.kernel.impl.proc.GlobalProcedures
+import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 

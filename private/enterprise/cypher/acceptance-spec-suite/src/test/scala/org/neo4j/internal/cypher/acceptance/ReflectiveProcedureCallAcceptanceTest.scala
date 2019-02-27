@@ -14,7 +14,7 @@ import org.neo4j.graphdb.{QueryExecutionException, TransactionFailureException}
 import org.neo4j.internal.cypher.acceptance.TestResourceProcedure._
 import org.neo4j.internal.kernel.api.Transaction
 import org.neo4j.internal.kernel.api.security.LoginContext
-import org.neo4j.kernel.impl.proc.GlobalProcedures
+import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 import scala.collection.mutable.ArrayBuffer
 

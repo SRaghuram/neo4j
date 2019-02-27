@@ -23,8 +23,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.StubResourceManager;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -57,7 +55,6 @@ public class DatabaseMetricsExtensionIT
 
     private File outputPath;
     private GraphDatabaseAPI db;
-    private final ResourceTracker resourceTracker = new StubResourceManager();
 
     @Before
     public void setup()

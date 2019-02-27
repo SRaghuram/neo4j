@@ -33,8 +33,8 @@ import static org.neo4j.configuration.Settings.min;
 import static org.neo4j.configuration.Settings.optionsObeyCase;
 import static org.neo4j.configuration.Settings.range;
 import static org.neo4j.configuration.Settings.setting;
-import static org.neo4j.kernel.impl.proc.ProcedureConfig.PROC_ALLOWED_SETTING_DEFAULT_NAME;
-import static org.neo4j.kernel.impl.proc.ProcedureConfig.PROC_ALLOWED_SETTING_ROLES;
+import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_DEFAULT_NAME;
+import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_ROLES;
 
 /**
  * Settings for security module
