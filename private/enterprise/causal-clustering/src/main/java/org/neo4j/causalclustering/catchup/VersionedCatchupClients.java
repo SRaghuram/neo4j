@@ -13,7 +13,6 @@ import org.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import org.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import org.neo4j.causalclustering.helper.TimeoutRetrier;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;

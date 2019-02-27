@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings( "unchecked" )
-class TimeoutRetrierTest
+class OperationProgressMonitorTest
 {
 
     private final Supplier<Optional<Long>> zeroMillisSinceLastResponse = () -> Optional.of( 0L );
@@ -46,10 +46,10 @@ class TimeoutRetrierTest
                 .thenThrow( TimeoutException.class )
                 .thenReturn( "expected" );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
 
         // when
-        Object actual = retryFuture.get( NullLog.getInstance() );
+        Object actual = monitoredFuture.get( NullLog.getInstance() );
 
         // then
         verify( future, atLeast( 2 ) ).get( anyLong(), any() );
@@ -66,13 +66,13 @@ class TimeoutRetrierTest
         when( future.get( anyLong(), any() ) )
                 .thenThrow( TimeoutException.class );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, incrementingMillisSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, incrementingMillisSinceLastResponse );
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         // when
         try
         {
-            retryFuture.get( FooException::new, logProvider.getLog( this.getClass() ) );
+            monitoredFuture.get( FooException::new, logProvider.getLog( this.getClass() ) );
             fail( "Should have eventually timed out and thrown!" );
         }
         catch ( FooException e )
@@ -93,12 +93,12 @@ class TimeoutRetrierTest
         when( future.get( anyLong(), any() ) )
                 .thenThrow( ExecutionException.class );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
 
         // when
         try
         {
-            retryFuture.get( FooException::new, NullLog.getInstance() );
+            monitoredFuture.get( FooException::new, NullLog.getInstance() );
             fail( "Should have thrown immediately!" );
         }
         catch ( FooException e )
@@ -119,14 +119,14 @@ class TimeoutRetrierTest
                 .thenThrow( InterruptedException.class )
                 .thenThrow( TimeoutException.class );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, foreverSinceLastResponse );
+        OperationProgressMonitor<Object> monitoredFuture = OperationProgressMonitor.of( future, inactivityTimeout, foreverSinceLastResponse );
 
         for ( int i = 0; i < 3; i++ )
         {
             // when
             try
             {
-                retryFuture.get( FooException::new, NullLog.getInstance() );
+                monitoredFuture.get( FooException::new, NullLog.getInstance() );
                 fail( "Should have thrown immediately!" );
             }
             catch ( FooException e )

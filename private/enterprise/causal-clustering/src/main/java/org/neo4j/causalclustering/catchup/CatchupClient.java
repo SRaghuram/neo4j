@@ -21,7 +21,7 @@ import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
-import org.neo4j.causalclustering.helper.TimeoutRetrier;
+import org.neo4j.causalclustering.helper.OperationProgressMonitor;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
@@ -152,12 +152,12 @@ class CatchupClient implements VersionedCatchupClients
             if ( protocol.equals( ApplicationProtocols.CATCHUP_1 ) )
             {
                 CatchupClient.V1 client = new CatchupClient.V1( channel, pool, defaultDatabaseName );
-                return timeoutRetrier( log, client, v1Request, allVersionsRequest, protocol );
+                return performRequest( log, client, v1Request, allVersionsRequest, protocol );
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
                 CatchupClient.V2 client = new CatchupClient.V2( channel, pool );
-                return timeoutRetrier( log, client, v2Request, allVersionsRequest, protocol );
+                return performRequest( log, client, v2Request, allVersionsRequest, protocol );
             }
             else
             {
@@ -167,17 +167,17 @@ class CatchupClient implements VersionedCatchupClients
             }
         }
 
-        private <CLIENT extends CatchupClientCommon> RESULT timeoutRetrier( Log log, CLIENT client,
+        private <CLIENT extends CatchupClientCommon> RESULT performRequest( Log log, CLIENT client,
                 Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest, Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest,
                 ApplicationProtocol protocol ) throws Exception
         {
             if ( specificVersionRequest != null )
             {
-                return retrying( specificVersionRequest.apply( client ).execute( responseHandler ) ).get( log );
+                return withProgressMonitor( specificVersionRequest.apply( client ).execute( responseHandler ) ).get( log );
             }
             else if ( allVersionsRequest != null )
             {
-                return retrying( allVersionsRequest.apply( client ).execute( responseHandler ) ).get( log );
+                return withProgressMonitor( allVersionsRequest.apply( client ).execute( responseHandler ) ).get( log );
             }
             else
             {
@@ -187,9 +187,9 @@ class CatchupClient implements VersionedCatchupClients
             }
         }
 
-        private TimeoutRetrier<RESULT> retrying( CompletableFuture<RESULT> request )
+        private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
         {
-            return TimeoutRetrier.of( request, inactivityTimeout.toMillis(), channel::millisSinceLastResponse );
+            return OperationProgressMonitor.of( request, inactivityTimeout.toMillis(), channel::millisSinceLastResponse );
         }
     }
 

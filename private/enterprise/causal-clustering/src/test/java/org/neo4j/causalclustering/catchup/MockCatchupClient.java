@@ -20,7 +20,7 @@ import org.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import org.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import org.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import org.neo4j.causalclustering.helper.TimeoutRetrier;
+import org.neo4j.causalclustering.helper.OperationProgressMonitor;
 import org.neo4j.causalclustering.identity.StoreId;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import org.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
@@ -132,18 +132,18 @@ public class MockCatchupClient implements VersionedCatchupClients
         {
             if ( protocol.equals( CATCHUP_1 ) )
             {
-                return retrying( v1Request.apply( v1Client ).execute( null ) ).get( log );
+                return withProgressMonitor( v1Request.apply( v1Client ).execute( null ) ).get( log );
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
-                return retrying( v2Request.apply( v2Client ).execute( null ) ).get( log );
+                return withProgressMonitor( v2Request.apply( v2Client ).execute( null ) ).get( log );
             }
-            return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+            return withProgressMonitor( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
         }
 
-        private TimeoutRetrier<RESULT> retrying( CompletableFuture<RESULT> request )
+        private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
         {
-            return TimeoutRetrier.of( request, 1, () -> Optional.of( 0L ) );
+            return OperationProgressMonitor.of( request, 1, () -> Optional.of( 0L ) );
         }
     }
 
