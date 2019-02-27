@@ -11,6 +11,7 @@ import com.neo4j.bench.client.QueryRetrier;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.model.Annotation;
 import com.neo4j.bench.client.model.Benchmark;
+import com.neo4j.bench.client.model.Benchmark.Mode;
 import com.neo4j.bench.client.model.BenchmarkConfig;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.BenchmarkGroupBenchmark;
@@ -28,7 +29,6 @@ import com.neo4j.bench.client.model.Repository;
 import com.neo4j.bench.client.model.TestRun;
 import com.neo4j.bench.client.model.TestRunError;
 import com.neo4j.bench.client.model.TestRunReport;
-import com.neo4j.bench.client.model.Benchmark.Mode;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.queries.AttachMetricsAnnotation;
 import com.neo4j.bench.client.queries.AttachTestRunAnnotation;
@@ -58,7 +58,6 @@ import static com.neo4j.bench.client.model.Repository.LDBC_BENCH;
 import static com.neo4j.bench.client.model.Repository.MICRO_BENCH;
 import static com.neo4j.bench.client.model.Repository.NEO4J;
 import static com.neo4j.bench.client.model.Repository.RONJA_BENCH;
-
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -67,8 +66,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class SyntheticStoreGenerator
 {
@@ -544,8 +541,12 @@ public class SyntheticStoreGenerator
 
                 if ( withAssertions )
                 {
-                    assertThat( "create/return one metrics per benchmark in group",
-                                result.benchmarkMetricsList().size(), equalTo( benchmarkPerGroupCount ) );
+                    if ( result.benchmarkMetricsList().size() != benchmarkPerGroupCount )
+                    {
+                        throw new AssertionError( format( "%s <> %s\nCreate/return one metrics per benchmark in group",
+                                                          result.benchmarkMetricsList().size(),
+                                                          benchmarkPerGroupCount ) );
+                    }
                     if ( !result.testRun().id().equals( testRun.id() ) )
                     {
                         throw new AssertionError( "return result for same test run" );
