@@ -36,13 +36,21 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
 
     private static String toPrettyString( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors, boolean verbose )
     {
-        int longestGroupName = longestStringIn( results.benchmarkGroupBenchmarks().stream()
-                                                       .map( BenchmarkGroupBenchmark::benchmarkGroup )
-                                                       .map( BenchmarkGroup::name ) );
+        if ( results.benchmarkGroupBenchmarks().isEmpty() && errors.isEmpty() )
+        {
+            // TODO added as sanity check for now, in reality this should never happen
+            throw new RuntimeException( "No results or errors to print!" );
+        }
 
-        int longestBenchmarkName = longestStringIn( results.benchmarkGroupBenchmarks().stream()
-                                                           .map( BenchmarkGroupBenchmark::benchmark )
-                                                           .map( Benchmark::name ) );
+        int longestGroupName = Math.max( longestStringIn( results.benchmarkGroupBenchmarks().stream()
+                                                                 .map( BenchmarkGroupBenchmark::benchmarkGroup )
+                                                                 .map( BenchmarkGroup::name ) ),
+                                         longestStringIn( errors.stream().map( TestRunError::groupName ) ) );
+
+        int longestBenchmarkName = Math.max( longestStringIn( results.benchmarkGroupBenchmarks().stream()
+                                                                     .map( BenchmarkGroupBenchmark::benchmark )
+                                                                     .map( Benchmark::name ) ),
+                                             longestStringIn( errors.stream().map( TestRunError::benchmarkName ) ) );
 
         String format = prettyPrintFormat( verbose, longestGroupName, longestBenchmarkName );
 
