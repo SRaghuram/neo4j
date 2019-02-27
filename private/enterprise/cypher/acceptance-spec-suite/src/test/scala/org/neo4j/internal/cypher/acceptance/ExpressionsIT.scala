@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{Ap
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{ast, _}
 import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.expressionVariables.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
@@ -81,14 +82,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   protected var query: QueryContext = _
-  private var cursors :ExpressionCursors = _
+  private var cursors: ExpressionCursors = _
+  private var expressionSlots: Array[AnyValue] = _
   private var tx: InternalTransaction = _
   private var context: TransactionalContext = _
   private val random = ThreadLocalRandom.current()
 
   test("round function") {
-    compile(function("round", literalFloat(PI))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(3.0))
-    compile(function("round", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("round", literalFloat(PI)))) should equal(doubleValue(3.0))
+    evaluate(compile(function("round", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("rand function") {
@@ -99,172 +101,172 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    val value = compiled.evaluate(ctx, query, EMPTY_MAP, cursors).asInstanceOf[DoubleValue].doubleValue()
-    value should (be >= 0.0 and be <1.0)
+    val value = evaluate(compiled).asInstanceOf[DoubleValue].doubleValue()
+    value should (be >= 0.0 and be < 1.0)
   }
 
   test("sin function") {
     val arg = random.nextDouble()
-    compile(function("sin", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(sin(arg)))
-    compile(function("sin", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("sin", literalFloat(arg)))) should equal(doubleValue(sin(arg)))
+    evaluate(compile(function("sin", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("asin function") {
     val arg = random.nextDouble()
-    compile(function("asin", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.asin(arg)))
-    compile(function("asin", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("asin", literalFloat(arg)))) should equal(doubleValue(Math.asin(arg)))
+    evaluate(compile(function("asin", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("haversin function") {
     val arg = random.nextDouble()
-    compile(function("haversin", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue((1.0 - Math.cos(arg)) / 2))
-    compile(function("haversin", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("haversin", literalFloat(arg)))) should equal(doubleValue((1.0 - Math.cos(arg)) / 2))
+    evaluate(compile(function("haversin", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("acos function") {
     val arg = random.nextDouble()
-    compile(function("acos", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.acos(arg)))
-    compile(function("acos", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("acos", literalFloat(arg)))) should equal(doubleValue(Math.acos(arg)))
+    evaluate(compile(function("acos", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("cos function") {
     val arg = random.nextDouble()
-    compile(function("cos", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.cos(arg)))
-    compile(function("cos", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("cos", literalFloat(arg)))) should equal(doubleValue(Math.cos(arg)))
+    evaluate(compile(function("cos", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("cot function") {
     val arg = random.nextDouble()
-    compile(function("cot", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(1 / Math.tan(arg)))
-    compile(function("cot", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("cot", literalFloat(arg)))) should equal(doubleValue(1 / Math.tan(arg)))
+    evaluate(compile(function("cot", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("atan function") {
     val arg = random.nextDouble()
-    compile(function("atan", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.atan(arg)))
-    compile(function("atan", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("atan", literalFloat(arg)))) should equal(doubleValue(Math.atan(arg)))
+    evaluate(compile(function("atan", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("atan2 function") {
     val arg1 = random.nextDouble()
     val arg2 = random.nextDouble()
-    compile(function("atan2", literalFloat(arg1), literalFloat(arg2))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.atan2(arg1, arg2)))
-    compile(function("atan2", nullLiteral, literalFloat(arg1))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
-    compile(function("atan2", literalFloat(arg1), nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
-    compile(function("atan2", nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("atan2", literalFloat(arg1), literalFloat(arg2)))) should equal(doubleValue(Math.atan2(arg1, arg2)))
+    evaluate(compile(function("atan2", nullLiteral, literalFloat(arg1)))) should equal(NO_VALUE)
+    evaluate(compile(function("atan2", literalFloat(arg1), nullLiteral))) should equal(NO_VALUE)
+    evaluate(compile(function("atan2", nullLiteral, nullLiteral))) should equal(NO_VALUE)
   }
 
   test("tan function") {
     val arg = random.nextDouble()
-    compile(function("tan", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.tan(arg)))
-    compile(function("tan", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("tan", literalFloat(arg)))) should equal(doubleValue(Math.tan(arg)))
+    evaluate(compile(function("tan", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("ceil function") {
     val arg = random.nextDouble()
-    compile(function("ceil", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.ceil(arg)))
-    compile(function("ceil", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("ceil", literalFloat(arg)))) should equal(doubleValue(Math.ceil(arg)))
+    evaluate(compile(function("ceil", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("floor function") {
     val arg = random.nextDouble()
-    compile(function("floor", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.floor(arg)))
-    compile(function("floor", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("floor", literalFloat(arg)))) should equal(doubleValue(Math.floor(arg)))
+    evaluate(compile(function("floor", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("abs function") {
-    compile(function("abs", literalFloat(3.2))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(3.2))
-    compile(function("abs", literalFloat(-3.2))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(3.2))
-    compile(function("abs", literalInt(3))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(3))
-    compile(function("abs", literalInt(-3))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(3))
-    compile(function("abs", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    evaluate(compile(function("abs", literalFloat(3.2)))) should equal(doubleValue(3.2))
+    evaluate(compile(function("abs", literalFloat(-3.2)))) should equal(doubleValue(3.2))
+    evaluate(compile(function("abs", literalInt(3)))) should equal(longValue(3))
+    evaluate(compile(function("abs", literalInt(-3)))) should equal(longValue(3))
+    evaluate(compile(function("abs", nullLiteral))) should equal(Values.NO_VALUE)
   }
 
   test("radians function") {
     val arg = random.nextDouble()
-    compile(function("radians", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.toRadians(arg)))
-    compile(function("radians", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("radians", literalFloat(arg)))) should equal(doubleValue(Math.toRadians(arg)))
+    evaluate(compile(function("radians", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("degrees function") {
     val arg = random.nextDouble()
-    compile(function("degrees", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.toDegrees(arg)))
-    compile(function("degrees", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("degrees", literalFloat(arg)))) should equal(doubleValue(Math.toDegrees(arg)))
+    evaluate(compile(function("degrees", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("exp function") {
     val arg = random.nextDouble()
-    compile(function("exp", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.exp(arg)))
-    compile(function("exp", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("exp", literalFloat(arg)))) should equal(doubleValue(Math.exp(arg)))
+    evaluate(compile(function("exp", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("log function") {
     val arg = random.nextDouble()
-    compile(function("log", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.log(arg)))
-    compile(function("log", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("log", literalFloat(arg)))) should equal(doubleValue(Math.log(arg)))
+    evaluate(compile(function("log", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("log10 function") {
     val arg = random.nextDouble()
-    compile(function("log10", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.log10(arg)))
-    compile(function("log10", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("log10", literalFloat(arg)))) should equal(doubleValue(Math.log10(arg)))
+    evaluate(compile(function("log10", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("sign function") {
     val arg = random.nextInt()
-    compile(function("sign", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.signum(arg)))
-    compile(function("sign", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("sign", literalFloat(arg)))) should equal(doubleValue(Math.signum(arg)))
+    evaluate(compile(function("sign", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("sqrt function") {
     val arg = random.nextDouble()
-    compile(function("sqrt", literalFloat(arg))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(doubleValue(Math.sqrt(arg)))
-    compile(function("sqrt", nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("sqrt", literalFloat(arg)))) should equal(doubleValue(Math.sqrt(arg)))
+    evaluate(compile(function("sqrt", nullLiteral))) should equal(NO_VALUE)
   }
 
   test("pi function") {
-    compile(function("pi")).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.PI)
+    evaluate(compile(function("pi"))) should equal(Values.PI)
   }
 
   test("e function") {
-    compile(function("e")).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.E)
+    evaluate(compile(function("e"))) should equal(Values.E)
   }
 
   test("range function with no step") {
     val range = function("range", literalInt(5), literalInt(9))
-    compile(range).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(list(longValue(5), longValue(6), longValue(7),
-                                                                              longValue(8), longValue(9)))
+    evaluate(compile(range)) should equal(list(longValue(5), longValue(6), longValue(7),
+                                               longValue(8), longValue(9)))
   }
 
   test("range function with step") {
     val range = function("range", literalInt(5), literalInt(9), literalInt(2))
-    compile(range).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(list(longValue(5), longValue(7), longValue(9)))
+    evaluate(compile(range)) should equal(list(longValue(5), longValue(7), longValue(9)))
   }
 
   test("coalesce function") {
-    compile(function("coalesce", nullLiteral, nullLiteral, literalInt(2), nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(2))
-    compile(function("coalesce", nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compile(function("coalesce", nullLiteral, nullLiteral, literalInt(2), nullLiteral))) should equal(longValue(2))
+    evaluate(compile(function("coalesce", nullLiteral, nullLiteral))) should equal(NO_VALUE)
   }
 
   test("coalesce function with parameters") {
     val compiled = compile(function("coalesce", parameter("a"), parameter("b"), parameter("c")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b", "c"), Array(NO_VALUE, longValue(2), NO_VALUE)), cursors) should equal(longValue(2))
-    compiled.evaluate(ctx, query, map(Array("a", "b", "c"), Array(NO_VALUE, NO_VALUE, NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b", "c"), Array(NO_VALUE, longValue(2), NO_VALUE))) should equal(longValue(2))
+    evaluate(compiled, map(Array("a", "b", "c"), Array(NO_VALUE, NO_VALUE, NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("distance function") {
     val compiled = compile(function("distance", parameter("p1"), parameter("p2")))
     val keys = Array("p1", "p2")
-    compiled.evaluate(ctx, query, map(keys,
-                                      Array(pointValue(Cartesian, 0.0, 0.0),
-                                             pointValue(Cartesian, 1.0, 1.0))), cursors) should equal(doubleValue(Math.sqrt(2)))
-    compiled.evaluate(ctx, query, map(keys,
-                                      Array(pointValue(Cartesian, 0.0, 0.0),
-                                             NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(keys,
-                                      Array(pointValue(Cartesian, 0.0, 0.0),
-                                             pointValue(WGS84, 1.0, 1.0))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(keys,
+                           Array(pointValue(Cartesian, 0.0, 0.0),
+                                 pointValue(Cartesian, 1.0, 1.0)))) should equal(doubleValue(Math.sqrt(2)))
+    evaluate(compiled, map(keys,
+                           Array(pointValue(Cartesian, 0.0, 0.0),
+                                 NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(keys,
+                           Array(pointValue(Cartesian, 0.0, 0.0),
+                                 pointValue(WGS84, 1.0, 1.0)))) should equal(NO_VALUE)
 
   }
 
@@ -274,8 +276,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     val compiled = compile(function("startNode", parameter("a")), slots)
     addRelationships(context, RelAt(rel, 0))
-    compiled.evaluate(context, query, map(Array("a"), Array(rel)), cursors) should equal(rel.startNode())
-    compiled.evaluate(context, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(rel.startNode())
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("endNode") {
@@ -284,16 +286,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     val compiled = compile(function("endNode", parameter("a")), slots)
     addRelationships(context, RelAt(rel, 0))
-    compiled.evaluate(context, query, map(Array("a"), Array(rel)), cursors) should equal(rel.endNode())
-    compiled.evaluate(context, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(rel.endNode())
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("exists on node") {
     val compiled = compile(function("exists", prop(parameter("a"), "prop")))
 
     val node = nodeValue(map(Array("prop"), Array(stringValue("hello"))))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(Values.TRUE)
   }
 
   test("exists on relationship") {
@@ -302,153 +304,155 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val rel = relationshipValue(nodeValue(),
                                 nodeValue(),
                                 map(Array("prop"), Array(stringValue("hello"))))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(Values.TRUE)
   }
 
   test("exists on map") {
     val compiled = compile(function("exists", prop(parameter("a"), "prop")))
 
     val mapValue = map(Array("prop"), Array(stringValue("hello")))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(mapValue)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(mapValue))) should equal(Values.TRUE)
   }
 
   test("head function") {
     val compiled = compile(function("head", parameter("a")))
     val listValue = list(stringValue("hello"), intValue(42))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(listValue)), cursors) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(EMPTY_LIST)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(listValue))) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(EMPTY_LIST))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("last function") {
     val compiled = compile(function("last", parameter("a")))
     val listValue = list(intValue(42), stringValue("hello"))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(listValue)), cursors) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(EMPTY_LIST)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(listValue))) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(EMPTY_LIST))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("left function") {
     val compiled = compile(function("left", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4)))) should
       equal(stringValue("HELL"))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(17))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(17)))) should
       equal(stringValue("HELLO"))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
 
-    an[IndexOutOfBoundsException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(-1))), cursors)
+    an[IndexOutOfBoundsException] should be thrownBy evaluate(compiled,
+                                                              map(Array("a", "b"),
+                                                                  Array(stringValue("HELLO"), intValue(-1))))
   }
 
   test("ltrim function") {
     val compiled = compile(function("ltrim", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("  HELLO  "))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(stringValue("  HELLO  ")))) should
       equal(stringValue("HELLO  "))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("rtrim function") {
     val compiled = compile(function("rtrim", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("  HELLO  "))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(stringValue("  HELLO  ")))) should
       equal(stringValue("  HELLO"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("trim function") {
     val compiled = compile(function("trim", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("  HELLO  "))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(stringValue("  HELLO  ")))) should
       equal(stringValue("HELLO"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("replace function") {
     val compiled = compile(function("replace", parameter("a"), parameter("b"), parameter("c")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b", "c"),
-                                      Array(stringValue("HELLO"),
-                                             stringValue("LL"),
-                                             stringValue("R"))), cursors) should equal(stringValue("HERO"))
-    compiled.evaluate(ctx, query, map(Array("a", "b", "c"),
-                                      Array(NO_VALUE,
-                                             stringValue("LL"),
-                                             stringValue("R"))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b", "c"),
-                                      Array(stringValue("HELLO"),
-                                             NO_VALUE,
-                                             stringValue("R"))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b", "c"),
-                                      Array(stringValue("HELLO"),
-                                             stringValue("LL"),
-                                             NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b", "c"),
+                           Array(stringValue("HELLO"),
+                                 stringValue("LL"),
+                                 stringValue("R")))) should equal(stringValue("HERO"))
+    evaluate(compiled, map(Array("a", "b", "c"),
+                           Array(NO_VALUE,
+                                 stringValue("LL"),
+                                 stringValue("R")))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b", "c"),
+                           Array(stringValue("HELLO"),
+                                 NO_VALUE,
+                                 stringValue("R")))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b", "c"),
+                           Array(stringValue("HELLO"),
+                                 stringValue("LL"),
+                                 NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("reverse function") {
     val compiled = compile(function("reverse", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("PARIS"))), cursors) should equal(stringValue("SIRAP"))
+    evaluate(compiled, map(Array("a"), Array(stringValue("PARIS")))) should equal(stringValue("SIRAP"))
     val original = list(intValue(1), intValue(2), intValue(3))
     val reversed = list(intValue(3), intValue(2), intValue(1))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(original)), cursors) should equal(reversed)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(original))) should equal(reversed)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("right function") {
     val compiled = compile(function("right", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(4)))) should
       equal(stringValue("ELLO"))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
   }
 
   test("split function") {
     val compiled = compile(function("split", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), stringValue("LL"))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("HELLO"), stringValue("LL")))) should
       equal(list(stringValue("HE"), stringValue("O")))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, stringValue("LL"))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), EMPTY_STRING)), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, stringValue("LL")))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("HELLO"), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("HELLO"), EMPTY_STRING))) should
       equal(list(stringValue("H"), stringValue("E"), stringValue("L"), stringValue("L"), stringValue("O")))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(EMPTY_STRING, stringValue("LL"))), cursors) should equal(list(EMPTY_STRING))
+    evaluate(compiled, map(Array("a", "b"), Array(EMPTY_STRING, stringValue("LL")))) should equal(list(EMPTY_STRING))
 
   }
 
   test("substring function no length") {
     val compiled = compile(function("substring", parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(1))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("HELLO"), intValue(1)))) should
       equal(stringValue("ELLO"))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
   }
 
   test("substring function with length") {
-    compile(function("substring", parameter("a"), parameter("b"), parameter("c")))
-      .evaluate(ctx, query, map(Array("a", "b", "c"), Array(stringValue("HELLO"), intValue(1), intValue(2))), cursors) should equal(stringValue("EL"))
-    compile(function("substring", parameter("a"), parameter("b")))
-      .evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), cursors) should equal(NO_VALUE)
+    evaluate(compile(function("substring", parameter("a"), parameter("b"), parameter("c"))),
+             map(Array("a", "b", "c"), Array(stringValue("HELLO"), intValue(1), intValue(2)))) should equal(stringValue("EL"))
+    evaluate(compile(function("substring", parameter("a"), parameter("b"))),
+             map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
   }
 
   test("toLower function") {
     val compiled = compile(function("toLower", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("HELLO"))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(stringValue("HELLO")))) should
       equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("toUpper function") {
     val compiled = compile(function("toUpper", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("hello"))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(stringValue("hello")))) should
       equal(stringValue("HELLO"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("nodes function") {
@@ -456,8 +460,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val p = path(2)
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(p)), cursors) should equal(VirtualValues.list(p.nodes():_*))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(p))) should equal(VirtualValues.list(p.nodes(): _*))
   }
 
   test("relationships function") {
@@ -465,8 +469,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val p = path(2)
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(p)), cursors) should equal(VirtualValues.list(p.relationships():_*))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(p))) should equal(VirtualValues.list(p.relationships(): _*))
   }
 
   test("id on node") {
@@ -474,8 +478,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val node = nodeValue()
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(longValue(node.id()))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(longValue(node.id()))
   }
 
   test("id on relationship") {
@@ -483,8 +487,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val rel = relationshipValue()
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(longValue(rel.id()))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(longValue(rel.id()))
   }
 
   test("labels function") {
@@ -492,16 +496,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val labels = Values.stringArray("A", "B", "C")
     val node = ValueUtils.fromNodeProxy(createLabeledNode("A", "B", "C"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(labels)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(labels)
   }
 
   test("type function") {
     val compiled = compile(function("type", parameter("a")))
     val rel = ValueUtils.fromRelationshipProxy(relate(createNode(), createNode(), "R"))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(stringValue("R"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(stringValue("R"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("points from node") {
@@ -511,8 +515,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                        Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
     val node = nodeValue(pointMap)
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(PointValue.fromMap(pointMap))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(PointValue.fromMap(pointMap))
   }
 
   test("points from relationship") {
@@ -522,8 +526,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                        Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
     val rel = relationshipValue(nodeValue(), nodeValue(), pointMap)
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(PointValue.fromMap(pointMap))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(PointValue.fromMap(pointMap))
   }
 
   test("points from map") {
@@ -531,16 +535,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val pointMap = map(Array("x", "y", "crs"),
                        Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(pointMap)), cursors) should equal(PointValue.fromMap(pointMap))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(pointMap))) should equal(PointValue.fromMap(pointMap))
   }
 
   test("keys on node") {
     val compiled = compile(function("keys", parameter("a")))
     val node = nodeValue(map(Array("A", "B", "C"), Array(stringValue("a"), stringValue("b"), stringValue("c"))))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(Values.stringArray("A", "B", "C"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(Values.stringArray("A", "B", "C"))
   }
 
   test("keys on relationship") {
@@ -551,8 +555,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                 map(Array("A", "B", "C"),
                                     Array(stringValue("a"), stringValue("b"), stringValue("c"))))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(Values.stringArray("A", "B", "C"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(Values.stringArray("A", "B", "C"))
   }
 
   test("keys on map") {
@@ -560,15 +564,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val mapValue = map(Array("x", "y", "crs"),
                        Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(mapValue)), cursors) should equal(mapValue.keys())
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(mapValue))) should equal(mapValue.keys())
   }
 
   test("size function") {
     val compiled = compile(function("size", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("HELLO"))), cursors) should equal(intValue(5))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("HELLO")))) should equal(intValue(5))
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
   }
 
   test("length function") {
@@ -576,70 +580,71 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val p = path(2)
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(p)), cursors) should equal(intValue(2))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(4))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(p))) should equal(intValue(2))
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, intValue(4)))) should equal(NO_VALUE)
   }
 
   test("tail function") {
     val compiled = compile(function("tail", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(list(intValue(2), intValue(3)))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled,
+             map(Array("a"), Array(list(intValue(1), intValue(2), intValue(3))))) should equal(list(intValue(2), intValue(3)))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("toBoolean function") {
     val compiled = compile(function("toBoolean", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(Values.TRUE)), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(Values.FALSE)), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("false"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("true"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("uncertain"))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(Values.TRUE))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(Values.FALSE))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("false")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("true")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("uncertain")))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("toFloat function") {
     val compiled = compile(function("toFloat", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(doubleValue(3.2))), cursors) should equal(doubleValue(3.2))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(intValue(3))), cursors) should equal(doubleValue(3))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("3.2"))), cursors) should equal(doubleValue(3.2))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("three dot two"))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(doubleValue(3.2)))) should equal(doubleValue(3.2))
+    evaluate(compiled, map(Array("a"), Array(intValue(3)))) should equal(doubleValue(3))
+    evaluate(compiled, map(Array("a"), Array(stringValue("3.2")))) should equal(doubleValue(3.2))
+    evaluate(compiled, map(Array("a"), Array(stringValue("three dot two")))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("toInteger function") {
     val compiled = compile(function("toInteger", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(doubleValue(3.2))), cursors) should equal(longValue(3))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(intValue(3))), cursors) should equal(intValue(3))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("3"))), cursors) should equal(longValue(3))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("three"))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(doubleValue(3.2)))) should equal(longValue(3))
+    evaluate(compiled, map(Array("a"), Array(intValue(3)))) should equal(intValue(3))
+    evaluate(compiled, map(Array("a"), Array(stringValue("3")))) should equal(longValue(3))
+    evaluate(compiled, map(Array("a"), Array(stringValue("three")))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("toString function") {
     val compiled = compile(function("toString", parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(doubleValue(3.2))), cursors) should equal(stringValue("3.2"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(Values.TRUE)), cursors) should equal(stringValue("true"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("hello"))), cursors) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(pointValue(Cartesian, 0.0, 0.0))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(doubleValue(3.2)))) should equal(stringValue("3.2"))
+    evaluate(compiled, map(Array("a"), Array(Values.TRUE))) should equal(stringValue("true"))
+    evaluate(compiled, map(Array("a"), Array(stringValue("hello")))) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(pointValue(Cartesian, 0.0, 0.0)))) should
       equal(stringValue("point({x: 0.0, y: 0.0, crs: 'cartesian'})"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(durationValue(Duration.ofHours(3)))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(durationValue(Duration.ofHours(3))))) should
       equal(stringValue("PT3H"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(temporalValue(localTime(20, 0, 0, 0)))), cursors) should
+    evaluate(compiled, map(Array("a"), Array(temporalValue(localTime(20, 0, 0, 0))))) should
       equal(stringValue("20:00:00"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    a [ParameterWrongTypeException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a"), Array(intArray(Array(1, 2, 3)))), cursors)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    a[ParameterWrongTypeException] should be thrownBy evaluate(compiled, map(Array("a"), Array(intArray(Array(1, 2, 3)))))
   }
 
   test("properties function on node") {
     val compiled = compile(function("properties", parameter("a")))
     val mapValue = map(Array("prop"), Array(longValue(42)))
     val node = nodeValue(mapValue)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(mapValue)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(mapValue)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("properties function on relationship") {
@@ -647,16 +652,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val mapValue = map(Array("prop"), Array(longValue(42)))
     val rel = relationshipValue(nodeValue(),
                                 nodeValue(), mapValue)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(mapValue)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(mapValue)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("properties function on map") {
     val compiled = compile(function("properties", parameter("a")))
     val mapValue = map(Array("prop"), Array(longValue(42)))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(mapValue)), cursors) should equal(mapValue)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(mapValue))) should equal(mapValue)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("add numbers") {
@@ -667,25 +672,25 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(52))
+    evaluate(compiled) should equal(longValue(52))
   }
 
   test("add temporals") {
     val compiled = compile(add(parameter("a"), parameter("b")))
 
     // temporal + duration
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(temporalValue(localTime(0)),
-                                                             durationValue(Duration.ofHours(10)))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(temporalValue(localTime(0)),
+                                                  durationValue(Duration.ofHours(10))))) should
       equal(localTime(10, 0, 0, 0))
 
     // duration + temporal
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
-                                                             temporalValue(localTime(0)))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
+                                                  temporalValue(localTime(0))))) should
       equal(localTime(10, 0, 0, 0))
 
     //duration + duration
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
-                                                             durationValue(Duration.ofHours(10)))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
+                                                  durationValue(Duration.ofHours(10))))) should
       equal(durationValue(Duration.ofHours(20)))
   }
 
@@ -697,8 +702,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
   }
 
   test("add strings") {
@@ -706,15 +711,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(add(parameter("a"), parameter("b")))
 
     // string1 + string2
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello "), stringValue("world"))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello "), stringValue("world")))) should
       equal(stringValue("hello world"))
     //string + other
-    compiled.evaluate(ctx, query, map(Array("a", "b"),
-                                      Array(stringValue("hello "), longValue(1337))), cursors) should
+    evaluate(compiled, map(Array("a", "b"),
+                                      Array(stringValue("hello "), longValue(1337)))) should
       equal(stringValue("hello 1337"))
     //other + string
-    compiled.evaluate(ctx, query, map(Array("a", "b"),
-                                      Array(longValue(1337), stringValue(" hello"))), cursors) should
+    evaluate(compiled, map(Array("a", "b"),
+                                      Array(longValue(1337), stringValue(" hello")))) should
       equal(stringValue("1337 hello"))
 
   }
@@ -727,9 +732,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, map(Array("a", "b"),
+    evaluate(compiled, map(Array("a", "b"),
                                       Array(longArray(Array(42, 43)),
-                                            longArray(Array(44, 45)))), cursors) should
+                                            longArray(Array(44, 45))))) should
       equal(list(longValue(42), longValue(43), longValue(44), longValue(45)))
   }
 
@@ -738,20 +743,20 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(add(parameter("a"), parameter("b")))
 
     // [a1,a2 ..] + [b1,b2 ..]
-    compiled.evaluate(ctx, query, map(Array("a", "b"),
+    evaluate(compiled, map(Array("a", "b"),
                                       Array(list(longValue(42), longValue(43)),
-                                             list(longValue(44), longValue(45)))), cursors) should
+                                             list(longValue(44), longValue(45))))) should
       equal(list(longValue(42), longValue(43), longValue(44), longValue(45)))
 
     // [a1,a2 ..] + b
-    compiled.evaluate(ctx, query, map(Array("a", "b"),
-                                      Array(list(longValue(42), longValue(43)), longValue(44))), cursors) should
+    evaluate(compiled, map(Array("a", "b"),
+                                      Array(list(longValue(42), longValue(43)), longValue(44)))) should
       equal(list(longValue(42), longValue(43), longValue(44)))
 
     // a + [b1,b2 ..]
-    compiled.evaluate(ctx, query, map(Array("a", "b"),
+    evaluate(compiled, map(Array("a", "b"),
                                       Array(longValue(43),
-                                             list(longValue(44), longValue(45)))), cursors) should
+                                             list(longValue(44), longValue(45))))) should
       equal(list(longValue(43), longValue(44), longValue(45)))
   }
 
@@ -763,7 +768,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(42))
+    evaluate(compiled) should equal(longValue(42))
   }
 
   test("subtract numbers") {
@@ -774,7 +779,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(32))
+    evaluate(compiled, EMPTY_MAP) should equal(longValue(32))
   }
 
   test("subtract with NO_VALUE") {
@@ -785,21 +790,21 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
   }
 
   test("subtract temporals") {
     val compiled = compile(subtract(parameter("a"), parameter("b")))
 
     // temporal - duration
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(temporalValue(localTime(20, 0, 0, 0)),
-                                                             durationValue(Duration.ofHours(10)))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(temporalValue(localTime(20, 0, 0, 0)),
+                                                             durationValue(Duration.ofHours(10))))) should
       equal(localTime(10, 0, 0, 0))
 
     //duration - duration
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
-                                                             durationValue(Duration.ofHours(10)))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(durationValue(Duration.ofHours(10)),
+                                                             durationValue(Duration.ofHours(10))))) should
       equal(durationValue(Duration.ofHours(0)))
   }
 
@@ -811,7 +816,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(-42))
+    evaluate(compiled, EMPTY_MAP) should equal(longValue(-42))
   }
 
   test("multiply function") {
@@ -822,7 +827,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(longValue(420))
+    evaluate(compiled, EMPTY_MAP) should equal(longValue(420))
   }
 
   test("multiply with NO_VALUE") {
@@ -833,56 +838,54 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
   }
 
   test("division") {
     val compiled = compile(divide(parameter("a"), parameter("b")))
 
     // Then
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(6), longValue(3))), cursors) should equal(longValue(2))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(5), doubleValue(2))), cursors) should equal(doubleValue(2.5))
-    an[ArithmeticException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(5), longValue(0))), cursors)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(doubleValue(3.0), doubleValue(0.0))), cursors) should equal(doubleValue(Double.PositiveInfinity))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(durationValue(Duration.ofHours(4)), longValue(2))), cursors) should equal(durationValue(Duration.ofHours(2)))
-    an[ArithmeticException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, longValue(0))), cursors)
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(6), longValue(3)))) should equal(longValue(2))
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(5), doubleValue(2)))) should equal(doubleValue(2.5))
+    an[ArithmeticException] should be thrownBy evaluate(compiled, map(Array("a", "b"), Array(longValue(5), longValue(0))))
+    evaluate(compiled, map(Array("a", "b"), Array(doubleValue(3.0), doubleValue(0.0)))) should equal(doubleValue(Double.PositiveInfinity))
+    evaluate(compiled, map(Array("a", "b"), Array(durationValue(Duration.ofHours(4)), longValue(2)))) should equal(durationValue(Duration.ofHours(2)))
+    an[ArithmeticException] should be thrownBy evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, longValue(0))))
   }
 
   test("modulo") {
     val compiled = compile(modulo(parameter("a"), parameter("b")))
 
     // Then
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(doubleValue(8.0), longValue(6))), cursors) should equal(doubleValue(2.0))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(8), doubleValue(6))), cursors) should equal(doubleValue(2.0))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(8), longValue(6))), cursors) should equal(longValue(2))
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(doubleValue(8.0), longValue(6)))) should equal(doubleValue(2.0))
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(8), doubleValue(6)))) should equal(doubleValue(2.0))
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(8), longValue(6)))) should equal(longValue(2))
   }
 
   test("pow") {
     val compiled = compile(pow(parameter("a"), parameter("b")))
 
     // Then
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, longValue(42))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(doubleValue(2), longValue(3))), cursors) should equal(doubleValue(8.0))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(2), longValue(3))), cursors) should equal(doubleValue(8.0))
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, longValue(42)))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(doubleValue(2), longValue(3)))) should equal(doubleValue(8.0))
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(2), longValue(3)))) should equal(doubleValue(8.0))
   }
 
   test("extract parameter") {
-    a[ParameterNotFoundException] should be thrownBy compile(parameter("prop")).evaluate(ctx, query, EMPTY_MAP, cursors)
-    compile(parameter("prop")).evaluate(ctx, query, map(Array("prop"), Array(stringValue("foo"))), cursors) should equal(stringValue("foo"))
-    compile(parameter("    AUTOBLAH BLAH BLAHA   ")).evaluate(ctx, query, map(Array("    AUTOBLAH BLAH BLAHA   "), Array(stringValue("foo"))), cursors) should equal(stringValue("foo"))
+    a[ParameterNotFoundException] should be thrownBy evaluate(compile(parameter("prop")))
+    evaluate(compile(parameter("prop")), map(Array("prop"), Array(stringValue("foo")))) should equal(stringValue("foo"))
+    evaluate(compile(parameter("    AUTOBLAH BLAH BLAHA   ")), map(Array("    AUTOBLAH BLAH BLAHA   "), Array(stringValue("foo")))) should equal(stringValue("foo"))
   }
 
   test("extract multiple parameters with whitespaces") {
-    compile(add(parameter(" A "), parameter("\tA\t")))
-          .evaluate(ctx, query, map(Array(" A ", "\tA\t"), Array(longValue(1), longValue(2) )), cursors) should equal(longValue(3))
-    compile(add(parameter(" A "), parameter("_A_")))
-          .evaluate(ctx, query, map(Array(" A ", "_A_"), Array(longValue(1), longValue(2) )), cursors) should equal(longValue(3))
+    evaluate(compile(add(parameter(" A "), parameter("\tA\t"))), map(Array(" A ", "\tA\t"), Array(longValue(1), longValue(2)))) should equal(longValue(3))
+    evaluate(compile(add(parameter(" A "), parameter("_A_"))), map(Array(" A ", "_A_"), Array(longValue(1), longValue(2)))) should equal(longValue(3))
   }
 
   test("NULL") {
@@ -893,7 +896,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled, EMPTY_MAP) should equal(NO_VALUE)
   }
 
   test("TRUE") {
@@ -904,7 +907,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compiled, EMPTY_MAP) should equal(Values.TRUE)
   }
 
   test("FALSE") {
@@ -915,238 +918,238 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression)
 
     // Then
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compiled, EMPTY_MAP) should equal(Values.FALSE)
   }
 
   test("OR") {
-    compile(or(trueLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(falseLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(trueLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(falseLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(or(trueLiteral, trueLiteral))) should equal(Values.TRUE)
+    evaluate(compile(or(falseLiteral, trueLiteral))) should equal(Values.TRUE)
+    evaluate(compile(or(trueLiteral, falseLiteral))) should equal(Values.TRUE)
+    evaluate(compile(or(falseLiteral, falseLiteral))) should equal(Values.FALSE)
 
-    compile(or(nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(or(nullLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(trueLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(nullLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(or(falseLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    evaluate(compile(or(nullLiteral, nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(or(nullLiteral, trueLiteral))) should equal(Values.TRUE)
+    evaluate(compile(or(trueLiteral, nullLiteral))) should equal(Values.TRUE)
+    evaluate(compile(or(nullLiteral, falseLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(or(falseLiteral, nullLiteral))) should equal(Values.NO_VALUE)
   }
 
   test("XOR") {
-    compile(xor(trueLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(xor(falseLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(xor(trueLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(xor(falseLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(xor(trueLiteral, trueLiteral))) should equal(Values.FALSE)
+    evaluate(compile(xor(falseLiteral, trueLiteral))) should equal(Values.TRUE)
+    evaluate(compile(xor(trueLiteral, falseLiteral))) should equal(Values.TRUE)
+    evaluate(compile(xor(falseLiteral, falseLiteral))) should equal(Values.FALSE)
 
-    compile(xor(nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(nullLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(trueLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(nullLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(xor(falseLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    evaluate(compile(xor(nullLiteral, nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(xor(nullLiteral, trueLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(xor(trueLiteral, nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(xor(nullLiteral, falseLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(xor(falseLiteral, nullLiteral))) should equal(Values.NO_VALUE)
   }
 
   test("OR should throw on non-boolean input") {
-    a [CypherTypeException] should be thrownBy compile(or(literalInt(42), falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors)
-    a [CypherTypeException] should be thrownBy compile(or(falseLiteral, literalInt(42))).evaluate(ctx, query, EMPTY_MAP, cursors)
-    compile(or(trueLiteral, literalInt(42))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(or(literalInt(42), trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    a [CypherTypeException] should be thrownBy evaluate(compile(or(literalInt(42), falseLiteral)))
+    a [CypherTypeException] should be thrownBy evaluate(compile(or(falseLiteral, literalInt(42))))
+    evaluate(compile(or(trueLiteral, literalInt(42)))) should equal(Values.TRUE)
+    evaluate(compile(or(literalInt(42), trueLiteral))) should equal(Values.TRUE)
   }
 
   test("OR should handle coercion") {
     val expression =  compile(or(parameter("a"), parameter("b")))
-    expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST)), cursors) should equal(Values.FALSE)
-    expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello")))), cursors) should equal(Values.TRUE)
+    evaluate(expression, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST))) should equal(Values.FALSE)
+    evaluate(expression, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello"))))) should equal(Values.TRUE)
   }
 
   test("ORS") {
-    compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, trueLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, nullLiteral, falseLiteral, falseLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(ors(falseLiteral, falseLiteral, falseLiteral, trueLiteral, nullLiteral, trueLiteral, falseLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, trueLiteral, falseLiteral))) should equal(Values.TRUE)
+    evaluate(compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral, falseLiteral))) should equal(Values.FALSE)
+    evaluate(compile(ors(falseLiteral, falseLiteral, falseLiteral, falseLiteral, nullLiteral, falseLiteral, falseLiteral, falseLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(ors(falseLiteral, falseLiteral, falseLiteral, trueLiteral, nullLiteral, trueLiteral, falseLiteral, falseLiteral))) should equal(Values.TRUE)
   }
 
   test("ORS should throw on non-boolean input") {
     val compiled = compile(ors(parameter("a"), parameter("b"), parameter("c"), parameter("d"), parameter("e")))
     val keys = Array("a", "b", "c", "d", "e")
-    compiled.evaluate(ctx, query, map(keys, Array(Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE)), cursors) should equal(Values.FALSE)
+    evaluate(compiled, map(keys, Array(Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE))) should equal(Values.FALSE)
 
-    compiled.evaluate(ctx, query, map(keys, Array(Values.FALSE, Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(keys, Array(Values.FALSE, Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE))) should equal(Values.TRUE)
 
-    compiled.evaluate(ctx, query, map(keys, Array(intValue(42), Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(keys, Array(intValue(42), Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE))) should equal(Values.TRUE)
 
-    a [CypherTypeException] should be thrownBy compiled.evaluate(ctx, query, map(keys, Array(intValue(42), Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE)), cursors)
+    a [CypherTypeException] should be thrownBy evaluate(compiled, map(keys, Array(intValue(42), Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE)))
   }
 
   test("ORS should handle coercion") {
     val expression =  compile(ors(parameter("a"), parameter("b")))
-    expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST)), cursors) should equal(Values.FALSE)
-    expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello")))), cursors) should equal(Values.TRUE)
+    evaluate(expression, map(Array("a", "b"), Array(Values.FALSE, EMPTY_LIST))) should equal(Values.FALSE)
+    evaluate(expression, map(Array("a", "b"), Array(Values.FALSE, list(stringValue("hello"))))) should equal(Values.TRUE)
   }
 
   test("AND") {
-    compile(and(trueLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(and(falseLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(trueLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(falseLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(and(trueLiteral, trueLiteral))) should equal(Values.TRUE)
+    evaluate(compile(and(falseLiteral, trueLiteral))) should equal(Values.FALSE)
+    evaluate(compile(and(trueLiteral, falseLiteral))) should equal(Values.FALSE)
+    evaluate(compile(and(falseLiteral, falseLiteral))) should equal(Values.FALSE)
 
-    compile(and(nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(and(nullLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(and(trueLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(and(nullLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(falseLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(and(nullLiteral, nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(and(nullLiteral, trueLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(and(trueLiteral, nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(and(nullLiteral, falseLiteral))) should equal(Values.FALSE)
+    evaluate(compile(and(falseLiteral, nullLiteral))) should equal(Values.FALSE)
   }
 
   test("AND should throw on non-boolean input") {
-    a [CypherTypeException] should be thrownBy compile(and(literalInt(42), trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors)
-    a [CypherTypeException] should be thrownBy compile(and(trueLiteral, literalInt(42))).evaluate(ctx, query, EMPTY_MAP, cursors)
-    compile(and(falseLiteral, literalInt(42))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(and(literalInt(42), falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    a [CypherTypeException] should be thrownBy evaluate(compile(and(literalInt(42), trueLiteral)))
+    a [CypherTypeException] should be thrownBy evaluate(compile(and(trueLiteral, literalInt(42))))
+    evaluate(compile(and(falseLiteral, literalInt(42)))) should equal(Values.FALSE)
+    evaluate(compile(and(literalInt(42), falseLiteral))) should equal(Values.FALSE)
   }
 
   test("AND should handle coercion") {
     val expression =  compile(and(parameter("a"), parameter("b")))
-   expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST)), cursors) should equal(Values.FALSE)
-   expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello")))), cursors) should equal(Values.TRUE)
+   evaluate(expression, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST))) should equal(Values.FALSE)
+   evaluate(expression, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello"))))) should equal(Values.TRUE)
   }
 
   test("ANDS") {
-    compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, trueLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, nullLiteral, trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(ands(trueLiteral, trueLiteral, trueLiteral, falseLiteral, nullLiteral, falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, trueLiteral))) should equal(Values.TRUE)
+    evaluate(compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, trueLiteral, falseLiteral))) should equal(Values.FALSE)
+    evaluate(compile(ands(trueLiteral, trueLiteral, trueLiteral, trueLiteral, nullLiteral, trueLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(ands(trueLiteral, trueLiteral, trueLiteral, falseLiteral, nullLiteral, falseLiteral))) should equal(Values.FALSE)
   }
 
   test("ANDS should throw on non-boolean input") {
     val compiled = compile(ands(parameter("a"), parameter("b"), parameter("c"), parameter("d"), parameter("e")))
     val keys = Array("a", "b", "c", "d", "e")
-    compiled.evaluate(ctx, query, map(keys, Array(Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(keys, Array(Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE))) should equal(Values.TRUE)
 
-    compiled.evaluate(ctx, query, map(keys, Array(Values.TRUE, Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE)), cursors) should equal(Values.FALSE)
+    evaluate(compiled, map(keys, Array(Values.TRUE, Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE))) should equal(Values.FALSE)
 
-    compiled.evaluate(ctx, query, map(keys, Array(intValue(42), Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE)), cursors) should equal(Values.FALSE)
+    evaluate(compiled, map(keys, Array(intValue(42), Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE))) should equal(Values.FALSE)
 
-    a [CypherTypeException] should be thrownBy compiled.evaluate(ctx, query, map(keys, Array(intValue(42), Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE)), cursors)
+    a [CypherTypeException] should be thrownBy evaluate(compiled, map(keys, Array(intValue(42), Values.TRUE, Values.TRUE, Values.TRUE, Values.TRUE)))
   }
 
   test("ANDS should handle coercion") {
     val expression =  compile(ands(parameter("a"), parameter("b")))
-    expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST)), cursors) should equal(Values.FALSE)
-    expression.evaluate(ctx, query, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello")))), cursors) should equal(Values.TRUE)
+    evaluate(expression, map(Array("a", "b"), Array(Values.TRUE, EMPTY_LIST))) should equal(Values.FALSE)
+    evaluate(expression, map(Array("a", "b"), Array(Values.TRUE, list(stringValue("hello"))))) should equal(Values.TRUE)
   }
 
   test("NOT") {
-    compile(not(falseLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(not(trueLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(not(nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    evaluate(compile(not(falseLiteral))) should equal(Values.TRUE)
+    evaluate(compile(not(trueLiteral))) should equal(Values.FALSE)
+    evaluate(compile(not(nullLiteral))) should equal(Values.NO_VALUE)
   }
 
   test("NOT should handle coercion") {
     val expression =  compile(not(parameter("a")))
-    expression.evaluate(ctx, query, map(Array("a"), Array(EMPTY_LIST)), cursors) should equal(Values.TRUE)
-    expression.evaluate(ctx, query, map(Array("a"), Array(list(stringValue("hello")))), cursors) should equal(Values.FALSE)
+    evaluate(expression, map(Array("a"), Array(EMPTY_LIST))) should equal(Values.TRUE)
+    evaluate(expression, map(Array("a"), Array(list(stringValue("hello"))))) should equal(Values.FALSE)
   }
 
   test("EQUALS") {
-    compile(equals(literalInt(42), literalInt(42))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(equals(literalInt(42), literalInt(43))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(equals(nullLiteral, literalInt(43))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(equals(literalInt(42), nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(equals(nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(equals(trueLiteral, equals(trueLiteral, equals(trueLiteral, nullLiteral)))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    evaluate(compile(equals(literalInt(42), literalInt(42)))) should equal(Values.TRUE)
+    evaluate(compile(equals(literalInt(42), literalInt(43)))) should equal(Values.FALSE)
+    evaluate(compile(equals(nullLiteral, literalInt(43)))) should equal(Values.NO_VALUE)
+    evaluate(compile(equals(literalInt(42), nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(equals(nullLiteral, nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(equals(trueLiteral, equals(trueLiteral, equals(trueLiteral, nullLiteral))))) should equal(Values.NO_VALUE)
   }
 
   test("NOT EQUALS") {
-    compile(notEquals(literalInt(42), literalInt(42))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(notEquals(literalInt(42), literalInt(43))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(notEquals(nullLiteral, literalInt(43))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(notEquals(literalInt(42), nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(notEquals(nullLiteral, nullLiteral)).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(notEquals(trueLiteral, notEquals(trueLiteral, notEquals(trueLiteral, nullLiteral)))).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
+    evaluate(compile(notEquals(literalInt(42), literalInt(42)))) should equal(Values.FALSE)
+    evaluate(compile(notEquals(literalInt(42), literalInt(43)))) should equal(Values.TRUE)
+    evaluate(compile(notEquals(nullLiteral, literalInt(43)))) should equal(Values.NO_VALUE)
+    evaluate(compile(notEquals(literalInt(42), nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(notEquals(nullLiteral, nullLiteral))) should equal(Values.NO_VALUE)
+    evaluate(compile(notEquals(trueLiteral, notEquals(trueLiteral, notEquals(trueLiteral, nullLiteral))))) should equal(Values.NO_VALUE)
   }
 
   test("regex match on literal pattern") {
     val compiled= compile(regex(parameter("a"), literalString("hell.*")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("hello"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("helo"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(Values.NO_VALUE)), cursors) should equal(Values.NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(longValue(42))), cursors) should equal(Values.NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("hello")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("helo")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(Values.NO_VALUE))) should equal(Values.NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(longValue(42)))) should equal(Values.NO_VALUE)
   }
 
   test("regex match on general expression") {
     val compiled= compile(regex(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell.*"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("helo"), stringValue("hell.*"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(Values.NO_VALUE, stringValue("hell.*"))), cursors) should equal(Values.NO_VALUE)
-    a [CypherTypeException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("forty-two"), longValue(42))), cursors)
-    an [InvalidSemanticsException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("["))), cursors)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell.*")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("helo"), stringValue("hell.*")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a", "b"), Array(Values.NO_VALUE, stringValue("hell.*")))) should equal(Values.NO_VALUE)
+    a [CypherTypeException] should be thrownBy evaluate(compiled, map(Array("a", "b"), Array(stringValue("forty-two"), longValue(42))))
+    an [InvalidSemanticsException] should be thrownBy evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("["))))
   }
 
   test("startsWith") {
     val compiled= compile(startsWith(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi"))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hell")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi")))) should equal(NO_VALUE)
   }
 
   test("endsWith") {
     val compiled= compile(endsWith(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ello"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi"))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ello")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi")))) should equal(NO_VALUE)
   }
 
   test("contains") {
     val compiled= compile(contains(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ell"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi"))), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("ell")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), stringValue("hi")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a", "b"), Array(stringValue("hello"), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, stringValue("hi")))) should equal(NO_VALUE)
   }
 
   test("in") {
     val compiled = compile(in(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(3), list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(4), list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, list(intValue(1), intValue(2), intValue(3)))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, EMPTY_LIST)), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(3), list(intValue(1), NO_VALUE, intValue(3)))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(4), list(intValue(1), NO_VALUE, intValue(3)))), cursors) should equal(Values.NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(intValue(4), NO_VALUE)), cursors) should equal(Values.NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(intValue(3), list(intValue(1), intValue(2), intValue(3))))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a", "b"), Array(intValue(4), list(intValue(1), intValue(2), intValue(3))))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, list(intValue(1), intValue(2), intValue(3))))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, EMPTY_LIST))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a", "b"), Array(intValue(3), list(intValue(1), NO_VALUE, intValue(3))))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a", "b"), Array(intValue(4), list(intValue(1), NO_VALUE, intValue(3))))) should equal(Values.NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(intValue(4), NO_VALUE))) should equal(Values.NO_VALUE)
   }
 
   test("in with literal list not containing null") {
     val compiled = compile(in(parameter("a"),
                               listOfString("a", "b", "c")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("b"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("c"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("A"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("a")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("b")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("c")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("A")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("in with literal list containing null") {
     val compiled = compile(in(parameter("a"),
                               listOf(literalString("a"), nullLiteral, literalString("c"))))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("c"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("b"))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("a")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("c")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("b")))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("in with empty literal list") {
     val compiled = compile(in(parameter("a"), listOf()))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("a"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("a")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(Values.FALSE)
   }
 
   test("should compare values using <") {
@@ -1159,7 +1162,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("should compare values using <=") {
     for (left <- allValues)
       for (right <- allValues) {
-        lessThanOrEqual(literal(left), literal(right))  should compareUsingLessThanOrEqual(left, right)
+        lessThanOrEqual(literal(left), literal(right)) should compareUsingLessThanOrEqual(left, right)
       }
   }
 
@@ -1180,8 +1183,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("isNull") {
     val compiled= compile(isNull(parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("hello"))), cursors) should equal(Values.FALSE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("hello")))) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(Values.TRUE)
   }
 
   test("isNull on top of NullCheck") {
@@ -1195,15 +1198,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     context.setLongAt(nullOffset, -1)
     context.setLongAt(nodeOffset, nodeValue().id())
 
-    compile(isNull(NullCheckVariable(nullOffset, NodeFromSlot(nullOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(isNull(NullCheckVariable(nodeOffset, NodeFromSlot(nodeOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(isNull(NullCheckVariable(nullOffset, NodeFromSlot(nullOffset, "n"))), slots), context) should equal(Values.TRUE)
+    evaluate(compile(isNull(NullCheckVariable(nodeOffset, NodeFromSlot(nodeOffset, "n"))), slots), context) should equal(Values.FALSE)
   }
 
   test("isNotNull") {
     val compiled= compile(isNotNull(parameter("a")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(stringValue("hello"))), cursors) should equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(stringValue("hello")))) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(Values.FALSE)
   }
 
   test("isNotNull on top of NullCheck") {
@@ -1217,17 +1220,17 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     context.setLongAt(nullOffset, -1)
     context.setLongAt(nodeOffset, nodeValue().id())
 
-    compile(isNotNull(NullCheckVariable(nullOffset, NodeFromSlot(nullOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(isNotNull(NullCheckVariable(nodeOffset, NodeFromSlot(nodeOffset, "n"))), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compile(isNotNull(NullCheckVariable(nullOffset, NodeFromSlot(nullOffset, "n"))), slots), context) should equal(Values.FALSE)
+    evaluate(compile(isNotNull(NullCheckVariable(nodeOffset, NodeFromSlot(nodeOffset, "n"))), slots), context) should equal(Values.TRUE)
   }
 
   test("CoerceToPredicate") {
     val coerced = CoerceToPredicate(parameter("a"))
 
-    compile(coerced).evaluate(ctx, query, map(Array("a"), Array(Values.FALSE)), cursors) should equal(Values.FALSE)
-    compile(coerced).evaluate(ctx, query, map(Array("a"), Array(Values.TRUE)), cursors) should equal(Values.TRUE)
-    compile(coerced).evaluate(ctx, query, map(Array("a"), Array(list(stringValue("A")))), cursors) should equal(Values.TRUE)
-    compile(coerced).evaluate(ctx, query, map(Array("a"), Array(list(EMPTY_LIST))), cursors) should equal(Values.TRUE)
+    evaluate(compile(coerced), map(Array("a"), Array(Values.FALSE))) should equal(Values.FALSE)
+    evaluate(compile(coerced), map(Array("a"), Array(Values.TRUE))) should equal(Values.TRUE)
+    evaluate(compile(coerced), map(Array("a"), Array(list(stringValue("A"))))) should equal(Values.TRUE)
+    evaluate(compile(coerced), map(Array("a"), Array(list(EMPTY_LIST)))) should equal(Values.TRUE)
   }
 
   test("ReferenceFromSlot") {
@@ -1242,7 +1245,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    evaluate(compiled, context) should equal(stringValue("hello"))
   }
 
   test("IdFromSlot") {
@@ -1257,15 +1260,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(longValue(42))
+    evaluate(compiled, context) should equal(longValue(42))
   }
 
   test("PrimitiveEquals") {
     val compiled = compile(PrimitiveEquals(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), longValue(42))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), longValue(42)))) should
       equal(Values.TRUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(longValue(42), longValue(1337))), cursors) should
+    evaluate(compiled, map(Array("a", "b"), Array(longValue(42), longValue(1337)))) should
       equal(Values.FALSE)
   }
 
@@ -1278,8 +1281,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     context.setLongAt(nullOffset, -1L)
     context.setLongAt(offset, 42L)
 
-    compile(NullCheck(nullOffset, literalFloat(PI)), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.NO_VALUE)
-    compile(NullCheck(offset, literalFloat(PI)), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.PI)
+    evaluate(compile(NullCheck(nullOffset, literalFloat(PI)), slots), context) should equal(Values.NO_VALUE)
+    evaluate(compile(NullCheck(offset, literalFloat(PI)), slots), context) should equal(Values.PI)
   }
 
   test("NullCheckVariable") {
@@ -1294,9 +1297,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     context.setLongAt(notNullOffset, 42L)
     context.setRefAt(0, stringValue("hello"))
 
-    compile(NullCheckVariable(1, ReferenceFromSlot(0, "aRef")), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(NullCheckVariable(1, ReferenceFromSlot(0, "aRef")), slots), context) should
       equal(Values.NO_VALUE)
-    compile(NullCheckVariable(0, ReferenceFromSlot(0, "aRef")), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(NullCheckVariable(0, ReferenceFromSlot(0, "aRef")), slots), context) should
       equal(stringValue("hello"))
   }
 
@@ -1310,16 +1313,16 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     context.setLongAt(nullOffset, -1)
     context.setLongAt(notNullOffset, 42L)
 
-    compile(IsPrimitiveNull(nullOffset), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(IsPrimitiveNull(notNullOffset)).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(IsPrimitiveNull(nullOffset), slots), context) should equal(Values.TRUE)
+    evaluate(compile(IsPrimitiveNull(notNullOffset)), context) should equal(Values.FALSE)
   }
 
   test("containerIndex on node") {
     val node =  nodeValue(map(Array("prop"), Array(stringValue("hello"))))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("containerIndex on relationship") {
@@ -1328,27 +1331,27 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                 map(Array("prop"), Array(stringValue("hello"))))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("containerIndex on map") {
     val mapValue = map(Array("prop"), Array(stringValue("hello")))
     val compiled = compile(containerIndex(parameter("a"), literalString("prop")))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(mapValue)), cursors) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(mapValue))) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
   test("containerIndex on list") {
     val listValue = list(longValue(42), stringValue("hello"), intValue(42))
     val compiled = compile(containerIndex(parameter("a"), parameter("b")))
 
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(listValue, intValue(1))), cursors) should equal(stringValue("hello"))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(listValue, intValue(-1))), cursors) should equal(intValue(42))
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(listValue, intValue(3))), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), cursors) should equal(NO_VALUE)
-    an [InvalidArgumentException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a", "b"), Array(listValue, longValue(Int.MaxValue + 1L))), cursors)
+    evaluate(compiled, map(Array("a", "b"), Array(listValue, intValue(1)))) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a", "b"), Array(listValue, intValue(-1)))) should equal(intValue(42))
+    evaluate(compiled, map(Array("a", "b"), Array(listValue, intValue(3)))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
+    an [InvalidArgumentException] should be thrownBy evaluate(compiled, map(Array("a", "b"), Array(listValue, longValue(Int.MaxValue + 1L))))
   }
 
   test("handle list literals") {
@@ -1356,7 +1359,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val compiled = compile(literal)
 
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(list(Values.TRUE, intValue(5), NO_VALUE, Values.FALSE))
+    evaluate(compiled) should equal(list(Values.TRUE, intValue(5), NO_VALUE, Values.FALSE))
   }
 
   test("handle map literals") {
@@ -1365,7 +1368,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(literal)
 
     import scala.collection.JavaConverters._
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> 2, "baz" -> 3).asInstanceOf[Map[String, AnyRef]].asJava))
+    evaluate(compiled) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> 2, "baz" -> 3).asInstanceOf[Map[String, AnyRef]].asJava))
   }
 
   test("handle map literals with null") {
@@ -1374,7 +1377,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(literal)
 
     import scala.collection.JavaConverters._
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> null, "baz" -> "three").asInstanceOf[Map[String, AnyRef]].asJava))
+    evaluate(compiled) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> null, "baz" -> "three").asInstanceOf[Map[String, AnyRef]].asJava))
   }
 
   test("handle empty map literals") {
@@ -1382,50 +1385,50 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val compiled = compile(literal)
 
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors) should equal(EMPTY_MAP)
+    evaluate(compiled) should equal(EMPTY_MAP)
   }
 
   test("from slice") {
     val slice = compile(sliceFrom(parameter("a"), parameter("b")))
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
 
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(3))), cursors) should equal(NO_VALUE)
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, NO_VALUE)), cursors) should equal(NO_VALUE)
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, intValue(2))), cursors) should equal(VirtualValues.list(intValue(3)))
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, intValue(-2))), cursors) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, intValue(0))), cursors) should equal(list)
+    evaluate(slice, map(Array("a", "b"), Array(NO_VALUE, intValue(3)))) should equal(NO_VALUE)
+    evaluate(slice, map(Array("a", "b"), Array(list, NO_VALUE))) should equal(NO_VALUE)
+    evaluate(slice, map(Array("a", "b"), Array(list, intValue(2)))) should equal(VirtualValues.list(intValue(3)))
+    evaluate(slice, map(Array("a", "b"), Array(list, intValue(-2)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    evaluate(slice, map(Array("a", "b"), Array(list, intValue(0)))) should equal(list)
   }
 
   test("to slice") {
     val slice = compile(sliceTo(parameter("a"), parameter("b")))
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
 
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(NO_VALUE, intValue(1))), cursors) should equal(NO_VALUE)
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, NO_VALUE)), cursors) should equal(NO_VALUE)
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, intValue(2))), cursors) should equal(VirtualValues.list(intValue(1), intValue(2)))
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, intValue(-2))), cursors) should equal(VirtualValues.list(intValue(1)))
-    slice.evaluate(ctx, query, map(Array("a", "b"), Array(list, intValue(0))), cursors) should equal(EMPTY_LIST)
+    evaluate(slice, map(Array("a", "b"), Array(NO_VALUE, intValue(1)))) should equal(NO_VALUE)
+    evaluate(slice, map(Array("a", "b"), Array(list, NO_VALUE))) should equal(NO_VALUE)
+    evaluate(slice, map(Array("a", "b"), Array(list, intValue(2)))) should equal(VirtualValues.list(intValue(1), intValue(2)))
+    evaluate(slice, map(Array("a", "b"), Array(list, intValue(-2)))) should equal(VirtualValues.list(intValue(1)))
+    evaluate(slice, map(Array("a", "b"), Array(list, intValue(0)))) should equal(EMPTY_LIST)
   }
 
   test("full slice") {
     val slice = compile(sliceFull(parameter("a"), parameter("b"), parameter("c")))
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3), intValue(4), intValue(5))
 
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(NO_VALUE, intValue(1), intValue(3))), cursors) should equal(NO_VALUE)
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(list, NO_VALUE, intValue(3))), cursors) should equal(NO_VALUE)
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(list, intValue(3), NO_VALUE)), cursors) should equal(NO_VALUE)
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(3))), cursors) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(-2))), cursors) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(3))), cursors) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(-2))), cursors) should equal(VirtualValues.list(intValue(2), intValue(3)))
-    slice.evaluate(ctx, query, map(Array("a", "b", "c"), Array(list, intValue(0), intValue(0))), cursors) should equal(EMPTY_LIST)
+    evaluate(slice, map(Array("a", "b", "c"), Array(NO_VALUE, intValue(1), intValue(3)))) should equal(NO_VALUE)
+    evaluate(slice, map(Array("a", "b", "c"), Array(list, NO_VALUE, intValue(3)))) should equal(NO_VALUE)
+    evaluate(slice, map(Array("a", "b", "c"), Array(list, intValue(3), NO_VALUE))) should equal(NO_VALUE)
+    evaluate(slice, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(3)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    evaluate(slice, map(Array("a", "b", "c"), Array(list, intValue(1), intValue(-2)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    evaluate(slice, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(3)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    evaluate(slice, map(Array("a", "b", "c"), Array(list, intValue(-4), intValue(-2)))) should equal(VirtualValues.list(intValue(2), intValue(3)))
+    evaluate(slice, map(Array("a", "b", "c"), Array(list, intValue(0), intValue(0)))) should equal(EMPTY_LIST)
   }
 
   test("handle variables") {
     val variable = varFor("key")
     val compiled = compile(variable)
     val context = new MapExecutionContext(mutable.Map("key" -> stringValue("hello")))
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    evaluate(compiled, context) should equal(stringValue("hello"))
   }
 
   test("handle variables with whitespace ") {
@@ -1433,7 +1436,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val variable = varFor(varName)
     val compiled = compile(variable)
     val context = new MapExecutionContext(mutable.Map(varName -> stringValue("hello")))
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    evaluate(compiled, context) should equal(stringValue("hello"))
   }
 
   test("coerceTo tests") {
@@ -1527,8 +1530,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val node = nodeValue(map(Array("prop"), Array(stringValue("hello"))))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(node)), cursors) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(node))) should equal(stringValue("hello"))
   }
 
   test("access property on relationship") {
@@ -1536,31 +1539,31 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val rel = relationshipValue(map(Array("prop"), Array(stringValue("hello"))))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(rel)), cursors) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(rel))) should equal(stringValue("hello"))
   }
 
   test("access property on map") {
     val compiled = compile(prop(parameter("a"), "prop"))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(map(Array("prop"), Array(stringValue("hello"))))), cursors) should equal(stringValue("hello"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(map(Array("prop"), Array(stringValue("hello")))))) should equal(stringValue("hello"))
   }
 
   test("access property on temporal") {
     val value = TimeValue.now(Clock.systemUTC())
     val compiled = compile(prop(parameter("a"), "timezone"))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors) should equal(value.get("timezone"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(value))) should equal(value.get("timezone"))
   }
 
   test("access property on duration") {
     val value = durationValue(Duration.ofHours(3))
     val compiled = compile(prop(parameter("a"), "seconds"))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors) should equal(value.get("seconds"))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(value))) should equal(value.get("seconds"))
   }
 
   test("access property on point") {
@@ -1568,8 +1571,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val compiled = compile(prop(parameter("a"), "x"))
 
-    compiled.evaluate(ctx, query, map(Array("a"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-    compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors) should equal(doubleValue(1.0))
+    evaluate(compiled, map(Array("a"), Array(NO_VALUE))) should equal(NO_VALUE)
+    evaluate(compiled, map(Array("a"), Array(value))) should equal(doubleValue(1.0))
   }
 
   test("access property on point with invalid key") {
@@ -1577,7 +1580,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val compiled = compile(prop(parameter("a"), "foobar"))
 
-    an[InvalidArgumentException] should be thrownBy compiled.evaluate(ctx, query, map(Array("a"), Array(value)), cursors)
+    an[InvalidArgumentException] should be thrownBy evaluate(compiled, map(Array("a"), Array(value)))
   }
 
   test("should project") {
@@ -1612,9 +1615,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), literalString("a"))))
 
     //Then
-    compiledNone.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
-    compiledSingle.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledMany.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledNone, context) should equal(booleanValue(false))
+    evaluate(compiledSingle, context) should equal(booleanValue(true))
+    evaluate(compiledMany, context) should equal(booleanValue(false))
   }
 
   test("single in list function accessing outer scope") {
@@ -1636,9 +1639,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), varFor("a"))))
 
     //Then
-    compiledNone.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
-    compiledSingle.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledMany.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledNone, context) should equal(booleanValue(false))
+    evaluate(compiledSingle, context) should equal(booleanValue(true))
+    evaluate(compiledMany, context) should equal(booleanValue(false))
   }
 
   test("single in list on null") {
@@ -1650,7 +1653,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                         equals(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("single in list with null predicate") {
@@ -1662,7 +1665,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equals(varFor("bar"), nullLiteral)))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("single function accessing same variable in inner and outer") {
@@ -1674,7 +1677,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compiled) should equal(Values.TRUE)
   }
 
   test("single function accessing the same parameter in inner and outer") {
@@ -1687,7 +1690,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, query, map(Array("a"), Array(list)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(Values.TRUE)
   }
 
   test("single on empty list") {
@@ -1698,7 +1701,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(singleInList("bar", listOf(), equals(literalInt(42), varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compiled) should equal(Values.FALSE)
   }
 
 
@@ -1715,8 +1718,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equals(varFor("bar"), literalString("a"))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("none in list function accessing outer scope") {
@@ -1732,8 +1735,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equals(varFor("bar"), varFor("a"))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("none in list on null") {
@@ -1745,7 +1748,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       equals(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("none in list with null predicate") {
@@ -1757,7 +1760,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equals(varFor("bar"), nullLiteral )))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("none function accessing same variable in inner and outer") {
@@ -1769,7 +1772,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(FALSE)
+    evaluate(compiled) should equal(FALSE)
   }
 
   test("none function accessing the same parameter in inner and outer") {
@@ -1782,7 +1785,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, query, map(Array("a"), Array(list)), cursors) should equal(FALSE)
+    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(FALSE)
   }
 
   test("none on empty list") {
@@ -1794,7 +1797,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compiled) should equal(Values.TRUE)
   }
 
   test("any in list function local access only") {
@@ -1810,8 +1813,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equals(varFor("bar"), literalString("b"))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("any in list function accessing outer scope") {
@@ -1827,8 +1830,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equals(varFor("bar"), varFor("b"))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("any in list on null") {
@@ -1840,7 +1843,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                      equals(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("any in list with null predicate") {
@@ -1852,7 +1855,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       equals(varFor("bar"), nullLiteral)))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("any function accessing same variable in inner and outer") {
@@ -1864,7 +1867,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compiled) should equal(Values.TRUE)
   }
 
   test("any function accessing the same parameter in inner and outer") {
@@ -1877,7 +1880,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, query, map(Array("a"), Array(list)), cursors) should equal(Values.TRUE)
+    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(Values.TRUE)
   }
 
   test("any on empty list") {
@@ -1889,7 +1892,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compiled) should equal(Values.FALSE)
   }
 
   test("all in list function local access only") {
@@ -1905,8 +1908,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), literalString("aa"))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("all in list function accessing outer scope") {
@@ -1922,8 +1925,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), varFor("aa"))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("all in list on null") {
@@ -1935,7 +1938,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                      startsWith(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("all in list with null predicate") {
@@ -1947,7 +1950,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), nullLiteral)))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("all function accessing same variable in inner and outer") {
@@ -1959,7 +1962,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(FALSE)
+    evaluate(compiled) should equal(FALSE)
   }
 
   test("all function accessing the same parameter in inner and outer") {
@@ -1972,7 +1975,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, query, map(Array("a"), Array(list)), cursors) should equal(Values.FALSE)
+    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(Values.FALSE)
   }
 
   test("all on empty list") {
@@ -1984,7 +1987,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compiled) should equal(Values.TRUE)
   }
 
   test("filter function local access only") {
@@ -1996,7 +1999,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), literalString("aa"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
   test("filter function accessing outer scope") {
@@ -2008,7 +2011,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
   test("filter on null") {
@@ -2020,7 +2023,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   startsWith(varFor("bar"), varFor("aa"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("filter with null predicate") {
@@ -2032,7 +2035,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       startsWith(varFor("bar"), nullLiteral)))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list())
+    evaluate(compiled) should equal(list())
   }
 
   test("filter function accessing same variable in inner and outer") {
@@ -2044,7 +2047,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                    equals(function("size", varFor("bar")), function("size", varFor("foo")))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.list(stringValue("aaa")))
+    evaluate(compiled) should equal(VirtualValues.list(stringValue("aaa")))
   }
 
   test("filter function accessing the same parameter in inner and outer") {
@@ -2057,7 +2060,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   equals(function("size", varFor("bar")), function("size", parameter("a")))))
 
     //Then
-    compiled.evaluate(context, query, map(Array("a"), Array(list)), cursors) should equal(VirtualValues.list(stringValue("aaa")))
+    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(VirtualValues.list(stringValue("aaa")))
   }
 
   test("filter on empty list") {
@@ -2069,7 +2072,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                       equals(varFor("bar"), literalInt(42))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(EMPTY_LIST)
+    evaluate(compiled) should equal(EMPTY_LIST)
   }
 
   test("nested list expressions local access only") {
@@ -2097,8 +2100,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("nested list expressions, outer expression accessing outer scope") {
@@ -2126,8 +2129,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("nested list expressions, inner expression accessing outer scope") {
@@ -2155,8 +2158,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("nested list expressions, both accessing outer scope") {
@@ -2184,8 +2187,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
           predicate = equals(varFor("bar"), varFor("foo")))))
 
     //Then
-    compiledTrue.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(true))
-    compiledFalse.evaluate(context, query, EMPTY_MAP, cursors) should equal(booleanValue(false))
+    evaluate(compiledTrue, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, context) should equal(booleanValue(false))
   }
 
   test("extract function local access only") {
@@ -2197,7 +2200,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                    function("size", varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(intValue(1), intValue(2), intValue(3)))
+    evaluate(compiled) should equal(list(intValue(1), intValue(2), intValue(3)))
   }
 
   test("extract function accessing outer scope") {
@@ -2209,7 +2212,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                    add(varFor("foo"), varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(intValue(11), intValue(12), intValue(13)))
+    evaluate(compiled) should equal(list(intValue(11), intValue(12), intValue(13)))
   }
 
   test("extract on null") {
@@ -2221,7 +2224,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                    function("size", varFor("bar"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("extract function accessing same variable in inner and outer") {
@@ -2233,7 +2236,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   function("size", varFor("foo"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+    evaluate(compiled) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
   }
 
   test("extract function accessing the same parameter in inner and outer") {
@@ -2246,7 +2249,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                    function("size", parameter("a"))))
 
     //Then
-    compiled.evaluate(context, query, map(Array("a"), Array(list)), cursors) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
   }
 
   test("extract on empty list") {
@@ -2257,7 +2260,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(extract("bar", listOf(), literalInt(42)))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(EMPTY_LIST)
+    evaluate(compiled) should equal(EMPTY_LIST)
   }
 
   test("reduce function local access only") {
@@ -2304,7 +2307,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   add(add(varFor("foo"), varFor("bar")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(intValue(36))
+    evaluate(compiled) should equal(intValue(36))
   }
 
   test("reduce on null") {
@@ -2316,7 +2319,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   add(function("size", varFor("bar")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
+    evaluate(compiled) should equal(NO_VALUE)
   }
 
   test("reduce function accessing same variable in inner and outer") {
@@ -2328,7 +2331,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   add(function("size", varFor("foo")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(intValue(9))
+    evaluate(compiled) should equal(intValue(9))
   }
 
   test("reduce function accessing the same parameter in inner and outer") {
@@ -2341,7 +2344,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   add(function("size", parameter("a")), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, query, map(Array("a"), Array(list)), cursors) should equal(intValue(9))
+    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(intValue(9))
   }
 
   test("reduce on empty list") {
@@ -2353,7 +2356,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                   add(literalInt(3), varFor("count"))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.intValue(42))
+    evaluate(compiled) should equal(Values.intValue(42))
   }
 
   test("list comprehension with predicate and extract expression") {
@@ -2366,7 +2369,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                              extractExpression = Some(add(varFor("bar"), literalString("A")))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(stringValue("aaA"), stringValue("aaaA")))
+    evaluate(compiled) should equal(list(stringValue("aaA"), stringValue("aaaA")))
   }
 
   test("list comprehension with no predicate but an extract expression") {
@@ -2379,7 +2382,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                              extractExpression = Some(add(varFor("bar"), literalString("A")))))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(stringValue("aA"), stringValue("aaA"), stringValue("aaaA")))
+    evaluate(compiled) should equal(list(stringValue("aA"), stringValue("aaA"), stringValue("aaaA")))
   }
 
   test("list comprehension with predicate but no extract expression") {
@@ -2392,7 +2395,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                              extractExpression = None))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
   test("list comprehension with no predicate nor extract expression") {
@@ -2405,31 +2408,31 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                              extractExpression = None))
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
   }
 
   test("simple case expressions") {
     val alts = List(literalInt(42) -> literalString("42"), literalInt(1337) -> literalString("1337"))
 
-    compile(simpleCase(parameter("a"), alts))
-      .evaluate(ctx, query, parameters("a" -> intValue(42)), cursors) should equal(stringValue("42"))
-    compile(simpleCase(parameter("a"), alts))
-      .evaluate(ctx, query, parameters("a" -> intValue(1337)), cursors) should equal(stringValue("1337"))
-    compile(simpleCase(parameter("a"), alts))
-      .evaluate(ctx, query, parameters("a" -> intValue(-1)), cursors) should equal(NO_VALUE)
-    compile(simpleCase(parameter("a"), alts, Some(literalString("THIS IS THE DEFAULT"))))
-      .evaluate(ctx, query, parameters("a" -> intValue(-1)), cursors) should equal(stringValue("THIS IS THE DEFAULT"))
+    evaluate(compile(simpleCase(parameter("a"), alts)),
+             parameters("a" -> intValue(42))) should equal(stringValue("42"))
+    evaluate(compile(simpleCase(parameter("a"), alts)),
+             parameters("a" -> intValue(1337))) should equal(stringValue("1337"))
+    evaluate(compile(simpleCase(parameter("a"), alts)),
+             parameters("a" -> intValue(-1))) should equal(NO_VALUE)
+    evaluate(compile(simpleCase(parameter("a"), alts, Some(literalString("THIS IS THE DEFAULT")))),
+             parameters("a" -> intValue(-1))) should equal(stringValue("THIS IS THE DEFAULT"))
   }
 
   test("generic case expressions") {
-    compile(genericCase(List(falseLiteral -> literalString("no"), trueLiteral -> literalString("yes"))))
-      .evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("yes"))
-    compile(genericCase(List(trueLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
-      .evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("no"))
-    compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
-      .evaluate(ctx, query, EMPTY_MAP, cursors) should equal(NO_VALUE)
-    compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes")), Some(literalString("default"))))
-      .evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("default"))
+    evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), trueLiteral -> literalString("yes"))))
+      ) should equal(stringValue("yes"))
+    evaluate(compile(genericCase(List(trueLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
+      ) should equal(stringValue("no"))
+    evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
+      ) should equal(NO_VALUE)
+    evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes")), Some(literalString("default"))))
+      ) should equal(stringValue("default"))
   }
 
   test("map projection node with map context") {
@@ -2437,10 +2440,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val node = nodeValue(propertyMap)
       val context = new MapExecutionContext(mutable.Map("n" -> node))
 
-      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")))
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")))
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected"))),
+         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected"))),
+         context) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection node from long slot") {
@@ -2453,10 +2456,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
       val context = SlottedExecutionContext(slots)
       context.setLongAt(offset, node.id())
-      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
+         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots),
+         context) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2470,10 +2473,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
       val context = SlottedExecutionContext(slots)
       context.setRefAt(offset, node)
-      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
+         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots),
+         context) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2482,10 +2485,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val relationship = relationshipValue(nodeValue(),
                                          nodeValue(), propertyMap)
     val context = new MapExecutionContext(mutable.Map("r" -> relationship))
-    compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")))
-      .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-    compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")))
-      .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+    evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected"))),
+       context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected"))),
+       context) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection relationship from long slot") {
@@ -2500,10 +2503,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
       val context = SlottedExecutionContext(slots)
       context.setLongAt(offset, relationship.id())
-      compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-      compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
+         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots),
+         context) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2518,10 +2521,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
       val context = SlottedExecutionContext(slots)
       context.setRefAt(offset, relationship)
-      compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-      compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
+         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots),
+         context) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2529,10 +2532,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val propertyMap = map(Array("prop"), Array(stringValue("hello")))
     val context = new MapExecutionContext(mutable.Map("map" -> propertyMap))
 
-    compile(mapProjection("map", includeAllProps = true, "foo" -> literalString("projected")))
-      .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-    compile(mapProjection("map", includeAllProps = false, "foo" -> literalString("projected")))
-      .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+    evaluate(compile(mapProjection("map", includeAllProps = true, "foo" -> literalString("projected"))),
+       context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    evaluate(compile(mapProjection("map", includeAllProps = false, "foo" -> literalString("projected"))),
+       context) should equal(map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection mapValue from ref slot") {
@@ -2544,10 +2547,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
       val context = SlottedExecutionContext(slots)
       context.setRefAt(offset, propertyMap)
-      compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-      compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots)
-        .evaluate(context, query, EMPTY_MAP, cursors) should equal(map(Array("foo"), Array(stringValue("projected"))))
+      evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
+         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots),
+         context) should equal(map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2563,7 +2566,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val udf = callFunction(signature(qualifiedName("foo"), id), literalString("hello"))
 
     //then
-    compile(udf).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("success"))
+    evaluate(compile(udf)) should equal(stringValue("success"))
   }
 
   test("call function by id with default argument") {
@@ -2580,7 +2583,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
 
     //then
-    compile(udf).evaluate(ctx, query, EMPTY_MAP, cursors) should equal(stringValue("success"))
+    evaluate(compile(udf)) should equal(stringValue("success"))
   }
 
   test("should compile grouping key with single expression") {
@@ -2668,7 +2671,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                         SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, Some(NodeFromSlot(n2.slot, "n2")),
                                                                    NilPathStep)))
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single outgoing path where target node not known (will only happen for legacy plans)") {
@@ -2690,7 +2693,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                         SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, None,
                                                                    NilPathStep)))
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single-node path") {
@@ -2705,7 +2708,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"), NilPathStep))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node), Array.empty))
+    evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node), Array.empty))
   }
 
   test("single incoming path") {
@@ -2728,7 +2731,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                    INCOMING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single incoming path where target node not known (will only happen for legacy plans)") {
@@ -2750,7 +2753,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                         SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), INCOMING, None, NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("single undirected path") {
@@ -2776,8 +2779,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                             BOTH, Some(NodeFromSlot(n1.slot, "n1")),
                                                                             NilPathStep))), slots)
     //then
-    p1.evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
-    p2.evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
+    evaluate(p1, context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    evaluate(p2, context) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
   }
 
   test("single undirected path where target node not known (will only happen for legacy plans)") {
@@ -2803,8 +2806,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                             BOTH, None,
                                                                             NilPathStep))), slots)
     //then
-    p1.evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
-    p2.evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
+    evaluate(p1, context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    evaluate(p2, context) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
   }
 
   test("single path with NO_VALUE") {
@@ -2826,7 +2829,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                         SingleRelationshipPathStep(NullCheckVariable(2, RelationshipFromSlot(2, "r")),
                                                                    OUTGOING,  Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should be(NO_VALUE)
+    evaluate(compile(p, slots), context) should be(NO_VALUE)
   }
 
   test("single path with statically undetermined entities") {
@@ -2849,7 +2852,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                         SingleRelationshipPathStep(ReferenceFromSlot(r.slot, "r"),
                                                                    OUTGOING, Some(ReferenceFromSlot(n2.slot, "n2")), NilPathStep)))
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
+    evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
 
   test("longer path with different direction") {
@@ -2880,7 +2883,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                                               SingleRelationshipPathStep(RelationshipFromSlot(r3.slot, "r3"), BOTH, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))))
 
     // then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
+    evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
   }
 
   test("multiple outgoing path") {
@@ -2912,7 +2915,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(
+    evaluate(compile(p, slots), context) should equal(
       VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
   }
 
@@ -2945,7 +2948,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   OUTGOING, None, NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(
+    evaluate(compile(p, slots), context) should equal(
       VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
   }
 
@@ -2978,7 +2981,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   INCOMING, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(
+    evaluate(compile(p, slots), context) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
@@ -3011,7 +3014,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   INCOMING, None, NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(
+    evaluate(compile(p, slots), context) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
@@ -3044,7 +3047,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   BOTH, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(
+    evaluate(compile(p, slots), context) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
@@ -3077,7 +3080,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   BOTH, None, NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(
+    evaluate(compile(p, slots), context) should equal(
       VirtualValues.path(Array(n4.node, n3.node, n2.node, n1.node), Array(r3.rel, r2.rel, r1.rel)))
   }
 
@@ -3110,7 +3113,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should be(NO_VALUE)
+    evaluate(compile(p, slots), context) should be(NO_VALUE)
   }
 
   test("multiple NO_VALUE path") {
@@ -3131,7 +3134,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                                                   OUTGOING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
 
     //then
-    compile(p, slots).evaluate(context, query, EMPTY_MAP, cursors) should be(NO_VALUE)
+    evaluate(compile(p, slots), context) should be(NO_VALUE)
   }
 
   test("node property access") {
@@ -3147,7 +3150,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    evaluate(compiled, context) should equal(stringValue("hello"))
   }
 
   test("late node property access") {
@@ -3156,9 +3159,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, n.getId)
 
-    compile(NodePropertyLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(NodePropertyLate(0, "prop", "prop")(null), slots), context) should
       equal(stringValue("hello"))
-    compile(NodePropertyLate(0, "notThere", "notThere")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(NodePropertyLate(0, "notThere", "notThere")(null), slots), context) should
       equal(NO_VALUE)
   }
 
@@ -3175,7 +3178,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello"))
+    evaluate(compiled, context) should equal(stringValue("hello"))
   }
 
   test("late relationship property access") {
@@ -3184,9 +3187,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, r.getId)
 
-    compile(RelationshipPropertyLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(RelationshipPropertyLate(0, "prop", "prop")(null), slots), context) should
       equal(stringValue("hello"))
-    compile(RelationshipPropertyLate(0, "notThere", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(RelationshipPropertyLate(0, "notThere", "prop")(null), slots), context) should
       equal(NO_VALUE)
   }
 
@@ -3201,7 +3204,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val expression = ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset)
     val compiled = compile(expression, slots)
 
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from tx state"))
+    evaluate(compiled, context) should equal(stringValue("hello from tx state"))
   }
 
   test("cached node property access") {
@@ -3219,7 +3222,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val expression = ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset)
     val compiled = compile(expression, slots)
 
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from cache"))
+    evaluate(compiled, context) should equal(stringValue("hello from cache"))
   }
 
   test("cached node property access, when invalidated") {
@@ -3240,7 +3243,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val expression = ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset)
     val compiled = compile(expression, slots)
 
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from disk"))
+    evaluate(compiled, context) should equal(stringValue("hello from disk"))
   }
 
   test("late cached node property access from tx state") {
@@ -3254,7 +3257,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val expression = CachedNodePropertyLate(0, "txStateProp", cachedPropertyOffset)
     val compiled = compile(expression, slots)
 
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from tx state"))
+    evaluate(compiled, context) should equal(stringValue("hello from tx state"))
   }
 
   test("late cached node property access") {
@@ -3272,7 +3275,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val expression = CachedNodePropertyLate(0, "txStateProp", cachedPropertyOffset)
     val compiled = compile(expression, slots)
 
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(stringValue("hello from cache"))
+    evaluate(compiled, context) should equal(stringValue("hello from cache"))
   }
 
   test("cached node property existence") {
@@ -3287,7 +3290,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val expression = function("exists", ast.CachedNodeProperty(0, tokenReader(_.propertyKey("txStateProp")), cachedPropertyOffset))
     val compiled = compile(expression, slots)
 
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compiled, context) should equal(Values.TRUE)
   }
 
   test("late cached node property existence") {
@@ -3303,7 +3306,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                               CachedNodePropertyLate(0, "prop", cachedPropertyOffset))
     val compiled = compile(expression, slots)
 
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
+    evaluate(compiled, context) should equal(Values.TRUE)
   }
 
   test("getDegree without type") {
@@ -3319,11 +3322,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, n.getId)
 
-    compile(GetDegreePrimitive(0, None, OUTGOING), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(GetDegreePrimitive(0, None, OUTGOING), slots), context) should
       equal(Values.longValue(3))
-    compile(GetDegreePrimitive(0, None, INCOMING), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(GetDegreePrimitive(0, None, INCOMING), slots), context) should
       equal(Values.longValue(2))
-    compile(GetDegreePrimitive(0, None, BOTH), slots).evaluate(context, query, EMPTY_MAP, cursors) should
+    evaluate(compile(GetDegreePrimitive(0, None, BOTH), slots), context) should
       equal(Values.longValue(5))
   }
 
@@ -3340,9 +3343,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, n.getId)
 
-    compile(GetDegreePrimitive(0, Some(relType), OUTGOING), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.longValue(2))
-    compile(GetDegreePrimitive(0, Some(relType), INCOMING), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.longValue(1))
-    compile(GetDegreePrimitive(0, Some(relType), BOTH), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.longValue(3))
+    evaluate(compile(GetDegreePrimitive(0, Some(relType), OUTGOING), slots), context) should equal(Values.longValue(2))
+    evaluate(compile(GetDegreePrimitive(0, Some(relType), INCOMING), slots), context) should equal(Values.longValue(1))
+    evaluate(compile(GetDegreePrimitive(0, Some(relType), BOTH), slots), context) should equal(Values.longValue(3))
   }
 
   test("NodePropertyExists") {
@@ -3353,8 +3356,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val property = tokenReader(_.propertyKey("prop"))
     val nonExistingProperty = 1337
 
-    compile(NodePropertyExists(0, property, "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(NodePropertyExists(0, nonExistingProperty, "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(NodePropertyExists(0, property, "prop")(null), slots), context) should equal(Values.TRUE)
+    evaluate(compile(NodePropertyExists(0, nonExistingProperty, "otherProp")(null), slots), context) should equal(Values.FALSE)
   }
 
   test("NodePropertyExistsLate") {
@@ -3363,8 +3366,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, n.getId)
 
-    compile(NodePropertyExistsLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(NodePropertyExistsLate(0, "otherProp", "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(NodePropertyExistsLate(0, "prop", "prop")(null), slots), context) should equal(Values.TRUE)
+    evaluate(compile(NodePropertyExistsLate(0, "otherProp", "otherProp")(null), slots), context) should equal(Values.FALSE)
   }
 
   test("RelationshipPropertyExists") {
@@ -3375,8 +3378,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val property = tokenReader(_.propertyKey("prop"))
     val nonExistingProperty = 1337
 
-    compile(RelationshipPropertyExists(0, property, "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(RelationshipPropertyExists(0, nonExistingProperty, "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(RelationshipPropertyExists(0, property, "prop")(null), slots), context) should equal(Values.TRUE)
+    evaluate(compile(RelationshipPropertyExists(0, nonExistingProperty, "otherProp")(null), slots), context) should equal(Values.FALSE)
   }
 
   test("RelationshipPropertyExistsLate") {
@@ -3385,8 +3388,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, r.getId)
 
-    compile(RelationshipPropertyExistsLate(0, "prop", "prop")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(RelationshipPropertyExistsLate(0, "otherProp", "otherProp")(null), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(RelationshipPropertyExistsLate(0, "prop", "prop")(null), slots), context) should equal(Values.TRUE)
+    evaluate(compile(RelationshipPropertyExistsLate(0, "otherProp", "otherProp")(null), slots), context) should equal(Values.FALSE)
   }
 
   test("NodeFromSlot") {
@@ -3401,7 +3404,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(n)
+    evaluate(compiled, context) should equal(n)
   }
 
   test("RelationshipFromSlot") {
@@ -3416,7 +3419,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(expression, slots)
 
     // Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(r)
+    evaluate(compiled, context) should equal(r)
   }
 
   test("HasLabels") {
@@ -3425,11 +3428,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = SlottedExecutionContext(slots)
     context.setLongAt(0, n.getId)
 
-    compile(hasLabels(NodeFromSlot(0, "n"), "L1"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.TRUE)
-    compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L3"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(hasLabels(NodeFromSlot(0, "n"), "L2", "L3"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
-    compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2", "L3"), slots).evaluate(context, query, EMPTY_MAP, cursors) should equal(Values.FALSE)
+    evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L1"), slots), context) should equal(Values.TRUE)
+    evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2"), slots), context) should equal(Values.TRUE)
+    evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L3"), slots), context) should equal(Values.FALSE)
+    evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L2", "L3"), slots), context) should equal(Values.FALSE)
+    evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L1", "L2", "L3"), slots), context) should equal(Values.FALSE)
   }
 
   case class NodeAt(node: NodeValue, slot: Int)
@@ -3509,10 +3512,26 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   def compileGroupingExpression(projections: Map[String, Expression],
                                 slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression
 
+  private def evaluate(compiled: CompiledExpression): AnyValue =
+    compiled.evaluate(ctx, query, EMPTY_MAP, cursors, expressionSlots)
+
+  private def evaluate(compiled: CompiledExpression,
+                       params: MapValue): AnyValue =
+    compiled.evaluate(ctx, query, params, cursors, expressionSlots)
+
+  private def evaluate(compiled: CompiledExpression,
+                       context: ExecutionContext): AnyValue =
+    compiled.evaluate(context, query, EMPTY_MAP, cursors, expressionSlots)
+
+  private def evaluate(compiled: CompiledExpression,
+                       params: MapValue,
+                       context: ExecutionContext): AnyValue =
+    compiled.evaluate(context, query, params, cursors, expressionSlots)
+  
   private def parameter(key: String): Parameter = parameter(key, CTAny)
 
   private def coerce(value: AnyValue, ct: CypherType) =
-    compile(coerceTo(parameter("a"), ct)).evaluate(ctx, query, map(Array("a"), Array(value)), cursors)
+    evaluate(compile(coerceTo(parameter("a"), ct)), map(Array("a"), Array(value)))
 
   private def callFunction(ufs: UserFunctionSignature, args: Expression*) =
     ResolvedFunctionInvocation(ufs.name, Some(ufs), args.toIndexedSeq)(pos)
@@ -3582,7 +3601,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   class compareUsing(left: Any, right: Any, operator: String) extends Matcher[Expression] {
     def apply(predicate: Expression): MatchResult = {
-      val actual = compile(predicate).evaluate(ctx, query, EMPTY_MAP, cursors)
+      val actual = evaluate(compile(predicate))
 
       if (isIncomparable(left, right))
         buildResult(actual == NO_VALUE, actual)
@@ -3656,7 +3675,8 @@ class InterpretedExpressionIT extends ExpressionsIT {
       override def evaluate(context: ExecutionContext,
                             dbAccess: DbAccess,
                             params: MapValue,
-                            cursors: ExpressionCursors): AnyValue = expression(context, state(dbAccess, params, cursors))
+                            cursors: ExpressionCursors,
+                            expressionSlots: Array[AnyValue]): AnyValue = expression(context, state(dbAccess, params, cursors))
 
     }
   }
