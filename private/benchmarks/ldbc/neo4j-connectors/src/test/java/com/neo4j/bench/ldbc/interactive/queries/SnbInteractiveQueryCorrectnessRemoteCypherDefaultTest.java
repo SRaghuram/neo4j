@@ -102,7 +102,7 @@ import java.util.List;
 import org.neo4j.driver.v1.AuthTokens;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.configuration.ConnectorPortRegister;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
