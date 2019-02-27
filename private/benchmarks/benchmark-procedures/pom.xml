@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.neo4j.bench</groupId>
-        <artifactId>benchmark</artifactId>
+        <artifactId>benchmarks</artifactId>
         <version>3.3.10-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>benchmark-procedure</artifactId>
+    <artifactId>benchmark-procedures</artifactId>
     <name>Neo4j - Benchmarks Procedures</name>
 
     <properties>
