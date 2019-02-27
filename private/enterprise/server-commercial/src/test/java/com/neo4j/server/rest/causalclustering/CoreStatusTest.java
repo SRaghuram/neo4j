@@ -74,7 +74,7 @@ public class CoreStatusTest
     @Before
     public void setup() throws Exception
     {
-        OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ), null );
+        OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
         db = mock( CoreGraphDatabase.class );
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
 

@@ -57,7 +57,7 @@ public class ReadReplicaStatusTest
     @Before
     public void setup() throws Exception
     {
-        OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ), null );
+        OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://base.local:1234/" ) );
         ReadReplicaGraphDatabase db = mock( ReadReplicaGraphDatabase.class );
         topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
         dependencyResolver.satisfyDependencies( topologyService );
