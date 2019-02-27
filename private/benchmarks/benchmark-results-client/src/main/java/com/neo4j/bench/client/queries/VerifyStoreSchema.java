@@ -14,10 +14,7 @@ import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 
 import static com.neo4j.bench.client.StoreClient.VERSION;
-
 import static java.lang.String.format;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class VerifyStoreSchema implements Query<Void>
 {
@@ -80,11 +77,10 @@ public class VerifyStoreSchema implements Query<Void>
             assertManyToOne( "Metrics nodes connect to Benchmark nodes correctly",
                              "(:Metrics)", "-[:METRICS_FOR]->", "(:Benchmark)", session );
 
-            assertThat( "Metrics & TestRun nodes connect to Neo4jConfig nodes correctly",
-                        patternCountInStore( "(:Neo4jConfig)", session ),
-                        equalTo(
-                                patternCountInStore( "(:Metrics)-[:HAS_CONFIG]->()", session ) +
-                                patternCountInStore( "(:TestRun)-[:HAS_CONFIG]->()", session ) ) );
+            assertEqual( "Metrics & TestRun nodes connect to Neo4jConfig nodes correctly",
+                         patternCountInStore( "(:Neo4jConfig)", session ),
+                         patternCountInStore( "(:Metrics)-[:HAS_CONFIG]->()", session ) +
+                         patternCountInStore( "(:TestRun)-[:HAS_CONFIG]->()", session ) );
 
             assertManyToOne( "Benchmark nodes connect to BenchmarkGroup nodes correctly",
                              "(:Benchmark)", "<-[:HAS_BENCHMARK]-", "(:BenchmarkGroup)", session );
@@ -107,60 +103,59 @@ public class VerifyStoreSchema implements Query<Void>
             assertManyToMany( "BenchmarkGroup nodes connect to BenchmarkTool correctly",
                               "(:BenchmarkTool)", "-[:IMPLEMENTS]->", "(:BenchmarkGroup)", session );
 
-            assertThat( "Metrics & TestRun nodes connect to Annotation nodes correctly",
-                        patternCountInStore( "(:Annotation)", session ),
-                        equalTo(
-                                patternCountInStore( "(:Metrics)-[:WITH_ANNOTATION]->()", session ) +
-                                patternCountInStore( "(:TestRun)-[:WITH_ANNOTATION]->()", session ) ) );
+            assertEqual( "Metrics & TestRun nodes connect to Annotation nodes correctly",
+                         patternCountInStore( "(:Annotation)", session ),
+                         patternCountInStore( "(:Metrics)-[:WITH_ANNOTATION]->()", session ) +
+                         patternCountInStore( "(:TestRun)-[:WITH_ANNOTATION]->()", session ) );
 
             // --------------------------------------------------------------------------------------------------------
             // ------------------------------- Isolated Nodes ---------------------------------------------------------
             // --------------------------------------------------------------------------------------------------------
 
-            assertThat( "All BenchmarkTool should have at least one relationship",
-                        isolatedCountForLabel( "BenchmarkTool", session ), equalTo( 0 ) );
+            assertEqual( "All BenchmarkTool should have at least one relationship",
+                         isolatedCountForLabel( "BenchmarkTool", session ), 0 );
 
-            assertThat( "All BenchmarkToolVersion should have at least one relationship",
-                        isolatedCountForLabel( "BenchmarkToolVersion", session ), equalTo( 0 ) );
+            assertEqual( "All BenchmarkToolVersion should have at least one relationship",
+                         isolatedCountForLabel( "BenchmarkToolVersion", session ), 0 );
 
-            assertThat( "All Project should have at least one relationship",
-                        isolatedCountForLabel( "Project", session ), equalTo( 0 ) );
+            assertEqual( "All Project should have at least one relationship",
+                         isolatedCountForLabel( "Project", session ), 0 );
 
-            assertThat( "All Neo4jConfig should have exactly one relationship",
-                        isolatedCountForLabel( "Neo4jConfig", session ), equalTo( 0 ) );
+            assertEqual( "All Neo4jConfig should have exactly one relationship",
+                         isolatedCountForLabel( "Neo4jConfig", session ), 0 );
 
-            assertThat( "All BenchmarkConfig should have exactly one relationship",
-                        isolatedCountForLabel( "BenchmarkConfig", session ), equalTo( 0 ) );
+            assertEqual( "All BenchmarkConfig should have exactly one relationship",
+                         isolatedCountForLabel( "BenchmarkConfig", session ), 0 );
 
-            assertThat( "All Java should have at least one relationship",
-                        isolatedCountForLabel( "Java", session ), equalTo( 0 ) );
+            assertEqual( "All Java should have at least one relationship",
+                         isolatedCountForLabel( "Java", session ), 0 );
 
-            assertThat( "All Environment should have at least one relationship",
-                        isolatedCountForLabel( "Environment", session ), equalTo( 0 ) );
+            assertEqual( "All Environment should have at least one relationship",
+                         isolatedCountForLabel( "Environment", session ), 0 );
 
-            assertThat( "All BenchmarkParams should have exactly one relationship",
-                        isolatedCountForLabel( "BenchmarkParams", session ), equalTo( 0 ) );
+            assertEqual( "All BenchmarkParams should have exactly one relationship",
+                         isolatedCountForLabel( "BenchmarkParams", session ), 0 );
 
-            assertThat( "All BenchmarkGroup should have at least one relationship",
-                        isolatedCountForLabel( "BenchmarkGroup", session ), equalTo( 0 ) );
+            assertEqual( "All BenchmarkGroup should have at least one relationship",
+                         isolatedCountForLabel( "BenchmarkGroup", session ), 0 );
 
-            assertThat( "All Benchmark should have at least one relationship",
-                        isolatedCountForLabel( "Benchmark", session ), equalTo( 0 ) );
+            assertEqual( "All Benchmark should have at least one relationship",
+                         isolatedCountForLabel( "Benchmark", session ), 0 );
 
-            assertThat( "All Profiles should have at exactly one relationship",
-                        isolatedCountForLabel( "Profiles", session ), equalTo( 0 ) );
+            assertEqual( "All Profiles should have at exactly one relationship",
+                         isolatedCountForLabel( "Profiles", session ), 0 );
 
-            assertThat( "All Annotation should have at exactly one relationship",
-                        isolatedCountForLabel( "Annotation", session ), equalTo( 0 ) );
+            assertEqual( "All Annotation should have at exactly one relationship",
+                         isolatedCountForLabel( "Annotation", session ), 0 );
 
             // --------------------------------------------------------------------------------------------------------
             // ------------------------------- No Unexpected Nodes ----------------------------------------------------
             // --------------------------------------------------------------------------------------------------------
 
-            assertThat( "All Neo4j nodes have been removed",
-                        patternCountInStore( "(:Neo4j)", session ), equalTo( 0 ) );
-            assertThat( "All WITH_NEO4J relationships have been removed",
-                        patternCountInStore( "()-[:WITH_NEO4J]->()", session ), equalTo( 0 ) );
+            assertEqual( "All Neo4j nodes have been removed",
+                         patternCountInStore( "(:Neo4j)", session ), 0 );
+            assertEqual( "All WITH_NEO4J relationships have been removed",
+                         patternCountInStore( "()-[:WITH_NEO4J]->()", session ), 0 );
         }
     }
 
@@ -180,9 +175,9 @@ public class VerifyStoreSchema implements Query<Void>
         String countsString = "   *  " + relPattern + " = " + countRel + "\n" +
                               "   * " + leftRelPattern + " = " + countLeftRel + "\n" +
                               "   * " + rightRelPattern + " = " + countRightRel;
-        assertThat( reason + "\n" + countsString, countLeftRel, equalTo( countRightRel ) );
-        assertThat( reason + "\n" + countsString, countRel, equalTo( countLeftRel ) );
-        assertThat( reason + "\n" + countsString, countRel, equalTo( countRightRel ) );
+        assertEqual( reason + "\n" + countsString, countLeftRel, countRightRel );
+        assertEqual( reason + "\n" + countsString, countRel, countLeftRel );
+        assertEqual( reason + "\n" + countsString, countRel, countRightRel );
     }
 
     // "approximate" because asserts only work on totals/averages, not on every entity
@@ -198,9 +193,9 @@ public class VerifyStoreSchema implements Query<Void>
             Session session )
     {
         assertManyToOne( reason, leftNode, relExpression, rightNode, session );
-        assertThat( reason,
-                    patternCountInStore( leftNode, session ),
-                    equalTo( patternCountInStore( rightNode, session ) ) );
+        assertEqual( reason,
+                     patternCountInStore( leftNode, session ),
+                     patternCountInStore( rightNode, session ) );
     }
 
     // "approximate" because asserts only work on totals/averages, not on every entity
@@ -222,8 +217,8 @@ public class VerifyStoreSchema implements Query<Void>
         String countsString = "   * " + leftNode + " = " + countLeft + "\n" +
                               "   * " + leftRelPattern + " = " + countLeftRel + "\n" +
                               "   * " + rightRelPattern + " = " + countRightRel;
-        assertThat( reason + "\n" + countsString, countLeft, equalTo( countLeftRel ) );
-        assertThat( reason + "\n" + countsString, countLeft, equalTo( countRightRel ) );
+        assertEqual( reason + "\n" + countsString, countLeft, countLeftRel );
+        assertEqual( reason + "\n" + countsString, countLeft, countRightRel );
     }
 
     private int isolatedCountForLabel( String labelName, Session session )
@@ -255,6 +250,14 @@ public class VerifyStoreSchema implements Query<Void>
         if ( version != VERSION )
         {
             throw new RuntimeException( format( "Expected store version %s but found %s", VERSION, version ) );
+        }
+    }
+
+    private void assertEqual( String errorMessage, long a, long b )
+    {
+        if ( a != b )
+        {
+            throw new AssertionError( format( "%s <> %s\n%s", a, b, errorMessage ) );
         }
     }
 }
