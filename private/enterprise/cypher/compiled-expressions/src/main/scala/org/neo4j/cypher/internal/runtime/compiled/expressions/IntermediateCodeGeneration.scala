@@ -11,6 +11,7 @@ import java.util.regex
 import org.neo4j.cypher.internal.compiler.v4_0.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{invoke, load, method, variable}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
@@ -334,21 +335,23 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case Variable(name) =>
       val (variableAccess, nullCheck, maybeVariable) = accessVariable(name, currentContext)
-
       Some(IntermediateExpression(variableAccess, Seq.empty, maybeVariable.toSeq, nullCheck.toSet))
+
+    case e: ExpressionVariable =>
+      val varLoad = loadExpressionVariable(e)
+      Some(IntermediateExpression(varLoad, Seq.empty, Seq.empty, Set(equal(varLoad, noValue)) ))
 
     case SingleIterablePredicate(scope, collectionExpression) =>
       /*
         ListValue list = [evaluate collection expression];
-        ExecutionContext innerContext = context.createClone();
         Iterator<AnyValue> listIterator = list.iterator();
         int matches = 0;
         boolean isNull = false;
         while( matches < 2 && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            innerContext.set([name from scope], currentValue);
-            Value isMatch = [result from inner expression using innerContext]
+            expressionSlots[innerVarOffset] = currentValue;
+            Value isMatch = [result from inner expression]
             if (isMatch == Values.TRUE)
             {
                 matches++;
@@ -360,11 +363,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         }
         return (matches < 2 && isNull) ? Values.NO_VALUE : Values.booleanValue(matches == 1);
        */
-      val innerContext = namer.nextVariableName()
+      val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
       for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get,
-                                              Some(load(innerContext))) //Note we update the context here
+           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -373,14 +375,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val isMatch = namer.nextVariableName()
         val ops = Seq(
           // ListValue list = [evaluate collection expression];
-          // ExecutionContext innerContext = context.createClone();
           // int matches = 0;
           // boolean isNull = false;
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          declare[ExecutionContext](innerContext),
-          assign(innerContext,
-                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
           declare[Int](matches),
           assign(matches, constant(0)),
           declare[Boolean](isNull),
@@ -397,9 +395,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              //innerContext.set([name from scope], currentValue);
-              contextSet(scope.variable.name, load(innerContext), load(currentValue)),
-              // Value isMatch = [result from inner expression using innerContext]
+              // expressionSlots[innerVarOffset] = currentValue;
+              setExpressionVariable(innerVariable, load(currentValue)),
+              // Value isMatch = [result from inner expression]
               // if (isMatch == Values.TRUE)
               // {
               //     matches = matches + 1;
@@ -433,15 +431,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case NoneIterablePredicate(scope, collectionExpression) =>
       /*
         ListValue list = [evaluate collection expression];
-        ExecutionContext innerContext = context.createClone();
         Iterator<AnyValue> listIterator = list.iterator();
         Value isMatch = listIterator.hasNext() ? Values.NO_VALUE : Values.FALSE;
         boolean isNull = false;
         while( isMatch != Values.TRUE && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            innerContext.set([name from scope], currentValue);
-            isMatch = [result from inner expression using innerContext]
+            expressionSlots[innerVarOffset] = currentValue;
+            isMatch = [result from inner expression]
             if (isMatch == Values.NO_VALUE)
             {
                 isNull = true;
@@ -449,11 +446,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         }
         return (isNull && isMatch != Values.TRUE) ? Values.NO_VALUE : Values.booleanValue(isMatch == Values.FALSE);
        */
-      val innerContext = namer.nextVariableName()
+      val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
       for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get,
-                                              Some(load(innerContext))) //Note we update the context here
+           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -461,18 +457,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val isNull = namer.nextVariableName()
         val ops = Seq(
           // ListValue list = [evaluate collection expression];
-          // ExecutionContext innerContext = context.createClone();
           // Value isMatch = Values.NO_VALUE;
           // boolean isNull = false;
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          declare[ExecutionContext](innerContext),
-          assign(innerContext,
-                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
           declare[java.util.Iterator[AnyValue]](iterVariable),
           assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
           declare[Value](isMatch),
-          //assign(isMatch, noValue),
+          // assign(isMatch, noValue),
           assign(isMatch,
                  ternary(invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")), noValue,
                          falseValue)),
@@ -488,9 +480,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              //innerContext.set([name from scope], currentValue);
-              contextSet(scope.variable.name, load(innerContext), load(currentValue)),
-              // isMatch = [result from inner expression using innerContext]
+              // expressionSlots[innerVarOffset] = currentValue;
+              setExpressionVariable(innerVariable, load(currentValue)),
+              // isMatch = [result from inner expression]
               assign(isMatch, nullCheck(inner)(inner.ir)),
               // if (isMatch == Values.NO_VALUE)
               // {
@@ -515,15 +507,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case AnyIterablePredicate(scope, collectionExpression) =>
       /*
         ListValue list = [evaluate collection expression];
-        ExecutionContext innerContext = context.createClone();
         Iterator<AnyValue> listIterator = list.iterator();
         Value isMatch = Values.FALSE;
         boolean isNull = false;
         while( isMatch != Values.TRUE && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            innerContext.set([name from scope], currentValue);
-            isMatch = [result from inner expression using innerContext]
+            expressionSlots[innerVarOffset] = currentValue;
+            isMatch = [result from inner expression]
             if (isMatch == Values.NO_VALUE)
             {
                 isNull = true;
@@ -531,11 +522,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         }
         return (isNull && isMatch != Values.TRUE) ? Values.NO_VALUE : isMatch;
        */
-      val innerContext = namer.nextVariableName()
+      val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
       for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get,
-                                              Some(load(innerContext))) //Note we update the context here
+           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -543,14 +533,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val isNull = namer.nextVariableName()
         val ops = Seq(
           // ListValue list = [evaluate collection expression];
-          // ExecutionContext innerContext = context.createClone();
           // Value isMatch = Values.FALSE;
           // boolean isNull = false;
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          declare[ExecutionContext](innerContext),
-          assign(innerContext,
-                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
           declare[Value](isMatch),
           assign(isMatch, falseValue),
           declare[Boolean](isNull),
@@ -567,9 +553,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              //innerContext.set([name from scope], currentValue);
-              contextSet(scope.variable.name, load(innerContext), load(currentValue)),
-              // isMatch = [result from inner expression using innerContext]
+              // expressionSlots[innerVarOffset] = currentValue;
+              setExpressionVariable(innerVariable, load(currentValue)),
+              // isMatch = [result from inner expression]
               assign(isMatch, nullCheck(inner)(inner.ir)),
               // if (isMatch == Values.NO_VALUE)
               // {
@@ -594,35 +580,29 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case AllIterablePredicate(scope, collectionExpression) =>
       /*
         ListValue list = [evaluate collection expression];
-        ExecutionContext innerContext = context.createClone();
         Iterator<AnyValue> listIterator = list.iterator();
         Value isMatch = Values.TRUE;
         while( isMatch==Values.TRUE && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            innerContext.set([name from scope], currentValue);
-            isMatch = [result from inner expression using innerContext]
+            expressionSlots[innerVarOffset] = currentValue;
+            isMatch = [result from inner expression]
         }
         return isMatch;
        */
-      val innerContext = namer.nextVariableName()
+      val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
       for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get,
-                                              Some(load(innerContext))) //Note we update the context here
+           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
         val isMatch = namer.nextVariableName()
         val ops = Seq(
           // ListValue list = [evaluate collection expression];
-          // ExecutionContext innerContext = context.createClone();
           // Value isMatch = Values.TRUE;
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          declare[ExecutionContext](innerContext),
-          assign(innerContext, loadContext(currentContext)),
-//                 invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
           declare[Value](isMatch),
           assign(isMatch, truthValue),
           // Iterator<AnyValue> listIterator = list.iterator();
@@ -637,9 +617,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              //innerContext.set([name from scope], currentValue);
-              contextSet(scope.variable.name, load(innerContext), load(currentValue)),
-              // isMatch = [result from inner expression using innerContext]
+              // expressionSlots[innerVarOffset] = currentValue;
+              setExpressionVariable(innerVariable, load(currentValue)),
+              // isMatch = [result from inner expression]
               assign(isMatch, nullCheck(inner)(inner.ir))
             ): _*)
           },
@@ -653,39 +633,40 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case FilterExpression(scope, collectionExpression) =>
-     filterExpression(internalCompileExpression(collectionExpression, currentContext),
-                      scope.innerPredicate.get, scope.variable.name, currentContext)
+      filterExpression(internalCompileExpression(collectionExpression, currentContext),
+                      scope.innerPredicate.get, ExpressionVariable.cast(scope.variable), currentContext)
 
     case ListComprehension(scope, list) =>
-       val filter = scope.innerPredicate match {
-         case Some(_: True) | None => internalCompileExpression(list, currentContext)
-         case Some(inner) => filterExpression(internalCompileExpression(list, currentContext),
-                                              inner, scope.variable.name, currentContext)
-       }
+      val filter = scope.innerPredicate match {
+        case Some(_: True) | None => internalCompileExpression(list, currentContext)
+        case Some(inner) => filterExpression(internalCompileExpression(list, currentContext),
+                                             inner, ExpressionVariable.cast(scope.variable), currentContext)
+      }
       scope.extractExpression match {
         case None => filter
         case Some(extract) =>
-          extractExpression(filter, extract, scope.variable.name, currentContext)
+          extractExpression(filter, extract, ExpressionVariable.cast(scope.variable), currentContext)
       }
 
     case ExtractExpression(scope, collectionExpression) =>
       extractExpression(internalCompileExpression(collectionExpression, currentContext),
-                        scope.extractExpression.get, scope.variable.name, currentContext)
+                        scope.extractExpression.get, ExpressionVariable.cast(scope.variable), currentContext)
 
     case ReduceExpression(scope, initExpression, collectionExpression) =>
       /*
-        reduce is tricky because it modifies the scope for future expressions. The generated code will be something
-        along the line of:
+        The generated code will be something along the lines of:
 
         ListValue list = [evaluate collection expression];
-        ctx.set(acc, init);
+        expressionSlots[accVarOffset] = init;
         for ( AnyValue currentValue : list ) {
-            ctx.set([name from scope], currentValue);
-            ctx.set(acc, [result])
+            expressionSlots[innerVarOffset] = currentValue;
+            expressionSlots[accVarOffset] = [result])
         }
-        return ctx.getByName(acc)
+        return expressionSlots[accVarOffset]
        */
-      //this is the context inner expressions should see
+      val accVar = ExpressionVariable.cast(scope.accumulator)
+      val innerVar = ExpressionVariable.cast(scope.variable)
+
       val iterVariable = namer.nextVariableName()
       for {collection <- internalCompileExpression(collectionExpression, currentContext)
            init <- internalCompileExpression(initExpression, currentContext)
@@ -693,15 +674,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
-        val (accessInnerContext, variableIsNull, maybeVariable) = accessVariable(scope.accumulator.name, currentContext)
         val ops = Seq(
-          //ListValue list = [evaluate collection expression];
-          //ExecutionContext innerContext = context.copyWith(acc, init);
+          // ListValue list = [evaluate collection expression];
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          contextSet(scope.accumulator.name, loadContext(currentContext), nullCheck(init)(init.ir)),
-          //Iterator<AnyValue> iter = list.iterator();
-          //while (iter.hasNext) {
+          // expressionSlots[accOffset] = init;
+          setExpressionVariable(accVar, nullCheck(init)(init.ir)),
+          // Iterator<AnyValue> iter = list.iterator();
+          // while (iter.hasNext) {
           //   AnyValue currentValue = iter.next();
           declare[java.util.Iterator[AnyValue]](iterVariable),
           assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
@@ -710,17 +690,17 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              // ctx.set([name from scope], currentValue);
-              contextSet(scope.variable.name, loadContext(currentContext), load(currentValue)),
-              //ctx.set(acc, [inner expression])
-              contextSet(scope.accumulator.name, loadContext(currentContext), nullCheck(inner)(inner.ir))
+              // expressionSlots[iterOffset] = currentValue;
+              setExpressionVariable(innerVar, load(currentValue)),
+              // expressionSlots[accOffset] = [inner expression];
+              setExpressionVariable(accVar, nullCheck(inner)(inner.ir))
             ): _*)
           },
-          //return innerContext(acc);
-          accessInnerContext
+          // return expressionSlots[accOffset];
+          loadExpressionVariable(accVar)
         )
         IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields ++ init.fields, collection.variables ++
-          inner.variables ++ init.variables ++ maybeVariable, collection.nullCheck ++ init.nullCheck ++ variableIsNull)
+          inner.variables ++ init.variables, collection.nullCheck ++ init.nullCheck)
       }
 
     //boolean operators
@@ -2210,18 +2190,17 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
   private def filterExpression(collectionExpression: Option[IntermediateExpression],
                                innerPredicate: Expression,
-                               scopeVariable: String,
+                               innerVariable: ExpressionVariable,
                                currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = {
     /*
        ListValue list = [evaluate collection expression];
-       ExecutionContext innerContext = context.createClone();
        ArrayList<AnyValue> filtered = new ArrayList<>();
        Iterator<AnyValue> listIterator = list.iterator();
        while( listIterator.hasNext() )
        {
            AnyValue currentValue = listIterator.next();
-           innerContext.set([name from scope], currentValue);
-           Value isFiltered = [result from inner expression using innerContext]
+           expressionSlots[innerVarOffset] = currentValue;
+           Value isFiltered = [result from inner expression]
            if (isFiltered == Values.TRUE)
            {
                filtered.add(currentValue);
@@ -2229,11 +2208,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
        }
        return VirtualValues.fromList(filtered);
       */
-    val innerContext = namer.nextVariableName()
     val iterVariable = namer.nextVariableName()
     for {collection <- collectionExpression
-         inner <- internalCompileExpression(innerPredicate,
-                                            Some(load(innerContext))) //Note we update the context here
+         inner <- internalCompileExpression(innerPredicate, currentContext)
     } yield {
       val listVar = namer.nextVariableName()
       val filteredVars = namer.nextVariableName()
@@ -2241,13 +2218,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val isFiltered = namer.nextVariableName()
       val ops = Seq(
         // ListValue list = [evaluate collection expression];
-        // ExecutionContext innerContext = context.createClone();
         // ArrayList<AnyValue> filtered = new ArrayList<>();
         declare[ListValue](listVar),
         assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-        declare[ExecutionContext](innerContext),
-        assign(innerContext,
-               invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
         declare[java.util.ArrayList[AnyValue]](filteredVars),
         assign(filteredVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
         // Iterator<AnyValue> listIterator = list.iterator();
@@ -2261,10 +2234,10 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             declare[AnyValue](currentValue),
             assign(currentValue,
                    cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-            //innerContext.set([name from scope], currentValue);
-            contextSet(scopeVariable, load(innerContext), load(currentValue)),
+            // expressionSlots[innerVarOffset] = currentValue;
+            setExpressionVariable(innerVariable, load(currentValue)),
             declare[Value](isFiltered),
-            // Value isFiltered = [result from inner expression using innerContext]
+            // Value isFiltered = [result from inner expression]
             assign(isFiltered, nullCheck(inner)(inner.ir)),
             // if (isFiltered == Values.TRUE)
             // {
@@ -2284,46 +2257,38 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                              collection.nullCheck)
     }
   }
+
   private def extractExpression(collectionExpression: Option[IntermediateExpression],
                                 extractExpression: Expression,
-                                scopeVariable: String,
+                                innerVariable: ExpressionVariable,
                                 currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = {
     /*
-        extract is tricky because it modifies the scope for future expressions. The generated code will be something
-        along the line of:
+        The generated code will be something along the line of:
 
         ListValue list = [evaluate collection expression];
-        ExecutionContext innerContext = context.createClone();
         ArrayList<AnyValue> extracted = new ArrayList<>();
         for ( AnyValue currentValue : list ) {
-            innerContext.set([name from scope], currentValue);
-            extracted.add([result from inner expression using innerContext]);
+            expressionSlots[innerVarOffset] = currentValue;
+            extracted.add([result from inner expression]);
         }
         return VirtualValues.fromList(extracted);
        */
-    //this is the context inner expressions should see
-    val innerContext = namer.nextVariableName()
     val iterVariable = namer.nextVariableName()
     for {collection <- collectionExpression
-         inner <- internalCompileExpression(extractExpression,
-                                            Some(load(innerContext))) //Note we update the context here
+         inner <- internalCompileExpression(extractExpression, currentContext)
     } yield {
       val listVar = namer.nextVariableName()
       val extractedVars = namer.nextVariableName()
       val currentValue = namer.nextVariableName()
       val ops = Seq(
-        //ListValue list = [evaluate collection expression];
-        //ExecutionContext innerContext = context.createClone();
-        //ArrayList<AnyValue> extracted = new ArrayList<>();
+        // ListValue list = [evaluate collection expression];
+        // ArrayList<AnyValue> extracted = new ArrayList<>();
         declare[ListValue](listVar),
         assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-        declare[ExecutionContext](innerContext),
-        assign(innerContext,
-               invoke(loadContext(currentContext), method[ExecutionContext, ExecutionContext]("createClone"))),
         declare[java.util.ArrayList[AnyValue]](extractedVars),
         assign(extractedVars, newInstance(constructor[java.util.ArrayList[AnyValue]])),
-        //Iterator<AnyValue> iter = list.iterator();
-        //while (iter.hasNext) {
+        // Iterator<AnyValue> iter = list.iterator();
+        // while (iter.hasNext) {
         //   AnyValue currentValue = iter.next();
         declare[java.util.Iterator[AnyValue]](iterVariable),
         assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
@@ -2332,9 +2297,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             declare[AnyValue](currentValue),
             assign(currentValue,
                    cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-            //innerContext.set([name from scope], currentValue);
-            contextSet(scopeVariable, load(innerContext), load(currentValue)),
-            //extracted.add([result from inner expression using innerContext]);
+            // expressionSlots[innerVarOffset] = currentValue;
+            setExpressionVariable(innerVariable, load(currentValue)),
+            // extracted.add([result from inner expression]);
             invokeSideEffect(load(extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
                              nullCheck(inner)(inner.ir))): _*)
         },
@@ -2593,6 +2558,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       Some(IntermediateExpression(ops, Seq(f), Seq(local), Set(nullChecks)))
 
     case _ => None
+  }
+
+  private def setExpressionVariable(ev: ExpressionVariable, value: IntermediateRepresentation): IntermediateRepresentation = {
+    arraySet(load("expressionSlots"), ev.offset, value)
+  }
+
+  private def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
+    arrayLoad(load("expressionSlots"), ev.offset)
   }
 }
 
