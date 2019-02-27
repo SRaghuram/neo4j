@@ -18,6 +18,7 @@ public interface CompiledGroupingExpression
 {
     /**
      * Projects the given grouping key to the given context
+     *
      * @param context the context to write to
      * @param groupingKey the grouping key to project
      */
@@ -25,8 +26,18 @@ public interface CompiledGroupingExpression
 
     /**
      * Computes grouping key.
+     *
+     * @param context the current context.
+     * @param dbAccess used for accessing the database
+     * @param params the parameters of the query
+     * @param cursors cursors to use for expression evaluation
+     * @param expressionSlots slots used for storing expression variable values
      */
-    AnyValue computeGroupingKey( ExecutionContext context, DbAccess dbAccess, MapValue params, ExpressionCursors cursors );
+    AnyValue computeGroupingKey( ExecutionContext context,
+                                 DbAccess dbAccess,
+                                 MapValue params,
+                                 ExpressionCursors cursors,
+                                 AnyValue[] expressionSlots );
 
     /**
      * Gets an already projected grouping key from the context.

@@ -1592,35 +1592,33 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compileProjection(projections, slots)
 
     //when
-    compiled.project(context, query, map(Array("param"), Array(NO_VALUE)), cursors)
+    compiled.project(context, query, map(Array("param"), Array(NO_VALUE)), cursors, expressionSlots)
 
     //then
     context.getRefAt(0) should equal(stringValue("hello"))
     context.getRefAt(1) should equal(NO_VALUE)
   }
 
-  test("single in list function local access only") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("single in list basic") {
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "b")
-    val compiledNone = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), literalString("b"))))
+    val compiledNone = compile(singleInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, literalString("b"))))
+
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aaa")
-    val compiledSingle = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), literalString("aaa"))))
+    val compiledSingle = compile(singleInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, literalString("aaa"))))
+
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "a")
-    val compiledMany = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), literalString("a"))))
+    val compiledMany = compile(singleInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, literalString("a"))))
 
     //Then
-    evaluate(compiledNone, context) should equal(booleanValue(false))
-    evaluate(compiledSingle, context) should equal(booleanValue(true))
-    evaluate(compiledMany, context) should equal(booleanValue(false))
+    evaluate(compiledNone, 1) should equal(booleanValue(false))
+    evaluate(compiledSingle, 1) should equal(booleanValue(true))
+    evaluate(compiledMany, 1) should equal(booleanValue(false))
   }
 
-  test("single in list function accessing outer scope") {
+  test("single in list accessing variable") {
     //Given
     val context = new MapExecutionContext(mutable.Map(
       "b" -> stringValue("b"),
@@ -1628,98 +1626,91 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "aaa" -> stringValue("aaa")))
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "b")
-    val compiledNone = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), varFor("b"))))
+    val compiledNone = compile(singleInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, varFor("b"))))
+
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aaa")
-    val compiledSingle = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), varFor("aaa"))))
+    val compiledSingle = compile(singleInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, varFor("aaa"))))
+
     // single(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "a")
-    val compiledMany = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), varFor("a"))))
+    val compiledMany = compile(singleInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, varFor("a"))))
 
     //Then
-    evaluate(compiledNone, context) should equal(booleanValue(false))
-    evaluate(compiledSingle, context) should equal(booleanValue(true))
-    evaluate(compiledMany, context) should equal(booleanValue(false))
+    evaluate(compiledNone, 1, EMPTY_MAP, context) should equal(booleanValue(false))
+    evaluate(compiledSingle, 1, EMPTY_MAP, context) should equal(booleanValue(true))
+    evaluate(compiledMany, 1, EMPTY_MAP, context) should equal(booleanValue(false))
   }
 
   test("single in list on null") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, single(bar IN null WHERE bar = foo)
-    val compiled = compile(singleInList("bar", nullLiteral,
-                                        equals(varFor("bar"), varFor("foo"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(singleInList(bar, nullLiteral,
+                                        equals(bar, varFor("foo"))))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
   test("single in list with null predicate") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, single(bar IN ['a','aa','aaa'] WHERE bar = null)
-    val compiled = compile(singleInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), nullLiteral)))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(singleInList(bar, listOfString("a", "aa", "aaa"), equals(bar, nullLiteral)))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
-  test("single function accessing same variable in inner and outer") {
+  test("single in list accessing same variable in inner and outer") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When, single(bar IN foo WHERE size(bar) = size(foo))
-    val compiled = compile(singleInList("bar", varFor("foo"),
-                                      equals(function("size", varFor("bar")), function("size", varFor("foo")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(singleInList(bar, varFor("foo"),
+                                        equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
-    evaluate(compiled) should equal(Values.TRUE)
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(Values.TRUE)
   }
 
-  test("single function accessing the same parameter in inner and outer") {
+  test("single in list accessing the same parameter in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
     val list = VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))
 
     //When, single(bar IN $a WHERE size(bar) = size($a))
-    val compiled = compile(singleInList("bar", parameter("a"),
-                                      equals(function("size", varFor("bar")), function("size", parameter("a")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(singleInList(bar, parameter("a"),
+                                        equals(function("size", bar), function("size", parameter("a")))))
 
     //Then
-    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(Values.TRUE)
+    evaluate(compiled, 1, map(Array("a"), Array(list))) should equal(Values.TRUE)
   }
 
-  test("single on empty list") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("single in list on empty list") {
     //When, single(bar IN [] WHERE bar = 42)
-    val compiled = compile(singleInList("bar", listOf(), equals(literalInt(42), varFor("bar"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(singleInList(bar, listOf(), equals(literalInt(42), bar)))
 
     //Then
-    evaluate(compiled) should equal(Values.FALSE)
+    evaluate(compiled, 1) should equal(Values.FALSE)
   }
 
 
-  test("none in list function local access only") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("none in list function basic") {
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = "b")
-    val compiledTrue = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), literalString("b"))))
+    val compiledTrue = compile(noneInList(bar, listOfString("a", "aa", "aaa"), equals(bar, literalString("b"))))
+
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = "a")
-    val compiledFalse = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), literalString("a"))))
+    val compiledFalse = compile(noneInList(bar, listOfString("a", "aa", "aaa"), equals(bar, literalString("a"))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 1) should equal(booleanValue(true))
+    evaluate(compiledFalse, 1) should equal(booleanValue(false))
   }
 
   test("none in list function accessing outer scope") {
@@ -1727,94 +1718,85 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("a" -> stringValue("a"), "b" -> stringValue("b")))
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = b)
-    val compiledTrue = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), varFor("b"))))
+    val compiledTrue = compile(noneInList(bar, listOfString("a", "aa", "aaa"), equals(bar, varFor("b"))))
+
     // none(bar IN ["a", "aa", "aaa"] WHERE bar = a)
-    val compiledFalse = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), varFor("a"))))
+    val compiledFalse = compile(noneInList(bar, listOfString("a", "aa", "aaa"), equals(bar, varFor("a"))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 1, EMPTY_MAP, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, 1, EMPTY_MAP, context) should equal(booleanValue(false))
   }
 
   test("none in list on null") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, none(bar IN null WHERE bar = foo)
-    val compiled = compile(noneInList("bar", nullLiteral,
-                                      equals(varFor("bar"), varFor("foo"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(noneInList(bar, nullLiteral, equals(bar, varFor("foo"))))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
   test("none in list with null predicate") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, none(bar IN null WHERE bar = null)
-    val compiled = compile(noneInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), nullLiteral )))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(noneInList(bar, listOfString("a", "aa", "aaa"), equals(bar, nullLiteral )))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
-  test("none function accessing same variable in inner and outer") {
+  test("none in list accessing same variable in inner and outer") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When,  none(bar IN foo WHERE size(bar) = size(foo))
-    val compiled = compile(noneInList("bar", varFor("foo"),
-                                  equals(function("size", varFor("bar")), function("size", varFor("foo")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(noneInList(bar, varFor("foo"),
+                                      equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
-    evaluate(compiled) should equal(FALSE)
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(FALSE)
   }
 
-  test("none function accessing the same parameter in inner and outer") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
+  test("none in list accessing the same parameter in inner and outer") {
     val list = VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))
 
     //When,  none(bar IN $a WHERE size(bar) = size($a))
-    val compiled = compile(noneInList("bar", parameter("a"),
-                                  equals(function("size", varFor("bar")), function("size", parameter("a")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(noneInList(bar, parameter("a"),
+                                      equals(function("size", bar), function("size", parameter("a")))))
 
     //Then
-    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(FALSE)
+    evaluate(compiled, 1, map(Array("a"), Array(list))) should equal(FALSE)
   }
 
-  test("none on empty list") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("none in list on empty list") {
     //When, none(bar IN [] WHERE bar = 42)
-    val compiled = compile(noneInList("bar", listOf(),
-                                      equals(varFor("bar"), literalInt(42))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(noneInList(bar, listOf(),
+                                      equals(bar, literalInt(42))))
 
     //Then
-    evaluate(compiled) should equal(Values.TRUE)
+    evaluate(compiled, 1) should equal(Values.TRUE)
   }
 
-  test("any in list function local access only") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("any in list function basic") {
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = "a")
-    val compiledTrue = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), literalString("a"))))
+    val compiledTrue = compile(anyInList(bar, listOfString("a", "aa", "aaa"), equals(bar, literalString("a"))))
+
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = "b")
-    val compiledFalse = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), literalString("b"))))
+    val compiledFalse = compile(anyInList(bar, listOfString("a", "aa", "aaa"), equals(bar, literalString("b"))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 1) should equal(booleanValue(true))
+    evaluate(compiledFalse, 1) should equal(booleanValue(false))
   }
 
   test("any in list function accessing outer scope") {
@@ -1822,94 +1804,84 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("a" -> stringValue("a"), "b" -> stringValue("b")))
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = a)
-    val compiledTrue = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), varFor("a"))))
+    val compiledTrue = compile(anyInList(bar, listOfString("a", "aa", "aaa"), equals(bar, varFor("a"))))
+
     // any(bar IN ["a", "aa", "aaa"] WHERE bar = aa)
-    val compiledFalse = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), varFor("b"))))
+    val compiledFalse = compile(anyInList(bar, listOfString("a", "aa", "aaa"), equals(bar, varFor("b"))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 1, EMPTY_MAP, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, 1, EMPTY_MAP, context) should equal(booleanValue(false))
   }
 
   test("any in list on null") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, any(bar IN null WHERE bar = foo)
-    val compiled = compile(anyInList("bar", nullLiteral,
-                                     equals(varFor("bar"), varFor("foo"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(anyInList(bar, nullLiteral, equals(bar, varFor("foo"))))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
   test("any in list with null predicate") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, any(bar IN ['a','aa','aaa'] WHERE bar = null)
-    val compiled = compile(anyInList("bar", listOfString("a", "aa", "aaa"),
-      equals(varFor("bar"), nullLiteral)))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(anyInList(bar, listOfString("a", "aa", "aaa"), equals(bar, nullLiteral)))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
-  test("any function accessing same variable in inner and outer") {
+  test("any in list accessing same variable in inner and outer") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When,  any(bar IN foo WHERE size(bar) = size(foo))
-    val compiled = compile(anyInList("bar", varFor("foo"),
-                                  equals(function("size", varFor("bar")), function("size", varFor("foo")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(anyInList(bar, varFor("foo"),
+                                     equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
-    evaluate(compiled) should equal(Values.TRUE)
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(Values.TRUE)
   }
 
-  test("any function accessing the same parameter in inner and outer") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
+  test("any in list accessing the same parameter in inner and outer") {
     val list = VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))
 
     //When,  any(bar IN $a WHERE size(bar) = size($a))
-    val compiled = compile(anyInList("bar", parameter("a"),
-                                  equals(function("size", varFor("bar")), function("size", parameter("a")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(anyInList(bar, parameter("a"),
+                                     equals(function("size", bar), function("size", parameter("a")))))
 
     //Then
-    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(Values.TRUE)
+    evaluate(compiled, 1, map(Array("a"), Array(list))) should equal(Values.TRUE)
   }
 
-  test("any on empty list") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("any in list on empty list") {
     //When, any(bar IN [] WHERE bar = 42)
-    val compiled = compile(anyInList("bar", listOf(),
-                                      equals(varFor("bar"), literalInt(42))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(anyInList(bar, listOf(), equals(bar, literalInt(42))))
 
     //Then
-    evaluate(compiled) should equal(Values.FALSE)
+    evaluate(compiled, 1) should equal(Values.FALSE)
   }
 
-  test("all in list function local access only") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("all in list function basic") {
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "a")
-    val compiledTrue = compile(allInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), literalString("a"))))
+    val compiledTrue = compile(allInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, literalString("a"))))
+
     //all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aa")
-    val compiledFalse = compile(allInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), literalString("aa"))))
+    val compiledFalse = compile(allInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, literalString("aa"))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 1) should equal(booleanValue(true))
+    evaluate(compiledFalse, 1) should equal(booleanValue(false))
   }
 
   test("all in list function accessing outer scope") {
@@ -1917,191 +1889,172 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("a" -> stringValue("a"), "aa" -> stringValue("aa")))
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+
     // all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH a)
-    val compiledTrue = compile(allInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), varFor("a"))))
+    val compiledTrue = compile(allInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, varFor("a"))))
+
     //all(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH aa)
-    val compiledFalse = compile(allInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), varFor("aa"))))
+    val compiledFalse = compile(allInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, varFor("aa"))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 1, EMPTY_MAP, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, 1, EMPTY_MAP, context) should equal(booleanValue(false))
   }
 
   test("all in list on null") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, all(bar IN null WHERE bar STARTS WITH foo)
-    val compiled = compile(allInList("bar", nullLiteral,
-                                     startsWith(varFor("bar"), varFor("foo"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(allInList(bar, nullLiteral, startsWith(bar, varFor("foo"))))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
   test("all in list with null predicate") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, all(bar IN null WHERE bar STARTS WITH null)
-    val compiled = compile(allInList("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), nullLiteral)))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(allInList(bar, listOfString("a", "aa", "aaa"), startsWith(bar, nullLiteral)))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
-  test("all function accessing same variable in inner and outer") {
+  test("all in list accessing same variable in inner and outer") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When, all(bar IN foo WHERE size(bar) = size(foo))
-    val compiled = compile(allInList("bar", varFor("foo"),
-                                  equals(function("size", varFor("bar")), function("size", varFor("foo")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(allInList(bar, varFor("foo"),
+                                     equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
-    evaluate(compiled) should equal(FALSE)
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(FALSE)
   }
 
-  test("all function accessing the same parameter in inner and outer") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
+  test("all in list accessing the same parameter in inner and outer") {
     val list = VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))
 
     //When,  all(bar IN $a WHERE size(bar) = size($a))
-    val compiled = compile(allInList("bar", parameter("a"),
-                                  equals(function("size", varFor("bar")), function("size", parameter("a")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(allInList(bar, parameter("a"),
+                                     equals(function("size", bar), function("size", parameter("a")))))
 
     //Then
-    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(Values.FALSE)
+    evaluate(compiled, 1, map(Array("a"), Array(list))) should equal(Values.FALSE)
   }
 
-  test("all on empty list") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("all in list on empty list") {
     //When, all(bar IN [] WHERE bar = 42)
-    val compiled = compile(allInList("bar", listOf(),
-                                      equals(varFor("bar"), literalInt(42))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(allInList(bar, listOf(), equals(bar, literalInt(42))))
 
     //Then
-    evaluate(compiled) should equal(Values.TRUE)
+    evaluate(compiled, 1) should equal(Values.TRUE)
   }
 
-  test("filter function local access only") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
+  test("filter basic") {
     //When, filter(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH "aa")
-    val compiled = compile(filter("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), literalString("aa"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(filter(bar, listOfString("a", "aa", "aaa"), startsWith(bar, literalString("aa"))))
 
     //Then
-    evaluate(compiled) should equal(list(stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled, 1) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
-  test("filter function accessing outer scope") {
+  test("filter accessing outer scope") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> stringValue("aa")))
 
     //When, filter(bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH foo)
-    val compiled = compile(filter("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), varFor("foo"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(filter(bar, listOfString("a", "aa", "aaa"), startsWith(bar, varFor("foo"))))
 
     //Then
-    evaluate(compiled) should equal(list(stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
   test("filter on null") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, filter(bar IN null WHERE bar STARTS WITH 'aa')
-    val compiled = compile(filter("bar", nullLiteral,
-                                  startsWith(varFor("bar"), varFor("aa"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(filter(bar, nullLiteral, startsWith(bar, varFor("aa"))))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
   test("filter with null predicate") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, filter(bar IN null WHERE bar STARTS WITH null)
-    val compiled = compile(filter("bar", listOfString("a", "aa", "aaa"),
-      startsWith(varFor("bar"), nullLiteral)))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(filter(bar, listOfString("a", "aa", "aaa"), startsWith(bar, nullLiteral)))
 
     //Then
-    evaluate(compiled) should equal(list())
+    evaluate(compiled, 1) should equal(list())
   }
 
-  test("filter function accessing same variable in inner and outer") {
+  test("filter accessing same variable in inner and outer") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When,  filter(bar IN foo WHERE size(bar) = size(foo))
-    val compiled = compile(filter("bar", varFor("foo"),
-                                   equals(function("size", varFor("bar")), function("size", varFor("foo")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(filter(bar, varFor("foo"),
+                                  equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
-    evaluate(compiled) should equal(VirtualValues.list(stringValue("aaa")))
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(VirtualValues.list(stringValue("aaa")))
   }
 
-  test("filter function accessing the same parameter in inner and outer") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
+  test("filter accessing the same parameter in inner and outer") {
     val list = VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))
 
     //When,  filter(bar IN $a WHERE size(bar) = size($a))
-    val compiled = compile(filter("bar", parameter("a"),
-                                  equals(function("size", varFor("bar")), function("size", parameter("a")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(filter(bar, parameter("a"),
+                                  equals(function("size", bar), function("size", parameter("a")))))
 
     //Then
-    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(VirtualValues.list(stringValue("aaa")))
+    evaluate(compiled, 1, map(Array("a"), Array(list))) should equal(VirtualValues.list(stringValue("aaa")))
   }
 
   test("filter on empty list") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, filter(bar IN [] WHERE bar = 42)
-    val compiled = compile(filter("bar", listOf(),
-                                      equals(varFor("bar"), literalInt(42))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(filter(bar, listOf(), equals(bar, literalInt(42))))
 
     //Then
-    evaluate(compiled) should equal(EMPTY_LIST)
+    evaluate(compiled, 1) should equal(EMPTY_LIST)
   }
 
-  test("nested list expressions local access only") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
+  test("nested list expressions basic") {
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+    val foo = ExpressionVariable(1, "foo")
     // none(bar IN ["a"] WHERE any(foo IN ["b"] WHERE bar = foo)) --> true
     val compiledTrue = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = listOfString("a"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = listOfString("b"),
-          predicate = equals(varFor("bar"), varFor("foo")))))
+          predicate = equals(bar, foo))))
+
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar = foo)) --> false
     val compiledFalse = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = listOfString("a"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = listOfString("a"),
-          predicate = equals(varFor("bar"), varFor("foo")))))
+          predicate = equals(bar, foo))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 2) should equal(booleanValue(true))
+    evaluate(compiledFalse, 2) should equal(booleanValue(false))
   }
 
   test("nested list expressions, outer expression accessing outer scope") {
@@ -2109,28 +2062,32 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("list" -> list(stringValue("a"))))
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+    val foo = ExpressionVariable(1, "foo")
+
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar <> foo)) --> true
     val compiledTrue = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = varFor("list"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = listOfString("a"),
-          predicate = notEquals(varFor("bar"), varFor("foo")))))
+          predicate = notEquals(bar, foo))))
+
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar = foo)) --> false
     val compiledFalse = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = varFor("list"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = listOfString("a"),
-          predicate = equals(varFor("bar"), varFor("foo")))))
+          predicate = equals(bar, foo))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 2, EMPTY_MAP, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, 2, EMPTY_MAP, context) should equal(booleanValue(false))
   }
 
   test("nested list expressions, inner expression accessing outer scope") {
@@ -2138,28 +2095,32 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("list" -> list(stringValue("a"))))
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+    val foo = ExpressionVariable(1, "foo")
+
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar <> foo)) --> true
     val compiledTrue = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = listOfString("a"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = listOfString("a"),
-          predicate = notEquals(varFor("bar"), varFor("foo")))))
+          predicate = notEquals(bar, foo))))
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar = foo)) --> false
+
     val compiledFalse = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = varFor("list"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = varFor("list"),
-          predicate = equals(varFor("bar"), varFor("foo")))))
+          predicate = equals(bar, foo))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 2, EMPTY_MAP, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, 2, EMPTY_MAP, context) should equal(booleanValue(false))
   }
 
   test("nested list expressions, both accessing outer scope") {
@@ -2167,248 +2128,219 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("list" -> list(stringValue("a"))))
 
     //When
+    val bar = ExpressionVariable(0, "bar")
+    val foo = ExpressionVariable(1, "foo")
+
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar <> foo)) --> true
     val compiledTrue = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = varFor("list"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = varFor("list"),
-          predicate = notEquals(varFor("bar"), varFor("foo")))))
+          predicate = notEquals(bar, foo))))
+
     // none(bar IN ["a"] WHERE any(foo IN ["a"] WHERE bar = foo)) --> false
     val compiledFalse = compile(
       noneInList(
-        variable = "bar",
+        variable = bar,
         collection = varFor("list"),
         predicate = anyInList(
-          variable = "foo",
+          variable = foo,
           collection = varFor("list"),
-          predicate = equals(varFor("bar"), varFor("foo")))))
+          predicate = equals(bar, foo))))
 
     //Then
-    evaluate(compiledTrue, context) should equal(booleanValue(true))
-    evaluate(compiledFalse, context) should equal(booleanValue(false))
+    evaluate(compiledTrue, 2, EMPTY_MAP, context) should equal(booleanValue(true))
+    evaluate(compiledFalse, 2, EMPTY_MAP, context) should equal(booleanValue(false))
   }
 
-  test("extract function local access only") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
-
+  test("extract basic") {
     //When, extract(bar IN ["a", "aa", "aaa"] | size(bar))
-    val compiled = compile(extract("bar", listOfString("a", "aa", "aaa"),
-                                   function("size", varFor("bar"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(extract(bar, listOfString("a", "aa", "aaa"), function("size", bar)))
 
     //Then
-    evaluate(compiled) should equal(list(intValue(1), intValue(2), intValue(3)))
+    evaluate(compiled, 1) should equal(list(intValue(1), intValue(2), intValue(3)))
   }
 
-  test("extract function accessing outer scope") {
+  test("extract accessing outer scope") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
 
     //When, extract(bar IN [1, 2, 3] | bar + foo)
-    val compiled = compile(extract("bar", listOfInt(1, 2, 3),
-                                   add(varFor("foo"), varFor("bar"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(extract(bar, listOfInt(1, 2, 3),
+                                   add(varFor("foo"), bar)))
 
     //Then
-    evaluate(compiled) should equal(list(intValue(11), intValue(12), intValue(13)))
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(list(intValue(11), intValue(12), intValue(13)))
   }
 
   test("extract on null") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
-
     //When, extract(bar IN null | size(bar)
-    val compiled = compile(extract("bar", nullLiteral,
-                                   function("size", varFor("bar"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(extract(bar, nullLiteral, function("size", bar)))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
-  test("extract function accessing same variable in inner and outer") {
+  test("extract accessing same variable in inner and outer") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
 
     //When, extract(bar IN foo | size(foo)
-    val compiled = compile(extract("bar", varFor("foo"),
-                                  function("size", varFor("foo"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(extract(bar, varFor("foo"), function("size", varFor("foo"))))
 
     //Then
-    evaluate(compiled) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+    evaluate(compiled, 1, EMPTY_MAP, context) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
   }
 
-  test("extract function accessing the same parameter in inner and outer") {
+  test("extract accessing the same parameter in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
 
     //When, extract(bar IN $a | size($a)
-    val compiled = compile(extract("bar", parameter("a"),
-                                   function("size", parameter("a"))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(extract(bar, parameter("a"), function("size", parameter("a"))))
 
     //Then
-    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
+    evaluate(compiled, 1, map(Array("a"), Array(list))) should equal(VirtualValues.list(intValue(3), intValue(3), intValue(3)))
   }
 
   test("extract on empty list") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
-    //When, extaract(bar IN [] | bar = 42)
-    val compiled = compile(extract("bar", listOf(), literalInt(42)))
+    //When, extract(bar IN [] | bar = 42)
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(extract(bar, listOf(), equals(bar, literalInt(42))))
 
     //Then
-    evaluate(compiled) should equal(EMPTY_LIST)
+    evaluate(compiled, 1) should equal(EMPTY_LIST)
   }
 
-  test("reduce function local access only") {
+  test("reduce basic") {
     //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
+    val count = ExpressionVariable(0, "count")
+    val bar = ExpressionVariable(1, "bar")
+    val reduceExpression = reduce(count, literalInt(0), bar, parameter("list"), add(function("size", bar), count))
 
     //When, reduce(count = 0, bar IN ["a", "aa", "aaa"] | count + size(bar))
-    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), listOfString("a", "aa", "aaa"),
-                                   add(function("size", varFor("bar")), varFor("count"))))
+    val compiled = compile(reduceExpression)
 
     //Then
-    compiled.evaluate(context, query, EMPTY_MAP, cursors) should equal(intValue(6))
+    evaluate(compiled, 2, map(Array("list"),
+                              Array(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
+    ), ctx) should equal(intValue(6))
+    evaluate(compiled, 2, map(Array("list"), Array(NO_VALUE))) should equal(NO_VALUE)
   }
 
-  test("reduce function local access only slotted") {
-    //Given
-    val slots = SlotConfiguration(Map("count" -> RefSlot(0, nullable = true, symbols.CTAny),
-                                      "bar" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
-    //Note: this is needed for interpreted
-    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-
-    val context = SlottedExecutionContext(slots)
-    val count = ReferenceFromSlot(slots("count").offset, "count")
-    val bar = ReferenceFromSlot(slots("bar").offset, "bar")
-
-    val reduceExpression = reduce(count, literalInt(0), bar, parameter("list"),  add(function("size", bar), count))
-
-    //When, reduce(count = 0, bar IN ["a", "aa", "aaa"] | count + size(bar))
-    val compiled = compile(reduceExpression, slots)
-
-    //Then
-    compiled.evaluate(context, query, map(Array("list"), Array(list(stringValue("a"), stringValue("aa"),
-                                                                    stringValue("aaa")))), cursors) should equal(intValue(6))
-    compiled.evaluate(context, query, map(Array("list"), Array(NO_VALUE)), cursors) should equal(NO_VALUE)
-  }
-
-  test("reduce function accessing outer scope") {
+  test("reduce accessing variable") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN [1, 2, 3] | count + bar + foo)
-    val compiled = compile(reduce(varFor("count"), literalInt(0),  varFor("bar"),
+    val count = ExpressionVariable(0, "count")
+    val bar = ExpressionVariable(1, "bar")
+    val compiled = compile(reduce(count, literalInt(0), bar,
                                   listOfInt(1, 2, 3),
-                                  add(add(varFor("foo"), varFor("bar")), varFor("count"))))
+                                  add(add(varFor("foo"), bar), count)))
 
     //Then
-    evaluate(compiled) should equal(intValue(36))
+    evaluate(compiled, 2, EMPTY_MAP, context) should equal(intValue(36))
   }
 
   test("reduce on null") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
-
     //When, reduce(count = 0, bar IN null | count + size(bar))
-    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), nullLiteral,
-                                  add(function("size", varFor("bar")), varFor("count"))))
+    val count = ExpressionVariable(0, "count")
+    val bar = ExpressionVariable(1, "bar")
+    val compiled = compile(reduce(count, literalInt(0), bar, nullLiteral,
+                                  add(function("size", bar), count)))
 
     //Then
-    evaluate(compiled) should equal(NO_VALUE)
+    evaluate(compiled, 2) should equal(NO_VALUE)
   }
 
-  test("reduce function accessing same variable in inner and outer") {
+  test("reduce accessing same variable in inner and outer") {
     //Given
     val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN foo | count + size(foo)
-    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), varFor("foo"),
-                                  add(function("size", varFor("foo")), varFor("count"))))
+    val count = ExpressionVariable(0, "count")
+    val bar = ExpressionVariable(1, "bar")
+    val compiled = compile(reduce(count, literalInt(0), bar, varFor("foo"),
+                                  add(function("size", varFor("foo")), count)))
 
     //Then
-    evaluate(compiled) should equal(intValue(9))
+    evaluate(compiled, 2, EMPTY_MAP, context) should equal(intValue(9))
   }
 
-  test("reduce function accessing the same parameter in inner and outer") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-    val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
-
+  test("reduce accessing the same parameter in inner and outer") {
     //When, reduce(count = 0, bar IN $a | count + size($a))
-    val compiled = compile(reduce(varFor("count"), literalInt(0), varFor("bar"), parameter("a"),
-                                  add(function("size", parameter("a")), varFor("count"))))
+    val count = ExpressionVariable(0, "count")
+    val bar = ExpressionVariable(1, "bar")
+    val compiled = compile(reduce(count, literalInt(0), bar, parameter("a"),
+                                  add(function("size", parameter("a")), count)))
 
     //Then
-    evaluate(compiled, map(Array("a"), Array(list)), context) should equal(intValue(9))
+    val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
+    evaluate(compiled, 2, map(Array("a"), Array(list))) should equal(intValue(9))
   }
 
   test("reduce on empty list") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty)
-
     //When, reduce(count = 42, bar IN [] | count + 3)
-    val compiled = compile(reduce(varFor("count"), literalInt(42), varFor("bar"), listOf(),
-                                  add(literalInt(3), varFor("count"))))
+    val count = ExpressionVariable(0, "count")
+    val bar = ExpressionVariable(1, "bar")
+    val compiled = compile(reduce(count, literalInt(42), bar, listOf(),
+                                  add(literalInt(3), count)))
 
     //Then
-    evaluate(compiled) should equal(Values.intValue(42))
+    evaluate(compiled, 2) should equal(Values.intValue(42))
   }
 
   test("list comprehension with predicate and extract expression") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
-
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa' | bar + 'A']
-    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
-                                             predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
-                                             extractExpression = Some(add(varFor("bar"), literalString("A")))))
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
+                                             predicate = Some(startsWith(bar, literalString("aa"))),
+                                             extractExpression = Some(add(bar, literalString("A")))))
 
     //Then
-    evaluate(compiled) should equal(list(stringValue("aaA"), stringValue("aaaA")))
+    evaluate(compiled, 1) should equal(list(stringValue("aaA"), stringValue("aaaA")))
   }
 
   test("list comprehension with no predicate but an extract expression") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
-
     //When, [bar IN ["a", "aa", "aaa"] | bar + 'A']
-    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
                                              predicate = None,
-                                             extractExpression = Some(add(varFor("bar"), literalString("A")))))
+                                             extractExpression = Some(add(bar, literalString("A")))))
 
     //Then
-    evaluate(compiled) should equal(list(stringValue("aA"), stringValue("aaA"), stringValue("aaaA")))
+    evaluate(compiled, 1) should equal(list(stringValue("aA"), stringValue("aaA"), stringValue("aaaA")))
   }
 
   test("list comprehension with predicate but no extract expression") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
-
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa']
-    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
-                                             predicate = Some(startsWith(varFor("bar"), literalString("aa"))),
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
+                                             predicate = Some(startsWith(bar, literalString("aa"))),
                                              extractExpression = None))
 
     //Then
-    evaluate(compiled) should equal(list(stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled, 1) should equal(list(stringValue("aa"), stringValue("aaa")))
   }
 
   test("list comprehension with no predicate nor extract expression") {
-    //Given
-    val context = new MapExecutionContext(mutable.Map.empty, mutable.Map.empty)
-
     //When, [bar IN ["a", "aa", "aaa"]]
-    val compiled = compile(listComprehension("bar", listOfString("a", "aa", "aaa"),
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
                                              predicate = None,
                                              extractExpression = None))
 
     //Then
-    evaluate(compiled) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
+    evaluate(compiled, 1) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
   }
 
   test("simple case expressions") {
@@ -2596,7 +2528,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors)
+    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionSlots)
     compiled.projectGroupingKey(outgoing, key)
 
     //then
@@ -2618,7 +2550,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors)
+    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionSlots)
     compiled.projectGroupingKey(outgoing, key)
 
     //then
@@ -2643,7 +2575,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors)
+    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionSlots)
     compiled.projectGroupingKey(outgoing, key)
 
     //then
@@ -3527,6 +3459,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                        params: MapValue,
                        context: ExecutionContext): AnyValue =
     compiled.evaluate(context, query, params, cursors, expressionSlots)
+
+  private def evaluate(compiled: CompiledExpression,
+                       nExpressionSlots: Int,
+                       params: MapValue = EMPTY_MAP,
+                       context: ExecutionContext = ctx): AnyValue =
+    compiled.evaluate(context, query, params, cursors, new Array(nExpressionSlots))
   
   private def parameter(key: String): Parameter = parameter(key, CTAny)
 
@@ -3668,15 +3606,14 @@ class CompiledExpressionsIT extends ExpressionsIT {
 }
 
 class InterpretedExpressionIT extends ExpressionsIT {
-  override  def compile(e: Expression,
-                                slots: SlotConfiguration): CompiledExpression = {
+  override  def compile(e: Expression, slots: SlotConfiguration): CompiledExpression = {
     val expression = converter(slots, (converter, id) => converter.toCommandExpression(id, e))
     new CompiledExpression() {
       override def evaluate(context: ExecutionContext,
                             dbAccess: DbAccess,
                             params: MapValue,
                             cursors: ExpressionCursors,
-                            expressionSlots: Array[AnyValue]): AnyValue = expression(context, state(dbAccess, params, cursors))
+                            expressionSlots: Array[AnyValue]): AnyValue = expression(context, state(dbAccess, params, cursors, expressionSlots))
 
     }
   }
@@ -3688,7 +3625,8 @@ class InterpretedExpressionIT extends ExpressionsIT {
       override def project(context: ExecutionContext,
                            dbAccess: DbAccess,
                            params: MapValue,
-                           cursors: ExpressionCursors): Unit = projector.project(context, state(dbAccess, params, cursors))
+                           cursors: ExpressionCursors,
+                           expressionSlots: Array[AnyValue]): Unit = projector.project(context, state(dbAccess, params, cursors, expressionSlots))
 
     }
   }
@@ -3704,8 +3642,9 @@ class InterpretedExpressionIT extends ExpressionsIT {
       override def computeGroupingKey(context: ExecutionContext,
                                       dbAccess: DbAccess,
                                       params: MapValue,
-                                      cursors: ExpressionCursors): AnyValue =
-        grouping.computeGroupingKey(context, state(dbAccess, params, cursors))
+                                      cursors: ExpressionCursors,
+                                      expressionSlots: Array[AnyValue]): AnyValue =
+        grouping.computeGroupingKey(context, state(dbAccess, params, cursors, expressionSlots))
 
 
       override def getGroupingKey(context: ExecutionContext): AnyValue = grouping.getGroupingKey(context)
@@ -3713,13 +3652,13 @@ class InterpretedExpressionIT extends ExpressionsIT {
   }
 
 
-  private def state(dbAccess: DbAccess, params: MapValue, cursors: ExpressionCursors) =
+  private def state(dbAccess: DbAccess, params: MapValue, cursors: ExpressionCursors, expressionSlots: Array[AnyValue]) =
     new QueryState(dbAccess.asInstanceOf[QueryContext],
                    null,
                    params,
                    cursors,
                    Array.empty,
-                   Array.empty[AnyValue])
+                   expressionSlots)
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
     val plan = PhysicalPlan(null, 0, new SlotConfigurations, new ArgumentSizes, new ApplyPlans, new AvailableExpressionVariables)

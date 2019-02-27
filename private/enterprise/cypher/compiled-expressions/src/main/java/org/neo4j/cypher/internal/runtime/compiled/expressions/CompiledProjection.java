@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions;
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.ExpressionCursors;
+import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 
 /**
@@ -17,10 +18,16 @@ public interface CompiledProjection
 {
     /**
      * Performs a projection
+     *
      * @param context the current context.
      * @param dbAccess used for accessing the database
      * @param params the parameters of the query
      * @param cursors cursors to use for expression evaluation
+     * @param expressionSlots slots used for storing expression variable values
      */
-    void project( ExecutionContext context, DbAccess dbAccess, MapValue params, ExpressionCursors cursors );
+    void project( ExecutionContext context,
+                  DbAccess dbAccess,
+                  MapValue params,
+                  ExpressionCursors cursors,
+                  AnyValue[] expressionSlots );
 }

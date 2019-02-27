@@ -23,7 +23,12 @@ public interface CompiledExpression
      * @param dbAccess used for accessing the database
      * @param params the parameters of the query
      * @param cursors cursors to use for expression evaluation
+     * @param expressionSlots slots used for storing expression variable values
      * @return an evaluated result from the compiled expression and given input.
      */
-    AnyValue evaluate( ExecutionContext context, DbAccess dbAccess, MapValue params, ExpressionCursors cursors );
+    AnyValue evaluate( ExecutionContext context,
+                       DbAccess dbAccess,
+                       MapValue params,
+                       ExpressionCursors cursors,
+                       AnyValue[] expressionSlots );
 }

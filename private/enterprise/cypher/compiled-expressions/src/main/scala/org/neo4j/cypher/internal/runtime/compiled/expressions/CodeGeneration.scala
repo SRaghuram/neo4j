@@ -38,29 +38,33 @@ object CodeGeneration {
   private val EXPRESSION = classOf[CompiledExpression]
   private val PROJECTION = classOf[CompiledProjection]
   private val GROUPING_EXPRESSION = classOf[CompiledGroupingExpression]
-  private val COMPUTE_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",
-                                                                 param(classOf[ExecutionContext], "context"),
-                                                                 param(classOf[DbAccess], "dbAccess"),
-                                                                 param(classOf[MapValue], "params"),
-                                                                 param(classOf[ExpressionCursors], "cursors"))
+  private val EVALUATE_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",
+                                                                  param(classOf[ExecutionContext], "context"),
+                                                                  param(classOf[DbAccess], "dbAccess"),
+                                                                  param(classOf[MapValue], "params"),
+                                                                  param(classOf[ExpressionCursors], "cursors"),
+                                                                  param(classOf[Array[AnyValue]], "expressionSlots"))
+
   private val PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "project",
                                                                  param(classOf[ExecutionContext], "context"),
                                                                  param(classOf[DbAccess], "dbAccess"),
                                                                  param(classOf[MapValue], "params"),
-                                                                 param(classOf[ExpressionCursors], "cursors"))
+                                                                 param(classOf[ExpressionCursors], "cursors"),
+                                                                 param(classOf[Array[AnyValue]], "expressionSlots"))
 
   private val GROUPING_KEY_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "computeGroupingKey",
                                                                       param(classOf[ExecutionContext], "context"),
                                                                       param(classOf[DbAccess], "dbAccess"),
                                                                       param(classOf[MapValue], "params"),
-                                                                      param(classOf[ExpressionCursors], "cursors"))
+                                                                      param(classOf[ExpressionCursors], "cursors"),
+                                                                      param(classOf[Array[AnyValue]], "expressionSlots"))
 
   private val GROUPING_PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "projectGroupingKey",
                                                                           param(classOf[ExecutionContext], "context"),
                                                                           param(classOf[AnyValue], "key"))
 
   private val GROUPING_GET_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "getGroupingKey",
-                                                                          param(classOf[ExecutionContext], "context"))
+                                                                      param(classOf[ExecutionContext], "context"))
 
   private def className(): String = "Expression" + System.nanoTime()
 
@@ -68,7 +72,7 @@ object CodeGeneration {
     val handle = using(generator.generateClass(PACKAGE_NAME, className(), EXPRESSION)) { clazz: ClassGenerator =>
 
       generateConstructor(clazz, expression.fields)
-      using(clazz.generate(COMPUTE_METHOD)) { block =>
+      using(clazz.generate(EVALUATE_METHOD)) { block =>
         expression.variables.distinct.foreach{ v =>
           block.assign(v.typ, v.name, compileExpression(v.value, block))
         }
