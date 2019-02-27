@@ -5,9 +5,8 @@
  */
 package org.neo4j.unsafe.batchinsert;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -88,9 +86,8 @@ public class BatchInsertEnterpriseIT
         }
 
         // THEN
-        GraphDatabaseService db = new CommercialGraphDatabaseFactory()
+        GraphDatabaseService db = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( directory.databaseDir() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
 
         try ( Transaction tx = db.beginTx() )
@@ -181,9 +178,8 @@ public class BatchInsertEnterpriseIT
 
     private GraphDatabaseService newDb( File storeDir, String recordFormat )
     {
-        return new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+        return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( GraphDatabaseSettings.record_format, recordFormat )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
     }
 

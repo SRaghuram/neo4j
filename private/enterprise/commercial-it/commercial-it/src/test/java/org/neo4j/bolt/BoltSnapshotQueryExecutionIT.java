@@ -5,7 +5,7 @@
  */
 package org.neo4j.bolt;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Rule;
@@ -71,7 +71,7 @@ public class BoltSnapshotQueryExecutionIT
 
     private void executeQuery( String directory, String useSnapshotEngineSettingValue )
     {
-        db = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.directory( directory ) )
+        db = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.directory( directory ) )
                 .setConfig( new BoltConnector( "bolt" ).type, "BOLT" )
                 .setConfig( new BoltConnector( "bolt" ).enabled, "true" )
                 .setConfig( new BoltConnector( "bolt" ).listen_address, "localhost:0" )

@@ -5,7 +5,7 @@
  */
 package org.neo4j.consistency;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -46,7 +46,7 @@ public class HalfCreatedConstraintIT
         Label marker = Label.label( "MARKER" );
         String property = "property";
 
-        GraphDatabaseService database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
         try
         {
             createNodes( marker, property, database );

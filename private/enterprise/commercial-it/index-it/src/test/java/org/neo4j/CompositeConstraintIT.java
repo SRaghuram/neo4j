@@ -5,15 +5,13 @@
  */
 package org.neo4j;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.ConsistencyCheckTool;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -37,9 +35,8 @@ class CompositeConstraintIT
     @Test
     void compositeNodeKeyConstraintUpdate() throws Exception
     {
-        GraphDatabaseService database = new CommercialGraphDatabaseFactory()
+        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
 
         Label label = Label.label( "label" );

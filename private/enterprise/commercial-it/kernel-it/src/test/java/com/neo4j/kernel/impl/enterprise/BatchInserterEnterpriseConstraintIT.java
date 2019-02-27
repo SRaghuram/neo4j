@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -30,7 +30,7 @@ class BatchInserterEnterpriseConstraintIT
     void startBatchInserterOnTopOfEnterpriseDatabase() throws IOException
     {
         File databaseDir = testDirectory.databaseDir();
-        GraphDatabaseService database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
         try ( Transaction transaction = database.beginTx() )
         {
             database.execute( "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname, n.surname) IS NODE KEY" );

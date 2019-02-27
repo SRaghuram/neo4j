@@ -5,13 +5,13 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -197,7 +197,7 @@ public class ImportAuthCommand implements AdminCommand
     {
         File databaseDir = config.get( GraphDatabaseSettings.databases_root_path ).getAbsoluteFile();
         File systemDbStoreDir = new File( databaseDir, IMPORT_SYSTEM_DATABASE_NAME );
-        CommercialGraphDatabaseFactory factory = new CommercialGraphDatabaseFactory();
+        TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         return factory.newEmbeddedDatabaseBuilder( systemDbStoreDir ).newGraphDatabase();
     }
 

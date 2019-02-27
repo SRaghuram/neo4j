@@ -5,7 +5,7 @@
  */
 package com.neo4j.graphdb;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -51,7 +51,7 @@ class StartupConstraintSemanticsTest
     private void assertThatCommunityCanStartOnNormalConstraint( String constraintCreationQuery )
     {
         // given
-        GraphDatabaseService graphDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+        GraphDatabaseService graphDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
         try
         {
             graphDb.execute( constraintCreationQuery );
@@ -80,7 +80,7 @@ class StartupConstraintSemanticsTest
     private void assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( String constraintCreationQuery, String errorMessage )
     {
         // given
-        GraphDatabaseService graphDb = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+        GraphDatabaseService graphDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
         try
         {
             graphDb.execute( constraintCreationQuery );

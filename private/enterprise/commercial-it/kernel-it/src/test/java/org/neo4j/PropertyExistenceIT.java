@@ -5,7 +5,7 @@
  */
 package org.neo4j;
 
-import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -21,7 +21,7 @@ public class PropertyExistenceIT
     @Test
     public void deletedNodesNotCheckedByExistenceConstraints()
     {
-        GraphDatabaseService database = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.directory() );
+        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.directory() );
         try
         {
             try ( Transaction transaction = database.beginTx() )
