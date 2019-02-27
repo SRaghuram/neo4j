@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, SlotConfigurations}
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.ir.v4_0.{HasHeaders, NoHeaders, ShortestPathPattern}
 import org.neo4j.cypher.internal.runtime.expressionVariables.AvailableExpressionVariables
@@ -38,7 +38,8 @@ object SlotAllocation {
 
   case class SlotMetaData(slotConfigurations: SlotConfigurations,
                           argumentSizes: ArgumentSizes,
-                          applyPlans: ApplyPlans)
+                          applyPlans: ApplyPlans,
+                          nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations)
 
   private[physicalplanning] def NO_ARGUMENT(allocateArgumentSlots: Boolean): SlotsAndArgument = {
     val slots = SlotConfiguration.empty
@@ -72,6 +73,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
   private val allocations = new  SlotConfigurations
   private val argumentSizes = new ArgumentSizes
   private val applyPlans = new ApplyPlans
+  private val nestedPlanArgumentConfigurations = new NestedPlanArgumentConfigurations
 
   /**
     * Allocate slot for every operator in the logical plan tree `lp`.
@@ -177,7 +179,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
       comingFrom = current
     }
 
-    SlotMetaData(allocations, argumentSizes, applyPlans)
+    SlotMetaData(allocations, argumentSizes, applyPlans, nestedPlanArgumentConfigurations)
   }
 
   // NOTE: If we find a NestedPlanExpression within the given LogicalPlan, the slotConfigurations and argumentSizes maps will be updated
@@ -237,12 +239,14 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           if (acc.doNotTraverseExpression.contains(e))
             (acc, DO_NOT_TRAVERSE_INTO_CHILDREN)
           else {
-            val argumentSlotConfiguration = breakingPolicy.invokeOnNestedPlan(slots)
+            breakingPolicy.onNestedPlanBreak()
+            val argumentSlotConfiguration = slots.copy()
             availableExpressionVariables(e.plan.id).foreach { expVar =>
               argumentSlotConfiguration.newReference(expVar.name, nullable = true, CTAny)
             }
+            nestedPlanArgumentConfigurations.set(e.plan.id, argumentSlotConfiguration)
 
-            val slotsAndArgument = SlotsAndArgument(argumentSlotConfiguration, argumentSlotConfiguration.size(), applyPlans(planId))
+            val slotsAndArgument = SlotsAndArgument(argumentSlotConfiguration.copy(), argumentSlotConfiguration.size(), applyPlans(planId))
 
             // Allocate slots for nested plan
             // Pass in mutable attributes to be modified by recursive call

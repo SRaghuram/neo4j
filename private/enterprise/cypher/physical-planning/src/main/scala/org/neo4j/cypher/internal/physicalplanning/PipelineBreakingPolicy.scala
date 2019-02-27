@@ -20,9 +20,12 @@ trait PipelineBreakingPolicy {
   def breakOn(lp: LogicalPlan): Boolean
 
   /**
-    * True if a nested operator should be the start of a new pipeline.
+    * A nested operator is always the start of a new pipeline. This callback
+    * simply gives the breaking policy a possibility to throw if this is not
+    * acceptable. And it's nice that the [[PipelineBreakingPolicy]] gets notified
+    * of all breaks.
     */
-  def breakOnNestedPlan: Boolean
+  def onNestedPlanBreak(): Unit
 
   def invoke(lp: LogicalPlan, slots: SlotConfiguration, argumentSlots: SlotConfiguration): SlotConfiguration =
     if (breakOn(lp)) {
@@ -32,21 +35,17 @@ trait PipelineBreakingPolicy {
         case _ => slots.copy()
       }
     } else slots
-
-  def invokeOnNestedPlan(slots: SlotConfiguration): SlotConfiguration =
-    if (breakOnNestedPlan) slots.copy() else slots
-
 }
 
 object BREAK_FOR_LEAFS extends PipelineBreakingPolicy {
   override def breakOn(lp: LogicalPlan): Boolean = lp.isInstanceOf[LogicalLeafPlan]
-  override def breakOnNestedPlan: Boolean = false
+  override def onNestedPlanBreak(): Unit = ()
 }
 
 object PipelineBreakingPolicy {
   def breakFor(logicalPlans: LogicalPlan*): PipelineBreakingPolicy =
     new PipelineBreakingPolicy {
       override def breakOn(lp: LogicalPlan): Boolean = logicalPlans.contains(lp)
-      override def breakOnNestedPlan: Boolean = false
+      override def onNestedPlanBreak(): Unit = ()
     }
 }

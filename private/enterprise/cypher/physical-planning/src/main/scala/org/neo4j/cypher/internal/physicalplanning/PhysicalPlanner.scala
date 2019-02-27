@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, SlotConfigurations}
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariables
 import org.neo4j.cypher.internal.runtime.expressionVariables.{AvailableExpressionVariables, Result}
@@ -28,6 +28,7 @@ object PhysicalPlanner {
                  slotMetaData.slotConfigurations,
                  slotMetaData.argumentSizes,
                  slotMetaData.applyPlans,
+                 slotMetaData.nestedPlanArgumentConfigurations,
                  availableExpressionVars)
   }
 }
@@ -37,4 +38,5 @@ case class PhysicalPlan(logicalPlan: LogicalPlan,
                         slotConfigurations: SlotConfigurations,
                         argumentSizes: ArgumentSizes,
                         applyPlans: ApplyPlans,
+                        nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations,
                         availableExpressionVariables: AvailableExpressionVariables)

@@ -35,5 +35,5 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
     }
   }
 
-  override def breakOnNestedPlan: Boolean = throw new UnsupportedOperationException("not implemented")
+  override def onNestedPlanBreak(): Unit = throw new UnsupportedOperationException("not implemented")
 }

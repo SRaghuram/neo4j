@@ -12,4 +12,5 @@ object PhysicalPlanningAttributes {
   class SlotConfigurations extends Attribute[SlotConfiguration]
   class ArgumentSizes extends Attribute[Size]
   class ApplyPlans extends Attribute[Id]
+  class NestedPlanArgumentConfigurations extends Attribute[SlotConfiguration]
 }
