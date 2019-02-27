@@ -5,14 +5,14 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
-import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
-import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, NestedPlanExpression, Projection, VarExpand, _}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, functions => frontendFunctions, _}
+import org.neo4j.cypher.internal.v4_0.logical.plans
+import org.neo4j.cypher.internal.v4_0.logical.plans.{LogicalPlan, NestedPlanExpression, Projection, VarExpand, _}
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils.ifAssertionsEnabled
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
@@ -61,11 +61,11 @@ class SlottedRewriter(tokenContext: TokenContext) {
         val rewriter = rewriteCreator(incomingSlotConfiguration, oldPlan, slotConfigurations)
 
         val newNodePredicate = oldPlan.nodePredicate.endoRewrite(rewriter)
-        val newEdgePredicate = oldPlan.edgePredicate.endoRewrite(rewriter)
+        val newEdgePredicate = oldPlan.relationshipPredicate.endoRewrite(rewriter)
 
         val newPlan = oldPlan.copy(
           nodePredicate = newNodePredicate,
-          edgePredicate = newEdgePredicate,
+          relationshipPredicate = newEdgePredicate,
           legacyPredicates = Seq.empty // If we use the legacy predicates, we are not on the slotted runtime
         )(SameId(oldPlan.id))
 

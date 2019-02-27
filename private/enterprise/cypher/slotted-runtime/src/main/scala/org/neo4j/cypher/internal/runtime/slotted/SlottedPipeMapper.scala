@@ -116,12 +116,13 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val relOffset = slots.getLongOffsetFor(relName)
         val toSlot = slots(toName)
         val predicate = predicates.map(buildPredicate(id, _)).reduceOption(_ andWith _).getOrElse(True())
+
         OptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, LazyTypes(types.toArray), predicate,
           slots)(id)
 
       case VarExpand(sourcePlan, fromName, dir, projectedDir, types, toName, relName,
       VarPatternLength(min, max), expansionMode, tempNode, tempEdge, nodePredicate,
-      edgePredicate, _) =>
+      relationshipPredicate, _) =>
         val shouldExpandAll = expansionMode match {
           case ExpandAll => true
           case ExpandInto => false
@@ -133,15 +134,15 @@ class SlottedPipeMapper(fallback: PipeMapper,
         // The node/edge predicates are evaluated on the source pipeline, not the produced one
         val sourceSlots = physicalPlan.slotConfigurations(sourcePlan.id)
         val tempNodeOffset = sourceSlots.getLongOffsetFor(tempNode)
-        val tempEdgeOffset = sourceSlots.getLongOffsetFor(tempEdge)
+        val tempRelationshipOffset = sourceSlots.getLongOffsetFor(tempEdge)
         val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs - 2, sourceSlots.numberOfReferences)
         VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, LazyTypes(types.toArray), min,
-          max, shouldExpandAll, slots,
-          tempNodeOffset = tempNodeOffset,
-          tempEdgeOffset = tempEdgeOffset,
-          nodePredicate = buildPredicate(id, nodePredicate),
-          edgePredicate = buildPredicate(id, edgePredicate),
-          argumentSize = argumentSize)(id)
+                                   max, shouldExpandAll, slots,
+                                   tempNodeOffset = tempNodeOffset,
+                                   tempRelationshipOffset = tempRelationshipOffset,
+                                   nodePredicate = expressionConverters.toCommandExpression(id, nodePredicate),
+                                   relationshipPredicate =  expressionConverters.toCommandExpression(id, relationshipPredicate),
+                                   argumentSize = argumentSize)(id)
 
       case Optional(inner, symbols) =>
         val nullableKeys = inner.availableSymbols -- symbols

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyTypes, Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
@@ -33,9 +33,9 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                                       shouldExpandAll: Boolean,
                                       slots: SlotConfiguration,
                                       tempNodeOffset: Int,
-                                      tempEdgeOffset: Int,
-                                      nodePredicate: Predicate,
-                                      edgePredicate: Predicate,
+                                      tempRelationshipOffset: Int,
+                                      nodePredicate: Expression,
+                                      relationshipPredicate: Expression,
                                       argumentSize: SlotConfiguration.Size)
                                      (val id: Id = Id.INVALID_ID) extends PipeWithSource(source) {
   type LNode = Long
@@ -81,10 +81,10 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
             val relationshipIsUniqueInPath = !rels.contains(relationship)
 
             if (relationshipIsUniqueInPath) {
-              row.setLongAt(tempEdgeOffset, relId)
+              row.setLongAt(tempRelationshipOffset, relId)
               row.setLongAt(tempNodeOffset, relationship.otherNodeId(fromNode))
               // Before expanding, check that both the edge and node in question fulfil the predicate
-              if (edgePredicate.isTrue(row, state) && nodePredicate.isTrue(row, state)) {
+              if ((relationshipPredicate(row, state) eq Values.TRUE) && (nodePredicate(row, state) eq Values.TRUE)) {
                 // TODO: This call creates an intermediate NodeProxy which should not be necessary
                 stack.push((relationship.otherNodeId(fromNode), rels.append(relationship)))
               }
@@ -124,7 +124,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
           // We set the fromNode on the temp node offset as well, to be able to run our node predicate and make sure
           // the start node is valid
           inputRow.setLongAt(tempNodeOffset, fromNode)
-          if (nodePredicate.isTrue(inputRow, state)) {
+          if (nodePredicate(inputRow, state) eq Values.TRUE) {
 
             val paths: Iterator[(LNode, RelationshipContainer)] = varLengthExpand(fromNode, state, inputRow)
             paths collect {
