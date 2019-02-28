@@ -14,19 +14,17 @@ class OnlineBackupRequiredArguments
 {
     private final AdvertisedSocketAddress address;
     private final String databaseName;
-    private final Path directory;
-    private final String name;
+    private final Path databaseBackupDir;
     private final boolean fallbackToFull;
     private final boolean doConsistencyCheck;
     private final Path reportDir;
 
-    OnlineBackupRequiredArguments( AdvertisedSocketAddress address, String databaseName, Path directory, String name,
+    OnlineBackupRequiredArguments( AdvertisedSocketAddress address, String databaseName, Path databaseBackupDir,
             boolean fallbackToFull, boolean doConsistencyCheck, Path reportDir )
     {
         this.address = address;
         this.databaseName = databaseName;
-        this.directory = directory;
-        this.name = name;
+        this.databaseBackupDir = databaseBackupDir;
         this.fallbackToFull = fallbackToFull;
         this.doConsistencyCheck = doConsistencyCheck;
         this.reportDir = reportDir;
@@ -42,14 +40,9 @@ class OnlineBackupRequiredArguments
         return Optional.ofNullable( databaseName );
     }
 
-    public Path getDirectory()
+    public Path getDatabaseBackupDir()
     {
-        return directory;
-    }
-
-    public String getName()
-    {
-        return name;
+        return databaseBackupDir;
     }
 
     public boolean isFallbackToFull()
@@ -65,10 +58,5 @@ class OnlineBackupRequiredArguments
     public Path getReportDir()
     {
         return reportDir;
-    }
-
-    public Path getResolvedLocationFromName()
-    {
-        return directory.resolve( name );
     }
 }

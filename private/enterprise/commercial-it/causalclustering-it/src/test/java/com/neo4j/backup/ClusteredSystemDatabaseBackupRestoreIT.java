@@ -27,7 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import org.neo4j.backup.impl.OnlineBackupCommandCcIT;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -85,13 +84,13 @@ class ClusteredSystemDatabaseBackupRestoreIT
     @Test
     void backingUpSystemDatabaseShouldBeSuccessful() throws Exception
     {
-        String backupName = "system-backup";
+        String databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
         CoreClusterMember leader = cluster.awaitLeader();
         String leaderAddress = leader.settingValue( backupAddress );
 
-        assertTrue( runBackupSameJvm( backupLocation, backupName, leaderAddress, GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) );
-        assertEquals( OnlineBackupCommandCcIT.getBackupDbRepresentation( backupName, backupLocation ),
-                DbRepresentation.of( getSystemDatabase( cluster ) ) );
+        assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( new File( backupLocation, databaseName ) );
+        assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 
         cluster.coreTx( ( db, tx ) ->
         {
@@ -99,17 +98,16 @@ class ClusteredSystemDatabaseBackupRestoreIT
             tx.success();
         } );
 
-        assertNotEquals( DbRepresentation.of( getSystemDatabase( cluster ) ),
-                OnlineBackupCommandCcIT.getBackupDbRepresentation( backupName, backupLocation ) );
+        assertNotEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
     }
 
     @Test
     void restoreSystemDatabaseShouldBeSuccessful() throws Exception
     {
         // given
+        String databaseName = GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
         String preBackupUsername = "preBackup";
         String postBackupUsername = "postBackup";
-        String backupName = "system-backup";
         CoreClusterMember leader = cluster.awaitLeader();
         String leaderAddress = leader.settingValue( backupAddress );
 
@@ -119,7 +117,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
             tx.success();
         } );
 
-        assertTrue( runBackupSameJvm( backupLocation, backupName, leaderAddress, GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) );
+        assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
 
         cluster.coreTx( ( db, tx ) ->
         {
@@ -134,7 +132,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         // when
         for ( Config config : memberConfigs )
         {
-            runRestore( fs, backupLocation, backupName, config );
+            runRestore( fs, new File( backupLocation, databaseName ), config );
         }
 
         unbindCluster( cluster, fs );
@@ -170,22 +168,23 @@ class ClusteredSystemDatabaseBackupRestoreIT
                 Collections.emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }
 
-    private static void runRestore( FileSystemAbstraction fs, File backupLocation, String backupName, Config memberConfig ) throws Exception
+    private static void runRestore( FileSystemAbstraction fs, File backupLocation, Config memberConfig ) throws Exception
     {
         Config restoreCommandConfig = Config.defaults();
         restoreCommandConfig.augment( memberConfig );
         restoreCommandConfig.augment( GraphDatabaseSettings.active_database, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        new RestoreDatabaseCommand( fs, new File( backupLocation, backupName ), restoreCommandConfig,
+        new RestoreDatabaseCommand( fs, backupLocation, restoreCommandConfig,
                 GraphDatabaseSettings.SYSTEM_DATABASE_NAME, true ).execute();
     }
 
-    private static boolean runBackupSameJvm( File neo4jHome, String backupName, String host, String databaseName )
+    private static boolean runBackupSameJvm( File neo4jHome, String host, String databaseName )
     {
-        return BackupTestUtil.runBackupToolFromSameJvm( neo4jHome,
+        int exitCode = BackupTestUtil.runBackupToolFromSameJvm( neo4jHome,
                 "--from", host,
                 "--database", databaseName,
-                "--backup-dir", neo4jHome.toString(),
-                "--name", backupName ) == 0;
+                "--backup-dir", neo4jHome.toString() );
+
+        return exitCode == 0;
     }
 
     private static GraphDatabaseService getSystemDatabase( Cluster cluster ) throws Exception

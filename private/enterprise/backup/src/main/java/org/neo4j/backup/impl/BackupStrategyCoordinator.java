@@ -5,7 +5,7 @@
  */
 package org.neo4j.backup.impl;
 
-import java.nio.file.Path;
+import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
@@ -52,16 +52,14 @@ class BackupStrategyCoordinator
     public void performBackup( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         OnlineBackupRequiredArguments requiredArgs = onlineBackupContext.getRequiredArguments();
-        Path destination = onlineBackupContext.getResolvedLocationFromName();
+        File destination = requiredArgs.getDatabaseBackupDir().toFile();
         ConsistencyFlags consistencyFlags = onlineBackupContext.getConsistencyFlags();
-
-        verifyArguments( onlineBackupContext );
 
         strategy.doBackup( onlineBackupContext );
 
         if ( requiredArgs.isDoConsistencyCheck() )
         {
-            performConsistencyCheck( onlineBackupContext.getConfig(), requiredArgs, consistencyFlags, DatabaseLayout.of( destination.toFile() ) );
+            performConsistencyCheck( onlineBackupContext.getConfig(), requiredArgs, consistencyFlags, DatabaseLayout.of( destination ) );
         }
     }
 
@@ -90,21 +88,6 @@ class BackupStrategyCoordinator
         if ( !ccResult.isSuccessful() )
         {
             throw new ConsistencyCheckExecutionException( format( "Inconsistencies found. See '%s' for details.", ccResult.reportFile() ), false );
-        }
-    }
-
-    private void verifyArguments( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
-    {
-        // Make sure destination exists
-        checkDestination( onlineBackupContext.getRequiredArguments().getDirectory() );
-        checkDestination( onlineBackupContext.getRequiredArguments().getReportDir() );
-    }
-
-    private void checkDestination( Path path ) throws BackupExecutionException
-    {
-        if ( !fs.isDirectory( path.toFile() ) )
-        {
-            throw new BackupExecutionException( format( "Directory '%s' does not exist.", path ) );
         }
     }
 }

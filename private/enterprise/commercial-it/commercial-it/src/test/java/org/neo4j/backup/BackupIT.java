@@ -8,22 +8,16 @@ package org.neo4j.backup;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
+import com.neo4j.test.TestWithRecordFormats;
 import org.eclipse.collections.impl.factory.Maps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -75,7 +69,6 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -166,14 +159,6 @@ class BackupIT
     private List<GraphDatabaseService> databases;
     private DatabaseLayout backupDatabaseLayout;
     private DatabaseLayout serverStoreLayout;
-
-    @Target( ElementType.METHOD )
-    @Retention( RetentionPolicy.RUNTIME )
-    @ParameterizedTest( name = "{0}" )
-    @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME} )
-    @interface TestWithRecordFormats
-    {
-    }
 
     @BeforeEach
     void beforeEach()

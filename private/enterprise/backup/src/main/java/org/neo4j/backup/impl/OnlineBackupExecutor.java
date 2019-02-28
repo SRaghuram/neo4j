@@ -8,6 +8,8 @@ package org.neo4j.backup.impl;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 
+import java.nio.file.Path;
+
 import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.common.Service;
 import org.neo4j.consistency.ConsistencyCheckService;
@@ -19,6 +21,8 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+
+import static java.lang.String.format;
 
 public class OnlineBackupExecutor
 {
@@ -52,6 +56,8 @@ public class OnlineBackupExecutor
 
     public void executeBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
+        verify( context );
+
         try ( BackupSupportingClasses supportingClasses = backupSupportingClassesFactory.createSupportingClasses( context ) )
         {
             StoreCopyClientMonitor backupStoreCopyMonitor = new BackupOutputMonitor( userLogProvider );
@@ -69,6 +75,26 @@ public class OnlineBackupExecutor
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
                     progressMonitorFactory, wrapper );
             coordinator.performBackup( context );
+        }
+    }
+
+    private void verify( OnlineBackupContext context ) throws BackupExecutionException
+    {
+        OnlineBackupRequiredArguments arguments = context.getRequiredArguments();
+
+        // user specifies target backup directory and backup procedure creates a sub-directory with the same name as the database
+        // verify existence of the directory as specified by the user
+        checkDestination( arguments.getDatabaseBackupDir().getParent() );
+
+        // consistency check report is placed directly into the specified directory, verify its existence
+        checkDestination( arguments.getReportDir() );
+    }
+
+    private void checkDestination( Path path ) throws BackupExecutionException
+    {
+        if ( !fs.isDirectory( path.toFile() ) )
+        {
+            throw new BackupExecutionException( format( "Directory '%s' does not exist.", path ) );
         }
     }
 

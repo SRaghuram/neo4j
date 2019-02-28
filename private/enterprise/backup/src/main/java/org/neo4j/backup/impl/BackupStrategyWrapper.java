@@ -62,7 +62,7 @@ class BackupStrategyWrapper
 
     private void performBackupWithoutLifecycle( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
-        Path backupLocation = onlineBackupContext.getResolvedLocationFromName();
+        Path backupLocation = onlineBackupContext.getRequiredArguments().getDatabaseBackupDir();
         AdvertisedSocketAddress address = onlineBackupContext.getRequiredArguments().getAddress();
         Config config = onlineBackupContext.getConfig();
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation.toFile() );
@@ -131,7 +131,7 @@ class BackupStrategyWrapper
      */
     private void fullBackupWithTemporaryFolderResolutions( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
-        Path userSpecifiedBackupLocation = onlineBackupContext.getResolvedLocationFromName();
+        Path userSpecifiedBackupLocation = onlineBackupContext.getRequiredArguments().getDatabaseBackupDir();
         Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
         boolean backupToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
 

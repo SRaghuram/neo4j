@@ -20,10 +20,8 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.text.StringContainsInOrder.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class BackupStrategyCoordinatorTest
@@ -54,20 +53,16 @@ class BackupStrategyCoordinatorTest
     private final ProgressMonitorFactory progressMonitorFactory = mock( ProgressMonitorFactory.class );
     private final ConsistencyCheckService.Result consistencyCheckResult = mock( ConsistencyCheckService.Result.class );
 
-    private Path reportDir;
-    private Path backupDir;
-
     @BeforeEach
     void setup()
     {
-        reportDir = testDirectory.directory( "reports" ).toPath();
-        backupDir = testDirectory.directory( "backups" ).toPath();
+        Path reportsDir = testDirectory.directory( "reports" ).toPath();
+        Path backupsDir = testDirectory.directory( "backups" ).toPath();
 
         when( fileSystem.isDirectory( any() ) ).thenReturn( true );
         when( onlineBackupContext.getRequiredArguments() ).thenReturn( requiredArguments );
-        when( onlineBackupContext.getResolvedLocationFromName() ).thenReturn( reportDir );
-        when( requiredArguments.getReportDir() ).thenReturn( reportDir );
-        when( requiredArguments.getDirectory() ).thenReturn( backupDir );
+        when( requiredArguments.getReportDir() ).thenReturn( reportsDir );
+        when( requiredArguments.getDatabaseBackupDir() ).thenReturn( backupsDir.resolve( DEFAULT_DATABASE_NAME ) );
         subject = new BackupStrategyCoordinator( fileSystem, consistencyCheckService, logProvider, progressMonitorFactory, firstStrategy );
     }
 
@@ -115,31 +110,5 @@ class BackupStrategyCoordinatorTest
 
         // when
         assertThat( error.getMessage(), containsString( "Inconsistencies found" ) );
-    }
-
-    @Test
-    void nonExistingReportDirectoryRaisesException()
-    {
-        // given report directory is not a directory
-        when( fileSystem.isDirectory( reportDir.toFile() ) ).thenReturn( false );
-
-        // when
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> subject.performBackup( onlineBackupContext ) );
-
-        // then
-        assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "reports' does not exist." ) ) );
-    }
-
-    @Test
-    void nonExistingBackupDirectoryRaisesException()
-    {
-        // given report directory is not a directory
-        when( fileSystem.isDirectory( backupDir.toFile() ) ).thenReturn( false );
-
-        // when
-        BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> subject.performBackup( onlineBackupContext ) );
-
-        // then
-        assertThat( error.getMessage(), stringContainsInOrder( asList( "Directory '", "backups' does not exist." ) ) );
     }
 }

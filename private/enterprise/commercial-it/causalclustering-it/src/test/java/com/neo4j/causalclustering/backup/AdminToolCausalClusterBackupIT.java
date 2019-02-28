@@ -8,11 +8,13 @@ package com.neo4j.causalclustering.backup;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.causalclustering.ClusterRule;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.apache.commons.lang3.SystemUtils;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -22,55 +24,65 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromSameJvm;
-import static org.junit.Assert.assertEquals;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.metrics.MetricsSettings.metricsEnabled;
 
-public class AdminToolCausalClusterBackupIT
+@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@ClusterExtension
+class AdminToolCausalClusterBackupIT
 {
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 0 );
+    @Inject
+    private ClusterFactory clusterFactory;
+    @Inject
+    private TestDirectory testDirectory;
 
     private Cluster cluster;
     private File testDir;
-    private File backupsDir;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void setup() throws Exception
     {
-        testDir = clusterRule.testDirectory().absolutePath();
-        backupsDir = clusterRule.testDirectory().cleanDirectory( "backups" );
-        cluster = clusterRule.startCluster();
+        testDir = testDirectory.absolutePath();
+
+        ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withDiscoveryServiceType( SHARED );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void shouldAllowBackupWithTimestampAsName() throws Exception
+    void shouldAllowBackupWithTimestampAsDirectoryName() throws Exception
     {
         CoreClusterMember leader = cluster.awaitLeader();
 
-        String backupName = newBackupName();
+        File backupDir = testDirectory.directory( "backups", newBackupDirName() );
         String backupAddress = leader.config().get( OnlineBackupSettings.online_backup_listen_address ).toString();
 
         cluster.coreTx( this::createSomeData );
 
         int exitCode = runBackupToolFromSameJvm( testDir,
                 "--from=" + backupAddress,
-                "--backup-dir=" + backupsDir,
-                "--name=" + backupName );
+                "--backup-dir=" + backupDir,
+                "--database=" + DEFAULT_DATABASE_NAME );
 
         assertEquals( 0, exitCode );
 
         DbRepresentation leaderDbRepresentation = DbRepresentation.of( leader.database() );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( new File( backupsDir, backupName ), tempDbConfig() );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( new File( backupDir, DEFAULT_DATABASE_NAME ), tempDbConfig() );
         assertEquals( leaderDbRepresentation, backupDbRepresentation );
     }
 
@@ -93,7 +105,7 @@ public class AdminToolCausalClusterBackupIT
                 .build();
     }
 
-    private static String newBackupName()
+    private static String newBackupDirName()
     {
         String name = LocalDateTime.now().toString();
         if ( SystemUtils.IS_OS_WINDOWS )

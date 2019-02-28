@@ -8,54 +8,66 @@ package org.neo4j.backup.clusteringsupport;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Settings;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
 import static com.neo4j.backup.BackupTestUtil.createSomeData;
-import static com.neo4j.backup.BackupTestUtil.getConfig;
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
-import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.transactionAddress;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.function.Predicates.awaitEx;
 
-public class BackupReadReplicaIT
+@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@ClusterExtension
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
+class BackupReadReplicaIT
 {
-    @Rule
-    public SuppressOutput suppress = SuppressOutput.suppressAll();
-
-    @Rule
-    public ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-            .withNumberOfReadReplicas( 1 )
-            .withSharedReadReplicaParam( OnlineBackupSettings.online_backup_enabled, Settings.TRUE );
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
-    private File backupPath;
+    private File backupsDir;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void setup() throws Exception
     {
-        backupPath = clusterRule.testDirectory().cleanDirectory( "backup-db" );
-        cluster = clusterRule.startCluster();
+        ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withSharedCoreParam( online_backup_enabled, FALSE )
+                .withNumberOfReadReplicas( 1 )
+                .withSharedReadReplicaParam( online_backup_enabled, Settings.TRUE );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+
+        backupsDir = testDirectory.cleanDirectory( "backups" );
     }
 
     @Test
-    public void makeSureBackupCanBePerformed() throws Throwable
+    void makeSureBackupCanBePerformed() throws Throwable
     {
         // Run backup
         CoreGraphDatabase leader = createSomeData( cluster );
@@ -65,16 +77,16 @@ public class BackupReadReplicaIT
         awaitEx( () -> readReplicasUpToDateAsTheLeader( leader, readReplica ), 1, TimeUnit.MINUTES );
 
         DbRepresentation beforeChange = DbRepresentation.of( readReplica );
-        String backupAddress = transactionAddress( readReplica );
+        String backupAddress = backupAddress( readReplica );
 
-        String[] args = backupArguments( backupAddress, backupPath, "readreplica" );
-        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( clusterRule.clusterDirectory(), args ) );
+        String[] args = backupArguments( backupAddress, backupsDir, DEFAULT_DATABASE_NAME );
+        assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( readReplica.databaseLayout().databaseDirectory(), args ) );
 
         // Add some new data
         DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
         // Verify that backed up database can be started and compare representation
-        DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( backupPath, "readreplica" ).databaseDirectory(), getConfig() );
+        DbRepresentation backupRepresentation = DbRepresentation.of( new File( backupsDir, DEFAULT_DATABASE_NAME ) );
         assertEquals( beforeChange, backupRepresentation );
         assertNotEquals( backupRepresentation, afterChange );
     }

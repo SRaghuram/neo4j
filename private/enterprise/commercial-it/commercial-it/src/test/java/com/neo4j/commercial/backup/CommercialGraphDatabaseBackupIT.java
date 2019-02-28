@@ -26,6 +26,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -63,17 +64,16 @@ class CommercialGraphDatabaseBackupIT
 
     private File performBackup( File storeDir ) throws Exception
     {
-        String backupDirName = "graph-db-backup";
         File backupsDir = testDirectory.directory( "backups" );
 
         int exitCode = BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode( storeDir,
                 "--from=" + backupAddress( db ),
                 "--backup-dir=" + backupsDir,
-                "--name=" + backupDirName );
+                "--database=" + DEFAULT_DATABASE_NAME );
 
         assertEquals( 0, exitCode );
 
-        return new File( backupsDir, backupDirName );
+        return new File( backupsDir, DEFAULT_DATABASE_NAME );
     }
 
     private GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )

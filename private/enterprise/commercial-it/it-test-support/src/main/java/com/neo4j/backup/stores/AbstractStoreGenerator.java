@@ -28,11 +28,11 @@ public abstract class AbstractStoreGenerator implements BackupStore
     abstract void modify( File backup ) throws Exception;
 
     @Override
-    public Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster backupCluster ) throws Exception
+    public Optional<DefaultDatabasesBackup> generate( File baseBackupDir, Cluster backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
-        File defaultBackupFromCore = createBackupFromCore( core, backupName( DEFAULT_DATABASE_NAME ), backupDir, DEFAULT_DATABASE_NAME );
-        File systemBackupFromCore = createBackupFromCore( core, backupName( SYSTEM_DATABASE_NAME ), backupDir, SYSTEM_DATABASE_NAME );
+        File defaultBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, DEFAULT_DATABASE_NAME ), DEFAULT_DATABASE_NAME );
+        File systemBackupFromCore = createBackupFromCore( core, backupDir( baseBackupDir, SYSTEM_DATABASE_NAME ), SYSTEM_DATABASE_NAME );
         DefaultDatabasesBackup backups = new DefaultDatabasesBackup( defaultBackupFromCore, systemBackupFromCore );
         modify( defaultBackupFromCore );
         return Optional.of( backups );
@@ -57,8 +57,10 @@ public abstract class AbstractStoreGenerator implements BackupStore
         }
     }
 
-    private static String backupName( String database )
+    private static File backupDir( File baseDir, String database ) throws IOException
     {
-        return database + "-backup-" + UUID.randomUUID().toString().substring( 5 );
+        File dir = new File( baseDir, database + "-backup-" + UUID.randomUUID() );
+        Files.createDirectories( dir.toPath() );
+        return dir;
     }
 }

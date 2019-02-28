@@ -38,9 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.backup.impl.OnlineBackupContextFactory.DEFAULT_BACKUP_HOSTNAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
-import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class OnlineBackupContextFactoryTest
@@ -122,16 +122,6 @@ class OnlineBackupContextFactoryTest
     {
         IncorrectUsage error = assertThrows( IncorrectUsage.class, () -> new OnlineBackupContextFactory( homeDir, configDir ).createContext() );
         assertThat( error.getMessage(), containsString( "Missing argument 'backup-dir'" ) );
-    }
-
-    @Test
-    void shouldTreatNameArgumentAsMandatory()
-    {
-        OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
-
-        IncorrectUsage error = assertThrows( IncorrectUsage.class, () -> handler.createContext( "--backup-dir=/" ) );
-
-        assertThat( error.getMessage(), containsString( "Missing argument 'name'" ) );
     }
 
     @Test
@@ -238,19 +228,6 @@ class OnlineBackupContextFactoryTest
     }
 
     @Test
-    void logsMustBePlacedInTargetBackupDirectory() throws Exception
-    {
-        // when
-        String name = "mybackup";
-        Path backupDir = homeDir.resolve( "poke" );
-        Path backupPath = backupDir.resolve( name );
-        Files.createDirectories( backupDir );
-        OnlineBackupContextFactory builder = new OnlineBackupContextFactory( homeDir, configDir );
-        OnlineBackupContext context = builder.createContext( "--backup-dir=" + backupDir, "--name=" + name );
-        assertThat( context.getConfig().get( transaction_logs_root_path ).getAbsolutePath(), is( backupPath.toString() ) );
-    }
-
-    @Test
     void metricsShouldBeDisabled() throws CommandFailed, IncorrectUsage
     {
         OnlineBackupContext context = new OnlineBackupContextFactory( homeDir, configDir ).createContext( requiredAnd() );
@@ -288,7 +265,7 @@ class OnlineBackupContextFactoryTest
     {
         List<String> args = new ArrayList<>();
         args.add( "--backup-dir=/" );
-        args.add( "--name=mybackup" );
+        args.add( "--database=" + DEFAULT_DATABASE_NAME );
         Collections.addAll( args, additionalArgs );
         return args.toArray( new String[0] );
     }

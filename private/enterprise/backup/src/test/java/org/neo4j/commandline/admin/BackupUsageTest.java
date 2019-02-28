@@ -5,8 +5,8 @@
  */
 package org.neo4j.commandline.admin;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -17,22 +17,25 @@ import java.util.List;
 
 import org.neo4j.backup.impl.BackupHelpOutput;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
 
-public class BackupUsageTest
+@ExtendWith( SuppressOutputExtension.class )
+class BackupUsageTest
 {
     private static final Path HERE = Paths.get( "." );
 
-    @Rule
-    public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
+    @Inject
+    private SuppressOutput suppressOutput;
 
     private final CommandLocator commandLocator = CommandLocator.fromServiceLocator();
 
     @Test
-    public void outputMatchesExpectedForMissingBackupDir()
+    void outputMatchesExpectedForMissingBackupDir()
     {
         // when
         String output = runBackup();
@@ -49,28 +52,11 @@ public class BackupUsageTest
     }
 
     @Test
-    public void missingBackupName()
-    {
-        // when
-        String output = runBackup( "--backup-dir=target" );
-
-        // then
-        String reason = "Missing argument 'name'";
-        assertThat( output, containsString( reason ) );
-
-        // and
-        for ( String line : BackupHelpOutput.BACKUP_OUTPUT_LINES )
-        {
-            assertThat( "Failed for line: " + line, output, containsString( line ) );
-        }
-    }
-
-    @Test
-    public void incorrectBackupDirectory() throws IOException
+    void incorrectBackupDirectory() throws IOException
     {
         // when
         Path backupDirectoryResolved = HERE.toRealPath().resolve( "non_existing_dir" );
-        String output = runBackup( "--backup-dir=non_existing_dir", "--name=mybackup" );
+        String output = runBackup( "--backup-dir=non_existing_dir" );
 
         // then
         String reason = String.format( "command failed: Directory '%s' does not exist.", backupDirectoryResolved );
@@ -87,13 +73,11 @@ public class BackupUsageTest
         ParameterisedOutsideWorld outsideWorld = // ParameterisedOutsideWorld used for suppressing #close() doing System.exit()
                 new ParameterisedOutsideWorld( System.console(), System.out, System.err, System.in, new DefaultFileSystemAbstraction() );
         AdminTool subject = new AdminTool( commandLocator, outsideWorld, debug );
-        Path homeDir = HERE;
-        Path configDir = HERE;
-        List<String> params = new ArrayList();
+        List<String> params = new ArrayList<>();
         params.add( "backup" );
         params.addAll( Arrays.asList( args ) );
-        String[] argArray = params.toArray( new String[params.size()] );
-        subject.execute( homeDir, configDir, argArray );
+        String[] argArray = params.toArray( new String[0] );
+        subject.execute( HERE, HERE, argArray );
 
         return suppressOutput.getErrorVoice().toString() + System.lineSeparator() + suppressOutput.getOutputVoice().toString();
     }

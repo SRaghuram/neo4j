@@ -220,12 +220,11 @@ class FulltextIndexBackupIT
         ConnectorPortRegister portRegister = resolver.resolveDependency( ConnectorPortRegister.class );
         HostnamePort backupAddress = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
 
-        String backupName = DEFAULT_DATABASE_NAME;
         Path backupDir = dir.directory( BACKUP_DIR_NAME ).toPath();
 
         OnlineBackupContext context = OnlineBackupContext.builder()
                 .withAddress( backupAddress.getHost(), backupAddress.getPort() )
-                .withBackupName( backupName )
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
                 .withBackupDirectory( backupDir )
                 .withReportsDirectory( backupDir )
                 .withConsistencyCheck( true )
@@ -234,6 +233,6 @@ class FulltextIndexBackupIT
 
         OnlineBackupExecutor.buildDefault().executeBackup( context );
 
-        return backupDir.resolve( backupName );
+        return backupDir.resolve( DEFAULT_DATABASE_NAME );
     }
 }

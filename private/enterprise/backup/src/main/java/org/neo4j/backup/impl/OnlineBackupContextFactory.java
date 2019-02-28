@@ -8,12 +8,10 @@ package org.neo4j.backup.impl;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.Optional;
 
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.arguments.Arguments;
-import org.neo4j.commandline.arguments.MandatoryNamedArg;
 import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.commandline.arguments.OptionalNamedArg;
 import org.neo4j.commandline.arguments.common.MandatoryCanonicalPath;
@@ -28,7 +26,6 @@ import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSetting
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
-import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 
 class OnlineBackupContextFactory
 {
@@ -36,10 +33,6 @@ class OnlineBackupContextFactory
 
     static final String ARG_NAME_BACKUP_DIRECTORY = "backup-dir";
     static final String ARG_DESC_BACKUP_DIRECTORY = "Directory to place backup in.";
-
-    static final String ARG_NAME_BACKUP_NAME = "name";
-    static final String ARG_DESC_BACKUP_NAME =
-            "Name of backup. If a backup with this name already exists an incremental backup will be attempted.";
 
     static final String ARG_NAME_BACKUP_SOURCE = "from";
     static final String ARG_DESC_BACKUP_SOURCE = "Host and port of Neo4j.";
@@ -97,8 +90,6 @@ class OnlineBackupContextFactory
         return new Arguments()
                 .withArgument( new MandatoryCanonicalPath(
                         ARG_NAME_BACKUP_DIRECTORY, "backup-path", ARG_DESC_BACKUP_DIRECTORY ) )
-                .withArgument( new MandatoryNamedArg(
-                        ARG_NAME_BACKUP_NAME, DEFAULT_DATABASE_NAME + "-backup", ARG_DESC_BACKUP_NAME ) )
                 .withArgument( new OptionalNamedArg(
                         ARG_NAME_BACKUP_SOURCE, "address", ARG_DFLT_BACKUP_SOURCE, ARG_DESC_BACKUP_SOURCE ) )
                 .withArgument( new OptionalNamedArg(
@@ -131,36 +122,16 @@ class OnlineBackupContextFactory
             arguments.parse( args );
 
             AdvertisedSocketAddress address = getAddress( arguments );
-
             Path backupDirectory = getBackupDirectory( arguments );
-            String backupName = arguments.get( ARG_NAME_BACKUP_NAME );
-            Path logPath = backupDirectory.resolve( backupName );
-
             String pageCacheMemory = arguments.get( ARG_NAME_PAGECACHE );
-            Optional<Path> additionalConfig = arguments.getOptionalPath( ARG_NAME_ADDITIONAL_CONFIG_DIR );
-
             Path configFile = configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME );
-            Config.Builder builder = Config.fromFile( configFile );
-            Config config = builder.withHome( homeDir )
-                                   .withSetting( transaction_logs_root_path, logPath.toString() )
-                                   .withConnectorsDisabled()
-                                   .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
-                                   .build();
-            additionalConfig.map( this::loadAdditionalConfigFile ).ifPresent( config::augment );
+            Path additionalConfigFile = arguments.getOptionalPath( ARG_NAME_ADDITIONAL_CONFIG_DIR ).orElse( null );
 
-            // We replace the page cache memory setting.
-            // Any other custom page swapper, etc. settings are preserved and used.
-            config.augment( pagecache_memory, pageCacheMemory );
-            // warmup is also disabled because it is not needed for temporary databases
-            config.augment( pagecache_warmup_enabled.name(), Settings.FALSE );
-
-            // Disable all metrics to avoid port binding and JMX naming exceptions
-            config.augment( "metrics.enabled", Settings.FALSE );
+            Config config = buildConfig( pageCacheMemory, configFile, additionalConfigFile );
 
             return OnlineBackupContext.builder()
                     .withAddress( address )
                     .withDatabaseName( arguments.get( ARG_NAME_DATABASE_NAME ) )
-                    .withBackupName( backupName )
                     .withBackupDirectory( backupDirectory )
                     .withFallbackToFullBackup( arguments.getBoolean( ARG_NAME_FALLBACK_FULL ) )
                     .withReportsDirectory( getReportDirectory( arguments ) )
@@ -180,6 +151,31 @@ class OnlineBackupContextFactory
         {
             throw new CommandFailed( e.getMessage(), e );
         }
+    }
+
+    private Config buildConfig( String pageCacheMemory, Path configFile, Path additionalConfigFile )
+    {
+        Config config = Config.fromFile( configFile )
+                .withHome( homeDir )
+                .withConnectorsDisabled()
+                .withNoThrowOnFileLoadFailure() // Online backup does not require the presence of a neo4j.conf file.
+                .build();
+
+        if ( additionalConfigFile != null )
+        {
+            Config additionalConfig = Config.fromFile( additionalConfigFile ).build();
+            config.augment( additionalConfig );
+        }
+
+        // We replace the page cache memory setting.
+        // Any other custom page swapper, etc. settings are preserved and used.
+        config.augment( pagecache_memory, pageCacheMemory );
+        // warmup is also disabled because it is not needed for temporary databases
+        config.augment( pagecache_warmup_enabled.name(), Settings.FALSE );
+
+        // Disable all metrics to avoid port binding and JMX naming exceptions
+        config.augment( "metrics.enabled", Settings.FALSE );
+        return config;
     }
 
     private AdvertisedSocketAddress getAddress( Arguments arguments )
@@ -211,10 +207,5 @@ class OnlineBackupContextFactory
     private Boolean getBoolean( Arguments arguments, String argName )
     {
         return arguments.has( argName ) ? arguments.getBoolean( argName ) : null;
-    }
-
-    private Config loadAdditionalConfigFile( Path path )
-    {
-        return Config.fromFile( path ).build();
     }
 }

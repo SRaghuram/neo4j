@@ -8,135 +8,112 @@ package org.neo4j.backup.impl;
 import com.neo4j.backup.BackupTestUtil;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.CoreGraphDatabase;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import com.neo4j.test.TestWithRecordFormats;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.IntFunction;
 
 import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
+import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.logging.NullLogProvider;
+import org.neo4j.kernel.recovery.Recovery;
+import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
-import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_topology_refresh;
+import static com.neo4j.causalclustering.discovery.DiscoveryServiceType.SHARED;
+import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
+import static com.neo4j.causalclustering.discovery.IpFamily.IPV6;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
-import static java.lang.String.format;
-import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
-@RunWith( Parameterized.class )
-public class OnlineBackupCommandCcIT
+@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@ClusterExtension
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
+class OnlineBackupCommandCcIT
 {
-    private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
-    private final TestDirectory testDirectory = TestDirectory.testDirectory( fileSystemRule );
-    private final PageCacheRule pageCacheRule = new PageCacheRule();
-    private ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 3 )
-            .withSharedCoreParam( CausalClusteringSettings.cluster_topology_refresh, "5s" );
+    @Inject
+    private SuppressOutput suppressOutput;
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private ClusterFactory clusterFactory;
 
-    private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    @Rule
-    public final RuleChain ruleChain =
-            RuleChain.outerRule( suppressOutput ).around( fileSystemRule ).around( testDirectory ).around( pageCacheRule ).around( clusterRule );
+    private File backupsDir;
 
-    private static final String DATABASE_NAME = "defaultport";
-    private File backupDatabaseDir;
-    private File backupStoreDir;
-    private final StorageEngineFactory storageEngineFactory = selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
-
-    @Parameter
-    public String recordFormat;
-
-    @Parameters( name = "{0}" )
-    public static List<String> recordFormats()
+    @BeforeEach
+    void setUp()
     {
-        return Arrays.asList( Standard.LATEST_NAME, HighLimit.NAME );
+        backupsDir = testDirectory.directory( "backups" );
     }
 
-    @Before
-    public void initialiseBackupDirectory()
-    {
-        backupStoreDir = testDirectory.directory( "backupStore" );
-        backupDatabaseDir = new File( backupStoreDir, DATABASE_NAME );
-        assertTrue( backupDatabaseDir.mkdirs() );
-    }
-
-    @Test
-    public void backupCanBePerformedOverCcWithCustomPort() throws Exception
+    @TestWithRecordFormats
+    void backupCanBePerformedOverCcWithCustomPort( String recordFormat ) throws Exception
     {
         Cluster cluster = startCluster( recordFormat );
-        String customAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
+        String customAddress = CausalClusteringTestHelpers.transactionAddress( cluster.awaitLeader().database() );
 
-        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
-        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
+        assertEquals( leaderDbRepresentation( cluster ), getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME ) );
 
         createSomeData( cluster );
-        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
-        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
+        assertEquals( leaderDbRepresentation( cluster ), getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME ) );
     }
 
-    @Test
-    public void dataIsInAUsableStateAfterBackup() throws Exception
+    @TestWithRecordFormats
+    void dataIsInAUsableStateAfterBackup( String recordFormat ) throws Exception
     {
         // given database exists
         Cluster cluster = startCluster( recordFormat );
@@ -152,7 +129,7 @@ public class OnlineBackupCommandCcIT
         {
             // then backup is successful
             String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
-            assertEquals( 0, runBackupToolAndGetExitCode( address, DATABASE_NAME ) );
+            assertEquals( 0, runBackupToolAndGetExitCode( address, DEFAULT_DATABASE_NAME ) );
         }
         finally
         {
@@ -161,132 +138,130 @@ public class OnlineBackupCommandCcIT
         }
     }
 
-    @Test
-    public void backupCanBeOptionallySwitchedOnWithTheBackupConfig() throws Exception
+    @TestWithRecordFormats
+    void backupCanBeOptionallySwitchedOnWithTheBackupConfig( String recordFormat ) throws Exception
     {
         // given a cluster with backup switched on
-        clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "true" )
+        ClusterConfig clusterConfig = defaultClusterConfig( recordFormat )
+                .withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, TRUE )
                 .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
-        Cluster cluster = startCluster( recordFormat );
+
+        Cluster cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
 
         // when a full backup is performed
-        assertEquals( 0, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
-        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DEFAULT_DATABASE_NAME ) );
+        assertEquals( leaderDbRepresentation( cluster ), getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME ) );
 
         // and an incremental backup is performed
         createSomeData( cluster );
-        assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
+        assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( leaderBackupAddress( cluster ), DEFAULT_DATABASE_NAME ) );
 
         // then the data matches
-        assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( DATABASE_NAME, backupStoreDir ) );
+        assertEquals( leaderDbRepresentation( cluster ), getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME ) );
     }
 
-    @Test
-    public void secondaryTransactionProtocolIsSwitchedOffCorrespondingBackupSetting() throws Exception
+    @TestWithRecordFormats
+    void secondaryTransactionProtocolIsSwitchedOffCorrespondingBackupSetting( String recordFormat ) throws Exception
     {
         // given a cluster with backup switched off
-        clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "false" )
+        ClusterConfig clusterConfig = defaultClusterConfig( recordFormat )
+                .withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "false" )
                 .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
-        Cluster cluster = startCluster( recordFormat );
+
+        Cluster cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
 
         // then a full backup is impossible from the backup port
-        assertEquals( 1, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
+        assertEquals( 1, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DEFAULT_DATABASE_NAME ) );
     }
 
-    @Test
-    public void backupDoesntDisplayExceptionWhenSuccessful() throws Exception
+    @TestWithRecordFormats
+    void backupDoesntDisplayExceptionWhenSuccessful( String recordFormat ) throws Exception
     {
         // given
         Cluster cluster = startCluster( recordFormat );
-        String customAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
+        String customAddress = CausalClusteringTestHelpers.transactionAddress( cluster.awaitLeader().database() );
 
         // when
-        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
 
         // then
         assertThat( suppressOutput.getErrorVoice().toString(), not( containsStringIgnoringCase( "exception" ) ) );
         assertThat( suppressOutput.getOutputVoice().toString(), not( containsStringIgnoringCase( "exception" ) ) );
     }
 
-    @Test
-    public void reportsProgress() throws Exception
+    @TestWithRecordFormats
+    void reportsProgress( String recordFormat ) throws Exception
     {
         // given
         Cluster cluster = startCluster( recordFormat );
         createIndexes( cluster );
-        String customAddress = CausalClusteringTestHelpers.backupAddress( clusterLeader( cluster ).database() );
+        String customAddress = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().database() );
 
         // when
-        final String backupName = "reportsProgress_" + recordFormat;
-        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, backupName ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
 
         // then
         String output = suppressOutput.getOutputVoice().toString();
-        String location = Paths.get( backupStoreDir.toString(), backupName ).toString();
 
-        assertTrue( output.contains( "Start receiving store files" ) );
-        assertTrue( output.contains( "Finish receiving store files" ) );
-        String tested = Paths.get( location, "neostore.nodestore.db.labels" ).toString();
-        assertTrue( tested, output.contains( format( "Start receiving store file %s", tested ) ) );
-        assertTrue( tested, output.contains( format( "Finish receiving store file %s", tested ) ) );
-        assertTrue( output.contains( "Start receiving transactions from " ) );
-        assertTrue( output.contains( "Finish receiving transactions at " ) );
-        assertTrue( output.contains( "Start receiving index snapshots" ) );
-        assertTrue( output.contains( "Finished receiving index snapshots" ) );
+        assertThat( output, containsString( "Start receiving store files" ) );
+        assertThat( output, containsString( "Finish receiving store files" ) );
+
+        String nodeStorePath = backupsDir.toPath().resolve( DEFAULT_DATABASE_NAME ).resolve( DatabaseFile.NODE_STORE.getName() ).toString();
+        assertThat( output, containsString( "Start receiving store file " + nodeStorePath ) );
+        assertThat( output, containsString( "Finish receiving store file " + nodeStorePath ) );
+
+        assertThat( output, containsString( "Start receiving transactions from" ) );
+        assertThat( output, containsString( "Finish receiving transactions at" ) );
+        assertThat( output, containsString( "Start receiving index snapshots" ) );
+        assertThat( output, containsString( "Finished receiving index snapshots" ) );
     }
 
-    @Test
-    public void fullBackupIsRecoveredAndConsistent() throws Exception
+    @TestWithRecordFormats
+    void fullBackupIsRecoveredAndConsistent( String recordFormat ) throws Exception
     {
         // given database exists with data
         Cluster cluster = startCluster( recordFormat );
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
-        String name = UUID.randomUUID().toString();
-        File backupLocation = new File( backupStoreDir, name );
+        File backupLocation = new File( backupsDir, DEFAULT_DATABASE_NAME );
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
 
         // when
-        assertEquals( 0, runBackupToolAndGetExitCode( address, name ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( address, DEFAULT_DATABASE_NAME ) );
 
         // then
-        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults(), storageEngineFactory ) );
-        ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
-        assertTrue( "Consistency check failed", new ConsistencyCheckService()
-                .runFullConsistencyCheck( backupLayout, Config.defaults(), ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), false, consistencyFlags )
-                .isSuccessful() );
+        assertFalse( isRecoveryRequired( backupLayout ), "Store should not require recovery" );
+        assertTrue( isConsistent( backupLayout ), "Consistency check failed" );
     }
 
-    @Test
-    public void incrementalBackupIsRecoveredAndConsistent() throws Exception
+    @TestWithRecordFormats
+    void incrementalBackupIsRecoveredAndConsistent( String recordFormat ) throws Exception
     {
         // given database exists with data
         Cluster cluster = startCluster( recordFormat );
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
-        String name = UUID.randomUUID().toString();
-        File backupLocation = new File( backupStoreDir, name );
+        File backupLocation = new File( backupsDir, DEFAULT_DATABASE_NAME );
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation );
 
         // when
-        assertEquals( 0, runBackupToolAndGetExitCode( address, name ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( address, DEFAULT_DATABASE_NAME ) );
 
         // and
         createSomeData( cluster );
-        assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( address, name ) );
+        assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( address, DEFAULT_DATABASE_NAME ) );
 
         // then
-        assertFalse( "Store should not require recovery", isRecoveryRequired( fileSystemRule, backupLayout, Config.defaults(), storageEngineFactory ) );
-        ConsistencyFlags consistencyFlags = new ConsistencyFlags( true, true, true, true );
-        assertTrue( "Consistency check failed", new ConsistencyCheckService()
-                .runFullConsistencyCheck( backupLayout, Config.defaults(), ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), false, consistencyFlags )
-                .isSuccessful() );
+        assertFalse( isRecoveryRequired( backupLayout ), "Store should not require recovery" );
+        assertTrue( isConsistent( backupLayout ), "Consistency check failed" );
     }
 
-    @Test
-    public void incrementalBackupRotatesLogFiles() throws Exception
+    @TestWithRecordFormats
+    void incrementalBackupRotatesLogFiles( String recordFormat ) throws Exception
     {
         // given database exists with data
         Cluster cluster = startCluster( recordFormat );
@@ -297,16 +272,16 @@ public class OnlineBackupCommandCcIT
         writeConfigWithLogRotationThreshold( configOverrideFile, "1m" );
 
         // and we have a full backup
-        final String backupName = "backupName" + recordFormat;
-        String address = CausalClusteringTestHelpers.backupAddress( clusterLeader( cluster ).database() );
+        File backupDir = testDirectory.directory( "backups", "backupName-" + recordFormat );
+        String address = CausalClusteringTestHelpers.backupAddress( cluster.awaitLeader().database() );
         assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
+                "--cc-report-dir=" + backupDir,
+                "--backup-dir=" + backupDir,
                 "--additional-config=" + configOverrideFile,
-                "--name=" + backupName ) );
+                "--database=" + DEFAULT_DATABASE_NAME ) );
 
-        LogFiles backupLogFiles = logFilesFromBackup( backupName );
+        LogFiles backupLogFiles = logFilesFromBackup( backupDir, DEFAULT_DATABASE_NAME );
         assertEquals( 0, backupLogFiles.getHighestLogVersion() );
         assertEquals( 0, backupLogFiles.getLowestLogVersion() );
 
@@ -316,10 +291,10 @@ public class OnlineBackupCommandCcIT
         // when we perform an incremental backup
         assertEquals( 0, runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
+                "--cc-report-dir=" + backupDir,
+                "--backup-dir=" + backupDir,
                 "--additional-config=" + configOverrideFile,
-                "--name=" + backupName,
+                "--database=" + DEFAULT_DATABASE_NAME,
                 "--fallback-to-full=false" ) );
 
         // then there has been a rotation
@@ -328,65 +303,55 @@ public class OnlineBackupCommandCcIT
         assertEquals( 0, backupLogFiles.getLowestLogVersion() );
     }
 
-    @Test
-    public void backupRenamesWork() throws Exception
+    @TestWithRecordFormats
+    void backupRenamesWork( String recordFormat ) throws Exception
     {
         // given a prexisting backup from a different store
-        String backupName = "preexistingBackup_" + recordFormat;
-        Cluster cluster = startCluster( recordFormat );
-        String firstBackupAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
+        Cluster cluster1 = startCluster( recordFormat );
+        String firstBackupAddress = CausalClusteringTestHelpers.transactionAddress( cluster1.awaitLeader().database() );
 
-        assertEquals( 0, runBackupToolAndGetExitCode( firstBackupAddress, backupName ) );
-        DbRepresentation firstDatabaseRepresentation = DbRepresentation.of( clusterLeader( cluster ).database() );
+        assertEquals( 0, runBackupToolAndGetExitCode( firstBackupAddress, DEFAULT_DATABASE_NAME ) );
+        DbRepresentation firstDatabaseRepresentation = leaderDbRepresentation( cluster1 );
 
         // and a different database
-        Cluster cluster2 = startCluster2( recordFormat );
-        DbRepresentation secondDatabaseRepresentation = DbRepresentation.of( clusterLeader( cluster2 ).database() );
+        Cluster cluster2 = startSecondCluster( recordFormat );
+        DbRepresentation secondDatabaseRepresentation = DbRepresentation.of( cluster2.awaitLeader().database() );
         assertNotEquals( firstDatabaseRepresentation, secondDatabaseRepresentation );
-        String secondBackupAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster2 ).database() );
+        String secondBackupAddress = CausalClusteringTestHelpers.transactionAddress( cluster2.awaitLeader().database() );
 
         // when backup is performed
-        assertEquals( 0, runBackupToolAndGetExitCode( secondBackupAddress, backupName ) );
+        assertEquals( 0, runBackupToolAndGetExitCode( secondBackupAddress, DEFAULT_DATABASE_NAME ) );
         cluster2.shutdown();
 
         // then the new backup has the correct name
-        assertEquals( secondDatabaseRepresentation, getBackupDbRepresentation( backupName, backupStoreDir ) );
+        assertEquals( secondDatabaseRepresentation, getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME ) );
 
         // and the old backup is in a renamed location
-        assertEquals( firstDatabaseRepresentation, getBackupDbRepresentation( backupName + ".err.0", backupStoreDir ) );
+        assertEquals( firstDatabaseRepresentation, getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME + ".err.0" ) );
 
         // and the data isn't equal (sanity check)
         assertNotEquals( firstDatabaseRepresentation, secondDatabaseRepresentation );
     }
 
-    @Test
-    public void ipv6Enabled() throws Exception
+    @TestWithRecordFormats
+    void ipv6Enabled( String recordFormat ) throws Exception
     {
         // given
-        Cluster cluster = startIpv6Cluster();
-        try
-        {
-            assertNotNull( DbRepresentation.of( clusterDatabase( cluster ) ) );
-            int port = clusterLeader( cluster ).config().get( CausalClusteringSettings.transaction_listen_address ).getPort();
-            String customAddress = String.format( "[%s]:%d", IpFamily.IPV6.localhostAddress(), port );
-            String backupName = "backup_" + recordFormat;
+        Cluster cluster = startIpv6Cluster( recordFormat );
+        int port = cluster.awaitLeader().config().get( CausalClusteringSettings.transaction_listen_address ).getPort();
+        String customAddress = String.format( "[%s]:%d", IPV6.localhostAddress(), port );
 
-            // when full backup
-            assertEquals( 0, runBackupToolAndGetExitCode( customAddress, backupName ) );
+        // when full backup
+        assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
 
-            // and
-            createSomeData( cluster );
+        // and
+        createSomeData( cluster );
 
-            // and incremental backup
-            assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( customAddress, backupName ) );
+        // and incremental backup
+        assertEquals( 0, runBackupToolWithoutFallbackToFullAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
 
-            // then
-            assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), getBackupDbRepresentation( backupName, backupStoreDir ) );
-        }
-        finally
-        {
-            cluster.shutdown();
-        }
+        // then
+        assertEquals( leaderDbRepresentation( cluster ), getBackupDbRepresentation( backupsDir, DEFAULT_DATABASE_NAME ) );
     }
 
     private static void repeatedlyPopulateDatabase( Cluster cluster, AtomicBoolean continueFlagReference )
@@ -397,45 +362,59 @@ public class OnlineBackupCommandCcIT
         }
     }
 
-    public static CoreGraphDatabase clusterDatabase( Cluster cluster )
+    private static DbRepresentation leaderDbRepresentation( Cluster cluster ) throws Exception
     {
-        return clusterLeader( cluster ).database();
+        return DbRepresentation.of( cluster.awaitLeader().database() );
     }
 
     private Cluster startCluster( String recordFormat ) throws Exception
     {
-        ClusterRule clusterRule = this.clusterRule.withSharedCoreParam( GraphDatabaseSettings.record_format, recordFormat )
-                .withSharedReadReplicaParam( GraphDatabaseSettings.record_format, recordFormat );
-        Cluster cluster = clusterRule.startCluster();
-        createSomeData( cluster );
-        return cluster;
-    }
-
-    private Cluster startIpv6Cluster() throws ExecutionException, InterruptedException
-    {
-        DiscoveryServiceFactory discoveryServiceFactory = new SharedDiscoveryServiceFactory();
-        File parentDir = testDirectory.directory( "ipv6_cluster" );
-        Map<String,String> coreParams = new HashMap<>();
-        coreParams.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
-
-        Map<String,String> readReplicaParams = new HashMap<>();
-        readReplicaParams.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
-
-        Cluster cluster = new Cluster( parentDir, 3, 3, discoveryServiceFactory, coreParams, instanceCoreParams, readReplicaParams,
-                instanceReadReplicaParams, recordFormat, IpFamily.IPV6, false );
+        ClusterConfig clusterConfig = defaultClusterConfig( recordFormat );
+        Cluster cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
         createSomeData( cluster );
         return cluster;
     }
 
-    private Cluster startCluster2( String recordFormat ) throws ExecutionException, InterruptedException
+    private static ClusterConfig defaultClusterConfig( String recordFormat )
     {
-        Map<String,String> sharedParams = new HashMap<>(  );
-        sharedParams.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        Cluster cluster = new Cluster( testDirectory.directory( "cluster-b_" + recordFormat ), 3, 0, new SharedDiscoveryServiceFactory(),
-                sharedParams, emptyMap(), sharedParams, emptyMap(), recordFormat, IpFamily.IPV4, false );
+        return ClusterConfig.clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 3 )
+                .withSharedCoreParam( cluster_topology_refresh, "5s" )
+                .withSharedCoreParam( record_format, recordFormat )
+                .withSharedReadReplicaParam( record_format, recordFormat );
+    }
+
+    private Cluster startIpv6Cluster( String recordFormat ) throws ExecutionException, InterruptedException
+    {
+        ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 3 )
+                .withDiscoveryServiceType( SHARED )
+                .withSharedCoreParam( record_format, recordFormat )
+                .withSharedReadReplicaParam( record_format, recordFormat )
+                .withIpFamily( IPV6 )
+                .useWildcard( false );
+
+        Cluster cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
+        createSomeData( cluster );
+        return cluster;
+    }
+
+    private Cluster startSecondCluster( String recordFormat ) throws ExecutionException, InterruptedException
+    {
+        ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 )
+                .withDiscoveryServiceType( SHARED )
+                .withSharedCoreParam( record_format, recordFormat )
+                .withSharedReadReplicaParam( record_format, recordFormat )
+                .withIpFamily( IPV4 )
+                .useWildcard( false );
+
+        Cluster cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
         createSomeData( cluster );
         return cluster;
@@ -459,34 +438,40 @@ public class OnlineBackupCommandCcIT
         }
     }
 
-    private static CoreClusterMember clusterLeader( Cluster cluster )
+    private static boolean isConsistent( DatabaseLayout backupLayout ) throws ConsistencyCheckIncompleteException
     {
-        return cluster.getMemberWithRole( Role.LEADER );
+        Config config = Config.defaults();
+        ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.textual( System.out );
+        LogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
+        ConsistencyFlags flags = new ConsistencyFlags( true, true, true, true );
+        ConsistencyCheckService service = new ConsistencyCheckService();
+        ConsistencyCheckService.Result result = service.runFullConsistencyCheck( backupLayout, config, progressMonitorFactory, logProvider, true, flags );
+        return result.isSuccessful();
     }
 
-    public static DbRepresentation getBackupDbRepresentation( String name, File storeDir )
+    private static DbRepresentation getBackupDbRepresentation( File backupDir, String databaseName )
     {
         Config config = Config.defaults();
         config.augment( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-        return DbRepresentation.of( DatabaseLayout.of( storeDir, name ).databaseDirectory(), config );
+        return DbRepresentation.of( DatabaseLayout.of( backupDir, databaseName ).databaseDirectory(), config );
     }
 
-    private int runBackupToolAndGetExitCode( String address, String backupName )
+    private int runBackupToolAndGetExitCode( String address, String databaseName )
     {
         return runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
-                "--name=" + backupName );
+                "--cc-report-dir=" + backupsDir,
+                "--backup-dir=" + backupsDir,
+                "--database=" + databaseName );
     }
 
-    private int runBackupToolWithoutFallbackToFullAndGetExitCode( String address, String backupName )
+    private int runBackupToolWithoutFallbackToFullAndGetExitCode( String address, String databaseName )
     {
         return runBackupToolAndGetExitCode(
                 "--from", address,
-                "--cc-report-dir=" + backupStoreDir,
-                "--backup-dir=" + backupStoreDir,
-                "--name=" + backupName,
+                "--cc-report-dir=" + backupsDir,
+                "--backup-dir=" + backupsDir,
+                "--database=" + databaseName,
                 "--fallback-to-full=false" );
     }
 
@@ -496,10 +481,16 @@ public class OnlineBackupCommandCcIT
         return BackupTestUtil.runBackupToolFromSameJvm( neo4jHome, args );
     }
 
-    private LogFiles logFilesFromBackup( String backupName ) throws IOException
+    private static LogFiles logFilesFromBackup( File backupDir, String databaseName ) throws IOException
     {
-        DatabaseLayout backupLayout = DatabaseLayout.of( new File( backupStoreDir, backupName ) );
+        DatabaseLayout backupLayout = DatabaseLayout.of( new File( backupDir, databaseName ) );
         return BackupTransactionLogFilesHelper.readLogFiles( backupLayout );
+    }
+
+    private boolean isRecoveryRequired( DatabaseLayout layout ) throws Exception
+    {
+        StorageEngineFactory storageEngineFactory = selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
+        return Recovery.isRecoveryRequired( testDirectory.getFileSystem(), layout, Config.defaults(), storageEngineFactory );
     }
 
     private static String leaderBackupAddress( Cluster cluster ) throws TimeoutException

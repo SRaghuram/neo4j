@@ -32,8 +32,8 @@ class OnlineBackupCommandTest
 
         String output = suppressOutput.getOutputVoice().toString();
 
-        assertEquals( format( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<neo4j-backup>%n" +
-                              "                          [--from=<address>] [--database=<neo4j>]%n" +
+        assertEquals( format( "usage: neo4j-admin backup --backup-dir=<backup-path> [--from=<address>]%n" +
+                              "                          [--database=<neo4j>]%n" +
                               "                          [--fallback-to-full[=<true|false>]] [--pagecache=<8m>]%n" +
                               "                          [--check-consistency[=<true|false>]]%n" +
                               "                          [--cc-report-dir=<directory>]%n" +
@@ -62,9 +62,6 @@ class OnlineBackupCommandTest
                               "%n" +
                               "options:%n" +
                               "  --backup-dir=<backup-path>               Directory to place backup in.%n" +
-                              "  --name=<neo4j-backup>                    Name of backup. If a backup with this%n" +
-                              "                                           name already exists an incremental%n" +
-                              "                                           backup will be attempted.%n" +
                               "  --from=<address>                         Host and port of Neo4j.%n" +
                               "                                           [default:localhost:6362]%n" +
                               "  --database=<neo4j>                       Name of the remote database to%n" +

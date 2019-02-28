@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -68,6 +69,7 @@ class BackupStrategyWrapperTest
     private DatabaseLayout desiredBackupLayout;
     private Path reportDir;
     private Path availableFreshBackupLocation;
+    private Path availableOldBackupLocation;
     private OnlineBackupRequiredArguments requiredArguments;
     private final Config config = mock( Config.class );
     private final AdvertisedSocketAddress address = new AdvertisedSocketAddress( "neo4j.com", 6362 );
@@ -81,13 +83,13 @@ class BackupStrategyWrapperTest
         desiredBackupLayout = testDirectory.databaseLayout( "desiredBackupLayout" );
         reportDir = testDirectory.directory( "reportDir" ).toPath();
         availableFreshBackupLocation = testDirectory.directory( "availableFreshBackupLocation" ).toPath();
-        Path availableOldBackupLocation = testDirectory.directory( "availableOldBackupLocation" ).toPath();
+        availableOldBackupLocation = testDirectory.directory( "availableOldBackupLocation" ).toPath();
 
         when( pageCache.map( any(), anyInt(), any() ) ).thenReturn( mock( PagedFile.class, RETURNS_MOCKS ) );
         when( outsideWorld.fileSystem() ).thenReturn( fileSystemAbstraction );
         when( backupCopyService.findAnAvailableLocationForNewFullBackup( any() ) ).thenReturn( availableFreshBackupLocation );
         when( backupCopyService.findNewBackupLocationForBrokenExisting( any() ) ).thenReturn( availableOldBackupLocation );
-        when( logProvider.getLog( (Class) any() ) ).thenReturn( log );
+        when( logProvider.getLog( (Class<?>) any() ) ).thenReturn( log );
 
         backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache,
                 NullLogProvider.getInstance(), logProvider, selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ) ) );
@@ -251,8 +253,11 @@ class BackupStrategyWrapperTest
     void successfulFullBackupsMoveExistingBackup() throws Exception
     {
         // given backup exists
-        desiredBackupLayout = testDirectory.databaseLayout( "some-preexisting-backup" );
-        when( backupCopyService.backupExists( desiredBackupLayout ) ).thenReturn( true );
+        File backupsDir = testDirectory.directory( "backups" );
+        File databaseBackupDir = new File( backupsDir, DEFAULT_DATABASE_NAME );
+
+        desiredBackupLayout = DatabaseLayout.of( backupsDir );
+        when( backupCopyService.backupExists( DatabaseLayout.of( databaseBackupDir ) ) ).thenReturn( true );
 
         // and fallback to full flag has been set
         requiredArguments = requiredArguments( true );
@@ -260,12 +265,12 @@ class BackupStrategyWrapperTest
 
         // and a new location for the existing backup is found
         Path newLocationForExistingBackup = testDirectory.directory( "new-backup-location" ).toPath();
-        when( backupCopyService.findNewBackupLocationForBrokenExisting( desiredBackupLayout.databaseDirectory().toPath() ) )
+        when( backupCopyService.findNewBackupLocationForBrokenExisting( databaseBackupDir.toPath() ) )
                 .thenReturn( newLocationForExistingBackup );
 
         // and there is a generated location for where to store a new full backup so the original is not destroyed
         Path temporaryFullBackupLocation = testDirectory.directory( "temporary-full-backup" ).toPath();
-        when( backupCopyService.findAnAvailableLocationForNewFullBackup( desiredBackupLayout.databaseDirectory().toPath() ) )
+        when( backupCopyService.findAnAvailableLocationForNewFullBackup( databaseBackupDir.toPath() ) )
                 .thenReturn( temporaryFullBackupLocation );
 
         // and incremental fails
@@ -278,10 +283,10 @@ class BackupStrategyWrapperTest
         assertDoesNotThrow( () -> backupWrapper.doBackup( onlineBackupContext ) );
 
         // then original existing backup is moved to err directory
-        verify( backupCopyService ).moveBackupLocation( eq( desiredBackupLayout.databaseDirectory().toPath() ), eq( newLocationForExistingBackup ) );
+        verify( backupCopyService ).moveBackupLocation( databaseBackupDir.toPath(), newLocationForExistingBackup );
 
         // and new successful backup is renamed to original expected name
-        verify( backupCopyService ).moveBackupLocation( eq( temporaryFullBackupLocation ), eq( desiredBackupLayout.databaseDirectory().toPath() ) );
+        verify( backupCopyService ).moveBackupLocation( temporaryFullBackupLocation, databaseBackupDir.toPath() );
     }
 
     @Test
@@ -404,8 +409,15 @@ class BackupStrategyWrapperTest
         backupWrapper.doBackup( onlineBackupContext );
 
         // then
-        verify( backupCopyService ).moveBackupLocation( eq( availableFreshBackupLocation ),
-                eq( desiredBackupLayout.databaseDirectory().toPath() ) );
+        Path databaseBackupDir = desiredBackupLayout.file( DEFAULT_DATABASE_NAME ).toPath();
+
+        InOrder inOrder = Mockito.inOrder( backupWrapper, backupCopyService );
+        // 1) perform recovery
+        inOrder.verify( backupWrapper ).performRecovery( eq( config ), any( DatabaseLayout.class ) );
+        // 2) move pre-existing backup to a different directory
+        inOrder.verify( backupCopyService ).moveBackupLocation( databaseBackupDir, availableOldBackupLocation );
+        // 3) move new backup from a temporary directory to the specified directory
+        inOrder.verify( backupCopyService ).moveBackupLocation( availableFreshBackupLocation, databaseBackupDir );
     }
 
     @Test
@@ -540,9 +552,9 @@ class BackupStrategyWrapperTest
 
     private OnlineBackupRequiredArguments requiredArguments( boolean fallbackToFull )
     {
-        File databaseDirectory = desiredBackupLayout.databaseDirectory();
-        return new OnlineBackupRequiredArguments( address, DEFAULT_DATABASE_NAME, desiredBackupLayout.getStoreLayout().storeDirectory().toPath(),
-                databaseDirectory.getName(), fallbackToFull, true, reportDir );
+        Path databaseBackupDir = desiredBackupLayout.databaseDirectory().toPath().resolve( DEFAULT_DATABASE_NAME );
+        return new OnlineBackupRequiredArguments( address, DEFAULT_DATABASE_NAME, databaseBackupDir,
+                fallbackToFull, true, reportDir );
     }
 
     private static ConsistencyFlags consistencyFlags()

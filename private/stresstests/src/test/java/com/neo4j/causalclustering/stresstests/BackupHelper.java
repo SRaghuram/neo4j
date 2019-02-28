@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -60,18 +61,18 @@ class BackupHelper
      * @throws BackupExecutionException if the backup fails for an unexpected reason during the backup phase.
      * @throws ConsistencyCheckExecutionException if the backup fails during the consistency checking phase.
      */
-    Optional<File> backup( ClusterMember member ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    Optional<File> backup( ClusterMember<?> member ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         AdvertisedSocketAddress address = member.config().get( transaction_advertised_address );
         String backupName = "backup-" + backupNumber.getAndIncrement();
+        Path backupDir = baseBackupDir.toPath().resolve( backupName );
 
         try
         {
             OnlineBackupContext context = OnlineBackupContext.builder()
                     .withAddress( address.getHostname(), address.getPort() )
-                    .withBackupName( backupName )
-                    .withBackupDirectory( baseBackupDir.toPath() )
-                    .withReportsDirectory( baseBackupDir.toPath() )
+                    .withBackupDirectory( backupDir )
+                    .withReportsDirectory( backupDir )
                     .build();
 
             OnlineBackupExecutor.buildDefault().executeBackup( context );

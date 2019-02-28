@@ -7,70 +7,72 @@ package org.neo4j.backup.clusteringsupport;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.test.causalclustering.ClusterRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import com.neo4j.test.causalclustering.ClusterConfig;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.util.concurrent.TimeUnit;
 
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.DbRepresentation;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.backup.BackupTestUtil.backupArguments;
 import static com.neo4j.backup.BackupTestUtil.createSomeData;
-import static com.neo4j.backup.BackupTestUtil.getConfig;
 import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.neo4j.test.assertion.Assert.assertEventually;
+import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class BackupCoreIT
+@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+@ClusterExtension
+@TestInstance( TestInstance.Lifecycle.PER_METHOD )
+class BackupCoreIT
 {
-    @Rule
-    public final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-    @Rule
-    public final ClusterRule clusterRule = new ClusterRule()
-            .withNumberOfCoreMembers( 3 )
-            .withNumberOfReadReplicas( 0 );
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
-    private File backupsDir;
 
-    @Before
-    public void setup() throws Exception
+    @BeforeEach
+    void setup() throws Exception
     {
-        backupsDir = clusterRule.testDirectory().cleanDirectory( "backups" );
-        cluster = clusterRule.startCluster();
+        ClusterConfig clusterConfig = ClusterConfig.clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 0 );
+
+        cluster = clusterFactory.createCluster( clusterConfig );
+        cluster.start();
     }
 
     @Test
-    public void makeSureBackupCanBePerformedFromAnyInstance() throws Throwable
+    void makeSureBackupCanBePerformedFromAnyInstance() throws Throwable
     {
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
             // Run backup
             DbRepresentation beforeChange = DbRepresentation.of( createSomeData( cluster ) );
-            String[] args = backupArguments( backupAddress( cluster ), backupsDir, "" + db.serverId() );
-            assertEventually( () -> runBackupToolFromOtherJvmToGetExitCode( clusterRule.clusterDirectory(), args ), equalTo( 0 ), 5, TimeUnit.SECONDS );
+            File coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" );
+            File coreDefaultDbBackupDir = new File( coreBackupDir, DEFAULT_DATABASE_NAME );
+            String[] args = backupArguments( backupAddress( db.database() ), coreBackupDir, DEFAULT_DATABASE_NAME );
+            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseDirectory(), args ) );
 
             // Add some new data
             DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
             // Verify that old data is back
-            DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( backupsDir, "" + db.serverId() ).databaseDirectory(), getConfig() );
+            DbRepresentation backupRepresentation = DbRepresentation.of( coreDefaultDbBackupDir );
             assertEquals( beforeChange, backupRepresentation );
             assertNotEquals( backupRepresentation, afterChange );
         }
     }
-
-    private static String backupAddress( Cluster cluster )
-    {
-        return cluster.getMemberWithRole( Role.LEADER ).settingValue( "causal_clustering.transaction_listen_address" );
-    }
-
 }

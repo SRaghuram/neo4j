@@ -60,7 +60,7 @@ import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.neo4j.backup.impl.OnlineBackupCommandCcIT.clusterDatabase;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class EncryptedBackupIT
@@ -122,7 +122,6 @@ class EncryptedBackupIT
         private static final String publicKeyName = "public.crt";
 
         private static File backupHome;
-        private static final String backupName = "encryptedBackup";
 
         boolean encryptedTxPort;
         boolean encryptedBackupPort;
@@ -327,7 +326,7 @@ class EncryptedBackupIT
             assertEquals( 0, exitCode );
 
             // and data matches
-            backupDataMatchesDatabase( cluster, backupHome, backupName );
+            assertEquals( DbRepresentation.of( cluster.awaitLeader().database() ), DbRepresentation.of( new File( backupHome, DEFAULT_DATABASE_NAME ) ) );
         }
 
         private static void shouldNotBeSuccessful( IntSupplier backupClient )
@@ -417,7 +416,7 @@ class EncryptedBackupIT
                 try
                 {
                     dataMatchesEventually( cluster.getMemberWithRole( Role.LEADER ), allMembers( cluster ) );
-                    return runBackupSameJvm( backupHome, backupName, selectedNodeAddress );
+                    return runBackupSameJvm( backupHome, selectedNodeAddress );
                 }
                 catch ( Exception e )
                 {
@@ -493,17 +492,12 @@ class EncryptedBackupIT
         /**
          * It is necessary to run from the same jvm due to being dependant on ssl which is commercial only
          */
-        private static int runBackupSameJvm( File neo4jHome, String backupName, String host )
+        private static int runBackupSameJvm( File neo4jHome, String host )
         {
             return BackupTestUtil.runBackupToolFromSameJvm( neo4jHome,
                     "--from", host,
                     "--backup-dir", neo4jHome.toString(),
-                    "--name", backupName );
-        }
-
-        private static void backupDataMatchesDatabase( Cluster cluster, File backupDir, String backupName )
-        {
-            assertEquals( DbRepresentation.of( clusterDatabase( cluster ) ), OnlineBackupCommandCcIT.getBackupDbRepresentation( backupName, backupDir ) );
+                    "--database", DEFAULT_DATABASE_NAME );
         }
 
         // ---------------------- New functionality

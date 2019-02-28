@@ -53,11 +53,6 @@ public class OnlineBackupContext
         return consistencyFlags;
     }
 
-    Path getResolvedLocationFromName()
-    {
-        return requiredArguments.getResolvedLocationFromName();
-    }
-
     StorageEngineFactory getStorageEngineFactory()
     {
         return storageEngineFactory;
@@ -68,7 +63,6 @@ public class OnlineBackupContext
         private AdvertisedSocketAddress address;
         private String databaseName;
         private Path backupDirectory;
-        private String backupName;
         private Path reportsDirectory;
         private boolean fallbackToFullBackup = true;
         private Config config;
@@ -102,12 +96,6 @@ public class OnlineBackupContext
         public Builder withBackupDirectory( Path backupDirectory )
         {
             this.backupDirectory = backupDirectory;
-            return this;
-        }
-
-        public Builder withBackupName( String backupName )
-        {
-            this.backupName = backupName;
             return this;
         }
 
@@ -193,15 +181,12 @@ public class OnlineBackupContext
             {
                 backupDirectory = Paths.get( "." );
             }
-            if ( backupName == null )
-            {
-                backupName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-            }
             if ( reportsDirectory == null )
             {
                 reportsDirectory = Paths.get( "." );
             }
-            return new OnlineBackupRequiredArguments( address, databaseName, backupDirectory, backupName,
+            Path databaseBackupDirectory = backupDirectory.resolve( databaseName );
+            return new OnlineBackupRequiredArguments( address, databaseName, databaseBackupDirectory,
                     fallbackToFullBackup, consistencyCheck, reportsDirectory );
         }
 
