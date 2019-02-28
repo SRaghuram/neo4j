@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.net;
 
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.channel.pool.SimpleChannelPool;
@@ -36,7 +37,7 @@ public class ChannelPoolService implements Lifecycle
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock.WriteLock exclusiveService = lock.writeLock();
     private final ReentrantReadWriteLock.ReadLock sharedService = lock.readLock();
-    private CompletableFuture<PooledChannel> endOfLife;
+    private CompletableFuture<Channel> endOfLife;
 
     private SimpleChannelPoolMap poolMap; // used as "is stopped" flag, stopped when null
     private EventLoopGroup eventLoopGroup;
@@ -59,18 +60,14 @@ public class ChannelPoolService implements Lifecycle
             {
                 return failedFuture( new IllegalStateException( "Channel pool service is not in a started state." ) );
             }
-            return acquire0( address ).applyToEither( endOfLife, pooledChannel -> pooledChannel );
+
+            SimpleChannelPool pool = poolMap.get( address );
+            return toCompletableFuture( pool.acquire() ).applyToEither( endOfLife, channel -> new PooledChannel( channel, pool ) );
         }
         finally
         {
             sharedService.unlock();
         }
-    }
-
-    private CompletableFuture<PooledChannel> acquire0( AdvertisedSocketAddress address )
-    {
-        SimpleChannelPool pool = poolMap.get( address );
-        return toCompletableFuture( pool.acquire(), channel -> new PooledChannel( channel, pool ) );
     }
 
     @Override
