@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
 public class RelationshipCheckTypeTest
 {
     @Test
-    public void inUseRecordEquality()
+    public void inUseRecordEquality() throws CloneNotSupportedException
     {
         RelationshipRecord record1 = new RelationshipRecord( 1 );
         record1.initialize( true, 1, 2, 3, 4, 5, 6, 7, 8, true, false );

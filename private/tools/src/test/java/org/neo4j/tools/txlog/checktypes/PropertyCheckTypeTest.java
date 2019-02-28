@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
 public class PropertyCheckTypeTest
 {
     @Test
-    public void inUseRecordEquality()
+    public void inUseRecordEquality() throws CloneNotSupportedException
     {
         PropertyRecord record1 = new PropertyRecord( 1 );
         record1.initialize( true, 1, 2 );

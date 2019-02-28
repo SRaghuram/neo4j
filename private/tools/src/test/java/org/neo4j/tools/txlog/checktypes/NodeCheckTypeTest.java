@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
 public class NodeCheckTypeTest
 {
     @Test
-    public void inUseRecordEquality()
+    public void inUseRecordEquality() throws CloneNotSupportedException
     {
         NodeRecord record1 = new NodeRecord( 1 );
         record1.initialize( true, 1, false, 2, 3 );

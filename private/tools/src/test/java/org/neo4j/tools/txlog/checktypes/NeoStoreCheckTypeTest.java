@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
 public class NeoStoreCheckTypeTest
 {
     @Test
-    public void inUseRecordEquality()
+    public void inUseRecordEquality() throws CloneNotSupportedException
     {
         NeoStoreRecord record1 = new NeoStoreRecord();
         record1.initialize( true, 1 );
