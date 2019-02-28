@@ -16,28 +16,27 @@ public enum Repository
     // --- benchmark tools ---
     // -----------------------
 
+
+    // OPTIONS:
+    //
+    //
     MICRO_BENCH( "micro",
-                 "benchmarks",
+                 "neo4j",
                  "neo-technology",
                  "^\\d\\.\\d$",
                  "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     MACRO_BENCH( "macro",
-                 "benchmarks",
-                 "neo-technology",
-                 "^\\d\\.\\d$",
-                 "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
-    RONJA_BENCH( "ronja-benchmarks",
-                 "ronja-benchmarks",
+                 "neo4j",
                  "neo-technology",
                  "^\\d\\.\\d$",
                  "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     LDBC_BENCH( "ldbc",
-                "benchmarks",
+                "neo4j",
                 "neo-technology",
                 "^\\d\\.\\d$",
                 "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
     IMPORT_BENCH( "import-benchmarks",
-                  "import-benchmarks",
+                  "neo4j",
                   "neo-technology",
                   "^\\d\\.\\d$",
                   "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),

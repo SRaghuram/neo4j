@@ -27,7 +27,7 @@ public class BranchAndVersionTest
     {
         BranchAndVersion.validate( Repository.MICRO_BENCH, Repository.MICRO_BENCH.defaultOwner(), "3.4" );
         BranchAndVersion.validate( Repository.LDBC_BENCH, Repository.LDBC_BENCH.defaultOwner(), "3.4" );
-        BranchAndVersion.validate( Repository.RONJA_BENCH, Repository.RONJA_BENCH.defaultOwner(), "3.4" );
+        BranchAndVersion.validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "3.4" );
     }
 
     @Test
