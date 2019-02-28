@@ -45,7 +45,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -199,14 +198,6 @@ class OnlineBackupIT
                 .withConsistencyCheck( true )
                 .withOutputStream( System.out )
                 .backup( DB_NAME, backupsDir );
-    }
-
-    private HostnamePort backupAddress()
-    {
-        ConnectorPortRegister portRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
-        HostnamePort backupAddress = portRegister.getLocalAddress( BACKUP_SERVER_NAME );
-        assertNotNull( backupAddress );
-        return backupAddress;
     }
 
     private DbRepresentation backupDbRepresentation()
