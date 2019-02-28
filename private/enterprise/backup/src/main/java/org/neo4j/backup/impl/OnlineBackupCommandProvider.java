@@ -5,12 +5,12 @@
  */
 package org.neo4j.backup.impl;
 
-import java.nio.file.Path;
 import javax.annotation.Nonnull;
 
 import org.neo4j.OnlineBackupCommandSection;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
+import org.neo4j.commandline.admin.CommandContext;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.arguments.Arguments;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -65,12 +65,13 @@ public class OnlineBackupCommandProvider extends AdminCommand.Provider
 
     @Override
     @Nonnull
-    public AdminCommand create( Path homeDir, Path configDir, OutsideWorld outsideWorld )
+    public AdminCommand create( CommandContext ctx )
     {
+        OutsideWorld outsideWorld = ctx.getOutsideWorld();
         LogProvider userLogProvider = FormattedLogProvider.toOutputStream( outsideWorld.outStream() );
-        LogProvider internalLogProvider = buildInternalLogProvider( outsideWorld );
+        LogProvider internalLogProvider = buildInternalLogProvider( ctx, outsideWorld );
 
-        OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( homeDir, configDir );
+        OnlineBackupContextFactory contextBuilder = new OnlineBackupContextFactory( ctx.getHomeDir(), ctx.getConfigDir() );
 
         OnlineBackupExecutor backupExecutor = OnlineBackupExecutor.builder()
                 .withFileSystem( outsideWorld.fileSystem() )
@@ -82,10 +83,9 @@ public class OnlineBackupCommandProvider extends AdminCommand.Provider
         return new OnlineBackupCommand( outsideWorld, contextBuilder, backupExecutor );
     }
 
-    private LogProvider buildInternalLogProvider( OutsideWorld outsideWorld )
+    private LogProvider buildInternalLogProvider( CommandContext ctx, OutsideWorld outsideWorld )
     {
-        boolean debug = System.getenv().get( "NEO4J_DEBUG" ) != null;
-        if ( debug )
+        if ( ctx.isDebugEnabled() )
         {
             return FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( outsideWorld.outStream() );
         }

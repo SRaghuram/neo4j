@@ -5,13 +5,12 @@
  */
 package org.neo4j.restore;
 
-import java.nio.file.Path;
 import javax.annotation.Nonnull;
 
 import org.neo4j.OnlineBackupCommandSection;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
-import org.neo4j.commandline.admin.OutsideWorld;
+import org.neo4j.commandline.admin.CommandContext;
 import org.neo4j.commandline.arguments.Arguments;
 
 public class RestoreDatabaseCliProvider extends AdminCommand.Provider
@@ -51,8 +50,8 @@ public class RestoreDatabaseCliProvider extends AdminCommand.Provider
 
     @Override
     @Nonnull
-    public AdminCommand create( Path homeDir, Path configDir, OutsideWorld outsideWorld )
+    public AdminCommand create( CommandContext ctx )
     {
-        return new RestoreDatabaseCli( homeDir, configDir );
+        return new RestoreDatabaseCli( ctx.getHomeDir(), ctx.getConfigDir() );
     }
 }

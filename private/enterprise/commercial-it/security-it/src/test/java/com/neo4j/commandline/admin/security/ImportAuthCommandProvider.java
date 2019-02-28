@@ -5,11 +5,9 @@
  */
 package com.neo4j.commandline.admin.security;
 
-import java.nio.file.Path;
-
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
-import org.neo4j.commandline.admin.OutsideWorld;
+import org.neo4j.commandline.admin.CommandContext;
 import org.neo4j.commandline.admin.security.AuthenticationCommandSection;
 import org.neo4j.commandline.arguments.Arguments;
 
@@ -48,8 +46,8 @@ public class ImportAuthCommandProvider extends AdminCommand.Provider
     }
 
     @Override
-    public AdminCommand create( Path homeDir, Path configDir, OutsideWorld outsideWorld )
+    public AdminCommand create( CommandContext ctx )
     {
-        return new ImportAuthCommand( homeDir, configDir, outsideWorld );
+        return new ImportAuthCommand( ctx.getHomeDir(), ctx.getConfigDir(), ctx.getOutsideWorld() );
     }
 }
