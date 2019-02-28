@@ -5,18 +5,31 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE_PARALLEL.HasEvidenceOfParallelism
-import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
+import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.{MORSEL_SIZE, SIZE_HINT}
 import org.neo4j.cypher.internal.runtime.spec.tests.{AggregationTestBase, AllNodeScanTestBase, ExpandAllTestBase, FilterTestBase, InputTestBase, LabelScanTestBase, NodeIndexContainsScanTestBase, NodeIndexScanTestBase, NodeIndexSeekRangeAndCompositeTestBase, NodeIndexSeekTestBase, ProjectionTestBase, UnwindTestBase}
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_PARALLEL, LogicalQueryBuilder}
+import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE_PARALLEL, LogicalQueryBuilder, RuntimeTestSuite, RuntimeTestSupport}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
 
 object MorselSpecSuite {
-  val SIZE_HINT = 10000
+  val SIZE_HINT = 1000
+  val MORSEL_SIZE = 100
+}
+
+trait MorselSpecSuite {
+  self: RuntimeTestSuite[EnterpriseRuntimeContext] =>
+  override def beforeEach(): Unit = {
+    graphDb = ENTERPRISE_PARALLEL.graphDatabaseFactory.newImpermanentDatabaseBuilder()
+      .setConfig(GraphDatabaseSettings.cypher_morsel_size, MORSEL_SIZE.toString)
+      .newGraphDatabase()
+    runtimeTestSupport = new RuntimeTestSupport[EnterpriseRuntimeContext](graphDb, ENTERPRISE_PARALLEL)
+    initTest()
+  }
 }
 
 // ALL NODE SCAN
-class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselAllNodeScanTest extends AllNodeScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselAllNodeScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
@@ -39,6 +52,7 @@ class MorselAllNodeScanStressTest extends ParallelStressSuite with RHSOfApplyLea
 // INDEX SEEK
 class MorselNodeIndexSeekTest extends NodeIndexSeekTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
                               with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+                              with MorselSpecSuite
 
 class MorselIndexSeekRangeStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
@@ -77,7 +91,7 @@ class MorselIndexSeekExactStressTest extends ParallelStressSuite with RHSOfApply
 }
 
 // LABEL SCAN
-class MorselLabelScanTest extends LabelScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselLabelScanTest extends LabelScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselLabelScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
@@ -99,7 +113,7 @@ class MorselLabelScanStressTest extends ParallelStressSuite with RHSOfApplyLeafS
 }
 
 // INDEX SCAN
-class MorselNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselIndexScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite with RHSOfCartesianLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
@@ -120,7 +134,7 @@ class MorselIndexScanStressTest extends ParallelStressSuite with RHSOfApplyLeafS
 }
 
 // INDEX CONTAINS SCAN
-class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselIndexContainsScanStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
@@ -135,7 +149,7 @@ class MorselIndexContainsScanStressTest extends ParallelStressSuite with RHSOfAp
 }
 
 // EXPAND
-class MorselExpandAllTest extends ExpandAllTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselExpandAllTest extends ExpandAllTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselExpandStressTest extends ParallelStressSuite with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite with OnTopOfParallelInputStressTest {
 
@@ -175,7 +189,7 @@ class MorselExpandStressTest extends ParallelStressSuite with RHSOfApplyOneChild
 
 // EAGER AGGREGATION
 
-class MorselAggregationTest extends AggregationTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselAggregationTest extends AggregationTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselAggregationStressTest extends ParallelStressSuite /*with RHSOfApplyOneChildStressSuite with RHSOfCartesianOneChildStressSuite*/ with OnTopOfParallelInputStressTest {
 
@@ -285,7 +299,7 @@ class MorselAggregationStressTest extends ParallelStressSuite /*with RHSOfApplyO
 
 // FILTER
 
-class MorselFilterTest extends FilterTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselFilterTest extends FilterTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
 
@@ -301,7 +315,7 @@ class MorselFilterStressTest extends ParallelStressSuite with OnTopOfParallelInp
 }
 
 // PROJECTION
-class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselProjectionTest extends ProjectionTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselProjectionStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
 
@@ -317,7 +331,7 @@ class MorselProjectionStressTest extends ParallelStressSuite with OnTopOfParalle
 }
 
 // UNWIND
-class MorselUnwindTest extends UnwindTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+class MorselUnwindTest extends UnwindTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 class MorselUnwindStressTest extends ParallelStressSuite with OnTopOfParallelInputStressTest {
 
@@ -336,7 +350,7 @@ class MorselUnwindStressTest extends ParallelStressSuite with OnTopOfParallelInp
 // ARGUMENT
 
 // FIXME broken in Morsel
-//class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT)
+//class MorselArgumentTest extends ArgumentTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite
 
 //class MorselArgumentStressTest extends ParallelStressSuite with RHSOfApplyLeafStressSuite {
 //  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
@@ -351,7 +365,7 @@ class MorselUnwindStressTest extends ParallelStressSuite with OnTopOfParallelInp
 
 // INPUT
 
-class MorselInputTest extends InputTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) {
+class MorselInputTest extends InputTestBase(ENTERPRISE_PARALLEL, MorselRuntime, SIZE_HINT) with MorselSpecSuite {
 
   test("should process input batches in parallel") {
     // when

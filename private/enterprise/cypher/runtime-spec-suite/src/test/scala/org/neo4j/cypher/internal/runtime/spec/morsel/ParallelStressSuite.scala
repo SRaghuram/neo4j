@@ -99,7 +99,7 @@ trait RHSOfApplyLeafStressSuite {
     // given
     init()
 
-    val input: InputValues = allNodesNTimes(10)
+    val input: InputValues = allNodesNTimes(2)
 
     val RHSOfApplyLeafTD(op, expectedResult) = rhsOfApplyLeaf("y", "x", "prop")
 
@@ -199,7 +199,7 @@ trait RHSOfCartesianLeafStressSuite {
     // given
     init()
 
-    val input = allNodesNTimes(10)
+    val input = allNodesNTimes(2)
 
     val RHSOfCartesianLeafTD(op, expectedResultFromRHS) = rhsOfCartesianLeaf("y")
 
