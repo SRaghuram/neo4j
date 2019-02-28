@@ -36,6 +36,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.storageengine.api.TransactionIdStore;
+import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
@@ -89,7 +90,7 @@ public class CatchupPollingProcessTest
         when( catchupAddressProvider.secondary() ).thenReturn( coreMemberAddress );
 
         catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_1, v1Client, v2Client, v3Client );
-        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
+        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
         txPuller = new CatchupPollingProcess( executor, databaseName, databaseService, startStopOnStoreCopy, catchupClientFactory, txApplier, new Monitors(),
                 storeCopy, FormattedLogProvider.toOutputStream( System.out ), panicker, catchupAddressProvider );
     }

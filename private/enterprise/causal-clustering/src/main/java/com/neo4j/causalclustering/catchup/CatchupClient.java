@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
-import com.neo4j.causalclustering.helper.TimeoutRetrier;
+import com.neo4j.causalclustering.helper.OperationProgressMonitor;
 import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -29,7 +29,6 @@ import java.util.function.Function;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
-import org.neo4j.util.concurrent.Futures;
 
 class CatchupClient implements VersionedCatchupClients
 {
@@ -38,15 +37,17 @@ class CatchupClient implements VersionedCatchupClients
     private final CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool;
     private final String defaultDatabaseName;
     private final Duration inactivityTimeout;
+    private final Log log;
 
     CatchupClient( AdvertisedSocketAddress upstream, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool, String defaultDatabaseName,
-            Duration inactivityTimeout ) throws Exception
+            Duration inactivityTimeout, Log log ) throws Exception
     {
         this.inactivityTimeout = inactivityTimeout;
         this.channel = pool.acquire( upstream );
         this.protocol = channel.protocol().get();
         this.pool = pool;
         this.defaultDatabaseName = defaultDatabaseName;
+        this.log = log;
     }
 
     private static <RESULT> CompletableFuture<RESULT> makeBlockingRequest( CatchupProtocolMessage request,
@@ -77,14 +78,14 @@ class CatchupClient implements VersionedCatchupClients
     @Override
     public <RESULT> NeedsV2Handler<RESULT> v1( Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName );
+        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName, log );
         return reqBuilder.v1( v1Request );
     }
 
     @Override
     public <RESULT> NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest )
     {
-        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName );
+        Builder<RESULT> reqBuilder = new Builder<>( channel, pool, protocol, defaultDatabaseName, log );
         return reqBuilder.any( allVersionsRequest );
     }
 
@@ -106,6 +107,7 @@ class CatchupClient implements VersionedCatchupClients
         private final CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool;
         private final ApplicationProtocol protocol;
         private final String defaultDatabaseName;
+        private final Log log;
         private Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request;
         private Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request;
         private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
@@ -113,12 +115,13 @@ class CatchupClient implements VersionedCatchupClients
         private CatchupResponseCallback<RESULT> responseHandler;
 
         private Builder( CatchupClientFactory.CatchupChannel channel, CatchupChannelPool<CatchupClientFactory.CatchupChannel> pool,
-                ApplicationProtocol protocol, String defaultDatabaseName )
+                ApplicationProtocol protocol, String defaultDatabaseName, Log log )
         {
             this.channel = channel;
             this.pool = pool;
             this.protocol = protocol;
             this.defaultDatabaseName = defaultDatabaseName;
+            this.log = log;
         }
 
         @Override
@@ -157,63 +160,56 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public RESULT request( Log log ) throws Exception
+        public RESULT request() throws Exception
         {
             if ( protocol.equals( com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1 ) )
             {
-                V1 v1 = new CatchupClient.V1( channel, pool, defaultDatabaseName );
-                if ( v1Request != null )
-                {
-                    return retrying( v1Request.apply( v1 ).execute( responseHandler ) ).get( log );
-                }
-                else if ( allVersionsRequest != null )
-                {
-                    return retrying( allVersionsRequest.apply( v1 ).execute( responseHandler ) ).get( log );
-                }
-                else
-                {
-                    retrying( Futures.failedFuture( new Exception( "No V1 action specified" ) ) );
-                }
+                CatchupClient.V1 client = new CatchupClient.V1( channel, pool, defaultDatabaseName );
+                return performRequest( client, v1Request, allVersionsRequest, protocol );
             }
             else if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_2 ) )
             {
-                V2 v2 = new CatchupClient.V2( channel, pool );
-                if ( v2Request != null )
-                {
-                    return retrying( v2Request.apply( v2 ).execute( responseHandler ) ).get( log );
-                }
-                else if ( allVersionsRequest != null )
-                {
-                    return retrying( allVersionsRequest.apply( v2 ).execute( responseHandler ) ).get( log );
-                }
-                else
-                {
-                    return retrying( Futures.failedFuture( new Exception( "No V2 action specified" ) ) ).get( log );
-                }
+                CatchupClient.V2 client = new CatchupClient.V2( channel, pool );
+                return performRequest( client, v2Request, allVersionsRequest, protocol );
             }
             else if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_3 ) )
             {
-                V3 v3 = new CatchupClient.V3( channel, pool );
-                if ( v3Request != null )
-                {
-                    return retrying( v3Request.apply( v3 ).execute( responseHandler ) ).get( log );
-                }
-                else if ( allVersionsRequest != null )
-                {
-                    return retrying( allVersionsRequest.apply( v3 ).execute( responseHandler ) ).get( log );
-                }
-                else
-                {
-                    return retrying( Futures.failedFuture( new Exception( "No V3 action specified" ) ) ).get( log );
-                }
+                CatchupClient.V3 client = new CatchupClient.V3( channel, pool );
+                return performRequest( client, v3Request, allVersionsRequest, protocol );
             }
-
-            return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+            else
+            {
+                String message = "Unrecognised protocol " + protocol;
+                log.error( message );
+                throw new Exception( message );
+            }
         }
 
-        private TimeoutRetrier<RESULT> retrying( CompletableFuture<RESULT> request )
+        private <CLIENT extends CatchupClientCommon> RESULT performRequest( CLIENT client, Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest,
+                Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest, ApplicationProtocol protocol ) throws Exception
         {
-            return TimeoutRetrier.of( request, inactivityTimeout.toMillis(), channel::millisSinceLastResponse );
+            PreparedRequest<RESULT> request;
+            if ( specificVersionRequest != null )
+            {
+                request = specificVersionRequest.apply( client );
+            }
+            else if ( allVersionsRequest != null )
+            {
+                request = allVersionsRequest.apply( client );
+            }
+            else
+            {
+                String message = "No action specified for protocol " + protocol;
+                log.error( message );
+                throw new Exception( message );
+            }
+
+            return withProgressMonitor( request.execute( responseHandler ) ).get();
+        }
+
+        private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
+        {
+            return OperationProgressMonitor.of( request, inactivityTimeout.toMillis(), channel::millisSinceLastResponse, log );
         }
     }
 

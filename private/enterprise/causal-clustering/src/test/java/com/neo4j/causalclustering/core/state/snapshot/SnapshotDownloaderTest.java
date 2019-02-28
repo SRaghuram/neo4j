@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 
@@ -34,6 +35,8 @@ import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -91,7 +94,7 @@ public class SnapshotDownloaderTest
         CatchupClientV3 v3Client = new MockClientV3( clientResponses );
 
         VersionedCatchupClients catchupClient = new MockCatchupClient( protocol, v1Client, v2Client, v3Client );
-        when( catchupClientFactory.getClient( remoteAddress ) ).thenReturn( catchupClient );
+        when( catchupClientFactory.getClient( eq( remoteAddress ), any( Log.class ) ) ).thenReturn( catchupClient );
         return catchupClientFactory;
     }
 }

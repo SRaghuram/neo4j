@@ -142,12 +142,12 @@ public class StoreCopyClient
                 AdvertisedSocketAddress address = addressProvider.secondary();
                 log.info( format( "Sending request StoreCopyRequest to '%s'", address ) );
 
-                StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address )
+                StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address, log )
                         .v1( v1Request )
                         .v2( v2Request )
                         .v3( v3Request )
                         .withResponseHandler( StoreCopyResponseAdaptors.filesCopyAdaptor( storeFileStream, log ) )
-                        .request( log );
+                        .request();
 
                 if ( successfulRequest( response ) )
                 {
@@ -194,12 +194,12 @@ public class StoreCopyClient
         try
         {
             log.info( "Requesting store listing from: " + from );
-            prepareStoreCopyResponse = catchUpClientFactory.getClient( from )
+            prepareStoreCopyResponse = catchUpClientFactory.getClient( from, log )
                     .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
                     .v2( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
                     .v3( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
                     .withResponseHandler( StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( storeFileStream, log ) )
-                    .request( log );
+                    .request();
         }
         catch ( Exception e )
         {
@@ -225,12 +225,12 @@ public class StoreCopyClient
                     signal.complete( response.storeId() );
                 }
             };
-            return catchUpClientFactory.getClient( fromAddress )
+            return catchUpClientFactory.getClient( fromAddress, log )
                     .v1( CatchupClientV1::getStoreId )
                     .v2( c -> c.getStoreId( databaseName ) )
                     .v3( c -> c.getStoreId( databaseName ) )
                     .withResponseHandler( responseHandler )
-                    .request( log );
+                    .request();
         }
         catch ( Exception e )
         {

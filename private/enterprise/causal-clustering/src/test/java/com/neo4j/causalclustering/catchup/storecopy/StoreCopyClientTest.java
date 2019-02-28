@@ -47,6 +47,7 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
@@ -126,7 +127,7 @@ class StoreCopyClientTest
     private void mockClient( Protocol.ApplicationProtocol protocol ) throws Exception
     {
         catchupClient = new MockCatchupClient( protocol, v1Client, v2Client, v3Client );
-        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ) ) ).thenReturn( catchupClient );
+        when( catchupClientFactory.getClient( any( AdvertisedSocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
     }
 
     @TestWithCatchupProtocols

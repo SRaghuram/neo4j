@@ -61,9 +61,9 @@ public class CatchupClientFactory extends LifecycleAdapter
         this.bootstrapConfiguration = bootstrapConfiguration;
     }
 
-    public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream ) throws Exception
+    public VersionedCatchupClients getClient( AdvertisedSocketAddress upstream, Log log ) throws Exception
     {
-        return new CatchupClient( upstream, pool, defaultDatabaseName, inactivityTimeout );
+        return new CatchupClient( upstream, pool, defaultDatabaseName, inactivityTimeout, log );
     }
 
     class CatchupChannel implements CatchupChannelPool.Channel

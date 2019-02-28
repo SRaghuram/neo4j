@@ -34,7 +34,7 @@ public class SnapshotDownloader
         CoreSnapshot coreSnapshot;
         try
         {
-            VersionedCatchupClients client = catchupClientFactory.getClient( address );
+            VersionedCatchupClients client = catchupClientFactory.getClient( address, log );
             CatchupResponseAdaptor<CoreSnapshot> responseHandler = new CatchupResponseAdaptor<CoreSnapshot>()
             {
                 @Override
@@ -47,7 +47,7 @@ public class SnapshotDownloader
             coreSnapshot = client
                     .any( VersionedCatchupClients.CatchupClientCommon::getCoreSnapshot )
                     .withResponseHandler( responseHandler )
-                    .request( log );
+                    .request();
         }
         catch ( Exception e )
         {

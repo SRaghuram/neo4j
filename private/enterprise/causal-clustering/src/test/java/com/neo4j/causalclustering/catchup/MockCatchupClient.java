@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.helper.TimeoutRetrier;
+import com.neo4j.causalclustering.helper.OperationProgressMonitor;
 import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocol;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
@@ -26,6 +26,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
+import org.neo4j.logging.NullLog;
 import org.neo4j.util.concurrent.Futures;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;
@@ -91,6 +92,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         private CatchupClientV1 v1Client;
         private CatchupClientV2 v2Client;
         private CatchupClientV3 v3Client;
+        private Log log = NullLog.getInstance();
 
         Builder( CatchupClientV1 v1Client, CatchupClientV2 v2Client, CatchupClientV3 v3Client )
         {
@@ -146,26 +148,26 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public RESULT request( Log log ) throws Exception
+        public RESULT request() throws Exception
         {
             if ( protocol.equals( CATCHUP_1 ) )
             {
-                return retrying( v1Request.apply( v1Client ).execute( null ) ).get( log );
+                return withProgressMonitor( v1Request.apply( v1Client ).execute( null ) ).get();
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_2 ) )
             {
-                return retrying( v2Request.apply( v2Client ).execute( null ) ).get( log );
+                return withProgressMonitor( v2Request.apply( v2Client ).execute( null ) ).get();
             }
             else if ( protocol.equals( ApplicationProtocols.CATCHUP_3 ) )
             {
-                return retrying( v3Request.apply( v3Client ).execute( null ) ).get( log );
+                return withProgressMonitor( v3Request.apply( v3Client ).execute( null ) ).get();
             }
-            return retrying( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get( log );
+            return withProgressMonitor( Futures.failedFuture( new Exception( "Unrecognised protocol" ) ) ).get();
         }
 
-        private TimeoutRetrier<RESULT> retrying( CompletableFuture<RESULT> request )
+        private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request )
         {
-            return TimeoutRetrier.of( request, 1, () -> Optional.of( 0L ) );
+            return OperationProgressMonitor.of( request, 1, () -> Optional.of( 0L ), log );
         }
     }
 

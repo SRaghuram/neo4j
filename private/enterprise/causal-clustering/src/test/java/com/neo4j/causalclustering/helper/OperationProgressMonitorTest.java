@@ -14,6 +14,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,12 +29,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings( "unchecked" )
-class TimeoutRetrierTest
+class OperationProgressMonitorTest
 {
 
     private final Supplier<Optional<Long>> zeroMillisSinceLastResponse = () -> Optional.of( 0L );
     private final Supplier<Optional<Long>> incrementingMillisSinceLastResponse = new IncrementingLastResponseTimer( 0 );
     private final Supplier<Optional<Long>> foreverSinceLastResponse = new IncrementingLastResponseTimer();
+    private final Log log = NullLog.getInstance();
 
     @Test
     void getShouldBeCalledMultipleTimesThenSucceed() throws Throwable
@@ -46,10 +48,10 @@ class TimeoutRetrierTest
                 .thenThrow( TimeoutException.class )
                 .thenReturn( "expected" );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
+        OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse, log );
 
         // when
-        Object actual = retryFuture.get( NullLog.getInstance() );
+        Object actual = retryFuture.get();
 
         // then
         verify( future, atLeast( 2 ) ).get( anyLong(), any() );
@@ -66,7 +68,7 @@ class TimeoutRetrierTest
         when( future.get( anyLong(), any() ) )
                 .thenThrow( TimeoutException.class );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, incrementingMillisSinceLastResponse );
+        OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, incrementingMillisSinceLastResponse, log );
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
         // when
@@ -86,7 +88,7 @@ class TimeoutRetrierTest
         when( future.get( anyLong(), any() ) )
                 .thenThrow( ExecutionException.class );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, zeroMillisSinceLastResponse );
+        OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse, log );
 
         // when
         assertThrows( FooException.class, () -> retryFuture.get( FooException::new, NullLog.getInstance() ) );
@@ -105,7 +107,7 @@ class TimeoutRetrierTest
                 .thenThrow( InterruptedException.class )
                 .thenThrow( TimeoutException.class );
 
-        TimeoutRetrier<Object> retryFuture = TimeoutRetrier.of( future, inactivityTimeout, foreverSinceLastResponse );
+        OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, foreverSinceLastResponse, log );
 
         for ( int i = 0; i < 3; i++ )
         {

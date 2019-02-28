@@ -17,8 +17,6 @@ import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.neo4j.logging.Log;
-
 /**
  * This class defines a client which "speaks" the various versions of the Catchup protocol. Basically wraps a builder for {@link CatchupProtocolMessage}s.
  */
@@ -86,7 +84,7 @@ public interface VersionedCatchupClients extends AutoCloseable
     /** {@link CatchupRequestBuilder} Final step */
     interface IsPrepared<RESULT>
     {
-        RESULT request( Log log ) throws Exception;
+        RESULT request() throws Exception;
     }
 
     /* Interfaces for CatchupClients (and their helper return type, PreparedRequest) below here. These
@@ -101,28 +99,28 @@ public interface VersionedCatchupClients extends AutoCloseable
 
     interface CatchupClientV1 extends CatchupClientCommon
     {
-       PreparedRequest<StoreId> getStoreId();
+        PreparedRequest<StoreId> getStoreId();
 
-       PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId );
+        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId );
 
-       PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId );
+        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId );
 
-       PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId );
+        PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId );
 
-       PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId );
+        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId );
     }
 
     interface CatchupClientV2 extends CatchupClientCommon
     {
-       PreparedRequest<StoreId> getStoreId( String databaseName );
+        PreparedRequest<StoreId> getStoreId( String databaseName );
 
-       PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
+        PreparedRequest<TxStreamFinishedResponse> pullTransactions( StoreId storeId, long previousTxId, String databaseName );
 
-       PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName );
+        PreparedRequest<PrepareStoreCopyResponse> prepareStoreCopy( StoreId storeId, String databaseName );
 
-       PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName );
+        PreparedRequest<StoreCopyFinishedResponse> getIndexFiles( StoreId storeId, long indexId, long requiredTxId, String databaseName );
 
-       PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName );
+        PreparedRequest<StoreCopyFinishedResponse> getStoreFile( StoreId storeId, File file, long requiredTxId, String databaseName );
     }
 
     interface CatchupClientV3 extends CatchupClientCommon
