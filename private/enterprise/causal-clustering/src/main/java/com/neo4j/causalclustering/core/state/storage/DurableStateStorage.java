@@ -12,8 +12,8 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FlushableChannel;
 import org.neo4j.io.fs.OpenMode;
-import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalFlushableChannel;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;

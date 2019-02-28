@@ -7,8 +7,8 @@ package com.neo4j.unsafe.impl.batchimport;
 
 import java.io.IOException;
 
-import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosableChannel;
+import org.neo4j.io.fs.FlushableChannel;
+import org.neo4j.io.fs.ReadableClosableChannel;
 import org.neo4j.string.UTF8;
 
 class ChannelUtils

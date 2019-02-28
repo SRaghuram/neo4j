@@ -18,9 +18,9 @@ import java.nio.ByteBuffer;
 
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
+import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 

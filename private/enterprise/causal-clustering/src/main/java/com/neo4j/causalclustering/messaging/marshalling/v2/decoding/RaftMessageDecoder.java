@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 
-import org.neo4j.storageengine.api.ReadableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 
 public class RaftMessageDecoder extends ByteToMessageDecoder
 {

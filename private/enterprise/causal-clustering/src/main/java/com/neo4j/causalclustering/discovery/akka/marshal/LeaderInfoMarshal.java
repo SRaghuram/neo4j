@@ -12,8 +12,8 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import java.io.IOException;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 public class LeaderInfoMarshal extends SafeChannelMarshal<LeaderInfo>
 {

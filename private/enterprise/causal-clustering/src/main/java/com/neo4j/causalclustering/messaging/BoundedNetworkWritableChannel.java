@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.messaging;
 
 import io.netty.buffer.ByteBuf;
 
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static java.lang.String.format;
 import static org.neo4j.io.ByteUnit.mebiBytes;

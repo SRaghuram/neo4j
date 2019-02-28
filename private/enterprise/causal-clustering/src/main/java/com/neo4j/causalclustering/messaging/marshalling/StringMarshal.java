@@ -10,8 +10,8 @@ import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 

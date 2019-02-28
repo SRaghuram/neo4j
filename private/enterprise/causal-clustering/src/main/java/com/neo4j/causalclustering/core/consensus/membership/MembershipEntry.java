@@ -14,8 +14,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 /**
  * Represents a membership entry in the RAFT log.

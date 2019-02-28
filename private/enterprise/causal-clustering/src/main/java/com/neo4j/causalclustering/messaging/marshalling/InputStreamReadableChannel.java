@@ -9,7 +9,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.neo4j.storageengine.api.ReadableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 
 public class InputStreamReadableChannel implements ReadableChannel
 {

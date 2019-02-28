@@ -15,8 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static java.lang.String.format;
 

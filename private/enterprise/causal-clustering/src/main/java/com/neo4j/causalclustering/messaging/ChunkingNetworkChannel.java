@@ -11,7 +11,7 @@ import io.netty.buffer.ByteBufAllocator;
 import java.util.Objects;
 import java.util.Queue;
 
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static java.lang.Integer.min;
 

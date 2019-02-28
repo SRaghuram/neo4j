@@ -23,8 +23,8 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector.Encryption;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.SocketAddressParser;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.http;

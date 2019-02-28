@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 import java.io.IOException;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 public class TermState
 {

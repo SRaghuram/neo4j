@@ -9,16 +9,4 @@ import org.neo4j.unsafe.impl.batchimport.Configuration;
 
 public class LdbcImporterConfig implements Configuration
 {
-    private final int denseNodeThreshold;
-
-    public LdbcImporterConfig( int denseNodeThreshold )
-    {
-        this.denseNodeThreshold = denseNodeThreshold;
-    }
-
-    @Override
-    public int denseNodeThreshold()
-    {
-        return denseNodeThreshold;
-    }
 }

@@ -9,10 +9,10 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.transaction.log.FlushableChannel;
+import org.neo4j.io.fs.FlushableChannel;
+import org.neo4j.io.fs.ReadableClosableChannel;
 import org.neo4j.kernel.impl.transaction.log.PhysicalFlushableChannel;
 import org.neo4j.kernel.impl.transaction.log.ReadAheadChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosableChannel;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics.RelationshipTypeCount;
 

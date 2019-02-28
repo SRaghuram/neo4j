@@ -10,15 +10,16 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import java.io.IOException;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadPastEndException;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 /**
  * Implementations of this class perform marshalling (encoding/decoding) of {@link STATE}
  * into/from a {@link WritableChannel} and a {@link ReadableChannel} respectively.
  *
  * N.B.: Implementations should prefer to extend {@link SafeChannelMarshal} to handle
- * {@link org.neo4j.storageengine.api.ReadPastEndException} correctly.
+ * {@link ReadPastEndException} correctly.
  *
  * @param <STATE> The class of objects supported by this marshal
  */
@@ -34,7 +35,7 @@ public interface ChannelMarshal<STATE>
      * to fully read an instance then an {@link EndOfStreamException} must be thrown.
      *
      * N.B: The ReadableChannel is sort of broken in its implementation and throws
-     * {@link org.neo4j.storageengine.api.ReadPastEndException} which is a subclass of IOException
+     * {@link ReadPastEndException} which is a subclass of IOException
      * and that is problematic since usually the case of reaching the end of a stream actually
      * requires handling distinct from that of arbitrary IOExceptions. Although it was possible
      * to catch that particular exception explicitly, you would not get compiler/IDE support

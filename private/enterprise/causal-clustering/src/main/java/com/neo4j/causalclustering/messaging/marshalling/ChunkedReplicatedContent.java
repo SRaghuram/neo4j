@@ -15,7 +15,7 @@ import io.netty.handler.stream.ChunkedInput;
 import java.io.IOException;
 
 import org.neo4j.function.ThrowingConsumer;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 public class ChunkedReplicatedContent implements ChunkedInput<ByteBuf>
 {

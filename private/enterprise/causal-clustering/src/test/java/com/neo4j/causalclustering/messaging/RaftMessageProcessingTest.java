@@ -24,9 +24,9 @@ import java.io.IOException;
 import java.time.Clock;
 import java.util.UUID;
 
-import org.neo4j.storageengine.api.ReadPastEndException;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadPastEndException;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static org.junit.Assert.assertEquals;
 

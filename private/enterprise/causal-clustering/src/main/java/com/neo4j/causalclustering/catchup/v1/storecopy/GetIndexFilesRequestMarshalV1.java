@@ -19,8 +19,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import java.io.IOException;
 import java.util.List;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 // TODO: consider inlining marshalling into codecs
 public class GetIndexFilesRequestMarshalV1 extends SafeChannelMarshal<GetIndexFilesRequest>

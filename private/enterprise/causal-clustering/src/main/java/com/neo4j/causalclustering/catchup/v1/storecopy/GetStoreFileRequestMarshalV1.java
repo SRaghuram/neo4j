@@ -13,8 +13,8 @@ import com.neo4j.causalclustering.messaging.marshalling.storeid.StoreIdMarshal;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.string.UTF8;
 
 public class GetStoreFileRequestMarshalV1 extends SafeChannelMarshal<GetStoreFileRequest>

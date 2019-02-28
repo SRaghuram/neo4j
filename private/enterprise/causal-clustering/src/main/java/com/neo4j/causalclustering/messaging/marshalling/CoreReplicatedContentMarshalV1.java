@@ -25,8 +25,8 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 
 import java.io.IOException;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static com.neo4j.causalclustering.messaging.marshalling.ContentCodes.DISTRIBUTED_OPERATION;
 import static com.neo4j.causalclustering.messaging.marshalling.ContentCodes.DUMMY_REQUEST;

@@ -9,9 +9,9 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 
+import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
-import org.neo4j.storageengine.api.ReadPastEndException;
 
 public class NetworkReadableClosableChannelNetty4 implements ReadableClosablePositionAwareChannel
 {

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro.benchmarks.cluster;
 
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 class CountingChannel implements WritableChannel
 {

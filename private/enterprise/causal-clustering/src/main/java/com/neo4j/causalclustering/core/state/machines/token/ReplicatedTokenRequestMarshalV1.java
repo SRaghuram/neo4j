@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 public class ReplicatedTokenRequestMarshalV1
 {

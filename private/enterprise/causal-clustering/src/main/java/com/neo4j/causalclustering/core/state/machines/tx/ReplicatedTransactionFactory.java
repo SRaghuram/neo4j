@@ -15,6 +15,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
@@ -25,7 +26,6 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.StorageCommandSerializer;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.storageengine.api.StorageCommand;
-import org.neo4j.storageengine.api.WritableChannel;
 
 public class ReplicatedTransactionFactory
 {

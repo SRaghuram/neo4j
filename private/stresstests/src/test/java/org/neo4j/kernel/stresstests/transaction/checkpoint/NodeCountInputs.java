@@ -11,12 +11,12 @@ import org.neo4j.unsafe.impl.batchimport.GeneratingInputIterator;
 import org.neo4j.unsafe.impl.batchimport.InputIterable;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
+import org.neo4j.unsafe.impl.batchimport.input.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.ReadableGroups;
-import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.values.storable.Value;
 
-import static org.neo4j.unsafe.impl.batchimport.input.Inputs.knownEstimates;
+import static org.neo4j.unsafe.impl.batchimport.input.Input.knownEstimates;
 
 public class NodeCountInputs implements Input
 {

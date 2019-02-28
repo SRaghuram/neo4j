@@ -10,9 +10,9 @@ import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
 
 /**
  * An in-memory representation of the IDs allocated to this core instance.

@@ -10,9 +10,9 @@ import java.io.IOException;
 import org.neo4j.csv.reader.CharSeeker;
 import org.neo4j.csv.reader.Mark;
 import org.neo4j.unsafe.impl.batchimport.input.Groups;
+import org.neo4j.unsafe.impl.batchimport.input.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Configuration;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
-import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 
 public class LdbcHeaderFactory implements Header.Factory
 {

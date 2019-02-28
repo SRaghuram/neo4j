@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -67,13 +68,13 @@ import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Collectors;
 import org.neo4j.unsafe.impl.batchimport.input.Group;
 import org.neo4j.unsafe.impl.batchimport.input.Groups;
+import org.neo4j.unsafe.impl.batchimport.input.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators;
 import org.neo4j.unsafe.impl.batchimport.input.csv.CsvInput;
 import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories;
 import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactory;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
-import org.neo4j.unsafe.impl.batchimport.input.csv.IdType;
 import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
@@ -717,7 +718,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         } );
 
         int denseNodeThreshold = 1;
-        Configuration batchImporterConfiguration = new LdbcImporterConfig( denseNodeThreshold );
+        Configuration batchImporterConfiguration = new LdbcImporterConfig();
 
         Input input = new CsvInput(
                 nodeDataFactories,
@@ -731,11 +732,11 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
         FormattedLogProvider systemOutLogProvider = FormattedLogProvider.toOutputStream( System.out );
         LogService logService = new SimpleLogService( systemOutLogProvider, systemOutLogProvider );
         JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
-        Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
-        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) );
         LifeSupport lifeSupport = new LifeSupport();
         lifeSupport.add( jobScheduler );
         lifeSupport.start();
+        Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
+        dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) );
         Collector badCollector = Collectors.badCollector( System.out, 0 );
         BatchImporter batchImporter = new ParallelBatchImporter(
                 DatabaseLayout.of( dbDir ),
@@ -745,9 +746,7 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 logService,
                 ExecutionMonitors.defaultVisible( jobScheduler ),
                 AdditionalInitialIds.EMPTY,
-                (null == importerProperties)
-                ? Config.defaults()
-                : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) ),
+                dbConfig,
                 StandardV4_0.RECORD_FORMATS,
                 NO_MONITOR,
                 jobScheduler,

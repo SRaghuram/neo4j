@@ -107,7 +107,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     {
         try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseDirectory, externalPageCache, recordFormats,
                       config, logService, additionalInitialIds, dbConfig, jobScheduler );
-              ImportLogic logic = new ImportLogic( databaseDirectory, fileSystem, store, config, logService,
+              ImportLogic logic = new ImportLogic( databaseDirectory, fileSystem, store, config, dbConfig, logService,
                       executionMonitor, recordFormats, badCollector, monitor ) )
         {
             StateStorage stateStore = new StateStorage( fileSystem, new File( databaseDirectory, FILE_NAME_STATE ) );

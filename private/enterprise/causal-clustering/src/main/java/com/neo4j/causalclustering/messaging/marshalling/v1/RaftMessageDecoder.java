@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.time.Clock;
 import java.util.List;
 
-import org.neo4j.storageengine.api.ReadableChannel;
+import org.neo4j.io.fs.ReadableChannel;
 
 public class RaftMessageDecoder extends ByteToMessageDecoder
 {

@@ -14,9 +14,9 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
 
 /**
  * Represents the current state of membership in RAFT and exposes operations

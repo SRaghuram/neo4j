@@ -30,8 +30,8 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;

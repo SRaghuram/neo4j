@@ -14,8 +14,8 @@ import scala.Int;
 
 import java.io.IOException;
 
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 /**
  * One might expect Akka to be able to serialize without Java serialization, but no.

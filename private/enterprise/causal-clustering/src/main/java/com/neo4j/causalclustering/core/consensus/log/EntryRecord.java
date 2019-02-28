@@ -11,9 +11,9 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.IOException;
 
-import org.neo4j.storageengine.api.ReadPastEndException;
-import org.neo4j.storageengine.api.ReadableChannel;
-import org.neo4j.storageengine.api.WritableChannel;
+import org.neo4j.io.fs.ReadPastEndException;
+import org.neo4j.io.fs.ReadableChannel;
+import org.neo4j.io.fs.WritableChannel;
 
 /**
  * A log entry and its log index.
