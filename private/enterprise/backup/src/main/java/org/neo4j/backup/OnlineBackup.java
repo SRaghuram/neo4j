@@ -172,7 +172,7 @@ public class OnlineBackup
         }
         catch ( ConsistencyCheckExecutionException e )
         {
-            logProvider.getLog( getClass() ).warn( "Consistency check failed", e );
+            logProvider.getLog( getClass() ).error( "Consistency check failed", e );
             return new Result( false );
         }
     }
