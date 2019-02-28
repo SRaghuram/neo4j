@@ -34,7 +34,7 @@ public class QueryLoggerExtension extends ExtensionFactory<QueryLoggerExtension.
 
     public QueryLoggerExtension()
     {
-        super( ExtensionType.DATABASE, "query-logging" );
+        super( ExtensionType.GLOBAL, "query-logging" );
     }
 
     @Override

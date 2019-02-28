@@ -36,11 +36,13 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.core.Is.is;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class ConfiguredQueryLoggerTest
 {
+    private static final String LOG_MESSAGE_TEMPLATE = "%d ms: %s - %s - {}";
     private static final ClientConnectionInfo SESSION_1 = new BoltConnectionInfo( "bolt-1", "client", ANY, ANY );
     private static final ClientConnectionInfo SESSION_2 = new BoltConnectionInfo( "bolt-2", "client", ANY, ANY );
     private static final ClientConnectionInfo SESSION_3 = new BoltConnectionInfo( "bolt-3", "client", ANY, ANY );
@@ -57,12 +59,12 @@ public class ConfiguredQueryLoggerTest
     private long pageFaults;
     private long thresholdInMillis = 10;
     private int queryId;
+    private AssertableLogProvider logProvider = new AssertableLogProvider();
 
     @Test
     public void shouldLogQuerySlowerThanThreshold()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
@@ -71,9 +73,9 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
+        String expectedSessionString = sessionConnectionDetails( SESSION_1,"TestUser" );
         logProvider.assertExactly(
-            inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 11L, expectedSessionString, QUERY_1 ) )
+            inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 11L, expectedSessionString, QUERY_1 ) )
         );
     }
 
@@ -81,7 +83,6 @@ public class ConfiguredQueryLoggerTest
     public void shouldRespectThreshold()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
@@ -100,9 +101,9 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query2 );
 
         // then
-        String expectedSessionString = sessionConnectionDetails( SESSION_2, "TestUser2" );
+        String expectedSessionString = sessionConnectionDetails( SESSION_2,"TestUser2" );
         logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 9L, expectedSessionString, QUERY_2 ) )
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 9L, expectedSessionString, QUERY_2 ) )
         );
     }
 
@@ -110,7 +111,6 @@ public class ConfiguredQueryLoggerTest
     public void shouldKeepTrackOfDifferentSessions()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ExecutingQuery query1 = query( SESSION_1, "TestUser1", QUERY_1 );
         clock.forward( 1, TimeUnit.MILLISECONDS );
         ExecutingQuery query2 = query( SESSION_2, "TestUser2", QUERY_2 );
@@ -130,11 +130,11 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query1 );
 
         // then
-        String expectedSession1String = sessionConnectionDetails( SESSION_1, "TestUser1" );
-        String expectedSession2String = sessionConnectionDetails( SESSION_2, "TestUser2" );
+        String expectedSession1String = sessionConnectionDetails( SESSION_1,"TestUser1" );
+        String expectedSession2String = sessionConnectionDetails( SESSION_2,"TestUser2" );
         logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 17L, expectedSession2String, QUERY_2 ) ),
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 25L, expectedSession1String, QUERY_1 ) )
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 17L, expectedSession2String, QUERY_2 ) ),
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 25L, expectedSession1String, QUERY_1 ) )
         );
     }
 
@@ -142,7 +142,6 @@ public class ConfiguredQueryLoggerTest
     public void shouldLogQueryOnFailureEvenIfFasterThanThreshold()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
 
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
@@ -155,7 +154,7 @@ public class ConfiguredQueryLoggerTest
         // then
         logProvider.assertExactly(
                 inLog( getClass() )
-                        .error( is( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" )
+                        .error( is( "1 ms: " + sessionConnectionDetails( SESSION_1,"TestUser" )
                                 + " - MATCH (n) RETURN n - {}" ), sameInstance( failure ) )
         );
     }
@@ -164,10 +163,9 @@ public class ConfiguredQueryLoggerTest
     public void shouldLogQueryParameters()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
-        ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_4, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, DEFAULT_DATABASE_NAME, "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" ) );
 
@@ -176,7 +174,7 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
+        String expectedSessionString = sessionConnectionDetails( SESSION_1,"TestUser" );
         logProvider.assertExactly(
             inLog( getClass() ).info( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
                     "{ages: " +
@@ -188,10 +186,9 @@ public class ConfiguredQueryLoggerTest
     public void shouldLogQueryParametersOnFailure()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
-        ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_4, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, DEFAULT_DATABASE_NAME, "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" ) );
         RuntimeException failure = new RuntimeException();
@@ -203,7 +200,7 @@ public class ConfiguredQueryLoggerTest
         // then
         logProvider.assertExactly(
             inLog( getClass() ).error(
-                    is( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" )
+                    is( "1 ms: " + sessionConnectionDetails( SESSION_1,"TestUser" )
                             + " - MATCH (n) WHERE n.age IN {ages} RETURN n - {ages: [41, 42, 43]} - {}" ),
                 sameInstance( failure ) )
         );
@@ -213,7 +210,6 @@ public class ConfiguredQueryLoggerTest
     public void shouldLogUserName()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
         // when
@@ -227,9 +223,9 @@ public class ConfiguredQueryLoggerTest
 
         // then
         logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 10L,
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
                         sessionConnectionDetails( SESSION_1, "TestUser" ), QUERY_1 ) ),
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 10L,
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
                         sessionConnectionDetails( SESSION_1, "AnotherUser" ), QUERY_1 ) )
         );
     }
@@ -238,16 +234,15 @@ public class ConfiguredQueryLoggerTest
     public void shouldLogMetaData()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
         // when
-        ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1, emptyMap(), map( "User", "UltiMate" ) );
+        ExecutingQuery query = query( SESSION_1, DEFAULT_DATABASE_NAME, "TestUser", QUERY_1, emptyMap(), map( "User", "UltiMate" ) );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
         ExecutingQuery anotherQuery =
-                query( SESSION_1, "AnotherUser", QUERY_1, emptyMap(), map( "Place", "Town" ) );
+                query( SESSION_1, DEFAULT_DATABASE_NAME, "AnotherUser", QUERY_1, emptyMap(), map( "Place", "Town" ) );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         Throwable error = new Throwable();
         queryLogger.failure( anotherQuery, error );
@@ -385,12 +380,12 @@ public class ConfiguredQueryLoggerTest
 
     private void runAndCheck( String inputQuery, String outputQuery, Map<String,Object> params, String paramsString )
     {
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
+        logProvider.clear();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" ) );
 
         // when
-        ExecutingQuery query = query( SESSION_1, "neo", inputQuery, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, DEFAULT_DATABASE_NAME, "neo", inputQuery, params, emptyMap() );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
@@ -405,7 +400,6 @@ public class ConfiguredQueryLoggerTest
     public void shouldBeAbleToLogDetailedTime()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_detailed_time_logging_enabled, "true" ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -424,7 +418,6 @@ public class ConfiguredQueryLoggerTest
     public void shouldBeAbleToLogAllocatedBytes()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_allocation_logging_enabled, "true" ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -443,7 +436,6 @@ public class ConfiguredQueryLoggerTest
     public void shouldBeAbleToLogPageHitsAndPageFaults()
     {
         // given
-        final AssertableLogProvider logProvider = new AssertableLogProvider();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_page_detail_logging_enabled, "true" ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
@@ -462,11 +454,9 @@ public class ConfiguredQueryLoggerTest
     @Test
     public void shouldLogRuntime()
     {
-        // given
-        AssertableLogProvider logProvider = new AssertableLogProvider();
         Map<String,Object> params = new HashMap<>();
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
-        ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_4, params, emptyMap() );
+        ExecutingQuery query = query( SESSION_1, DEFAULT_DATABASE_NAME, "TestUser", QUERY_4, params, emptyMap() );
         Config config = Config.defaults();
         config.augment( GraphDatabaseSettings.log_queries_parameter_logging_enabled, "true" );
         config.augment( GraphDatabaseSettings.log_queries_runtime_logging_enabled, "true" );
@@ -483,6 +473,30 @@ public class ConfiguredQueryLoggerTest
                 inLog( getClass() ).info( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
                         "{ages: [41, 42, 43]} - runtime=quantum" ) )
         );
+    }
+
+    @Test
+    public void includeDatabaseNameIntoQueryLogString()
+    {
+        ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
+
+        // when
+        ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
+        clock.forward( 10, TimeUnit.MILLISECONDS );
+        queryLogger.success( query );
+
+        ExecutingQuery anotherQuery = query( SESSION_1, "otherDb", "AnotherUser", QUERY_1 );
+        clock.forward( 10, TimeUnit.MILLISECONDS );
+        queryLogger.success( anotherQuery );
+
+        // then
+        logProvider.assertExactly(
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
+                        sessionConnectionDetails( SESSION_1, DEFAULT_DATABASE_NAME,"TestUser" ), QUERY_1 ) ),
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
+                        sessionConnectionDetails( SESSION_1, "otherDb", "AnotherUser" ), QUERY_1 ) )
+        );
+
     }
 
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider )
@@ -502,16 +516,31 @@ public class ConfiguredQueryLoggerTest
             String username,
             String queryText )
     {
-        return query( sessionInfo, username, queryText, emptyMap(), emptyMap() );
-    }
-
-    private String sessionConnectionDetails( ClientConnectionInfo sessionInfo, String username )
-    {
-        return sessionInfo.asConnectionDetails()  + "\t" + username;
+        return query( sessionInfo, DEFAULT_DATABASE_NAME, username, queryText );
     }
 
     private ExecutingQuery query(
             ClientConnectionInfo sessionInfo,
+            String databaseName,
+            String username,
+            String queryText )
+    {
+        return query( sessionInfo, databaseName, username, queryText, emptyMap(), emptyMap() );
+    }
+
+    private String sessionConnectionDetails( ClientConnectionInfo sessionInfo, String username )
+    {
+        return sessionConnectionDetails( sessionInfo,  DEFAULT_DATABASE_NAME, username );
+    }
+
+    private String sessionConnectionDetails( ClientConnectionInfo sessionInfo, String databaseName, String username )
+    {
+        return sessionInfo.asConnectionDetails()  + "\t" + databaseName + " - " + username ;
+    }
+
+    private ExecutingQuery query(
+            ClientConnectionInfo sessionInfo,
+            String databaseName,
             String username,
             String queryText,
             Map<String,Object> params,
@@ -519,9 +548,7 @@ public class ConfiguredQueryLoggerTest
     {
         Thread thread = Thread.currentThread();
         return new ExecutingQuery( queryId++,
-                sessionInfo,
-                username,
-                queryText,
+                sessionInfo, databaseName, username, queryText,
                 ValueUtils.asMapValue( params ),
                 metaData,
                 () -> 0,

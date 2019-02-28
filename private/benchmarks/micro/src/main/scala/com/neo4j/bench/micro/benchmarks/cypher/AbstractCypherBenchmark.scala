@@ -9,6 +9,7 @@ import java.util
 import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.ir.v4_0.{PlannerQuery, ProvidedOrder}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -185,20 +186,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       threadToStatementContextBridge,
       tx,
       initialStatement,
-      new ExecutingQuery(
-        queryId,
-        ClientConnectionInfo.EMBEDDED_CONNECTION,
-        "username",
-        "query text",
-        queryParameters,
-        metaData,
-        activeLockCount,
-        new DefaultPageCursorTracer(),
-        threadExecutingTheQuery.getId,
-        threadExecutingTheQuery.getName,
-        Clocks.nanoClock(),
-        CpuClock.CPU_CLOCK,
-        HeapAllocation.HEAP_ALLOCATION),
+      new ExecutingQuery(queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, GraphDatabaseSettings.DEFAULT_DATABASE_NAME, "username", "query text", queryParameters, metaData, activeLockCount, new DefaultPageCursorTracer(), threadExecutingTheQuery.getId, threadExecutingTheQuery.getName, Clocks.nanoClock(), CpuClock.CPU_CLOCK, HeapAllocation.HEAP_ALLOCATION),
       new DefaultValueMapper(proxySpi)) {
       override def close(success: Boolean): Unit = ()
     }

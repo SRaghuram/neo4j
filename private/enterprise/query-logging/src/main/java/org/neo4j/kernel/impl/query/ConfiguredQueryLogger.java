@@ -68,6 +68,7 @@ class ConfiguredQueryLogger implements QueryLogger
     {
         String sourceString = query.clientConnection().asConnectionDetails();
         String username = query.username();
+        String databaseName = query.databaseName();
         String queryText = query.queryText();
 
         Set<String> passwordParams = new HashSet<>();
@@ -104,7 +105,7 @@ class ConfiguredQueryLogger implements QueryLogger
         {
             QueryLogFormatter.formatPageDetails( result, query );
         }
-        result.append( sourceString ).append( "\t" ).append( username ).append( " - " ).append( queryText );
+        result.append( sourceString ).append( "\t" ).append( databaseName ).append( " - " ).append( username ).append( " - " ).append( queryText );
         if ( logQueryParameters )
         {
             QueryLogFormatter.formatMapValue( result.append(" - "), query.queryParameters(), passwordParams );

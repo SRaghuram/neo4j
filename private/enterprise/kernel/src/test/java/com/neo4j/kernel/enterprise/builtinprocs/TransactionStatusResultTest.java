@@ -56,7 +56,6 @@ import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.lock.LockTracer;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
-import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -69,8 +68,10 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.util.collection.CollectionsFactorySupplier.ON_HEAP;
 import static org.neo4j.test.rule.DatabaseRule.mockedTokenHolders;
+import static org.neo4j.values.virtual.VirtualValues.EMPTY_MAP;
 
 class TransactionStatusResultTest
 {
@@ -199,7 +200,7 @@ class TransactionStatusResultTest
 
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
-        return new ExecutingQuery( queryId, getTestConnectionInfo(), "testUser", "testQuery", VirtualValues.EMPTY_MAP,
+        return new ExecutingQuery( queryId, getTestConnectionInfo(), DEFAULT_DATABASE_NAME, "testUser", "testQuery", EMPTY_MAP,
                 stringObjectEmptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 new CountingNanoClock(), new CountingCpuClock(), new CountingHeapAllocation() );

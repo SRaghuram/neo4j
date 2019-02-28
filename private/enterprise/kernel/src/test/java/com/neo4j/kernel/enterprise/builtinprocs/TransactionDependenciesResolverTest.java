@@ -34,6 +34,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TransactionDependenciesResolverTest
 {
@@ -149,7 +150,7 @@ class TransactionDependenciesResolverTest
 
     private ExecutingQuery createExecutingQuery( long queryId )
     {
-        return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, "test", "testQuey",
+        return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, DEFAULT_DATABASE_NAME, "test", "testQuey",
                 VirtualValues.EMPTY_MAP, Collections.emptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 Clocks.nanoClock(), CpuClock.NOT_AVAILABLE, HeapAllocation.NOT_AVAILABLE );

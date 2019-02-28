@@ -41,7 +41,6 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
 
     // These fields are only accessed during (re-) configuration, and are protected from concurrent access
     // by the monitor lock on DynamicQueryLogger.
-    private ZoneId currentLogTimeZone;
     private FormattedLog.Builder logBuilder;
     private File currentQueryLogFile;
     private long currentRotationThreshold;
@@ -62,7 +61,7 @@ class DynamicLoggingQueryExecutionMonitor extends LifecycleAdapter implements Qu
     public synchronized void init()
     {
         // This set of settings are currently not dynamic:
-        currentLogTimeZone = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
+        ZoneId currentLogTimeZone = config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
         logBuilder = FormattedLog.withZoneId( currentLogTimeZone );
         currentQueryLogFile = config.get( GraphDatabaseSettings.log_queries_filename );
 
