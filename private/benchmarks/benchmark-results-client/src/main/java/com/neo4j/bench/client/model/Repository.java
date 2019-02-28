@@ -15,11 +15,6 @@ public enum Repository
     // -----------------------
     // --- benchmark tools ---
     // -----------------------
-
-
-    // OPTIONS:
-    //
-    //
     MICRO_BENCH( "micro",
                  "neo4j",
                  "neo-technology",
