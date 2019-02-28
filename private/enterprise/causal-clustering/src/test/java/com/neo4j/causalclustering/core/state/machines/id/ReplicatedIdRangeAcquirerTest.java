@@ -28,6 +28,7 @@ import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.rule.fs.FileSystemRule;
 
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ReplicatedIdRangeAcquirerTest
 {
@@ -100,7 +101,7 @@ public class ReplicatedIdRangeAcquirerTest
     {
         Map<IdType,Integer> allocationSizes =
                 Arrays.stream( IdType.values() ).collect( Collectors.toMap( idType -> idType, idType -> idRangeLength ) );
-        ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( "graph.db", replicator, idAllocationStateMachine,
+        ReplicatedIdRangeAcquirer acquirer = new ReplicatedIdRangeAcquirer( DEFAULT_DATABASE_NAME, replicator, idAllocationStateMachine,
                 allocationSizes, member, NullLogProvider.getInstance() );
 
         return new ReplicatedIdGenerator( fs, file, IdType.ARRAY_BLOCK, () -> initialHighId, acquirer, NullLogProvider.getInstance(), 10, true, panicker );

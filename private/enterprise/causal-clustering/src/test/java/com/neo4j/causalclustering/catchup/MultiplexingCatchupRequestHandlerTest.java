@@ -28,8 +28,8 @@ import static org.mockito.Mockito.when;
 
 class MultiplexingCatchupRequestHandlerTest
 {
-    private static final String EXISTING_DB_NAME = "existing.graph.db";
-    private static final String NON_EXISTING_DB_NAME = "non.existing.graph.db";
+    private static final String EXISTING_DB_NAME = "existing.neo4j";
+    private static final String NON_EXISTING_DB_NAME = "non.existing.neo4j";
     private static final String SUCCESS_RESPONSE = "Correct handler invoked";
 
     private final EmbeddedChannel channel = new EmbeddedChannel();

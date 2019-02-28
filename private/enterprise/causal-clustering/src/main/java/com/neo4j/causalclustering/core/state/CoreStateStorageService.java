@@ -123,7 +123,7 @@ public class CoreStateStorageService
      *      cluster-state/
      *
      * but has now moved down to
-     *      cluster-state/db/<database-name>     (typically /graph.db)
+     *      cluster-state/db/<database-name>     (typically /neo4j)
      */
     private void migrateDatabaseStateIfNeeded( String databaseName )
     {

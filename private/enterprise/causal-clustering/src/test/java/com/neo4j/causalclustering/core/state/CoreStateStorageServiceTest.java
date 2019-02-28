@@ -21,6 +21,7 @@ import org.neo4j.test.rule.fs.FileSystemRule;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class CoreStateStorageServiceTest
 {
@@ -41,7 +42,7 @@ public class CoreStateStorageServiceTest
         CoreStateStorageService coreStateStorage =
                 new CoreStateStorageService( fs, clusterState, new LifeSupport(), NullLogProvider.getInstance(), Config.defaults() );
 
-        String databaseName = "graph.db";
+        String databaseName = DEFAULT_DATABASE_NAME;
 
         File oldIdAllocDir = makeDir( clusterStateDir, CoreStateFiles.ID_ALLOCATION.directoryName() );
         File oldLockTokenDir = makeDir( clusterStateDir, CoreStateFiles.LOCK_TOKEN.directoryName() );

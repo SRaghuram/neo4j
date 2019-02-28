@@ -24,6 +24,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.mode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class CommercialNeoServerTest
@@ -46,7 +47,7 @@ class CommercialNeoServerTest
         server.start();
         try
         {
-            Path expectedPath = Paths.get( testDirectory.storeDir().getPath(), "data", "databases", "graph.db" );
+            Path expectedPath = Paths.get( testDirectory.storeDir().getPath(), "data", "databases", DEFAULT_DATABASE_NAME );
             GraphDatabaseFacade graph = server.getDatabase().getGraph();
             assertEquals( expectedPath, graph.databaseLayout().databaseDirectory().toPath() );
         }

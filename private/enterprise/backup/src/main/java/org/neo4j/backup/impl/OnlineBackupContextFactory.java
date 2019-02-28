@@ -25,6 +25,7 @@ import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.impl.util.Converters;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.DEFAULT_BACKUP_PORT;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
@@ -97,11 +98,11 @@ class OnlineBackupContextFactory
                 .withArgument( new MandatoryCanonicalPath(
                         ARG_NAME_BACKUP_DIRECTORY, "backup-path", ARG_DESC_BACKUP_DIRECTORY ) )
                 .withArgument( new MandatoryNamedArg(
-                        ARG_NAME_BACKUP_NAME, "graph.db-backup", ARG_DESC_BACKUP_NAME ) )
+                        ARG_NAME_BACKUP_NAME, DEFAULT_DATABASE_NAME + "-backup", ARG_DESC_BACKUP_NAME ) )
                 .withArgument( new OptionalNamedArg(
                         ARG_NAME_BACKUP_SOURCE, "address", ARG_DFLT_BACKUP_SOURCE, ARG_DESC_BACKUP_SOURCE ) )
                 .withArgument( new OptionalNamedArg(
-                        ARG_NAME_DATABASE_NAME, "graph.db", ARG_DFLT_DATABASE_NAME, ARG_DESC_DATABASE_NAME ) )
+                        ARG_NAME_DATABASE_NAME, DEFAULT_DATABASE_NAME, ARG_DFLT_DATABASE_NAME, ARG_DESC_DATABASE_NAME ) )
                 .withArgument( new OptionalBooleanArg(
                         ARG_NAME_FALLBACK_FULL, true, ARG_DESC_FALLBACK_FULL ) )
                 .withArgument( new OptionalNamedArg(

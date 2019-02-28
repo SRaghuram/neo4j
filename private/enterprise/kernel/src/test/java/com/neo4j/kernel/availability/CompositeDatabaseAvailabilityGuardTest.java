@@ -28,6 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 class CompositeDatabaseAvailabilityGuardTest
 {
@@ -44,7 +45,7 @@ class CompositeDatabaseAvailabilityGuardTest
         mockClock = mock( Clock.class );
         compositeGuard = new CompositeDatabaseAvailabilityGuard( mockClock, NullLogService.getInstance() );
         defaultGuard = compositeGuard.createDatabaseAvailabilityGuard( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        systemGuard = compositeGuard.createDatabaseAvailabilityGuard( "system.db" );
+        systemGuard = compositeGuard.createDatabaseAvailabilityGuard( SYSTEM_DATABASE_NAME );
     }
 
     @Test

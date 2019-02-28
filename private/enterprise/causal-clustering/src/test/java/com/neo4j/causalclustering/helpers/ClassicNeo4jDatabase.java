@@ -25,6 +25,7 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static java.util.Optional.of;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
@@ -61,7 +62,7 @@ public class ClassicNeo4jDatabase
         private final File baseDirectoryAbsolute;
         private final FileSystemAbstraction fileSystem;
 
-        private String databaseName = "graph.db";
+        private String databaseName = DEFAULT_DATABASE_NAME;
         private boolean needRecover;
         private int nrOfNodes = 10;
         private String recordFormat = Standard.LATEST_NAME;

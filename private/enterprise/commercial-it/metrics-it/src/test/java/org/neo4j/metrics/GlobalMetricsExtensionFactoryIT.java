@@ -158,7 +158,7 @@ public class GlobalMetricsExtensionFactoryIT
         @Override
         protected boolean matchesSafely( AnyValue[] item )
         {
-            return item.length > 2 && stringValue( "neo4j.metrics:name=neo4j.system.db.transaction.active_write" ).equals( item[0] ) &&
+            return item.length > 2 && stringValue( "neo4j.metrics:name=neo4j.system.transaction.active_write" ).equals( item[0] ) &&
                     stringValue( "Information on the management interface of the MBean" ).equals( item[1] );
         }
 

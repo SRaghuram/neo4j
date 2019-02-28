@@ -67,7 +67,7 @@ class RotatableCsvOutputIT
     {
         // Commit a transaction and wait for rotation to happen
         doTransaction();
-        String committedTxMetric = "neo4j.graph.db.transaction.committed";
+        String committedTxMetric = "neo4j.neo4j.transaction.committed";
         waitForRotation( outputPath, committedTxMetric );
 
         // Latest file should now have recorded the transaction

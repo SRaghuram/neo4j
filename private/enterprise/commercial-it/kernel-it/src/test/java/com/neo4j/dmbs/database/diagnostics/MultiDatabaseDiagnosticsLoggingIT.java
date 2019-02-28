@@ -44,7 +44,7 @@ class MultiDatabaseDiagnosticsLoggingIT
     @Test
     void dumpDefaultDatabaseInformation()
     {
-        provider.assertContainsMessageContaining( "Database: graph.db" );
+        provider.assertContainsMessageContaining( "Database: neo4j" );
         provider.assertContainsMessageContaining( "Version" );
         provider.assertContainsMessageContaining( "Store files" );
         provider.assertContainsMessageContaining( "Transaction log" );

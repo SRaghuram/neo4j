@@ -20,7 +20,7 @@ import static java.lang.String.format;
  * Typical setup
  *
  *   root state        $NEO4J_HOME/data/cluster-state
- *   database state    $NEO4J_HOME/data/cluster-state/db/graph.db
+ *   database state    $NEO4J_HOME/data/cluster-state/db/neo4j
  * </pre>
  */
 public class ClusterStateDirectory

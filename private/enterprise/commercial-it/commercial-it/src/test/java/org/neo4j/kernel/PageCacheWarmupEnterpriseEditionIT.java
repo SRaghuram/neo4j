@@ -184,7 +184,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         deleteRecursively( graphdb );
         cleanDirectory( logs );
-        File dumpFile = new File( dumpDir, "graph.db.dump" );
+        File dumpFile = new File( dumpDir, "neo4j.dump" );
         adminTool.execute( homePath, homePath, "load", "--database=" + DEFAULT_DATABASE_NAME, "--from=" + dumpFile );
         FileUtils.copyRecursively( graphdb, databaseDir );
         deleteRecursively( graphdb );

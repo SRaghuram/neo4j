@@ -64,7 +64,7 @@ class PrometheusOutputIT
 
         assertTrue( s.hasNext() );
         String response = s.next();
-        assertThat( response, containsString( "neo4j.graph.db.ids_in_use.node" ) );
-        assertThat( response, containsString( "neo4j.graph.db.ids_in_use.relationship_type" ) );
+        assertThat( response, containsString( "neo4j.neo4j.ids_in_use.node" ) );
+        assertThat( response, containsString( "neo4j.neo4j.ids_in_use.relationship_type" ) );
     }
 }

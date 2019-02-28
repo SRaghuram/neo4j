@@ -22,6 +22,8 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMERCIAL;
 
@@ -48,7 +50,7 @@ class CommercialEditionModuleTest
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );
-        order.verify( manager ).createDatabase( eq( "system.db" ) );
-        order.verify( manager ).createDatabase( eq( "graph.db" ) );
+        order.verify( manager ).createDatabase( eq( SYSTEM_DATABASE_NAME ) );
+        order.verify( manager ).createDatabase( eq( DEFAULT_DATABASE_NAME ) );
     }
 }

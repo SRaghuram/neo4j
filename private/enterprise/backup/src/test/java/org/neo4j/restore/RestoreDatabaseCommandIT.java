@@ -266,7 +266,7 @@ public class RestoreDatabaseCommandIT
                             "%n" +
                             "options:%n" +
                             "  --from=<backup-directory>   Path to backup to restore from.%n" +
-                            "  --database=<name>           Name of database. [default:graph.db]%n" +
+                            "  --database=<name>           Name of database. [default:neo4j]%n" +
                             "  --force=<true|false>        If an existing database should be replaced.%n" +
                             "                              [default:false]%n" ),
                     baos.toString() );

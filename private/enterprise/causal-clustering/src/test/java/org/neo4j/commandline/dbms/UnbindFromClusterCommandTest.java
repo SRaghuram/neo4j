@@ -42,6 +42,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class UnbindFromClusterCommandTest
 {
@@ -129,7 +130,7 @@ public class UnbindFromClusterCommandTest
         UnbindFromClusterCommand command = new UnbindFromClusterCommand( homeDir, confDir, outsideWorld );
 
         // when
-        command.execute( databaseNameParameter( "graph.db" ) );
+        command.execute( databaseNameParameter( DEFAULT_DATABASE_NAME ) );
 
         // then
         assertFalse( fs.fileExists( clusterStateDir ) );
@@ -172,7 +173,7 @@ public class UnbindFromClusterCommandTest
 
     private Path createFakeDbDir( Path homeDir ) throws IOException
     {
-        Path graphDb = homeDir.resolve( "data/databases/graph.db" );
+        Path graphDb = homeDir.resolve( "data/databases/" + DEFAULT_DATABASE_NAME );
         fs.mkdirs( graphDb.toFile() );
         fs.create( graphDb.resolve( "neostore" ).toFile() ).close();
         return graphDb;

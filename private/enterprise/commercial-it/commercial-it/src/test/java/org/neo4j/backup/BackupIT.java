@@ -516,12 +516,12 @@ class BackupIT
         executeBackup( db );
 
         // unexpected file was moved to an error directory
-        File incorrectExistingBackupDir = new File( backupsDir, "graph.db.err.0" );
+        File incorrectExistingBackupDir = new File( backupsDir, "neo4j.err.0" );
         assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
         assertTrue( fs.fileExists( new File( incorrectExistingBackupDir, incorrectFile.getName() ) ) );
 
-        // no temporary directories are present, i.e. 'graph.db.temp.0'
-        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "graph.db.err.0" ) );
+        // no temporary directories are present, i.e. 'neo4j.temp.0'
+        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "neo4j.err.0" ) );
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
@@ -541,14 +541,14 @@ class BackupIT
         executeBackup( db );
 
         // unexpected directory was moved to an error directory
-        File incorrectExistingBackupDir = new File( backupsDir, "graph.db.err.0" );
+        File incorrectExistingBackupDir = new File( backupsDir, "neo4j.err.0" );
         assertTrue( fs.isDirectory( incorrectExistingBackupDir ) );
         File movedIncorrectDir = new File( incorrectExistingBackupDir, incorrectDir.getName() );
         assertTrue( fs.isDirectory( movedIncorrectDir ) );
         assertTrue( fs.fileExists( new File( movedIncorrectDir, incorrectFile.getName() ) ) );
 
-        // no temporary directories are present, i.e. 'graph.db.temp.0'
-        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "graph.db.err.0" ) );
+        // no temporary directories are present, i.e. 'neo4j.temp.0'
+        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "neo4j.err.0" ) );
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );

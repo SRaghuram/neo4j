@@ -61,6 +61,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class StoreCopyClientIT
@@ -118,7 +119,7 @@ public class StoreCopyClientIT
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
-        subject = new StoreCopyClient( catchUpClient, "graph.db", Monitors::new, logProvider, storeCopyBackoffStrategy );
+        subject = new StoreCopyClient( catchUpClient, DEFAULT_DATABASE_NAME, Monitors::new, logProvider, storeCopyBackoffStrategy );
     }
 
     @After

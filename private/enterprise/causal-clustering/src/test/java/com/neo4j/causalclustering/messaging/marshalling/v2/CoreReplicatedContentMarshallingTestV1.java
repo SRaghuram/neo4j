@@ -61,7 +61,7 @@ public class CoreReplicatedContentMarshallingTestV1
     @Test
     public void shouldSerializeAndDeserialize() throws Exception
     {
-        ChannelMarshal<ReplicatedContent> coreReplicatedContentMarshal = CoreReplicatedContentMarshalFactory.marshalV1( "graph.db" );
+        ChannelMarshal<ReplicatedContent> coreReplicatedContentMarshal = CoreReplicatedContentMarshalFactory.marshalV1( DEFAULT_DATABASE_NAME );
         ByteBuf buffer = buffers.buffer();
         BoundedNetworkWritableChannel channel = new BoundedNetworkWritableChannel( buffer );
         coreReplicatedContentMarshal.marshal( replicatedContent, channel );

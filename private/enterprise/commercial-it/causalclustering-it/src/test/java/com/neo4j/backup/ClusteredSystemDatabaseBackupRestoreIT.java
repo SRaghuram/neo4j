@@ -88,7 +88,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     @Test
     void backingUpSystemDatabaseShouldBeSuccessful() throws Exception
     {
-        String backupName = "system.db-backup";
+        String backupName = "system-backup";
         CoreClusterMember leader = cluster.awaitLeader();
         String leaderAddress = leader.settingValue( backupAddress );
 
@@ -112,7 +112,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         // given
         String preBackupUsername = "preBackup";
         String postBackupUsername = "postBackup";
-        String backupName = "system.db-backup";
+        String backupName = "system-backup";
         CoreClusterMember leader = cluster.awaitLeader();
         String leaderAddress = leader.settingValue( backupAddress );
 

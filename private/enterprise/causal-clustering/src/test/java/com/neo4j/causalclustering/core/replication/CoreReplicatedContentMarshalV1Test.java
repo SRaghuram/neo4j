@@ -37,11 +37,12 @@ import org.neo4j.storageengine.api.StorageCommand;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
 public class CoreReplicatedContentMarshalV1Test
 {
-    private final ChannelMarshal<ReplicatedContent> marshal = CoreReplicatedContentMarshalFactory.marshalV1( "graph.db" );
+    private final ChannelMarshal<ReplicatedContent> marshal = CoreReplicatedContentMarshalFactory.marshalV1( DEFAULT_DATABASE_NAME );
 
     @Test
     public void shouldMarshalTransactionReference() throws Exception
@@ -51,7 +52,7 @@ public class CoreReplicatedContentMarshalV1Test
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
         representation.setHeader( new byte[]{0}, 1, 1, 1, 1, 1, 1 );
 
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, "graph.db" );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DEFAULT_DATABASE_NAME );
 
         assertMarshalingEquality( buffer, replicatedTx );
     }
@@ -63,7 +64,7 @@ public class CoreReplicatedContentMarshalV1Test
         PhysicalTransactionRepresentation representation =
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
 
-        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, "graph.db" );
+        TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DEFAULT_DATABASE_NAME );
 
         assertMarshalingEquality( buffer, replicatedTx );
     }
@@ -85,7 +86,7 @@ public class CoreReplicatedContentMarshalV1Test
     {
         ByteBuf buffer = Unpooled.buffer();
         ReplicatedContent message = new ReplicatedIdAllocationRequest(
-                new MemberId( UUID.randomUUID() ), IdType.PROPERTY, 100, 200, "graph.db" );
+                new MemberId( UUID.randomUUID() ), IdType.PROPERTY, 100, 200, DEFAULT_DATABASE_NAME );
 
         assertMarshalingEquality( buffer, message );
     }

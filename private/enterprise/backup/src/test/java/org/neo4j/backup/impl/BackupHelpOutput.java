@@ -17,8 +17,8 @@ public class BackupHelpOutput
     {
         List<String> lines = new ArrayList<>();
 
-        lines.add( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<graph.db-backup>" );
-        lines.add( "                          [--from=<address>] [--database=<graph.db>]" );
+        lines.add( "usage: neo4j-admin backup --backup-dir=<backup-path> --name=<neo4j-backup>" );
+        lines.add( "                          [--from=<address>] [--database=<neo4j>]" );
         lines.add( "                          [--fallback-to-full[=<true|false>]] [--pagecache=<8m>]" );
         lines.add( "                          [--check-consistency[=<true|false>]]" );
         lines.add( "                          [--cc-report-dir=<directory>]" );
@@ -47,7 +47,7 @@ public class BackupHelpOutput
         lines.add( "" );
         lines.add( "options:" );
         lines.add( "  --backup-dir=<backup-path>               Directory to place backup in." );
-        lines.add( "  --name=<graph.db-backup>                 Name of backup. If a backup with this" );
+        lines.add( "  --name=<neo4j-backup>                    Name of backup. If a backup with this" );
         lines.add( "                                           name already exists an incremental" );
         lines.add( "                                           backup will be attempted." );
         lines.add( "  --from=<address>                         Host and port of Neo4j." );

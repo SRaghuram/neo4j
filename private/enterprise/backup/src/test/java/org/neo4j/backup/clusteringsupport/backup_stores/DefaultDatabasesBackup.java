@@ -8,7 +8,7 @@ package org.neo4j.backup.clusteringsupport.backup_stores;
 import java.io.File;
 
 /**
- * Simple struct for the pair of databases created by Neo4j by default: system.db and graph.db
+ * Simple struct for the pair of databases created by Neo4j by default: system and neo4j
  */
 public class DefaultDatabasesBackup
 {

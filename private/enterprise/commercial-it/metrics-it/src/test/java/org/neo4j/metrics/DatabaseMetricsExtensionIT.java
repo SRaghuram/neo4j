@@ -86,7 +86,7 @@ public class DatabaseMetricsExtensionIT
 
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j.graph.db.transaction.committed" );
+        File metricsFile = metricsCsv( outputPath, "neo4j.neo4j.transaction.committed" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -104,7 +104,7 @@ public class DatabaseMetricsExtensionIT
         // GIVEN
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
-        File metricsFile = metricsCsv( outputPath, "neo4j.graph.db.ids_in_use.node" );
+        File metricsFile = metricsCsv( outputPath, "neo4j.neo4j.ids_in_use.node" );
 
         // WHEN
         // We should at least have a "timestamp" column, and a "neo4j.transaction.committed" column
@@ -139,8 +139,8 @@ public class DatabaseMetricsExtensionIT
             addNodes( 1 );
         }
 
-        File replanCountMetricFile = metricsCsv( outputPath, "neo4j.graph.db.cypher.replan_events" );
-        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j.graph.db.cypher.replan_wait_time" );
+        File replanCountMetricFile = metricsCsv( outputPath, "neo4j.neo4j.cypher.replan_events" );
+        File replanWaitMetricFile = metricsCsv( outputPath, "neo4j.neo4j.cypher.replan_wait_time" );
 
         // THEN see that the replan metric have pickup up at least one replan event
         // since reporting happens in an async fashion then give it some time and check now and then
@@ -169,7 +169,7 @@ public class DatabaseMetricsExtensionIT
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
-        File metricFile = metricsCsv( outputPath, "neo4j.graph.db.check_point.duration" );
+        File metricFile = metricsCsv( outputPath, "neo4j.neo4j.check_point.duration" );
 
         long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 

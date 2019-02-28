@@ -180,7 +180,7 @@ class StoreCopyClientTest
         }
         else
         {
-            // else, if Catchup V1 is being used, both the storeId should always be that of the default database, graph.db
+            // else, if Catchup V1 is being used, both the storeId should always be that of the default database, neo4j
             assertEquals( storeIdA, defaultDbStoreId );
             assertEquals( storeIdB, defaultDbStoreId );
         }
