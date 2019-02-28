@@ -66,6 +66,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
@@ -499,7 +500,7 @@ public class QueryLoggerIT
 
     private static String connectionAndUserDetails()
     {
-        return EMBEDDED_CONNECTION.asConnectionDetails() + "\t";
+        return EMBEDDED_CONNECTION.asConnectionDetails() + "\t" + DEFAULT_DATABASE_NAME + " - ";
     }
 
     private List<String> readAllLinesSilent( File logFilename )
