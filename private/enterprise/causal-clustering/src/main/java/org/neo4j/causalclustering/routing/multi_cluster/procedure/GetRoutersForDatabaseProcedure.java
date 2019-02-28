@@ -24,6 +24,7 @@ import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.procedure.Mode;
 
 import static org.neo4j.causalclustering.routing.Util.extractBoltAddress;
 import static org.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.DATABASE;
@@ -41,6 +42,7 @@ public class GetRoutersForDatabaseProcedure implements CallableProcedure
                     .in( DATABASE.parameterName(), Neo4jTypes.NTString )
                     .out( TTL.parameterName(), Neo4jTypes.NTInteger )
                     .out( ROUTERS.parameterName(), Neo4jTypes.NTList( Neo4jTypes.NTMap ) )
+                    .mode( Mode.DBMS )
                     .description( DESCRIPTION )
                     .build();
 

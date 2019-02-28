@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
 import org.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
@@ -392,7 +391,8 @@ public class GetServersProcedureV1Test
             for ( Map<String,Object> single : result )
             {
                 Role role = Role.valueOf( (String) single.get( "role" ) );
-                Set<AdvertisedSocketAddress> addresses = parse( (Object[]) single.get( "addresses" ) );
+                @SuppressWarnings( "unchecked" )
+                Set<AdvertisedSocketAddress> addresses = parseAddresses( (List<String>) single.get( "addresses" ) );
                 assertFalse( view.containsKey( role ) );
                 view.put( role, addresses );
             }
@@ -400,16 +400,16 @@ public class GetServersProcedureV1Test
             return new ClusterView( view );
         }
 
-        private static Set<AdvertisedSocketAddress> parse( Object[] addresses )
+        private static Set<AdvertisedSocketAddress> parseAddresses( List<String> addresses )
         {
             List<AdvertisedSocketAddress> list =
-                    Stream.of( addresses ).map( address -> parse( (String) address ) ).collect( toList() );
+                    addresses.stream().map( ClusterView::parseAddress ).collect( toList() );
             Set<AdvertisedSocketAddress> set = new HashSet<>( list );
             assertEquals( list.size(), set.size() );
             return set;
         }
 
-        private static AdvertisedSocketAddress parse( String address )
+        private static AdvertisedSocketAddress parseAddress( String address )
         {
             String[] split = address.split( ":" );
             assertEquals( 2, split.length );

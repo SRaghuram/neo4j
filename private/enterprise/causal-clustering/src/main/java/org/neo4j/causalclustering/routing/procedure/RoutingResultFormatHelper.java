@@ -6,7 +6,6 @@
 package org.neo4j.causalclustering.routing.procedure;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.neo4j.causalclustering.routing.Endpoint;
 import org.neo4j.causalclustering.routing.Role;
@@ -17,10 +16,10 @@ import static java.util.stream.Collectors.toList;
 public final class RoutingResultFormatHelper
 {
 
-    public static List<Endpoint> parseEndpoints( Object[] addresses, Role role )
+    public static List<Endpoint> parseEndpoints( List<String> addresses, Role role )
     {
-        return Stream.of( addresses )
-                .map( rawAddress -> parseAddress( (String) rawAddress ) )
+        return addresses.stream()
+                .map( RoutingResultFormatHelper::parseAddress )
                 .map( address -> new Endpoint( address, role ) )
                 .collect( toList() );
     }

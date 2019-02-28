@@ -20,6 +20,7 @@ import org.neo4j.causalclustering.routing.load_balancing.LoadBalancingResult;
 import org.neo4j.helpers.SocketAddress;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.neo4j.causalclustering.routing.Role.READ;
 import static org.neo4j.causalclustering.routing.Role.ROUTE;
 import static org.neo4j.causalclustering.routing.Role.WRITE;
@@ -39,13 +40,13 @@ public class ResultFormatV1
 
     static Object[] build( LoadBalancingProcessor.Result result )
     {
-        Object[] routers = result.routeEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).toArray();
-        Object[] readers = result.readEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).toArray();
-        Object[] writers = result.writeEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).toArray();
+        List<String> routers = result.routeEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).collect( toList() );
+        List<String> readers = result.readEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).collect( toList() );
+        List<String> writers = result.writeEndpoints().stream().map( Endpoint::address ).map( SocketAddress::toString ).collect( toList() );
 
         List<Map<String,Object>> servers = new ArrayList<>();
 
-        if ( writers.length > 0 )
+        if ( writers.size() > 0 )
         {
             Map<String,Object> map = new TreeMap<>();
 
@@ -55,7 +56,7 @@ public class ResultFormatV1
             servers.add( map );
         }
 
-        if ( readers.length > 0 )
+        if ( readers.size() > 0 )
         {
             Map<String,Object> map = new TreeMap<>();
 
@@ -65,7 +66,7 @@ public class ResultFormatV1
             servers.add( map );
         }
 
-        if ( routers.length > 0 )
+        if ( routers.size() > 0 )
         {
             Map<String,Object> map = new TreeMap<>();
 
@@ -108,7 +109,8 @@ public class ResultFormatV1
         for ( Map<String,Object> single : result )
         {
             Role role = Role.valueOf( (String) single.get( "role" ) );
-            List<Endpoint> addresses = parseEndpoints( (Object[]) single.get( "addresses" ), role );
+            @SuppressWarnings( "unchecked" )
+            List<Endpoint> addresses = parseEndpoints( (List<String>) single.get( "addresses" ), role );
             endpoints.put( role, addresses );
         }
 
