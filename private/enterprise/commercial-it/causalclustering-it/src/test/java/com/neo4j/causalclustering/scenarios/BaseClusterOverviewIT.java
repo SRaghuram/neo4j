@@ -247,7 +247,10 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverGreaterTermBasedLeaderStepdown() throws Exception
         {
-            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig
+                    .withNumberOfCoreMembers( 3 )
+                    .withNumberOfReadReplicas( 0 )
+                    .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, "false" ) ); // triggering elections doesn't work otherwise
             cluster.start();
 
             int originalCoreMembers = cluster.coreMembers().size();

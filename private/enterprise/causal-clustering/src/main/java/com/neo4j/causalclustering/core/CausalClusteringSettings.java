@@ -94,7 +94,7 @@ public class CausalClusteringSettings implements LoadableConfig
 
     @Description( "Enable pre-voting extension to the Raft protocol (this is breaking and must match between the core cluster members)" )
     public static final Setting<Boolean> enable_pre_voting =
-            setting( "causal_clustering.enable_pre_voting", BOOLEAN, FALSE );
+            setting( "causal_clustering.enable_pre_voting", BOOLEAN, TRUE );
 
     @Description( "The maximum batch size when catching up (in unit of entries)" )
     public static final Setting<Integer> catchup_batch_size =
