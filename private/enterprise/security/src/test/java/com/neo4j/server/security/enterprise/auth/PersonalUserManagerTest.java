@@ -6,69 +6,72 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.time.Clock;
 import java.util.Set;
 
-import org.neo4j.configuration.Config;
+import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
-import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
-import org.neo4j.logging.Log;
-import org.neo4j.server.security.auth.BasicPasswordPolicy;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
+import org.neo4j.logging.AssertableLogProvider;
 
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
+import static org.neo4j.test.assertion.Assert.assertException;
 
-public class PersonalUserManagerTest
+class PersonalUserManagerTest
 {
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
-    private PersonalUserManager userManager;
     private EvilUserManager evilUserManager;
-    private Log log;
+    private AssertableLogProvider log;
+    private SecurityLog securityLog;
 
     @Test
-    public void shouldHandleFailureToCreateUser() throws Exception
+    void shouldLogFailureCreateUser()
     {
         // Given
+        PersonalUserManager userManager = getUserManager( "Alice", true );
         evilUserManager.setFailNextCall();
+        log.clear();
 
         //Expect
-        expectedException.expect( IOException.class );
-        expectedException.expectMessage( "newUserException" );
-
-        // When
-        userManager.newUser( "hewhoshallnotbenamed", password( "avada kedavra" ), false );
-        verify( log ).error( withSubject( SecurityContext.AUTH_DISABLED.subject(), "tried to create user `%s`: %s" ),
-                "hewhoshallnotbenamed", "newUserException" );
+        assertException( () -> userManager.newUser( "HeWhoShallNotBeNamed", password( "avada kedavra" ), false ), IOException.class );
+        log.assertExactly( error( "[Alice]: tried to create user `%s`: %s", "HeWhoShallNotBeNamed", "newUserException" ) );
     }
 
-    @Before
-    public void setup()
+    @Test
+    void shouldLogUnauthorizedCreateUser()
     {
-        evilUserManager = new EvilUserManager(
-                new InternalFlatFileRealm( new InMemoryUserRepository(), new InMemoryRoleRepository(),
-                        new BasicPasswordPolicy(), new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ),
-                        new InternalFlatFileRealmIT.TestJobScheduler(), new InMemoryUserRepository(),
-                        new InMemoryUserRepository() ) );
-        log = spy( Log.class );
-        userManager = new PersonalUserManager( evilUserManager, AuthSubject.AUTH_DISABLED, new SecurityLog( log ), true );
+        // Given
+        PersonalUserManager userManager = getUserManager( "Bob", false );
+        log.clear();
+
+        //Expect
+        assertException( () -> userManager.newUser( "HeWhoShallNotBeNamed", password( "avada kedavra" ), false ), AuthorizationViolationException.class );
+        log.assertExactly( error( "[Bob]: tried to create user `%s`: %s", "HeWhoShallNotBeNamed", "Permission denied." ) );
     }
 
-    private String withSubject( AuthSubject subject, String msg )
+    @BeforeEach
+    void setup()
     {
-        return "[" + subject.username() + "] " + msg;
+        log = new AssertableLogProvider();
+        securityLog = new SecurityLog( log.getLog( getClass() ) );
+        EnterpriseUserManager realm = mock( EnterpriseUserManager.class );
+        evilUserManager = new EvilUserManager( realm );
+    }
+
+    private PersonalUserManager getUserManager( String userName, boolean isAdmin )
+    {
+        return new PersonalUserManager( evilUserManager, new MockAuthSubject( userName ), securityLog, isAdmin );
+    }
+
+    private AssertableLogProvider.LogMatcher error( String message, String... arguments )
+    {
+        return inLog( this.getClass() ).error( message, (Object[]) arguments );
     }
 
     private class EvilUserManager implements EnterpriseUserManager
@@ -260,6 +263,45 @@ public class PersonalUserManagerTest
         public Set<String> silentlyGetUsernamesForRole( String roleName )
         {
             return delegate.silentlyGetUsernamesForRole( roleName );
+        }
+    }
+
+    private static class MockAuthSubject implements AuthSubject
+    {
+        private final String name;
+
+        private MockAuthSubject( String name )
+        {
+            this.name = name;
+        }
+
+        @Override
+        public void logout()
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AuthenticationResult getAuthenticationResult()
+        {
+            return AuthenticationResult.SUCCESS;
+        }
+
+        @Override
+        public void setPasswordChangeNoLongerRequired()
+        {
+        }
+
+        @Override
+        public boolean hasUsername( String username )
+        {
+            return name.equals( username );
+        }
+
+        @Override
+        public String username()
+        {
+            return name;
         }
     }
 }
