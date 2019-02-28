@@ -5,7 +5,8 @@
  */
 package com.neo4j.bench.client.model;
 
-import java.util.ArrayList;
+import java.text.DecimalFormat;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -21,108 +22,63 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         this.verbose = verbose;
     }
 
-    public String toPrettyString( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
-    {
-        return toPrettyString( results, errors, verbose );
-    }
-
     public String toPrettyString( BenchmarkGroupBenchmarkMetrics results )
     {
-        List<TestRunError> errors = new ArrayList<>();
-        return toPrettyString( results, errors, verbose );
+        return toPrettyString( results, Collections.emptyList() );
     }
 
-    private static String toPrettyString( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors, boolean verbose )
+    public String toPrettyString( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
     {
-        int longestGroupName = longestStringIn( results.benchmarkGroupBenchmarks().stream()
-                                                       .map( BenchmarkGroupBenchmark::benchmarkGroup )
-                                                       .map( BenchmarkGroup::name ) );
+        assertNotEmpty( results, errors );
+        int longestGroupName = longestGroup( results, errors );
+        int longestBenchmarkName = longestBenchmark( results, errors );
 
-        int longestBenchmarkName = longestStringIn( results.benchmarkGroupBenchmarks().stream()
-                                                           .map( BenchmarkGroupBenchmark::benchmark )
-                                                           .map( Benchmark::name ) );
-
-        String format = prettyPrintFormat( verbose, longestGroupName, longestBenchmarkName );
+        RowWriter rowWriter = verbose
+                              ? new VerboseRowWriter( longestGroupName, longestBenchmarkName )
+                              : new ConciseRowWriter( longestGroupName, longestBenchmarkName );
 
         StringBuilder sb = new StringBuilder();
-        String header = prettyHeader( verbose, longestGroupName, longestBenchmarkName );
-        sb.append( header ).append( "\n" );
-        appendPrettyMetricsString( sb, verbose, results, format );
+        sb.append( rowWriter.prettyHeader() ).append( "\n" );
 
-        for ( TestRunError error : errors )
-        {
-            sb.append( prettyErrorRow( verbose, error.groupName(), error.benchmarkName(), format ) ).append( "\n" );
-        }
-
-        return sb.toString();
-    }
-
-    private static String prettyHeader( boolean verbose, int longestGroupName, int longestBenchmarkName )
-    {
-        String format = prettyPrintFormat( verbose, longestGroupName, longestBenchmarkName );
-        return verbose
-               ? String.format( format, "Group", "Benchmark", "Count", "Mean", "Min", "Median", "90th", "Max", "Unit" )
-               : String.format( format, "Group", "Benchmark", "Count", "Mean", "Unit" );
-    }
-
-    private static void appendPrettyMetricsString( StringBuilder sb, boolean verbose, BenchmarkGroupBenchmarkMetrics results, String format )
-    {
         for ( BenchmarkGroupBenchmark benchmark : results.benchmarkGroupBenchmarks().stream()
                                                          .sorted( new BenchmarkGroupBenchmarkComparator() )
                                                          .collect( toList() ) )
         {
             Metrics metrics = results.getMetricsFor( benchmark ).metrics();
-            sb.append( prettyMetricsRow( verbose, benchmark.benchmarkGroup(), benchmark.benchmark(), metrics, format ) ).append( "\n" );
+            sb.append( rowWriter.prettyDataRow( benchmark.benchmarkGroup().name(), benchmark.benchmark().name(), metrics ) ).append( "\n" );
+        }
+
+        for ( TestRunError error : errors )
+        {
+            sb.append( rowWriter.prettyErrorRow( error.groupName(), error.benchmarkName() ) ).append( "\n" );
+        }
+
+        return sb.toString();
+    }
+
+    private void assertNotEmpty( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
+    {
+        if ( results.benchmarkGroupBenchmarks().isEmpty() && errors.isEmpty() )
+        {
+            // TODO added as sanity check for now, in reality this should never happen
+            throw new RuntimeException( "No results or errors to print!" );
         }
     }
 
-    private static String prettyMetricsRow( boolean verbose,
-                                            BenchmarkGroup group,
-                                            Benchmark benchmark,
-                                            Metrics metrics,
-                                            String format )
+    private int longestGroup( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
     {
-        return verbose
-               ? String.format( format,
-                                group.name(),
-                                benchmark.name(),
-                                metrics.toMap().get( Metrics.SAMPLE_SIZE ),
-                                metrics.toMap().get( Metrics.MEAN ),
-                                ((Number) metrics.toMap().get( Metrics.MIN )).longValue(),
-                                ((Number) metrics.toMap().get( Metrics.PERCENTILE_50 )).longValue(),
-                                ((Number) metrics.toMap().get( Metrics.PERCENTILE_90 )).longValue(),
-                                ((Number) metrics.toMap().get( Metrics.MAX )).longValue(),
-                                metrics.toMap().get( Metrics.UNIT ) )
-               : String.format( format,
-                                group.name(),
-                                benchmark.name(),
-                                metrics.toMap().get( Metrics.SAMPLE_SIZE ),
-                                metrics.toMap().get( Metrics.MEAN ),
-                                metrics.toMap().get( Metrics.UNIT ) );
+        return Math.max( longestStringIn( results.benchmarkGroupBenchmarks().stream()
+                                                 .map( BenchmarkGroupBenchmark::benchmarkGroup )
+                                                 .map( BenchmarkGroup::name ) ),
+                         longestStringIn( errors.stream().map( TestRunError::groupName ) ) );
     }
 
-    private static String prettyErrorRow( boolean verbose,
-                                          String group,
-                                          String benchmark,
-                                          String format )
+    private int longestBenchmark( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
     {
-        return verbose
-               ? String.format( format,
-                                group,
-                                benchmark,
-                                "<error>",
-                                "<error>",
-                                "<error>",
-                                "<error>",
-                                "<error>",
-                                "<error>",
-                                "<error>" )
-               : String.format( format,
-                                group,
-                                benchmark,
-                                "<error>",
-                                "<error>",
-                                "<error>" );
+        return Math.max( longestStringIn( results.benchmarkGroupBenchmarks().stream()
+                                                 .map( BenchmarkGroupBenchmark::benchmark )
+                                                 .map( Benchmark::name ) ),
+                         longestStringIn( errors.stream().map( TestRunError::benchmarkName ) ) );
     }
 
     private static int longestStringIn( Stream<String> strings )
@@ -130,11 +86,99 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         return strings.mapToInt( String::length ).max().orElse( 0 );
     }
 
-    private static String prettyPrintFormat( boolean verbose, int longestGroupName, int longestBenchmarkName )
+    private static final DecimalFormat MEAN_FORMAT = new DecimalFormat( "###,###,##0.00" );
+
+    private interface RowWriter
     {
-        return verbose
-               ? "%1$-" + longestGroupName + "s   %2$-" + longestBenchmarkName + "s   %3$-10s %4$-10s %5$-10s %6$-10s %7$-10s %8$-10s %9$-10s"
-               : "%1$-" + longestGroupName + "s   %2$-" + longestBenchmarkName + "s   %3$-10s %4$-10s %5$-10s";
+        String prettyHeader();
+
+        String prettyDataRow( String group, String benchmark, Metrics metrics );
+
+        String prettyErrorRow( String group, String benchmark );
+    }
+
+    private static class ConciseRowWriter implements RowWriter
+    {
+        private final String format;
+
+        private ConciseRowWriter( int longestGroupName, int longestBenchmarkName )
+        {
+            this.format = "%1$-" + longestGroupName + "s   %2$-" + longestBenchmarkName + "s   %3$-10s %4$-10s %5$-10s";
+        }
+
+        @Override
+        public String prettyHeader()
+        {
+            return String.format( format, "Group", "Benchmark", "Count", "Mean", "Unit" );
+        }
+
+        @Override
+        public String prettyDataRow( String group, String benchmark, Metrics metrics )
+        {
+            return String.format( format,
+                                  group,
+                                  benchmark,
+                                  metrics.toMap().get( Metrics.SAMPLE_SIZE ),
+                                  MEAN_FORMAT.format( metrics.toMap().get( Metrics.MEAN ) ),
+                                  metrics.toMap().get( Metrics.UNIT ) );
+        }
+
+        @Override
+        public String prettyErrorRow( String group, String benchmark )
+        {
+            return String.format( format,
+                                  group,
+                                  benchmark,
+                                  "<error>",
+                                  "<error>",
+                                  "<error>" );
+        }
+    }
+
+    private static class VerboseRowWriter implements RowWriter
+    {
+        private final String format;
+
+        private VerboseRowWriter( int longestGroupName, int longestBenchmarkName )
+        {
+            this.format = "%1$-" + longestGroupName + "s   %2$-" + longestBenchmarkName + "s   %3$-10s %4$-10s %5$-10s %6$-10s %7$-10s %8$-10s %9$-10s";
+        }
+
+        @Override
+        public String prettyHeader()
+        {
+            return String.format( format, "Group", "Benchmark", "Count", "Mean", "Min", "Median", "90th", "Max", "Unit" );
+        }
+
+        @Override
+        public String prettyDataRow( String group, String benchmark, Metrics metrics )
+        {
+            return String.format( format,
+                                  group,
+                                  benchmark,
+                                  metrics.toMap().get( Metrics.SAMPLE_SIZE ),
+                                  MEAN_FORMAT.format( metrics.toMap().get( Metrics.MEAN ) ),
+                                  ((Number) metrics.toMap().get( Metrics.MIN )).longValue(),
+                                  ((Number) metrics.toMap().get( Metrics.PERCENTILE_50 )).longValue(),
+                                  ((Number) metrics.toMap().get( Metrics.PERCENTILE_90 )).longValue(),
+                                  ((Number) metrics.toMap().get( Metrics.MAX )).longValue(),
+                                  metrics.toMap().get( Metrics.UNIT ) );
+        }
+
+        @Override
+        public String prettyErrorRow( String group, String benchmark )
+        {
+            return String.format( format,
+                                  group,
+                                  benchmark,
+                                  "<error>",
+                                  "<error>",
+                                  "<error>",
+                                  "<error>",
+                                  "<error>",
+                                  "<error>",
+                                  "<error>" );
+        }
     }
 
     private static class BenchmarkGroupBenchmarkComparator implements Comparator<BenchmarkGroupBenchmark>
