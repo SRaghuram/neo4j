@@ -99,10 +99,8 @@ public class ChannelPoolService implements Lifecycle
     @Override
     public void stop()
     {
-        sharedService.lock();
         // usages of the pool should have been stopped before this point, hence illegal state exception
         endOfLife.completeExceptionally( new IllegalStateException( "Pool is closed. Lifecycle issue?" ) );
-        sharedService.unlock();
 
         exclusiveService.lock();
         try
