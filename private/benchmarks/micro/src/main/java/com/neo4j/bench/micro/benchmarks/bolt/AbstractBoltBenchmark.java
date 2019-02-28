@@ -199,19 +199,19 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
 
         @Override
-        public boolean onPullRecords( BoltResult result, long size ) throws Exception
+        public boolean onPullRecords( BoltResult result, long size ) throws Throwable
         {
 
             return doOnRecords( result, size );
         }
 
         @Override
-        public boolean onDiscardRecords( BoltResult result, long size )
+        public boolean onDiscardRecords( BoltResult result, long size ) throws Throwable
         {
             throw new RuntimeException( "Did not expect this to happen in benchmarks" );
         }
 
-        private boolean doOnRecords( BoltResult boltResult, long size ) throws Exception
+        private boolean doOnRecords( BoltResult boltResult, long size ) throws Throwable
         {
             return boltResult.handleRecords(
                     new BoltResult.RecordConsumer()
