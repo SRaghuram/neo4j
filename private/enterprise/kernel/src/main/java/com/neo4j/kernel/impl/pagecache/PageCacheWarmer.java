@@ -22,9 +22,11 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Resource;
+import org.neo4j.io.fs.FileHandle;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
@@ -57,12 +59,14 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 {
     public static final String SUFFIX_CACHEPROF = ".cacheprof";
 
+    private static final String PROFILE_DIR = "profiles";
     private static final int IO_PARALLELISM = Runtime.getRuntime().availableProcessors();
 
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
     private final JobScheduler scheduler;
     private final File databaseDirectory;
+    private final File profilesDirectory;
     private final ProfileRefCounts refCounts;
     private volatile boolean stopped;
     private ExecutorService executor;
@@ -74,6 +78,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         this.pageCache = pageCache;
         this.scheduler = scheduler;
         this.databaseDirectory = databaseDirectory;
+        this.profilesDirectory = new File( databaseDirectory, PROFILE_DIR );
         this.refCounts = new ProfileRefCounts();
     }
 
@@ -84,8 +89,8 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         {
             return Resource.EMPTY;
         }
-        List<PagedFile> files = pageCache.listExistingMappings();
-        Profile[] existingProfiles = findExistingProfiles( files );
+        List<PagedFile> pagedFilesInDatabase = pagedFilesInDatabase();
+        Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
         for ( Profile profile : existingProfiles )
         {
             coll.add( new StoreFileMetadata( profile.file(), 1, false ) );
@@ -132,9 +137,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
             return OptionalLong.empty();
         }
         long pagesLoaded = 0;
-        List<PagedFile> files = pageCache.listExistingMappings();
-        Profile[] existingProfiles = findExistingProfiles( files );
-        for ( PagedFile file : files )
+        List<PagedFile> pagedFilesInDatabase = pagedFilesInDatabase();
+        Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
+        for ( PagedFile file : pagedFilesInDatabase )
         {
             try
             {
@@ -165,9 +170,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         // fast, that it rivals the overhead of starting and stopping threads. Because of this, the complexity of
         // profiling in parallel is just not worth it.
         long pagesInMemory = 0;
-        List<PagedFile> files = pageCache.listExistingMappings();
-        Profile[] existingProfiles = findExistingProfiles( files );
-        for ( PagedFile file : files )
+        List<PagedFile> pagedFilesInDatabase = pagedFilesInDatabase();
+        Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
+        for ( PagedFile file : pagedFilesInDatabase )
         {
             try
             {
@@ -254,7 +259,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         Profile nextProfile = filterRelevant( existingProfiles, file )
                 .max( naturalOrder() )
                 .map( Profile::next )
-                .orElse( Profile.first( file.file() ) );
+                .orElse( Profile.first( databaseDirectory, profilesDirectory, file.file() ) );
 
         try ( OutputStream output = nextProfile.write( fs );
               PageCursor cursor = file.io( 0, PF_SHARED_READ_LOCK | PF_NO_FAULT ) )
@@ -298,19 +303,51 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 threadFactory, rejectionPolicy );
     }
 
+    private List<PagedFile> pagedFilesInDatabase() throws IOException
+    {
+        Path databasePath = databaseDirectory.toPath();
+        return pageCache.listExistingMappings().stream()
+                .filter( pagedFile -> pagedFile.file().toPath().startsWith( databasePath ) )
+                .collect( Collectors.toList() );
+    }
+
     private static Stream<Profile> filterRelevant( Profile[] profiles, PagedFile pagedFile )
     {
         return Stream.of( profiles ).filter( Profile.relevantTo( pagedFile ) );
     }
 
-    private Profile[] findExistingProfiles( List<PagedFile> pagedFiles )
+    private Profile[] findExistingProfiles( List<PagedFile> pagedFilesInDatabase ) throws IOException
+    {
+        List<Path> allProfilePaths = fs.streamFilesRecursive( profilesDirectory )
+                .map( FileHandle::getFile )
+                .map( File::toPath )
+                .collect( Collectors.toList() );
+        return pagedFilesInDatabase.stream()
+                .map( pagedFile -> pagedFile.file().toPath() )
+                .flatMap( pagedFilePath -> extractRelevantProfiles( allProfilePaths, pagedFilePath ) )
+                .toArray( Profile[]::new );
+    }
+
+    private Stream<? extends Profile> extractRelevantProfiles( List<Path> allProfilePaths, Path pagedFilePath )
     {
         Path databasePath = databaseDirectory.toPath();
-        return pagedFiles.stream()
-                         .filter( pf -> pf.file().toPath().startsWith( databasePath ) )
-                         .map( pf -> pf.file().getParentFile() )
-                         .distinct()
-                         .flatMap( dir -> Profile.findProfilesInDirectory( fs, dir ) )
-                         .toArray( Profile[]::new );
+        Path profilesPath = profilesDirectory.toPath();
+        return allProfilePaths.stream()
+                .filter( profilePath -> sameRelativePath( databasePath, pagedFilePath, profilesPath, profilePath ) )
+                .flatMap( profilePath -> Profile.parseProfileName( profilePath, pagedFilePath ) );
+    }
+
+    private boolean sameRelativePath( Path databasePath, Path pagedFilePath, Path profilesPath, Path profilePath )
+    {
+        Path profileRelativeDir = profilesPath.relativize( profilePath ).getParent();
+        Path pagedFileRelativeDir = databasePath.relativize( pagedFilePath ).getParent();
+        if ( profileRelativeDir != null )
+        {
+            return profileRelativeDir.equals( pagedFileRelativeDir );
+        }
+        else
+        {
+            return pagedFileRelativeDir == null;
+        }
     }
 }

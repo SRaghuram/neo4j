@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -18,13 +19,13 @@ import java.util.zip.GZIPOutputStream;
 
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PagedFile;
 
 import static com.neo4j.kernel.impl.pagecache.PageCacheWarmer.SUFFIX_CACHEPROF;
 
 final class Profile implements Comparable<Profile>
 {
-    private static final String PROFILE_DIR = "profiles";
     private final File profileFile;
     private final File pagedFile;
     private final long profileSequenceId;
@@ -110,19 +111,32 @@ final class Profile implements Comparable<Profile>
     Profile next()
     {
         long next = profileSequenceId + 1L;
-        return new Profile( profileName( pagedFile, next ), pagedFile, next );
+        return new Profile( profileName( profileFile.getParentFile(), pagedFile, next ), pagedFile, next );
     }
 
-    static Profile first( File file )
+    static Profile first( File databaseDirectory, File profileDirectory, File file )
     {
-        return new Profile( profileName( file, 0 ), file, 0 );
+        return new Profile( firstProfileName( databaseDirectory, profileDirectory, file ), file, 0 );
     }
 
-    private static File profileName( File file, long count )
+    /**
+     * Create profile file for mappedFile. It is assumed that baseDirectory contains mappedFile (can be in multiple sub directories down).
+     * Profile file will be placed inside profileDirectory but keep it's sub directory structure relative to baseDirectory.
+     */
+    private static File firstProfileName( File baseDirectory, File profileDirectory, File mappedFile )
     {
-        String name = file.getName();
-        File dir = new File( file.getParentFile(), PROFILE_DIR );
-        return new File( dir, name + "." + Long.toString( count ) + SUFFIX_CACHEPROF );
+        File profileFileDir = FileUtils.pathToFileAfterMove( baseDirectory, profileDirectory, mappedFile ).getParentFile();
+        File file = profileName( profileFileDir, mappedFile, 0L );
+        return file;
+    }
+
+    /**
+     * Create profile file for mappedFile directly inside profileFileDirectory.
+     */
+    private static File profileName( File profileFileDirectory, File mappedFile, long count )
+    {
+        String name = mappedFile.getName();
+        return new File( profileFileDirectory, name + "." + count + SUFFIX_CACHEPROF );
     }
 
     static Predicate<Profile> relevantTo( PagedFile pagedFile )
@@ -130,21 +144,9 @@ final class Profile implements Comparable<Profile>
         return p -> p.pagedFile.equals( pagedFile.file() );
     }
 
-    static Stream<Profile> findProfilesInDirectory( FileSystemAbstraction fs, File dir )
+    static Stream<Profile> parseProfileName( Path profilePath, Path mappedFilePath )
     {
-        File[] files = fs.listFiles( new File( dir, PROFILE_DIR ) );
-        if ( files == null )
-        {
-            return Stream.empty();
-        }
-        return Stream.of( files ).flatMap( Profile::parseProfileName );
-    }
-
-    private static Stream<Profile> parseProfileName( File profile )
-    {
-        File profileFolder = profile.getParentFile();
-        File dir = profileFolder.getParentFile();
-        String name = profile.getName();
+        String name = profilePath.getFileName().toString();
         if ( !name.endsWith( SUFFIX_CACHEPROF ) )
         {
             return Stream.empty();
@@ -155,8 +157,15 @@ final class Profile implements Comparable<Profile>
         try
         {
             long sequenceId = Long.parseLong( countStr, 10 );
-            String mappedFileName = name.substring( 0, secondLastDot );
-            return Stream.of( new Profile( profile, new File( dir, mappedFileName ), sequenceId ) );
+            String targetMappedFileName = name.substring( 0, secondLastDot );
+            if ( targetMappedFileName.equals( mappedFilePath.getFileName().toString() ) )
+            {
+                return Stream.of( new Profile( profilePath.toFile(), mappedFilePath.toFile(), sequenceId ) );
+            }
+            else
+            {
+                return Stream.empty();
+            }
         }
         catch ( NumberFormatException e )
         {

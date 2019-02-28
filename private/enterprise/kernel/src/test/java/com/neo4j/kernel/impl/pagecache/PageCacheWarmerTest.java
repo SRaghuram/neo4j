@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.Resource;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
@@ -47,6 +50,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -125,7 +129,7 @@ class PageCacheWarmerTest
     }
 
     @Test
-    void listOnlyDatabaseRelaterFilesInListOfMetadata() throws IOException
+    void listOnlyDatabaseRelatedFilesInListOfMetadata() throws IOException
     {
         File ignoredFile = new File( testDirectory.storeDir(), "b" );
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
@@ -317,26 +321,98 @@ class PageCacheWarmerTest
     }
 
     @Test
+    void profilerMustProfileMultipleFilesWithSameName() throws IOException
+    {
+        File aaFile = new File( new File( testDirectory.databaseDir(), "a" ), "a" );
+        File baFile = new File( new File( testDirectory.databaseDir(), "b" ), "a" );
+        fs.mkdirs( aaFile.getParentFile() );
+        fs.mkdirs( baFile.getParentFile() );
+        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
+              PagedFile aa = pageCache.map( aaFile, pageCache.pageSize(), StandardOpenOption.CREATE );
+              PagedFile ba = pageCache.map( baFile, pageCache.pageSize(), StandardOpenOption.CREATE ) )
+        {
+            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.databaseDir() );
+            warmer.start();
+            warmer.profile();
+            List<StoreFileMetadata> fileListing = new ArrayList<>();
+            try ( Resource resource = warmer.addFilesTo( fileListing ) )
+            {
+                List<File> uniqueProfileFiles = fileListing.stream()
+                        .map( StoreFileMetadata::file )
+                        .distinct()
+                        .collect( Collectors.toList() );
+                assertEquals( 2, uniqueProfileFiles.size(),
+                        "expected mapped files in different directories but with same name to both have a unique profile. Profile files where " +
+                                uniqueProfileFiles );
+            }
+            warmer.stop();
+        }
+    }
+
+    @Test
+    void profilesMustKeepTheirSubDirectoryStructureInsideProfileDirectory()
+    {
+        Path baseDir = Paths.get( "baseDir" );
+        Path profileDir = Paths.get( "profileDir" );
+        Path dirA = baseDir.resolve( "dirA" );
+        Path dirAA = dirA.resolve( "dirA" );
+        Path dirB = baseDir.resolve( "dirB " );
+        Path fileAAA = dirAA.resolve( "a" );
+        Path fileAA = dirA.resolve( "a" );
+        Path fileBA = dirB.resolve( "a" );
+        Path fileA = baseDir.resolve( "a" );
+        File baseDirFile = baseDir.toFile();
+        File profileDirFile = profileDir.toFile();
+        Profile aaa = Profile.first( baseDirFile, profileDirFile, fileAAA.toFile() );
+        Profile aa = Profile.first( baseDirFile, profileDirFile, fileAA.toFile() );
+        Profile ba = Profile.first( baseDirFile, profileDirFile, fileBA.toFile() );
+        Profile a = Profile.first( baseDirFile, profileDirFile, fileA.toFile() );
+        Profile aaaNext = aaa.next();
+        Profile aaNext = aa.next();
+        Profile baNext = ba.next();
+        Profile aNext = a.next();
+
+        assertSameRelativePath( baseDir, profileDir, fileAAA, aaa );
+        assertSameRelativePath( baseDir, profileDir, fileAA, aa );
+        assertSameRelativePath( baseDir, profileDir, fileBA, ba );
+        assertSameRelativePath( baseDir, profileDir, fileA, a );
+        assertSameRelativePath( baseDir, profileDir, fileAAA, aaaNext );
+        assertSameRelativePath( baseDir, profileDir, fileAA, aaNext );
+        assertSameRelativePath( baseDir, profileDir, fileBA, baNext );
+        assertSameRelativePath( baseDir, profileDir, fileA, aNext );
+    }
+
+    private void assertSameRelativePath( Path baseDir, Path profileDir, Path mappedFile, Profile profile )
+    {
+        Path fileRelativePath = baseDir.relativize( mappedFile ).getParent();
+        Path profileRelativePath = profileDir.relativize( profile.file().toPath() ).getParent();
+        assertEquals( fileRelativePath, profileRelativePath,
+                "expected relative path to be equal but was " + fileRelativePath + " and " + profileRelativePath );
+    }
+
+    @Test
     void profilesMustSortByPagedFileAndProfileSequenceId()
     {
-        File fileAA = new File( "aa" );
-        File fileAB = new File( "ab" );
-        File fileBA = new File( "ba" );
+        File baseDir = new File( "baseDir" );
+        File profileDir = new File( "profileDir" );
+        File fileAA = new File( baseDir,"aa" );
+        File fileAB = new File( baseDir,"ab" );
+        File fileBA = new File( baseDir,"ba" );
         Profile aa;
         Profile ab;
         Profile ba;
         List<Profile> sortedProfiles = Arrays.asList(
-                aa = Profile.first( fileAA ),
+                aa = Profile.first( baseDir, profileDir, fileAA ),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa.next(),
-                ab = Profile.first( fileAB ),
+                ab = Profile.first( baseDir, profileDir, fileAB ),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab.next(),
-                ba = Profile.first( fileBA ),
+                ba = Profile.first( baseDir, profileDir, fileBA ),
                 ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(),
                 ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(),
                 ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(),
