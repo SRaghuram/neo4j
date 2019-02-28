@@ -17,6 +17,7 @@
         <ldbc-driver-version>0.3.2</ldbc-driver-version>
         <airline.version>0.7</airline.version>
         <fastutil.version>7.0.10</fastutil.version>
+        <commons-math3.version>3.6.1</commons-math3.version>
         <uberjar.name>ldbc</uberjar.name>
         <license-text.header>../../build/license-header.txt</license-text.header>
     </properties>
@@ -94,7 +95,10 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
-            <version>3.6.1</version>
+            <version>${commons-math3.version}</version>
+            <!-- I am overwriting scope here, it is set to test in parent
+                 and shade plugin only includes runtime scope dependencies              
+             -->
             <scope>runtime</scope>
         </dependency>
         
