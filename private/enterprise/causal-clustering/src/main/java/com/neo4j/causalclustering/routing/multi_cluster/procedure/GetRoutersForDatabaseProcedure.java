@@ -26,6 +26,7 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.procedure.Mode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
@@ -45,6 +46,7 @@ public class GetRoutersForDatabaseProcedure implements CallableProcedure
                     .in( DATABASE.parameterName(), Neo4jTypes.NTString )
                     .out( TTL.parameterName(), Neo4jTypes.NTInteger )
                     .out( ROUTERS.parameterName(), Neo4jTypes.NTList( Neo4jTypes.NTMap ) )
+                    .mode( Mode.DBMS )
                     .description( DESCRIPTION )
                     .build();
 

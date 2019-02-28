@@ -26,6 +26,7 @@ import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.proc.CallableProcedure;
 import org.neo4j.kernel.api.proc.Context;
+import org.neo4j.procedure.Mode;
 import org.neo4j.values.AnyValue;
 
 import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
@@ -43,6 +44,7 @@ public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
             procedureSignature( GET_ROUTERS_FOR_ALL_DATABASES.fullyQualifiedName() )
                     .out( TTL.parameterName(), Neo4jTypes.NTInteger )
                     .out( ROUTERS.parameterName(), Neo4jTypes.NTList( Neo4jTypes.NTMap ) )
+                    .mode( Mode.DBMS )
                     .description( DESCRIPTION )
                     .build();
 
