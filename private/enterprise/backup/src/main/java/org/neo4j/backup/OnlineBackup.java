@@ -21,6 +21,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
 
 import static java.util.Objects.requireNonNull;
+import static org.neo4j.util.Preconditions.checkArgument;
 
 /**
  * This class encapsulates the information needed to perform an online backup against a running Neo4j instance
@@ -56,6 +57,7 @@ public class OnlineBackup
      *
      * @param hostnameOrIp hostname or IP address of the backup server.
      * @return an {@code OnlineBackup} instance ready to perform backup operations from the given remote server.
+     * @throws NullPointerException if the parameter is {@code null}.
      */
     public static OnlineBackup from( String hostnameOrIp )
     {
@@ -67,12 +69,14 @@ public class OnlineBackup
      * hostname and port passed in as parameters.
      *
      * @param hostnameOrIp hostname or IP address of the backup server.
-     * @param port port at which the remote backup server is listening.
+     * @param port port at which the remote backup server is listening. Value should positive and less than or equal to 65535.
      * @return an {@code OnlineBackup} instance ready to perform backup operations from the given remote server.
+     * @throws NullPointerException if the hostname parameter is {@code null}.
+     * @throws IllegalArgumentException if the port parameter is not in the expected range.
      */
     public static OnlineBackup from( String hostnameOrIp, int port )
     {
-        return new OnlineBackup( requireNonNull( hostnameOrIp, "hostnameOrIp" ), port );
+        return new OnlineBackup( requireNonNull( hostnameOrIp, "hostnameOrIp" ), requireValidPort( port ) );
     }
 
     /**
@@ -196,6 +200,12 @@ public class OnlineBackup
                 .build();
 
         backupExecutor.executeBackup( context );
+    }
+
+    private static int requireValidPort( int port )
+    {
+        checkArgument( port > 0 && port <= 65535, "Port is expected to be positive and less than or equal to 65535 but was: " + port );
+        return port;
     }
 
     /**

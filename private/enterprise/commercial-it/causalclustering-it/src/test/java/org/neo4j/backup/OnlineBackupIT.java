@@ -159,6 +159,16 @@ class OnlineBackupIT
         assertThat( getRootCause( error ), instanceOf( StoreIdDownloadFailedException.class ) );
     }
 
+    @Test
+    void shouldFailWhenConfiguredWithInvalidPort()
+    {
+        // not possible to listen on port 0
+        assertThrows( IllegalArgumentException.class, () -> OnlineBackup.from( "localhost", 0 ) );
+
+        assertThrows( IllegalArgumentException.class, () -> OnlineBackup.from( "localhost", -1 ) );
+        assertThrows( IllegalArgumentException.class, () -> OnlineBackup.from( "localhost", 99_000 ) );
+    }
+
     private void corruptNodeStore()
     {
         RecordStorageEngine storageEngine = db.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
