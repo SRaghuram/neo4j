@@ -55,7 +55,7 @@ public class BackupTestUtil
             ClusterMember<?> clusterMember, String database ) throws IOException, CommandFailed
     {
         Config config = Config.fromSettings( clusterMember.config().getRaw() )
-                .withSetting( GraphDatabaseSettings.active_database, database )
+                .withSetting( GraphDatabaseSettings.default_database, database )
                 .withConnectorsDisabled()
                 .build();
         RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( fsa, backup, config, database, true );

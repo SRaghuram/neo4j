@@ -37,11 +37,10 @@ public class TransactionBackupServiceProvider
     private final CatchupServerHandler catchupServerHandler;
     private final JobScheduler scheduler;
     private final ConnectorPortRegister portRegister;
-    private final String activeDatabaseName;
 
     public TransactionBackupServiceProvider( LogProvider logProvider, ApplicationSupportedProtocols catchupProtocols,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, NettyPipelineBuilderFactory serverPipelineBuilderFactory,
-            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, String activeDatabaseName, JobScheduler scheduler,
+            CatchupServerHandler catchupServerHandler, ChannelInboundHandler parentHandler, JobScheduler scheduler,
             ConnectorPortRegister portRegister )
     {
         this.logProvider = logProvider;
@@ -50,12 +49,11 @@ public class TransactionBackupServiceProvider
         this.supportedModifierProtocols = supportedModifierProtocols;
         this.serverPipelineBuilderFactory = serverPipelineBuilderFactory;
         this.catchupServerHandler = catchupServerHandler;
-        this.activeDatabaseName = activeDatabaseName;
         this.scheduler = scheduler;
         this.portRegister = portRegister;
     }
 
-    public Optional<Server> resolveIfBackupEnabled( Config config )
+    public Optional<Server> resolveIfBackupEnabled( Config config, String databaseName )
     {
         if ( config.get( OnlineBackupSettings.online_backup_enabled ) )
         {
@@ -63,7 +61,7 @@ public class TransactionBackupServiceProvider
             logProvider.getLog( TransactionBackupServiceProvider.class ).info( "Binding backup service on address %s", backupAddress );
             Server catchupServer = CatchupServerBuilder.builder()
                     .catchupServerHandler( catchupServerHandler )
-                    .defaultDatabaseName( activeDatabaseName )
+                    .defaultDatabaseName( databaseName )
                     .catchupProtocols( catchupProtocols )
                     .modifierProtocols( supportedModifierProtocols )
                     .pipelineBuilder( serverPipelineBuilderFactory )

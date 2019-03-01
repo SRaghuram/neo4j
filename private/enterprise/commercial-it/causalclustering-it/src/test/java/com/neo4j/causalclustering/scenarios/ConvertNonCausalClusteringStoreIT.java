@@ -72,7 +72,7 @@ public class ConvertNonCausalClusteringStoreIT
             for ( CoreClusterMember core : cluster.coreMembers() )
             {
                 new RestoreDatabaseCommand( fileSystem, classicNeo4jDatabase, core.config(),
-                        core.settingValue( GraphDatabaseSettings.active_database.name() ), true ).execute();
+                        core.settingValue( GraphDatabaseSettings.default_database.name() ), true ).execute();
             }
         }
 

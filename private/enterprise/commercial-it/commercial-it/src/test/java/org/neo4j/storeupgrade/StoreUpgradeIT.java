@@ -77,7 +77,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.helpers.collection.Iterables.count;
@@ -176,10 +178,10 @@ public class StoreUpgradeIT
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
             File rootDir = testDir.directory();
-            File databaseDirectory = Config.defaults( GraphDatabaseSettings.data_directory, rootDir.toString() )
-                    .get( GraphDatabaseSettings.database_path );
+            Config config = Config.defaults( GraphDatabaseSettings.data_directory, rootDir.toString() );
+            DatabaseLayout databaseLayout = DatabaseLayout.of( config.get( databases_root_path ), DEFAULT_DATABASE_NAME );
 
-            store.prepareDirectory( databaseDirectory );
+            store.prepareDirectory( databaseLayout.databaseDirectory() );
 
             File configFile = new File( rootDir, Config.DEFAULT_CONFIG_FILE_NAME );
             Properties props = new Properties();
@@ -210,7 +212,7 @@ public class StoreUpgradeIT
                 bootstrapper.stop();
             }
 
-            assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
+            assertConsistentStore( databaseLayout );
         }
 
         @Test

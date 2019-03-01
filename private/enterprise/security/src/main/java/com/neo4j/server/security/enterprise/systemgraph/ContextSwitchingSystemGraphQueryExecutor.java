@@ -28,14 +28,14 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 public class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
 {
     private final DatabaseManager databaseManager;
-    private final String activeDbName;
+    private final String defaultDbName;
     private GraphDatabaseFacade systemDb;
     private ThreadToStatementContextBridge threadToStatementContextBridge;
 
-    public ContextSwitchingSystemGraphQueryExecutor( DatabaseManager databaseManager, String activeDbName )
+    public ContextSwitchingSystemGraphQueryExecutor( DatabaseManager databaseManager, String defaultDbName )
     {
         this.databaseManager = databaseManager;
-        this.activeDbName = activeDbName;
+        this.defaultDbName = defaultDbName;
     }
 
     @Override
@@ -164,7 +164,7 @@ public class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
         // Resolve statementContext of the active database on the first call
         if ( threadToStatementContextBridge == null )
         {
-            DatabaseContext activeDb = getDb( activeDbName );
+            DatabaseContext activeDb = getDb( defaultDbName );
             threadToStatementContextBridge = activeDb.getDependencies().resolveDependency( ThreadToStatementContextBridge.class );
         }
         return threadToStatementContextBridge;

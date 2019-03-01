@@ -26,6 +26,7 @@ import org.neo4j.kernel.impl.util.Validators;
 
 import static org.neo4j.commandline.arguments.common.Database.ARG_DATABASE;
 import static org.neo4j.configuration.Config.fromFile;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 
 public class UnbindFromClusterCommand implements AdminCommand
 {
@@ -46,10 +47,9 @@ public class UnbindFromClusterCommand implements AdminCommand
         return arguments;
     }
 
-    private static Config loadNeo4jConfig( Path homeDir, Path configDir, String databaseName )
+    private static Config loadNeo4jConfig( Path homeDir, Path configDir )
     {
         return fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
-                .withSetting( GraphDatabaseSettings.active_database, databaseName )
                 .withNoThrowOnFileLoadFailure()
                 .withHome( homeDir ).build();
     }
@@ -59,14 +59,16 @@ public class UnbindFromClusterCommand implements AdminCommand
     {
         try
         {
-            Config config = loadNeo4jConfig( homeDir, configDir, arguments.parse( args ).get( ARG_DATABASE ) );
+            String databaseName = arguments.parse( args ).get( ARG_DATABASE );
+            Config config = loadNeo4jConfig( homeDir, configDir );
             File dataDirectory = config.get( GraphDatabaseSettings.data_directory );
-            Path pathToSpecificDatabase = config.get( GraphDatabaseSettings.database_path ).toPath();
+            File databasesRoot = config.get( databases_root_path );
+            DatabaseLayout databaseLayout = DatabaseLayout.of( databasesRoot, databaseName );
 
             boolean hasDatabase = true;
             try
             {
-                Validators.CONTAINS_EXISTING_DATABASE.validate( pathToSpecificDatabase.toFile() );
+                Validators.CONTAINS_EXISTING_DATABASE.validate( databaseLayout.databaseDirectory() );
             }
             catch ( IllegalArgumentException ignored )
             {
@@ -76,7 +78,7 @@ public class UnbindFromClusterCommand implements AdminCommand
 
             if ( hasDatabase )
             {
-                confirmTargetDirectoryIsWritable( DatabaseLayout.of( pathToSpecificDatabase.toFile() ).getStoreLayout() );
+                confirmTargetDirectoryIsWritable( databaseLayout.getStoreLayout() );
             }
 
             ClusterStateDirectory clusterStateDirectory = ClusterStateDirectory.withoutInitializing( outsideWorld.fileSystem(), dataDirectory );

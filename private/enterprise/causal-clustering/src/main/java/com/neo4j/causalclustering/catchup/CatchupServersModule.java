@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -53,7 +52,7 @@ public abstract class CatchupServersModule
     private final LogProvider userLogProvider;
     private final ConnectorPortRegister portRegister;
 
-    public CatchupServersModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, GlobalModule globalModule )
+    public CatchupServersModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, GlobalModule globalModule, String databaseName )
     {
         this.databaseService = databaseService;
         this.pipelineBuilders = pipelineBuilders;
@@ -70,7 +69,7 @@ public abstract class CatchupServersModule
         this.supportedCatchupProtocols = supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration();
         this.supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
 
-        this.catchupClientFactory = createCatchupClient();
+        this.catchupClientFactory = createCatchupClient( databaseName );
 
         FileSystemAbstraction fileSystem = globalModule.getFileSystem();
         PageCache pageCache = globalModule.getPageCache();
@@ -79,10 +78,10 @@ public abstract class CatchupServersModule
                 pageCache, globalConfig, logProvider, globalModule.getGlobalMonitors(), globalModule.getStorageEngineFactory() );
     }
 
-    private CatchupClientFactory createCatchupClient()
+    private CatchupClientFactory createCatchupClient( String databaseName )
     {
         CatchupClientFactory catchupClient = CatchupClientBuilder.builder()
-                .defaultDatabaseName( globalConfig.get( GraphDatabaseSettings.active_database ) )
+                .defaultDatabaseName( databaseName )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.client() )
@@ -98,11 +97,11 @@ public abstract class CatchupServersModule
     }
 
     protected final Server createCatchupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler,
-            String activeDatabaseName )
+            String databaseName )
     {
         return CatchupServerBuilder.builder()
                 .catchupServerHandler( catchupServerHandler )
-                .defaultDatabaseName( activeDatabaseName )
+                .defaultDatabaseName( databaseName )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.server() )
@@ -117,7 +116,7 @@ public abstract class CatchupServersModule
     }
 
     protected final Optional<Server> createBackupServer( InstalledProtocolHandler installedProtocolsHandler, CatchupServerHandler catchupServerHandler,
-            String activeDatabaseName )
+            String databaseName )
     {
         TransactionBackupServiceProvider transactionBackupServiceProvider =
                 new TransactionBackupServiceProvider( logProvider, supportedCatchupProtocols,
@@ -125,11 +124,10 @@ public abstract class CatchupServersModule
                         pipelineBuilders.backupServer(),
                         catchupServerHandler,
                         installedProtocolsHandler,
-                        activeDatabaseName,
                         scheduler,
                         portRegister );
 
-        return transactionBackupServiceProvider.resolveIfBackupEnabled( globalConfig );
+        return transactionBackupServiceProvider.resolveIfBackupEnabled( globalConfig, databaseName );
     }
 
     public final CatchupClientFactory catchupClient()

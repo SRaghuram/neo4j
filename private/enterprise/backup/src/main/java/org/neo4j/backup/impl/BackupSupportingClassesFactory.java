@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
@@ -38,8 +37,6 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.util.VisibleForTesting;
-
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * The dependencies for the backup strategies require a valid configuration for initialisation.
@@ -86,7 +83,7 @@ public class BackupSupportingClassesFactory
     private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, Config config, OnlineBackupRequiredArguments arguments )
     {
         CatchupClientFactory catchUpClient = catchUpClient( config, arguments );
-        String databaseName = arguments.getDatabaseName().orElse( DEFAULT_DATABASE_NAME );
+        String databaseName = arguments.getDatabaseName();
 
         TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseName, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
@@ -110,10 +107,10 @@ public class BackupSupportingClassesFactory
     private CatchupClientFactory catchUpClient( Config config, OnlineBackupRequiredArguments arguments )
     {
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
-        ApplicationSupportedProtocols supportedCatchupProtocols = getSupportedCatchupProtocols( arguments, supportedProtocolCreator );
+        ApplicationSupportedProtocols supportedCatchupProtocols = getSupportedCatchupProtocols( supportedProtocolCreator );
 
         return CatchupClientBuilder.builder()
-                .defaultDatabaseName( config.get( GraphDatabaseSettings.active_database ) )
+                .defaultDatabaseName( arguments.getDatabaseName() )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( createPipelineWrapper( config ) ) )
@@ -126,19 +123,9 @@ public class BackupSupportingClassesFactory
                 .userLogProvider( logProvider ).build();
     }
 
-    private static ApplicationSupportedProtocols getSupportedCatchupProtocols( OnlineBackupRequiredArguments arguments,
-            SupportedProtocolCreator supportedProtocolCreator )
+    private static ApplicationSupportedProtocols getSupportedCatchupProtocols( SupportedProtocolCreator supportedProtocolCreator )
     {
-        ApplicationSupportedProtocols catchupProtocol;
-        if ( arguments.getDatabaseName().isPresent() )
-        {
-            catchupProtocol = supportedProtocolCreator.getMinimumCatchupProtocols( CatchupProtocolFeatures.SUPPORTS_MULTIPLE_DATABASES_FROM_VERSION );
-        }
-        else
-        {
-            catchupProtocol = supportedProtocolCreator.getAllCatchupProtocols();
-        }
-        return catchupProtocol;
+        return supportedProtocolCreator.getMinimumCatchupProtocols( CatchupProtocolFeatures.SUPPORTS_MULTIPLE_DATABASES_FROM_VERSION );
     }
 
     private static BackupDelegator backupDelegator(

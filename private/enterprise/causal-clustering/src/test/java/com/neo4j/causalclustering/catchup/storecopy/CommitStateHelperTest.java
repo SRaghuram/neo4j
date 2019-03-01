@@ -49,7 +49,7 @@ class CommitStateHelperTest
         config = Config.builder().withSetting( GraphDatabaseSettings.transaction_logs_root_path,
                 txLogLocation.getAbsolutePath() ).build();
         File storeDir = testDirectory.storeDir();
-        databaseLayout = DatabaseLayout.of( storeDir, LayoutConfig.of( config ), config.get( GraphDatabaseSettings.active_database ) );
+        databaseLayout = DatabaseLayout.of( storeDir, LayoutConfig.of( config ), config.get( GraphDatabaseSettings.default_database ) );
         commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ) );
     }
 

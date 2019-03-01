@@ -155,7 +155,7 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
         log.log( "Creating '%s' database.", databaseName );
         Config globalConfig = globalModule.getGlobalConfig();
         GraphDatabaseFacade facade =
-                globalConfig.get( GraphDatabaseSettings.active_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
+                globalConfig.get( GraphDatabaseSettings.default_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
         DatabaseModule dataSource = new DatabaseModule( databaseName, globalModule, edition, globalProcedures, facade );
         ClassicCoreSPI spi = new ClassicCoreSPI( globalModule, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
         Database database = dataSource.database;

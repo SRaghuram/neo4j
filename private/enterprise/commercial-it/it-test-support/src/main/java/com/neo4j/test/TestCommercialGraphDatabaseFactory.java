@@ -57,7 +57,7 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
     private static void augmentConfig( Config config, File databasesRoot, File storeDir )
     {
         config.augment( GraphDatabaseSettings.ephemeral, FALSE );
-        config.augment( GraphDatabaseSettings.active_database, storeDir.getName() );
+        config.augment( GraphDatabaseSettings.default_database, storeDir.getName() );
         config.augment( GraphDatabaseSettings.databases_root_path, databasesRoot.getAbsolutePath() );
         config.augment( OnlineBackupSettings.online_backup_listen_address, "127.0.0.1:0" );
         if ( !config.isConfigured( OnlineBackupSettings.online_backup_enabled ) )

@@ -118,7 +118,7 @@ class MultiDatabaseIdGeneratorIT
 
     private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager databaseManager )
     {
-        return databaseManager.getDatabaseContext( Config.defaults().get( GraphDatabaseSettings.active_database ) )
+        return databaseManager.getDatabaseContext( Config.defaults().get( GraphDatabaseSettings.default_database ) )
                 .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
                 .getDatabaseFacade();
     }

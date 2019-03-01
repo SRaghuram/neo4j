@@ -1102,7 +1102,7 @@ class BackupIT
     {
         Config config = Config.builder()
                 .withSetting( online_backup_enabled, FALSE )
-                .withSetting( GraphDatabaseSettings.active_database, backupDatabasePath.getName() ).build();
+                .withSetting( GraphDatabaseSettings.default_database, backupDatabasePath.getName() ).build();
         return DbRepresentation.of( backupDatabasePath, config );
     }
 

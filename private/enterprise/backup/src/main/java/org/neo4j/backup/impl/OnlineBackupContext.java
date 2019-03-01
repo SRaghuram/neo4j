@@ -175,7 +175,7 @@ public class OnlineBackupContext
         {
             if ( databaseName == null )
             {
-                databaseName = config.get( GraphDatabaseSettings.active_database );
+                databaseName = config.get( GraphDatabaseSettings.default_database );
             }
             if ( backupDirectory == null )
             {

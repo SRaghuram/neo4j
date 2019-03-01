@@ -67,6 +67,7 @@ import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.scheduler.JobScheduler;
 
 import static java.lang.String.format;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.function.Predicates.any;
 
 public class CommercialEditionModule extends CommunityEditionModule
@@ -156,13 +157,13 @@ public class CommercialEditionModule extends CommunityEditionModule
 
     private static void createCommercialEditionDatabases( DatabaseManager databaseManager, Config config )
     {
-        databaseManager.createDatabase( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        databaseManager.createDatabase( SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 
     private static void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
     {
-        databaseManager.createDatabase( config.get( GraphDatabaseSettings.active_database ) );
+        databaseManager.createDatabase( config.get( GraphDatabaseSettings.default_database ) );
     }
 
     @Override
@@ -240,12 +241,11 @@ public class CommercialEditionModule extends CommunityEditionModule
                 pipelineBuilders.backupServer(),
                 new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, internalLogProvider, fs ),
                 new InstalledProtocolHandler(),
-                config.get( GraphDatabaseSettings.active_database ),
                 jobScheduler,
                 portRegister
         );
 
-        Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config );
+        Optional<Server> backupServer = backupServiceProvider.resolveIfBackupEnabled( config, config.get( GraphDatabaseSettings.default_database ) );
 
         backupServer.ifPresent( globalModule.getGlobalLife()::add );
     }

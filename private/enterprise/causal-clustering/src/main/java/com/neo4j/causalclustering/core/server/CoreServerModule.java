@@ -63,9 +63,9 @@ public class CoreServerModule extends CatchupServersModule
     public CoreServerModule( IdentityModule identityModule, final GlobalModule globalModule, ConsensusModule consensusModule,
             CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule, DatabaseService databaseService,
             Supplier<DatabaseHealth> dbHealthSupplier, PipelineBuilders pipelineBuilders, InstalledProtocolHandler installedProtocolsHandler,
-            CatchupHandlerFactory handlerFactory, String activeDatabaseName, Panicker panicker )
+            CatchupHandlerFactory handlerFactory, String databaseName, Panicker panicker )
     {
-        super( databaseService, pipelineBuilders, globalModule );
+        super( databaseService, pipelineBuilders, globalModule, databaseName );
         this.identityModule = identityModule;
         this.consensusModule = consensusModule;
         this.clusteringModule = clusteringModule;
@@ -104,8 +104,8 @@ public class CoreServerModule extends CatchupServersModule
         this.membershipWaiterLifecycle = createMembershipWaiterLifecycle();
 
         CatchupServerHandler catchupServerHandler = handlerFactory.create( snapshotService );
-        catchupServer = createCatchupServer( installedProtocolsHandler, catchupServerHandler, activeDatabaseName );
-        backupServer = createBackupServer( installedProtocolsHandler, catchupServerHandler, activeDatabaseName );
+        catchupServer = createCatchupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
+        backupServer = createBackupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
 
         RaftLogPruner raftLogPruner = new RaftLogPruner( consensusModule.raftMachine(), commandApplicationProcess, globalModule.getGlobalClock() );
         globalDependencies.satisfyDependency( raftLogPruner );

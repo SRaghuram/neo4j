@@ -6,11 +6,10 @@
 package org.neo4j.commandline.dbms;
 
 import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -26,31 +25,35 @@ import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.admin.Usage;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-public class UnbindFromClusterCommandTest
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
+class UnbindFromClusterCommandTest
 {
-    private final TestDirectory testDir = TestDirectory.testDirectory();
-    private final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    @Inject
+    private TestDirectory testDir;
+    @Inject
+    private EphemeralFileSystemAbstraction fileSystem;
 
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( testDir );
     private Path homeDir;
     private Path confDir;
 
@@ -58,8 +61,8 @@ public class UnbindFromClusterCommandTest
     private OutsideWorld outsideWorld = mock( OutsideWorld.class );
     private FileChannel channel;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         homeDir = testDir.directory( "home" ).toPath();
         confDir = testDir.directory( "conf" ).toPath();
@@ -68,8 +71,8 @@ public class UnbindFromClusterCommandTest
         when( outsideWorld.fileSystem() ).thenReturn( fs );
     }
 
-    @After
-    public void tearDown() throws IOException
+    @AfterEach
+    void tearDown() throws IOException
     {
         IOUtils.closeAll( channel );
     }
@@ -83,7 +86,7 @@ public class UnbindFromClusterCommandTest
     }
 
     @Test
-    public void shouldIgnoreIfSpecifiedDatabaseDoesNotExist() throws Exception
+    void shouldIgnoreIfSpecifiedDatabaseDoesNotExist() throws Exception
     {
         // given
         File clusterStateDir = createClusterStateDir( fs );
@@ -97,7 +100,7 @@ public class UnbindFromClusterCommandTest
     }
 
     @Test
-    public void shouldFailToUnbindLiveDatabase() throws Exception
+    void shouldFailToUnbindLiveDatabase() throws Exception
     {
         // given
         createClusterStateDir( fs );
@@ -106,14 +109,8 @@ public class UnbindFromClusterCommandTest
         FileLock fileLock = createLockedFakeDbDir( homeDir );
         try
         {
-            // when
-            command.execute( databaseNameParameter( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ) );
-            fail();
-        }
-        catch ( CommandFailed e )
-        {
-            // then
-            assertThat( e.getMessage(), containsString( "Database is currently locked. Please shutdown Neo4j." ) );
+            CommandFailed commandException = assertThrows( CommandFailed.class, () -> command.execute( databaseNameParameter( DEFAULT_DATABASE_NAME ) ) );
+            assertThat( commandException.getMessage(), containsString( "Database is currently locked. Please shutdown Neo4j." ) );
         }
         finally
         {
@@ -122,7 +119,7 @@ public class UnbindFromClusterCommandTest
     }
 
     @Test
-    public void shouldRemoveClusterStateDirectoryForGivenDatabase() throws Exception
+    void shouldRemoveClusterStateDirectoryForGivenDatabase() throws Exception
     {
         // given
         File clusterStateDir = createClusterStateDir( fs );
@@ -137,7 +134,7 @@ public class UnbindFromClusterCommandTest
     }
 
     @Test
-    public void shouldReportWhenClusterStateDirectoryIsNotPresent() throws Exception
+    void shouldReportWhenClusterStateDirectoryIsNotPresent() throws Exception
     {
         // given
         createUnlockedFakeDbDir( homeDir );
@@ -147,7 +144,7 @@ public class UnbindFromClusterCommandTest
     }
 
     @Test
-    public void shouldPrintUsage() throws Throwable
+    void shouldPrintUsage() throws Throwable
     {
         try ( ByteArrayOutputStream baos = new ByteArrayOutputStream() )
         {

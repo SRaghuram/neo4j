@@ -90,7 +90,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     private final TopologyService topologyService;
     protected final LogProvider logProvider;
     protected final DefaultDatabaseService<ReadReplicaLocalDatabase> databaseService;
-    private final String activeDatabaseName;
+    private final String defaultDatabaseName;
     private final Config globaConfig;
     private final GlobalModule globalModule;
     private final GlobalTransactionStats transactionStats;
@@ -100,7 +100,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         this.globalModule = globalModule;
         LogService logService = globalModule.getLogService();
         this.globaConfig = globalModule.getGlobalConfig();
-        this.activeDatabaseName = globaConfig.get( GraphDatabaseSettings.active_database );
+        this.defaultDatabaseName = globaConfig.get( GraphDatabaseSettings.default_database );
         logProvider = logService.getInternalLogProvider();
         LogProvider userLogProvider = logService.getUserLogProvider();
         logProvider.getLog( getClass() ).info( String.format( "Generated new id: %s", myself ) );
@@ -154,7 +154,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         CatchupHandlerFactory handlerFactory = ignored -> getHandlerFactory( globalModule, fileSystem );
         ReadReplicaServerModule serverModule =
-                new ReadReplicaServerModule( databaseService, pipelineBuilders, handlerFactory, globalModule, activeDatabaseName );
+                new ReadReplicaServerModule( databaseService, pipelineBuilders, handlerFactory, globalModule, defaultDatabaseName );
 
         CommandIndexTracker commandIndexTracker = globalDependencies.satisfyDependency( new CommandIndexTracker() );
 
@@ -259,7 +259,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
     private void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
     {
-        createDatabase( databaseManager, config.get( GraphDatabaseSettings.active_database ) );
+        createDatabase( databaseManager, config.get( GraphDatabaseSettings.default_database ) );
     }
 
     protected void createDatabase( DatabaseManager databaseManager, String databaseName )

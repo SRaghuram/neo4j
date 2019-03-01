@@ -19,7 +19,7 @@ import org.neo4j.kernel.impl.util.Validators;
 import static java.lang.String.format;
 import static org.neo4j.commandline.Util.checkLock;
 import static org.neo4j.commandline.Util.isSameOrChildFile;
-import static org.neo4j.configuration.GraphDatabaseSettings.database_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.LayoutConfig.of;
 
 public class RestoreDatabaseCommand
@@ -27,17 +27,14 @@ public class RestoreDatabaseCommand
     private FileSystemAbstraction fs;
     private final File fromDatabasePath;
     private final DatabaseLayout targetDatabaseLayout;
-    private final String toDatabaseName;
     private boolean forceOverwrite;
 
-    public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String toDatabaseName,
-            boolean forceOverwrite )
+    public RestoreDatabaseCommand( FileSystemAbstraction fs, File fromDatabasePath, Config config, String databaseName, boolean forceOverwrite )
     {
         this.fs = fs;
         this.fromDatabasePath = fromDatabasePath;
-        this.toDatabaseName = toDatabaseName;
         this.forceOverwrite = forceOverwrite;
-        this.targetDatabaseLayout = DatabaseLayout.of( config.get( database_path ).getAbsoluteFile(), of( config ) );
+        this.targetDatabaseLayout = DatabaseLayout.of( config.get( databases_root_path ).getAbsoluteFile(), of( config ), databaseName );
     }
 
     public void execute() throws IOException, CommandFailed
@@ -59,8 +56,8 @@ public class RestoreDatabaseCommand
 
         if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )
         {
-            throw new IllegalArgumentException(
-                    format( "Database with name [%s] already exists at %s", toDatabaseName, targetDatabaseLayout ) );
+            throw new IllegalArgumentException( format( "Database with name [%s] already exists at %s", targetDatabaseLayout.getDatabaseName(),
+                            targetDatabaseLayout.databaseDirectory() ) );
         }
 
         checkLock( targetDatabaseLayout.getStoreLayout() );

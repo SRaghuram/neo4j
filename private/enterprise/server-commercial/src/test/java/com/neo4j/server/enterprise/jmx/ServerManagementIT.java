@@ -7,35 +7,30 @@ package com.neo4j.server.enterprise.jmx;
 
 import com.neo4j.server.enterprise.CommercialNeoServer;
 import com.neo4j.server.enterprise.helpers.CommercialServerBuilder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.NeoServer;
-import org.neo4j.test.rule.CleanupRule;
-import org.neo4j.test.rule.SuppressOutput;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
-import static org.neo4j.configuration.GraphDatabaseSettings.database_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 
-public class ServerManagementIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class ServerManagementIT
 {
-    private final CleanupRule cleanup = new CleanupRule();
-    private final TestDirectory baseDir = TestDirectory.testDirectory();
-    private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
-
-    @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( suppressOutput ).around( baseDir ).around( cleanup );
+    @Inject
+    private TestDirectory baseDir;
 
     @Test
-    public void shouldBeAbleToRestartServer() throws Exception
+    void shouldBeAbleToRestartServer() throws Exception
     {
         // Given
         String dataDirectory1 = baseDir.directory( "data1" ).getAbsolutePath();
@@ -51,22 +46,25 @@ public class ServerManagementIT
                 .build();
 
         // When
-        NeoServer server = cleanup.add( new CommercialNeoServer( config, graphDbDependencies() ) );
-        server.start();
+        NeoServer server = new CommercialNeoServer( config, graphDbDependencies() );
+        try
+        {
+            server.start();
 
-        assertNotNull( server.getDatabase().getGraph() );
-        assertEquals( config.get( database_path ).getAbsolutePath(),
-                server.getDatabase().getLocation().getAbsolutePath() );
+            assertNotNull( server.getDatabase().getGraph() );
 
-        // Change the database location
-        config.augment( data_directory, dataDirectory2 );
-        ServerManagement bean = new ServerManagement( server );
-        bean.restartServer();
+            // Change the database location
+            config.augment( data_directory, dataDirectory2 );
+            ServerManagement bean = new ServerManagement( server );
+            bean.restartServer();
 
-        // Then
-        assertNotNull( server.getDatabase().getGraph() );
-        assertEquals( config.get( database_path ).getAbsolutePath(),
-                server.getDatabase().getLocation().getAbsolutePath() );
+            // Then
+            assertNotNull( server.getDatabase().getGraph() );
+        }
+        finally
+        {
+            server.stop();
+        }
     }
 
     private static GraphDatabaseDependencies graphDbDependencies()

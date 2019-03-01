@@ -58,7 +58,7 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.configuration.GraphDatabaseSettings.active_database;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.store.id.IdType.ARRAY_BLOCK;
@@ -112,9 +112,9 @@ public class CoreBootstrapper
     private final Log log;
     private final StorageEngineFactory storageEngineFactory;
 
-    private final Map<String,String> activeDatabaseParams;
+    private final Map<String,String> defaultDatabaseParams;
     private final Map<String,String> systemDatabaseParams;
-    private final Config activeDatabaseFilteredConfig;
+    private final Config defaultDatabaseFilteredConfig;
     private final Config systemDatabaseFilteredConfig;
 
     CoreBootstrapper( DatabaseService databaseService, TemporaryDatabaseFactory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
@@ -128,21 +128,21 @@ public class CoreBootstrapper
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
 
-        this.activeDatabaseParams = initialActiveDatabaseParams( config );
+        this.defaultDatabaseParams = initialDefaultDatabaseParams( config );
         this.systemDatabaseParams = initialSystemDatabaseParams( config );
 
-        this.activeDatabaseFilteredConfig = Config.defaults( activeDatabaseParams );
+        this.defaultDatabaseFilteredConfig = Config.defaults( defaultDatabaseParams );
         this.systemDatabaseFilteredConfig = Config.defaults( systemDatabaseParams );
 
         this.storageEngineFactory = storageEngineFactory;
     }
 
-    private Map<String,String> initialActiveDatabaseParams( Config config )
+    private Map<String,String> initialDefaultDatabaseParams( Config config )
     {
         Map<String,String> params = new HashMap<>();
 
         /* We want to only inherit things that will affect the storage as necessary during bootstrap of the database. */
-        params.put( GraphDatabaseSettings.active_database.name(), config.get( active_database ) );
+        params.put( GraphDatabaseSettings.default_database.name(), config.get( default_database ) );
         params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
         params.put( GraphDatabaseSettings.record_format.name(), config.get( record_format ) );
 
@@ -152,11 +152,8 @@ public class CoreBootstrapper
     private Map<String,String> initialSystemDatabaseParams( Config config )
     {
         Map<String,String> params = new HashMap<>();
-
-        params.put( GraphDatabaseSettings.active_database.name(), SYSTEM_DATABASE_NAME );
         params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
         // default store format will be used, not the configured one
-
         return params;
     }
 
@@ -175,39 +172,39 @@ public class CoreBootstrapper
             throw new IllegalArgumentException( "Not supporting " + databaseCount + " number of databases." );
         }
 
-        String activeDatabaseName = activeDatabaseFilteredConfig.get( GraphDatabaseSettings.active_database );
-        LocalDatabase activeDatabase = getDatabaseOrThrow( activeDatabaseName );
-        DatabaseLayout activeDatabaseLayout = activeDatabase.databaseLayout();
+        String defaultDatabaseName = defaultDatabaseFilteredConfig.get( GraphDatabaseSettings.default_database );
+        LocalDatabase defaultDatabase = getDatabaseOrThrow( defaultDatabaseName );
+        DatabaseLayout defaultDatabaseLayout = defaultDatabase.databaseLayout();
 
-        DatabaseLayout systemDatabaseLayout = DatabaseLayout.of( activeDatabaseLayout.getStoreLayout(), SYSTEM_DATABASE_NAME );
+        DatabaseLayout systemDatabaseLayout = DatabaseLayout.of( defaultDatabaseLayout.getStoreLayout(), SYSTEM_DATABASE_NAME );
 
         CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
         coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
 
-        ensureRecoveredOrThrow( activeDatabaseLayout, activeDatabaseFilteredConfig );
+        ensureRecoveredOrThrow( defaultDatabaseLayout, defaultDatabaseFilteredConfig );
         ensureRecoveredOrThrow( systemDatabaseLayout, systemDatabaseFilteredConfig);
 
-        initialise( activeDatabaseLayout, systemDatabaseLayout );
-        registerDatabase( coreSnapshot, activeDatabaseLayout, activeDatabaseFilteredConfig, activeDatabaseName );
+        initialise( defaultDatabaseLayout, systemDatabaseLayout );
+        registerDatabase( coreSnapshot, defaultDatabaseLayout, defaultDatabaseFilteredConfig, defaultDatabaseName );
         registerDatabase( coreSnapshot, systemDatabaseLayout, systemDatabaseFilteredConfig, SYSTEM_DATABASE_NAME );
 
         return coreSnapshot;
     }
 
-    private void initialise( DatabaseLayout activeDatabaseLayout, DatabaseLayout systemDatabaseLayout ) throws IOException
+    private void initialise( DatabaseLayout defaultDatabaseLayout, DatabaseLayout systemDatabaseLayout ) throws IOException
     {
         boolean systemDatabaseExists = isStorePresent( systemDatabaseLayout );
-        if ( isStorePresent( activeDatabaseLayout ) )
+        if ( isStorePresent( defaultDatabaseLayout ) )
         {
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( activeDatabaseLayout, activeDatabaseFilteredConfig);
+            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( defaultDatabaseLayout, defaultDatabaseFilteredConfig );
         }
         if ( systemDatabaseExists )
         {
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( systemDatabaseLayout, systemDatabaseFilteredConfig );
         }
         try ( TemporaryDatabase temporaryDatabase =
-                tempDatabaseFactory.startTemporaryDatabase( pageCache, activeDatabaseLayout.databaseDirectory(), activeDatabaseParams ) )
+                tempDatabaseFactory.startTemporaryDatabase( pageCache, defaultDatabaseLayout.databaseDirectory(), defaultDatabaseParams ) )
         {
             if ( !systemDatabaseExists )
             {

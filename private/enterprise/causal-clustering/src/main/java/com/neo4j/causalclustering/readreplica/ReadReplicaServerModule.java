@@ -20,14 +20,14 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 public class ReadReplicaServerModule extends CatchupServersModule
 {
     ReadReplicaServerModule( DatabaseService databaseService, PipelineBuilders pipelineBuilders, CatchupHandlerFactory handlerFactory,
-            GlobalModule globalModule, String activeDatabaseName )
+            GlobalModule globalModule, String databaseName )
     {
-        super( databaseService, pipelineBuilders, globalModule );
+        super( databaseService, pipelineBuilders, globalModule, databaseName );
 
         CatchupServerHandler catchupServerHandler = handlerFactory.create( null );
         InstalledProtocolHandler installedProtocolsHandler = new InstalledProtocolHandler();
-        catchupServer = createCatchupServer( installedProtocolsHandler, catchupServerHandler, activeDatabaseName );
-        backupServer = createBackupServer( installedProtocolsHandler, catchupServerHandler, activeDatabaseName );
+        catchupServer = createCatchupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
+        backupServer = createBackupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
     }
 
     @Override

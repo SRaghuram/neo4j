@@ -342,7 +342,7 @@ public class CommercialSecurityModule extends SecurityModule
             AccessCapability accessCapability )
     {
         ContextSwitchingSystemGraphQueryExecutor queryExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager,
-                config.get( GraphDatabaseSettings.active_database ) );
+                config.get( GraphDatabaseSettings.default_database ) );
 
         SecureHasher secureHasher = new SecureHasher();
         SystemGraphOperations systemGraphOperations = new SystemGraphOperations( queryExecutor, secureHasher );

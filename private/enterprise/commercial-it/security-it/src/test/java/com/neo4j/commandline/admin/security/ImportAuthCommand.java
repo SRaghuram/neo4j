@@ -51,7 +51,7 @@ public class ImportAuthCommand implements AdminCommand
     public static final String ROLE_ARG_NAME = "roles-file";
     public static final String OFFLINE_ARG_NAME = "offline";
     public static final String RESET_ARG_NAME = "reset";
-    // TODO: Currently it is not allowed to set SYSTEM_DATABASE_NAME as `active_database`. We need to work around this for --offline mode.
+    // TODO: Currently it is not allowed to set SYSTEM_DATABASE_NAME as `default_database`. We need to work around this for --offline mode.
     public static final String IMPORT_SYSTEM_DATABASE_NAME = SYSTEM_DATABASE_NAME + ".import";
 
     private static final Arguments arguments = new Arguments()

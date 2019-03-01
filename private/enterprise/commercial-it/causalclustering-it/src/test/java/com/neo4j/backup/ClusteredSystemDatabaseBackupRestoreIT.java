@@ -172,8 +172,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     {
         Config restoreCommandConfig = Config.defaults();
         restoreCommandConfig.augment( memberConfig );
-        restoreCommandConfig.augment( GraphDatabaseSettings.active_database, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
-        new RestoreDatabaseCommand( fs, backupLocation, restoreCommandConfig,
+        new RestoreDatabaseCommand( fs, new File( backupLocation, GraphDatabaseSettings.SYSTEM_DATABASE_NAME ), restoreCommandConfig,
                 GraphDatabaseSettings.SYSTEM_DATABASE_NAME, true ).execute();
     }
 

@@ -140,7 +140,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     private final DefaultDatabaseService<CoreLocalDatabase> databaseService;
     private final Map<String,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     //TODO: Find a way to be more generic about this to help with 4.0 plans
-    private final String activeDatabaseName;
+    private final String defaultDatabaseName;
     private final GlobalModule globalModule;
     private final GlobalTransactionStats globalTransactionStats;
 
@@ -157,8 +157,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         CoreMonitor.register( logProvider, logService.getUserLogProvider(), globalModule.getGlobalMonitors() );
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
-        this.activeDatabaseName = globalConfig.get( GraphDatabaseSettings.active_database );
-        final DatabaseLayout activeDatabaseLayout = globalModule.getStoreLayout().databaseLayout( activeDatabaseName );
+        this.defaultDatabaseName = globalConfig.get( GraphDatabaseSettings.default_database );
+        final DatabaseLayout activeDatabaseLayout = globalModule.getStoreLayout().databaseLayout( defaultDatabaseName );
 
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
         /* Database directory is passed here to support migration from earlier versions of cluster state, which were stored *inside* the database directory */
@@ -166,7 +166,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         clusterStateDirectory.initialize();
         globalDependencies.satisfyDependency( clusterStateDirectory );
         CoreStateStorageService storage = new CoreStateStorageService( fileSystem, clusterStateDirectory, globalLife, logProvider, globalConfig );
-        storage.migrateIfNecessary( activeDatabaseName );
+        storage.migrateIfNecessary( defaultDatabaseName );
 
         CoreStartupState coreStartupState = new CoreStartupState( storage ); // must be constructed before storage is touched by other modules
         globalLife.add( new IdFilesSanitationModule( coreStartupState, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem,
@@ -187,7 +187,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         //Build local databases object
         final Supplier<DatabaseManager> databaseManagerSupplier = () -> globalDependencies.resolveDependency( DatabaseManager.class );
         final Supplier<DatabaseHealth> databaseHealthSupplier =
-                () -> databaseManagerSupplier.get().getDatabaseContext( globalConfig.get( GraphDatabaseSettings.active_database ) )
+                () -> databaseManagerSupplier.get().getDatabaseContext( globalConfig.get( GraphDatabaseSettings.default_database ) )
                         .map( DatabaseContext::getDependencies )
                         .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
                         .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
@@ -237,7 +237,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
 
         consensusModule = new ConsensusModule( identityModule.myself(), globalModule,
-                loggingOutbound, clusterStateDirectory.get(), topologyService, storage, activeDatabaseName );
+                loggingOutbound, clusterStateDirectory.get(), topologyService, storage, defaultDatabaseName );
 
         globalDependencies.satisfyDependency( consensusModule.raftMachine() );
         replicationModule = new ReplicationModule( consensusModule.raftMachine(), identityModule.myself(), globalModule, globalConfig,
@@ -258,7 +258,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         this.coreServerModule = new CoreServerModule( identityModule, globalModule, consensusModule, coreStateService, clusteringModule,
                 replicationModule, databaseService, databaseHealthSupplier, pipelineBuilders, serverInstalledProtocolHandler,
-                handlerFactory, activeDatabaseName, panicService );
+                handlerFactory, defaultDatabaseName, panicService );
 
         addPanicEventHandlers( globalLife, panicService, databaseHealthSupplier );
 
@@ -271,7 +271,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
                         catchupStrategySelector );
         RaftServerModule.createAndStart( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilders.server(), messageLogger,
-                catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, activeDatabaseName, panicService );
+                catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, defaultDatabaseName, panicService );
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
@@ -446,7 +446,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     private void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
     {
-        createDatabase( databaseManager, config.get( GraphDatabaseSettings.active_database ) );
+        createDatabase( databaseManager, config.get( GraphDatabaseSettings.default_database ) );
     }
 
     protected void createDatabase( DatabaseManager databaseManager, String databaseName )

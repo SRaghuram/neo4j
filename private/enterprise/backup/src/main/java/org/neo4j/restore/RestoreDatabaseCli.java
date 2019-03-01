@@ -16,7 +16,6 @@ import org.neo4j.commandline.arguments.Arguments;
 import org.neo4j.commandline.arguments.MandatoryNamedArg;
 import org.neo4j.commandline.arguments.OptionalBooleanArg;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 
@@ -37,11 +36,10 @@ public class RestoreDatabaseCli implements AdminCommand
         this.configDir = configDir;
     }
 
-    private static Config loadNeo4jConfig( Path homeDir, Path configDir, String databaseName )
+    private static Config loadNeo4jConfig( Path homeDir, Path configDir )
     {
         return Config.fromFile( configDir.resolve( Config.DEFAULT_CONFIG_FILE_NAME ) )
                 .withHome( homeDir )
-                .withSetting( GraphDatabaseSettings.active_database, databaseName )
                 .withConnectorsDisabled().build();
     }
 
@@ -63,7 +61,7 @@ public class RestoreDatabaseCli implements AdminCommand
             throw new IncorrectUsage( e.getMessage() );
         }
 
-        Config config = loadNeo4jConfig( homeDir, configDir, databaseName );
+        Config config = loadNeo4jConfig( homeDir, configDir );
 
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {

@@ -6,7 +6,6 @@
 package org.neo4j.backup.impl;
 
 import java.nio.file.Path;
-import java.util.Optional;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
 
@@ -35,9 +34,9 @@ class OnlineBackupRequiredArguments
         return address;
     }
 
-    public Optional<String> getDatabaseName()
+    public String getDatabaseName()
     {
-        return Optional.ofNullable( databaseName );
+        return databaseName;
     }
 
     public Path getDatabaseBackupDir()
