@@ -125,7 +125,7 @@ public class ForkingRunnable implements RunnableFork
                                                                    query.benchmarkGroup(),
                                                                    query.benchmark() ) );
 
-            JvmProcess.start( jvm, jvmProcessArgs ).waitFor();
+            JvmProcess.start( jvmProcessArgs ).waitFor();
 
             profilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
                                                                   query.benchmarkGroup(),

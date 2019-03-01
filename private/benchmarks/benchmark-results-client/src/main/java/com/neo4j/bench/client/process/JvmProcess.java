@@ -18,14 +18,13 @@ import java.util.Optional;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.inputStreamToString;
 import static com.neo4j.bench.client.util.BenchmarkUtil.lessWhiteSpace;
-
 import static java.time.Duration.between;
 import static java.time.Instant.now;
 import static java.util.stream.Collectors.toList;
 
 public class JvmProcess implements BaseProcess, HasPid
 {
-    public static JvmProcess start( Jvm jvm, JvmProcessArgs jvmProcessArgs )
+    public static JvmProcess start( JvmProcessArgs jvmProcessArgs )
     {
         try
         {
@@ -36,7 +35,7 @@ public class JvmProcess implements BaseProcess, HasPid
             ProcessWrapper process = ProcessWrapper.start( processBuilder );
             Instant start = Instant.now();
             Duration timeout = Duration.of( 5, ChronoUnit.MINUTES );
-            JpsPid jpsPid = processPid( jvm, start, timeout, jvmProcessArgs.processName() );
+            JpsPid jpsPid = processPid( jvmProcessArgs.jvm(), start, timeout, jvmProcessArgs.processName() );
             long pid = jpsPid.pid().orElseThrow( () -> failedToStartExceptionFor( jvmProcessArgs, process, jpsPid ) );
             return new JvmProcess( process, pid );
         }
@@ -48,7 +47,7 @@ public class JvmProcess implements BaseProcess, HasPid
 
     private static RuntimeException failedToStartExceptionFor( JvmProcessArgs jvmProcessArgs, ProcessWrapper process, JpsPid jpsPid )
     {
-        return new RuntimeException( "Failed to start process, was not reported by 'jps'\n" +
+        return new RuntimeException( "Failed to start process, and was not reported by 'jps'\n" +
                                      "Process '-Dname' : '" + jvmProcessArgs.processName() + "'\n" +
                                      "------------------  JPS Output  ----------------\n" +
                                      jpsPid.jpsOutput() + "\n" +
