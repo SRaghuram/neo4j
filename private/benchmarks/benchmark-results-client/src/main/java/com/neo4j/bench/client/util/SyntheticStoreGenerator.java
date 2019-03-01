@@ -57,7 +57,6 @@ import static com.neo4j.bench.client.model.Repository.CAPS_BENCH;
 import static com.neo4j.bench.client.model.Repository.LDBC_BENCH;
 import static com.neo4j.bench.client.model.Repository.MICRO_BENCH;
 import static com.neo4j.bench.client.model.Repository.NEO4J;
-import static com.neo4j.bench.client.model.Repository.RONJA_BENCH;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -79,7 +78,7 @@ public class SyntheticStoreGenerator
     private static final String[] DEFAULT_NEO4J_VERSIONS = {"3.0.2", "3.0.1", "3.0.0"};
     private static final Edition[] DEFAULT_NEO4J_EDITIONS = Edition.values();
     private static final int DEFAULT_SETTINGS_IN_CONFIG = 50;
-    private static final Repository[] TOOLS = {RONJA_BENCH, MICRO_BENCH, LDBC_BENCH, CAPS_BENCH};
+    private static final Repository[] TOOLS = {MICRO_BENCH, LDBC_BENCH, CAPS_BENCH};
     private static final Repository[] PROJECTS = {NEO4J, CAPS};
     private static final String[] DEFAULT_OPERATING_SYSTEMS = {"Windows", "OSX", "Ubuntu"};
     private static final String[] DEFAULT_SERVERS = {"Skalleper", "local", "AWS", "Mattis", "Borka"};
@@ -90,7 +89,6 @@ public class SyntheticStoreGenerator
     private static final String[] DEFAULT_CAPS_BRANCH_OWNERS = {CAPS.defaultOwner()};
     private static final String[] DEFAULT_TOOL_BRANCH_OWNERS = {
             MICRO_BENCH.defaultOwner(),
-            RONJA_BENCH.defaultOwner(),
             LDBC_BENCH.defaultOwner(),
             CAPS_BENCH.defaultOwner()};
     private static final Mode[] MODES = {THROUGHPUT, LATENCY, SINGLE_SHOT};
@@ -617,8 +615,6 @@ public class SyntheticStoreGenerator
             return randomFrom( neo4jBranchOwners );
         case CAPS:
             return randomFrom( capsBranchOwners );
-        case RONJA_BENCH:
-            return RONJA_BENCH.defaultOwner();
         case CAPS_BENCH:
             return randomFrom( toolBranchOwners );
         case MICRO_BENCH:
