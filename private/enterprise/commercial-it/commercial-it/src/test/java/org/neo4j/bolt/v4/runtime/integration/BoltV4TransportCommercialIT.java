@@ -284,6 +284,30 @@ public class BoltV4TransportCommercialIT
         }
     }
 
+    @Test
+    public void shouldHandleQueryWithProfile() throws Throwable
+    {
+        //Given
+        negotiateBoltV4();
+
+        for ( String runtime : RUNTIMES )
+        {
+            // When
+            String query = String.format("CYPHER runtime=%s PROFILE MERGE (n {name: 'bob'}) ON CREATE SET n.created = timestamp() ON " +
+                           "MATCH SET n.counter = coalesce(n.counter, 0) + 1", runtime);
+
+            //begin, run, pull, rollback
+            connection.send( util.chunk(
+                    new BeginMessage(),
+                    new RunMessage( query ),
+                    new PullNMessage( asMapValue( map( "n", 5L ) ) ),
+                    RollbackMessage.ROLLBACK_MESSAGE ) );
+
+            // Then
+            assertThat( connection, util.eventuallyReceives( msgSuccess(), msgSuccess(), msgSuccess(), msgSuccess() ) );
+        }
+    }
+
     private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "compiled", "morsel debug=singleThreaded", "morsel" };
 
     private static MapValue paramWithRange( int from, int to )
