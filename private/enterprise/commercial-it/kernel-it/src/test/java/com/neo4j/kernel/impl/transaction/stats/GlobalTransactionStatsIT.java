@@ -51,7 +51,7 @@ class GlobalTransactionStatsIT
     void useAggregatedTransactionMonitorForMultidatabase() throws InterruptedException
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
-        String secondDb = "second.db";
+        String secondDb = "second";
         DatabaseManager databaseManager = getDatabaseManager();
         GraphDatabaseFacade secondFacade = databaseManager.createDatabase( secondDb ).getDatabaseFacade();
 

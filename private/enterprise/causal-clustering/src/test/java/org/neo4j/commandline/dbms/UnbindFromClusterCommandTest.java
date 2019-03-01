@@ -90,7 +90,7 @@ public class UnbindFromClusterCommandTest
         UnbindFromClusterCommand command = new UnbindFromClusterCommand( homeDir, confDir, outsideWorld );
 
         // when
-        command.execute( databaseNameParameter( "doesnotexist.db" ) );
+        command.execute( databaseNameParameter( "doesnotexist" ) );
 
         // then
         assertFalse( fs.fileExists( clusterStateDir ) );

@@ -157,7 +157,7 @@ class StoreCopyClientTest
     {
         // given
         mockClient( protocol );
-        String altDbName = "alternative.db";
+        String altDbName = "alternative";
         StoreId defaultDbStoreId = new StoreId( 6, 3, 2, 6 );
         StoreId altDbStoreId = new StoreId( 4, 6,1,9 );
         Map<GetStoreIdRequest,StoreId> storeIdMap = new HashMap<>();

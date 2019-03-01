@@ -91,7 +91,7 @@ class MultiDatabaseLockManagerIT
 
     private GraphDatabaseFacade startSecondDatabase()
     {
-        String secondDb = "second.db";
+        String secondDb = "second";
         DatabaseManager databaseManager = getDatabaseManager();
         return databaseManager.createDatabase( secondDb ).getDatabaseFacade();
     }

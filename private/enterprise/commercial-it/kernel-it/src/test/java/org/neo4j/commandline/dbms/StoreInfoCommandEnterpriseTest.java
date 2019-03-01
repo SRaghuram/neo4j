@@ -50,7 +50,7 @@ class StoreInfoCommandEnterpriseTest
     void setUp() throws Exception
     {
         Path homeDir = testDirectory.directory( "home-dir" ).toPath();
-        databaseDirectory = homeDir.resolve( "data/databases/foo.db" );
+        databaseDirectory = homeDir.resolve( "data/databases/foo" );
         Files.createDirectories( databaseDirectory );
         outCaptor = ArgumentCaptor.forClass( String.class );
         out = mock( Consumer.class );

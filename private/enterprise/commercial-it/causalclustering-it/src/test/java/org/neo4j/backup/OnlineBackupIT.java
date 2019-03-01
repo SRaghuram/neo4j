@@ -132,7 +132,7 @@ class OnlineBackupIT
     {
         RuntimeException error = assertThrows( RuntimeException.class, () ->
                 OnlineBackup.from( backupAddress.getHost(), backupAddress.getPort() )
-                        .backup( "unknown.db", backupsDir ) );
+                        .backup( "unknown", backupsDir ) );
 
         assertThat( error.getCause(), instanceOf( BackupExecutionException.class ) );
     }

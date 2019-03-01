@@ -41,7 +41,7 @@ public class StoreDownloaderTest
     private final AdvertisedSocketAddress primaryAddress = new AdvertisedSocketAddress( "primary", 1 );
     private final AdvertisedSocketAddress secondaryAddress = new AdvertisedSocketAddress( "secondary", 2 );
 
-    private final String databaseName = "target.db";
+    private final String databaseName = "target";
     private final StoreId storeId = randomStoreId();
 
     private final StubCatchupComponentsRepository components = new StubCatchupComponentsRepository();
@@ -78,7 +78,7 @@ public class StoreDownloaderTest
         // given
         LocalDatabase database = mockLocalDatabase( databaseName, true, storeId );
 
-        RemoteStore remoteStore = components.getOrCreate( "target.db" ).remoteStore();
+        RemoteStore remoteStore = components.getOrCreate( "target" ).remoteStore();
         StoreId mismatchedStoreId = randomStoreId();
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
@@ -151,7 +151,7 @@ public class StoreDownloaderTest
     public void shouldThrowIfComponentsDoNotExist() throws Exception
     {
         // given
-        LocalDatabase database = mockLocalDatabase( "wrong.db", true, storeId );
+        LocalDatabase database = mockLocalDatabase( "wrong", true, storeId );
 
         // when
         try

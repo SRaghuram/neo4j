@@ -103,7 +103,7 @@ public class CoreReplicatedContentMarshalV1Test
         after.setCreated();
         after.setNameId( 3232 );
         commands.add( new Command.LabelTokenCommand( before, after ) );
-        ReplicatedContent message = new ReplicatedTokenRequest( "some.graph.db",
+        ReplicatedContent message = new ReplicatedTokenRequest( "some.graph",
                 TokenType.LABEL, "theLabel", StorageCommandMarshal.commandsToBytes( commands ) );
         assertMarshalingEquality( buffer, message );
     }

@@ -113,7 +113,7 @@ class MultiDatabaseIdGeneratorIT
 
     private static GraphDatabaseFacade startSecondDatabase( DatabaseManager databaseManager )
     {
-        return databaseManager.createDatabase( "second.db" ).getDatabaseFacade();
+        return databaseManager.createDatabase( "second" ).getDatabaseFacade();
     }
 
     private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager databaseManager )

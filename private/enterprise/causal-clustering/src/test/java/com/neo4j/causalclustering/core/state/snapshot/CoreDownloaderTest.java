@@ -43,8 +43,8 @@ public class CoreDownloaderTest
     @Before
     public void before()
     {
-        databaseService.registerDatabase( "first.db", databaseA );
-        databaseService.registerDatabase( "second.db", databaseB );
+        databaseService.registerDatabase( "first", databaseA );
+        databaseService.registerDatabase( "second", databaseB );
     }
 
     @Test
