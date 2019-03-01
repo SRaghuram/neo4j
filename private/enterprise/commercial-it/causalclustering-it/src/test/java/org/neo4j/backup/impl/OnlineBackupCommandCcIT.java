@@ -72,7 +72,9 @@ import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSetting
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -202,8 +204,8 @@ public class OnlineBackupCommandCcIT
         assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
 
         // then
-        assertFalse( suppressOutput.getErrorVoice().toString().toLowerCase().contains( "exception" ) );
-        assertFalse( suppressOutput.getOutputVoice().toString().toLowerCase().contains( "exception" ) );
+        assertThat( suppressOutput.getErrorVoice().toString(), not( containsStringIgnoringCase( "exception" ) ) );
+        assertThat( suppressOutput.getOutputVoice().toString(), not( containsStringIgnoringCase( "exception" ) ) );
     }
 
     @Test

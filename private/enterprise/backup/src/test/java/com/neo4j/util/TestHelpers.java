@@ -52,7 +52,7 @@ public class TestHelpers
     {
         try ( ExitCodeMemorizingOutsideWorld outsideWorld = new ExitCodeMemorizingOutsideWorld() )
         {
-            AdminTool adminTool = new AdminTool( CommandLocator.fromServiceLocator(), outsideWorld, true );
+            AdminTool adminTool = new AdminTool( CommandLocator.fromServiceLocator(), outsideWorld, false );
 
             List<String> allArgs = new ArrayList<>();
             allArgs.add( "backup" );
