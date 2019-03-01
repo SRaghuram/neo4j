@@ -27,12 +27,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertDirectoryExists;
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertDoesNotExist;
 import static com.neo4j.bench.client.util.BenchmarkUtil.assertFileExists;
-
 import static java.lang.String.format;
 
 public class ForkDirectory
@@ -190,13 +190,18 @@ public class ForkDirectory
         try
         {
             String exceptionString = ErrorReporter.stackTraceToString( e );
-            Path errorFile = dir.resolve( "error-" + System.currentTimeMillis() + ".log" );
-            return Files.write( errorFile, exceptionString.getBytes( StandardCharsets.UTF_8 ) );
+            Path errorLog = newErrorLog();
+            return Files.write( errorLog, exceptionString.getBytes( StandardCharsets.UTF_8 ) );
         }
         catch ( IOException ioe )
         {
             throw new UncheckedIOException( ioe );
         }
+    }
+
+    public Path newErrorLog()
+    {
+        return dir.resolve( "error-" + UUID.randomUUID() + ".log" );
     }
 
     public List<ProfilerType> profilers()

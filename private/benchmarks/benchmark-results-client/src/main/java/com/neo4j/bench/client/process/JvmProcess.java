@@ -26,12 +26,17 @@ public class JvmProcess implements BaseProcess, HasPid
 {
     public static JvmProcess start( JvmProcessArgs jvmProcessArgs )
     {
+        return start( jvmProcessArgs, Redirect.INHERIT, Redirect.INHERIT );
+    }
+
+    public static JvmProcess start( JvmProcessArgs jvmProcessArgs, Redirect outputRedirect, Redirect errorRedirect )
+    {
         try
         {
             ProcessBuilder processBuilder = new ProcessBuilder()
                     .command( jvmProcessArgs.args() )
-                    .redirectOutput( Redirect.INHERIT )
-                    .redirectError( Redirect.INHERIT );
+                    .redirectOutput( outputRedirect )
+                    .redirectError( errorRedirect );
             ProcessWrapper process = ProcessWrapper.start( processBuilder );
             Instant start = Instant.now();
             Duration timeout = Duration.of( 5, ChronoUnit.MINUTES );
