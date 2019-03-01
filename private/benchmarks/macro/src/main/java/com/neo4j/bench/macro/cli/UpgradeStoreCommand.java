@@ -17,6 +17,7 @@ import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -76,6 +77,13 @@ public class UpgradeStoreCommand implements Runnable
                                     originalDbDir.getAbsolutePath(),
                                     upgradedDbDir.getAbsolutePath() ) );
 
+        // TODO remove, after store upgrade
+        Path systemDbDir = originalDbDir.toPath().resolve( "system.db" );
+        if ( Files.exists( systemDbDir ) )
+        {
+            BenchmarkUtil.deleteDir( systemDbDir );
+        }
+
         Store.assertDirectoryIsNeoStore( originalDbDir.toPath() );
         try ( Store originalStore = Store.createFrom( originalDbDir.toPath() );
               Resources resources = new Resources() )
@@ -92,7 +100,8 @@ public class UpgradeStoreCommand implements Runnable
                 neo4jConfigPath = Paths.get( "neo4j.conf" );
                 Neo4jConfig.empty()
                            .withSetting( allow_upgrade, "true" )
-                           .withSetting( record_format, "high_limit" ).writeAsProperties( neo4jConfigPath );
+                           .withSetting( record_format, "high_limit" )
+                           .writeAsProperties( neo4jConfigPath );
             }
 
             System.out.println( "Checking schema..." );
