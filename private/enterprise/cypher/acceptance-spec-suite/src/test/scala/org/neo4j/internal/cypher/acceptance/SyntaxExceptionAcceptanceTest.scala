@@ -113,10 +113,9 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
       execute(query)
       fail(s"Did not get the expected syntax error, expected: $message")
     } catch {
-      case x: CypherException => {
-        val actual = x.getMessage.lines.next.trim
+      case x: CypherException =>
+        val actual = x.getMessage.linesIterator.next.trim
         actual should startWith(message.init)
-      }
     }
   }
 
@@ -126,7 +125,7 @@ class SyntaxExceptionAcceptanceTest extends ExecutionEngineFunSuite {
       fail(s"Did not get the expected syntax error, expected matching: '$messageRegex'")
     } catch {
       case x: CypherException =>
-        val actual = x.getMessage.lines.next().trim
+        val actual = x.getMessage.linesIterator.next().trim
         messageRegex findFirstIn actual match {
           case None => fail(s"Expected matching '$messageRegex', but was '$actual'")
           case Some(_) => ()

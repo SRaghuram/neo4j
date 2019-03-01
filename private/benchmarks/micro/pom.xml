@@ -199,7 +199,7 @@
                     <target>${maven.compiler.target}</target>
                     <source>${maven.compiler.target}</source>
                     <args>
-                      <arg>-target:jvm-${maven.compiler.target}</arg>
+                        <arg>-target:jvm-${scala.target.vm}</arg>
                     </args>
                 </configuration>
                 <executions>

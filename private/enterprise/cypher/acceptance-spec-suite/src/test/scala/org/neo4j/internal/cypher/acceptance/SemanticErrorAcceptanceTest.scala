@@ -346,7 +346,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     val query = "EXPLAIN MATCH (m), (n) RETURN m, n, o LIMIT 25"
     val error = intercept[QueryExecutionException](graph.execute(query))
 
-    val first :: second :: third :: Nil = error.getMessage.lines.toList
+    val first :: second :: third :: Nil = error.getMessage.linesIterator.toList
     first should equal("Variable `o` not defined (line 1, column 37 (offset: 36))")
     second should equal(s""""$query"""")
     third should startWith(" "*37 + "^")
@@ -478,7 +478,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
       fail(s"Did not get the expected error, expected: $expectedErrorString")
     } catch {
       case x: QueryExecutionException =>
-        val actual = x.getMessage.lines.next().trim
+        val actual = x.getMessage.linesIterator.next().trim
         if (!correctError(actual, expected)) {
           fail(s"Did not get the expected error, expected: $expectedErrorString actual: '$actual'")
         }
