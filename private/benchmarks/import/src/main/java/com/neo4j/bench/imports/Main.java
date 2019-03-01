@@ -231,6 +231,7 @@ public class Main
                     new TestRunReport( testRun, new BenchmarkConfig(), Sets.newHashSet( neo4j ), neo4jConfig, Environment.current(), metrics, tool, java,
                             Lists.newArrayList() );
             SubmitTestRun submitTestRun = new SubmitTestRun( report );
+            System.out.println( "Test run reported: " + report );
 
             new QueryRetrier().execute( client, submitTestRun );
         }
