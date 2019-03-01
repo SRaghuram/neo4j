@@ -73,7 +73,7 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        String expectedSessionString = sessionConnectionDetails( SESSION_1,"TestUser" );
+        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
         logProvider.assertExactly(
             inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 11L, expectedSessionString, QUERY_1 ) )
         );
@@ -101,7 +101,7 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query2 );
 
         // then
-        String expectedSessionString = sessionConnectionDetails( SESSION_2,"TestUser2" );
+        String expectedSessionString = sessionConnectionDetails( SESSION_2, "TestUser2" );
         logProvider.assertExactly(
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 9L, expectedSessionString, QUERY_2 ) )
         );
@@ -130,8 +130,8 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query1 );
 
         // then
-        String expectedSession1String = sessionConnectionDetails( SESSION_1,"TestUser1" );
-        String expectedSession2String = sessionConnectionDetails( SESSION_2,"TestUser2" );
+        String expectedSession1String = sessionConnectionDetails( SESSION_1, "TestUser1" );
+        String expectedSession2String = sessionConnectionDetails( SESSION_2, "TestUser2" );
         logProvider.assertExactly(
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 17L, expectedSession2String, QUERY_2 ) ),
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 25L, expectedSession1String, QUERY_1 ) )
@@ -154,7 +154,7 @@ public class ConfiguredQueryLoggerTest
         // then
         logProvider.assertExactly(
                 inLog( getClass() )
-                        .error( is( "1 ms: " + sessionConnectionDetails( SESSION_1,"TestUser" )
+                        .error( is( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" )
                                 + " - MATCH (n) RETURN n - {}" ), sameInstance( failure ) )
         );
     }
@@ -174,7 +174,7 @@ public class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        String expectedSessionString = sessionConnectionDetails( SESSION_1,"TestUser" );
+        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
         logProvider.assertExactly(
             inLog( getClass() ).info( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
                     "{ages: " +
@@ -200,7 +200,7 @@ public class ConfiguredQueryLoggerTest
         // then
         logProvider.assertExactly(
             inLog( getClass() ).error(
-                    is( "1 ms: " + sessionConnectionDetails( SESSION_1,"TestUser" )
+                    is( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" )
                             + " - MATCH (n) WHERE n.age IN {ages} RETURN n - {ages: [41, 42, 43]} - {}" ),
                 sameInstance( failure ) )
         );
@@ -492,7 +492,7 @@ public class ConfiguredQueryLoggerTest
         // then
         logProvider.assertExactly(
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, DEFAULT_DATABASE_NAME,"TestUser" ), QUERY_1 ) ),
+                        sessionConnectionDetails( SESSION_1, DEFAULT_DATABASE_NAME, "TestUser" ), QUERY_1 ) ),
                 inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
                         sessionConnectionDetails( SESSION_1, "otherDb", "AnotherUser" ), QUERY_1 ) )
         );
