@@ -96,12 +96,15 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
             <version>${commons-math3.version}</version>
-            <!-- I am overwriting scope here, it is set to test in parent
-                 and shade plugin only includes runtime scope dependencies              
-             -->
+            <!-- I am overwriting scope here, this artifact scope
+                 is set to test in parent pom, and because of this,
+                 is not being included in final ldbc jar,
+                 which is build with maven shade plugin,
+                 and shade plugin only includes runtime scope dependencies,
+                 this change is only required for ldbc module -->
             <scope>runtime</scope>
         </dependency>
-        
+
         <!--git sub-module libraries -->
         <dependency>
             <groupId>com.ldbc.driver</groupId>
