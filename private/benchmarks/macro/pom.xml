@@ -86,7 +86,7 @@
         </dependency>
         <dependency>
             <groupId>io.findify</groupId>
-            <artifactId>s3mock_2.11</artifactId>
+            <artifactId>s3mock_${scala.binary.version}</artifactId>
             <version>0.2.4</version>
             <scope>test</scope>
         </dependency>
