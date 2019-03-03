@@ -6,12 +6,14 @@
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandexpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{NestedPipeExpression, Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.NestedPipeSlottedExpression
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.expressions.{functions, _}
 import org.neo4j.cypher.internal.v4_0.logical.plans.{NestedPlanExpression, ResolvedFunctionInvocation}
@@ -19,7 +21,7 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 
-object MorselExpressionConverters extends ExpressionConverter {
+case class MorselExpressionConverters(physicalPlan: PhysicalPlan) extends ExpressionConverter {
 
   override def toCommandExpression(id: Id, expression: ast.Expression,
                                    self: ExpressionConverters): Option[Expression] = expression match {
@@ -60,9 +62,12 @@ object MorselExpressionConverters extends ExpressionConverter {
     // We need to convert NestedPipeExpression here so we can register a noop dummy pipe as owner
     // TODO: Later we may want to establish a connection with the id of the operator for proper PROFILE support
     case e: NestedPipeExpression =>
-      val ce = commandexpressions.NestedPipeExpression(e.pipe,
-                                                       self.toCommandExpression(id, e.projection),
-                                                       e.availableExpressionVariables.map(exp => commandexpressions.ExpressionVariable(exp.offset, exp.name)))
+      val ce = NestedPipeSlottedExpression(e.pipe,
+                                           self.toCommandExpression(id, e.projection),
+                                           physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
+                                           e.availableExpressionVariables.map(
+                                             exp => commandexpressions.ExpressionVariable(exp.offset, exp.name)
+                                           ).toArray)
       ce.registerOwningPipe(new NoPipe)
       Some(ce)
 

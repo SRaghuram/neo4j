@@ -40,12 +40,12 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     val converters: ExpressionConverters = if (context.compileExpressions) {
       new ExpressionConverters(
         new CompiledExpressionConverter(context.log, physicalPlan, context.tokenContext),
-        MorselExpressionConverters,
+        MorselExpressionConverters(physicalPlan),
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     } else {
       new ExpressionConverters(
-        MorselExpressionConverters,
+        MorselExpressionConverters(physicalPlan),
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     }

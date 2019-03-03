@@ -88,10 +88,10 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
       case runtimeAst.IsPrimitiveNull(offset) =>
         Some(runtimeExpression.IsPrimitiveNull(offset))
       case e: org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression =>
-        Some(runtimeExpression.NestedPipeExpression(e.pipe,
-                                                    self.toCommandExpression(id, e.projection),
-                                                    physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
-                                                    e.availableExpressionVariables.map(commands.ExpressionVariable.of).toArray))
+        Some(runtimeExpression.NestedPipeSlottedExpression(e.pipe,
+                                                           self.toCommandExpression(id, e.projection),
+                                                           physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
+                                                           e.availableExpressionVariables.map(commands.ExpressionVariable.of).toArray))
       case _ =>
         None
     }
