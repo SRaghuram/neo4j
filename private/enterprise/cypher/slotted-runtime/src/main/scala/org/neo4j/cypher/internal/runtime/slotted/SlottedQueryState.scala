@@ -21,23 +21,23 @@ class SlottedQueryState(query: QueryContext,
                         params: MapValue,
                         cursors: ExpressionCursors,
                         queryIndexes: Array[IndexReadSession],
-                        expressionSlots: Array[AnyValue],
+                        expressionVariables: Array[AnyValue],
                         decorator: PipeDecorator = NullPipeDecorator,
                         initialContext: Option[ExecutionContext] = None,
                         cachedIn: SingleThreadedLRUCache[Any, InCheckContainer] = new SingleThreadedLRUCache(maxSize = 16),
                         lenientCreateRelationship: Boolean = false,
                         prePopulateResults: Boolean = false,
                         input: InputDataStream = NoInput)
-  extends QueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input) {
+  extends QueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
   override def withDecorator(decorator: PipeDecorator) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
+    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
   override def withInitialContext(initialContext: ExecutionContext) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, Some(initialContext), cachedIn, lenientCreateRelationship, prePopulateResults, input)
+    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator, Some(initialContext), cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
   override def withQueryContext(query: QueryContext) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
+    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
 }
 
 case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends ExecutionContextFactory {

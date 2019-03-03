@@ -114,7 +114,7 @@ case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupin
 
   override def computeGroupingKey(context: ExecutionContext,
                                   state: QueryState): AnyValue =
-    projection.computeGroupingKey(context, state.query, state.params, state.cursors, state.expressionSlots)
+    projection.computeGroupingKey(context, state.query, state.params, state.cursors, state.expressionVariables)
 
 
   override def getGroupingKey(context: ExecutionContext): AnyValue = projection.getGroupingKey(context)
@@ -128,7 +128,7 @@ case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Bo
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
   override def project(ctx: ExecutionContext, state: QueryState): Unit =
-    projection.project(ctx, state.query, state.params, state.cursors, state.expressionSlots)
+    projection.project(ctx, state.query, state.params, state.cursors, state.expressionVariables)
 }
 
 case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression) extends ExtendedExpression {
@@ -138,7 +138,7 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
   override def arguments: Seq[Expression] = legacy.arguments
 
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
-    ce.evaluate(ctx, state.query, state.params, state.cursors, state.expressionSlots)
+    ce.evaluate(ctx, state.query, state.params, state.cursors, state.expressionVariables)
 
   override def symbolTableDependencies: Set[String] = legacy.symbolTableDependencies
 

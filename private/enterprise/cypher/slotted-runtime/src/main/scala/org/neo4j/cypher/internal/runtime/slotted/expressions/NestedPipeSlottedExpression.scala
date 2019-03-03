@@ -43,7 +43,7 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
     var i = 0
     while (i < expVarSlotsInNestedPlan.length) {
       val expVar = availableExpressionVariables(i)
-      initialContext.setRefAt(expVarSlotsInNestedPlan(i), state.expressionSlots(expVar.offset))
+      initialContext.setRefAt(expVarSlotsInNestedPlan(i), state.expressionVariables(expVar.offset))
       i += 1
     }
     initialContext

@@ -43,21 +43,21 @@ object CodeGeneration {
                                                                   param(classOf[DbAccess], "dbAccess"),
                                                                   param(classOf[MapValue], "params"),
                                                                   param(classOf[ExpressionCursors], "cursors"),
-                                                                  param(classOf[Array[AnyValue]], "expressionSlots"))
+                                                                  param(classOf[Array[AnyValue]], "expressionVariables"))
 
   private val PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "project",
                                                                  param(classOf[ExecutionContext], "context"),
                                                                  param(classOf[DbAccess], "dbAccess"),
                                                                  param(classOf[MapValue], "params"),
                                                                  param(classOf[ExpressionCursors], "cursors"),
-                                                                 param(classOf[Array[AnyValue]], "expressionSlots"))
+                                                                 param(classOf[Array[AnyValue]], "expressionVariables"))
 
   private val GROUPING_KEY_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "computeGroupingKey",
                                                                       param(classOf[ExecutionContext], "context"),
                                                                       param(classOf[DbAccess], "dbAccess"),
                                                                       param(classOf[MapValue], "params"),
                                                                       param(classOf[ExpressionCursors], "cursors"),
-                                                                      param(classOf[Array[AnyValue]], "expressionSlots"))
+                                                                      param(classOf[Array[AnyValue]], "expressionVariables"))
 
   private val GROUPING_PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "projectGroupingKey",
                                                                           param(classOf[ExecutionContext], "context"),

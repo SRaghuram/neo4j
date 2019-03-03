@@ -150,7 +150,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                               predicate: Expression,
                               entity: AnyValue): Boolean =
     tempOffset == -1 || {
-      state.expressionSlots(tempOffset) = entity
+      state.expressionVariables(tempOffset) = entity
       predicate(row, state) eq Values.TRUE
     }
 

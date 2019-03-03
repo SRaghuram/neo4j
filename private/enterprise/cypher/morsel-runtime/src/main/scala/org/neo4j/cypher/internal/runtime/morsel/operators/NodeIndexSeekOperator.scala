@@ -69,7 +69,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionSlots(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots))
       nodeCursors = indexSeek(queryState, state.queryIndexes(queryIndexId), needsValues, indexOrder, inputRow)
       true
     }

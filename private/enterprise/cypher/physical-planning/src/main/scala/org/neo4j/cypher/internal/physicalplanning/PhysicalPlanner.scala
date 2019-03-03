@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.expressionVariables
-import org.neo4j.cypher.internal.runtime.expressionVariables.{AvailableExpressionVariables, Result}
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.{AvailableExpressionVariables, Result}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
 
@@ -19,7 +19,7 @@ object PhysicalPlanner {
            semanticTable: SemanticTable,
            breakingPolicy: PipelineBreakingPolicy,
            allocateArgumentSlots: Boolean = false): PhysicalPlan = {
-    val Result(logicalPlan, nExpressionSlots, availableExpressionVars) = expressionVariables.replace(beforeRewrite)
+    val Result(logicalPlan, nExpressionSlots, availableExpressionVars) = expressionVariableAllocation.replace(beforeRewrite)
     val slotMetaData = SlotAllocation.allocateSlots(logicalPlan, semanticTable, breakingPolicy, availableExpressionVars, allocateArgumentSlots)
     val slottedRewriter = new SlottedRewriter(tokenContext)
     val finalLogicalPlan = slottedRewriter(logicalPlan, slotMetaData.slotConfigurations)

@@ -31,13 +31,13 @@ public interface CompiledGroupingExpression
      * @param dbAccess used for accessing the database
      * @param params the parameters of the query
      * @param cursors cursors to use for expression evaluation
-     * @param expressionSlots slots used for storing expression variable values
+     * @param expressionVariables array used for storing expression variable values
      */
     AnyValue computeGroupingKey( ExecutionContext context,
                                  DbAccess dbAccess,
                                  MapValue params,
                                  ExpressionCursors cursors,
-                                 AnyValue[] expressionSlots );
+                                 AnyValue[] expressionVariables );
 
     /**
      * Gets an already projected grouping key from the context.

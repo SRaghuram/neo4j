@@ -44,7 +44,7 @@ class AggregationReduceOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionSlots(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots))
 
       if (null == aggregates) {
         aggregates = aggregateInputs(inputMorsels, queryState)

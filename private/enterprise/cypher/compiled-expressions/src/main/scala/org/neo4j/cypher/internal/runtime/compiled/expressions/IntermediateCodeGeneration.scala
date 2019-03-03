@@ -350,7 +350,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         while( matches < 2 && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            expressionSlots[innerVarOffset] = currentValue;
+            expressionVariables[innerVarOffset] = currentValue;
             Value isMatch = [result from inner expression]
             if (isMatch == Values.TRUE)
             {
@@ -395,7 +395,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              // expressionSlots[innerVarOffset] = currentValue;
+              // expressionVariables[innerVarOffset] = currentValue;
               setExpressionVariable(innerVariable, load(currentValue)),
               // Value isMatch = [result from inner expression]
               // if (isMatch == Values.TRUE)
@@ -437,7 +437,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         while( isMatch != Values.TRUE && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            expressionSlots[innerVarOffset] = currentValue;
+            expressionVariables[innerVarOffset] = currentValue;
             isMatch = [result from inner expression]
             if (isMatch == Values.NO_VALUE)
             {
@@ -480,7 +480,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              // expressionSlots[innerVarOffset] = currentValue;
+              // expressionVariables[innerVarOffset] = currentValue;
               setExpressionVariable(innerVariable, load(currentValue)),
               // isMatch = [result from inner expression]
               assign(isMatch, nullCheck(inner)(inner.ir)),
@@ -513,7 +513,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         while( isMatch != Values.TRUE && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            expressionSlots[innerVarOffset] = currentValue;
+            expressionVariables[innerVarOffset] = currentValue;
             isMatch = [result from inner expression]
             if (isMatch == Values.NO_VALUE)
             {
@@ -553,7 +553,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              // expressionSlots[innerVarOffset] = currentValue;
+              // expressionVariables[innerVarOffset] = currentValue;
               setExpressionVariable(innerVariable, load(currentValue)),
               // isMatch = [result from inner expression]
               assign(isMatch, nullCheck(inner)(inner.ir)),
@@ -585,7 +585,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         while( isMatch==Values.TRUE && listIterator.hasNext() )
         {
             AnyValue currentValue = listIterator.next();
-            expressionSlots[innerVarOffset] = currentValue;
+            expressionVariables[innerVarOffset] = currentValue;
             isMatch = [result from inner expression]
         }
         return isMatch;
@@ -617,7 +617,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              // expressionSlots[innerVarOffset] = currentValue;
+              // expressionVariables[innerVarOffset] = currentValue;
               setExpressionVariable(innerVariable, load(currentValue)),
               // isMatch = [result from inner expression]
               assign(isMatch, nullCheck(inner)(inner.ir))
@@ -657,12 +657,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         The generated code will be something along the lines of:
 
         ListValue list = [evaluate collection expression];
-        expressionSlots[accVarOffset] = init;
+        expressionVariables[accVarOffset] = init;
         for ( AnyValue currentValue : list ) {
-            expressionSlots[innerVarOffset] = currentValue;
-            expressionSlots[accVarOffset] = [result])
+            expressionVariables[innerVarOffset] = currentValue;
+            expressionVariables[accVarOffset] = [result])
         }
-        return expressionSlots[accVarOffset]
+        return expressionVariables[accVarOffset]
        */
       val accVar = ExpressionVariable.cast(scope.accumulator)
       val innerVar = ExpressionVariable.cast(scope.variable)
@@ -678,7 +678,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           // ListValue list = [evaluate collection expression];
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
-          // expressionSlots[accOffset] = init;
+          // expressionVariables[accOffset] = init;
           setExpressionVariable(accVar, nullCheck(init)(init.ir)),
           // Iterator<AnyValue> iter = list.iterator();
           // while (iter.hasNext) {
@@ -690,13 +690,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               declare[AnyValue](currentValue),
               assign(currentValue,
                      cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-              // expressionSlots[iterOffset] = currentValue;
+              // expressionVariables[iterOffset] = currentValue;
               setExpressionVariable(innerVar, load(currentValue)),
-              // expressionSlots[accOffset] = [inner expression];
+              // expressionVariables[accOffset] = [inner expression];
               setExpressionVariable(accVar, nullCheck(inner)(inner.ir))
             ): _*)
           },
-          // return expressionSlots[accOffset];
+          // return expressionVariables[accOffset];
           loadExpressionVariable(accVar)
         )
         IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields ++ init.fields, collection.variables ++
@@ -2199,7 +2199,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
        while( listIterator.hasNext() )
        {
            AnyValue currentValue = listIterator.next();
-           expressionSlots[innerVarOffset] = currentValue;
+           expressionVariables[innerVarOffset] = currentValue;
            Value isFiltered = [result from inner expression]
            if (isFiltered == Values.TRUE)
            {
@@ -2234,7 +2234,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             declare[AnyValue](currentValue),
             assign(currentValue,
                    cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-            // expressionSlots[innerVarOffset] = currentValue;
+            // expressionVariables[innerVarOffset] = currentValue;
             setExpressionVariable(innerVariable, load(currentValue)),
             declare[Value](isFiltered),
             // Value isFiltered = [result from inner expression]
@@ -2268,7 +2268,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         ListValue list = [evaluate collection expression];
         ArrayList<AnyValue> extracted = new ArrayList<>();
         for ( AnyValue currentValue : list ) {
-            expressionSlots[innerVarOffset] = currentValue;
+            expressionVariables[innerVarOffset] = currentValue;
             extracted.add([result from inner expression]);
         }
         return VirtualValues.fromList(extracted);
@@ -2297,7 +2297,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             declare[AnyValue](currentValue),
             assign(currentValue,
                    cast[AnyValue](invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Object]("next")))),
-            // expressionSlots[innerVarOffset] = currentValue;
+            // expressionVariables[innerVarOffset] = currentValue;
             setExpressionVariable(innerVariable, load(currentValue)),
             // extracted.add([result from inner expression]);
             invokeSideEffect(load(extractedVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
@@ -2561,11 +2561,11 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
   }
 
   private def setExpressionVariable(ev: ExpressionVariable, value: IntermediateRepresentation): IntermediateRepresentation = {
-    arraySet(load("expressionSlots"), ev.offset, value)
+    arraySet(load("expressionVariables"), ev.offset, value)
   }
 
   private def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
-    arrayLoad(load("expressionSlots"), ev.offset)
+    arrayLoad(load("expressionVariables"), ev.offset)
   }
 }
 

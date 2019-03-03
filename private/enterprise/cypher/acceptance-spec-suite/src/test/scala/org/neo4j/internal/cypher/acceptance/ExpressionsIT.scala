@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.physicalplanning.{ast, _}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.expressionVariables.AvailableExpressionVariables
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -83,7 +83,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   protected var query: QueryContext = _
   private var cursors: ExpressionCursors = _
-  private var expressionSlots: Array[AnyValue] = _
+  private var expressionVariables: Array[AnyValue] = _
   private var tx: InternalTransaction = _
   private var context: TransactionalContext = _
   private val random = ThreadLocalRandom.current()
@@ -1592,7 +1592,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compileProjection(projections, slots)
 
     //when
-    compiled.project(context, query, map(Array("param"), Array(NO_VALUE)), cursors, expressionSlots)
+    compiled.project(context, query, map(Array("param"), Array(NO_VALUE)), cursors, expressionVariables)
 
     //then
     context.getRefAt(0) should equal(stringValue("hello"))
@@ -2528,7 +2528,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionSlots)
+    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionVariables)
     compiled.projectGroupingKey(outgoing, key)
 
     //then
@@ -2550,7 +2550,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionSlots)
+    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionVariables)
     compiled.projectGroupingKey(outgoing, key)
 
     //then
@@ -2575,7 +2575,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
-    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionSlots)
+    val key = compiled.computeGroupingKey(incoming, query, EMPTY_MAP, cursors, expressionVariables)
     compiled.projectGroupingKey(outgoing, key)
 
     //then
@@ -3445,20 +3445,20 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                                 slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression
 
   private def evaluate(compiled: CompiledExpression): AnyValue =
-    compiled.evaluate(ctx, query, EMPTY_MAP, cursors, expressionSlots)
+    compiled.evaluate(ctx, query, EMPTY_MAP, cursors, expressionVariables)
 
   private def evaluate(compiled: CompiledExpression,
                        params: MapValue): AnyValue =
-    compiled.evaluate(ctx, query, params, cursors, expressionSlots)
+    compiled.evaluate(ctx, query, params, cursors, expressionVariables)
 
   private def evaluate(compiled: CompiledExpression,
                        context: ExecutionContext): AnyValue =
-    compiled.evaluate(context, query, EMPTY_MAP, cursors, expressionSlots)
+    compiled.evaluate(context, query, EMPTY_MAP, cursors, expressionVariables)
 
   private def evaluate(compiled: CompiledExpression,
                        params: MapValue,
                        context: ExecutionContext): AnyValue =
-    compiled.evaluate(context, query, params, cursors, expressionSlots)
+    compiled.evaluate(context, query, params, cursors, expressionVariables)
 
   private def evaluate(compiled: CompiledExpression,
                        nExpressionSlots: Int,
@@ -3613,7 +3613,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
                             dbAccess: DbAccess,
                             params: MapValue,
                             cursors: ExpressionCursors,
-                            expressionSlots: Array[AnyValue]): AnyValue = expression(context, state(dbAccess, params, cursors, expressionSlots))
+                            expressionVariables: Array[AnyValue]): AnyValue = expression(context, state(dbAccess, params, cursors, expressionVariables))
 
     }
   }
@@ -3626,7 +3626,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
                            dbAccess: DbAccess,
                            params: MapValue,
                            cursors: ExpressionCursors,
-                           expressionSlots: Array[AnyValue]): Unit = projector.project(context, state(dbAccess, params, cursors, expressionSlots))
+                           expressionVariables: Array[AnyValue]): Unit = projector.project(context, state(dbAccess, params, cursors, expressionVariables))
 
     }
   }
@@ -3643,8 +3643,8 @@ class InterpretedExpressionIT extends ExpressionsIT {
                                       dbAccess: DbAccess,
                                       params: MapValue,
                                       cursors: ExpressionCursors,
-                                      expressionSlots: Array[AnyValue]): AnyValue =
-        grouping.computeGroupingKey(context, state(dbAccess, params, cursors, expressionSlots))
+                                      expressionVariables: Array[AnyValue]): AnyValue =
+        grouping.computeGroupingKey(context, state(dbAccess, params, cursors, expressionVariables))
 
 
       override def getGroupingKey(context: ExecutionContext): AnyValue = grouping.getGroupingKey(context)
@@ -3652,13 +3652,13 @@ class InterpretedExpressionIT extends ExpressionsIT {
   }
 
 
-  private def state(dbAccess: DbAccess, params: MapValue, cursors: ExpressionCursors, expressionSlots: Array[AnyValue]) =
+  private def state(dbAccess: DbAccess, params: MapValue, cursors: ExpressionCursors, expressionVariables: Array[AnyValue]) =
     new QueryState(dbAccess.asInstanceOf[QueryContext],
                    null,
                    params,
                    cursors,
                    Array.empty,
-                   expressionSlots)
+                   expressionVariables)
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
     val plan = PhysicalPlan(null,

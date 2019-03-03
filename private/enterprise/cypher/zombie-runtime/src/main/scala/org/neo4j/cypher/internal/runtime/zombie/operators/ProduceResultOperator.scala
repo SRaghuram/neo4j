@@ -80,7 +80,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionSlots(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots))
 
       // Loop over the rows of the morsel and call the visitor for each one
       while (output.isValidRow) {

@@ -48,7 +48,7 @@ class PreSortOperator(val workIdentity: WorkIdentity,
                                            params = state.params,
                                            resources.expressionCursors,
                                            Array.empty[IndexReadSession],
-                                           resources.expressionSlots(state.nExpressionSlots))
+                                           resources.expressionVariables(state.nExpressionSlots))
         count(currentRow, queryState).asInstanceOf[NumberValue].longValue().toInt
       }
 

@@ -17,12 +17,12 @@ class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {
 
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory)
   val cursorPools: CursorPools = new CursorPools(cursorFactory)
-  private var _expressionSlots = new Array[AnyValue](8)
+  private var _expressionVariables = new Array[AnyValue](8)
 
-  def expressionSlots(nExpressionSlots: Int): Array[AnyValue] = {
-    if (nExpressionSlots < _expressionSlots.length)
-      _expressionSlots = new Array[AnyValue](nExpressionSlots)
-    _expressionSlots
+  def expressionVariables(nExpressionSlots: Int): Array[AnyValue] = {
+    if (nExpressionSlots < _expressionVariables.length)
+      _expressionVariables = new Array[AnyValue](nExpressionSlots)
+    _expressionVariables
   }
 
   override def close(): Unit = {

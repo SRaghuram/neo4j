@@ -36,7 +36,7 @@ class AggregationMapperOperator(val workIdentity: WorkIdentity,
                                        params = state.params,
                                        resources.expressionCursors,
                                        Array.empty[IndexReadSession],
-                                       resources.expressionSlots(state.nExpressionSlots))
+                                       resources.expressionVariables(state.nExpressionSlots))
 
     //loop over the entire morsel and apply the aggregation
     while (currentRow.isValidRow) {

@@ -30,7 +30,7 @@ class FilterOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionSlots(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots))
 
       while (readingRow.isValidRow) {
         val matches = predicate(readingRow, queryState) == Values.TRUE

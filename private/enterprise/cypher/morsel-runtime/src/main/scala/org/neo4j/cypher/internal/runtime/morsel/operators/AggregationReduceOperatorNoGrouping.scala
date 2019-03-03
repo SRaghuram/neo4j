@@ -35,7 +35,7 @@ class AggregationReduceOperatorNoGrouping(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionSlots(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots))
 
       val reducers = aggregations.map(_.createReducer)
 

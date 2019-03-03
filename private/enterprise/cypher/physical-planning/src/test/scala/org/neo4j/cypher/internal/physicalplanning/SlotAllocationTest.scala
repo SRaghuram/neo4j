@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.PlanMatchHelp
 import org.neo4j.cypher.internal.ir.v4_0.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy.breakFor
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
-import org.neo4j.cypher.internal.runtime.expressionVariables.AvailableExpressionVariables
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, _}
 import org.neo4j.cypher.internal.v4_0.logical.{plans => logicalPlans}
 import org.neo4j.cypher.internal.v4_0.logical.plans

@@ -41,7 +41,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                                  params = state.params,
                                                  resources.expressionCursors,
                                                  Array.empty[IndexReadSession],
-                                                 resources.expressionSlots(state.nExpressionSlots))
+                                                 resources.expressionVariables(state.nExpressionSlots))
 
       while (inputRow.isValidRow && outputRow.isValidRow) {
         if (unwoundValues == null) {

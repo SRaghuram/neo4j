@@ -50,7 +50,7 @@ class NodeIndexContainsScanOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionSlots(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots))
       val value = valueExpr(inputRow, queryState)
 
       value match {

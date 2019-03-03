@@ -48,7 +48,7 @@ object LazySlottedPipeStreamingOperator {
                           morselQueryState.params,
                           resources.expressionCursors,
                           morselQueryState.queryIndexes,
-                          resources.expressionSlots(morselQueryState.nExpressionSlots),
+                          resources.expressionVariables(morselQueryState.nExpressionSlots),
                           pipeDecorator,
                           lenientCreateRelationship = false)
   }
@@ -63,7 +63,7 @@ object LazySlottedPipeStreamingOperator {
                            morselQueryState.params,
                            resources.expressionCursors,
                            morselQueryState.queryIndexes,
-                           resources.expressionSlots(morselQueryState.nExpressionSlots),
+                           resources.expressionVariables(morselQueryState.nExpressionSlots),
                            pipeDecorator,
                            lenientCreateRelationship = false,
                            inputMorsel = inputMorsel)
@@ -75,18 +75,18 @@ class FeedPipeQueryState(query: QueryContext,
                          params: MapValue,
                          cursors: ExpressionCursors,
                          queryIndexes: Array[IndexReadSession],
-                         expressionSlots: Array[AnyValue],
+                         expressionVariables: Array[AnyValue],
                          decorator: PipeDecorator = NullPipeDecorator,
                          initialContext: Option[ExecutionContext] = None,
                          cachedIn: SingleThreadedLRUCache[Any, InCheckContainer] = new SingleThreadedLRUCache(maxSize = 16),
                          lenientCreateRelationship: Boolean = false,
                          var inputMorsel: MorselExecutionContext = null)
-  extends SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, initialContext, cachedIn, lenientCreateRelationship) {
+  extends SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator, initialContext, cachedIn, lenientCreateRelationship) {
 
   var isNextRowReady: Boolean = false
 
   override def withInitialContext(initialContext: ExecutionContext): FeedPipeQueryState = {
-    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionSlots, decorator, Some(initialContext), cachedIn, lenientCreateRelationship, inputMorsel)
+    new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator, Some(initialContext), cachedIn, lenientCreateRelationship, inputMorsel)
   }
 }
 

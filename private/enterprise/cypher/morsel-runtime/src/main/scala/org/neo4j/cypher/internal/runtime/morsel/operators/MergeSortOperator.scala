@@ -45,7 +45,7 @@ class MergeSortOperator(val workIdentity: WorkIdentity,
                                          params = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
-                                         resources.expressionSlots(state.nExpressionSlots))
+                                         resources.expressionVariables(state.nExpressionSlots))
       count(firstRow, queryState).asInstanceOf[NumberValue].longValue()
     }
 
