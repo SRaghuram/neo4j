@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.compiler.v4_0.planner.LogicalPlanningTestSuppor
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.PlanMatchHelp
 import org.neo4j.cypher.internal.ir.v4_0.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy.breakFor
+import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.expressionVariables.AvailableExpressionVariables
 import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, _}
 import org.neo4j.cypher.internal.v4_0.logical.{plans => logicalPlans}
@@ -216,7 +217,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     val allNodesScan = AllNodesScan("x", Set.empty)
     val varLength = VarPatternLength(1, Some(15))
     val expand = VarExpand(allNodesScan, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty, "z", "r",
-      varLength, ExpandAll, Some(VariablePredicate(varFor("r_NODES"), trueLiteral)), Some(VariablePredicate(varFor("r_EDGES"), trueLiteral)))
+      varLength, ExpandAll, Some(VariablePredicate(exprVar(0, "r_NODES"), trueLiteral)), Some(VariablePredicate(exprVar(1, "r_EDGES"), trueLiteral)))
 
     // when
     val allocations = SlotAllocation.allocateSlots(expand, semanticTable, breakFor(expand), NO_EXPR_VARS).slotConfigurations
@@ -225,18 +226,16 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     allocations should have size 2
     val allNodeScanAllocations = allocations(allNodesScan.id)
     allNodeScanAllocations should equal(
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r_NODES" -> LongSlot(1, nullable = false, CTNode),
-        "r_EDGES" -> LongSlot(2, nullable = false, CTRelationship)),
-        numberOfLongs = 3, numberOfReferences = 0))
+      SlotConfiguration.empty.newLong("x", nullable = false, CTNode)
+    )
 
     val expandAllocations = allocations(expand.id)
     expandAllocations should equal(
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r" -> RefSlot(0, nullable = false, CTList(CTRelationship)),
-        "z" -> LongSlot(1, nullable = false, CTNode)), numberOfLongs = 2, numberOfReferences = 1))
+      SlotConfiguration.empty
+        .newLong("x", nullable = false, CTNode)
+        .newReference("r", nullable = false, CTList(CTRelationship))
+        .newLong("z", nullable = false, CTNode)
+    )
   }
 
   test("single node with var length expand into") {
@@ -245,7 +244,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     val expand = Expand(allNodesScan, "x", SemanticDirection.OUTGOING, Seq.empty, "y", "r", ExpandAll)
     val varLength = VarPatternLength(1, Some(15))
     val varExpand = VarExpand(expand, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty, "y", "r2",
-      varLength, ExpandInto, Some(VariablePredicate(varFor("r_NODES"), trueLiteral)), Some(VariablePredicate(varFor("r_EDGES"), trueLiteral)))
+      varLength, ExpandInto, Some(VariablePredicate(exprVar(0, "r_NODES"), trueLiteral)), Some(VariablePredicate(exprVar(1, "r_EDGES"), trueLiteral)))
 
     // when
     val allocations = SlotAllocation.allocateSlots(varExpand, semanticTable, breakFor(expand, varExpand), NO_EXPR_VARS).slotConfigurations
@@ -254,28 +253,25 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     allocations should have size 3
     val allNodeScanAllocations = allocations(allNodesScan.id)
     allNodeScanAllocations should equal(
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode)),
-        numberOfLongs = 1, numberOfReferences = 0))
+      SlotConfiguration.empty.newLong("x", nullable = false, CTNode)
+    )
 
     val expandAllocations = allocations(expand.id)
     expandAllocations should equal(
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r" -> LongSlot(1, nullable = false, CTRelationship),
-        "y" -> LongSlot(2, nullable = false, CTNode),
-        "r_NODES" -> LongSlot(3, nullable = false, CTNode),
-        "r_EDGES" -> LongSlot(4, nullable = false, CTRelationship)),
-        numberOfLongs = 5, numberOfReferences = 0))
+      SlotConfiguration.empty
+        .newLong("x", nullable = false, CTNode)
+        .newLong("r", nullable = false, CTRelationship)
+        .newLong("y", nullable = false, CTNode)
+    )
 
     val varExpandAllocations = allocations(varExpand.id)
     varExpandAllocations should equal(
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r" -> LongSlot(1, nullable = false, CTRelationship),
-        "y" -> LongSlot(2, nullable = false, CTNode),
-        "r2" -> RefSlot(0, nullable = false, CTList(CTRelationship))),
-        numberOfLongs = 3, numberOfReferences = 1))
+      SlotConfiguration.empty
+        .newLong("x", nullable = false, CTNode)
+        .newLong("r", nullable = false, CTRelationship)
+        .newLong("y", nullable = false, CTNode)
+        .newReference("r2", nullable = false, CTList(CTRelationship))
+    )
   }
 
   test("let's skip this one") {
@@ -853,10 +849,11 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     val nestedPlan = AllNodesScan("x", Set.empty)
     val argument = Argument()
     val plan = Projection(argument, Map("z" -> NestedPlanExpression(nestedPlan, literalString("foo"))(pos)))
+    val availableExpressionVariables = new AvailableExpressionVariables
+    availableExpressionVariables.set(nestedPlan.id, Seq.empty)
 
     // when
-    val physicalPlan = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS)
-    val allocations = physicalPlan.slotConfigurations
+    val allocations = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, availableExpressionVariables).slotConfigurations
 
     // then
     allocations should have size 3
@@ -972,4 +969,6 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
       SlotAllocation.allocateSlots(filter, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS)
     }
   }
+
+  def exprVar(offset: Int, name: String): ExpressionVariable = ExpressionVariable(offset, name)
 }
