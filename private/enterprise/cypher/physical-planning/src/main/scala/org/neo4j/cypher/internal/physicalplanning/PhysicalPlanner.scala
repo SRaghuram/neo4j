@@ -19,7 +19,7 @@ object PhysicalPlanner {
            semanticTable: SemanticTable,
            breakingPolicy: PipelineBreakingPolicy,
            allocateArgumentSlots: Boolean = false): PhysicalPlan = {
-    val Result(logicalPlan, nExpressionSlots, availableExpressionVars) = expressionVariableAllocation.replace(beforeRewrite)
+    val Result(logicalPlan, nExpressionSlots, availableExpressionVars) = expressionVariableAllocation.allocate(beforeRewrite)
     val slotMetaData = SlotAllocation.allocateSlots(logicalPlan, semanticTable, breakingPolicy, availableExpressionVars, allocateArgumentSlots)
     val slottedRewriter = new SlottedRewriter(tokenContext)
     val finalLogicalPlan = slottedRewriter(logicalPlan, slotMetaData.slotConfigurations)
