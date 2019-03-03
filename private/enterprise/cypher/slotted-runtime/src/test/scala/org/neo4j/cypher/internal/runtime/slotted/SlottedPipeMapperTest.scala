@@ -425,51 +425,6 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     )
   }
 
-  test("single node with varlength expand and a predicate") {
-    // given
-    val allNodesScan = AllNodesScan("x", Set.empty)
-    val varLength = VarPatternLength(1, Some(15))
-    val nodePredicate = propEquality("r_NODES", "propertyKey", 4)
-    val edgePredicate = not(propLessThan("r_EDGES", "propertyKey", 4))
-
-    val expand = VarExpand(allNodesScan, "x", SemanticDirection.INCOMING, SemanticDirection.INCOMING, Seq.empty,
-      "z", "r", varLength, ExpandAll, Some(VariablePredicate(varFor("r_NODES"), nodePredicate)), Some(VariablePredicate(varFor("r_EDGES"), edgePredicate)))
-
-    // when
-    val pipe = build(expand)
-
-    // then
-    val xNodeSlot = LongSlot(0, nullable = false, CTNode)
-    val tempNodeSlot = LongSlot(1, nullable = false, CTNode)
-    val tempRelSlot = LongSlot(2, nullable = false, CTRelationship)
-    val zNodeSlot = LongSlot(1, nullable = false, CTNode)
-    val rRelSlot = RefSlot(0, nullable = false, CTList(CTRelationship))
-
-    val allNodeScanSlots = SlotConfiguration(Map(
-      "x" -> xNodeSlot,
-      "r_NODES" -> tempNodeSlot,
-      "r_EDGES" -> tempRelSlot), numberOfLongs = 3, numberOfReferences = 0)
-
-    val varExpandSlots = SlotConfiguration(Map(
-      "x" -> xNodeSlot,
-      "r" -> rRelSlot,
-      "z" -> zNodeSlot), numberOfLongs = 2, numberOfReferences = 1)
-
-    pipe should equal(VarLengthExpandSlottedPipe(
-      AllNodesScanSlottedPipe("x", allNodeScanSlots, Size.zero)(),
-      xNodeSlot, rRelSlot.offset, zNodeSlot,
-      SemanticDirection.INCOMING, SemanticDirection.INCOMING,
-      LazyTypes.empty, varLength.min, varLength.max, shouldExpandAll = true,
-      varExpandSlots,
-      tempNodeSlot.offset, tempRelSlot.offset,
-      commands.predicates.Equals(NodeProperty(1, 0), Literal(4)),
-      commands.predicates.Not(
-        commands.predicates.LessThan(RelationshipProperty(2, 0), Literal(4))
-      ),
-      Size(1, 0)
-    )())
-  }
-
   test("let's skip this one") {
     // given
     val allNodesScan = AllNodesScan("x", Set.empty)
