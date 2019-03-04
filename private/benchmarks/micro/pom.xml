@@ -23,6 +23,7 @@
         <mockito.version>1.10.19</mockito.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
+        <scala-maven-plugin.version>3.2.0</scala-maven-plugin.version>
     </properties>
 
     <licenses>
@@ -186,6 +187,7 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala-maven-plugin.version}</version>
                 <configuration>
                     <recompileMode>incremental</recompileMode>
                     <scalaVersion>${scala.version}</scalaVersion>
