@@ -11,7 +11,6 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.store.id.IdGenerator;
@@ -25,6 +24,7 @@ import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.lock.ResourceLocker;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
+import org.neo4j.token.api.NamedToken;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.equalTo;

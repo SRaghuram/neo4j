@@ -19,8 +19,8 @@
  */
 package org.neo4j.internal.recordstorage;
 
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.storageengine.api.SchemaRule;
+import org.neo4j.token.api.NamedToken;
 
 public interface CacheAccessBackDoor
 {

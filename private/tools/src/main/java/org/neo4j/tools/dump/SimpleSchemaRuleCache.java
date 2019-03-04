@@ -13,13 +13,13 @@ import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
+import org.neo4j.token.api.NamedToken;
 
-import static org.neo4j.internal.kernel.api.Read.ANY_LABEL;
+import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
 
 class SimpleSchemaRuleCache
 {

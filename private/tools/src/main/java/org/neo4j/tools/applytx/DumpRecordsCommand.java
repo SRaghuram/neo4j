@@ -12,7 +12,6 @@ import io.airlift.airline.Cli.CliBuilder;
 import java.io.PrintStream;
 import java.util.function.Supplier;
 
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.kernel.impl.store.LabelTokenStore;
 import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
 import org.neo4j.kernel.impl.store.RecordStore;
@@ -23,6 +22,7 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
+import org.neo4j.token.api.NamedToken;
 import org.neo4j.tools.console.input.Command;
 import org.neo4j.tools.console.input.ConsoleInput;
 

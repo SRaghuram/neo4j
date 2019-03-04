@@ -34,7 +34,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.api.index.IndexingService;
-import org.neo4j.kernel.impl.core.NonUniqueTokenException;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -47,6 +46,7 @@ import org.neo4j.test.Barrier;
 import org.neo4j.test.TestLabels;
 import org.neo4j.test.rule.OtherThreadRule;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.token.api.NonUniqueTokenException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
