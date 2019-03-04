@@ -63,7 +63,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
      * This flag is used in the same way as User.PASSWORD_CHANGE_REQUIRED, but it's
      * placed here because of user suspension not being a part of community edition
      */
-    static final String IS_SUSPENDED = "is_suspended";
+    public static final String IS_SUSPENDED = "is_suspended";
 
     public SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, boolean initOnStart,
             SecureHasher secureHasher, PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,

@@ -330,7 +330,7 @@ public class SystemGraphOperations
     // Allow all ascii from '!' to '~', apart from ',' and ':' which are used as separators in flat file
     private static final Pattern usernamePattern = Pattern.compile( "^[\\x21-\\x2B\\x2D-\\x39\\x3B-\\x7E]+$" );
 
-    private static void assertValidUsername( String username ) throws InvalidArgumentsException
+    static void assertValidUsername( String username ) throws InvalidArgumentsException
     {
         if ( username == null || username.isEmpty() )
         {
@@ -345,7 +345,7 @@ public class SystemGraphOperations
 
     private static final Pattern roleNamePattern = Pattern.compile( "^[a-zA-Z0-9_]+$" );
 
-    private static void assertValidRoleName( String name ) throws InvalidArgumentsException
+    static void assertValidRoleName( String name ) throws InvalidArgumentsException
     {
         if ( name == null || name.isEmpty() )
         {

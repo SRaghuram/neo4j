@@ -34,7 +34,7 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.test.assertion.Assert.assertException;
 
-public class UserManagementProceduresLoggingTest
+public abstract class UserManagementProceduresLoggingTest
 {
     protected TestUserManagementProcedures authProcedures;
     private AssertableLogProvider log;
@@ -42,10 +42,12 @@ public class UserManagementProceduresLoggingTest
     private EnterpriseUserManager generalUserManager;
 
     @BeforeEach
-    public void setUp() throws Throwable
+    void setUp() throws Throwable
     {
         init();
     }
+
+    protected abstract EnterpriseUserManager getUserManager() throws Throwable;
 
     protected void init() throws Throwable
     {
@@ -71,21 +73,6 @@ public class UserManagementProceduresLoggingTest
         authProcedures.securityContext = securityContext;
         authProcedures.userManager = new PersonalUserManager( generalUserManager, securityContext.subject(),
                 authProcedures.securityLog, securityContext.isAdmin() );
-    }
-
-    protected EnterpriseUserManager getUserManager() throws Throwable
-    {
-        InternalFlatFileRealm realm = new InternalFlatFileRealm(
-                                            new InMemoryUserRepository(),
-                                            new InMemoryRoleRepository(),
-                                            new BasicPasswordPolicy(),
-                                            mock( AuthenticationStrategy.class ),
-                                            mock( JobScheduler.class ),
-                                            new InMemoryUserRepository(),
-                                            new InMemoryUserRepository()
-                                        );
-        realm.start(); // creates default user and roles
-        return realm;
     }
 
     @Test

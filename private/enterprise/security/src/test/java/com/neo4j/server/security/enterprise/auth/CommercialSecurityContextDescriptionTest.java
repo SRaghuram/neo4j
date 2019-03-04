@@ -31,8 +31,7 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 public class CommercialSecurityContextDescriptionTest
 {
     @Rule
-    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule( new InMemoryUserRepository(),
-            new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ) );
+    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
 
     private EnterpriseUserManager manager;
     private final ToIntFunction<String> token = s -> -1;

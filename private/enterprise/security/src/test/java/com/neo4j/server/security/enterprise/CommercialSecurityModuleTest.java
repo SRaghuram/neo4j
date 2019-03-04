@@ -271,13 +271,13 @@ class CommercialSecurityModuleTest
 
     private void assertSuccess()
     {
-        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null, mockAccessCapability );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, mockAccessCapability );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
-                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null,
+                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem,
                         mockAccessCapability ) );
         assertEquals( e.getMessage(), errorMsg );
     }
