@@ -22,11 +22,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdGeneratorContractTest;
+import org.neo4j.internal.id.IdRange;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.impl.store.IdGeneratorContractTest;
-import org.neo4j.kernel.impl.store.id.IdGenerator;
-import org.neo4j.kernel.impl.store.id.IdRange;
-import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;

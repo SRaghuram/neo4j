@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 
-import org.neo4j.kernel.impl.store.id.IdRange;
-import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.internal.id.IdRange;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

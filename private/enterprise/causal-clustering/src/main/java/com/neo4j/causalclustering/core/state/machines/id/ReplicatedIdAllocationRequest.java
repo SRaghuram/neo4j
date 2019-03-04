@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentHandler
 import java.io.IOException;
 import java.util.function.Consumer;
 
-import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.internal.id.IdType;
 
 import static java.lang.String.format;
 

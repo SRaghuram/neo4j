@@ -11,9 +11,9 @@ import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 
-import org.neo4j.kernel.impl.store.id.IdGenerator;
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
 
 public class FreeIdFilteredIdGeneratorFactory implements IdGeneratorFactory
 {

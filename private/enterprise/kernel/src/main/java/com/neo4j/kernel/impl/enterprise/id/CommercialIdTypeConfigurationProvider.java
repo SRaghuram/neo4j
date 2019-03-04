@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.kernel.impl.store.id.configuration.CommunityIdTypeConfigurationProvider;
-import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfiguration;
+import org.neo4j.internal.id.IdType;
+import org.neo4j.internal.id.configuration.CommunityIdTypeConfigurationProvider;
+import org.neo4j.internal.id.configuration.IdTypeConfiguration;
 
 /**
  * Id type configuration provider for enterprise edition.

@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.test.extension.DefaultFileSystemExtension;

@@ -14,7 +14,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.InvalidSettingException;
-import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.internal.id.IdType;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.idTypesToReuse;
 import static org.junit.jupiter.api.Assertions.assertEquals;

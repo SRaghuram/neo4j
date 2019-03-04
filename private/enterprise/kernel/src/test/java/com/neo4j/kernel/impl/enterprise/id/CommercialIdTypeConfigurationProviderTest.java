@@ -16,9 +16,9 @@ import java.util.Map;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfiguration;
-import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfigurationProvider;
+import org.neo4j.internal.id.IdType;
+import org.neo4j.internal.id.configuration.IdTypeConfiguration;
+import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

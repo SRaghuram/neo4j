@@ -11,18 +11,18 @@ import java.io.File;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.LongSupplier;
 
+import org.neo4j.internal.id.IdContainer;
+import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdRange;
+import org.neo4j.internal.id.IdRangeIterator;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.store.id.IdContainer;
-import org.neo4j.kernel.impl.store.id.IdGenerator;
-import org.neo4j.kernel.impl.store.id.IdRange;
-import org.neo4j.kernel.impl.store.id.IdRangeIterator;
-import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.Math.max;
-import static org.neo4j.kernel.impl.store.id.IdRangeIterator.EMPTY_ID_RANGE_ITERATOR;
-import static org.neo4j.kernel.impl.store.id.IdRangeIterator.VALUE_REPRESENTING_NULL;
+import static org.neo4j.internal.id.IdRangeIterator.EMPTY_ID_RANGE_ITERATOR;
+import static org.neo4j.internal.id.IdRangeIterator.VALUE_REPRESENTING_NULL;
 
 class ReplicatedIdGenerator implements IdGenerator
 {

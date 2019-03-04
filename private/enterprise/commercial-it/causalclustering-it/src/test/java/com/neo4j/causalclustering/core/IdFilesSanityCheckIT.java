@@ -15,9 +15,9 @@ import java.io.File;
 import java.util.ArrayList;
 
 import org.neo4j.graphdb.Node;
+import org.neo4j.internal.id.IdContainer;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.store.id.IdContainer;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;

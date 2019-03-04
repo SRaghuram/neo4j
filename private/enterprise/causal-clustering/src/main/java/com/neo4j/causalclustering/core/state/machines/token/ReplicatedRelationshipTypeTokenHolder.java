@@ -9,12 +9,12 @@ import com.neo4j.causalclustering.core.replication.Replicator;
 
 import java.util.function.Supplier;
 
+import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.core.TokenRegistry;
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.storageengine.api.StorageEngine;
 
-import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP_TYPE_TOKEN;
+import static org.neo4j.internal.id.IdType.RELATIONSHIP_TYPE_TOKEN;
 
 public class ReplicatedRelationshipTypeTokenHolder extends ReplicatedTokenHolder
 {

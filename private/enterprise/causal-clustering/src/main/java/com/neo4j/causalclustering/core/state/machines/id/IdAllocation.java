@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state.machines.id;
 
-import org.neo4j.kernel.impl.store.id.IdRange;
+import org.neo4j.internal.id.IdRange;
 
 public final class IdAllocation
 {

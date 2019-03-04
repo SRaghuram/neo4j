@@ -10,7 +10,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.impl.transaction.log.InMemoryVersionableReadableClosablePositionAwareChannel;
 
 import static org.junit.Assert.assertEquals;

@@ -10,7 +10,7 @@ import org.junit.Test;
 
 import java.util.function.BooleanSupplier;
 
-import org.neo4j.kernel.impl.store.id.IdGenerator;
+import org.neo4j.internal.id.IdGenerator;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -18,7 +18,6 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 
 public class FreeIdFilteredIdGeneratorTest
 {
-
     private IdGenerator idGenerator = mock( IdGenerator.class );
 
     @Test

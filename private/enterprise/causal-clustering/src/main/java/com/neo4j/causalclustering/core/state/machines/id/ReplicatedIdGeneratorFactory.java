@@ -14,12 +14,12 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 import org.neo4j.helpers.collection.Pair;
+import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
+import org.neo4j.internal.id.configuration.IdTypeConfiguration;
+import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.impl.store.id.IdGenerator;
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
-import org.neo4j.kernel.impl.store.id.IdType;
-import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfiguration;
-import org.neo4j.kernel.impl.store.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.logging.LogProvider;
 
 public class ReplicatedIdGeneratorFactory implements IdGeneratorFactory

@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.id;
 
 import java.util.function.BooleanSupplier;
 
-import org.neo4j.kernel.impl.store.id.IdGenerator;
+import org.neo4j.internal.id.IdGenerator;
 
 /**
  * Id generator that will perform filtering of ids to free using supplied condition.

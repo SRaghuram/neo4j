@@ -11,9 +11,9 @@ import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
 
+import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
-import org.neo4j.kernel.impl.store.id.IdType;
 
 public class ReplicatedIdAllocationRequestMarshalV2
 {

@@ -19,9 +19,9 @@ import java.util.stream.Stream;
 import org.neo4j.com.storecopy.FileMoveAction;
 import org.neo4j.com.storecopy.FileMoveProvider;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.internal.id.IdGeneratorImpl;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.store.id.IdGeneratorImpl;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

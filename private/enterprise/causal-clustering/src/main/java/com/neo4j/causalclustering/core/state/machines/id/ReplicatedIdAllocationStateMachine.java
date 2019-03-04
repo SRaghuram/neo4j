@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-import org.neo4j.kernel.impl.store.id.IdType;
+import org.neo4j.internal.id.IdType;
 
 /**
  * Keeps track of global id allocations for all members.
