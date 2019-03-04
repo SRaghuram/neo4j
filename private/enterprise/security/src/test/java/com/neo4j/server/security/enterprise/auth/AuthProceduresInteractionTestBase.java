@@ -14,7 +14,7 @@ import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.test.DoubleLatch;
 
-import static com.neo4j.server.security.enterprise.auth.InternalFlatFileRealm.IS_SUSPENDED;
+import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
