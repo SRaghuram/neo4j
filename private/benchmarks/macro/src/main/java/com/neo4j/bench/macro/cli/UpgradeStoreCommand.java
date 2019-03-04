@@ -17,7 +17,6 @@ import io.airlift.airline.Option;
 import io.airlift.airline.OptionType;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -76,13 +75,6 @@ public class UpgradeStoreCommand implements Runnable
                                     workloadName,
                                     originalDbDir.getAbsolutePath(),
                                     upgradedDbDir.getAbsolutePath() ) );
-
-        // TODO remove, after store upgrade
-        Path systemDbDir = originalDbDir.toPath().resolve( "system.db" );
-        if ( Files.exists( systemDbDir ) )
-        {
-            BenchmarkUtil.deleteDir( systemDbDir );
-        }
 
         Store.assertDirectoryIsNeoStore( originalDbDir.toPath() );
         try ( Store originalStore = Store.createFrom( originalDbDir.toPath() );
