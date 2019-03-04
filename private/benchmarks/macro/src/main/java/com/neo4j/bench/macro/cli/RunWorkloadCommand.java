@@ -393,9 +393,16 @@ public class RunWorkloadCommand implements Runnable
                 }
                 catch ( ForkFailureException e )
                 {
-                    System.out.println( format( "%s failed with error: %s\n" +
-                                                "See work directory: %s\n",
-                                                e.query().benchmark().name(), e.getCause().getMessage(), e.benchmarkDir().toAbsolutePath() ) );
+                    System.err.println( format( "\n" +
+                                                "***************************************\n" +
+                                                "Benchmark Execution Failed!\n" +
+                                                "Benchmark: %s\n" +
+                                                "See directory for error log: %s\n" +
+                                                "%s\n" +
+                                                "***************************************\n",
+                                                e.query().benchmark().name(),
+                                                e.benchmarkDir().toAbsolutePath(),
+                                                ErrorReporter.stackTraceToString( e ) ) );
                     errorReporter.recordOrThrow( e, query.benchmarkGroup(), query.benchmark() );
                 }
             }
