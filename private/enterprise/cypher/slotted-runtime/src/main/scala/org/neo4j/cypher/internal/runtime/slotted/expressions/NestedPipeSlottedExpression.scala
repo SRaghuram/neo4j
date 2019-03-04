@@ -39,7 +39,7 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
 
   private def createInitialContext(ctx: ExecutionContext, state: QueryState): SlottedExecutionContext = {
     val initialContext = new SlottedExecutionContext(slots)
-    initialContext.copyFrom(ctx, slots.numberOfLongs, slots.numberOfReferences)
+    initialContext.copyFrom(ctx, slots.numberOfLongs, slots.numberOfReferences - expVarSlotsInNestedPlan.length)
     var i = 0
     while (i < expVarSlotsInNestedPlan.length) {
       val expVar = availableExpressionVariables(i)

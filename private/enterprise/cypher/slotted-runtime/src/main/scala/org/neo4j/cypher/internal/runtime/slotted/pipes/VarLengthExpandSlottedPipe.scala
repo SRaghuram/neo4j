@@ -84,8 +84,8 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
 
             if (relationshipIsUniqueInPath) {
               // Before expanding, check that both the edge and node in question fulfil the predicate
-              if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, VirtualValues.relationship(relId)) &&
-                  predicateIsTrue(row, state, tempNodeOffset, nodePredicate, VirtualValues.node(relationship.otherNodeId(fromNode)))
+              if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, state.query.relationshipById(relId)) &&
+                  predicateIsTrue(row, state, tempNodeOffset, nodePredicate, state.query.nodeById(relationship.otherNodeId(fromNode)))
               ) {
                 // TODO: This call creates an intermediate NodeProxy which should not be necessary
                 stack.push((relationship.otherNodeId(fromNode), rels.append(relationship)))
@@ -124,7 +124,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
         }
         else {
           // Ensure that the start-node also adheres to the node predicate
-          if (predicateIsTrue(inputRow, state, tempNodeOffset, nodePredicate, VirtualValues.node(fromNode))) {
+          if (predicateIsTrue(inputRow, state, tempNodeOffset, nodePredicate, state.query.nodeById(fromNode))) {
 
             val paths: Iterator[(LNode, RelationshipContainer)] = varLengthExpand(fromNode, state, inputRow)
             paths collect {
