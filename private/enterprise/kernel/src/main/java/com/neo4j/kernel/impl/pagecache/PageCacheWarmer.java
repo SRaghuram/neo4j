@@ -59,7 +59,6 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
 {
     public static final String SUFFIX_CACHEPROF = ".cacheprof";
 
-    private static final String PROFILE_DIR = "profiles";
     private static final int IO_PARALLELISM = Runtime.getRuntime().availableProcessors();
 
     private final FileSystemAbstraction fs;
@@ -78,7 +77,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         this.pageCache = pageCache;
         this.scheduler = scheduler;
         this.databaseDirectory = databaseDirectory;
-        this.profilesDirectory = new File( databaseDirectory, PROFILE_DIR );
+        this.profilesDirectory = new File( databaseDirectory, Profile.PROFILE_DIR );
         this.refCounts = new ProfileRefCounts();
     }
 
@@ -259,7 +258,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         Profile nextProfile = filterRelevant( existingProfiles, file )
                 .max( naturalOrder() )
                 .map( Profile::next )
-                .orElse( Profile.first( databaseDirectory, profilesDirectory, file.file() ) );
+                .orElse( Profile.first( databaseDirectory, file.file() ) );
 
         try ( OutputStream output = nextProfile.write( fs );
               PageCursor cursor = file.io( 0, PF_SHARED_READ_LOCK | PF_NO_FAULT ) )
@@ -334,7 +333,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         Path profilesPath = profilesDirectory.toPath();
         return allProfilePaths.stream()
                 .filter( profilePath -> sameRelativePath( databasePath, pagedFilePath, profilesPath, profilePath ) )
-                .flatMap( profilePath -> Profile.parseProfileName( profilePath, pagedFilePath ) );
+                .flatMap( profilePath -> Profile.parseProfileName( databasePath, profilePath, pagedFilePath ) );
     }
 
     private boolean sameRelativePath( Path databasePath, Path pagedFilePath, Path profilesPath, Path profilePath )

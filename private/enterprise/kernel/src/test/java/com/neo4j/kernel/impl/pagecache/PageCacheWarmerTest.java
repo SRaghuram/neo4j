@@ -353,7 +353,7 @@ class PageCacheWarmerTest
     void profilesMustKeepTheirSubDirectoryStructureInsideProfileDirectory()
     {
         Path baseDir = Paths.get( "baseDir" );
-        Path profileDir = Paths.get( "profileDir" );
+        Path profileDir = baseDir.resolve( Profile.PROFILE_DIR );
         Path dirA = baseDir.resolve( "dirA" );
         Path dirAA = dirA.resolve( "dirA" );
         Path dirB = baseDir.resolve( "dirB " );
@@ -362,11 +362,10 @@ class PageCacheWarmerTest
         Path fileBA = dirB.resolve( "a" );
         Path fileA = baseDir.resolve( "a" );
         File baseDirFile = baseDir.toFile();
-        File profileDirFile = profileDir.toFile();
-        Profile aaa = Profile.first( baseDirFile, profileDirFile, fileAAA.toFile() );
-        Profile aa = Profile.first( baseDirFile, profileDirFile, fileAA.toFile() );
-        Profile ba = Profile.first( baseDirFile, profileDirFile, fileBA.toFile() );
-        Profile a = Profile.first( baseDirFile, profileDirFile, fileA.toFile() );
+        Profile aaa = Profile.first( baseDirFile, fileAAA.toFile() );
+        Profile aa = Profile.first( baseDirFile, fileAA.toFile() );
+        Profile ba = Profile.first( baseDirFile, fileBA.toFile() );
+        Profile a = Profile.first( baseDirFile, fileA.toFile() );
         Profile aaaNext = aaa.next();
         Profile aaNext = aa.next();
         Profile baNext = ba.next();
@@ -394,7 +393,6 @@ class PageCacheWarmerTest
     void profilesMustSortByPagedFileAndProfileSequenceId()
     {
         File baseDir = new File( "baseDir" );
-        File profileDir = new File( "profileDir" );
         File fileAA = new File( baseDir,"aa" );
         File fileAB = new File( baseDir,"ab" );
         File fileBA = new File( baseDir,"ba" );
@@ -402,17 +400,17 @@ class PageCacheWarmerTest
         Profile ab;
         Profile ba;
         List<Profile> sortedProfiles = Arrays.asList(
-                aa = Profile.first( baseDir, profileDir, fileAA ),
+                aa = Profile.first( baseDir, fileAA ),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(),
                 aa = aa.next(), aa = aa.next(), aa = aa.next(), aa = aa.next(), aa.next(),
-                ab = Profile.first( baseDir, profileDir, fileAB ),
+                ab = Profile.first( baseDir, fileAB ),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(),
                 ab = ab.next(), ab = ab.next(), ab = ab.next(), ab = ab.next(), ab.next(),
-                ba = Profile.first( baseDir, profileDir, fileBA ),
+                ba = Profile.first( baseDir, fileBA ),
                 ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(),
                 ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(),
                 ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(), ba = ba.next(),

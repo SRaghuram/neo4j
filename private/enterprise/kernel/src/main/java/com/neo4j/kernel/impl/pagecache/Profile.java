@@ -26,14 +26,18 @@ import static com.neo4j.kernel.impl.pagecache.PageCacheWarmer.SUFFIX_CACHEPROF;
 
 final class Profile implements Comparable<Profile>
 {
+    static final String PROFILE_DIR = "profiles";
+    private final File baseDir;
     private final File profileFile;
     private final File pagedFile;
     private final long profileSequenceId;
 
-    private Profile( File profileFile, File pagedFile, long profileSequenceId )
+    private Profile( File baseDir, File profileFile, File pagedFile, long profileSequenceId )
     {
         Objects.requireNonNull( profileFile );
         Objects.requireNonNull( pagedFile );
+        Objects.requireNonNull( baseDir );
+        this.baseDir = baseDir;
         this.profileFile = profileFile;
         this.pagedFile = pagedFile;
         this.profileSequenceId = profileSequenceId;
@@ -111,32 +115,25 @@ final class Profile implements Comparable<Profile>
     Profile next()
     {
         long next = profileSequenceId + 1L;
-        return new Profile( profileName( profileFile.getParentFile(), pagedFile, next ), pagedFile, next );
+        return new Profile( baseDir, profileName( baseDir, pagedFile, next ), pagedFile, next );
     }
 
-    static Profile first( File databaseDirectory, File profileDirectory, File file )
+    static Profile first( File databaseDirectory, File file )
     {
-        return new Profile( firstProfileName( databaseDirectory, profileDirectory, file ), file, 0 );
+        long profileSequenceId = 0;
+        return new Profile( databaseDirectory, profileName( databaseDirectory, file, profileSequenceId ), file, profileSequenceId );
     }
 
     /**
      * Create profile file for mappedFile. It is assumed that baseDirectory contains mappedFile (can be in multiple sub directories down).
      * Profile file will be placed inside profileDirectory but keep it's sub directory structure relative to baseDirectory.
      */
-    private static File firstProfileName( File baseDirectory, File profileDirectory, File mappedFile )
+    private static File profileName( File baseDirectory, File mappedFile, long count )
     {
+        File profileDirectory = new File( baseDirectory, PROFILE_DIR );
         File profileFileDir = FileUtils.pathToFileAfterMove( baseDirectory, profileDirectory, mappedFile ).getParentFile();
-        File file = profileName( profileFileDir, mappedFile, 0L );
-        return file;
-    }
-
-    /**
-     * Create profile file for mappedFile directly inside profileFileDirectory.
-     */
-    private static File profileName( File profileFileDirectory, File mappedFile, long count )
-    {
         String name = mappedFile.getName();
-        return new File( profileFileDirectory, name + "." + count + SUFFIX_CACHEPROF );
+        return new File( profileFileDir, name + "." + count + SUFFIX_CACHEPROF );
     }
 
     static Predicate<Profile> relevantTo( PagedFile pagedFile )
@@ -144,7 +141,7 @@ final class Profile implements Comparable<Profile>
         return p -> p.pagedFile.equals( pagedFile.file() );
     }
 
-    static Stream<Profile> parseProfileName( Path profilePath, Path mappedFilePath )
+    static Stream<Profile> parseProfileName( Path basePath, Path profilePath, Path mappedFilePath )
     {
         String name = profilePath.getFileName().toString();
         if ( !name.endsWith( SUFFIX_CACHEPROF ) )
@@ -160,7 +157,7 @@ final class Profile implements Comparable<Profile>
             String targetMappedFileName = name.substring( 0, secondLastDot );
             if ( targetMappedFileName.equals( mappedFilePath.getFileName().toString() ) )
             {
-                return Stream.of( new Profile( profilePath.toFile(), mappedFilePath.toFile(), sequenceId ) );
+                return Stream.of( new Profile( basePath.toFile(), profilePath.toFile(), mappedFilePath.toFile(), sequenceId ) );
             }
             else
             {
