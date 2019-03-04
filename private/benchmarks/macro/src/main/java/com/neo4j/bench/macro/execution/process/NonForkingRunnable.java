@@ -109,9 +109,5 @@ public class NonForkingRunnable implements RunnableFork
 
             return Results.loadFrom( forkDirectory, Results.Phase.MEASUREMENT );
         }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Error executing benchmark process", e );
-        }
     }
 }

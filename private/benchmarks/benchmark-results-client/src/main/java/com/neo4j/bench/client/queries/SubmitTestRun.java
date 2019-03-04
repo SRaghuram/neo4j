@@ -23,7 +23,6 @@ import org.neo4j.driver.v1.StatementResult;
 
 import static com.neo4j.bench.client.ClientUtil.prettyPrint;
 import static com.neo4j.bench.client.model.BenchmarkMetrics.extractBenchmarkMetricsList;
-
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -50,31 +49,51 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     @Override
     public SubmitTestRunResult execute( Driver driver )
     {
-        SubmitTestRunResult result;
         try ( Session session = driver.session() )
         {
             Map<String,Object> params = params();
             StatementResult statementResult = session.run( SUBMIT_TEST_RUN, params );
-            Record record = statementResult.single();
-            result = new SubmitTestRunResult(
-                    new TestRun( record.get( "test_run" ) ),
-                    extractBenchmarkMetricsList( record.get( "benchmark_metrics" ) ) );
-            if ( result.benchmarkMetricsList().size() != report.benchmarkGroupBenchmarkMetrics().toList().size() )
-            {
-                nonFatalError = format( "Query created/returned unexpected number of metrics\n" +
-                                        "Expected %s\n" +
-                                        "Received %s",
-                                        report.benchmarkGroupBenchmarkMetrics().toList().size(),
-                                        result.benchmarkMetricsList().size() );
-            }
 
-            if ( !report.benchmarkPlans().isEmpty() )
+            if ( statementResult.hasNext() )
             {
-                PlanTreeSubmitter.execute( session, report.testRun(), report.benchmarkPlans(), submitTreeWithPlanner );
+                Record record = statementResult.next();
+
+                if ( statementResult.hasNext() )
+                {
+                    throw new RuntimeException( "Query returned more than one row!" );
+                }
+
+                SubmitTestRunResult result = new SubmitTestRunResult(
+                        new TestRun( record.get( "test_run" ) ),
+                        extractBenchmarkMetricsList( record.get( "benchmark_metrics" ) ) );
+
+                maybeSetNonFatalError( result.benchmarkMetricsList().size() );
+
+                if ( !report.benchmarkPlans().isEmpty() )
+                {
+                    PlanTreeSubmitter.execute( session, report.testRun(), report.benchmarkPlans(), submitTreeWithPlanner );
+                }
+
+                return result;
+            }
+            else
+            {
+                maybeSetNonFatalError( 0 );
+                return null;
             }
         }
+    }
 
-        return result;
+    private void maybeSetNonFatalError( int actualResultSize )
+    {
+        if ( actualResultSize != report.benchmarkGroupBenchmarkMetrics().toList().size() )
+        {
+            nonFatalError = format( "Query created/returned unexpected number of metrics\n" +
+                                    "Expected %s\n" +
+                                    "Received %s",
+                                    report.benchmarkGroupBenchmarkMetrics().toList().size(),
+                                    actualResultSize );
+        }
     }
 
     public Map<String,Object> params()

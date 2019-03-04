@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.deleteDir;
@@ -28,42 +29,13 @@ import static java.util.stream.Collectors.toList;
 
 public class Store implements AutoCloseable
 {
-    private static final String DB_NAME = "graph.db";
     private final Path topLevelDir;
+    private final Path graphDbDir;
     private final boolean isTemporaryCopy;
 
     public static void assertDirectoryIsNeoStore( Path topLevelDir )
     {
-        try
-        {
-            Path graphDbDir = topLevelDir.resolve( DB_NAME );
-            for ( Path file : Files.list( graphDbDir ).collect( toList() ) )
-            {
-                if ( file.getFileName().startsWith( "neostore" ) )
-                {
-                    // Is likely a Neo4j store directory
-                    return;
-                }
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( "Error trying to list files in store directory", e );
-        }
-        throw new RuntimeException( "Store directory is not a Neo4j store: " + topLevelDir.toAbsolutePath() );
-    }
-
-    /**
-     * Store directory will not be deleted on close, must be deleted manually by caller.
-     *
-     * @param topLevelDir top level directory of Neo4j store,
-     * if it does not contain a graph.db/ directory one will be created.
-     * @return new Store
-     */
-    public static Store createEmptyAt( Path topLevelDir )
-    {
-        BenchmarkUtil.tryMkDir( topLevelDir.resolve( DB_NAME ) );
-        return new Store( topLevelDir, false );
+        discoverGraphDbOrFail( topLevelDir );
     }
 
     /**
@@ -95,14 +67,52 @@ public class Store implements AutoCloseable
     {
         this.topLevelDir = topLevelDir;
         this.isTemporaryCopy = isTemporaryCopy;
-        BenchmarkUtil.assertDirectoryExists( topLevelDirectory() );
-        // TODO class member: graphDb
-        // TODO List<Path> discoveredGraphDb = discoverGraphDbs() <--- checks for existence of "neo4j files"
-        // TODO assert discoveredGraphDb.size() == 1
-        // TODO graphDb = discoveredGraphDb.get(0);
+        BenchmarkUtil.assertDirectoryExists( topLevelDir );
+        this.graphDbDir = discoverGraphDbOrFail( topLevelDir );
+    }
 
-        // TODO remove
-        BenchmarkUtil.assertDirectoryExists( graphDbDirectory() );
+    private static Path discoverGraphDbOrFail( Path topLevelDir )
+    {
+        List<Path> paths = discoverGraphDbs( topLevelDir );
+        if ( paths.size() == 0 )
+        {
+            throw new RuntimeException( "Could not find any store in: " + topLevelDir );
+        }
+        if ( paths.size() > 1 )
+        {
+            String pathNames = paths.stream().map( Path::toString ).collect( Collectors.joining( "\n" ) );
+            throw new RuntimeException( "Found more than one store in: " + topLevelDir + "\n" + pathNames );
+        }
+        return paths.get( 0 );
+    }
+
+    private static List<Path> discoverGraphDbs( Path topLevelDir )
+    {
+        try
+        {
+            return Files.list( topLevelDir )
+                        .filter( Files::isDirectory )
+                        .filter( Store::isGraphDb )
+                        // TODO filter out system database here, in 4.0
+                        .collect( Collectors.toList() );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    private static boolean isGraphDb( Path maybeGraphDb )
+    {
+        try
+        {
+            return Files.list( maybeGraphDb )
+                        .anyMatch( file -> file.getFileName().startsWith( "neostore" ) );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     public Store makeCopyAt( Path topLevelDirCopy )
@@ -121,7 +131,7 @@ public class Store implements AutoCloseable
 
     public Path graphDbDirectory()
     {
-        return topLevelDir.resolve( DB_NAME );
+        return graphDbDir;
     }
 
     public long bytes()

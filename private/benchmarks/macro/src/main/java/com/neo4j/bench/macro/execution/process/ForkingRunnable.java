@@ -20,6 +20,7 @@ import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.workload.Query;
 
+import java.lang.ProcessBuilder.Redirect;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
@@ -125,17 +126,17 @@ public class ForkingRunnable implements RunnableFork
                                                                    query.benchmarkGroup(),
                                                                    query.benchmark() ) );
 
-            JvmProcess.start( jvm, jvmProcessArgs ).waitFor();
+            JvmProcess.start( jvmProcessArgs,
+                              // inherit output
+                              Redirect.INHERIT,
+                              // redirect error to file
+                              Redirect.to( forkDirectory.newErrorLog().toFile() ) ).waitFor();
 
             profilers.forEach( profiler -> profiler.afterProcess( forkDirectory,
                                                                   query.benchmarkGroup(),
                                                                   query.benchmark() ) );
 
             return Results.loadFrom( forkDirectory, Results.Phase.MEASUREMENT );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( "Error executing benchmark process", e );
         }
     }
 }

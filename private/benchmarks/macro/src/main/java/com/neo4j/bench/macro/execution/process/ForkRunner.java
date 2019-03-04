@@ -70,12 +70,7 @@ public class ForkRunner
                                                   // no need to export logical plan in profiling runs
                                                   false );
 
-                System.out.println( format( "Fork (%s): %s", profilerFork.getClass().getSimpleName(), forkName ) );
-                // retrieve results from profiling forks, but only for the purpose of displaying them
-                Results results = profilerFork.run().convertUnit( unit );
-                BenchmarkGroupBenchmarkMetrics justForPrinting = new BenchmarkGroupBenchmarkMetrics();
-                justForPrinting.add( query.benchmarkGroup(), query.benchmark(), results.metrics(), NO_NEO4J_CONFIG );
-                System.out.println( metricsPrinter.toPrettyString( justForPrinting ) );
+                runFork( query, unit, metricsPrinter, forkName, profilerFork );
             }
 
             // always run at least one fork. value 0 means run 1 in-process 'fork'
@@ -99,11 +94,7 @@ public class ForkRunner
                                                      // only necessary to export logical plans from one measurement fork
                                                      forkNumber == 0 );
 
-                System.out.println( format( "Fork (%s): %s", measurementFork.getClass().getSimpleName(), forkName ) );
-                Results forkResults = measurementFork.run().convertUnit( unit );
-                BenchmarkGroupBenchmarkMetrics justForPrinting = new BenchmarkGroupBenchmarkMetrics();
-                justForPrinting.add( query.benchmarkGroup(), query.benchmark(), forkResults.metrics(), NO_NEO4J_CONFIG );
-                System.out.println( metricsPrinter.toPrettyString( justForPrinting ) );
+                runFork( query, unit, metricsPrinter, forkName, measurementFork );
             }
 
             return benchmarkDir;
@@ -112,6 +103,19 @@ public class ForkRunner
         {
             throw new ForkFailureException( query, benchmarkDir, exception );
         }
+    }
+
+    private static void runFork( Query query,
+                                 TimeUnit unit,
+                                 BenchmarkGroupBenchmarkMetricsPrinter metricsPrinter,
+                                 String forkName,
+                                 RunnableFork fork )
+    {
+        System.out.println( format( "Fork (%s): %s", fork.getClass().getSimpleName(), forkName ) );
+        Results results = fork.run().convertUnit( unit );
+        BenchmarkGroupBenchmarkMetrics justForPrinting = new BenchmarkGroupBenchmarkMetrics();
+        justForPrinting.add( query.benchmarkGroup(), query.benchmark(), results.metrics(), NO_NEO4J_CONFIG );
+        System.out.println( metricsPrinter.toPrettyString( justForPrinting ) );
     }
 
     private static RunnableFork fork( Query query,
