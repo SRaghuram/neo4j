@@ -18,7 +18,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
-import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -35,6 +34,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
+import static org.neo4j.internal.kernel.api.Read.ANY_RELATIONSHIP_TYPE;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.tools.dump.SimpleSchemaRuleCache.token;
@@ -149,7 +149,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
 
     private String relationshipType( int id )
     {
-        if ( id == StatementConstants.ANY_RELATIONSHIP_TYPE )
+        if ( id == ANY_RELATIONSHIP_TYPE )
         {
             return "";
         }

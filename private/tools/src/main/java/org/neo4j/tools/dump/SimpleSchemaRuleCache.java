@@ -15,10 +15,11 @@ import java.util.List;
 
 import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
-import org.neo4j.kernel.api.StatementConstants;
 import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
+
+import static org.neo4j.internal.kernel.api.Read.ANY_LABEL;
 
 class SimpleSchemaRuleCache
 {
@@ -39,7 +40,7 @@ class SimpleSchemaRuleCache
     {
         if ( ids.length == 1 )
         {
-            if ( ids[0] == StatementConstants.ANY_LABEL )
+            if ( ids[0] == ANY_LABEL )
             {
                 return "";
             }
