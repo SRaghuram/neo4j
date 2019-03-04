@@ -74,8 +74,8 @@ class SchedulerTracerAcceptanceTest extends ExecutionEngineFunSuite {
     Thread.sleep(1000) // allow tracer output daemon to finish
 
     val (header, dataRows) = parseTrace(file.toString())
-    header should be (Array("id",
-                             "upstreamId",
+    header should be (Array("id_1.0",
+                             "upstreamIds",
                              "queryId",
                              "schedulingThreadId",
                              "schedulingTime(us)",
@@ -108,14 +108,12 @@ class SchedulerTracerAcceptanceTest extends ExecutionEngineFunSuite {
     dataLookup.size should be(dataRows.size)
 
     for (dataRow <- dataRows) {
-      val upstreamId = dataRow.upstreamId
-      if (upstreamId != -1) {
+      for (upstreamId <- dataRow.upstreamIds) {
         dataLookup.get(upstreamId) match {
           case None =>
             fail(s"Could not find upstream data row with id $upstreamId")
           case Some(upstream) =>
             upstream.stopTime should be < dataRow.startTime
-
         }
       }
     }
@@ -133,7 +131,7 @@ class SchedulerTracerAcceptanceTest extends ExecutionEngineFunSuite {
       else
         dataRows += DataRow(
           parts(0).toLong,
-          parts(1).toLong,
+          parseUpstreams(parts(1)),
           parts(2).toInt,
           parts(3).toLong,
           parts(4).toLong,
@@ -148,8 +146,12 @@ class SchedulerTracerAcceptanceTest extends ExecutionEngineFunSuite {
     (header, dataRows)
   }
 
+  private def parseUpstreams(upstreams: String): Seq[Long] = {
+    upstreams.slice(1, upstreams.length - 1).split(',').filter(_.nonEmpty).map(_.toLong)
+  }
+
   private case class DataRow(id: Long,
-                             upstreamId: Long,
+                             upstreamIds: Seq[Long],
                              queryId: Long,
                              schedulingThreadId: Long,
                              schedulingTime: Long,

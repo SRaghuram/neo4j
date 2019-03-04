@@ -36,7 +36,7 @@ class SimpleScheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable](executorService: E
 
   def schedule(task: Task[THREAD_LOCAL_RESOURCE], upstreamWorkUnit: Option[WorkUnitEvent], queryTracer: QueryExecutionTracer): Future[TaskResult] = {
     dprintln(() => s"SimpleScheduler schedule $task")
-    val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit)
+    val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit.toSeq)
     val callableTask =
       new Callable[TaskResult] {
         override def call(): TaskResult = {

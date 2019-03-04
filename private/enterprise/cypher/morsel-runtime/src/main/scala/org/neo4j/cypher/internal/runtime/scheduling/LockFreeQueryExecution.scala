@@ -26,7 +26,7 @@ class LockFreeQueryExecution[THREAD_LOCAL_RESOURCE <: AutoCloseable](queryTracer
       // The query failed. Thus we don't accept any new tasks
       return None
     }
-    val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit)
+    val scheduledWorkUnitEvent = queryTracer.scheduleWorkUnit(task, upstreamWorkUnit.toSeq)
 
     val callableTask =
       new Callable[TaskResult[THREAD_LOCAL_RESOURCE]] {

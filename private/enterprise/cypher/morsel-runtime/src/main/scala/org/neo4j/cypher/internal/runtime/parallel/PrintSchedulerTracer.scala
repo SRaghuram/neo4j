@@ -19,12 +19,10 @@ class PrintSchedulerTracer() extends SchedulerTracer {
   case class QueryTracer() extends QueryExecutionTracer {
     print(s"START $this\n")
 
-    private final val NO_UPSTREAM : Long = -1
-
-    override def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnit: Option[WorkUnitEvent]): ScheduledWorkUnitEvent = {
+    override def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnits: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
       val schedulingThread = Thread.currentThread().getId
-      val upstreamWorkUnitId = upstreamWorkUnit.map(_.id).getOrElse(NO_UPSTREAM)
-      val swu = ScheduledWorkUnit(upstreamWorkUnitId, schedulingThread, task)
+      val upstreamWorkUnitIds = upstreamWorkUnits.map(_.id)
+      val swu = ScheduledWorkUnit(upstreamWorkUnitIds, schedulingThread, task)
       print(s"SCHEDULE $swu\n")
       swu
     }
@@ -35,13 +33,13 @@ class PrintSchedulerTracer() extends SchedulerTracer {
     }
   }
 
-  case class ScheduledWorkUnit(upstreamWorkUnitId: Long,
+  case class ScheduledWorkUnit(upstreamWorkUnitIds: Seq[Long],
                                schedulingThreadId: Long,
                                task: Task[_ <: AutoCloseable]) extends ScheduledWorkUnitEvent {
 
     override def start(): WorkUnitEvent = {
 
-      val wu = WorkUnit(upstreamWorkUnitId,
+      val wu = WorkUnit(upstreamWorkUnitIds,
           schedulingThreadId,
           Thread.currentThread().getId,
           task)
@@ -50,7 +48,7 @@ class PrintSchedulerTracer() extends SchedulerTracer {
     }
   }
 
-  case class WorkUnit(upstreamId: Long,
+  case class WorkUnit(upstreamIds: Seq[Long],
                       schedulingThreadId: Long,
                       executionThreadId: Long,
                       task: Task[_ <: AutoCloseable]) extends WorkUnitEvent {

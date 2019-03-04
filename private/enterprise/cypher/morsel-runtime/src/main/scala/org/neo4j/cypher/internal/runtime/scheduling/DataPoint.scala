@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.scheduling
 
 case class DataPoint(id: Long,
-                     upstreamId: Long,
+                     upstreamIds: Seq[Long],
                      queryId: Int,
                      schedulingThreadId: Long,
                      scheduledTime: Long,
@@ -16,8 +16,9 @@ case class DataPoint(id: Long,
                      task: WorkIdentity) {
 
   def withTimeZero(t0: Long): DataPoint =
-    DataPoint(id,
-      upstreamId,
+    DataPoint(
+      id,
+      upstreamIds,
       queryId,
       schedulingThreadId,
       scheduledTime - t0,

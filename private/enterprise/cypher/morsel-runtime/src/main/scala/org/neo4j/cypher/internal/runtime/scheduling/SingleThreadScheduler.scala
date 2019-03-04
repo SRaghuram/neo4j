@@ -64,7 +64,7 @@ class SingleThreadScheduler[T <: AutoCloseable](threadLocalResourceFactory: () =
 
     private def schedule(task: Task[T], upstreamWorkUnitEvent: Option[WorkUnitEvent]): Unit = {
       dprintln(() => s"SingleThreadedScheduler schedule $task")
-      val scheduledWorkUnitEvent = tracer.scheduleWorkUnit(task, upstreamWorkUnitEvent)
+      val scheduledWorkUnitEvent = tracer.scheduleWorkUnit(task, upstreamWorkUnitEvent.toSeq)
       jobStack.push((task,scheduledWorkUnitEvent))
     }
   }

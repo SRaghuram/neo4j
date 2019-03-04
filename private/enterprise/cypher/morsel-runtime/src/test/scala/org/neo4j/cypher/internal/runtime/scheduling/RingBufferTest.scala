@@ -78,7 +78,7 @@ class RingBufferTest extends CypherFunSuite {
 
   private def dataPointsFor(min: Int, max: Int, threadId: Int): Seq[DataPoint] = (min until max).map(i => dataPointFor(i, threadId))
 
-  private def dataPointFor(i: Int, threadId: Int) = DataPoint(i, 0, 0, 0, 0, threadId, 0, 0, NOP)
+  private def dataPointFor(i: Int, threadId: Int) = DataPoint(i, Seq(0), 0, 0, 0, threadId, 0, 0, NOP)
 
   case object NOP extends Task[Resource.type] {
     override def executeWorkUnit(resource: Resource.type): Seq[Task[Resource.type]] = Nil
