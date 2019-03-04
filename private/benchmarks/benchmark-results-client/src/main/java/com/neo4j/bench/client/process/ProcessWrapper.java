@@ -60,26 +60,28 @@ public class ProcessWrapper implements BaseProcess
     String infoString()
     {
         String baseInfo = "====================================================================\n" +
-                          "Args: " + args + "\n" +
+                          "--- Args ---\n" +
                           "--------------------------------------------------------------------\n" +
-                          "Process Output:\n" +
+                          args + "\n" +
+                          "====================================================================\n" +
+                          "--- Process Output ---\n" +
                           "--------------------------------------------------------------------\n" +
                           output( output, process, Process::getInputStream ) + "\n";
 
-        return outputSameAsError()
+        return isOutputSameAsError()
 
                ? baseInfo +
                  "====================================================================\n"
 
                : baseInfo +
-                 "--------------------------------------------------------------------\n" +
-                 "Process Error:\n" +
+                 "====================================================================\n" +
+                 "--- Process Error ---\n" +
                  "--------------------------------------------------------------------\n" +
                  output( error, process, Process::getErrorStream ) + "\n" +
                  "====================================================================\n";
     }
 
-    private boolean outputSameAsError()
+    private boolean isOutputSameAsError()
     {
         return (null == output && null == error) ||
                (null != output && output.equals( error ));
@@ -89,17 +91,23 @@ public class ProcessWrapper implements BaseProcess
     {
         try
         {
+            // if no file exists include that info in printout, to assist with debugging -- it may be surprising
+            String outputFileInfo = (null != output && !Files.exists( output ))
+                                    ? "Expected to find output file, but none found.\n" +
+                                      "Path: " + output.toAbsolutePath().toString() + "\n\n"
+                                    : "";
+            // expect to find an output file & find one
             if ( null != output && Files.exists( output ) )
             {
-                return inputStreamToString( Files.newInputStream( output ) );
+                return outputFileInfo + inputStreamToString( Files.newInputStream( output ) );
             }
             else if ( process.isAlive() )
             {
-                return inputStreamToString( processInputStream.apply( process ) );
+                return outputFileInfo + inputStreamToString( processInputStream.apply( process ) );
             }
             else
             {
-                return "<UNABLE TO RETRIEVE PROCESS OUTPUT>";
+                return outputFileInfo + "<UNABLE TO RETRIEVE PROCESS OUTPUT>";
             }
         }
         catch ( IOException e )

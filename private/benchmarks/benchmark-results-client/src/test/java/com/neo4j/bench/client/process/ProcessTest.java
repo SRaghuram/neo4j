@@ -38,7 +38,7 @@ public class ProcessTest
                                                                           jvmArgs,
                                                                           toolCommandArgs,
                                                                           Main.class );
-        JvmProcess jvmProcess = JvmProcess.start( Jvm.defaultJvmOrFail(), jvmProcessArgs );
+        JvmProcess jvmProcess = JvmProcess.start( jvmProcessArgs );
         jvmProcess.waitFor();
     }
 

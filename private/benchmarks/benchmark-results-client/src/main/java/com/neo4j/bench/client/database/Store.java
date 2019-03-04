@@ -93,6 +93,7 @@ public class Store implements AutoCloseable
             return Files.list( topLevelDir )
                         .filter( Files::isDirectory )
                         .filter( Store::isGraphDb )
+                        // TODO filter out system database here, in 4.0
                         .collect( Collectors.toList() );
         }
         catch ( IOException e )
