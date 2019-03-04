@@ -10,8 +10,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -69,13 +69,13 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.of( path );
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs ),
-                        pages, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
+                        pages, fs, logProvider );
                 CountsTracker counts = new ReadOnlyCountsTracker( logProvider, fs, pages, config, databaseLayout );
                 life.add( counts );
 
                 NeoStores neoStores = factory.openAllNeoStores();
 
-                TokenHolders tokenHolders = RecordStorageEngineFactory.readOnlyTokenHolders( neoStores );
+                TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
                 SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
                 counts.accept( new DumpCountsStore( out, new SimpleSchemaRuleCache( neoStores, schemaStorage ) ) );
             }

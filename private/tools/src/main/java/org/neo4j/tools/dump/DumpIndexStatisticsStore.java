@@ -9,13 +9,12 @@ import java.io.File;
 import java.io.PrintStream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.recordstorage.RecordStorageEngineFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsVisitor;
 import org.neo4j.kernel.impl.core.TokenHolders;
@@ -60,9 +59,9 @@ public class DumpIndexStatisticsStore
                 DatabaseLayout databaseLayout = DatabaseLayout.of( path );
                 indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate() );
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs ),
-                        pageCache, fs, logProvider, EmptyVersionContextSupplier.EMPTY );
+                        pageCache, fs, logProvider );
                 NeoStores neoStores = factory.openAllNeoStores();
-                TokenHolders tokenHolders = RecordStorageEngineFactory.readOnlyTokenHolders( neoStores );
+                TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
                 SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
                 schema = new SimpleSchemaRuleCache( neoStores, schemaStorage );
             }

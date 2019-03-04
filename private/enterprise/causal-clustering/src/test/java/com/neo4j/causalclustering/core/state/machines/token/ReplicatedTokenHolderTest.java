@@ -48,8 +48,7 @@ public class ReplicatedTokenHolderTest
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
-        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, null,
-                null, storageEngineSupplier );
+        ReplicatedTokenHolder tokenHolder = new ReplicatedLabelTokenHolder( databaseName, registry, null, null, storageEngineSupplier );
 
         // when
         tokenHolder.setInitialTokens( asList( new NamedToken( "name1", 1 ), new NamedToken( "name2", 2 ) ) );
