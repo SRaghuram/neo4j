@@ -21,6 +21,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, Transactiona
 import org.neo4j.cypher.internal.spi.v4_0.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer
+import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.GeneratingNamer
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.v4_0.util.{CartesianProductNotification, InputPosition}
@@ -83,12 +84,13 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
   private def runQuery(query: String) = {
     graph.inTx {
       val tracer = CompilationPhaseTracer.NO_TRACING
-      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer)
+      val innerVariableNamer = new GeneratingNamer
+      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer)
       val kernelTransaction = graph.getDependencyResolver.resolveDependency(classOf[ThreadToStatementContextBridge]).getKernelTransactionBoundToThisThread(true)
       val statement = kernelTransaction.acquireStatement()
       val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, Set.empty,
                                                  None, monitors, metricsFactory, createQueryGraphSolver(), configuration, defaultUpdateStrategy, Clock.systemUTC(), new SequentialIdGen(),
-                                                 simpleExpressionEvaluator)
+                                                 simpleExpressionEvaluator, innerVariableNamer)
 
       try {
         val normalized = compiler.normalizeQuery(parsed, context)

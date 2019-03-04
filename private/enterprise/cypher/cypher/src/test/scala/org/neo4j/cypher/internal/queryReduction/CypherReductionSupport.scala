@@ -26,6 +26,7 @@ import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Pre
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticFeature, SemanticState}
 import org.neo4j.cypher.internal.v4_0.frontend.phases.CompilationPhaseTracer.NO_TRACING
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
+import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.GeneratingNamer
 import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer}
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherTestSupport}
@@ -217,6 +218,6 @@ trait CypherReductionSupport extends CypherTestSupport with GraphIcing {
     PlannerContextCreator.create(NO_TRACING, devNullLogger, planContext, query, Set(),
                                  None, WrappedMonitors(new Monitors), metricsFactory,
                                  queryGraphSolver, config, defaultUpdateStrategy, MasterCompiler.CLOCK,
-                                 logicalPlanIdGen, null)
+                                 logicalPlanIdGen, null, new GeneratingNamer)
   }
 }
