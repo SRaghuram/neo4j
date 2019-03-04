@@ -35,6 +35,7 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.api.ClockContext;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
 
+import static java.util.Collections.emptyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -259,6 +260,12 @@ class StubKernelTransaction implements KernelTransaction
     @Override
     public void setMetaData( Map<String,Object> metaData )
     {
+    }
+
+    @Override
+    public Map<String,Object> getMetaData()
+    {
+        return emptyMap();
     }
 
     @Override
