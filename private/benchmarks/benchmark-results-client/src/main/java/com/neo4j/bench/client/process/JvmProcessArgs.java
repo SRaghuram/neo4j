@@ -63,6 +63,11 @@ public class JvmProcessArgs
         return processName;
     }
 
+    public Jvm jvm()
+    {
+        return jvm;
+    }
+
     List<String> args()
     {
         List<String> commands = new ArrayList<>();
@@ -76,7 +81,7 @@ public class JvmProcessArgs
         return commands;
     }
 
-    public String conciseToString()
+    String conciseToString()
     {
         return "ProcessArgs\n" +
                "\tjvmInvokeArg    : " + jvmInvokeArg + "\n" +

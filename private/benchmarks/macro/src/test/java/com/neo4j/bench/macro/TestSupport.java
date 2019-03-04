@@ -6,6 +6,7 @@
 package com.neo4j.bench.macro;
 
 import com.neo4j.bench.client.database.Store;
+import com.neo4j.bench.client.util.BenchmarkUtil;
 
 import java.nio.file.Path;
 
@@ -15,8 +16,9 @@ public class TestSupport
 {
     public static Store createEmptyStore( Path storeDir )
     {
-        Store store = Store.createEmptyAt( storeDir );
-        new GraphDatabaseFactory().newEmbeddedDatabase( store.graphDbDirectory().toFile() ).shutdown();
-        return store;
+        Path graphDbDir = storeDir.resolve( "graph.db" );
+        BenchmarkUtil.assertDoesNotExist( graphDbDir );
+        new GraphDatabaseFactory().newEmbeddedDatabase( graphDbDir.toFile() ).shutdown();
+        return Store.createFrom( storeDir );
     }
 }
