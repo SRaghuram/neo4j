@@ -15,6 +15,8 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.recordstorage.CacheAccessBackDoor;
 import org.neo4j.internal.recordstorage.CacheInvalidationTransactionApplier;
@@ -32,8 +34,6 @@ import org.neo4j.kernel.impl.locking.LockGroup;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.StoreFactory;
-import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
-import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;

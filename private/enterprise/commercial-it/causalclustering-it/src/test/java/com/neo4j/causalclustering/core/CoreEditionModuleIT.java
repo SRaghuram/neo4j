@@ -15,10 +15,10 @@ import org.junit.Test;
 import java.util.function.Predicate;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.internal.id.BufferedIdController;
+import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.store.id.BufferedIdController;
-import org.neo4j.kernel.impl.store.id.IdController;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 
 import static org.hamcrest.Matchers.instanceOf;
