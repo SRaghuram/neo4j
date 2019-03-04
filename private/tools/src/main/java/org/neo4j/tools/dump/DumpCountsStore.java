@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.counts.CountsVisitor;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -18,7 +19,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.api.StatementConstants;
-import org.neo4j.kernel.impl.api.CountsVisitor;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.StoreFactory;
