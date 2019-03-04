@@ -11,13 +11,13 @@ import java.io.IOException;
 import java.util.function.BooleanSupplier;
 
 import org.neo4j.function.Predicates;
-import org.neo4j.kernel.impl.store.UnderlyingStorageException;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.UnderlyingStorageException;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
