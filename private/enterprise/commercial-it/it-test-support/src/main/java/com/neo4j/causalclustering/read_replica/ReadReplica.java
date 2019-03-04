@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.readreplica;
+package com.neo4j.causalclustering.read_replica;
 
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
@@ -11,6 +11,8 @@ import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 
 import java.io.File;
@@ -36,7 +38,6 @@ import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 
-@SuppressWarnings( "WeakerAccess" )
 public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
 {
     public interface ReadReplicaGraphDatabaseFactory
@@ -45,16 +46,16 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
                 GraphDatabaseDependencies databaseDependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId );
     }
 
-    protected final DiscoveryServiceFactory discoveryServiceFactory;
+    private final DiscoveryServiceFactory discoveryServiceFactory;
     private final File neo4jHome;
-    protected final DatabaseLayout defaultDatabaseLayout;
+    private final DatabaseLayout defaultDatabaseLayout;
     private final int serverId;
     private final String boltAdvertisedSocketAddress;
     private final Config memberConfig;
-    protected ReadReplicaGraphDatabase database;
-    protected Monitors monitors;
+    private ReadReplicaGraphDatabase database;
+    private final Monitors monitors;
     private final ThreadGroup threadGroup;
-    protected final File databasesDirectory;
+    private final File databasesDirectory;
     private final ReadReplicaGraphDatabaseFactory dbFactory;
     private volatile boolean hasPanicked;
 

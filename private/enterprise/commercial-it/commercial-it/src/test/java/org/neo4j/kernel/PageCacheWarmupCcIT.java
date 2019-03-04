@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.upstream.strategies.LeaderOnlyStrategy;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitorAdapter;
 import com.neo4j.test.causalclustering.ClusterRule;
@@ -44,7 +44,7 @@ public class PageCacheWarmupCcIT extends PageCacheWarmupTestSupport
             .withSharedReadReplicaParam( CausalClusteringSettings.pull_interval, "100ms" )
             .withSharedReadReplicaParam( CausalClusteringSettings.upstream_selection_strategy, LeaderOnlyStrategy.IDENTITY );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private CoreClusterMember leader;
 
     @Before

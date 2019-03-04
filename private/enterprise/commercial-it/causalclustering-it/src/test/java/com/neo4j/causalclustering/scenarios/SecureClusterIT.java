@@ -6,12 +6,11 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.SecureCluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +46,7 @@ class SecureClusterIT
     @Inject
     private DefaultFileSystemAbstraction fs;
 
-    private SecureCluster cluster;
+    private Cluster cluster;
 
     @AfterEach
     void cleanup()
@@ -68,7 +67,7 @@ class SecureClusterIT
         Map<String,String> coreParams = MapUtil.stringMap(
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
                 CausalClusteringSettings.middleware_logging_level.name(), "0",
-                CausalClusteringSettings.ssl_policy.name(), sslPolicyName,
+                CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes cores run secure communication
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
                 SecuritySettings.auth_provider.name(), SYSTEM_GRAPH_REALM_NAME,
                 policyConfig.base_directory.name(), "certificates/cluster"
@@ -76,14 +75,14 @@ class SecureClusterIT
         Map<String,String> readReplicaParams = MapUtil.stringMap(
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
                 CausalClusteringSettings.middleware_logging_level.name(), "0",
-                CausalClusteringSettings.ssl_policy.name(), sslPolicyName,
+                CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes read replicas run secure communication
                 policyConfig.base_directory.name(), "certificates/cluster"
         );
 
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
 
-        cluster = new SecureCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas,
+        cluster = new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas,
                 new AkkaDiscoveryServiceFactory(), coreParams, emptyMap(), readReplicaParams,
                 emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
 

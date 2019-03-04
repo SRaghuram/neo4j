@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.helpers.collection.Iterables;
 
@@ -17,7 +18,7 @@ import static org.neo4j.consistency.ConsistencyCheckTool.runConsistencyCheckTool
  */
 public class ConsistencyCheck extends Validation
 {
-    private final Cluster<?> cluster;
+    private final Cluster cluster;
 
     ConsistencyCheck( Resources resources )
     {

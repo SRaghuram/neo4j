@@ -5,8 +5,14 @@
  */
 package org.neo4j.backup.clusteringsupport;
 
+import com.neo4j.backup.stores.BackupStore;
+import com.neo4j.backup.stores.BackupStoreWithSomeData;
+import com.neo4j.backup.stores.BackupStoreWithSomeDataButNoTransactionLogs;
+import com.neo4j.backup.stores.DefaultDatabasesBackup;
+import com.neo4j.backup.stores.EmptyBackupStore;
+import com.neo4j.backup.stores.EmptyBackupStoreWithoutTransactionLogs;
+import com.neo4j.backup.stores.NoStore;
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
@@ -21,13 +27,6 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.Optional;
 
-import org.neo4j.backup.clusteringsupport.backup_stores.BackupStore;
-import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeData;
-import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeDataButNoTransactionLogs;
-import org.neo4j.backup.clusteringsupport.backup_stores.DefaultDatabasesBackup;
-import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStore;
-import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStoreWithoutTransactionLogs;
-import org.neo4j.backup.clusteringsupport.backup_stores.NoStore;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
@@ -36,10 +35,10 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.backup.clusteringsupport.BackupUtil.restoreFromBackup;
 
 @RunWith( Parameterized.class )
 public class ClusterSeedingIT
@@ -57,8 +56,8 @@ public class ClusterSeedingIT
     @Rule
     public RuleChain rules = RuleChain.outerRule( fileSystemRule ).around( testDir ).around( suppressOutput );
 
-    private Cluster<?> backupCluster;
-    private Cluster<?> cluster;
+    private Cluster backupCluster;
+    private Cluster cluster;
     private FileCopyDetector fileCopyDetector;
     private File baseBackupDir;
 
@@ -78,11 +77,11 @@ public class ClusterSeedingIT
     public void setup()
     {
         this.fileCopyDetector = new FileCopyDetector();
-        backupCluster = new DefaultCluster( testDir.directory( "cluster-for-backup" ), 3, 0,
+        backupCluster = new Cluster( testDir.directory( "cluster-for-backup" ), 3, 0,
                 new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard
                 .LATEST_NAME, IpFamily.IPV4, false );
 
-        cluster = new DefaultCluster( testDir.directory( "cluster-b" ), 3, 0,
+        cluster = new Cluster( testDir.directory( "cluster-b" ), 3, 0,
                 new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), Standard.LATEST_NAME,
                 IpFamily.IPV4, false );
 

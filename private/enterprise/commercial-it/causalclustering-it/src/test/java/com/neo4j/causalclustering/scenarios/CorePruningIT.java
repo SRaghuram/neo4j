@@ -6,9 +6,9 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.helpers.SampleData;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,17 +34,13 @@ public class CorePruningIT
     public void actuallyDeletesTheFiles() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         CoreClusterMember coreGraphDatabase = null;
         int txs = 10;
         for ( int i = 0; i < txs; i++ )
         {
-            coreGraphDatabase = cluster.coreTx( ( db, tx ) ->
-            {
-                SampleData.createData( db, 1 );
-                tx.success();
-            } );
+            coreGraphDatabase = DataCreator.createDataInOneTransaction( cluster, 1 );
         }
 
         // when pruning kicks in then some files are actually deleted
@@ -58,13 +54,13 @@ public class CorePruningIT
     public void shouldNotPruneUncommittedEntries() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         CoreClusterMember coreGraphDatabase = null;
         int txs = 1000;
         for ( int i = 0; i < txs; i++ )
         {
-            coreGraphDatabase = cluster.coreTx( ( db, tx ) -> SampleData.createData( db, 1 ) );
+            coreGraphDatabase = DataCreator.createDataInOneTransaction( cluster, 1 );
         }
 
         // when pruning kicks in then some files are actually deleted
@@ -76,6 +72,6 @@ public class CorePruningIT
 
     private int numberOfFiles( File raftLogDir ) throws RuntimeException
     {
-        return raftLogDir.list().length;
+        return clusterRule.testDirectory().getFileSystem().listFiles( raftLogDir ).length;
     }
 }

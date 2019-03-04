@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
@@ -47,7 +46,7 @@ public class ServerGroupsIT
     @Rule
     public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @After
     public void after()
@@ -73,7 +72,7 @@ public class ServerGroupsIT
                 id -> String.join( ", ", makeReplicaGroups( suffix.get(), id ) ) );
 
         int nServers = 3;
-        cluster = new DefaultCluster( testDir.directory( "cluster" ), nServers, nServers,
+        cluster = new Cluster( testDir.directory( "cluster" ), nServers, nServers,
                 new HazelcastDiscoveryServiceFactory(), emptyMap(), instanceCoreParams,
                 emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
 

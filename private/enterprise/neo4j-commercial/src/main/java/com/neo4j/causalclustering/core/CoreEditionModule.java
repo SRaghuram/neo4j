@@ -31,7 +31,6 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.diagnostics.CoreMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.CoreRoleProcedure;
@@ -119,7 +118,6 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
-import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
@@ -198,9 +196,11 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, globalModule,
                 databaseManagerSupplier, logProvider, globalConfig );
-        globalDependencies.satisfyDependency( SslPolicyLoader.create( globalConfig, logProvider ) );
 
-        ClusteringModule clusteringModule = getClusteringModule( globalModule, discoveryServiceFactory, storage, identityModule, globalDependencies );
+        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
+        globalDependencies.satisfyDependency( sslPolicyLoader );
+
+        ClusteringModule clusteringModule = getClusteringModule( globalModule, discoveryServiceFactory, storage, identityModule, sslPolicyLoader );
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, globalConfig, globalDependencies );
 
@@ -431,19 +431,11 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     protected ClusteringModule getClusteringModule( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageService storage, IdentityModule identityModule, Dependencies dependencies )
+            CoreStateStorageService storage, IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
     {
-        SslPolicyLoader sslPolicyFactory = dependencies.resolveDependency( SslPolicyLoader.class );
-        SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( globalConfig.get( CausalClusteringSettings.ssl_policy ) );
-
-        if ( discoveryServiceFactory instanceof SslDiscoveryServiceFactory )
-        {
-            ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
-        }
-
         TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory();
-
         return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storage, databaseService, temporaryDatabaseFactory,
+                sslPolicyLoader,
                 dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
     }
 

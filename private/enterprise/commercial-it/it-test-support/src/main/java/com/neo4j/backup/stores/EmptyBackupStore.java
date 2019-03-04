@@ -3,17 +3,17 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.backup.clusteringsupport.backup_stores;
-
-import java.io.File;
+package com.neo4j.backup.stores;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 
+import java.io.File;
+
 public class EmptyBackupStore extends AbstractStoreGenerator
 {
     @Override
-    CoreClusterMember createData( Cluster<?> cluster )
+    CoreClusterMember createData( Cluster cluster )
     {
         return cluster.coreMembers().iterator().next();
     }

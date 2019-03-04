@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.backup.clusteringsupport.backup_stores;
+package com.neo4j.backup.stores;
 
 import java.io.File;
 

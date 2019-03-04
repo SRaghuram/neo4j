@@ -5,10 +5,11 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.common.Cluster;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.neo4j.causalclustering.common.Cluster;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -22,7 +23,7 @@ class CreateNodesWithProperties extends Workload
 {
     private static final Label label = Label.label( "Label" );
 
-    private final Cluster<?> cluster;
+    private final Cluster cluster;
     private final CappedLogger txLogger;
     private final boolean enableIndexes;
 
@@ -81,7 +82,7 @@ class CreateNodesWithProperties extends Workload
         txSuccessCount++;
     }
 
-    private static void setupIndexes( Cluster<?> cluster )
+    private static void setupIndexes( Cluster cluster )
     {
         try
         {

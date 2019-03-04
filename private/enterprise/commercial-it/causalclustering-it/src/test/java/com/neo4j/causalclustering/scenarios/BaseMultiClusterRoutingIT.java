@@ -63,7 +63,7 @@ public abstract class BaseMultiClusterRoutingIT
     private final ClusterConfig clusterConfig;
     private final int numCores;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @Inject
     private DefaultFileSystemAbstraction fs;

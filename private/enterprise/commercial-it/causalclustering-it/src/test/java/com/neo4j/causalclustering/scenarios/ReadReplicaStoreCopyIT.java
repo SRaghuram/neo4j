@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
@@ -45,7 +45,7 @@ public class ReadReplicaStoreCopyIT
     @Test( timeout = 240_000 )
     public void shouldNotBePossibleToStartTransactionsWhenReadReplicaCopiesStore() throws Throwable
     {
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         ReadReplica readReplica = cluster.findAnyReadReplica();
 
@@ -77,7 +77,7 @@ public class ReadReplicaStoreCopyIT
         }
     }
 
-    private static void writeSomeDataAndForceLogRotations( Cluster<?> cluster ) throws Exception
+    private static void writeSomeDataAndForceLogRotations( Cluster cluster ) throws Exception
     {
         for ( int i = 0; i < 20; i++ )
         {
@@ -91,7 +91,7 @@ public class ReadReplicaStoreCopyIT
         }
     }
 
-    private static void forceLogRotationOnAllCores( Cluster<?> cluster )
+    private static void forceLogRotationOnAllCores( Cluster cluster )
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {

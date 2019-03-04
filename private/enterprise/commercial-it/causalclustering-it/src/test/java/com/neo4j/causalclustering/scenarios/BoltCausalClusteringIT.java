@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -72,7 +72,7 @@ class BoltCausalClusteringIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @BeforeAll
     void startCluster() throws Exception
@@ -219,7 +219,7 @@ class BoltCausalClusteringIT
      */
     private class LeaderSwitcher implements Runnable
     {
-        private final Cluster<?> cluster;
+        private final Cluster cluster;
         private final CountDownLatch switchCompleteLatch;
         private CoreClusterMember initialLeader;
         private CoreClusterMember currentLeader;
@@ -228,7 +228,7 @@ class BoltCausalClusteringIT
         private boolean stopped;
         private Throwable throwable;
 
-        LeaderSwitcher( Cluster<?> cluster, CountDownLatch switchCompleteLatch )
+        LeaderSwitcher( Cluster cluster, CountDownLatch switchCompleteLatch )
         {
             this.cluster = cluster;
             this.switchCompleteLatch = switchCompleteLatch;
@@ -643,7 +643,7 @@ class BoltCausalClusteringIT
                         GraphDatabaseSettings.check_point_interval_time.name(), "100ms", CausalClusteringSettings.cluster_allow_reads_on_followers.name(),
                         "false" );
 
-        Cluster<?> cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
+        Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
         cluster.start();
 
         Driver driver = GraphDatabase.driver( cluster.awaitLeader().routingURI(), AuthTokens.basic( "neo4j", "neo4j" ) );

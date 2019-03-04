@@ -54,7 +54,7 @@ class WillNotBecomeLeaderIT
             }
         } );
 
-        Cluster<?> cluster = clusterFactory.createCluster( clusterConfig );
+        Cluster cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
         assertEquals( leaderId, cluster.awaitLeader().serverId() );
 

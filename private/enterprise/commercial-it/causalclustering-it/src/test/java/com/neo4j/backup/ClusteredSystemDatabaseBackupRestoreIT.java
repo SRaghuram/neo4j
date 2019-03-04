@@ -6,14 +6,11 @@
 package com.neo4j.backup;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.SecureCluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.SslSharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import com.neo4j.util.TestHelpers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +59,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
     @Inject
     private DefaultFileSystemAbstraction fs;
 
-    private Cluster<SslDiscoveryServiceFactory> cluster;
+    private Cluster cluster;
     private File backupLocation;
     private String backupAddress = OnlineBackupSettings.online_backup_listen_address.name();
     private File clusterLocation;
@@ -156,7 +153,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         } );
     }
 
-    private void unbindCluster( Cluster<SslDiscoveryServiceFactory> cluster, FileSystemAbstraction fs ) throws IOException
+    private void unbindCluster( Cluster cluster, FileSystemAbstraction fs ) throws IOException
     {
         for ( CoreClusterMember member : cluster.coreMembers() )
         {
@@ -166,10 +163,10 @@ class ClusteredSystemDatabaseBackupRestoreIT
         this.cluster = createCluster( clusterLocation, getConfigMap() );
     }
 
-    private static Cluster<SslDiscoveryServiceFactory> createCluster( File clusterLocation, Map<String,String> configMap )
+    private static Cluster createCluster( File clusterLocation, Map<String,String> configMap )
     {
-        return new SecureCluster( clusterLocation, 3, 0,
-                new SslSharedDiscoveryServiceFactory(), configMap, Collections.emptyMap(), configMap,
+        return new Cluster( clusterLocation, 3, 0,
+                new SharedDiscoveryServiceFactory(), configMap, Collections.emptyMap(), configMap,
                 Collections.emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }
 
@@ -184,14 +181,14 @@ class ClusteredSystemDatabaseBackupRestoreIT
 
     private static boolean runBackupSameJvm( File neo4jHome, String backupName, String host, String databaseName )
     {
-        return TestHelpers.runBackupToolFromSameJvm( neo4jHome,
+        return BackupTestUtil.runBackupToolFromSameJvm( neo4jHome,
                 "--from", host,
                 "--database", databaseName,
                 "--backup-dir", neo4jHome.toString(),
                 "--name", backupName ) == 0;
     }
 
-    private static GraphDatabaseService getSystemDatabase( Cluster<?> cluster ) throws Exception
+    private static GraphDatabaseService getSystemDatabase( Cluster cluster ) throws Exception
     {
         DatabaseManager databaseManager = cluster.awaitLeader().database()
                 .getDependencyResolver()

@@ -6,7 +6,6 @@
 package com.neo4j.test.causalclustering;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
@@ -40,7 +39,7 @@ public class ClusterRule extends ExternalResource
 {
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private File clusterDirectory;
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     private int noCoreMembers = 3;
     private int noReadReplicas = 3;
@@ -104,7 +103,7 @@ public class ClusterRule extends ExternalResource
      * Starts cluster with the configuration provided at instantiation time. This method will not return until the
      * cluster is up and all members report each other as available.
      */
-    public Cluster<?> startCluster() throws Exception
+    public Cluster startCluster() throws Exception
     {
         createCluster();
         cluster.start();
@@ -115,11 +114,11 @@ public class ClusterRule extends ExternalResource
         return cluster;
     }
 
-    public Cluster<?> createCluster()
+    public Cluster createCluster()
     {
         if ( cluster == null )
         {
-            cluster = new DefaultCluster( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceType.createFactory(), coreParams,
+            cluster = new Cluster( clusterDirectory, noCoreMembers, noReadReplicas, discoveryServiceType.createFactory(), coreParams,
                     instanceCoreParams, readReplicaParams, instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, dbNames );
         }
 

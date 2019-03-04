@@ -23,11 +23,13 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
 
+import static com.neo4j.backup.BackupTestUtil.backupArguments;
+import static com.neo4j.backup.BackupTestUtil.createSomeData;
+import static com.neo4j.backup.BackupTestUtil.getConfig;
+import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
 import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.transactionAddress;
-import static com.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.neo4j.backup.clusteringsupport.BackupUtil.getConfig;
 import static org.neo4j.function.Predicates.awaitEx;
 
 public class BackupReadReplicaIT
@@ -42,7 +44,7 @@ public class BackupReadReplicaIT
             .withNumberOfReadReplicas( 1 )
             .withSharedReadReplicaParam( OnlineBackupSettings.online_backup_enabled, Settings.TRUE );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private File backupPath;
 
     @Before
@@ -56,7 +58,7 @@ public class BackupReadReplicaIT
     public void makeSureBackupCanBePerformed() throws Throwable
     {
         // Run backup
-        CoreGraphDatabase leader = BackupUtil.createSomeData( cluster );
+        CoreGraphDatabase leader = createSomeData( cluster );
 
         ReadReplicaGraphDatabase readReplica = cluster.findAnyReadReplica().database();
 
@@ -65,11 +67,11 @@ public class BackupReadReplicaIT
         DbRepresentation beforeChange = DbRepresentation.of( readReplica );
         String backupAddress = transactionAddress( readReplica );
 
-        String[] args = BackupUtil.backupArguments( backupAddress, backupPath, "readreplica" );
+        String[] args = backupArguments( backupAddress, backupPath, "readreplica" );
         assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( clusterRule.clusterDirectory(), args ) );
 
         // Add some new data
-        DbRepresentation afterChange = DbRepresentation.of( BackupUtil.createSomeData( cluster ) );
+        DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
         // Verify that backed up database can be started and compare representation
         DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( backupPath, "readreplica" ).databaseDirectory(), getConfig() );

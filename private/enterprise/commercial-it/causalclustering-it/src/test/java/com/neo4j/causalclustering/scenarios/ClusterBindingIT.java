@@ -6,12 +6,12 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
-import com.neo4j.causalclustering.helpers.SampleData;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -44,7 +43,6 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 
 public class ClusterBindingIT
@@ -59,7 +57,7 @@ public class ClusterBindingIT
     @Rule
     public RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( clusterRule );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private FileSystemAbstraction fs;
 
     @Before
@@ -67,23 +65,14 @@ public class ClusterBindingIT
     {
         fs = fileSystemRule.get();
         cluster = clusterRule.startCluster();
-        cluster.coreTx( ( db, tx ) ->
-        {
-            SampleData.createSchema( db );
-            tx.success();
-        } );
+        DataCreator.createSchema( cluster );
     }
 
     @Test
     public void allServersShouldHaveTheSameStoreId() throws Throwable
     {
         // WHEN
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        DataCreator.createDataInOneTransaction( cluster, 1 );
 
         List<File> coreStoreDirs = databaseDirs( cluster.coreMembers() );
 
@@ -97,12 +86,7 @@ public class ClusterBindingIT
     public void whenWeRestartTheClusterAllServersShouldStillHaveTheSameStoreId() throws Throwable
     {
         // GIVEN
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        DataCreator.createDataInOneTransaction( cluster, 1 );
 
         cluster.shutdown();
         // WHEN
@@ -110,12 +94,7 @@ public class ClusterBindingIT
 
         List<File> coreStoreDirs = databaseDirs( cluster.coreMembers() );
 
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        DataCreator.createDataInOneTransaction( cluster, 1 );
 
         cluster.shutdown();
 
@@ -128,12 +107,7 @@ public class ClusterBindingIT
     public void shouldNotJoinClusterIfHasDataWithDifferentStoreId() throws Exception
     {
         // GIVEN
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        DataCreator.createDataInOneTransaction( cluster, 1 );
 
         File databaseDirectory = cluster.getCoreMemberById( 0 ).databaseDirectory();
 
@@ -156,17 +130,12 @@ public class ClusterBindingIT
     public void laggingFollowerShouldDownloadSnapshot() throws Exception
     {
         // GIVEN
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        DataCreator.createDataInOneTransaction( cluster, 1 );
 
         //TODO: Work out if/why this won't potentially remove a leader?
         cluster.removeCoreMemberWithServerId( 0 );
 
-        SampleData.createSomeData( 100, cluster );
+        DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
@@ -190,18 +159,13 @@ public class ClusterBindingIT
     public void badFollowerShouldNotJoinCluster() throws Exception
     {
         // GIVEN
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        DataCreator.createDataInOneTransaction( cluster, 1 );
 
         CoreClusterMember coreMember = cluster.getCoreMemberById( 0 );
         cluster.removeCoreMemberWithServerId( 0 );
         changeClusterId( coreMember );
 
-        SampleData.createSomeData( 100, cluster );
+        DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
         for ( CoreClusterMember db : cluster.coreMembers() )
         {
@@ -224,14 +188,7 @@ public class ClusterBindingIT
     public void aNewServerShouldJoinTheClusterByDownloadingASnapshot() throws Exception
     {
         // GIVEN
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
-
-        SampleData.createSomeData( 100, cluster );
+        DataCreator.createDataInMultipleTransactions( cluster, 100 );
 
         for ( CoreClusterMember db : cluster.coreMembers() )
         {

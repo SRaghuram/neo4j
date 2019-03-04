@@ -6,8 +6,6 @@
 package com.neo4j.test.causalclustering;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.helper.ErrorHandler;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -42,10 +40,10 @@ public class TrackingClusterFactory implements ClusterFactory
     }
 
     @Override
-    public Cluster<DiscoveryServiceFactory> createCluster( ClusterConfig clusterConfig )
+    public Cluster createCluster( ClusterConfig clusterConfig )
     {
         File directory = testDirectory.directory( generateId() );
-        DefaultCluster cluster = ClusterConfig.createCluster( directory, clusterConfig );
+        Cluster cluster = ClusterConfig.createCluster( directory, clusterConfig );
         clusters.add( cluster );
         return cluster;
     }

@@ -31,7 +31,7 @@ public class IdFilesSanityCheckIT
                     .withNumberOfReadReplicas( 0 )
                     .withTimeout( 1000, SECONDS );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private FileSystemAbstraction fs = clusterRule.testDirectory().getFileSystem();
 
     @Before

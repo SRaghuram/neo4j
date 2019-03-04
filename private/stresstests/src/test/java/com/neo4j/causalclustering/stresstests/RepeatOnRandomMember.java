@@ -7,11 +7,12 @@ package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+
 import org.neo4j.helper.Workload;
 
 abstract class RepeatOnRandomMember extends Workload implements WorkOnMember
 {
-    private final Cluster<?> cluster;
+    private final Cluster cluster;
 
     RepeatOnRandomMember( Control control, Resources resources )
     {

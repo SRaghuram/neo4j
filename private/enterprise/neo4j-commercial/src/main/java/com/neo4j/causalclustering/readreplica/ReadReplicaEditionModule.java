@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.RemoteMembersResolver;
 import com.neo4j.causalclustering.discovery.ResolutionResolverFactory;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
-import com.neo4j.causalclustering.discovery.SslDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
@@ -77,7 +76,6 @@ import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
@@ -129,12 +127,11 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         RemoteMembersResolver hostnameResolver = ResolutionResolverFactory.chooseResolver( globaConfig, logService);
 
-        globalDependencies.satisfyDependency( SslPolicyLoader.create( globaConfig, logProvider ) );
-
-        configureDiscoveryService( discoveryServiceFactory, globalDependencies, globaConfig, logProvider );
+        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( globaConfig, logProvider );
+        globalDependencies.satisfyDependency( sslPolicyLoader );
 
         topologyService = discoveryServiceFactory.readReplicaTopologyService( globaConfig, logProvider, jobScheduler, myself, hostnameResolver,
-                resolveStrategy( globaConfig, logProvider ) );
+                resolveStrategy( globaConfig, logProvider ), sslPolicyLoader );
 
         globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
@@ -225,18 +222,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return () ->
         {
         };
-    }
-
-    private void configureDiscoveryService( DiscoveryServiceFactory discoveryServiceFactory, Dependencies dependencies,
-                                              Config config, LogProvider logProvider )
-    {
-        SslPolicyLoader sslPolicyFactory = dependencies.resolveDependency( SslPolicyLoader.class );
-        SslPolicy clusterSslPolicy = sslPolicyFactory.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
-
-        if ( discoveryServiceFactory instanceof SslDiscoveryServiceFactory )
-        {
-            ((SslDiscoveryServiceFactory) discoveryServiceFactory).setSslPolicy( clusterSslPolicy );
-        }
     }
 
     @Override

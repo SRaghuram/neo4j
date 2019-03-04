@@ -6,10 +6,10 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterOverviewHelper;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.helpers.ClusterOverviewHelper;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -61,7 +61,7 @@ public class AkkaDiscoveryUncleanShutdownIT
             .withNumberOfCoreMembers( coreMembers )
             .withNumberOfReadReplicas( 0 );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private List<CoreClusterMember> runningCores;
     private Set<Integer> removedCoreIds;
 

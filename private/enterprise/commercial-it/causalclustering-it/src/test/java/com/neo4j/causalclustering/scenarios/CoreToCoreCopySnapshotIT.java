@@ -6,23 +6,22 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.helpers.SampleData;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.Clock;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.Node;
-import org.neo4j.io.fs.FileUtils;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.time.Clocks;
 
@@ -47,30 +46,22 @@ public class CoreToCoreCopySnapshotIT
     public void shouldBeAbleToDownloadLargerFreshSnapshot() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
-        CoreClusterMember source = cluster.coreTx( ( db, tx ) ->
-        {
-            SampleData.createData( db, 1000 );
-            tx.success();
-        } );
+        CoreClusterMember source = DataCreator.createDataInOneTransaction( cluster, 1000 );
 
         // when
         CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 5, TimeUnit.SECONDS );
 
         // shutdown the follower, remove the store, restart
         follower.shutdown();
-        deleteDirectoryRecursively( follower.databaseDirectory(), follower.serverId() );
-        deleteDirectoryRecursively( follower.clusterStateDirectory(), follower.serverId() );
+        FileSystemAbstraction fs = clusterRule.testDirectory().getFileSystem();
+        fs.deleteRecursively( follower.databaseDirectory() );
+        fs.deleteRecursively( follower.clusterStateDirectory() );
         follower.start();
 
         // then
         assertEquals( DbRepresentation.of( source.database() ), DbRepresentation.of( follower.database() ) );
-    }
-
-    protected void deleteDirectoryRecursively( File directory, int id ) throws IOException
-    {
-        FileUtils.deleteRecursively( directory );
     }
 
     @Test
@@ -81,13 +72,9 @@ public class CoreToCoreCopySnapshotIT
                 CausalClusteringSettings.raft_log_pruning_strategy.name(), "3 entries",
                 CausalClusteringSettings.raft_log_rotation_size.name(), "1K" );
 
-        Cluster<?> cluster = clusterRule.withSharedCoreParams( params ).startCluster();
+        Cluster cluster = clusterRule.withSharedCoreParams( params ).startCluster();
 
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
-        {
-            SampleData.createData( db, 10000 );
-            tx.success();
-        } );
+        CoreClusterMember leader = DataCreator.createDataInOneTransaction( cluster, 10000 );
 
         // when
         for ( CoreClusterMember coreDb : cluster.coreMembers() )
@@ -118,7 +105,7 @@ public class CoreToCoreCopySnapshotIT
         int numberOfTransactions = 100;
 
         // start the cluster
-        Cluster<?> cluster = clusterRule.withSharedCoreParams( coreParams ).startCluster();
+        Cluster cluster = clusterRule.withSharedCoreParams( coreParams ).startCluster();
         Timeout timeout = new Timeout( Clocks.systemClock(), 120, SECONDS );
 
         // accumulate some log files
@@ -182,7 +169,7 @@ public class CoreToCoreCopySnapshotIT
         return clusterMember.getLogFileNames().lastKey().intValue();
     }
 
-    private CoreClusterMember doSomeTransactions( Cluster<?> cluster, int count )
+    private CoreClusterMember doSomeTransactions( Cluster cluster, int count )
     {
         try
         {

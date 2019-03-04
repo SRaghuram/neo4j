@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.discovery.SslSharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -49,7 +49,7 @@ class CoreEditionModuleTest
                 return NullLogService.getInstance();
             }
         };
-        CoreEditionModule editionModule = new CoreEditionModule( globalModule, new SslSharedDiscoveryServiceFactory() );
+        CoreEditionModule editionModule = new CoreEditionModule( globalModule, new SharedDiscoveryServiceFactory() );
         editionModule.createDatabases( manager, config );
 
         InOrder order = inOrder( manager );

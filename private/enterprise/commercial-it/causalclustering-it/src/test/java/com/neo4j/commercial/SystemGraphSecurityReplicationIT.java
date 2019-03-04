@@ -5,12 +5,13 @@
  */
 package com.neo4j.commercial;
 
-import com.neo4j.causalclustering.common.SecureCluster;
+import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
+import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SslHazelcastDiscoveryServiceFactory;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.enterprise.api.security.CommercialAuthManager;
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
@@ -59,7 +60,7 @@ class SystemGraphSecurityReplicationIT
     @Inject
     private TestDirectory testDir;
 
-    private SecureCluster cluster;
+    private Cluster cluster;
 
     @BeforeEach
     void setup() throws Exception
@@ -72,7 +73,9 @@ class SystemGraphSecurityReplicationIT
         int noOfCoreMembers = 3;
         int noOfReadReplicas = 3;
 
-        cluster = new SecureCluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, new SslHazelcastDiscoveryServiceFactory(), params,
+        // use secure discovery service factory to make cluster members communicate with SSL enabled
+        DiscoveryServiceFactory discoveryServiceFactory = new SslHazelcastDiscoveryServiceFactory();
+        cluster = new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, params,
                 emptyMap(), params, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
 
         cluster.start();

@@ -8,7 +8,7 @@ package org.neo4j.procedure.routing;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -39,7 +39,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     @Inject
     private static ClusterFactory clusterFactory;
 
-    private static Cluster<?> cluster;
+    private static Cluster cluster;
 
     @BeforeAll
     static void startCluster() throws Exception

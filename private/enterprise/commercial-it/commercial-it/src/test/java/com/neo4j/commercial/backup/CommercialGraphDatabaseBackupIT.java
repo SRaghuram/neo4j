@@ -5,9 +5,9 @@
  */
 package com.neo4j.commercial.backup;
 
+import com.neo4j.backup.BackupTestUtil;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
-import com.neo4j.util.TestHelpers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,7 +66,7 @@ class CommercialGraphDatabaseBackupIT
         String backupDirName = "graph-db-backup";
         File backupsDir = testDirectory.directory( "backups" );
 
-        int exitCode = TestHelpers.runBackupToolFromOtherJvmToGetExitCode( storeDir,
+        int exitCode = BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode( storeDir,
                 "--from=" + backupAddress( db ),
                 "--backup-dir=" + backupsDir,
                 "--name=" + backupDirName );

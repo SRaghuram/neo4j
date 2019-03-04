@@ -20,8 +20,10 @@ import java.util.UUID;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
@@ -48,13 +50,15 @@ public abstract class BaseCoreTopologyServiceIT
         config.augment( initial_discovery_members, initialHosts );
         config.augment( CausalClusteringSettings.discovery_listen_address, "localhost:" + PortAuthority.allocatePort() );
 
+        LogProvider logProvider = NullLogProvider.getInstance();
         JobScheduler jobScheduler = createInitialisedScheduler();
         InitialDiscoveryMembersResolver initialDiscoveryMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
+        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
 
         service = discoveryServiceType
                 .createFactory()
-                .coreTopologyService( config, new MemberId( UUID.randomUUID() ), jobScheduler, NullLogProvider.getInstance(), NullLogProvider.getInstance(),
-                        initialDiscoveryMemberResolver, new NoRetriesStrategy(), new Monitors(), Clocks.systemClock() );
+                .coreTopologyService( config, new MemberId( UUID.randomUUID() ), jobScheduler, logProvider, logProvider,
+                        initialDiscoveryMemberResolver, new NoRetriesStrategy(), sslPolicyLoader, new Monitors(), Clocks.systemClock() );
     }
 
     @Test

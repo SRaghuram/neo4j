@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.helpers.DataCreator;
 import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -53,7 +53,7 @@ public abstract class BaseMultiClusteringIT
     private final Set<String> dbNames;
     private final ClusterConfig clusterConfig;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     @Inject
     private DefaultFileSystemAbstraction fs;
 

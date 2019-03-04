@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
@@ -31,7 +30,7 @@ import static java.util.Collections.emptyMap;
 
 public class ClusterCommunityToEnterpriseIT
 {
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private FileSystemAbstraction fsa;
 
     @Rule
@@ -44,7 +43,7 @@ public class ClusterCommunityToEnterpriseIT
     {
         fsa = fileSystemRule.get();
 
-        cluster = new DefaultCluster( testDir.directory( "cluster" ), 3, 0,
+        cluster = new Cluster( testDir.directory( "cluster" ), 3, 0,
                 new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), HighLimit.NAME,
                 IpFamily.IPV4, false );
     }

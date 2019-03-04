@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -31,7 +31,7 @@ class CatchupNewReadReplica extends Workload
 
     private final FileSystemAbstraction fs;
     private final Log log;
-    private final Cluster<?> cluster;
+    private final Cluster cluster;
     private boolean deleteStore;
 
     CatchupNewReadReplica( Control control, Resources resources )

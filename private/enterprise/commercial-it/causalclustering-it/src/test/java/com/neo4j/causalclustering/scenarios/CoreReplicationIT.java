@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.helpers.DataCreator;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -51,7 +51,7 @@ class CoreReplicationIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     private long nodesBeforeTest;
 
@@ -302,7 +302,7 @@ class CoreReplicationIT
     void shouldBeAbleToShutdownWhenTheLeaderIsTryingToReplicateTransaction() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterFactory.createCluster( clusterConfig );
+        Cluster cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
         cluster.coreTx( ( db, tx ) ->
         {

@@ -8,7 +8,7 @@ package org.neo4j.kernel.api.impl.fulltext;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.set.mutable.primitive.LongHashSet;
@@ -68,7 +68,7 @@ public class FulltextIndexCausalClusterIT
     @Rule
     public ClusterRule clusterRule = new ClusterRule().withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 1 );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private long nodeId1;
     private long nodeId2;
     private long relId1;

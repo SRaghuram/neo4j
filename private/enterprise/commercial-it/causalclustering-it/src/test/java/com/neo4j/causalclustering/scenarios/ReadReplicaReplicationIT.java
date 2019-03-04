@@ -8,15 +8,15 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.catchup.tx.FileCopyMonitor;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.helpers.SampleData;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterRule;
@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -71,6 +70,9 @@ import org.neo4j.logging.Log;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 
+import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1;
+import static com.neo4j.causalclustering.common.DataCreator.NODE_PROPERTY_1_PREFIX;
+import static com.neo4j.causalclustering.common.DataCreator.createDataInOneTransaction;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -88,7 +90,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.function.Predicates.awaitEx;
-import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.helpers.collection.Iterables.count;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
@@ -109,7 +110,7 @@ public class ReadReplicaReplicationIT
     public void shouldNotBeAbleToWriteToReadReplica() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         ReadReplicaGraphDatabase readReplica = cluster.findAnyReadReplica().database();
 
@@ -117,8 +118,8 @@ public class ReadReplicaReplicationIT
         try ( Transaction tx = readReplica.beginTx() )
         {
             Node node = readReplica.createNode();
-            node.setProperty( "foobar", "baz_bat" );
-            node.addLabel( Label.label( "Foo" ) );
+            node.setProperty( NODE_PROPERTY_1, "baz_bat" );
+            node.addLabel( DataCreator.LABEL );
             tx.success();
             fail( "should have thrown" );
         }
@@ -132,7 +133,7 @@ public class ReadReplicaReplicationIT
     public void allServersBecomeAvailable() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         // then
         for ( final ReadReplica readReplica : cluster.readReplicas() )
@@ -146,23 +147,15 @@ public class ReadReplicaReplicationIT
     public void shouldEventuallyPullTransactionDownToAllReadReplicas() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
+        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
         int nodesBeforeReadReplicaStarts = 1;
 
-        cluster.coreTx( ( db, tx ) ->
-        {
-            db.schema().constraintFor( Label.label( "Foo" ) ).assertPropertyIsUnique( "foobar" ).create();
-            tx.success();
-        } );
+        DataCreator.createSchema( cluster );
 
         // when
         for ( int i = 0; i < 100; i++ )
         {
-            cluster.coreTx( ( db, tx ) ->
-            {
-                SampleData.createData( db, nodesBeforeReadReplicaStarts );
-                tx.success();
-            } );
+            createDataInOneTransaction( cluster, nodesBeforeReadReplicaStarts );
         }
 
         Set<Path> labelScanStoreFiles = new HashSet<>();
@@ -183,11 +176,7 @@ public class ReadReplicaReplicationIT
 
         for ( int i = 0; i < 100; i++ )
         {
-            cluster.coreTx( ( db, tx ) ->
-            {
-                SampleData.createData( db, nodesBeforeReadReplicaStarts );
-                tx.success();
-            } );
+            createDataInOneTransaction( cluster, nodesBeforeReadReplicaStarts );
         }
 
         // then
@@ -201,7 +190,7 @@ public class ReadReplicaReplicationIT
 
                 for ( Node node : readReplica.getAllNodes() )
                 {
-                    assertThat( node.getProperty( "foobar" ).toString(), startsWith( "baz_bat" ) );
+                    assertThat( node.getProperty( NODE_PROPERTY_1 ).toString(), startsWith( NODE_PROPERTY_1_PREFIX ) );
                 }
 
                 tx.success();
@@ -226,9 +215,9 @@ public class ReadReplicaReplicationIT
     public void shouldShutdownRatherThanPullUpdatesFromCoreMemberWithDifferentStoreIdIfLocalStoreIsNonEmpty()
             throws Exception
     {
-        Cluster<?> cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
+        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
 
-        cluster.coreTx( createSomeData );
+        createDataInOneTransaction( cluster, 10 );
 
         cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 2, TimeUnit.SECONDS );
 
@@ -259,20 +248,20 @@ public class ReadReplicaReplicationIT
     public void aReadReplicShouldBeAbleToRejoinTheCluster() throws Exception
     {
         int readReplicaId = 4;
-        Cluster<?> cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
+        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).startCluster();
 
-        cluster.coreTx( createSomeData );
+        createDataInOneTransaction( cluster, 10 );
 
         cluster.addReadReplicaWithId( readReplicaId ).start();
 
         // let's spend some time by adding more data
-        cluster.coreTx( createSomeData );
+        createDataInOneTransaction( cluster, 10 );
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
         cluster.removeReadReplicaWithMemberId( readReplicaId );
 
         // let's spend some time by adding more data
-        cluster.coreTx( createSomeData );
+        createDataInOneTransaction( cluster, 10 );
 
         cluster.addReadReplicaWithId( readReplicaId ).start();
 
@@ -291,7 +280,7 @@ public class ReadReplicaReplicationIT
     public void readReplicasShouldRestartIfTheWholeClusterIsRestarted() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         // when
         cluster.shutdown();
@@ -313,13 +302,9 @@ public class ReadReplicaReplicationIT
                 GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
-        Cluster<?> cluster = clusterRule.withSharedCoreParams( params ).startCluster();
+        Cluster cluster = clusterRule.withSharedCoreParams( params ).startCluster();
 
-        cluster.coreTx( ( db, tx ) ->
-        {
-            SampleData.createData( db, 10 );
-            tx.success();
-        } );
+        createDataInOneTransaction( cluster, 10 );
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
@@ -332,12 +317,7 @@ public class ReadReplicaReplicationIT
         CoreClusterMember core;
         do
         {
-            core = cluster.coreTx( ( db, tx ) ->
-            {
-                SampleData.createData( db, 1_000 );
-                tx.success();
-            } );
-
+            core = createDataInOneTransaction( cluster, 1_000 );
         }
         while ( physicalLogFiles( core ).getLowestLogVersion() <= highestReadReplicaLogVersion );
 
@@ -359,13 +339,9 @@ public class ReadReplicaReplicationIT
                 GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
                 GraphDatabaseSettings.check_point_interval_time.name(), "100ms" );
 
-        Cluster<?> cluster = clusterRule.withSharedCoreParams( params ).startCluster();
+        Cluster cluster = clusterRule.withSharedCoreParams( params ).startCluster();
 
-        cluster.coreTx( ( db, tx ) ->
-        {
-            SampleData.createData( db, 10 );
-            tx.success();
-        } );
+        createDataInOneTransaction( cluster, 10 );
 
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
@@ -377,12 +353,7 @@ public class ReadReplicaReplicationIT
         CoreClusterMember core;
         do
         {
-            core = cluster.coreTx( ( db, tx ) ->
-            {
-                SampleData.createData( db, 1_000 );
-                tx.success();
-            } );
-
+            core = createDataInOneTransaction( cluster, 1_000 );
         }
         while ( physicalLogFiles( core ).getLowestLogVersion() <= highestReadReplicaLogVersion );
 
@@ -391,11 +362,7 @@ public class ReadReplicaReplicationIT
         awaitEx( () -> readReplicasUpToDateAsTheLeader( cluster.awaitLeader(), cluster.readReplicas() ), 1, TimeUnit.MINUTES );
 
         // when
-        cluster.coreTx( ( db, tx ) ->
-        {
-            SampleData.createData( db, 10 );
-            tx.success();
-        } );
+        createDataInOneTransaction( cluster, 10 );
 
         // then
         assertEventually( "The read replica has the same data as the core members",
@@ -407,7 +374,7 @@ public class ReadReplicaReplicationIT
     public void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         ReadReplicaGraphDatabase readReplicaGraphDatabase = cluster.findAnyReadReplica().database();
         CatchupPollingProcess pollingClient = readReplicaGraphDatabase.getDependencyResolver()
@@ -493,10 +460,10 @@ public class ReadReplicaReplicationIT
     public void shouldThrowExceptionIfReadReplicaRecordFormatDiffersToCoreRecordFormat() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterRule.withNumberOfReadReplicas( 0 ).withRecordFormat( HighLimit.NAME ).startCluster();
+        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).withRecordFormat( HighLimit.NAME ).startCluster();
 
         // when
-        cluster.coreTx( createSomeData );
+        createDataInOneTransaction( cluster, 10 );
 
         try
         {
@@ -519,7 +486,7 @@ public class ReadReplicaReplicationIT
                 CausalClusteringSettings.raft_log_pruning_frequency.name(), "500ms",
                 CausalClusteringSettings.state_machine_flush_window_size.name(), "1",
                 CausalClusteringSettings.raft_log_pruning_strategy.name(), "1 entries" );
-        Cluster<?> cluster = clusterRule.withNumberOfReadReplicas( 0 ).withSharedCoreParams( params )
+        Cluster cluster = clusterRule.withNumberOfReadReplicas( 0 ).withSharedCoreParams( params )
                 .withRecordFormat( HighLimit.NAME ).startCluster();
 
         cluster.coreTx( ( db, tx ) ->
@@ -576,7 +543,7 @@ public class ReadReplicaReplicationIT
     public void pageFaultsFromReplicationMustCountInMetrics() throws Exception
     {
         // Given initial pin counts on all members
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
         Function<ReadReplica,PageCacheCounters> getPageCacheCounters =
                 ccm -> ccm.database().getDependencyResolver().resolveDependency( PageCacheCounters.class );
         List<PageCacheCounters> countersList =
@@ -584,12 +551,7 @@ public class ReadReplicaReplicationIT
         long[] initialPins = countersList.stream().mapToLong( PageCacheCounters::pins ).toArray();
 
         // when the leader commits a write transaction,
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = db.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.success();
-        } );
+        DataCreator.createDataInOneTransaction( cluster, 1 );
 
         // then the replication should cause pins on a majority of core members to increase.
         // However, the commit returns as soon as the transaction has been replicated through the Raft log, which
@@ -612,10 +574,4 @@ public class ReadReplicaReplicationIT
             return membersWithIncreasedPinCount;
         }, Matchers.is( greaterThanOrEqualTo( minimumUpdatedMembersCount ) ), 10, SECONDS );
     }
-
-    private final BiConsumer<CoreGraphDatabase,Transaction> createSomeData = ( db, tx ) ->
-    {
-        SampleData.createData( db, 10 );
-        tx.success();
-    };
 }

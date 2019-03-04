@@ -5,7 +5,7 @@
  */
 package com.neo4j.test.causalclustering;
 
-import com.neo4j.causalclustering.common.DefaultCluster;
+import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
@@ -52,9 +52,9 @@ public class ClusterConfig
     {
     }
 
-    static DefaultCluster createCluster( File directory, ClusterConfig clusterConfig )
+    static Cluster createCluster( File directory, ClusterConfig clusterConfig )
     {
-        return new DefaultCluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.createFactory(),
+        return new Cluster( directory, clusterConfig.noCoreMembers, clusterConfig.noReadReplicas, clusterConfig.discoveryServiceType.createFactory(),
                 clusterConfig.coreParams, clusterConfig.instanceCoreParams, clusterConfig.readReplicaParams, clusterConfig.instanceReadReplicaParams,
                 clusterConfig.recordFormat, clusterConfig.ipFamily, clusterConfig.useWildcard, clusterConfig.dbNames );
     }

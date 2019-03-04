@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
@@ -61,7 +60,7 @@ class ServerPoliciesLoadBalancingIT
     @Inject
     private FileSystemAbstraction fs;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @AfterEach
     void AfterEach()
@@ -169,10 +168,10 @@ class ServerPoliciesLoadBalancingIT
         }
     }
 
-    private Cluster<?> startCluster( int cores, int readReplicas, Map<String,String> sharedCoreParams, Map<String,IntFunction<String>> instanceCoreParams,
+    private Cluster startCluster( int cores, int readReplicas, Map<String,String> sharedCoreParams, Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,IntFunction<String>> instanceReplicaParams ) throws Exception
     {
-        Cluster<?> cluster = new DefaultCluster( testDir.directory( "cluster" ), cores, readReplicas,
+        Cluster cluster = new Cluster( testDir.directory( "cluster" ), cores, readReplicas,
                 new HazelcastDiscoveryServiceFactory(), sharedCoreParams, instanceCoreParams,
                 emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
 

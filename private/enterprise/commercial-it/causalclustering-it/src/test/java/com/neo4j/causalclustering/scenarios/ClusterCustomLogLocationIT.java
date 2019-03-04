@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,7 +35,7 @@ public class ClusterCustomLogLocationIT
     @Test
     public void clusterWithCustomTransactionLogLocation() throws Exception
     {
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
         for ( int i = 0; i < 10; i++ )
         {

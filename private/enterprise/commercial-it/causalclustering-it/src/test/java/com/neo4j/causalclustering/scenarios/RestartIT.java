@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -51,7 +51,7 @@ class RestartIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private ExecutorService executor;
 
     @BeforeAll
@@ -143,7 +143,7 @@ class RestartIT
     void readReplicaTest() throws Exception
     {
         // given
-        Cluster<?> cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 1 ) );
+        Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withNumberOfCoreMembers( 2 ).withNumberOfReadReplicas( 1 ) );
         cluster.start();
 
         // when

@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.helpers.DataCreator;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Before;
 import org.junit.Rule;
@@ -58,7 +58,7 @@ public class ReadReplicaHierarchicalCatchupIT
                 .withInstanceCoreParam( CausalClusteringSettings.server_groups, id -> serverGroups.get( id ) );
 
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
         int numberOfNodesToCreate = 100;
 
         cluster.coreTx( ( db, tx ) ->

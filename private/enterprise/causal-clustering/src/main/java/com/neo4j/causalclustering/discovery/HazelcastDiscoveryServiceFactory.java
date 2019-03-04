@@ -16,13 +16,14 @@ import org.neo4j.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 public class HazelcastDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            RetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
+            RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
     {
         configureHazelcast( config, logProvider );
         return new HazelcastCoreTopologyService( config, myself, jobScheduler, logProvider, userLogProvider, remoteMembersResolver,
@@ -32,7 +33,7 @@ public class HazelcastDiscoveryServiceFactory implements DiscoveryServiceFactory
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider,
             JobScheduler jobScheduler, MemberId myself, RemoteMembersResolver remoteMembersResolver,
-            RetryStrategy topologyServiceRetryStrategy )
+            RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader )
     {
         configureHazelcast( config, logProvider );
         return new HazelcastClient( new HazelcastClientConnector( config, logProvider, remoteMembersResolver ), jobScheduler,

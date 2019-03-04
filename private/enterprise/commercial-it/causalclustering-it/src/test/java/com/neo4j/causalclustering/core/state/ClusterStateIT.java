@@ -34,7 +34,7 @@ public class ClusterStateIT
     @Rule
     public FileSystemRule fsRule = new DefaultFileSystemRule();
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private FileSystemAbstraction fs = fsRule.get();
 
     @Before

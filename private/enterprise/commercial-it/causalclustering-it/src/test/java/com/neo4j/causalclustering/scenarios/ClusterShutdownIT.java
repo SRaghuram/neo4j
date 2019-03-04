@@ -38,7 +38,7 @@ class ClusterShutdownIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     static Stream<Collection<Integer>> shutdownOrders()
     {
@@ -69,7 +69,7 @@ class ClusterShutdownIT
         } );
     }
 
-    private void shouldShutdownEvenThoughWaitingForLock0( Cluster<?> cluster, int victimId, Collection<Integer> shutdownOrder ) throws Exception
+    private void shouldShutdownEvenThoughWaitingForLock0( Cluster cluster, int victimId, Collection<Integer> shutdownOrder ) throws Exception
     {
         final int LONG_TIME = 60_000;
         final int NUMBER_OF_LOCK_ACQUIRERS = 2;

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Clock;
@@ -14,17 +15,17 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
-public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServiceFactory implements SslDiscoveryServiceFactory
+public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServiceFactory
 {
-    private SslPolicy sslPolicy;
-
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            RetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
+            RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
     {
         configureHazelcast( config, logProvider );
+        SslPolicy sslPolicy = createSslPolicy( sslPolicyLoader, config );
         return new SslHazelcastCoreTopologyService( config, sslPolicy, myself, jobScheduler, logProvider,
                 userLogProvider, remoteMembersResolver, topologyServiceRetryStrategy, monitors );
     }
@@ -32,16 +33,16 @@ public class SslHazelcastDiscoveryServiceFactory extends HazelcastDiscoveryServi
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler,
             MemberId myself, RemoteMembersResolver remoteMembersResolver,
-            RetryStrategy topologyServiceRetryStrategy )
+            RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader )
     {
         configureHazelcast( config, logProvider );
+        SslPolicy sslPolicy = createSslPolicy( sslPolicyLoader, config );
         return new HazelcastClient( new SslHazelcastClientConnector( config, logProvider, sslPolicy, remoteMembersResolver ),
                 jobScheduler, logProvider, config, myself );
     }
 
-    @Override
-    public void setSslPolicy( SslPolicy sslPolicy )
+    private static SslPolicy createSslPolicy( SslPolicyLoader sslPolicyLoader, Config config )
     {
-        this.sslPolicy = sslPolicy;
+        return sslPolicyLoader.getPolicy( config.get( CausalClusteringSettings.ssl_policy ) );
     }
 }

@@ -5,21 +5,21 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.CoreClusterMember;
 import org.hamcrest.Matchers;
 
 import java.io.File;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 
+import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static java.lang.String.format;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.backup.clusteringsupport.BackupUtil.restoreFromBackup;
 
 class ReplaceRandomMember extends RepeatOnRandomMember
 {
@@ -30,7 +30,7 @@ class ReplaceRandomMember extends RepeatOnRandomMember
     private static final long MAX_BACKUP_FAILURES = 20;
     private static final long RETRY_TIMEOUT_MILLIS = 5000;
 
-    private final Cluster<?> cluster;
+    private final Cluster cluster;
     private final FileSystemAbstraction fs;
     private final Log log;
     private final BackupHelper backupHelper;

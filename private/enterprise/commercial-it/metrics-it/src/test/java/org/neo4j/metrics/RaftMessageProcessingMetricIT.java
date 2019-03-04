@@ -40,7 +40,7 @@ public class RaftMessageProcessingMetricIT
             .withSharedCoreParam( MetricsSettings.csvEnabled, Settings.TRUE )
             .withSharedCoreParam( MetricsSettings.csvInterval, "100ms" );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @After
     public void shutdown()

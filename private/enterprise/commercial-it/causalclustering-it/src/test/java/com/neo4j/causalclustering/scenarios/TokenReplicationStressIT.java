@@ -68,7 +68,7 @@ class TokenReplicationStressIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @BeforeEach
     void setUp() throws Exception
@@ -132,7 +132,7 @@ class TokenReplicationStressIT
         } while ( true );
     }
 
-    private static void createTokens( Cluster<?> cluster, LongSupplier tokenIdSupplier, AtomicBoolean stop )
+    private static void createTokens( Cluster cluster, LongSupplier tokenIdSupplier, AtomicBoolean stop )
     {
         while ( !stop.get() )
         {
@@ -171,7 +171,7 @@ class TokenReplicationStressIT
         }
     }
 
-    private static void triggerElections( Cluster<?> cluster, AtomicBoolean stop )
+    private static void triggerElections( Cluster cluster, AtomicBoolean stop )
     {
         while ( !stop.get() )
         {
@@ -215,7 +215,7 @@ class TokenReplicationStressIT
         }
     }
 
-    private static CoreClusterMember awaitLeader( Cluster<?> cluster )
+    private static CoreClusterMember awaitLeader( Cluster cluster )
     {
         try
         {
@@ -227,7 +227,7 @@ class TokenReplicationStressIT
         }
     }
 
-    private static CoreClusterMember randomClusterMember( Cluster<?> cluster, CoreClusterMember except )
+    private static CoreClusterMember randomClusterMember( Cluster cluster, CoreClusterMember except )
     {
         CoreClusterMember[] members = cluster.coreMembers()
                 .stream()
@@ -237,29 +237,29 @@ class TokenReplicationStressIT
         return members[ThreadLocalRandom.current().nextInt( members.length )];
     }
 
-    private void verifyTokens( Cluster<?> cluster )
+    private void verifyTokens( Cluster cluster )
     {
         verifyLabelTokens( cluster );
         verifyPropertyKeyTokens( cluster );
         verifyRelationshipTypeTokens( cluster );
     }
 
-    private void verifyLabelTokens( Cluster<?> cluster )
+    private void verifyLabelTokens( Cluster cluster )
     {
         verifyTokens( "Labels", cluster, this::allLabels );
     }
 
-    private void verifyPropertyKeyTokens( Cluster<?> cluster )
+    private void verifyPropertyKeyTokens( Cluster cluster )
     {
         verifyTokens( "Property keys", cluster, this::allPropertyKeys );
     }
 
-    private void verifyRelationshipTypeTokens( Cluster<?> cluster )
+    private void verifyRelationshipTypeTokens( Cluster cluster )
     {
         verifyTokens( "Relationship types", cluster, this::allRelationshipTypes );
     }
 
-    private static void verifyTokens( String tokenType, Cluster<?> cluster, Function<CoreClusterMember,List<String>> tokensExtractor )
+    private static void verifyTokens( String tokenType, Cluster cluster, Function<CoreClusterMember,List<String>> tokensExtractor )
     {
         List<List<String>> tokensFromAllMembers = cluster.coreMembers()
                 .stream()

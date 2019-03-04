@@ -33,6 +33,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.CLUSTER_ID;
@@ -47,6 +48,7 @@ public class ClusteringModule
 
     public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, GlobalModule globalModule,
             CoreStateStorageService coreStateStorage, DatabaseService databaseService, TemporaryDatabaseFactory temporaryDatabaseFactory,
+            SslPolicyLoader sslPolicyLoader,
             Function<String,DatabaseInitializer> databaseInitializers )
     {
         LifeSupport globalLife = globalModule.getGlobalLife();
@@ -60,7 +62,8 @@ public class ClusteringModule
         RemoteMembersResolver remoteMembersResolver = chooseResolver( globalConfig, logService );
 
         topologyService = discoveryServiceFactory.coreTopologyService( globalConfig, myself, globalModule.getJobScheduler(),
-                logProvider, userLogProvider, remoteMembersResolver, resolveStrategy( globalConfig ), globalMonitors, globalModule.getGlobalClock() );
+                logProvider, userLogProvider, remoteMembersResolver, resolveStrategy( globalConfig ), sslPolicyLoader,
+                globalMonitors, globalModule.getGlobalClock() );
 
         globalLife.add( topologyService );
 

@@ -37,7 +37,7 @@ class PanicIT
     @Inject
     private ClusterFactory clusterFactory;
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @BeforeEach
     void startCluster() throws ExecutionException, InterruptedException

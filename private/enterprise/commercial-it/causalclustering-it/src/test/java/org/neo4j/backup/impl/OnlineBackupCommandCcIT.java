@@ -5,8 +5,8 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.backup.BackupTestUtil;
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
@@ -18,7 +18,6 @@ import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterRule;
-import com.neo4j.util.TestHelpers;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,11 +39,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
-import org.neo4j.backup.clusteringsupport.ClusterHelper;
 import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -80,6 +79,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.recovery.Recovery.isRecoveryRequired;
 import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
@@ -124,7 +124,7 @@ public class OnlineBackupCommandCcIT
     @Test
     public void backupCanBePerformedOverCcWithCustomPort() throws Exception
     {
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
         String customAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
 
         assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DATABASE_NAME ) );
@@ -139,10 +139,10 @@ public class OnlineBackupCommandCcIT
     public void dataIsInAUsableStateAfterBackup() throws Exception
     {
         // given database exists
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
 
         // and the database has indexes
-        ClusterHelper.createIndexes( cluster.getMemberWithAnyRole( Role.LEADER ).database() );
+        createIndexes( cluster );
 
         // and the database is being populated
         AtomicBoolean populateDatabaseFlag = new AtomicBoolean( true );
@@ -167,7 +167,7 @@ public class OnlineBackupCommandCcIT
         // given a cluster with backup switched on
         clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "true" )
                 .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
 
         // when a full backup is performed
         assertEquals( 0, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
@@ -187,7 +187,7 @@ public class OnlineBackupCommandCcIT
         // given a cluster with backup switched off
         clusterRule = clusterRule.withSharedCoreParam( OnlineBackupSettings.online_backup_enabled, "false" )
                 .withInstanceCoreParam( online_backup_listen_address, i -> "localhost:" + PortAuthority.allocatePort() );
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
 
         // then a full backup is impossible from the backup port
         assertEquals( 1, runBackupToolAndGetExitCode( leaderBackupAddress( cluster ), DATABASE_NAME ) );
@@ -197,7 +197,7 @@ public class OnlineBackupCommandCcIT
     public void backupDoesntDisplayExceptionWhenSuccessful() throws Exception
     {
         // given
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
         String customAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
 
         // when
@@ -212,8 +212,8 @@ public class OnlineBackupCommandCcIT
     public void reportsProgress() throws Exception
     {
         // given
-        Cluster<?> cluster = startCluster( recordFormat );
-        ClusterHelper.createIndexes( cluster.getMemberWithAnyRole( Role.LEADER ).database() );
+        Cluster cluster = startCluster( recordFormat );
+        createIndexes( cluster );
         String customAddress = CausalClusteringTestHelpers.backupAddress( clusterLeader( cluster ).database() );
 
         // when
@@ -239,7 +239,7 @@ public class OnlineBackupCommandCcIT
     public void fullBackupIsRecoveredAndConsistent() throws Exception
     {
         // given database exists with data
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
@@ -262,7 +262,7 @@ public class OnlineBackupCommandCcIT
     public void incrementalBackupIsRecoveredAndConsistent() throws Exception
     {
         // given database exists with data
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
         createSomeData( cluster );
         String address = cluster.awaitLeader().config().get( online_backup_listen_address ).toString();
 
@@ -289,7 +289,7 @@ public class OnlineBackupCommandCcIT
     public void incrementalBackupRotatesLogFiles() throws Exception
     {
         // given database exists with data
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
         createSomeData( cluster );
 
         // and backup client is told to rotate conveniently
@@ -333,14 +333,14 @@ public class OnlineBackupCommandCcIT
     {
         // given a prexisting backup from a different store
         String backupName = "preexistingBackup_" + recordFormat;
-        Cluster<?> cluster = startCluster( recordFormat );
+        Cluster cluster = startCluster( recordFormat );
         String firstBackupAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster ).database() );
 
         assertEquals( 0, runBackupToolAndGetExitCode( firstBackupAddress, backupName ) );
         DbRepresentation firstDatabaseRepresentation = DbRepresentation.of( clusterLeader( cluster ).database() );
 
         // and a different database
-        Cluster<?> cluster2 = startCluster2( recordFormat );
+        Cluster cluster2 = startCluster2( recordFormat );
         DbRepresentation secondDatabaseRepresentation = DbRepresentation.of( clusterLeader( cluster2 ).database() );
         assertNotEquals( firstDatabaseRepresentation, secondDatabaseRepresentation );
         String secondBackupAddress = CausalClusteringTestHelpers.transactionAddress( clusterLeader( cluster2 ).database() );
@@ -363,7 +363,7 @@ public class OnlineBackupCommandCcIT
     public void ipv6Enabled() throws Exception
     {
         // given
-        Cluster<?> cluster = startIpv6Cluster();
+        Cluster cluster = startIpv6Cluster();
         try
         {
             assertNotNull( DbRepresentation.of( clusterDatabase( cluster ) ) );
@@ -389,7 +389,7 @@ public class OnlineBackupCommandCcIT
         }
     }
 
-    private static void repeatedlyPopulateDatabase( Cluster<?> cluster, AtomicBoolean continueFlagReference )
+    private static void repeatedlyPopulateDatabase( Cluster cluster, AtomicBoolean continueFlagReference )
     {
         while ( continueFlagReference.get() )
         {
@@ -397,21 +397,21 @@ public class OnlineBackupCommandCcIT
         }
     }
 
-    public static CoreGraphDatabase clusterDatabase( Cluster<?> cluster )
+    public static CoreGraphDatabase clusterDatabase( Cluster cluster )
     {
         return clusterLeader( cluster ).database();
     }
 
-    private Cluster<?> startCluster( String recordFormat ) throws Exception
+    private Cluster startCluster( String recordFormat ) throws Exception
     {
         ClusterRule clusterRule = this.clusterRule.withSharedCoreParam( GraphDatabaseSettings.record_format, recordFormat )
                 .withSharedReadReplicaParam( GraphDatabaseSettings.record_format, recordFormat );
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
         createSomeData( cluster );
         return cluster;
     }
 
-    private Cluster<?> startIpv6Cluster() throws ExecutionException, InterruptedException
+    private Cluster startIpv6Cluster() throws ExecutionException, InterruptedException
     {
         DiscoveryServiceFactory discoveryServiceFactory = new SharedDiscoveryServiceFactory();
         File parentDir = testDirectory.directory( "ipv6_cluster" );
@@ -423,27 +423,25 @@ public class OnlineBackupCommandCcIT
         readReplicaParams.put( GraphDatabaseSettings.record_format.name(), recordFormat );
         Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
 
-        Cluster<?> cluster = new DefaultCluster( parentDir, 3, 3, discoveryServiceFactory, coreParams, instanceCoreParams, readReplicaParams,
+        Cluster cluster = new Cluster( parentDir, 3, 3, discoveryServiceFactory, coreParams, instanceCoreParams, readReplicaParams,
                 instanceReadReplicaParams, recordFormat, IpFamily.IPV6, false );
         cluster.start();
         createSomeData( cluster );
         return cluster;
     }
 
-    private Cluster<?> startCluster2( String recordFormat ) throws ExecutionException, InterruptedException
+    private Cluster startCluster2( String recordFormat ) throws ExecutionException, InterruptedException
     {
         Map<String,String> sharedParams = new HashMap<>(  );
         sharedParams.put( GraphDatabaseSettings.record_format.name(), recordFormat );
-        Cluster<?> cluster =
-                new DefaultCluster( testDirectory.directory( "cluster-b_" + recordFormat ), 3, 0, new SharedDiscoveryServiceFactory(),
-                        sharedParams, emptyMap(), sharedParams, emptyMap(),
-                recordFormat, IpFamily.IPV4, false );
+        Cluster cluster = new Cluster( testDirectory.directory( "cluster-b_" + recordFormat ), 3, 0, new SharedDiscoveryServiceFactory(),
+                sharedParams, emptyMap(), sharedParams, emptyMap(), recordFormat, IpFamily.IPV4, false );
         cluster.start();
         createSomeData( cluster );
         return cluster;
     }
 
-    private static void insert20MbOfData( Cluster<?> cluster ) throws Exception
+    private static void insert20MbOfData( Cluster cluster ) throws Exception
     {
         int numberOfTransactions = 500;
         int sizeOfTransaction = (int) ((ByteUnit.mebiBytes( 20 ) / numberOfTransactions) + 1);
@@ -461,19 +459,7 @@ public class OnlineBackupCommandCcIT
         }
     }
 
-    public static void createSomeData( Cluster<?> cluster )
-    {
-        try
-        {
-            cluster.coreTx( ClusterHelper::createSomeData );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
-        }
-    }
-
-    private static CoreClusterMember clusterLeader( Cluster<?> cluster )
+    private static CoreClusterMember clusterLeader( Cluster cluster )
     {
         return cluster.getMemberWithRole( Role.LEADER );
     }
@@ -507,7 +493,7 @@ public class OnlineBackupCommandCcIT
     private int runBackupToolAndGetExitCode( String... args )
     {
         File neo4jHome = testDirectory.absolutePath();
-        return TestHelpers.runBackupToolFromSameJvm( neo4jHome, args );
+        return BackupTestUtil.runBackupToolFromSameJvm( neo4jHome, args );
     }
 
     private LogFiles logFilesFromBackup( String backupName ) throws IOException
@@ -516,7 +502,7 @@ public class OnlineBackupCommandCcIT
         return BackupTransactionLogFilesHelper.readLogFiles( backupLayout );
     }
 
-    private static String leaderBackupAddress( Cluster<?> cluster ) throws TimeoutException
+    private static String leaderBackupAddress( Cluster cluster ) throws TimeoutException
     {
         ListenSocketAddress address = cluster.awaitLeader().config().get( online_backup_listen_address );
         assertNotNull( address );
@@ -534,6 +520,36 @@ public class OnlineBackupCommandCcIT
             Properties properties = new Properties();
             properties.putAll( config.getRaw() );
             properties.store( writer, "" );
+        }
+    }
+
+    private static void createIndexes( Cluster cluster ) throws Exception
+    {
+        cluster.coreTx( ( db, tx ) ->
+        {
+            db.schema().indexFor( label( "Person" ) ).on( "id" ).create();
+            db.schema().indexFor( label( "Person" ) ).on( "first_name" ).on( "last_name" ).create();
+            tx.success();
+        } );
+    }
+
+    private static void createSomeData( Cluster cluster )
+    {
+        try
+        {
+            cluster.coreTx( ( db, tx ) ->
+            {
+                Node node = db.createNode( label( "Person" ) );
+                node.setProperty( "id", ThreadLocalRandom.current().nextLong() );
+                node.setProperty( "first_name", UUID.randomUUID().toString() );
+                node.setProperty( "last_name", UUID.randomUUID().toString() );
+                db.createNode( label( "Person" ) ).createRelationshipTo( node, RelationshipType.withName( "KNOWS" ) );
+                tx.success();
+            } );
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
         }
     }
 }

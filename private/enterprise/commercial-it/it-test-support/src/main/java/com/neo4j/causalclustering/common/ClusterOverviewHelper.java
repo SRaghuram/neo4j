@@ -3,14 +3,12 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.helpers;
+package com.neo4j.causalclustering.common;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
@@ -52,12 +50,12 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 public class ClusterOverviewHelper
 {
-    public static void assertAllEventualOverviews( Cluster<?> cluster, Matcher<List<MemberInfo>> expected ) throws InterruptedException, KernelException
+    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected ) throws InterruptedException, KernelException
     {
         assertAllEventualOverviews( cluster, expected, Collections.emptySet(), Collections.emptySet()  );
     }
 
-    public static void assertAllEventualOverviews( Cluster<?> cluster, Matcher<List<MemberInfo>> expected, Set<Integer> excludedCores,
+    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected, Set<Integer> excludedCores,
             Set<Integer> excludedRRs ) throws InterruptedException, KernelException
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
@@ -89,7 +87,7 @@ public class ClusterOverviewHelper
                 () -> clusterOverview( member.database() ), expected, 90, SECONDS );
     }
 
-    public static Matcher<Iterable<? extends MemberInfo>> containsMemberAddresses( Collection<? extends ClusterMember> members )
+    public static Matcher<Iterable<? extends MemberInfo>> containsMemberAddresses( Collection<? extends ClusterMember<?>> members )
     {
         return containsInAnyOrder( members.stream().map( coreClusterMember ->
                 new TypeSafeMatcher<MemberInfo>()
@@ -159,8 +157,7 @@ public class ClusterOverviewHelper
     }
 
     @SafeVarargs
-    public static Matcher<Iterable<? extends MemberInfo>> containsAllMemberAddresses(
-            Collection<? extends ClusterMember>... members )
+    public static Matcher<Iterable<? extends MemberInfo>> containsAllMemberAddresses( Collection<? extends ClusterMember<?>>... members )
     {
         return containsMemberAddresses( Stream.of( members).flatMap( Collection::stream ).collect( toList() ) );
     }

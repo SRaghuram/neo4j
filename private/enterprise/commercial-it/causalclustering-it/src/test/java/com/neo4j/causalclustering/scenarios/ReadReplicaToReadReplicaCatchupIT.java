@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.helpers.DataCreator;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,7 +24,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.kernel.monitoring.Monitors;
 
-import static com.neo4j.causalclustering.upstream.SpecificReplicaStrategy.upstreamFactory;
+import static com.neo4j.causalclustering.read_replica.SpecificReplicaStrategy.upstreamFactory;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -47,7 +47,7 @@ public class ReadReplicaToReadReplicaCatchupIT
     public void shouldEventuallyPullTransactionAcrossReadReplicas() throws Throwable
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
         int numberOfNodesToCreate = 100;
 
         cluster.coreTx( ( db, tx ) ->
@@ -86,7 +86,7 @@ public class ReadReplicaToReadReplicaCatchupIT
     public void shouldCatchUpFromCoresWhenPreferredReadReplicasAreUnavailable() throws Throwable
     {
         // given
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
         int numberOfNodes = 1;
         int firstReadReplicaLocalMemberId = 101;
 
@@ -130,7 +130,7 @@ public class ReadReplicaToReadReplicaCatchupIT
         checkDataHasReplicatedToReadReplicas( cluster, numberOfNodes * 2 );
     }
 
-    static void checkDataHasReplicatedToReadReplicas( Cluster<?> cluster, long numberOfNodes ) throws Exception
+    static void checkDataHasReplicatedToReadReplicas( Cluster cluster, long numberOfNodes ) throws Exception
     {
         for ( final ReadReplica server : cluster.readReplicas() )
         {
@@ -149,5 +149,4 @@ public class ReadReplicaToReadReplicaCatchupIT
             }
         }
     }
-
 }

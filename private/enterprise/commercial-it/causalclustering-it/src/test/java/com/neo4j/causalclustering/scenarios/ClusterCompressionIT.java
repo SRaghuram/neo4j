@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.helpers.DataCreator;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.Protocol.ModifierProtocols;
 import com.neo4j.test.causalclustering.ClusterRule;
@@ -56,7 +56,7 @@ public class ClusterCompressionIT
                 .withSharedCoreParam( compression_implementations, modifierProtocol.implementation() )
                 .withSharedReadReplicaParam( compression_implementations, modifierProtocol.implementation() );
 
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
 
          // when
         int numberOfNodes = 10;

@@ -34,7 +34,7 @@ public class CoreEditionModuleIT
     @Test
     public void createBufferedIdComponentsByDefault() throws Exception
     {
-        Cluster<?> cluster = clusterRule.startCluster();
+        Cluster cluster = clusterRule.startCluster();
         CoreClusterMember leader = cluster.awaitLeader();
         DependencyResolver dependencyResolver = leader.database().getDependencyResolver();
 

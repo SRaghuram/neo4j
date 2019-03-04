@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.stresstests;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.discovery.HazelcastDiscoveryServiceFactory;
 import com.neo4j.causalclustering.discovery.IpFamily;
 
@@ -28,7 +27,7 @@ import static org.neo4j.helper.StressTestingHelper.ensureExistsAndEmpty;
 
 class Resources
 {
-    private final Cluster<?> cluster;
+    private final Cluster cluster;
     private final File clusterDir;
     private final File backupDir;
     private final FileSystemAbstraction fileSystem;
@@ -60,11 +59,11 @@ class Resources
         config.populateReadReplicaParams( readReplicaParams );
 
         HazelcastDiscoveryServiceFactory discoveryServiceFactory = new HazelcastDiscoveryServiceFactory();
-        cluster = new DefaultCluster( clusterDir, numberOfCores, numberOfEdges, discoveryServiceFactory, coreParams, emptyMap(), readReplicaParams,
+        cluster = new Cluster( clusterDir, numberOfCores, numberOfEdges, discoveryServiceFactory, coreParams, emptyMap(), readReplicaParams,
                 emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
     }
 
-    public Cluster<?> cluster()
+    public Cluster cluster()
     {
         return cluster;
     }

@@ -13,6 +13,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 public class SharedDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
@@ -22,14 +23,14 @@ public class SharedDiscoveryServiceFactory implements DiscoveryServiceFactory
     @Override
     public CoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler,
             LogProvider logProvider, LogProvider userLogProvider, RemoteMembersResolver remoteMembersResolver,
-            RetryStrategy topologyServiceRetryStrategy, Monitors monitors, Clock clock )
+            RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader, Monitors monitors, Clock clock )
     {
         return new SharedDiscoveryCoreClient( discoveryService, myself, logProvider, config );
     }
 
     @Override
     public TopologyService readReplicaTopologyService( Config config, LogProvider logProvider, JobScheduler jobScheduler, MemberId myself,
-            RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy )
+            RemoteMembersResolver remoteMembersResolver, RetryStrategy topologyServiceRetryStrategy, SslPolicyLoader sslPolicyLoader )
     {
         return new SharedDiscoveryReadReplicaClient( discoveryService, config, myself, logProvider );
     }

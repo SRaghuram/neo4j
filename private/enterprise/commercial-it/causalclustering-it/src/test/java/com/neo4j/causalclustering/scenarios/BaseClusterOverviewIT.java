@@ -6,12 +6,12 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterOverviewHelper;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
-import com.neo4j.causalclustering.helpers.ClusterOverviewHelper;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -66,7 +66,7 @@ public abstract class BaseClusterOverviewIT
         @Inject
         private ClusterFactory clusterFactory;
 
-        private Cluster<?> cluster;
+        private Cluster cluster;
         private int initialCoreMembers;
         private int initialReadReplicas;
 
@@ -205,7 +205,7 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverRemovalOfReadReplicaThatWasInitiallyAssociatedWithACoreThatWasAlsoRemoved() throws Throwable
         {
-            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 6 ) );
+            Cluster cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 6 ) );
             cluster.start();
             int coreMembers = cluster.coreMembers().size();
             int readReplicas = cluster.readReplicas().size();
@@ -233,7 +233,7 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverTimeoutBasedLeaderStepdown() throws Exception
         {
-            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
+            Cluster cluster = clusterFactory.createCluster( clusterConfig.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 ) );
 
             cluster.start();
 
@@ -247,7 +247,7 @@ public abstract class BaseClusterOverviewIT
         @Test
         void shouldDiscoverGreaterTermBasedLeaderStepdown() throws Exception
         {
-            Cluster<?> cluster = clusterFactory.createCluster( clusterConfig
+            Cluster cluster = clusterFactory.createCluster( clusterConfig
                     .withNumberOfCoreMembers( 3 )
                     .withNumberOfReadReplicas( 0 )
                     .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, "false" ) ); // triggering elections doesn't work otherwise
@@ -270,7 +270,7 @@ public abstract class BaseClusterOverviewIT
         }
     }
 
-    private static int getRunningCoreId( Cluster<?> cluster )
+    private static int getRunningCoreId( Cluster cluster )
     {
         return cluster.coreMembers().stream().findFirst().orElseThrow( () -> new IllegalStateException( "Unable to find a running core" ) ).serverId();
     }

@@ -34,6 +34,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -90,12 +91,12 @@ public class SharedDiscoveryServiceIT
     {
         JobScheduler jobScheduler = createInitialisedScheduler();
         Config config = config();
-        InitialDiscoveryMembersResolver
-                remoteMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
+        InitialDiscoveryMembersResolver remoteMemberResolver = new InitialDiscoveryMembersResolver( new NoOpHostnameResolver(), config );
+        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
 
         CoreTopologyService topologyService = discoveryServiceFactory.coreTopologyService( config, member,
                 jobScheduler, logProvider, userLogProvider, remoteMemberResolver, new NoRetriesStrategy(),
-                new Monitors(), Clocks.systemClock() );
+                sslPolicyLoader, new Monitors(), Clocks.systemClock() );
         return sharedClientStarter( topologyService, expectedTargetSet );
     }
 

@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.common;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.CoreEditionModule;
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.LeaderCanWrite;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
@@ -19,7 +20,10 @@ import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.helper.ErrorHandler;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
+import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 
 import java.io.File;
@@ -46,11 +50,13 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
+import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.Exceptions;
@@ -71,28 +77,29 @@ import static org.neo4j.helpers.collection.Iterables.firstOrNull;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.LockSessionExpired;
 import static org.neo4j.util.concurrent.Futures.combine;
 
-public abstract class Cluster<T extends DiscoveryServiceFactory>
+public class Cluster
 {
     private static final int DEFAULT_TIMEOUT_MS = 120_000;
     private static final int DEFAULT_CLUSTER_SIZE = 3;
 
-    protected final File parentDir;
+    private final File parentDir;
     private final Map<String,String> coreParams;
     private final Map<String,IntFunction<String>> instanceCoreParams;
     private final Map<String,String> readReplicaParams;
     private final Map<String,IntFunction<String>> instanceReadReplicaParams;
     private final String recordFormat;
-    protected final T discoveryServiceFactory;
-    protected final String listenAddress;
-    protected final String advertisedAddress;
+    private final DiscoveryServiceFactory discoveryServiceFactory;
+    private final String listenAddress;
+    private final String advertisedAddress;
     private final Set<String> dbNames;
 
-    private Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
-    private Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
+    private final Map<Integer,CoreClusterMember> coreMembers = new ConcurrentHashMap<>();
+    private final Map<Integer,ReadReplica> readReplicas = new ConcurrentHashMap<>();
     private int highestCoreServerId;
     private int highestReplicaServerId;
 
-    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, T discoveryServiceFactory, Map<String,String> coreParams,
+    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
+            Map<String,String> coreParams,
             Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
             String recordFormat, IpFamily ipFamily, boolean useWildcard )
@@ -101,7 +108,8 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
                 instanceReadReplicaParams, recordFormat, ipFamily, useWildcard, Collections.singleton( CausalClusteringSettings.database.getDefaultValue() ) );
     }
 
-    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, T discoveryServiceFactory, Map<String,String> coreParams,
+    public Cluster( File parentDir, int noOfCoreMembers, int noOfReadReplicas, DiscoveryServiceFactory discoveryServiceFactory,
+            Map<String,String> coreParams,
             Map<String,IntFunction<String>> instanceCoreParams,
             Map<String,String> readReplicaParams, Map<String,IntFunction<String>> instanceReadReplicaParams,
             String recordFormat, IpFamily ipFamily, boolean useWildcard, Set<String> dbNames )
@@ -581,20 +589,75 @@ public abstract class Cluster<T extends DiscoveryServiceFactory>
         highestCoreServerId = noOfCoreMembers - 1;
     }
 
-    protected abstract CoreClusterMember createCoreClusterMember( int serverId,
-                                                       int discoveryPort,
-                                                       int clusterSize,
-                                                       List<AdvertisedSocketAddress> initialHosts,
-                                                       String recordFormat,
-                                                       Map<String, String> extraParams,
-                                                       Map<String, IntFunction<String>> instanceExtraParams );
+    private CoreClusterMember createCoreClusterMember( int serverId,
+            int discoveryPort,
+            int clusterSize,
+            List<AdvertisedSocketAddress> initialHosts,
+            String recordFormat,
+            Map<String,String> extraParams,
+            Map<String,IntFunction<String>> instanceExtraParams )
+    {
+        int txPort = PortAuthority.allocatePort();
+        int raftPort = PortAuthority.allocatePort();
+        int boltPort = PortAuthority.allocatePort();
+        int httpPort = PortAuthority.allocatePort();
+        int backupPort = PortAuthority.allocatePort();
 
-    protected abstract ReadReplica createReadReplica( int serverId,
-                                           List<AdvertisedSocketAddress> initialHosts,
-                                           Map<String, String> extraParams,
-                                           Map<String, IntFunction<String>> instanceExtraParams,
-                                           String recordFormat,
-                                           Monitors monitors );
+        return new CoreClusterMember(
+                serverId,
+                discoveryPort,
+                txPort,
+                raftPort,
+                boltPort,
+                httpPort,
+                backupPort,
+                clusterSize,
+                initialHosts,
+                discoveryServiceFactory,
+                recordFormat,
+                parentDir,
+                extraParams,
+                instanceExtraParams,
+                listenAddress,
+                advertisedAddress,
+                ( File file, Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory ) ->
+                        new CoreGraphDatabase( file, config, dependencies, discoveryServiceFactory, CoreEditionModule::new )
+        );
+    }
+
+    private ReadReplica createReadReplica( int serverId,
+            List<AdvertisedSocketAddress> initialHosts,
+            Map<String,String> extraParams,
+            Map<String,IntFunction<String>> instanceExtraParams,
+            String recordFormat,
+            Monitors monitors )
+    {
+        int boltPort = PortAuthority.allocatePort();
+        int httpPort = PortAuthority.allocatePort();
+        int txPort = PortAuthority.allocatePort();
+        int backupPort = PortAuthority.allocatePort();
+        int discoveryPort = PortAuthority.allocatePort();
+
+        return new ReadReplica(
+                parentDir,
+                serverId,
+                boltPort,
+                httpPort,
+                txPort,
+                backupPort,
+                discoveryPort,
+                discoveryServiceFactory,
+                initialHosts,
+                extraParams,
+                instanceExtraParams,
+                recordFormat,
+                monitors,
+                advertisedAddress,
+                listenAddress,
+                ( File file, Config config, GraphDatabaseDependencies dependencies, DiscoveryServiceFactory discoveryServiceFactory, MemberId memberId ) ->
+                        new ReadReplicaGraphDatabase( file, config, dependencies, discoveryServiceFactory, memberId, ReadReplicaEditionModule::new )
+        );
+    }
 
     public void startCoreMembers() throws InterruptedException, ExecutionException
     {

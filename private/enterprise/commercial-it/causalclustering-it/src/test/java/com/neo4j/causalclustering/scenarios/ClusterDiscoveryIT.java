@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.scenarios;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -46,7 +46,7 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toSet;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.helpers.collection.Iterators.asList;
 import static org.neo4j.procedure.builtin.routing.Role.READ;
@@ -65,7 +65,7 @@ class ClusterDiscoveryIT
     {
         boolean allowReadsOnFollowers = true;
 
-        Cluster<?> cluster = startCluster( allowReadsOnFollowers );
+        Cluster cluster = startCluster( allowReadsOnFollowers );
 
         testReadWriteAndRouteServersDiscovery( cluster, allowReadsOnFollowers );
     }
@@ -75,12 +75,12 @@ class ClusterDiscoveryIT
     {
         boolean allowReadsOnFollowers = false;
 
-        Cluster<?> cluster = startCluster( allowReadsOnFollowers );
+        Cluster cluster = startCluster( allowReadsOnFollowers );
 
         testReadWriteAndRouteServersDiscovery( cluster, allowReadsOnFollowers );
     }
 
-    private static void testReadWriteAndRouteServersDiscovery( Cluster<?> cluster, boolean expectFollowersAsReadEndPoints ) throws Exception
+    private static void testReadWriteAndRouteServersDiscovery( Cluster cluster, boolean expectFollowersAsReadEndPoints ) throws Exception
     {
         for ( CoreClusterMember coreMember : cluster.coreMembers() )
         {
@@ -89,11 +89,11 @@ class ClusterDiscoveryIT
 
         for ( ReadReplica readReplica : cluster.readReplicas() )
         {
-            verifyServersDiscovery( cluster, readReplica );
+            verifyServersDiscovery( readReplica );
         }
     }
 
-    private static void verifyServersDiscovery( Cluster<?> cluster, CoreClusterMember coreMember, boolean expectFollowersAsReadEndPoints ) throws Exception
+    private static void verifyServersDiscovery( Cluster cluster, CoreClusterMember coreMember, boolean expectFollowersAsReadEndPoints ) throws Exception
     {
         List<Map<String,Object>> members = getMembers( coreMember.database() );
 
@@ -106,13 +106,13 @@ class ClusterDiscoveryIT
         assertEquals( expectedRouteEndpoints, addresses( members, ROUTE ) );
     }
 
-    private static Set<String> expectedWriteEndpoints( Cluster<?> cluster ) throws TimeoutException
+    private static Set<String> expectedWriteEndpoints( Cluster cluster ) throws TimeoutException
     {
         CoreClusterMember leader = cluster.awaitLeader();
         return singleton( leader.boltAdvertisedAddress() );
     }
 
-    private static Set<String> expectedReadEndpoints( Cluster<?> cluster, boolean expectFollowersAsReadEndPoints ) throws TimeoutException
+    private static Set<String> expectedReadEndpoints( Cluster cluster, boolean expectFollowersAsReadEndPoints ) throws TimeoutException
     {
         ClusterMember<?> leader = cluster.awaitLeader();
         Stream<ClusterMember<?>> cores = cluster.coreMembers().stream().map( identity() );
@@ -125,7 +125,7 @@ class ClusterDiscoveryIT
                 .collect( toSet() );
     }
 
-    private static Set<String> expectedRouteEndpoints( Cluster<?> cluster )
+    private static Set<String> expectedRouteEndpoints( Cluster cluster )
     {
         return cluster.coreMembers()
                 .stream()
@@ -133,7 +133,7 @@ class ClusterDiscoveryIT
                 .collect( toSet() );
     }
 
-    private static void verifyServersDiscovery( Cluster<?> cluster, ReadReplica readReplica ) throws Exception
+    private static void verifyServersDiscovery( ReadReplica readReplica ) throws Exception
     {
         List<Map<String,Object>> members = getMembers( readReplica.database() );
 
@@ -176,9 +176,9 @@ class ClusterDiscoveryIT
         }
     }
 
-    private Cluster<?> startCluster( boolean allowReadsOnFollowers ) throws Exception
+    private Cluster startCluster( boolean allowReadsOnFollowers ) throws Exception
     {
-        Cluster<?> cluster = clusterFactory.createCluster( newClusterConfig( allowReadsOnFollowers ) );
+        Cluster cluster = clusterFactory.createCluster( newClusterConfig( allowReadsOnFollowers ) );
         cluster.start();
         return cluster;
     }

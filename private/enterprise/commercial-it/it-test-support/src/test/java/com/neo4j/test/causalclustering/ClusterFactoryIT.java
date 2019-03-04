@@ -46,7 +46,7 @@ class ClusterFactoryIT
         @Inject
         ClusterFactory clusterFactory;
 
-        Cluster<?> cluster;
+        Cluster cluster;
 
         Label uniqueLabel = Label.label( "foo" );
 
@@ -60,7 +60,7 @@ class ClusterFactoryIT
         void canCreateAndStartAnotherCluster() throws Exception
         {
             isRunningAndContainData( cluster );
-            Cluster<?> cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
+            Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
             cluster.start();
             isRunningAndNotContainingData( cluster );
             cluster.shutdown();
@@ -79,21 +79,21 @@ class ClusterFactoryIT
             }
         }
 
-        private void isRunningAndNotContainingData( Cluster<?> cluster ) throws Exception
+        private void isRunningAndNotContainingData( Cluster cluster ) throws Exception
         {
             cluster.awaitLeader();
             cluster.coreTx( ( coreGraphDatabase, transaction ) -> assertEquals( 0,
                     coreGraphDatabase.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
         }
 
-        private void isRunningAndContainData( Cluster<?> cluster ) throws Exception
+        private void isRunningAndContainData( Cluster cluster ) throws Exception
         {
             cluster.awaitLeader();
             cluster.coreTx( ( coreGraphDatabase, transaction ) -> assertEquals( 1,
                     coreGraphDatabase.getAllNodes().stream().filter( node -> node.hasLabel( uniqueLabel ) ).count() ) );
         }
 
-        Cluster<?> createAndStartCluster() throws Exception
+        Cluster createAndStartCluster() throws Exception
         {
             cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig() );
             cluster.start();

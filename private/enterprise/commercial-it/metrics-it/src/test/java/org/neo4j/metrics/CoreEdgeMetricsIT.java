@@ -7,7 +7,7 @@ package org.neo4j.metrics;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.After;
 import org.junit.Rule;
@@ -53,7 +53,7 @@ public class CoreEdgeMetricsIT
             .withSharedCoreParam( MetricsSettings.csvInterval, "100ms" )
             .withSharedReadReplicaParam( MetricsSettings.csvInterval, "100ms" );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @After
     public void shutdown()

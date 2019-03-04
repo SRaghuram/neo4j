@@ -65,7 +65,7 @@ public class ConvertNonCausalClusteringStoreIT
         int classicNodeCount = 1024;
         File classicNeo4jDatabase = createNeoDatabase( dbDir, classicNodeCount ).layout().databaseDirectory();
 
-        Cluster<?> cluster = this.clusterRule.withRecordFormat( recordFormat ).createCluster();
+        Cluster cluster = this.clusterRule.withRecordFormat( recordFormat ).createCluster();
 
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {

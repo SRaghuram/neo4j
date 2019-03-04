@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.readreplica.ReadReplica;
+import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,7 +34,7 @@ public class ClusterRuleIT
     @Test
     public void shouldAssignPortsToMembersAutomatically() throws Exception
     {
-        Cluster<?> cluster = clusterRule.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 5 ).startCluster();
+        Cluster cluster = clusterRule.withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 5 ).startCluster();
 
         int numberOfCoreMembers = cluster.coreMembers().size();
         assertThat( numberOfCoreMembers, is( 3 ) );
@@ -49,7 +49,7 @@ public class ClusterRuleIT
                         numberOfReadReplicas * NumberOfPortsUsedByReadReplica ) );
     }
 
-    private Set<Integer> gatherPortsUsed( Cluster<?> cluster )
+    private Set<Integer> gatherPortsUsed( Cluster cluster )
     {
         Set<Integer> portsUsed = new HashSet<>();
 

@@ -24,7 +24,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
 
-import static com.neo4j.util.TestHelpers.runBackupToolFromSameJvm;
+import static com.neo4j.backup.BackupTestUtil.runBackupToolFromSameJvm;
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.Settings.FALSE;
 import static org.neo4j.graphdb.Label.label;
@@ -40,7 +40,7 @@ public class AdminToolCausalClusterBackupIT
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private File testDir;
     private File backupsDir;
 

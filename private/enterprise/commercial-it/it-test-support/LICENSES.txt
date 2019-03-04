@@ -307,6 +307,7 @@ BSD License
   asm-analysis
   asm-tree
   asm-util
+  Hamcrest
   Scala Compiler
   scala-java8-compat
   scala-parser-combinators

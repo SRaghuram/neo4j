@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.backup.clusteringsupport.backup_stores;
+package com.neo4j.backup.stores;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -17,18 +17,18 @@ import java.util.UUID;
 
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
 
-import static org.neo4j.backup.clusteringsupport.BackupUtil.createBackupFromCore;
+import static com.neo4j.backup.BackupTestUtil.createBackupFromCore;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public abstract class AbstractStoreGenerator implements BackupStore
 {
-    abstract CoreClusterMember createData( Cluster<?> cluster ) throws Exception;
+    abstract CoreClusterMember createData( Cluster cluster ) throws Exception;
 
     abstract void modify( File backup ) throws Exception;
 
     @Override
-    public Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster<?> backupCluster ) throws Exception
+    public Optional<DefaultDatabasesBackup> generate( File backupDir, Cluster backupCluster ) throws Exception
     {
         CoreClusterMember core = createData( backupCluster );
         File defaultBackupFromCore = createBackupFromCore( core, backupName( DEFAULT_DATABASE_NAME ), backupDir, DEFAULT_DATABASE_NAME );

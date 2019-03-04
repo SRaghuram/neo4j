@@ -20,13 +20,13 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
 
-import static com.neo4j.util.TestHelpers.runBackupToolFromOtherJvmToGetExitCode;
+import static com.neo4j.backup.BackupTestUtil.backupArguments;
+import static com.neo4j.backup.BackupTestUtil.createSomeData;
+import static com.neo4j.backup.BackupTestUtil.getConfig;
+import static com.neo4j.backup.BackupTestUtil.runBackupToolFromOtherJvmToGetExitCode;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.neo4j.backup.clusteringsupport.BackupUtil.backupArguments;
-import static org.neo4j.backup.clusteringsupport.BackupUtil.createSomeData;
-import static org.neo4j.backup.clusteringsupport.BackupUtil.getConfig;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class BackupCoreIT
@@ -38,7 +38,7 @@ public class BackupCoreIT
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private File backupsDir;
 
     @Before
@@ -68,7 +68,7 @@ public class BackupCoreIT
         }
     }
 
-    private static String backupAddress( Cluster<?> cluster )
+    private static String backupAddress( Cluster cluster )
     {
         return cluster.getMemberWithRole( Role.LEADER ).settingValue( "causal_clustering.transaction_listen_address" );
     }

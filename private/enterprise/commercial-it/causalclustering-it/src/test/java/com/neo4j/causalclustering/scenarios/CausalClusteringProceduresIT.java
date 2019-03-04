@@ -47,7 +47,7 @@ class CausalClusteringProceduresIT
     @Inject
     private static ClusterFactory clusterFactory;
 
-    private static Cluster<?> cluster;
+    private static Cluster cluster;
 
     @BeforeAll
     void setup() throws Exception

@@ -5,11 +5,18 @@
  */
 package org.neo4j.backup.clusteringsupport;
 
+import com.neo4j.backup.stores.BackupStore;
+import com.neo4j.backup.stores.BackupStoreWithSomeData;
+import com.neo4j.backup.stores.BackupStoreWithSomeDataButNoTransactionLogs;
+import com.neo4j.backup.stores.DefaultDatabasesBackup;
+import com.neo4j.backup.stores.EmptyBackupStore;
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DefaultCluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.IpFamily;
 import com.neo4j.causalclustering.discovery.SharedDiscoveryServiceFactory;
+import com.neo4j.causalclustering.load.ClusterLoad;
+import com.neo4j.causalclustering.load.NoLoad;
+import com.neo4j.causalclustering.load.SmallBurst;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -23,24 +30,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 
-import org.neo4j.backup.clusteringsupport.backup_stores.BackupStore;
-import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeData;
-import org.neo4j.backup.clusteringsupport.backup_stores.BackupStoreWithSomeDataButNoTransactionLogs;
-import org.neo4j.backup.clusteringsupport.backup_stores.DefaultDatabasesBackup;
-import org.neo4j.backup.clusteringsupport.backup_stores.EmptyBackupStore;
-import org.neo4j.backup.clusteringsupport.cluster_load.ClusterLoad;
-import org.neo4j.backup.clusteringsupport.cluster_load.NoLoad;
-import org.neo4j.backup.clusteringsupport.cluster_load.SmallBurst;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static com.neo4j.backup.BackupTestUtil.restoreFromBackup;
 import static com.neo4j.causalclustering.common.Cluster.dataMatchesEventually;
 import static java.util.Collections.emptyMap;
 import static org.junit.Assert.assertFalse;
-import static org.neo4j.backup.clusteringsupport.BackupUtil.restoreFromBackup;
 
 @RunWith( Parameterized.class )
 public class NewMemberSeedingIT
@@ -58,7 +57,7 @@ public class NewMemberSeedingIT
     @Rule
     public RuleChain rules = RuleChain.outerRule( fileSystemRule ).around( testDir ).around( suppressOutput );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
     private FileCopyDetector fileCopyDetector;
     private File baseBackupDir;
 
@@ -95,7 +94,7 @@ public class NewMemberSeedingIT
     public void setup()
     {
         this.fileCopyDetector = new FileCopyDetector();
-        cluster = new DefaultCluster( testDir.directory( "cluster-b" ), 3, 0, new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(),
+        cluster = new Cluster( testDir.directory( "cluster-b" ), 3, 0, new SharedDiscoveryServiceFactory(), emptyMap(), emptyMap(),
                 emptyMap(), emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
         baseBackupDir = testDir.directory( "backups" );
     }

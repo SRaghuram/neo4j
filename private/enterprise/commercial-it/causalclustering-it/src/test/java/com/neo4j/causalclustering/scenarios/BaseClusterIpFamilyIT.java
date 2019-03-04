@@ -6,11 +6,11 @@
 package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceType;
 import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.helpers.DataCreator;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -42,7 +42,7 @@ public abstract class BaseClusterIpFamilyIT
             .withSharedCoreParam( CausalClusteringSettings.middleware_logging_level, "0" )
             .withSharedReadReplicaParam( CausalClusteringSettings.middleware_logging_level, "0" );
 
-    private Cluster<?> cluster;
+    private Cluster cluster;
 
     @BeforeAll
     void setup() throws Exception

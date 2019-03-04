@@ -5,6 +5,10 @@
  */
 package com.neo4j.causalclustering.stresstests;
 
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.common.ClusterMember;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+
 import java.io.File;
 import java.security.SecureRandom;
 import java.util.HashSet;
@@ -12,9 +16,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMember;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
@@ -42,7 +43,7 @@ class IdReuse
      */
     static class UniqueFreeIds extends Validation
     {
-        private final Cluster<?> cluster;
+        private final Cluster cluster;
         private final FileSystemAbstraction fs;
         private final Log log;
 
@@ -112,7 +113,7 @@ class IdReuse
 
     static class IdReuseSetup extends Preparation
     {
-        private final Cluster<?> cluster;
+        private final Cluster cluster;
 
         IdReuseSetup( Resources resources )
         {
@@ -147,7 +148,7 @@ class IdReuse
 
     static class InsertionWorkload extends Workload
     {
-        private Cluster<?> cluster;
+        private Cluster cluster;
 
         InsertionWorkload( Control control, Resources resources )
         {
@@ -184,7 +185,7 @@ class IdReuse
     {
         private final long reelectIntervalSeconds;
         private final Log log;
-        private Cluster<?> cluster;
+        private Cluster cluster;
 
         ReelectionWorkload( Control control, Resources resources, Config config )
         {
@@ -222,7 +223,7 @@ class IdReuse
     {
         private final SecureRandom rnd = new SecureRandom();
         private final int idHighRange;
-        private Cluster<?> cluster;
+        private Cluster cluster;
 
         DeletionWorkload( Control control, Resources resources )
         {
