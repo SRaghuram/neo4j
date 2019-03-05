@@ -21,7 +21,7 @@ import org.neo4j.logging.AssertableLogProvider;
 
 import static org.mockito.Mockito.mock;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.test.assertion.Assert.assertException;
 
 class PersonalUserManagerTest

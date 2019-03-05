@@ -57,7 +57,7 @@ import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.O
 import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.driver.v1.AuthTokens.basic;
 import static org.neo4j.driver.v1.AuthTokens.custom;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestUnit
 {
