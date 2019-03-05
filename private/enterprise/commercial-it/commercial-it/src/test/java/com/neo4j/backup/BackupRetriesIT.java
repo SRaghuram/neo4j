@@ -24,17 +24,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import org.neo4j.backup.impl.BackupSupportingClassesFactory;
 import org.neo4j.backup.impl.OnlineBackupContext;
@@ -71,6 +67,9 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.catch_up_
 import static com.neo4j.causalclustering.core.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -133,8 +132,8 @@ class BackupRetriesIT
         assertAll( "All channels should be closed after backup " + channels,
                 channels.stream().map( channel -> () -> assertFalse( channel.isActive() ) ) );
 
-        // all channels except one should've been broken
-        assertEquals( channels.size() - 1, channelBreakingMonitor.brokenChannelsCount.get() );
+        assertThat( "More than one channel should be used due to breaking " + channels,
+                channels, hasSize( greaterThan( 1 ) ) );
     }
 
     private GraphDatabaseAPI startDb()
@@ -217,10 +216,6 @@ class BackupRetriesIT
     {
         ChannelBreaker[] channelBreakers = ChannelBreaker.values();
 
-        List<ChannelBreaker> snapshotBreakers = Stream.generate( () -> random.among( channelBreakers ) )
-                .limit( random.nextInt( 1, 10 ) )
-                .collect( toList() );
-
         List<DatabaseFile> storeFiles = Arrays.stream( DatabaseFile.values() )
                 .filter( DatabaseFile::hasIdFile )
                 .collect( toList() );
@@ -231,7 +226,7 @@ class BackupRetriesIT
             storeFileBreakers.put( random.among( storeFiles ), random.among( channelBreakers ) );
         }
 
-        return new ChannelBreakingStoreCopyClientMonitor( channels, snapshotBreakers, storeFileBreakers, logProvider );
+        return new ChannelBreakingStoreCopyClientMonitor( channels, storeFileBreakers, logProvider );
     }
 
     private OnlineBackupExecutor buildBackupExecutor( Set<Channel> channels, StoreCopyClientMonitor channelBreakingMonitor )
@@ -388,31 +383,15 @@ class BackupRetriesIT
 
     private static class ChannelBreakingStoreCopyClientMonitor extends StoreCopyClientMonitor.Adapter
     {
-        final Deque<ChannelBreaker> snapshotBreakers;
         final Map<DatabaseFile,ChannelBreaker> storeFileBreakers;
         final Set<Channel> channels;
         final Log log;
 
-        final AtomicInteger brokenChannelsCount = new AtomicInteger();
-
-        ChannelBreakingStoreCopyClientMonitor( Set<Channel> channels, List<ChannelBreaker> snapshotBreakers,
-                Map<DatabaseFile,ChannelBreaker> storeFileBreakers, LogProvider logProvider )
+        ChannelBreakingStoreCopyClientMonitor( Set<Channel> channels, Map<DatabaseFile,ChannelBreaker> storeFileBreakers, LogProvider logProvider )
         {
-            this.snapshotBreakers = new ArrayDeque<>( snapshotBreakers );
-            this.storeFileBreakers = storeFileBreakers;
+            this.storeFileBreakers = new ConcurrentHashMap<>( storeFileBreakers );
             this.channels = channels;
             this.log = logProvider.getLog( getClass() );
-        }
-
-        @Override
-        public void startReceivingIndexSnapshot( long indexId )
-        {
-            ChannelBreaker breaker = snapshotBreakers.poll();
-            if ( breaker != null )
-            {
-                log.info( "Breaking receiving of snapshot %s file using %s", indexId, breaker );
-                breakChannels( breaker );
-            }
         }
 
         @Override
@@ -420,7 +399,7 @@ class BackupRetriesIT
         {
             String storeFileName = new File( file ).getName();
             DatabaseFile databaseFile = DatabaseFile.fileOf( storeFileName ).orElseThrow( AssertionError::new );
-            ChannelBreaker breaker = storeFileBreakers.get( databaseFile );
+            ChannelBreaker breaker = storeFileBreakers.remove( databaseFile );
             if ( breaker != null )
             {
                 log.info( "Breaking receiving of a store file %s using %s", storeFileName, breaker );
@@ -437,7 +416,6 @@ class BackupRetriesIT
                     try
                     {
                         breaker.doBreak( channel );
-                        brokenChannelsCount.incrementAndGet();
                     }
                     catch ( Throwable t )
                     {
