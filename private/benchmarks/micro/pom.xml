@@ -23,7 +23,7 @@
         <mockito.version>1.10.19</mockito.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
-        <scala-maven-plugin.version>3.2.0</scala-maven-plugin.version>
+        <scala-maven-plugin.version>3.4.4</scala-maven-plugin.version>
     </properties>
 
     <licenses>
