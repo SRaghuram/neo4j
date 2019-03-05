@@ -42,7 +42,7 @@ public class HighLimit extends BaseRecordFormats
     {
         super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_0_0.introductionVersion(), 6, Capability.DENSE_NODES,
                 Capability.RELATIONSHIP_TYPE_3BYTES, Capability.SCHEMA, LuceneCapability.LUCENE_7, Capability.POINT_PROPERTIES, Capability.TEMPORAL_PROPERTIES,
-                Capability.SECONDARY_RECORD_UNITS, Capability.FLEXIBLE_SCHEMA_STORE );
+                Capability.SECONDARY_RECORD_UNITS, Capability.FLEXIBLE_SCHEMA_STORE, Capability.INTERNAL_TOKENS );
     }
 
     @Override
