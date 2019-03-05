@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.collection.pool.Pool;
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
