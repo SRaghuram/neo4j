@@ -76,7 +76,7 @@ public class DumpCountsStore implements CountsVisitor, MetadataVisitor, UnknownK
                 NeoStores neoStores = factory.openAllNeoStores();
 
                 TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
-                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
+                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders.propertyKeyTokens() );
                 counts.accept( new DumpCountsStore( out, new SimpleSchemaRuleCache( neoStores, schemaStorage ) ) );
             }
             else

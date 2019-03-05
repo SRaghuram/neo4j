@@ -13,11 +13,11 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
-import org.neo4j.kernel.api.schema.constraints.ConstraintDescriptorFactory;
-import org.neo4j.kernel.api.schema.constraints.RelExistenceConstraintDescriptor;
-import org.neo4j.storageengine.api.schema.ConstraintDescriptor;
-import org.neo4j.storageengine.api.schema.DefaultRelationTypeSchemaDescriptor;
-import org.neo4j.storageengine.api.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.ConstraintDescriptor;
+import org.neo4j.internal.schema.DefaultRelationTypeSchemaDescriptor;
+import org.neo4j.internal.schema.SchemaDescriptorFactory;
+import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
+import org.neo4j.internal.schema.constraints.RelExistenceConstraintDescriptor;
 
 import static org.neo4j.graphdb.RelationshipType.withName;
 

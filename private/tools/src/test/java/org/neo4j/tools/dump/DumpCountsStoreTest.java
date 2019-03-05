@@ -17,7 +17,6 @@ import java.util.List;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
-import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
 import org.neo4j.kernel.impl.store.LabelTokenStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
@@ -27,6 +26,7 @@ import org.neo4j.kernel.impl.store.kvstore.HeaderField;
 import org.neo4j.kernel.impl.store.kvstore.Headers;
 import org.neo4j.kernel.impl.store.kvstore.ReadableBuffer;
 import org.neo4j.kernel.impl.store.kvstore.WritableBuffer;
+import org.neo4j.storageengine.api.StorageIndexReference;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.token.api.NamedToken;
 
@@ -117,8 +117,8 @@ public class DumpCountsStoreTest
     private SchemaRuleAccess createRuleAccess()
     {
         SchemaRuleAccess schemaRuleAccess = mock( SchemaRuleAccess.class );
-        StoreIndexDescriptor rule = descriptor.withId( indexId );
-        ArrayList<StoreIndexDescriptor> rules = new ArrayList<>();
+        StorageIndexReference rule = descriptor.withId( indexId );
+        ArrayList<StorageIndexReference> rules = new ArrayList<>();
         rules.add( rule );
 
         when( schemaRuleAccess.indexesGetAll() ).thenReturn( rules.iterator() );

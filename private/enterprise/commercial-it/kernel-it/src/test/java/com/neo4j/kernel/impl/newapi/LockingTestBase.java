@@ -15,10 +15,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.Transaction;
+import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.newapi.KernelAPIWriteTestBase;
 import org.neo4j.kernel.impl.newapi.KernelAPIWriteTestSupport;
-import org.neo4j.storageengine.api.schema.LabelSchemaDescriptor;
 import org.neo4j.values.storable.Values;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

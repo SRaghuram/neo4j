@@ -5,12 +5,12 @@
  */
 package com.neo4j.kernel.impl.newapi;
 
+import org.neo4j.internal.schema.LabelSchemaDescriptor;
+import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
+import org.neo4j.internal.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.impl.newapi.SchemaReadWriteTestBase;
-import org.neo4j.storageengine.api.schema.LabelSchemaDescriptor;
-import org.neo4j.storageengine.api.schema.RelationTypeSchemaDescriptor;
-import org.neo4j.storageengine.api.schema.SchemaDescriptorFactory;
 
-import static org.neo4j.storageengine.api.schema.SchemaDescriptorFactory.forRelType;
+import static org.neo4j.internal.schema.SchemaDescriptorFactory.forRelType;
 
 public class SchemaReadWriteTest extends SchemaReadWriteTestBase<EnterpriseWriteTestSupport>
 {

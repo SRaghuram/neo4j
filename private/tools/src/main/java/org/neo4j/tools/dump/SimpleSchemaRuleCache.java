@@ -14,9 +14,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
-import org.neo4j.kernel.impl.index.schema.StoreIndexDescriptor;
+import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
-import org.neo4j.storageengine.api.schema.IndexDescriptor;
+import org.neo4j.storageengine.api.StorageIndexReference;
 import org.neo4j.token.api.NamedToken;
 
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
@@ -74,10 +74,10 @@ class SimpleSchemaRuleCache
     private static LongObjectMap<IndexDescriptor> getAllIndexesFrom( SchemaRuleAccess schemaRuleAccess )
     {
         LongObjectHashMap<IndexDescriptor> indexes = new LongObjectHashMap<>();
-        Iterator<StoreIndexDescriptor> indexRules = schemaRuleAccess.indexesGetAll();
+        Iterator<StorageIndexReference> indexRules = schemaRuleAccess.indexesGetAll();
         while ( indexRules.hasNext() )
         {
-            StoreIndexDescriptor rule = indexRules.next();
+            StorageIndexReference rule = indexRules.next();
             indexes.put( rule.getId(), rule );
         }
         return indexes;

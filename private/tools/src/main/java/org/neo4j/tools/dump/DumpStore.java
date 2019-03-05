@@ -247,7 +247,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         try ( SchemaStore store = neoStores.getSchemaStore() )
         {
             TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
-            final SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
+            final SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders.propertyKeyTokens() );
             new DumpStore<SchemaRecord,SchemaStore>( System.out )
             {
                 @Override

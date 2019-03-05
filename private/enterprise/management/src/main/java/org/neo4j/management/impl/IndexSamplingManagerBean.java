@@ -10,6 +10,7 @@ import javax.management.NotCompliantMBeanException;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
+import org.neo4j.internal.schema.SchemaDescriptorFactory;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
@@ -18,7 +19,6 @@ import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.management.IndexSamplingManager;
-import org.neo4j.storageengine.api.schema.SchemaDescriptorFactory;
 
 import static org.neo4j.internal.kernel.api.TokenRead.NO_TOKEN;
 import static org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode.TRIGGER_REBUILD_ALL;

@@ -7,13 +7,13 @@ package org.neo4j.internal.cypher.debug
 
 import org.neo4j.cypher.internal.LastCommittedTxIdProvider
 import org.neo4j.cypher.internal.logical.plans.{ProcedureSignature, QualifiedName, UserFunctionSignature}
-import org.neo4j.cypher.internal.planner.spi.{GraphStatistics, IndexDescriptor, InstrumentedGraphStatistics, MutableGraphStatisticsSnapshot, PlanContext, StatisticsCompletingGraphStatistics}
+import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundTokenContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
-import org.neo4j.cypher.internal.v4_0.util.{Cardinality, LabelId, PropertyKeyId, RelTypeId, Selectivity}
+import org.neo4j.cypher.internal.v4_0.util._
 import org.neo4j.exceptions.KernelException
-import org.neo4j.kernel.api.schema.SchemaDescriptorFactory
-import org.neo4j.storageengine.api.schema.ConstraintDescriptor
+import org.neo4j.internal.schema.{ConstraintDescriptor, SchemaDescriptorFactory}
+
 import scala.collection.JavaConverters._
 
 /**

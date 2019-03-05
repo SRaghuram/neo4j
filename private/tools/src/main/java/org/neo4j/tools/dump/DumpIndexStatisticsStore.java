@@ -12,6 +12,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
 import org.neo4j.internal.recordstorage.StoreTokens;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -24,7 +25,6 @@ import org.neo4j.kernel.impl.store.StoreFactory;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.storageengine.api.schema.SchemaDescriptor;
 
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
@@ -62,7 +62,7 @@ public class DumpIndexStatisticsStore
                         pageCache, fs, logProvider );
                 NeoStores neoStores = factory.openAllNeoStores();
                 TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
-                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
+                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders.propertyKeyTokens() );
                 schema = new SimpleSchemaRuleCache( neoStores, schemaStorage );
             }
             else
