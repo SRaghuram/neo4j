@@ -61,8 +61,6 @@ import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
-import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
-import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.GetRoutersForAllDatabasesProcedure;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.GetRoutersForDatabaseProcedure;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
@@ -202,7 +200,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         ClusteringModule clusteringModule = getClusteringModule( globalModule, discoveryServiceFactory, storage, identityModule, sslPolicyLoader );
 
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, globalConfig, globalDependencies );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globalConfig, sslPolicyLoader );
 
         topologyService = clusteringModule.topologyService();
 
@@ -314,18 +312,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( coreServerModule.catchupServer() ) );
         coreServerModule.backupServer().ifPresent( server -> panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( server ) ) );
         panicService.addPanicEventHandler( PanicEventHandlers.shutdownLifeCycle( life ) );
-    }
-
-    private LoadBalancingProcessor getLoadBalancingProcessor()
-    {
-        try
-        {
-            return LoadBalancingPluginLoader.load( topologyService, consensusModule.raftMachine(), logProvider, globalConfig );
-        }
-        catch ( Throwable e )
-        {
-            throw new RuntimeException( e );
-        }
     }
 
     @Override

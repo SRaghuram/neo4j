@@ -14,8 +14,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.impl.util.Dependencies;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 public final class PipelineBuilders
 {
@@ -23,11 +22,11 @@ public final class PipelineBuilders
     private final NettyPipelineBuilderFactory serverPipelineBuilderFactory;
     private final NettyPipelineBuilderFactory backupServerPipelineBuilderFactory;
 
-    public PipelineBuilders( Supplier<DuplexPipelineWrapperFactory> pipelineWrapperFactory, LogProvider logProvider, Config config, Dependencies deps )
+    public PipelineBuilders( Supplier<DuplexPipelineWrapperFactory> pipelineWrapperFactory, Config config, SslPolicyLoader sslPolicyLoader )
     {
-        PipelineWrapper serverPipelineWrapper = pipelineWrapperFactory.get().forServer( config, deps, logProvider, CausalClusteringSettings.ssl_policy );
-        PipelineWrapper clientPipelineWrapper = pipelineWrapperFactory.get().forClient( config, deps, logProvider, CausalClusteringSettings.ssl_policy );
-        PipelineWrapper backupServerPipelineWrapper = pipelineWrapperFactory.get().forServer( config, deps, logProvider, OnlineBackupSettings.ssl_policy );
+        PipelineWrapper serverPipelineWrapper = pipelineWrapperFactory.get().forServer( config, CausalClusteringSettings.ssl_policy, sslPolicyLoader );
+        PipelineWrapper clientPipelineWrapper = pipelineWrapperFactory.get().forClient( config, CausalClusteringSettings.ssl_policy, sslPolicyLoader );
+        PipelineWrapper backupServerPipelineWrapper = pipelineWrapperFactory.get().forServer( config, OnlineBackupSettings.ssl_policy, sslPolicyLoader );
 
         clientPipelineBuilderFactory = new NettyPipelineBuilderFactory( clientPipelineWrapper );
         serverPipelineBuilderFactory = new NettyPipelineBuilderFactory( serverPipelineWrapper );

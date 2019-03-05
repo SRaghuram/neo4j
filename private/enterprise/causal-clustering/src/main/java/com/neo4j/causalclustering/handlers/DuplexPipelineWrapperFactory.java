@@ -7,12 +7,11 @@ package com.neo4j.causalclustering.handlers;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.impl.util.Dependencies;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 public interface DuplexPipelineWrapperFactory
 {
-    PipelineWrapper forServer( Config config, Dependencies dependencies, LogProvider logProvider, Setting<String> policyName );
+    PipelineWrapper forServer( Config config, Setting<String> policyName, SslPolicyLoader sslPolicyLoader );
 
-    PipelineWrapper forClient( Config config, Dependencies dependencies, LogProvider logProvider, Setting<String> policyName );
+    PipelineWrapper forClient( Config config, Setting<String> policyName, SslPolicyLoader sslPolicyLoader );
 }

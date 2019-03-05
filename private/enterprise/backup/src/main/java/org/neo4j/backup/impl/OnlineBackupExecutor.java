@@ -72,18 +72,6 @@ public class OnlineBackupExecutor
         }
     }
 
-    private static BackupSupportingClassesFactory createBackupSupportingClassesFactory( FileSystemAbstraction fs,
-            LogProvider logProvider, Monitors monitors, StorageEngineFactory storageEngineFactory )
-    {
-        BackupModule backupModule = new BackupModule( fs, logProvider, monitors, storageEngineFactory );
-
-        BackupSupportingClassesFactoryProvider classesFactoryProvider = BackupSupportingClassesFactoryProvider.getProvidersByPriority()
-                .findFirst()
-                .orElseThrow( () -> new IllegalStateException( "Unable to find a suitable backup supporting classes provider in the classpath" ) );
-
-        return classesFactoryProvider.getFactory( backupModule );
-    }
-
     public static final class Builder
     {
         private FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
@@ -144,7 +132,7 @@ public class OnlineBackupExecutor
         {
             if ( supportingClassesFactory == null )
             {
-                supportingClassesFactory = createBackupSupportingClassesFactory( fs, internalLogProvider, monitors, storageEngineFactory );
+                supportingClassesFactory = new BackupSupportingClassesFactory( storageEngineFactory, fs, internalLogProvider, monitors );
             }
 
             return new OnlineBackupExecutor( this );

@@ -135,7 +135,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, logProvider, globaConfig, globalDependencies );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globaConfig, sslPolicyLoader );
 
         Supplier<DatabaseManager> databaseManagerSupplier = () -> globalDependencies.resolveDependency( DatabaseManager.class );
         Supplier<DatabaseHealth> databaseHealthSupplier =

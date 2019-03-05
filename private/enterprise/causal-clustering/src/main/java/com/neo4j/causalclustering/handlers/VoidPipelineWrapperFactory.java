@@ -12,8 +12,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.kernel.impl.util.Dependencies;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static java.util.Collections.emptyList;
 
@@ -35,14 +34,14 @@ public class VoidPipelineWrapperFactory implements DuplexPipelineWrapperFactory
     };
 
     @Override
-    public PipelineWrapper forServer( Config config, Dependencies dependencies, LogProvider logProvider, Setting<String> policyName )
+    public PipelineWrapper forServer( Config config, Setting<String> policyName, SslPolicyLoader sslPolicyLoader )
     {
         verifyNoEncryption( config, policyName );
         return VOID_WRAPPER;
     }
 
     @Override
-    public PipelineWrapper forClient( Config config, Dependencies dependencies, LogProvider logProvider, Setting<String> policyName )
+    public PipelineWrapper forClient( Config config, Setting<String> policyName, SslPolicyLoader sslPolicyLoader )
     {
         verifyNoEncryption( config, policyName );
         return VOID_WRAPPER;

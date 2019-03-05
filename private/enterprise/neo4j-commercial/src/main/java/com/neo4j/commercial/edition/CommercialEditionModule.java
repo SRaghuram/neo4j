@@ -232,7 +232,7 @@ public class CommercialEditionModule extends CommunityEditionModule
         LogProvider internalLogProvider = globalModule.getLogService().getInternalLogProvider();
 
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, internalLogProvider );
-        PipelineBuilders pipelineBuilders = new PipelineBuilders( SecurePipelineFactory::new, internalLogProvider, config, globalDependencies );
+        PipelineBuilders pipelineBuilders = new PipelineBuilders( SecurePipelineFactory::new, config, sslPolicyLoader );
 
         TransactionBackupServiceProvider backupServiceProvider = new TransactionBackupServiceProvider(
                 internalLogProvider, supportedProtocolCreator.getSupportedCatchupProtocolsFromConfiguration(),

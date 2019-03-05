@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.SupportedProtocolCreator;
 import com.neo4j.causalclustering.handlers.PipelineWrapper;
-import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
+import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -31,10 +31,13 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.util.VisibleForTesting;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -45,23 +48,24 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
  */
 public class BackupSupportingClassesFactory
 {
-    protected final LogProvider logProvider;
-    protected final Clock clock;
-    protected final Monitors monitors;
-    protected final FileSystemAbstraction fileSystemAbstraction;
-    protected final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
+    private final LogProvider logProvider;
+    private final Clock clock;
+    private final Monitors monitors;
+    private final FileSystemAbstraction fileSystemAbstraction;
+    private final TransactionLogCatchUpFactory transactionLogCatchUpFactory;
     private final JobScheduler jobScheduler;
     private final StorageEngineFactory storageEngineFactory;
 
-    protected BackupSupportingClassesFactory( BackupModule backupModule )
+    public BackupSupportingClassesFactory( StorageEngineFactory storageEngineFactory, FileSystemAbstraction fileSystemAbstraction, LogProvider logProvider,
+            Monitors monitors )
     {
-        this.logProvider = backupModule.getLogProvider();
-        this.clock = backupModule.getClock();
-        this.monitors = backupModule.getMonitors();
-        this.fileSystemAbstraction = backupModule.getFileSystem();
-        this.transactionLogCatchUpFactory = backupModule.getTransactionLogCatchUpFactory();
-        this.jobScheduler = backupModule.jobScheduler();
-        this.storageEngineFactory = backupModule.getStorageEngineFactory();
+        this.logProvider = logProvider;
+        this.clock = Clock.systemUTC();
+        this.monitors = monitors;
+        this.fileSystemAbstraction = fileSystemAbstraction;
+        this.transactionLogCatchUpFactory = new TransactionLogCatchUpFactory();
+        this.jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
+        this.storageEngineFactory = storageEngineFactory;
     }
 
     /**
@@ -95,9 +99,12 @@ public class BackupSupportingClassesFactory
         return backupDelegator( remoteStore, catchUpClient, storeCopyClient );
     }
 
+    @VisibleForTesting
     protected PipelineWrapper createPipelineWrapper( Config config )
     {
-        return new VoidPipelineWrapperFactory().forClient( config, null, logProvider, OnlineBackupSettings.ssl_policy );
+        SecurePipelineFactory factory = new SecurePipelineFactory();
+        SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( config, logProvider );
+        return factory.forClient( config, OnlineBackupSettings.ssl_policy, sslPolicyLoader );
     }
 
     private CatchupClientFactory catchUpClient( Config config, OnlineBackupRequiredArguments arguments )
@@ -119,7 +126,7 @@ public class BackupSupportingClassesFactory
                 .userLogProvider( logProvider ).build();
     }
 
-    private ApplicationSupportedProtocols getSupportedCatchupProtocols( OnlineBackupRequiredArguments arguments,
+    private static ApplicationSupportedProtocols getSupportedCatchupProtocols( OnlineBackupRequiredArguments arguments,
             SupportedProtocolCreator supportedProtocolCreator )
     {
         ApplicationSupportedProtocols catchupProtocol;

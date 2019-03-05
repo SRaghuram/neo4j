@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import org.neo4j.backup.impl.BackupModule;
 import org.neo4j.backup.impl.BackupSupportingClassesFactory;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
@@ -240,8 +239,8 @@ class BackupRetriesIT
         Monitors monitors = new Monitors();
         monitors.addMonitorListener( channelBreakingMonitor );
 
-        BackupModule backupModule = new BackupModule( fs, logProvider, monitors, storageEngineFactory );
-        BackupSupportingClassesFactory backupSupportingClassesFactory = new ChannelTrackingBackupSupportingClassesFactory( backupModule, channels );
+        BackupSupportingClassesFactory backupSupportingClassesFactory = new ChannelTrackingBackupSupportingClassesFactory( logProvider, monitors, fs,
+                storageEngineFactory, channels );
 
         return OnlineBackupExecutor.builder()
                 .withUserLogProvider( logProvider )
@@ -292,9 +291,10 @@ class BackupRetriesIT
     {
         final Set<Channel> channels;
 
-        ChannelTrackingBackupSupportingClassesFactory( BackupModule backupModule, Set<Channel> channels )
+        ChannelTrackingBackupSupportingClassesFactory( LogProvider logProvider, Monitors monitors, FileSystemAbstraction fileSystemAbstraction,
+                StorageEngineFactory storageEngineFactory, Set<Channel> channels )
         {
-            super( backupModule );
+            super( storageEngineFactory, fileSystemAbstraction, logProvider, monitors );
             this.channels = channels;
         }
 
