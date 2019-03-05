@@ -80,7 +80,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                         logicalPlan,
                         query.resultColumns,
                         executor,
-                        null)
+                        context.runtimeEnvironment.tracer)
   }
 
   private def rewritePlan(context: EnterpriseRuntimeContext,

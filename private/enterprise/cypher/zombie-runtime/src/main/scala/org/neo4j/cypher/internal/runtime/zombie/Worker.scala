@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
 import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext, QueryResources}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.zombie.execution.{ExecutingQuery, QueryManager, SchedulingPolicy}
 
 /**
@@ -57,8 +58,10 @@ class Worker(val workerId: Int,
       if (task != null) {
         val pipeline = task.pipeline
         val state = executingQuery.executionState
-        val output = allocateMorsel(pipeline, executingQuery.queryState.morselSize)
+        val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
+        val output = allocateMorsel(pipeline, executingQuery.queryState.morselSize, workUnitEvent)
         task.executeWorkUnit(resources, output)
+        workUnitEvent.stop()
 
         if (pipeline.output != null) {
           state.produceMorsel(pipeline.output.id, output)
@@ -79,7 +82,12 @@ class Worker(val workerId: Int,
     }
   }
 
-  private def allocateMorsel(pipeline: ExecutablePipeline, morselSize: Int): MorselExecutionContext = {
+  private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
+    val upstreamWorkUnitEvent = task.start.inputMorsel.producingWorkUnitEvent
+    if (upstreamWorkUnitEvent != null) Seq(upstreamWorkUnitEvent) else Seq.empty
+  }
+
+  private def allocateMorsel(pipeline: ExecutablePipeline, morselSize: Int, producingWorkUnitEvent: WorkUnitEvent): MorselExecutionContext = {
     val slots = pipeline.slots
     val slotSize = slots.size()
     val morsel = Morsel.create(slots, morselSize)
@@ -88,7 +96,8 @@ class Worker(val workerId: Int,
                                slotSize.nReferences,
                                morselSize,
                                currentRow = 0,
-                               slots)
+                               slots,
+                               producingWorkUnitEvent)
   }
 }
 

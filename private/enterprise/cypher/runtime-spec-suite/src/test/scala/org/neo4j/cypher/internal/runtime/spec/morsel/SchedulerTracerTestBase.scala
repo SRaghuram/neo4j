@@ -18,8 +18,9 @@ import scala.io.Source
 object SchedulerTracerTestBase {
   private val path = Files.createTempFile("scheduler-trace", ".csv")
   val WORKER_COUNT: Int = Runtime.getRuntime.availableProcessors()
+  val MORSEL_SIZE: Int = 4
   val EDITION = ENTERPRISE.PARALLEL.copyWith(
-    GraphDatabaseSettings.cypher_morsel_size -> "4",
+    GraphDatabaseSettings.cypher_morsel_size -> MORSEL_SIZE.toString,
     GraphDatabaseSettings.cypher_worker_count -> WORKER_COUNT.toString,
     GraphDatabaseSettings.enable_morsel_runtime_trace -> "true",
     GraphDatabaseSettings.morsel_scheduler_trace_filename -> path.toAbsolutePath.toString
@@ -51,7 +52,8 @@ class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
 
     val runtimeResult = execute(logicalQuery, runtime)
 
-    runtimeResult should beColumns("n1", "n3").withRows(rowCount(2000))
+    val expectedRowCount = 2000
+    runtimeResult should beColumns("n1", "n3").withRows(rowCount(expectedRowCount))
 
     Thread.sleep(1000) // allow tracer output daemon to finish
 
@@ -67,6 +69,8 @@ class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
                              "pipelineId",
                              "pipelineDescription"))
 
+    dataRows.size should be >= expectedRowCount / MORSEL_SIZE
+
     val queryIds = mutable.Set[Long]()
     val dataLookup = mutable.Map[Long, DataRow]()
     val executionThreadIds = mutable.Set[Long]()
@@ -75,6 +79,7 @@ class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
     for (dataRow <- dataRows) {
       dataRow.schedulingTime should be <= dataRow.startTime
       dataRow.startTime should be <= dataRow.stopTime
+      dataRow.pipelineId should be >= 0L
       dataRow.pipelineDescription should not be ""
 
       queryIds += dataRow.queryId
@@ -87,7 +92,9 @@ class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
     schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
     executionThreadIds.size should be <= WORKER_COUNT
     executionThreadIds.size should be > 1
-    dataLookup.size should be(dataRows.size)
+    withClue("Expect no duplicate work unit IDs"){
+      dataLookup.size should be(dataRows.size)
+    }
 
     for (dataRow <- dataRows) {
       for (upstreamId <- dataRow.upstreamIds) {

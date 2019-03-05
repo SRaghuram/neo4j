@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotAllocation, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
@@ -41,7 +42,9 @@ class MorselExecutionContext(private val morsel: Morsel,
                              private val refsPerRow: Int,
                              private var validRows: Int,
                              private var currentRow: Int,
-                             val slots: SlotConfiguration) extends ExecutionContext with SlottedCompatible {
+                             val slots: SlotConfiguration,
+                            // TODO reviewer: will revisit this default once zombie is merged with morsel
+                             val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
 
   private var firstRow: Int = 0
 

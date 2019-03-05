@@ -7,15 +7,21 @@ package org.neo4j.cypher.internal.runtime.zombie.execution
 
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.QueryState
+import org.neo4j.cypher.internal.runtime.scheduling.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, ExecutionState}
 
 class ExecutingQuery(val executablePipelines: IndexedSeq[ExecutablePipeline],
                      val executionState: ExecutionState,
                      val queryContext: QueryContext,
-                     val queryState: QueryState) extends QueryExecutionHandle {
+                     val queryState: QueryState,
+                     val queryExecutionTracer: QueryExecutionTracer) extends QueryExecutionHandle {
 
   override def await(): Option[Throwable] = {
-    executionState.awaitCompletion()
+    try{
+      executionState.awaitCompletion()
+    } finally {
+      queryExecutionTracer.stopQuery()
+    }
     None
   }
 }

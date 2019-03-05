@@ -45,9 +45,9 @@ case class PipelineTask(start: ContinuableInputOperatorTask,
     }
   }
 
-  override def workId: Int = -1
+  override def workId: Int = pipeline.workId
 
-  override def workDescription: String = "not implemented"
+  override def workDescription: String = pipeline.workDescription
 
   override def canContinue: Boolean = start.canContinue || (produceResult != null && produceResult.canContinue)
 }

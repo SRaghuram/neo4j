@@ -14,6 +14,7 @@ import org.neo4j.cypher.result.RuntimeResult
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
+class ZombieSchedulerTracerTest extends SchedulerTracerTestBase(ZombieRuntime)
 
 abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, ZombieRuntime) {
 

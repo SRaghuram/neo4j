@@ -30,8 +30,8 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
       case _: Apply
       => true
 
-      case _ =>
-        throw new UnsupportedOperationException("not implemented")
+      case plan =>
+        throw new UnsupportedOperationException(s"Not implemented: ${plan.getClass.getSimpleName}")
     }
   }
 

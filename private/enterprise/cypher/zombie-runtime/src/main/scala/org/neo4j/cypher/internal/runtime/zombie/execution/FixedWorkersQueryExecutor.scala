@@ -60,7 +60,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
     val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory)
     executionState.initialize()
 
-    val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState)
+    val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState, schedulerTracer.traceQuery())
     queryManager.addQuery(executingQuery)
     executingQuery
   }
