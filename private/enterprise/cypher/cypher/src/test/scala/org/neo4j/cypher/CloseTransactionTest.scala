@@ -88,12 +88,12 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
       txBridge(service).hasTransaction shouldBe false
 
       // when
-      engine.profile("return 1").close()
+      engine.execute("PROFILE return 1").close()
       // then
       txBridge(service).hasTransaction shouldBe false
 
       // when
-      engine.profile("return 1").close()
+      engine.execute("PROFILE return 1").close()
       // then
       txBridge(service).hasTransaction shouldBe false
     }
@@ -462,9 +462,6 @@ class CloseTransactionTest extends CypherFunSuite with GraphIcing {
   }
 
   implicit class RichExecutionEngine(engine: ExecutionEngine) {
-    def profile(query: String): Result =
-      engine.profile(query, VirtualValues.emptyMap(), engine.queryService.transactionalContext(query = query -> Map()))
-
     def execute(query: String): Result =
       engine.execute(query, VirtualValues.emptyMap(), engine.queryService.transactionalContext(query = query -> Map()))
   }

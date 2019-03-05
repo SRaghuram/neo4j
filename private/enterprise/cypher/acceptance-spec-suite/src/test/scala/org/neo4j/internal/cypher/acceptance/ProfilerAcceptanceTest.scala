@@ -684,7 +684,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   type Planner = (String, Map[String, Any]) => RewindableExecutionResult
 
   def profileWithPlanner(planner: Planner, q: String, params: Map[String, Any]): RewindableExecutionResult = {
-    val result = planner("profile " + q, params)
+    val result = planner("PROFILE " + q, params)
     result.executionMode should equal(ProfileMode)
 
     val planDescription: InternalPlanDescription = result.executionPlanDescription()
@@ -712,8 +712,6 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     }
     result
   }
-
-  override def profile(q: String, params: (String, Any)*): RewindableExecutionResult = fail("Don't use profile all together in ProfilerAcceptanceTest")
 
   def legacyProfile(q: String, params: (String, Any)*): RewindableExecutionResult = profileWithPlanner(executeSingle, q, params.toMap)
 
