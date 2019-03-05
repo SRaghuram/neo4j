@@ -7,6 +7,7 @@ package org.neo4j.management.impl;
 
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
@@ -24,6 +25,7 @@ import static org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode.TRIGGER
 import static org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode.TRIGGER_REBUILD_UPDATED;
 
 @Deprecated
+@ServiceProvider
 public final class IndexSamplingManagerBean extends ManagementBeanProvider
 {
     public IndexSamplingManagerBean()

@@ -5,7 +5,10 @@
  */
 package org.neo4j.management.impl;
 
+import org.neo4j.annotations.service.ServiceProvider;
+
 @Deprecated
+@ServiceProvider
 public class HotspotManagementSupport extends AdvancedManagementSupport
 {
     // On HotSpot, all the default behaviour just works.

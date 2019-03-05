@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import java.io.File;
 import java.util.EnumSet;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemUtils;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
@@ -21,6 +22,7 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.management.CausalClustering;
 
+@ServiceProvider
 public class CausalClusteringBean extends ManagementBeanProvider
 {
     private static final EnumSet<OperationalMode> CLUSTERING_MODES = EnumSet.of( OperationalMode.CORE, OperationalMode.READ_REPLICA );

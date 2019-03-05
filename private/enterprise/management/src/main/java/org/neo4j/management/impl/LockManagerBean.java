@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
 import org.neo4j.jmx.impl.ManagementData;
 import org.neo4j.jmx.impl.Neo4jMBean;
@@ -17,6 +18,7 @@ import org.neo4j.kernel.info.LockInfo;
 import org.neo4j.management.LockManager;
 
 @Deprecated
+@ServiceProvider
 public final class LockManagerBean extends ManagementBeanProvider
 {
     public LockManagerBean()

@@ -9,6 +9,7 @@ import java.io.StringWriter;
 import java.time.ZoneId;
 import javax.management.NotCompliantMBeanException;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.jmx.impl.ManagementBeanProvider;
@@ -19,6 +20,7 @@ import org.neo4j.logging.FormattedLog;
 import org.neo4j.management.Diagnostics;
 
 @Deprecated
+@ServiceProvider
 public class DiagnosticsBean extends ManagementBeanProvider
 {
     public DiagnosticsBean()
