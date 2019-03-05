@@ -13,10 +13,10 @@ import java.nio.file.StandardCopyOption;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
+import org.neo4j.io.fs.PhysicalFlushableChannel;
+import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.io.fs.ReadableClosableChannel;
-import org.neo4j.kernel.impl.transaction.log.PhysicalFlushableChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadAheadChannel;
 
 import static com.neo4j.unsafe.impl.batchimport.ChannelUtils.readString;
 import static com.neo4j.unsafe.impl.batchimport.ChannelUtils.writeString;

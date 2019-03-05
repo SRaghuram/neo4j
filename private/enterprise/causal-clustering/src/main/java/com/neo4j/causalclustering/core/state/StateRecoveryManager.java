@@ -13,8 +13,8 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
+import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableClosableChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadAheadChannel;
 
 public class StateRecoveryManager<STATE>
 {

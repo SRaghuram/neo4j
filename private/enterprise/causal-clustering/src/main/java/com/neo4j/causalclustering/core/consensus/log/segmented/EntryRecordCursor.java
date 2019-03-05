@@ -15,8 +15,8 @@ import java.io.IOException;
 
 import org.neo4j.cursor.CursorValue;
 import org.neo4j.cursor.IOCursor;
+import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.StoreChannel;
-import org.neo4j.kernel.impl.transaction.log.ReadAheadChannel;
 
 /**
  * A cursor for iterating over RAFT log entries starting at an index and until the end of the segment is met.
