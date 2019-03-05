@@ -57,7 +57,7 @@ class SystemGraphInternalsTest
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
         File storeDir = testDirectory.databaseDir();
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
-        builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+        builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         database = builder.newGraphDatabase();
         String activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
         DatabaseManager databaseManager = getDatabaseManager();

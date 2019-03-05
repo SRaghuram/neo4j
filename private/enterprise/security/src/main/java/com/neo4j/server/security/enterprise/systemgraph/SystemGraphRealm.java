@@ -70,7 +70,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
             boolean authorizationEnabled )
     {
         super();
-        setName( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+        setName( SecuritySettings.NATIVE_REALM_NAME );
 
         this.systemGraphOperations = systemGraphOperations;
         this.systemGraphInitializer = systemGraphInitializer;

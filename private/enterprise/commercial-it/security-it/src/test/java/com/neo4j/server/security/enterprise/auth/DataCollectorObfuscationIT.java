@@ -14,10 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
-import org.neo4j.test.extension.Inject;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,13 +23,10 @@ import static org.hamcrest.Matchers.equalTo;
 @ExtendWith( EphemeralFileSystemExtension.class )
 public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<CommercialLoginContext>
 {
-    @Inject
-    EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
-
     @Override
     protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
-        return new EmbeddedInteraction( config, () -> new UncloseableDelegatingFileSystemAbstraction( fileSystemRule.get() ) );
+        return new EmbeddedInteraction( config, testDirectory );
     }
 
     @Override

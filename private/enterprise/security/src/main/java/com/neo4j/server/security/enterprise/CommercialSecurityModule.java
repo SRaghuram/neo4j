@@ -185,7 +185,7 @@ public class CommercialSecurityModule extends SecurityModule
 
     public Optional<DatabaseInitializer> getDatabaseInitializer()
     {
-        if ( !((CommercialSecurityConfig) securityConfig).hasSystemGraphProvider )
+        if ( !securityConfig.hasNativeProvider )
         {
             return Optional.empty();
         }
@@ -279,7 +279,7 @@ public class CommercialSecurityModule extends SecurityModule
 
     private SecurityConfig getValidatedSecurityConfig( Config config )
     {
-        SecurityConfig securityConfig = new CommercialSecurityConfig( config );
+        SecurityConfig securityConfig = new SecurityConfig( config );
         securityConfig.validate();
         return securityConfig;
     }
@@ -305,7 +305,7 @@ public class CommercialSecurityModule extends SecurityModule
             SecurityLog securityLog, AccessCapability accessCapability )
     {
         EnterpriseUserManager internalRealm = null;
-        if ( securityConfig.hasNativeProvider || ((CommercialSecurityConfig) securityConfig).hasSystemGraphProvider )
+        if ( securityConfig.hasNativeProvider )
         {
             internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
         }
@@ -542,24 +542,36 @@ public class CommercialSecurityModule extends SecurityModule
 
     protected static class SecurityConfig
     {
-        protected final List<String> authProviders;
-        public final boolean hasNativeProvider;
-        protected final boolean hasLdapProvider;
-        protected final List<String> pluginAuthProviders;
-        protected final boolean nativeAuthentication;
-        protected final boolean nativeAuthorization;
-        protected final boolean ldapAuthentication;
-        protected final boolean ldapAuthorization;
-        protected final boolean pluginAuthentication;
-        protected final boolean pluginAuthorization;
-        protected final boolean propertyAuthorization;
+        final List<String> authProviders;
+        boolean hasNativeProvider;
+        boolean hasLdapProvider;
+        final List<String> pluginAuthProviders;
+        final boolean nativeAuthentication;
+        final boolean nativeAuthorization;
+        final boolean ldapAuthentication;
+        final boolean ldapAuthorization;
+        final boolean pluginAuthentication;
+        final boolean pluginAuthorization;
+        final boolean propertyAuthorization;
         private final String propertyAuthMapping;
         final Map<String,List<String>> propertyBlacklist = new HashMap<>();
-        protected boolean nativeAuthEnabled;
+        final boolean nativeAuthEnabled;
 
-        protected SecurityConfig( Config config )
+        SecurityConfig( Config config )
         {
-            authProviders = config.get( SecuritySettings.auth_providers );
+            authProviders = new ArrayList<>();
+            for ( String authProvider : config.get( SecuritySettings.auth_providers ) )
+            {
+                if ( authProvider.equals( SecuritySettings.SYSTEM_GRAPH_REALM_NAME ) )
+                {
+                    // Translate from old system graph name
+                    authProviders.add( SecuritySettings.NATIVE_REALM_NAME );
+                }
+                else
+                {
+                    authProviders.add( authProvider );
+                }
+            }
             hasNativeProvider = authProviders.contains( SecuritySettings.NATIVE_REALM_NAME );
             hasLdapProvider = authProviders.contains( SecuritySettings.LDAP_REALM_NAME );
             pluginAuthProviders = authProviders.stream()
@@ -613,7 +625,7 @@ public class CommercialSecurityModule extends SecurityModule
             }
         }
 
-        protected boolean parsePropertyPermissions()
+        boolean parsePropertyPermissions()
         {
             if ( propertyAuthMapping != null && !propertyAuthMapping.isEmpty() )
             {
@@ -650,43 +662,14 @@ public class CommercialSecurityModule extends SecurityModule
             return true;
         }
 
-        protected boolean onlyPluginAuthentication()
+        boolean onlyPluginAuthentication()
         {
             return !nativeAuthentication && !ldapAuthentication && pluginAuthentication;
         }
 
-        protected boolean onlyPluginAuthorization()
+        boolean onlyPluginAuthorization()
         {
             return !nativeAuthorization && !ldapAuthorization && pluginAuthorization;
-        }
-    }
-
-    static class CommercialSecurityConfig extends SecurityConfig
-    {
-        final boolean hasSystemGraphProvider;
-
-        CommercialSecurityConfig( Config config )
-        {
-            super( config );
-            hasSystemGraphProvider = authProviders.contains( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
-        }
-
-        @Override
-        protected void validate()
-        {
-            if ( hasSystemGraphProvider && !nativeAuthentication && !nativeAuthorization )
-            {
-                throw illegalConfiguration(
-                        "System graph auth provider configured, but both authentication and authorization are disabled." );
-            }
-
-            if ( hasNativeProvider && hasSystemGraphProvider )
-            {
-                throw illegalConfiguration(
-                        "Both system graph auth provider and native auth provider configured," +
-                                " but they cannot be used together. Please remove one of them from the configuration." );
-            }
-            super.validate();
         }
     }
 

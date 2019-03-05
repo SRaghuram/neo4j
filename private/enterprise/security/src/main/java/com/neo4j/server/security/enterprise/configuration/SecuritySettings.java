@@ -43,6 +43,7 @@ import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_ROLE
 public class SecuritySettings implements LoadableConfig
 {
     public static final String NATIVE_REALM_NAME = "native";
+    @Deprecated
     public static final String SYSTEM_GRAPH_REALM_NAME = "system-graph";
     public static final String LDAP_REALM_NAME = "ldap";
     public static final String PLUGIN_REALM_NAME_PREFIX = "plugin-";

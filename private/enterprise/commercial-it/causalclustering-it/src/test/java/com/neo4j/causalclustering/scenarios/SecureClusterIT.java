@@ -35,7 +35,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.NATIVE_REALM_NAME;
 import static java.util.Collections.emptyMap;
 import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.graphdb.Label.label;
@@ -71,7 +71,7 @@ class SecureClusterIT
                 CausalClusteringSettings.middleware_logging_level.name(), "0",
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes cores run secure communication
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
-                SecuritySettings.auth_provider.name(), SYSTEM_GRAPH_REALM_NAME,
+                SecuritySettings.auth_provider.name(), NATIVE_REALM_NAME,
                 policyConfig.base_directory.name(), "certificates/cluster",
                 policyConfig.format.name(), PEM.name()
         );

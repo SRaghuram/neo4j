@@ -163,7 +163,7 @@ public class ImportAuthCommand implements AdminCommand
 
         outsideWorld.stdOutLine( "Users and roles files copied to import files. " +
                 "Please restart the database with configuration setting " + SecuritySettings.auth_provider.name() + "=" +
-                SecuritySettings.SYSTEM_GRAPH_REALM_NAME + " to complete the import." );
+                SecuritySettings.NATIVE_REALM_NAME + " to complete the import." );
     }
 
     private void importAuthOffline( Config config, FileSystemAbstraction fileSystem,

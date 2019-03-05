@@ -12,7 +12,6 @@ import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
@@ -20,13 +19,13 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
@@ -35,35 +34,18 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginContext>
 {
-    protected GraphDatabaseFacade db;
+    private GraphDatabaseFacade db;
     private CommercialAuthManager authManager;
-    private FileSystemAbstraction fileSystem;
     private ConnectorPortRegister connectorRegister;
 
-    EmbeddedInteraction( Map<String, String> config ) throws Throwable
-    {
-        this( config, EphemeralFileSystemAbstraction::new );
-    }
-
-    EmbeddedInteraction( Map<String, String> config, Supplier<FileSystemAbstraction> fileSystemSupplier ) throws Throwable
+    EmbeddedInteraction( Map<String, String> config, TestDirectory testDirectory ) throws Throwable
     {
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
-        this.fileSystem = fileSystemSupplier.get();
-        factory.setFileSystem( fileSystem );
-        GraphDatabaseBuilder builder = factory.newImpermanentDatabaseBuilder();
+        GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
         init( builder, config );
     }
 
-    public EmbeddedInteraction( GraphDatabaseBuilder builder, Map<String, String> config ) throws Throwable
-    {
-        init( builder, config );
-    }
-
-    protected EmbeddedInteraction()
-    {
-    }
-
-    protected void init( GraphDatabaseBuilder builder, Map<String, String> config ) throws Throwable
+    private void init( GraphDatabaseBuilder builder, Map<String,String> config ) throws Throwable
     {
         builder.setConfig( new BoltConnector( "bolt" ).type, "BOLT" );
         builder.setConfig( new BoltConnector( "bolt" ).enabled, "true" );
@@ -100,7 +82,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<CommercialLoginC
     @Override
     public FileSystemAbstraction fileSystem()
     {
-        return fileSystem;
+        return db.getDependencyResolver().resolveDependency( FileSystemAbstraction.class );
     }
 
     @Override

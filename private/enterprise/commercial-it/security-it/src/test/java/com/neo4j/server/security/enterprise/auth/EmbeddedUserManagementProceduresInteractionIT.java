@@ -6,13 +6,19 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EmbeddedUserManagementProceduresInteractionIT extends AuthProceduresInteractionTestBase<CommercialLoginContext>
 {
@@ -20,7 +26,7 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
     protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config )
             throws Throwable
     {
-        return new EmbeddedInteraction( config );
+        return new EmbeddedInteraction( config, testDirectory );
     }
 
     @Override
@@ -34,6 +40,20 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
         {
             return obj;
         }
+    }
+
+    @Test
+    void shouldUnassignAnyDbRolesWhenDeletingRole() throws Exception
+    {
+        userManager.newRole( "new_role" );
+        userManager.addRoleToUser( "new_role", "noneSubject" );
+        assertTrue( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
+                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
+                "Should be connected to default db" );
+        assertEmpty( adminSubject, "CALL dbms.security.deleteRole('new_role')" );
+        assertFalse( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
+                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
+                "Should not be connected to default db" );
     }
 
     /*

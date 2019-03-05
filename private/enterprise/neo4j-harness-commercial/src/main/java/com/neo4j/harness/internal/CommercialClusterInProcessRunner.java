@@ -31,7 +31,7 @@ public class CommercialClusterInProcessRunner
                             .withLogger( toOutputStream( System.out ) )
                             .atPath( clusterPath )
                             .withConfig( GraphDatabaseSettings.auth_enabled.name(), "true" )
-                            .withConfig( SecuritySettings.auth_provider.name(), SecuritySettings.SYSTEM_GRAPH_REALM_NAME )
+                            .withConfig( SecuritySettings.auth_provider.name(), SecuritySettings.NATIVE_REALM_NAME )
                             .build();
 
             System.out.println( "Waiting for cluster to boot up..." );

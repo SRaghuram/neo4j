@@ -65,7 +65,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
 
-    protected DbmsRule dbRule = getDatabaseTestRule( testDirectory );
+    DbmsRule dbRule = new CommercialDbmsRule( testDirectory ).startLazily();
 
     @Rule
     public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
@@ -85,11 +85,6 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     }
 
     protected abstract Map<Setting<?>,String> getSettings();
-
-    protected DbmsRule getDatabaseTestRule( TestDirectory testDirectory )
-    {
-        return new CommercialDbmsRule( testDirectory ).startLazily();
-    }
 
     void restartServerWithOverriddenSettings( String... configChanges ) throws IOException
     {
