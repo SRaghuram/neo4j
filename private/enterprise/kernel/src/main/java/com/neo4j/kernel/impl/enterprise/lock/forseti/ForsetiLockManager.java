@@ -20,8 +20,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
-import org.neo4j.storageengine.api.lock.ResourceType;
-import org.neo4j.storageengine.api.lock.WaitStrategy;
+import org.neo4j.lock.ResourceType;
+import org.neo4j.lock.WaitStrategy;
 
 /**
  * <h1>Forseti, the Nordic god of justice</h1>

@@ -17,9 +17,9 @@ import java.util.stream.Stream;
 
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
-import org.neo4j.storageengine.api.lock.LockTracer;
-import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.lock.AcquireLockTimeoutException;
+import org.neo4j.lock.LockTracer;
+import org.neo4j.lock.ResourceType;
 
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NoLeaderAvailable;
 import static org.neo4j.kernel.api.exceptions.Status.Cluster.NotALeader;

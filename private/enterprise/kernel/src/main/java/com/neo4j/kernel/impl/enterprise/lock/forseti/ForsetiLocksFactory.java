@@ -11,8 +11,8 @@ import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.locking.DynamicLocksFactory;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.ResourceTypes;
-import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.lock.ResourceType;
+import org.neo4j.lock.ResourceTypes;
 
 @ServiceProvider
 public class ForsetiLocksFactory implements DynamicLocksFactory

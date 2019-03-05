@@ -27,7 +27,7 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.locking.ResourceTypes;
+import org.neo4j.lock.ResourceTypes;
 import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.VerboseTimeout;
 import org.neo4j.test.rule.concurrent.ThreadingRule;

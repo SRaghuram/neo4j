@@ -13,9 +13,9 @@ import org.junit.Test;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.ResourceTypes;
-import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
-import org.neo4j.storageengine.api.lock.LockTracer;
+import org.neo4j.lock.AcquireLockTimeoutException;
+import org.neo4j.lock.LockTracer;
+import org.neo4j.lock.ResourceTypes;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static org.junit.Assert.fail;

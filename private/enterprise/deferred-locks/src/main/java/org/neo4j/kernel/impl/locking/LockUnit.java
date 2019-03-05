@@ -5,7 +5,7 @@
  */
 package org.neo4j.kernel.impl.locking;
 
-import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.lock.ResourceType;
 
 /**
  * Description of a lock that was deferred to commit time.

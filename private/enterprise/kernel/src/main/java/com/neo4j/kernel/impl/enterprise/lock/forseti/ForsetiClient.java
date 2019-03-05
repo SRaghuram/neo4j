@@ -33,13 +33,13 @@ import org.neo4j.kernel.impl.locking.LockAcquisitionTimeoutException;
 import org.neo4j.kernel.impl.locking.LockClientStateHolder;
 import org.neo4j.kernel.impl.locking.LockClientStoppedException;
 import org.neo4j.kernel.impl.locking.Locks;
-import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.kernel.impl.util.collection.SimpleBitSet;
-import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
-import org.neo4j.storageengine.api.lock.LockTracer;
-import org.neo4j.storageengine.api.lock.LockWaitEvent;
-import org.neo4j.storageengine.api.lock.ResourceType;
-import org.neo4j.storageengine.api.lock.WaitStrategy;
+import org.neo4j.lock.AcquireLockTimeoutException;
+import org.neo4j.lock.LockTracer;
+import org.neo4j.lock.LockWaitEvent;
+import org.neo4j.lock.ResourceType;
+import org.neo4j.lock.ResourceTypes;
+import org.neo4j.lock.WaitStrategy;
 
 import static java.lang.String.format;
 

@@ -20,10 +20,10 @@ import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.locking.ActiveLock;
-import org.neo4j.kernel.impl.locking.ResourceTypes;
+import org.neo4j.lock.ResourceType;
+import org.neo4j.lock.ResourceTypes;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.resources.HeapAllocation;
-import org.neo4j.storageengine.api.lock.ResourceType;
 import org.neo4j.time.Clocks;
 import org.neo4j.values.virtual.VirtualValues;
 

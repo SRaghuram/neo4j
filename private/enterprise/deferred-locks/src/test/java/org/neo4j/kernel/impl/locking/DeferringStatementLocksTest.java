@@ -7,8 +7,9 @@ package org.neo4j.kernel.impl.locking;
 
 import org.junit.jupiter.api.Test;
 
-import org.neo4j.storageengine.api.lock.LockTracer;
-import org.neo4j.storageengine.api.lock.ResourceType;
+import org.neo4j.lock.LockTracer;
+import org.neo4j.lock.ResourceType;
+import org.neo4j.lock.ResourceTypes;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;

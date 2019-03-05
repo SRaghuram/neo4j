@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
-import org.neo4j.storageengine.api.lock.AcquireLockTimeoutException;
+import org.neo4j.lock.AcquireLockTimeoutException;
 
 class TxHelp
 {
