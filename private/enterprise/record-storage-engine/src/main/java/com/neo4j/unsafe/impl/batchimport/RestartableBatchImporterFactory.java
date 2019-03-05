@@ -5,6 +5,7 @@
  */
 package com.neo4j.unsafe.impl.batchimport;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -20,13 +21,18 @@ import org.neo4j.unsafe.impl.batchimport.ImportLogic;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
+@ServiceProvider
 public class RestartableBatchImporterFactory extends BatchImporterFactory
 {
-    public static final String NAME = "restartable";
-
     public RestartableBatchImporterFactory()
     {
-        super( NAME, 10 );
+        super( 10 );
+    }
+
+    @Override
+    public String getName()
+    {
+        return "restartable";
     }
 
     @Override
