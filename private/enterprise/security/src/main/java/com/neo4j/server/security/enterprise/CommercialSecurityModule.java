@@ -12,7 +12,6 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
-import com.neo4j.server.security.enterprise.auth.InternalFlatFileRealm;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -142,7 +141,7 @@ public class CommercialSecurityModule extends SecurityModule
             );
         life.add( securityLog );
 
-        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, jobScheduler, accessCapability );
+        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, accessCapability );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
         // Register procedures
@@ -242,14 +241,14 @@ public class CommercialSecurityModule extends SecurityModule
     }
 
     CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
-            JobScheduler jobScheduler, AccessCapability accessCapability )
+            AccessCapability accessCapability )
     {
         securityConfig = getValidatedSecurityConfig( config );
 
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createInternalRealm( config, logProvider, fileSystem, jobScheduler, securityLog, accessCapability );
+        EnterpriseUserManager internalRealm = createInternalRealm( config, logProvider, fileSystem, securityLog, accessCapability );
         if ( internalRealm != null )
         {
             realms.add( (Realm) internalRealm );
@@ -302,35 +301,15 @@ public class CommercialSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, JobScheduler jobScheduler,
+    private EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
             SecurityLog securityLog, AccessCapability accessCapability )
     {
         EnterpriseUserManager internalRealm = null;
-        if ( securityConfig.hasNativeProvider )
-        {
-            internalRealm = createInternalFlatFileRealm( config, logProvider, fileSystem, jobScheduler );
-        }
-        else if ( ( (CommercialSecurityConfig) securityConfig ).hasSystemGraphProvider )
+        if ( securityConfig.hasNativeProvider || ((CommercialSecurityConfig) securityConfig).hasSystemGraphProvider )
         {
             internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
         }
         return internalRealm;
-    }
-
-    private static InternalFlatFileRealm createInternalFlatFileRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
-            JobScheduler jobScheduler )
-    {
-        return new InternalFlatFileRealm(
-                CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem ),
-                getRoleRepository( config, logProvider, fileSystem ),
-                new BasicPasswordPolicy(),
-                createAuthenticationStrategy( config ),
-                config.get( SecuritySettings.native_authentication_enabled ),
-                config.get( SecuritySettings.native_authorization_enabled ),
-                jobScheduler,
-                CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem ),
-                getDefaultAdminRepository( config, logProvider, fileSystem )
-            );
     }
 
     private static AuthenticationStrategy createAuthenticationStrategy( Config config )
