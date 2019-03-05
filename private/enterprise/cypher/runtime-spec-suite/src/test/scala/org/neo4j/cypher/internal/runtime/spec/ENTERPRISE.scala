@@ -29,9 +29,8 @@ object ENTERPRISE {
         RuntimeEnvironment.createDispatcher(runtimeConfig, jobScheduler, kernel.cursors(), txBridge),
         RuntimeEnvironment.createQueryExecutor(runtimeConfig, jobScheduler, kernel.cursors(), txBridge),
         kernel.cursors(),
-        // TODO not done here. tracer needs to be configurable from outside
-        () => RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler))
-//        () => new ParallelismTracer)
+        () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler),
+                                           new ParallelismTracer))
     },
     GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> "4")
@@ -43,9 +42,12 @@ object ENTERPRISE {
   val HasEvidenceOfParallelism: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](
       context =>
-        if (System.getenv().containsKey("RUN_EXPERIMENTAL"))
-          context.runtimeEnvironment.tracer.asInstanceOf[ParallelismTracer].hasEvidenceOfParallelism
-        else true,
+        if (System.getenv().containsKey("RUN_EXPERIMENTAL")) {
+          val composingTracer = context.runtimeEnvironment.tracer.asInstanceOf[ComposingSchedulerTracer]
+          composingTracer.inners.collectFirst {
+            case x: ParallelismTracer => x.hasEvidenceOfParallelism
+          }.get
+        } else true,
       "Evidence of parallelism could not be found"
     )
 }
