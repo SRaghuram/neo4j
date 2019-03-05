@@ -148,6 +148,8 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         try
         {
             username = AuthToken.safeCast( AuthToken.PRINCIPAL, shiroAuthToken.getAuthTokenMap() );
+            // This is only checked here to check for InvalidAuthToken
+            AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
         }
         catch ( InvalidAuthTokenException e )
         {
@@ -238,6 +240,18 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         }
 
         return systemGraphOperations.doGetAuthorizationInfo( username );
+    }
+
+    protected Object getAuthenticationCacheKey( AuthenticationToken token )
+    {
+        Object principal = token != null ? token.getPrincipal() : null;
+        return principal != null ? principal : "";
+    }
+
+    protected Object getAuthenticationCacheKey( PrincipalCollection principals )
+    {
+        Object principal = getAvailablePrincipal( principals );
+        return principal == null ? "" : principal;
     }
 
     @Override
