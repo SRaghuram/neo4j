@@ -24,8 +24,7 @@ import org.openjdk.jmh.annotations.State;
 import java.util.function.Supplier;
 
 import org.neo4j.internal.kernel.api.IndexQuery;
-import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate;
-import org.neo4j.kernel.impl.locking.ResourceTypes;
+import org.neo4j.kernel.impl.locking.ResourceIds;
 import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
@@ -49,7 +48,6 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randGeneratorFor;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 @BenchmarkEnabled( true )
@@ -132,7 +130,7 @@ public class HashCode extends AbstractValuesBenchmark
             case STR_BIG:
                 @SuppressWarnings( "ConstantConditions" )
                 String unhashedString = (String) value;
-                return () -> Values.stringValue( new String( unhashedString ) );
+                return () -> Values.stringValue( unhashedString );
             case POINT:
                 return () -> (PointValue) value;
             case BYTE_ARR:
@@ -156,7 +154,7 @@ public class HashCode extends AbstractValuesBenchmark
                 {
                     for ( int i = 0; i < unhashedStringArray.length; i++ )
                     {
-                        hashingStringArray[i] = new String( unhashedStringArray[i] );
+                        hashingStringArray[i] = unhashedStringArray[i];
                     }
                     return Values.stringArray( hashingStringArray );
                 };
@@ -188,10 +186,9 @@ public class HashCode extends AbstractValuesBenchmark
     @Fork( jvmArgsAppend = "-Dorg.neo4j.kernel.impl.locking.ResourceTypes.useStrongHashing=true" )
     public long indexEntryHashCode4xx( ThreadState threadState )
     {
-        return ResourceTypes.indexEntryResourceId(
-                ARBITRARY_UNIMPORTANT_IMAGINARY_LABEL_ID,
-                new ExactPredicate[]{IndexQuery.exact(
+        return ResourceIds.indexEntryResourceId(
+                ARBITRARY_UNIMPORTANT_IMAGINARY_LABEL_ID, IndexQuery.exact(
                         ARBITRARY_UNIMPORTANT_IMAGINARY_PROPERTY_KEY_ID,
-                        threadState.nextValue.get() )} );
+                        threadState.nextValue.get() ) );
     }
 }

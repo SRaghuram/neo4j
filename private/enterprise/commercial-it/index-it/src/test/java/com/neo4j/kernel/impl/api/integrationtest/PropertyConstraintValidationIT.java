@@ -40,8 +40,8 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.neo4j.kernel.api.schema.SchemaDescriptorFactory.forLabel;
-import static org.neo4j.kernel.api.schema.SchemaDescriptorFactory.forRelType;
+import static org.neo4j.storageengine.api.schema.SchemaDescriptorFactory.forLabel;
+import static org.neo4j.storageengine.api.schema.SchemaDescriptorFactory.forRelType;
 import static org.neo4j.test.assertion.Assert.assertException;
 
 @RunWith( Suite.class )

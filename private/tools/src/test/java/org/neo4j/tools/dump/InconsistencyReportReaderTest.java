@@ -26,7 +26,7 @@ import org.neo4j.logging.FormattedLog;
 import org.neo4j.tools.dump.InconsistentRecords.Type;
 
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.kernel.api.schema.SchemaDescriptorFactory.forLabel;
+import static org.neo4j.storageengine.api.schema.SchemaDescriptorFactory.forLabel;
 
 public class InconsistencyReportReaderTest
 {
