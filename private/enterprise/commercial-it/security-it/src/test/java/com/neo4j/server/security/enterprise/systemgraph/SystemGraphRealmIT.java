@@ -25,12 +25,10 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.database.Database;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.AssertableLogProvider;
@@ -43,15 +41,17 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.server.security.auth.BasicAuthManagerTest.clearedPasswordWithSameLenghtAs;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 @ExtendWith( TestDirectoryExtension.class )
 class SystemGraphRealmIT
@@ -215,6 +215,98 @@ class SystemGraphRealmIT
         assertAuthenticationFailsWithTooManyAttempts( realm, "bob", maxFailedAttempts + 1 );
     }
 
+    @Test
+    void shouldClearPasswordOnNewUser() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .build(), securityLog, dbManager
+        );
+
+        byte[] password = password( "jake" );
+
+        // When
+        realm.newUser( "jake", password, true );
+
+        // Then
+        assertThat( password, equalTo( clearedPasswordWithSameLenghtAs( "jake" ) ) );
+        assertAuthenticationSucceeds( realm, "jake" );
+    }
+
+    @Test
+    void shouldClearPasswordOnNewUserAlreadyExists() throws Throwable
+    {
+        // Given
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .build(), securityLog, dbManager
+        );
+
+        realm.newUser( "jake", password( "jake" ), true );
+        byte[] password = password( "abc123" );
+
+        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, () -> realm.newUser( "jake", password, true ) );
+        assertThat( exception.getMessage(), equalTo( "The specified user 'jake' already exists." ) );
+
+        // Then
+        assertThat( password, equalTo( clearedPasswordWithSameLenghtAs( "abc123" ) ) );
+        assertAuthenticationSucceeds( realm, "jake" );
+    }
+
+    @Test
+    void shouldClearPasswordOnSetUserPassword() throws Throwable
+    {
+        // Given
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .build(), securityLog, dbManager
+        );
+
+        realm.newUser( "jake", password( "abc123" ), false );
+
+        byte[] newPassword = password( "jake" );
+
+        // When
+        realm.setUserPassword( "jake", newPassword, false );
+
+        // Then
+        assertThat( newPassword, equalTo( clearedPasswordWithSameLenghtAs( "jake" ) ) );
+        assertAuthenticationSucceeds( realm, "jake" );
+    }
+
+    @Test
+    void shouldClearPasswordOnSetUserPasswordWithInvalidPassword() throws Throwable
+    {
+        // Given
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .build(), securityLog, dbManager
+        );
+
+        realm.newUser( "jake", password( "jake" ), false );
+        byte[] newPassword = password( "jake" );
+
+        // When
+        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, () -> realm.setUserPassword( "jake", newPassword, false ) );
+        assertThat( exception.getMessage(), equalTo( "Old password and new password cannot be the same." ) );
+
+        // Then
+        assertThat( newPassword, equalTo( clearedPasswordWithSameLenghtAs( "jake" ) ) );
+        assertAuthenticationSucceeds( realm, "jake" );
+    }
+
     private void prePopulateUsers( String... usernames ) throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
@@ -224,23 +316,6 @@ class SystemGraphRealmIT
         );
         realm.stop();
         realm.shutdown();
-    }
-
-    private class TestContextSwitchingSystemGraphQueryExecutor extends ContextSwitchingSystemGraphQueryExecutor
-    {
-        private TestThreadToStatementContextBridge bridge;
-
-        TestContextSwitchingSystemGraphQueryExecutor( DatabaseManager databaseManager )
-        {
-            super( databaseManager, DEFAULT_DATABASE_NAME );
-            bridge = new TestThreadToStatementContextBridge();
-        }
-
-        @Override
-        protected ThreadToStatementContextBridge getThreadToStatementContextBridge()
-        {
-            return bridge;
-        }
     }
 
     private class TestDatabaseManager extends LifecycleAdapter implements DatabaseManager
@@ -292,21 +367,6 @@ class SystemGraphRealmIT
         public List<String> listDatabases()
         {
             return emptyList();
-        }
-    }
-
-    private class TestThreadToStatementContextBridge extends ThreadToStatementContextBridge
-    {
-        @Override
-        public boolean hasTransaction()
-        {
-            return false;
-        }
-
-        @Override
-        public KernelTransaction getKernelTransactionBoundToThisThread( boolean strict )
-        {
-            return null;
         }
     }
 
