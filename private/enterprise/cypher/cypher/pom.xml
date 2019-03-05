@@ -28,8 +28,14 @@
     </properties>
 
   <dependencies>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>annotations</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
 
-        <!-- shared versions are defined in the parent pom -->
+    <!-- shared versions are defined in the parent pom -->
 
         <!-- scala -->
 
