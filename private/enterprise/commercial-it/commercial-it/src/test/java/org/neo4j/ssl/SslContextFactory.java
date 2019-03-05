@@ -12,11 +12,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.ssl.config.SslSystemSettings;
+
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 
 public class SslContextFactory
 {
@@ -88,7 +89,7 @@ public class SslContextFactory
         new File( baseDirectory, "trusted" ).mkdirs();
         new File( baseDirectory, "revoked" ).mkdirs();
 
-        config.put( policyConfig.format.name(), BaseSslPolicyConfig.Format.PEM.name() );
+        config.put( policyConfig.format.name(), PEM.name() );
         config.put( policyConfig.base_directory.name(), baseDirectory.getPath() );
         config.put( policyConfig.private_key.name(), sslResource.privateKey().getPath() );
         config.put( policyConfig.public_certificate.name(), sslResource.publicCertificate().getPath() );

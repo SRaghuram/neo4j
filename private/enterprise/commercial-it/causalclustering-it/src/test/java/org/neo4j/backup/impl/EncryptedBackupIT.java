@@ -63,6 +63,7 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
 class EncryptedBackupIT
@@ -456,7 +457,7 @@ class EncryptedBackupIT
             BaseSslPolicyConfig backupSslConfigGroup = new PemSslPolicyConfig( backupPolicyName );
             properties.setProperty( OnlineBackupSettings.ssl_policy.name(), backupPolicyName );
             properties.setProperty( backupSslConfigGroup.base_directory.name(), backupPolicyLocation.getAbsolutePath() );
-            properties.setProperty( backupSslConfigGroup.format.name(), BaseSslPolicyConfig.Format.PEM.name() );
+            properties.setProperty( backupSslConfigGroup.format.name(), PEM.name() );
             config.getParentFile().mkdirs();
 
             try ( FileWriter fileWriter = new FileWriter( config ) )
@@ -525,7 +526,7 @@ class EncryptedBackupIT
             BaseSslPolicyConfig clusterPolicyConfig = new PemSslPolicyConfig( clusterPolicyName );
             Config additionalConf = Config.builder()
                     .withSetting( CausalClusteringSettings.ssl_policy, clusterPolicyName )
-                    .withSetting( clusterPolicyConfig.format, BaseSslPolicyConfig.Format.PEM.name() )
+                    .withSetting( clusterPolicyConfig.format, PEM.name() )
                     .withSetting( clusterPolicyConfig.base_directory, "certificates/" + clusterPolicyName )
                     .build();
             for ( ClusterMember clusterMember : allMembers( cluster ) )
@@ -539,7 +540,7 @@ class EncryptedBackupIT
             BaseSslPolicyConfig backupPolicyConfig = new PemSslPolicyConfig( backupPolicyName );
             Config additionalConf = Config.builder()
                     .withSetting( OnlineBackupSettings.ssl_policy, backupPolicyName )
-                    .withSetting( backupPolicyConfig.format, BaseSslPolicyConfig.Format.PEM.name() )
+                    .withSetting( backupPolicyConfig.format, PEM.name() )
                     .withSetting( backupPolicyConfig.base_directory, "certificates/" + backupPolicyName )
                     .build();
             for ( ClusterMember clusterMember : allMembers( cluster ) )

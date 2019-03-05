@@ -37,6 +37,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
 import static java.util.Collections.emptyMap;
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -72,14 +73,14 @@ class SecureClusterIT
                 GraphDatabaseSettings.auth_enabled.name(), Settings.TRUE,
                 SecuritySettings.auth_provider.name(), SYSTEM_GRAPH_REALM_NAME,
                 policyConfig.base_directory.name(), "certificates/cluster",
-                policyConfig.format.name(), BaseSslPolicyConfig.Format.PEM.name()
+                policyConfig.format.name(), PEM.name()
         );
         Map<String,String> readReplicaParams = MapUtil.stringMap(
                 CausalClusteringSettings.disable_middleware_logging.name(), "false",
                 CausalClusteringSettings.middleware_logging_level.name(), "0",
                 CausalClusteringSettings.ssl_policy.name(), sslPolicyName, // setting this config value makes read replicas run secure communication
                 policyConfig.base_directory.name(), "certificates/cluster",
-                policyConfig.format.name(), BaseSslPolicyConfig.Format.PEM.name()
+                policyConfig.format.name(), PEM.name()
         );
 
         int noOfCoreMembers = 3;

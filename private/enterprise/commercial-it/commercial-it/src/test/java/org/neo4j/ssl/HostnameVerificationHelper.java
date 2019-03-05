@@ -15,9 +15,10 @@ import java.security.GeneralSecurityException;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.ssl.BaseSslPolicyConfig;
 import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.test.rule.TestDirectory;
+
+import static org.neo4j.configuration.ssl.BaseSslPolicyConfig.Format.PEM;
 
 public class HostnameVerificationHelper
 {
@@ -37,7 +38,7 @@ public class HostnameVerificationHelper
         revoked.mkdirs();
         PKI_UTILS.createSelfSignedCertificate( validCertificatePath, validPrivateKeyPath, hostname ); // Sets Subject Alternative Name(s) to hostname
         return Config.builder()
-                .withSetting( SSL_POLICY_CONFIG.format, BaseSslPolicyConfig.Format.PEM.name() )
+                .withSetting( SSL_POLICY_CONFIG.format, PEM.name() )
                 .withSetting( SSL_POLICY_CONFIG.base_directory, baseDirectory.toString() )
                 .withSetting( SSL_POLICY_CONFIG.trusted_dir, trusted.toString() )
                 .withSetting( SSL_POLICY_CONFIG.revoked_dir, revoked.toString() )
