@@ -30,8 +30,8 @@ abstract class CsvDataWriter extends DataPointFlusher {
       dataPoint.executionThreadId.toString,
       TimeUnit.NANOSECONDS.toMicros(dataPoint.startTime).toString,
       TimeUnit.NANOSECONDS.toMicros(dataPoint.stopTime).toString,
-      dataPoint.task.workId,
-      dataPoint.task.workDescription
+      dataPoint.workId.workId,
+      dataPoint.workId.workDescription
     ).mkString(SEPARATOR) + System.lineSeparator()
 }
 

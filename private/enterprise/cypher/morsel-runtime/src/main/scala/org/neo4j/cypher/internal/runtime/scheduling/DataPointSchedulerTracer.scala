@@ -26,12 +26,12 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
     QueryTracer(queryCounter.incrementAndGet())
 
   case class QueryTracer(queryId: Int) extends QueryExecutionTracer {
-    override def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnits: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
+    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnits: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
       val scheduledTime = currentTime()
       val schedulingThread = Thread.currentThread().getId
       val workUnitId = newWorkUnitId(schedulingThread)
       val upstreamWorkUnitIds = upstreamWorkUnits.map(_.id)
-      ScheduledWorkUnit(workUnitId, upstreamWorkUnitIds, queryId, scheduledTime, schedulingThread, task)
+      ScheduledWorkUnit(workUnitId, upstreamWorkUnitIds, queryId, scheduledTime, schedulingThread, workId)
     }
 
     override def stopQuery(): Unit = {}
@@ -42,18 +42,18 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
                                queryId: Int,
                                scheduledTime: Long,
                                schedulingThreadId: Long,
-                               task: Task[_ <: AutoCloseable]) extends ScheduledWorkUnitEvent {
+                               workId: WorkIdentity) extends ScheduledWorkUnitEvent {
 
     override def start(): WorkUnitEvent = {
       val startTime = currentTime()
       WorkUnit(workUnitId,
-        upstreamWorkUnitIds,
+               upstreamWorkUnitIds,
                queryId,
                schedulingThreadId,
                scheduledTime,
                Thread.currentThread().getId,
                startTime,
-               task)
+               workId)
     }
   }
 
@@ -64,12 +64,12 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
                       scheduledTime: Long,
                       executionThreadId: Long,
                       startTime: Long,
-                      task: Task[_ <: AutoCloseable]) extends WorkUnitEvent {
+                      workId: WorkIdentity) extends WorkUnitEvent {
 
     override def stop(): Unit = {
       val stopTime = currentTime()
       dataPointWriter.write(
-        DataPoint(id, upstreamIds, queryId, schedulingThreadId, scheduledTime, executionThreadId, startTime, stopTime, task))
+        DataPoint(id, upstreamIds, queryId, schedulingThreadId, scheduledTime, executionThreadId, startTime, stopTime, workId))
     }
   }
 

@@ -13,7 +13,7 @@ case class DataPoint(id: Long,
                      executionThreadId: Long,
                      startTime: Long,
                      stopTime: Long,
-                     task: WorkIdentity) {
+                     workId: WorkIdentity) {
 
   def withTimeZero(t0: Long): DataPoint =
     DataPoint(
@@ -25,7 +25,7 @@ case class DataPoint(id: Long,
       executionThreadId,
       startTime - t0,
       stopTime - t0,
-      task)
+      workId)
 }
 
 /**

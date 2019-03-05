@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.parallel
 
-import org.neo4j.cypher.internal.runtime.scheduling.{QueryExecutionTracer, ScheduledWorkUnitEvent, SchedulerTracer, Task, WorkUnitEvent}
+import org.neo4j.cypher.internal.runtime.scheduling._
 
 /**
   * This class simply prints information to stdout. It uses `print` instead of `println`
@@ -19,10 +19,10 @@ class PrintSchedulerTracer() extends SchedulerTracer {
   case class QueryTracer() extends QueryExecutionTracer {
     print(s"START $this\n")
 
-    override def scheduleWorkUnit(task: Task[_ <: AutoCloseable], upstreamWorkUnits: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
+    override def scheduleWorkUnit(workId: WorkIdentity, upstreamWorkUnits: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent = {
       val schedulingThread = Thread.currentThread().getId
       val upstreamWorkUnitIds = upstreamWorkUnits.map(_.id)
-      val swu = ScheduledWorkUnit(upstreamWorkUnitIds, schedulingThread, task)
+      val swu = ScheduledWorkUnit(upstreamWorkUnitIds, schedulingThread, workId)
       print(s"SCHEDULE $swu\n")
       swu
     }
@@ -35,14 +35,15 @@ class PrintSchedulerTracer() extends SchedulerTracer {
 
   case class ScheduledWorkUnit(upstreamWorkUnitIds: Seq[Long],
                                schedulingThreadId: Long,
-                               task: Task[_ <: AutoCloseable]) extends ScheduledWorkUnitEvent {
+                               workId: WorkIdentity) extends ScheduledWorkUnitEvent {
 
     override def start(): WorkUnitEvent = {
 
-      val wu = WorkUnit(upstreamWorkUnitIds,
+      val wu = WorkUnit(
+          upstreamWorkUnitIds,
           schedulingThreadId,
           Thread.currentThread().getId,
-          task)
+          workId)
       print(s"START $wu\n")
       wu
     }
@@ -51,7 +52,7 @@ class PrintSchedulerTracer() extends SchedulerTracer {
   case class WorkUnit(upstreamIds: Seq[Long],
                       schedulingThreadId: Long,
                       executionThreadId: Long,
-                      task: Task[_ <: AutoCloseable]) extends WorkUnitEvent {
+                      workId: WorkIdentity) extends WorkUnitEvent {
 
     override def id: Long = 1
 

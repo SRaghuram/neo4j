@@ -29,7 +29,7 @@ trait Scheduler[THREAD_LOCAL_RESOURCE <: AutoCloseable] {
 /**
   * A single task
   */
-trait Task[THREAD_LOCAL_RESOURCE <: AutoCloseable] extends WorkIdentity {
+trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
 
   /**
     * Execute the next work-unit of this task. After the first call, [[executeWorkUnit]] will be

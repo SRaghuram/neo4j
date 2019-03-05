@@ -81,10 +81,15 @@ object RuntimeEnvironment {
         override def run(): Unit =
           while (!Thread.interrupted()) {
             dataTracer.consume(dataWriter)
-            Thread.sleep(1)
+            try {
+              Thread.sleep(1)
+            } catch {
+              case _:InterruptedException =>
+                return
+            }
           }
       }
-      jobScheduler.threadFactory(Group.CYPHER_WORKER).newThread(runnable).start()
+      jobScheduler.interruptableThreadFactory(Group.CYPHER_WORKER).newThread(runnable).start()
 
       new DataPointSchedulerTracer(dataTracer)
     }

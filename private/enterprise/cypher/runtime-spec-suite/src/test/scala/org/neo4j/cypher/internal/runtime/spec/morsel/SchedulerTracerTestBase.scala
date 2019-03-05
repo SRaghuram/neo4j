@@ -1,0 +1,145 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package org.neo4j.cypher.internal.runtime.spec.morsel
+
+import java.nio.file.{Files, Path}
+
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.internal.runtime.spec._
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
+
+object SchedulerTracerTestBase {
+  private val path = Files.createTempFile("scheduler-trace", ".csv")
+  val WORKER_COUNT: Int = Runtime.getRuntime.availableProcessors()
+  val EDITION = ENTERPRISE.PARALLEL.copyWith(
+    GraphDatabaseSettings.cypher_morsel_size -> "4",
+    GraphDatabaseSettings.cypher_worker_count -> WORKER_COUNT.toString,
+    GraphDatabaseSettings.enable_morsel_runtime_trace -> "true",
+    GraphDatabaseSettings.morsel_scheduler_trace_filename -> path.toAbsolutePath.toString
+  )
+}
+
+import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
+
+class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
+  extends RuntimeTestSuite[EnterpriseRuntimeContext](EDITION, runtime) {
+
+  override def afterShutdown(): Unit = {
+    Files.delete(path)
+  }
+
+  test("should trace big expand query correctly") {
+
+    // GIVEN
+    val SIZE = 10
+
+    bipartiteGraph(SIZE,"A","B","R")
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("n1", "n3")
+      .expand("(n2)--(n3)")
+      .expand("(n1)--(n2)")
+      .allNodeScan("n1")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    runtimeResult should beColumns("n1", "n3").withRows(rowCount(2000))
+
+    Thread.sleep(1000) // allow tracer output daemon to finish
+
+    val (header, dataRows) = parseTrace(path.toAbsolutePath)
+    header should be (Array("id_1.0",
+                             "upstreamIds",
+                             "queryId",
+                             "schedulingThreadId",
+                             "schedulingTime(us)",
+                             "executionThreadId",
+                             "startTime(us)",
+                             "stopTime(us)",
+                             "pipelineId",
+                             "pipelineDescription"))
+
+    val queryIds = mutable.Set[Long]()
+    val dataLookup = mutable.Map[Long, DataRow]()
+    val executionThreadIds = mutable.Set[Long]()
+    val schedulingThreadIds = mutable.Set[Long]()
+
+    for (dataRow <- dataRows) {
+      dataRow.schedulingTime should be <= dataRow.startTime
+      dataRow.startTime should be <= dataRow.stopTime
+      dataRow.pipelineDescription should not be ""
+
+      queryIds += dataRow.queryId
+      dataLookup += dataRow.id -> dataRow
+      schedulingThreadIds += dataRow.schedulingThreadId
+      executionThreadIds += dataRow.executionThreadId
+    }
+
+    queryIds.size should be(1)
+    schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
+    executionThreadIds.size should be <= WORKER_COUNT
+    executionThreadIds.size should be > 1
+    dataLookup.size should be(dataRows.size)
+
+    for (dataRow <- dataRows) {
+      for (upstreamId <- dataRow.upstreamIds) {
+        dataLookup.get(upstreamId) match {
+          case None =>
+            fail(s"Could not find upstream data row with id $upstreamId")
+          case Some(upstream) =>
+            upstream.stopTime should be < dataRow.startTime
+        }
+      }
+    }
+  }
+
+  private def parseTrace(path: Path): (Array[String], ArrayBuffer[DataRow]) = {
+
+    var header: Array[String] = null
+    val dataRows: ArrayBuffer[DataRow] = new ArrayBuffer
+
+    for (line <- Source.fromFile(path.toFile).getLines()) {
+      val parts = line.split(",").map(_.trim)
+      if (header == null)
+        header = parts
+      else
+        dataRows += DataRow(
+          parts(0).toLong,
+          parseUpstreams(parts(1)),
+          parts(2).toInt,
+          parts(3).toLong,
+          parts(4).toLong,
+          parts(5).toLong,
+          parts(6).toLong,
+          parts(7).toLong,
+          parts(8).toLong,
+          parts(9)
+        )
+    }
+
+    (header, dataRows)
+  }
+
+  private def parseUpstreams(upstreams: String): Seq[Long] = {
+    upstreams.slice(1, upstreams.length - 1).split(',').filter(_.nonEmpty).map(_.toLong)
+  }
+
+  private case class DataRow(id: Long,
+                             upstreamIds: Seq[Long],
+                             queryId: Long,
+                             schedulingThreadId: Long,
+                             schedulingTime: Long,
+                             executionThreadId: Long,
+                             startTime: Long,
+                             stopTime: Long,
+                             pipelineId: Long,
+                             pipelineDescription: String)
+}

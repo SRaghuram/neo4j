@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.result.RuntimeResult
 
-class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE_SINGLE_THREAD)
-class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE_PARALLEL)
+class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
+class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
 
 abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, ZombieRuntime) {
 

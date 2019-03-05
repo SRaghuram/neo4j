@@ -54,9 +54,9 @@ class ParallelismTracer extends SchedulerTracer {
 
   private class TestQueryExecutionTracer extends QueryExecutionTracer {
 
-    override def scheduleWorkUnit(task: Task[_ <: AutoCloseable],
-                                  upstreamWorkUnitEvent: Option[WorkUnitEvent]): ScheduledWorkUnitEvent =
-      new TestScheduledWorkUnitEvent(task.workId, task.workDescription)
+    override def scheduleWorkUnit(workId: WorkIdentity,
+                                  upstreamWorkUnitEvents: Seq[WorkUnitEvent]): ScheduledWorkUnitEvent =
+      new TestScheduledWorkUnitEvent(workId.workId, workId.workDescription)
 
     override def stopQuery(): Unit = {}
   }
