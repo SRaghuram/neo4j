@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.diagnostics.DiagnosticsOfflineReportProvider;
@@ -19,6 +20,7 @@ import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 
 import static org.neo4j.kernel.diagnostics.DiagnosticsReportSources.newDiagnosticsRotatingFile;
 
+@ServiceProvider
 public class SecurityLogDiagnosticsOfflineReportProvider extends DiagnosticsOfflineReportProvider
 {
     private FileSystemAbstraction fs;
@@ -26,7 +28,7 @@ public class SecurityLogDiagnosticsOfflineReportProvider extends DiagnosticsOffl
 
     public SecurityLogDiagnosticsOfflineReportProvider()
     {
-        super( "enterprise-security", "logs" );
+        super( "logs" );
     }
 
     @Override

@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -18,6 +19,7 @@ import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 
 import static org.neo4j.kernel.diagnostics.DiagnosticsReportSources.newDiagnosticsRotatingFile;
 
+@ServiceProvider
 public class QueryLoggerDiagnosticsOfflineReportProvider extends DiagnosticsOfflineReportProvider
 {
     private FileSystemAbstraction fs;
@@ -25,7 +27,7 @@ public class QueryLoggerDiagnosticsOfflineReportProvider extends DiagnosticsOffl
 
     public QueryLoggerDiagnosticsOfflineReportProvider()
     {
-        super( "query-logger", "logs" );
+        super( "logs" );
     }
 
     @Override

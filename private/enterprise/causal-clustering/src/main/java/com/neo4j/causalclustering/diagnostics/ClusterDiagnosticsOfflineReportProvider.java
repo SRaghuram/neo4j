@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -24,6 +25,7 @@ import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSources;
 import org.neo4j.logging.NullLog;
 
+@ServiceProvider
 public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineReportProvider
 {
     private FileSystemAbstraction fs;
@@ -32,7 +34,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     public ClusterDiagnosticsOfflineReportProvider()
     {
-        super( "cc", "raft", "ccstate" );
+        super( "raft", "ccstate" );
     }
 
     @Override
