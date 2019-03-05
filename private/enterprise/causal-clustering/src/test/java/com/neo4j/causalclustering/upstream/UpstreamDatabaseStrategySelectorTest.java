@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 
@@ -98,6 +99,7 @@ public class UpstreamDatabaseStrategySelectorTest
         verifyZeroInteractions( shouldNotUse );
     }
 
+    @ServiceProvider
     public static class DummyUpstreamDatabaseSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
         private MemberId memberId;
@@ -119,6 +121,7 @@ public class UpstreamDatabaseStrategySelectorTest
         }
     }
 
+    @ServiceProvider
     public static class AnotherDummyUpstreamDatabaseSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
         public AnotherDummyUpstreamDatabaseSelectionStrategy()
@@ -133,6 +136,7 @@ public class UpstreamDatabaseStrategySelectorTest
         }
     }
 
+    @ServiceProvider
     public static class YetAnotherDummyUpstreamDatabaseSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
         public YetAnotherDummyUpstreamDatabaseSelectionStrategy()

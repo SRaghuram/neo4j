@@ -22,6 +22,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.annotations.service.ServiceProvider;
+
+@ServiceProvider
 public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionStrategy
 {
 
@@ -44,12 +47,12 @@ public class UserDefinedConfigurationStrategy extends UpstreamDatabaseSelectionS
         {
             Filter<ServerInfo> parsed = FilterConfigParser.parse( filterConfig );
             filters = Optional.of( parsed );
-            log.info( "Upstream selection strategy " + readableName + " configured with " + filterConfig );
+            log.info( "Upstream selection strategy " + name + " configured with " + filterConfig );
         }
         catch ( InvalidFilterSpecification invalidFilterSpecification )
         {
             filters = Optional.empty();
-            log.warn( "Cannot parse configuration '" + filterConfig + "' for upstream selection strategy " + readableName + ". " +
+            log.warn( "Cannot parse configuration '" + filterConfig + "' for upstream selection strategy " + name + ". " +
                     invalidFilterSpecification.getMessage() );
         }
     }

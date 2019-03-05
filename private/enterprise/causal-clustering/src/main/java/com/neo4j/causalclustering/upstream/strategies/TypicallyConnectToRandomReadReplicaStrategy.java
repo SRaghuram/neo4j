@@ -15,8 +15,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.annotations.service.ServiceProvider;
+
 import static org.neo4j.function.Predicates.not;
 
+@ServiceProvider
 public class TypicallyConnectToRandomReadReplicaStrategy extends UpstreamDatabaseSelectionStrategy
 {
     public static final String IDENTITY = "typically-connect-to-random-read-replica";

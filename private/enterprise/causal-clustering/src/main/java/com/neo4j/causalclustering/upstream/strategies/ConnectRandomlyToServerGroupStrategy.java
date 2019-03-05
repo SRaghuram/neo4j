@@ -12,6 +12,9 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import java.util.List;
 import java.util.Optional;
 
+import org.neo4j.annotations.service.ServiceProvider;
+
+@ServiceProvider
 public class ConnectRandomlyToServerGroupStrategy extends UpstreamDatabaseSelectionStrategy
 {
     static final String IDENTITY = "connect-randomly-to-server-group";
@@ -30,12 +33,12 @@ public class ConnectRandomlyToServerGroupStrategy extends UpstreamDatabaseSelect
 
         if ( groups.isEmpty() )
         {
-            log.warn( "No server groups configured for upstream strategy " + readableName + ". Strategy will not find upstream servers." );
+            log.warn( "No server groups configured for upstream strategy " + name + ". Strategy will not find upstream servers." );
         }
         else
         {
             String readableGroups = String.join( ", ", groups );
-            log.info( "Upstream selection strategy " + readableName + " configured with server groups " + readableGroups );
+            log.info( "Upstream selection strategy " + name + " configured with server groups " + readableGroups );
         }
     }
 

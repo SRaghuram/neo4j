@@ -1,4 +1,0 @@
-com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy
-com.neo4j.causalclustering.upstream.strategies.ConnectRandomlyWithinServerGroupStrategy
-com.neo4j.causalclustering.upstream.strategies.ConnectRandomlyToServerGroupStrategy
-com.neo4j.causalclustering.upstream.strategies.LeaderOnlyStrategy

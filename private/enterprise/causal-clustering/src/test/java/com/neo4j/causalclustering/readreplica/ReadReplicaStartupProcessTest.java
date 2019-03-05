@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -332,6 +333,7 @@ public class ReadReplicaStartupProcessTest
         verify( databaseService ).stop();
     }
 
+    @ServiceProvider
     public static class AlwaysChooseFirstMember extends UpstreamDatabaseSelectionStrategy
     {
         public AlwaysChooseFirstMember()

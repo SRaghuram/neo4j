@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.neo4j.annotations.service.ServiceProvider;
+
+@ServiceProvider
 public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
 {
     public static final String IDENTITY = "leader-only";

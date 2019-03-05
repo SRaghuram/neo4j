@@ -11,13 +11,19 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.service.Services;
+
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static org.eclipse.collections.impl.block.factory.Predicates.notNull;
 
 /**
  * Loads and initialises any service implementations of <class>UpstreamDatabaseSelectionStrategy</class>.
@@ -43,29 +49,23 @@ public class UpstreamDatabaseStrategiesLoader implements Iterable<UpstreamDataba
     @Override
     public Iterator<UpstreamDatabaseSelectionStrategy> iterator()
     {
-        Iterable<UpstreamDatabaseSelectionStrategy> allImplementationsOnClasspath = Service.loadAll( UpstreamDatabaseSelectionStrategy.class );
+        final List<String> configuredNames = config.get( CausalClusteringSettings.upstream_selection_strategy );
+        final Map<String, UpstreamDatabaseSelectionStrategy> availableStrategies = Services.loadAll( UpstreamDatabaseSelectionStrategy.class ).stream()
+                .collect( toMap( UpstreamDatabaseSelectionStrategy::getName, identity() ) );
 
-        LinkedHashSet<UpstreamDatabaseSelectionStrategy> candidates = new LinkedHashSet<>();
-        for ( String key : config.get( CausalClusteringSettings.upstream_selection_strategy ) )
+        final List<UpstreamDatabaseSelectionStrategy> strategies = configuredNames.stream()
+                .distinct()
+                .map( availableStrategies::get )
+                .filter( notNull() )
+                .collect( toList() );
+
+        strategies.forEach( strategy ->
         {
-            for ( UpstreamDatabaseSelectionStrategy candidate : allImplementationsOnClasspath )
-            {
-                if ( candidate.getKeys().iterator().next().equals( key ) )
-                {
-                    candidate.inject( topologyService, config, logProvider, myself );
-                    candidates.add( candidate );
-                }
-            }
-        }
+            strategy.inject( topologyService, config, logProvider, myself );
+        } );
 
-        log( candidates );
-
-        return candidates.iterator();
-    }
-
-    private void log( LinkedHashSet<UpstreamDatabaseSelectionStrategy> candidates )
-    {
-        log.debug( "Upstream database strategies loaded in order of precedence: " + nicelyCommaSeparatedList( candidates ) );
+        log.debug( "Upstream database strategies loaded in order of precedence: " + nicelyCommaSeparatedList( strategies ) );
+        return strategies.iterator();
     }
 
     private static String nicelyCommaSeparatedList( Collection<UpstreamDatabaseSelectionStrategy> items )

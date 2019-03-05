@@ -10,14 +10,18 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
 import java.util.Optional;
 
+import org.neo4j.annotations.service.ServiceProvider;
+
+@ServiceProvider
 public class SpecificReplicaStrategy extends UpstreamDatabaseSelectionStrategy
 {
+    static final String NAME = "specific";
     // This because we need a stable point for config to inject into Service loader loaded classes
     public static final UpstreamFactory upstreamFactory = new UpstreamFactory();
 
     public SpecificReplicaStrategy()
     {
-        super( "specific" );
+        super( NAME );
     }
 
     @Override

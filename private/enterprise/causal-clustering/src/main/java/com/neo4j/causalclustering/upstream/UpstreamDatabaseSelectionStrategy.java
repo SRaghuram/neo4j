@@ -10,26 +10,32 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
-import org.neo4j.common.Service;
+import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.service.NamedService;
 
-public abstract class UpstreamDatabaseSelectionStrategy extends Service
+@Service
+public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
 {
     protected TopologyService topologyService;
     protected Config config;
     protected Log log;
     protected MemberId myself;
-    protected String readableName;
+    protected String name;
     protected String dbName;
 
-    public UpstreamDatabaseSelectionStrategy( String key, String... altKeys )
+    protected UpstreamDatabaseSelectionStrategy( String name )
     {
-        super( key, altKeys );
+        this.name = name;
+    }
+
+    @Override
+    public String getName()
+    {
+        return name;
     }
 
     // Service loader can't inject via the constructor
@@ -40,9 +46,7 @@ public abstract class UpstreamDatabaseSelectionStrategy extends Service
         this.log = logProvider.getLog( this.getClass() );
         this.myself = myself;
         this.dbName = config.get( CausalClusteringSettings.database );
-
-        readableName = String.join( ", ", getKeys() );
-        log.info( "Using upstream selection strategy " + readableName );
+        log.info( "Using upstream selection strategy " + name );
         init();
     }
 
@@ -55,11 +59,6 @@ public abstract class UpstreamDatabaseSelectionStrategy extends Service
     @Override
     public String toString()
     {
-        return nicelyCommaSeparatedList( getKeys() );
-    }
-
-    private static String nicelyCommaSeparatedList( Iterable<String> keys )
-    {
-        return StreamSupport.stream( keys.spliterator(), false ).collect( Collectors.joining( ", " ) );
+        return name;
     }
 }
