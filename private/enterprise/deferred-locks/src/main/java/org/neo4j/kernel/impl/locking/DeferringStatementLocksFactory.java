@@ -20,6 +20,7 @@ import static org.neo4j.configuration.Settings.setting;
  * A {@link StatementLocksFactory} that created {@link DeferringStatementLocks} based on the given
  * {@link Locks} and {@link Config}.
  */
+@ServiceProvider
 public class DeferringStatementLocksFactory implements StatementLocksFactory
 {
     @ServiceProvider
