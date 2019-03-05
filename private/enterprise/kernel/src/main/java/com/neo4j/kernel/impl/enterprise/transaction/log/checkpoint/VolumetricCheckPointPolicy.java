@@ -7,17 +7,20 @@ package com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint;
 
 import java.time.Clock;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointThreshold;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointThresholdPolicy;
 import org.neo4j.kernel.impl.transaction.log.pruning.LogPruning;
 import org.neo4j.logging.LogProvider;
 
-public class VolumetricCheckPointPolicy extends CheckPointThresholdPolicy
+@ServiceProvider
+public class VolumetricCheckPointPolicy implements CheckPointThresholdPolicy
 {
-    public VolumetricCheckPointPolicy()
+    @Override
+    public String getName()
     {
-        super( "volumetric" );
+        return "volumetric";
     }
 
     @Override
