@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
@@ -28,13 +29,19 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import static com.neo4j.kernel.impl.enterprise.PropertyExistenceEnforcer.getOrCreatePropertyExistenceEnforcerFrom;
 import static org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException.Phase.VERIFICATION;
 
+@ServiceProvider
 public class CommercialConstraintSemantics extends StandardConstraintSemantics
 {
     public CommercialConstraintSemantics()
     {
-        super( "commercialConstraints", 2 );
+        super( 2 );
     }
 
+    @Override
+    public String getName()
+    {
+        return "commercialConstraints";
+    }
     @Override
     protected ConstraintDescriptor readNonStandardConstraint( ConstraintRule rule, String errorMessage )
     {
