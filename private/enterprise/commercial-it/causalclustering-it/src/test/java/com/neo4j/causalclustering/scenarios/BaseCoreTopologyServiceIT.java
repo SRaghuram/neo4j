@@ -19,9 +19,9 @@ import java.time.Duration;
 import java.util.UUID;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.test.ports.PortAuthority;

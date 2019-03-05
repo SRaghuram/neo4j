@@ -12,7 +12,7 @@ import org.junit.rules.RuleChain;
 import java.io.File;
 
 import org.neo4j.kernel.impl.store.StoreType;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;

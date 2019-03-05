@@ -15,7 +15,7 @@ import org.neo4j.graphalgo.impl.path.ShortestPath
 import org.neo4j.graphalgo.impl.path.ShortestPath.DataMonitor
 import org.neo4j.graphdb.{Node, Path}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
-import org.neo4j.kernel.monitoring.Monitors
+import org.neo4j.monitoring.Monitors
 import org.scalatest.matchers.Matcher
 
 import scala.collection.JavaConverters._

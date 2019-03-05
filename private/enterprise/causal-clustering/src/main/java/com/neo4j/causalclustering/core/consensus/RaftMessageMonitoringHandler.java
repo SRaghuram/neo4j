@@ -13,7 +13,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
 {

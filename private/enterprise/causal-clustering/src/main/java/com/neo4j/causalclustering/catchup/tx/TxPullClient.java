@@ -13,9 +13,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 public class TxPullClient
 {

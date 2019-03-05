@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 public class StreamToDiskProvider implements StoreFileStreamProvider
 {

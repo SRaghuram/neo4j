@@ -7,15 +7,15 @@ package org.neo4j.metrics.source.causalclustering;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.neo4j.causalclustering.core.consensus.CoreMetaData;
+import com.neo4j.causalclustering.core.consensus.RaftMessages;
 
 import java.util.function.Supplier;
 
-import com.neo4j.causalclustering.core.consensus.CoreMetaData;
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.metrics.metric.MetricsCounter;
+import org.neo4j.monitoring.Monitors;
 
 import static com.codahale.metrics.MetricRegistry.name;
 

@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogAppendInd
 
 import java.io.IOException;
 
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 public class MonitoredRaftLog extends DelegatingRaftLog
 {

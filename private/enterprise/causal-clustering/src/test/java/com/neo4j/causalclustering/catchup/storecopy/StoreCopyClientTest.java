@@ -43,11 +43,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;

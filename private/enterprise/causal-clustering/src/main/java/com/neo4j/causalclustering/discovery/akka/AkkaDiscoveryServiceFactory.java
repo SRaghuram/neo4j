@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;

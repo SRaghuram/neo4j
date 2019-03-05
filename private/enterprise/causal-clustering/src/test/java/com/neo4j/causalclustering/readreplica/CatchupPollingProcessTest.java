@@ -33,10 +33,10 @@ import java.util.concurrent.Future;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.logging.Log;
+import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.catchup.MockCatchupClient.responses;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;

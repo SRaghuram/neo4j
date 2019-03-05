@@ -5,11 +5,11 @@
  */
 package org.neo4j.backup.impl;
 
+import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
 import org.junit.jupiter.api.Test;
 
-import com.neo4j.causalclustering.catchup.storecopy.StoreCopyClientMonitor;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.neo4j.logging.AssertableLogProvider.inLog;

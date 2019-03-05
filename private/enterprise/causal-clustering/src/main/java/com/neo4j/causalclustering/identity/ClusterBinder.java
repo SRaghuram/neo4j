@@ -24,7 +24,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.function.ThrowingAction;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 

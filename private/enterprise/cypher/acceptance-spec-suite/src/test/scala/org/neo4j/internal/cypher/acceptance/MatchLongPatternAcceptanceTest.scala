@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
-import org.neo4j.kernel.monitoring
+import org.neo4j.monitoring.Monitors
 import org.neo4j.test.ImpermanentGraphDatabase
 
 import scala.collection.JavaConverters._
@@ -217,7 +217,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
           eengine = engine
           makeLargeMatrixDataset(100)
           val monitor = TestIDPSolverMonitor()
-          val monitors: monitoring.Monitors = graph.getDependencyResolver.resolveDependency(classOf[monitoring.Monitors])
+          val monitors: Monitors = graph.getDependencyResolver.resolveDependency(classOf[Monitors])
           monitors.addMonitorListener(monitor)
           executeSingle(s"EXPLAIN CYPHER planner=IDP $query", Map.empty)
           acc(configValue) = monitor.maxStartIteration

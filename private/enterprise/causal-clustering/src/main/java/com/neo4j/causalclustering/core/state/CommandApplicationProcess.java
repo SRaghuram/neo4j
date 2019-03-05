@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.util.List;
 
 import org.neo4j.function.ThrowingAction;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;

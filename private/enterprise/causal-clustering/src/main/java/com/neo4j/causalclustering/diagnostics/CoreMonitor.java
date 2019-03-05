@@ -18,9 +18,9 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.helpers.SocketAddress;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 

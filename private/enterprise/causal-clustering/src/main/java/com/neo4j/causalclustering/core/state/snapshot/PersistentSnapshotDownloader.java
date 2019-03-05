@@ -18,8 +18,8 @@ import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
+import org.neo4j.monitoring.Monitors;
 
 public class PersistentSnapshotDownloader implements Runnable
 {

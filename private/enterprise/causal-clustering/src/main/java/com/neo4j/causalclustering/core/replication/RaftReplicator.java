@@ -20,9 +20,9 @@ import com.neo4j.causalclustering.messaging.Outbound;
 
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 

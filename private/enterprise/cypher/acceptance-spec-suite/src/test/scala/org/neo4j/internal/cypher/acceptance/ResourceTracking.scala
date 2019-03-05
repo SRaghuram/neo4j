@@ -12,8 +12,9 @@ import org.neo4j.cypher.internal.runtime.ResourceMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResource
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.GraphDatabaseService
+import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.internal.GraphDatabaseAPI
-import org.neo4j.kernel.{GraphDatabaseQueryService, monitoring}
+import org.neo4j.monitoring.Monitors
 
 trait ResourceTracking extends CypherFunSuite {
 
@@ -24,7 +25,7 @@ trait ResourceTracking extends CypherFunSuite {
   def trackResources(graph: GraphDatabaseQueryService): Unit = trackResources(graph.getDependencyResolver)
 
   def trackResources(resolver: DependencyResolver): Unit = {
-    val monitors = resolver.resolveDependency(classOf[monitoring.Monitors])
+    val monitors = resolver.resolveDependency(classOf[Monitors])
     resourceMonitor = TrackingResourceMonitor()
     monitors.addMonitorListener(resourceMonitor)
   }

@@ -24,9 +24,9 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;

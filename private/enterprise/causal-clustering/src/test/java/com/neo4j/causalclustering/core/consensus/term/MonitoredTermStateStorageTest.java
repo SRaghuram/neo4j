@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftTermMonitor;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import org.junit.Test;
 
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 import static org.junit.Assert.assertEquals;
 

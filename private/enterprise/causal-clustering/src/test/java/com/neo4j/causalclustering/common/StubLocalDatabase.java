@@ -16,8 +16,8 @@ import java.util.function.Supplier;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 /**
  * StubLocalDatabase for testing.

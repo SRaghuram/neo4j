@@ -12,9 +12,9 @@ import org.junit.Test;
 
 import java.util.UUID;
 
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
+import org.neo4j.monitoring.Monitors;
 
 public class CoreMonitorTest
 {

@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.identity.MemberId;
 import java.time.Clock;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 

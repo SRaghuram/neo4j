@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.QueryCache.ParameterTypeMap
 import org.neo4j.cypher.internal.StringCacheMonitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.helpers.collection.Pair
-import org.neo4j.kernel.monitoring.Monitors
+import org.neo4j.monitoring.Monitors
 
 /**
   * These tests are similar with the tests in LeafPlanningIntegrationTest, but

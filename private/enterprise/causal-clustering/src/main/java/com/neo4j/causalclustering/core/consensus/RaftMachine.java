@@ -32,9 +32,9 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.core.consensus.roles.Role.LEADER;
 import static java.lang.String.format;

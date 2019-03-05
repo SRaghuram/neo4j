@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.ext.udc.UdcSettings;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.concurrent.BinaryLatch;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;

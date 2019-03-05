@@ -22,7 +22,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.read_replica.SpecificReplicaStrategy.upstreamFactory;
 import static java.util.concurrent.TimeUnit.MINUTES;

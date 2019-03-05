@@ -12,7 +12,7 @@ import java.io.File;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 public interface ClusterMember<T extends GraphDatabaseAPI>
 {

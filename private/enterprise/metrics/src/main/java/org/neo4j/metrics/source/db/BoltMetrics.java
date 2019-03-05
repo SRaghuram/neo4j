@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
 import org.neo4j.kernel.impl.annotations.Documented;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.metrics.metric.MetricsCounter;
+import org.neo4j.monitoring.Monitors;
 
 import static com.codahale.metrics.MetricRegistry.name;
 

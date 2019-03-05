@@ -30,8 +30,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.is;

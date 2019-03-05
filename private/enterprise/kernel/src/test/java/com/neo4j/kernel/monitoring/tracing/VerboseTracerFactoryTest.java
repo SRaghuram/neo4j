@@ -8,8 +8,8 @@ package com.neo4j.kernel.monitoring.tracing;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.BufferingLog;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.time.Clocks;
 

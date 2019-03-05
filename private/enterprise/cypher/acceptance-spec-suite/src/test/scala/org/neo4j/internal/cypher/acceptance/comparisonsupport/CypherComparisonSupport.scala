@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, CypherT
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.query.TransactionalContext
-import org.neo4j.kernel.monitoring.Monitors
+import org.neo4j.monitoring.Monitors
 import org.neo4j.test.TestGraphDatabaseFactory
 import org.neo4j.values.virtual.MapValue
 

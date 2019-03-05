@@ -82,7 +82,6 @@ import com.neo4j.bench.ldbc.utils.AnnotatedQuery;
 import com.neo4j.bench.ldbc.utils.LdbcCompilationTimeEventListener;
 import com.neo4j.bench.ldbc.utils.PlanMeta;
 import com.neo4j.bench.ldbc.utils.PlansSerializer;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -94,7 +93,7 @@ import java.util.List;
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 

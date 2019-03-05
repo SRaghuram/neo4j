@@ -25,9 +25,9 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.monitoring.Monitors;
 
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.noConstraint;
 import static com.neo4j.causalclustering.catchup.storecopy.RequiredTransactions.requiredRange;

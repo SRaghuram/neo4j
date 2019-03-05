@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
 import java.io.IOException;
 
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 
 public class MonitoredTermStateStorage implements StateStorage<TermState>
 {

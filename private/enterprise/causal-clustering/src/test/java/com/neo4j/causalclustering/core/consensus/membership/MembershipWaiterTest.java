@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.kernel.internal.DatabaseHealth;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.OnDemandJobScheduler;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;

@@ -34,8 +34,8 @@ import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Level;
+import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;

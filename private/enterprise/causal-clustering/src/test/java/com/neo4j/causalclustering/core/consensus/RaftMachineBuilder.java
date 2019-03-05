@@ -28,9 +28,9 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
 public class RaftMachineBuilder

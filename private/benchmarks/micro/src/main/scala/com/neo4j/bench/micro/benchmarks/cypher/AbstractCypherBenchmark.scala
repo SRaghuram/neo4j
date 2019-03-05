@@ -41,6 +41,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber.NOT_A_SUBSCRIBER
 import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, TransactionalContext}
 import org.neo4j.kernel.impl.util.DefaultValueMapper
 import org.neo4j.kernel.internal.GraphDatabaseAPI
+import org.neo4j.monitoring.Monitors
 import org.neo4j.resources.{CpuClock, HeapAllocation}
 import org.neo4j.scheduler.JobScheduler
 import org.neo4j.time.Clocks
@@ -151,7 +152,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   private def jobScheduler = dependencyResolver.resolveDependency(classOf[JobScheduler])
 
-  private def kernelMonitors = dependencyResolver.resolveDependency(classOf[org.neo4j.kernel.monitoring.Monitors])
+  private def kernelMonitors = dependencyResolver.resolveDependency(classOf[Monitors])
 
   private def transactionalContextWrapper(txContext: TransactionalContext) = TransactionalContextWrapper(txContext)
 

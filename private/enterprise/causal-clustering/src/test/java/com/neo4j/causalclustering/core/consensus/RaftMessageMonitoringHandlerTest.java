@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.neo4j.kernel.monitoring.Monitors;
+import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
 import static org.mockito.Mockito.mock;
