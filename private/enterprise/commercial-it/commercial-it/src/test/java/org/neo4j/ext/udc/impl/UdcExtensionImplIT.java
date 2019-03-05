@@ -288,9 +288,10 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        String userAgents = handler.getQueryMap().get( USER_AGENTS );
-        assertTrue( userAgents.contains( "test/1.0" ) );
-        assertTrue( userAgents.contains( "foo/bar" ) );
+        Map<String,String> queryMap = handler.getQueryMap();
+        String userAgents = queryMap.get( USER_AGENTS );
+        assertTrue( "Query map is: " + queryMap, userAgents.contains( "test/1.0" ) );
+        assertTrue( "Query map is: " + queryMap, userAgents.contains( "foo/bar" ) );
     }
 
     @Test
