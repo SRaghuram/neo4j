@@ -42,8 +42,8 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
-import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
@@ -75,12 +75,14 @@ import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationPlugin;
 import org.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
+import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings.COMMERCIAL_SECURITY_MODULE_ID;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
+@ServiceProvider
 public class CommercialSecurityModule extends SecurityModule
 {
     public static final String ROLE_STORE_FILENAME = "roles";
@@ -98,14 +100,10 @@ public class CommercialSecurityModule extends SecurityModule
     private CommercialAuthAndUserManager authManager;
     private SecurityConfig securityConfig;
 
-    public CommercialSecurityModule()
+    @Override
+    public String getName()
     {
-        super( COMMERCIAL_SECURITY_MODULE_ID );
-    }
-
-    public CommercialSecurityModule( String securityModuleId )
-    {
-        super( securityModuleId );
+        return COMMERCIAL_SECURITY_MODULE_ID;
     }
 
     @Override
@@ -436,7 +434,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.pluginAuthentication && securityConfig.pluginAuthorization )
         {
-            for ( AuthPlugin plugin : Service.loadAll( AuthPlugin.class ) )
+            for ( AuthPlugin plugin : Services.loadAll( AuthPlugin.class ) )
             {
                 PluginRealm pluginRealm =
                         new PluginRealm( plugin, config, securityLog, Clocks.systemClock(), secureHasher );
@@ -446,7 +444,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.pluginAuthentication )
         {
-            for ( AuthenticationPlugin plugin : Service.loadAll( AuthenticationPlugin.class ) )
+            for ( AuthenticationPlugin plugin : Services.loadAll( AuthenticationPlugin.class ) )
             {
                 PluginRealm pluginRealm;
 
@@ -471,7 +469,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.pluginAuthorization )
         {
-            for ( AuthorizationPlugin plugin : Service.loadAll( AuthorizationPlugin.class ) )
+            for ( AuthorizationPlugin plugin : Services.loadAll( AuthorizationPlugin.class ) )
             {
                 if ( !excludedClasses.contains( plugin.getClass() ) )
                 {
