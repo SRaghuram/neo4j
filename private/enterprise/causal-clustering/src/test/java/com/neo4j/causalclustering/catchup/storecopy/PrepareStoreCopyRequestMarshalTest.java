@@ -39,7 +39,7 @@ public class PrepareStoreCopyRequestMarshalTest
 
         // then it can be received/deserialised
         PrepareStoreCopyRequest prepareStoreCopyRequestRead = embeddedChannel.readInbound();
-        assertEquals( prepareStoreCopyRequest.getStoreId(), prepareStoreCopyRequestRead.getStoreId() );
+        assertEquals( prepareStoreCopyRequest.storeId(), prepareStoreCopyRequestRead.storeId() );
     }
 
     public static <E> void sendToChannel( E e, EmbeddedChannel embeddedChannel )

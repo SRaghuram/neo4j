@@ -29,7 +29,7 @@ public class CoreSnapshotService
         this.raftMachine = raftMachine;
     }
 
-    public synchronized CoreSnapshot snapshot() throws Exception
+    public synchronized CoreSnapshot snapshot( String databaseName ) throws Exception
     {
         applicationProcess.pauseApplier( OPERATION_NAME );
         try
@@ -39,7 +39,7 @@ public class CoreSnapshotService
             long prevTerm = raftLog.readEntryTerm( lastApplied );
             CoreSnapshot coreSnapshot = new CoreSnapshot( lastApplied, prevTerm );
 
-            coreStateRepository.augmentSnapshot( coreSnapshot );
+            coreStateRepository.augmentSnapshot( databaseName, coreSnapshot );
             coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftMachine.coreState() );
 
             return coreSnapshot;
@@ -50,12 +50,12 @@ public class CoreSnapshotService
         }
     }
 
-    public synchronized void installSnapshot( CoreSnapshot coreSnapshot ) throws IOException
+    public synchronized void installSnapshot( String databaseName, CoreSnapshot coreSnapshot ) throws IOException
     {
         long snapshotPrevIndex = coreSnapshot.prevIndex();
         raftLog.skip( snapshotPrevIndex, coreSnapshot.prevTerm() );
 
-        coreStateRepository.installSnapshot( coreSnapshot );
+        coreStateRepository.installSnapshot( databaseName, coreSnapshot );
         raftMachine.installCoreState( coreSnapshot.get( CoreStateFiles.RAFT_CORE_STATE ) );
         coreStateRepository.flush( snapshotPrevIndex );
 

@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -44,7 +44,7 @@ class MultiplexingCatchupRequestHandlerTest
     void shouldReportErrorWhenDatabaseDoesNotExist()
     {
         channel.pipeline().addLast( newMultiplexingHandler() );
-        DatabaseCatchupRequest request = newCatchupRequest( NON_EXISTING_DB_NAME );
+        CatchupProtocolMessage request = newCatchupRequest( NON_EXISTING_DB_NAME );
 
         channel.writeInbound( request );
 
@@ -55,9 +55,9 @@ class MultiplexingCatchupRequestHandlerTest
     @Test
     void shouldReportErrorWhenPerDatabaseHandlerCantBeCreated()
     {
-        Function<Database,SimpleChannelInboundHandler<DatabaseCatchupRequest>> handlerFactory = ignore -> null;
+        Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory = ignore -> null;
         channel.pipeline().addLast( newMultiplexingHandler( handlerFactory ) );
-        DatabaseCatchupRequest request = newCatchupRequest( EXISTING_DB_NAME );
+        CatchupProtocolMessage request = newCatchupRequest( EXISTING_DB_NAME );
 
         channel.writeInbound( request );
 
@@ -69,14 +69,14 @@ class MultiplexingCatchupRequestHandlerTest
     void shouldInvokePerDatabaseHandler()
     {
         channel.pipeline().addLast( newMultiplexingHandler() );
-        DatabaseCatchupRequest request = newCatchupRequest( EXISTING_DB_NAME );
+        CatchupProtocolMessage request = newCatchupRequest( EXISTING_DB_NAME );
 
         channel.writeInbound( request );
 
         assertEquals( SUCCESS_RESPONSE, channel.readOutbound() );
     }
 
-    private DatabaseManager newDbManager()
+    private static DatabaseManager newDbManager()
     {
         DatabaseManager dbManager = mock( DatabaseManager.class );
         DatabaseContext dbContext = mock( DatabaseContext.class );
@@ -87,37 +87,43 @@ class MultiplexingCatchupRequestHandlerTest
         return dbManager;
     }
 
-    private MultiplexingCatchupRequestHandler<DatabaseCatchupRequest> newMultiplexingHandler()
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler()
     {
-        return newMultiplexingHandler( this::newHandlerFactory );
+        return newMultiplexingHandler( MultiplexingCatchupRequestHandlerTest::newHandlerFactory );
     }
 
-    private MultiplexingCatchupRequestHandler<DatabaseCatchupRequest> newMultiplexingHandler(
-            Function<Database,SimpleChannelInboundHandler<DatabaseCatchupRequest>> handlerFactory )
+    private static MultiplexingCatchupRequestHandler<CatchupProtocolMessage> newMultiplexingHandler(
+            Function<Database,SimpleChannelInboundHandler<CatchupProtocolMessage>> handlerFactory )
     {
-        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), this::newDbManager, handlerFactory,
-                DatabaseCatchupRequest.class, NullLogProvider.getInstance() );
+        return new MultiplexingCatchupRequestHandler<>( new CatchupServerProtocol(), MultiplexingCatchupRequestHandlerTest::newDbManager, handlerFactory,
+                CatchupProtocolMessage.class, NullLogProvider.getInstance() );
     }
 
-    private SimpleChannelInboundHandler<DatabaseCatchupRequest> newHandlerFactory( Database db )
+    private static SimpleChannelInboundHandler<CatchupProtocolMessage> newHandlerFactory( Database db )
     {
         assertEquals( EXISTING_DB_NAME, db.getDatabaseName() );
-        return new DatabaseCatchupRequestHandler();
+        return new CatchupProtocolMessageHandler();
     }
 
-    private static DatabaseCatchupRequest newCatchupRequest( String dbName )
+    private static CatchupProtocolMessage newCatchupRequest( String dbName )
     {
-        DatabaseCatchupRequest request = mock( DatabaseCatchupRequest.class );
-        when( request.databaseName() ).thenReturn( dbName );
-        return request;
+        return new DummyMessage( dbName );
     }
 
-    private static class DatabaseCatchupRequestHandler extends SimpleChannelInboundHandler<DatabaseCatchupRequest>
+    private static class CatchupProtocolMessageHandler extends SimpleChannelInboundHandler<CatchupProtocolMessage>
     {
         @Override
-        protected void channelRead0( ChannelHandlerContext ctx, DatabaseCatchupRequest request )
+        protected void channelRead0( ChannelHandlerContext ctx, CatchupProtocolMessage request )
         {
             ctx.writeAndFlush( SUCCESS_RESPONSE );
+        }
+    }
+
+    private static class DummyMessage extends CatchupProtocolMessage
+    {
+        DummyMessage( String databaseName )
+        {
+            super( RequestMessageType.STORE_FILE, databaseName );
         }
     }
 }

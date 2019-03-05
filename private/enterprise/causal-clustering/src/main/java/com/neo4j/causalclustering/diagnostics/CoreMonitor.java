@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.identity.ClusterBinder;
 import com.neo4j.causalclustering.identity.ClusterId;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.helpers.SocketAddress;
@@ -71,10 +72,10 @@ public class CoreMonitor implements ClusterBinder.Monitor, HazelcastCoreTopology
     }
 
     @Override
-    public void bootstrapped( CoreSnapshot snapshot, ClusterId clusterId )
+    public void bootstrapped( Map<String,CoreSnapshot> snapshots, ClusterId clusterId )
     {
         user.info( "This instance bootstrapped the cluster." );
-        debug.info( format( "Bootstrapped with snapshot: %s and clusterId: %s", snapshot, clusterId ) );
+        debug.info( format( "Bootstrapped with snapshots: %s and clusterId: %s", snapshots, clusterId ) );
     }
 
     @Override

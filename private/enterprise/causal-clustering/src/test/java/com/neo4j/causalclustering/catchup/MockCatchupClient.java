@@ -30,8 +30,6 @@ import org.neo4j.logging.NullLog;
 import org.neo4j.util.concurrent.Futures;
 
 import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_1;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_2;
-import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols.CATCHUP_3;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class MockCatchupClient implements VersionedCatchupClients
@@ -59,13 +57,6 @@ public class MockCatchupClient implements VersionedCatchupClients
     {
         Builder<RESULT> reqBuilder = new Builder<>( v1Client, v2Client, v3Client );
         return reqBuilder.v1( v1Request );
-    }
-
-    @Override
-    public <RESULT> NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest )
-    {
-        Builder<RESULT> reqBuilder = new Builder<>( v1Client, v2Client, v3Client );
-        return reqBuilder.any( allVersionsRequest );
     }
 
     public ApplicationProtocol protocol()
@@ -118,24 +109,6 @@ public class MockCatchupClient implements VersionedCatchupClients
         public NeedsResponseHandler<RESULT> v3( Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request )
         {
             this.v3Request = v3Request;
-            return this;
-        }
-
-        @Override
-        public NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest )
-        {
-            if ( protocol.equals( CATCHUP_1 ) )
-            {
-                v1Request = allVersionsRequest::apply;
-            }
-            else if ( protocol.equals( CATCHUP_2 ) )
-            {
-                v2Request = allVersionsRequest::apply;
-            }
-            else if ( protocol.equals( CATCHUP_3 ) )
-            {
-                v3Request = allVersionsRequest::apply;
-            }
             return this;
         }
 
@@ -291,7 +264,7 @@ public class MockCatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot()
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( String databaseName )
         {
             return handler -> CompletableFuture.completedFuture( responses.coreSnapshot.get() );
         }

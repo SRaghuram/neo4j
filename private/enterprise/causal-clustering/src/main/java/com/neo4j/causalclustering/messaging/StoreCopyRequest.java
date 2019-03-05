@@ -5,11 +5,56 @@
  */
 package com.neo4j.causalclustering.messaging;
 
+import com.neo4j.causalclustering.catchup.RequestMessageType;
 import com.neo4j.causalclustering.identity.StoreId;
 
-public interface StoreCopyRequest extends DatabaseCatchupRequest
-{
-    long requiredTransactionId();
+import java.util.Objects;
 
-    StoreId expectedStoreId();
+public abstract class StoreCopyRequest extends CatchupProtocolMessage
+{
+    private final StoreId expectedStoreId;
+    private final long requiredTransactionId;
+
+    protected StoreCopyRequest( RequestMessageType type, String databaseName, StoreId expectedStoreId, long requiredTransactionId )
+    {
+        super( type, databaseName );
+        this.expectedStoreId = expectedStoreId;
+        this.requiredTransactionId = requiredTransactionId;
+    }
+
+    public final StoreId expectedStoreId()
+    {
+        return expectedStoreId;
+    }
+
+    public final long requiredTransactionId()
+    {
+        return requiredTransactionId;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        if ( !super.equals( o ) )
+        {
+            return false;
+        }
+        StoreCopyRequest that = (StoreCopyRequest) o;
+        return requiredTransactionId == that.requiredTransactionId &&
+               Objects.equals( expectedStoreId, that.expectedStoreId );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( super.hashCode(), expectedStoreId, requiredTransactionId );
+    }
 }

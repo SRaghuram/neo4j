@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
@@ -108,14 +107,9 @@ public class CoreBootstrapper
     private final Function<String,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
     private final FileSystemAbstraction fs;
-    private final LogProvider logProvider;
     private final Log log;
     private final StorageEngineFactory storageEngineFactory;
-
-    private final Map<String,String> defaultDatabaseParams;
-    private final Map<String,String> systemDatabaseParams;
-    private final Config defaultDatabaseFilteredConfig;
-    private final Config systemDatabaseFilteredConfig;
+    private final Config config;
 
     CoreBootstrapper( DatabaseService databaseService, TemporaryDatabaseFactory tempDatabaseFactory, Function<String,DatabaseInitializer> databaseInitializers,
             FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache, StorageEngineFactory storageEngineFactory )
@@ -125,36 +119,9 @@ public class CoreBootstrapper
         this.databaseInitializers = databaseInitializers;
         this.fs = fs;
         this.pageCache = pageCache;
-        this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
-
-        this.defaultDatabaseParams = initialDefaultDatabaseParams( config );
-        this.systemDatabaseParams = initialSystemDatabaseParams( config );
-
-        this.defaultDatabaseFilteredConfig = Config.defaults( defaultDatabaseParams );
-        this.systemDatabaseFilteredConfig = Config.defaults( systemDatabaseParams );
-
+        this.config = config;
         this.storageEngineFactory = storageEngineFactory;
-    }
-
-    private Map<String,String> initialDefaultDatabaseParams( Config config )
-    {
-        Map<String,String> params = new HashMap<>();
-
-        /* We want to only inherit things that will affect the storage as necessary during bootstrap of the database. */
-        params.put( GraphDatabaseSettings.default_database.name(), config.get( default_database ) );
-        params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
-        params.put( GraphDatabaseSettings.record_format.name(), config.get( record_format ) );
-
-        return params;
-    }
-
-    private Map<String,String> initialSystemDatabaseParams( Config config )
-    {
-        Map<String,String> params = new HashMap<>();
-        params.put( GraphDatabaseSettings.transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
-        // default store format will be used, not the configured one
-        return params;
     }
 
     /**
@@ -164,49 +131,51 @@ public class CoreBootstrapper
      * @return a snapshot which represents the initial state.
      * @throws IOException if an I/O exception occurs.
      */
-    public CoreSnapshot bootstrap( Set<MemberId> members ) throws Exception
+    public Map<String,CoreSnapshot> bootstrap( Set<MemberId> members ) throws Exception
     {
-        int databaseCount = databaseService.registeredDatabases().size();
-        if ( databaseCount != 1 && databaseCount != 2 )
-        {
-            throw new IllegalArgumentException( "Not supporting " + databaseCount + " number of databases." );
-        }
-
-        String defaultDatabaseName = defaultDatabaseFilteredConfig.get( GraphDatabaseSettings.default_database );
-        LocalDatabase defaultDatabase = getDatabaseOrThrow( defaultDatabaseName );
-        DatabaseLayout defaultDatabaseLayout = defaultDatabase.databaseLayout();
-
-        DatabaseLayout systemDatabaseLayout = DatabaseLayout.of( defaultDatabaseLayout.getStoreLayout(), SYSTEM_DATABASE_NAME );
-
-        CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
-        coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) ) );
-        coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, new GlobalSessionTrackerState() );
-
-        ensureRecoveredOrThrow( defaultDatabaseLayout, defaultDatabaseFilteredConfig );
-        ensureRecoveredOrThrow( systemDatabaseLayout, systemDatabaseFilteredConfig);
-
-        initialise( defaultDatabaseLayout, systemDatabaseLayout );
-        registerDatabase( coreSnapshot, defaultDatabaseLayout, defaultDatabaseFilteredConfig, defaultDatabaseName );
-        registerDatabase( coreSnapshot, systemDatabaseLayout, systemDatabaseFilteredConfig, SYSTEM_DATABASE_NAME );
-
-        return coreSnapshot;
+        prepareForBootstrapping();
+        initializeSystemDatabaseIfNeeded();
+        appendDummyTransactions();
+        return buildCoreSnapshots( members );
     }
 
-    private void initialise( DatabaseLayout defaultDatabaseLayout, DatabaseLayout systemDatabaseLayout ) throws IOException
+    private void prepareForBootstrapping() throws Exception
     {
-        boolean systemDatabaseExists = isStorePresent( systemDatabaseLayout );
-        if ( isStorePresent( defaultDatabaseLayout ) )
+        for ( LocalDatabase db : databaseService.registeredDatabases().values() )
         {
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( defaultDatabaseLayout, defaultDatabaseFilteredConfig );
+            DatabaseLayout layout = db.databaseLayout();
+            Config config = createTemporaryConfig( db );
+
+            ensureRecoveredOrThrow( layout, config );
+
+            if ( isStorePresent( db ) )
+            {
+                appendNullTransactionLogEntryToSetRaftIndexToMinusOne( layout, createTemporaryConfig( db ) );
+            }
         }
-        if ( systemDatabaseExists )
+    }
+
+    private void initializeSystemDatabaseIfNeeded()
+    {
+        boolean systemDbStoreExists = databaseService.get( SYSTEM_DATABASE_NAME )
+                .map( this::isStorePresent )
+                .orElse( false );
+
+        // find some non-system db and use it to start a temporary database
+        // this code and starting a temp db should go away when we have a migration step that introduces a system db
+        LocalDatabase defaultDb = databaseService.registeredDatabases()
+                .values()
+                .stream()
+                .filter( db -> !db.databaseName().equals( SYSTEM_DATABASE_NAME ) )
+                .findFirst()
+                .orElseThrow( IllegalStateException::new );
+
+        File dir = defaultDb.databaseLayout().databaseDirectory();
+        Config config = createTemporaryConfig( defaultDb );
+
+        try ( TemporaryDatabase temporaryDatabase = tempDatabaseFactory.startTemporaryDatabase( pageCache, dir, config.getRaw() ) )
         {
-            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( systemDatabaseLayout, systemDatabaseFilteredConfig );
-        }
-        try ( TemporaryDatabase temporaryDatabase =
-                tempDatabaseFactory.startTemporaryDatabase( pageCache, defaultDatabaseLayout.databaseDirectory(), defaultDatabaseParams ) )
-        {
-            if ( !systemDatabaseExists )
+            if ( !systemDbStoreExists )
             {
                 DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
                 DatabaseManager databaseManager =
@@ -220,18 +189,63 @@ public class CoreBootstrapper
         }
     }
 
-    private void registerDatabase( CoreSnapshot coreSnapshot, DatabaseLayout databaseLayout, Config config, String databaseName ) throws IOException
+    private void appendDummyTransactions() throws IOException
     {
-        appendNullTransactionLogEntryToSetRaftIndexToMinusOne( databaseLayout, config );
-
-        IdAllocationState idAllocation = deriveIdAllocationState( databaseLayout );
-        coreSnapshot.add( databaseName, CoreStateFiles.ID_ALLOCATION, idAllocation );
-        coreSnapshot.add( databaseName, CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
+        for ( LocalDatabase db : databaseService.registeredDatabases().values() )
+        {
+            appendNullTransactionLogEntryToSetRaftIndexToMinusOne( db.databaseLayout(), createTemporaryConfig( db ) );
+        }
     }
 
-    private boolean isStorePresent( DatabaseLayout databaseLayout )
+    private Map<String,CoreSnapshot> buildCoreSnapshots( Set<MemberId> members )
     {
-        return storageEngineFactory.storageExists( fs, pageCache, databaseLayout );
+        Map<String,CoreSnapshot> snapshots = new HashMap<>();
+
+        RaftCoreState raftCoreState = new RaftCoreState( new MembershipEntry( FIRST_INDEX, members ) );
+        GlobalSessionTrackerState sessionTrackerState = new GlobalSessionTrackerState();
+
+        for ( LocalDatabase db : databaseService.registeredDatabases().values() )
+        {
+            CoreSnapshot coreSnapshot = createCoreSnapshot( db, raftCoreState, sessionTrackerState );
+            snapshots.put( db.databaseName(), coreSnapshot );
+        }
+
+        return snapshots;
+    }
+
+    private CoreSnapshot createCoreSnapshot( LocalDatabase db, RaftCoreState raftCoreState, GlobalSessionTrackerState sessionTrackerState )
+    {
+        CoreSnapshot coreSnapshot = new CoreSnapshot( FIRST_INDEX, FIRST_TERM );
+        coreSnapshot.add( CoreStateFiles.RAFT_CORE_STATE, raftCoreState );
+        coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, sessionTrackerState );
+        IdAllocationState idAllocation = deriveIdAllocationState( db.databaseLayout() );
+        coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocation );
+        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, ReplicatedLockTokenState.INITIAL_LOCK_TOKEN );
+        return coreSnapshot;
+    }
+
+    private Config createTemporaryConfig( LocalDatabase db )
+    {
+        String dbName = db.databaseName();
+
+        Map<String,String> params = new HashMap<>();
+
+        // We want to only inherit things that will affect the storage as necessary during bootstrap of the database
+        params.put( default_database.name(), dbName );
+        params.put( transaction_logs_root_path.name(), config.get( transaction_logs_root_path ).getAbsolutePath() );
+
+        // For system database default store format will be used, not the configured one
+        if ( !dbName.equals( SYSTEM_DATABASE_NAME ) )
+        {
+            params.put( record_format.name(), config.get( record_format ) );
+        }
+
+        return Config.defaults( params );
+    }
+
+    private boolean isStorePresent( LocalDatabase db )
+    {
+        return storageEngineFactory.storageExists( fs, pageCache, db.databaseLayout() );
     }
 
     private void ensureRecoveredOrThrow( DatabaseLayout databaseLayout, Config config ) throws Exception
@@ -243,16 +257,6 @@ public class CoreBootstrapper
             log.error( message );
             throw new IllegalStateException( message );
         }
-    }
-
-    private LocalDatabase getDatabaseOrThrow( String databaseName )
-    {
-        LocalDatabase localDatabase = databaseService.registeredDatabases().get( databaseName );
-        if ( localDatabase == null )
-        {
-            throw new IllegalStateException( "Should have found database named " + databaseName );
-        }
-        return localDatabase;
     }
 
     /**

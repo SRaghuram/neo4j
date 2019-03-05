@@ -17,7 +17,6 @@ import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.protocol.Protocol;
-import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
 import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
@@ -172,17 +171,16 @@ class StoreCopyClientTest
         StoreId storeIdA = subjectA.fetchStoreId( expectedAdvertisedAddress );
         StoreId storeIdB = subjectB.fetchStoreId( expectedAdvertisedAddress );
 
-        if ( catchupClient.protocol().equals( ApplicationProtocols.CATCHUP_2 ) || catchupClient.protocol().equals( CATCHUP_3 ) )
+        if ( catchupClient.protocol().equals( CATCHUP_1 ) )
         {
-            // then, if Catchup V2 is being used, store id matches
+            // if Catchup V1 is being used, both the storeId should always be that of the default database, neo4j
             assertEquals( storeIdA, defaultDbStoreId );
-            assertEquals( storeIdB, altDbStoreId );
+            assertEquals( storeIdB, defaultDbStoreId );
         }
         else
         {
-            // else, if Catchup V1 is being used, both the storeId should always be that of the default database, neo4j
             assertEquals( storeIdA, defaultDbStoreId );
-            assertEquals( storeIdB, defaultDbStoreId );
+            assertEquals( storeIdB, altDbStoreId );
         }
     }
 

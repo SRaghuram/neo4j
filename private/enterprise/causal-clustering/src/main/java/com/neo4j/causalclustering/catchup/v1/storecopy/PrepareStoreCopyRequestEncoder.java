@@ -16,6 +16,6 @@ public class PrepareStoreCopyRequestEncoder extends MessageToByteEncoder<Prepare
     @Override
     protected void encode( ChannelHandlerContext channelHandlerContext, PrepareStoreCopyRequest prepareStoreCopyRequest, ByteBuf byteBuf ) throws Exception
     {
-        StoreIdMarshal.INSTANCE.marshal( prepareStoreCopyRequest.getStoreId(), new BoundedNetworkWritableChannel( byteBuf ) );
+        StoreIdMarshal.INSTANCE.marshal( prepareStoreCopyRequest.storeId(), new BoundedNetworkWritableChannel( byteBuf ) );
     }
 }

@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.DatabaseService;
 import com.neo4j.causalclustering.common.LocalDatabase;
 
 import java.io.IOException;
@@ -27,14 +26,12 @@ import org.neo4j.logging.LogProvider;
  */
 public class CoreDownloader
 {
-    private final DatabaseService databaseService;
     private final SnapshotDownloader snapshotDownloader;
     private final StoreDownloader storeDownloader;
     private final Log log;
 
-    public CoreDownloader( DatabaseService databaseService, SnapshotDownloader snapshotDownloader, StoreDownloader storeDownloader, LogProvider logProvider )
+    public CoreDownloader( SnapshotDownloader snapshotDownloader, StoreDownloader storeDownloader, LogProvider logProvider )
     {
-        this.databaseService = databaseService;
         this.snapshotDownloader = snapshotDownloader;
         this.storeDownloader = storeDownloader;
         this.log = logProvider.getLog( getClass() );
@@ -60,7 +57,7 @@ public class CoreDownloader
      * @throws IOException An issue with I/O.
      * @throws DatabaseShutdownException The database is shutting down.
      */
-    Optional<CoreSnapshot> downloadSnapshotAndStores( CatchupAddressProvider addressProvider ) throws IOException, DatabaseShutdownException
+    Optional<CoreSnapshot> downloadSnapshotAndStore( LocalDatabase db, CatchupAddressProvider addressProvider ) throws IOException, DatabaseShutdownException
     {
         Optional<AdvertisedSocketAddress> primaryOpt = lookupPrimary( addressProvider );
         if ( !primaryOpt.isPresent() )
@@ -69,31 +66,18 @@ public class CoreDownloader
         }
         AdvertisedSocketAddress primaryAddress = primaryOpt.get();
 
-        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( primaryAddress );
+        Optional<CoreSnapshot> coreSnapshot = snapshotDownloader.getCoreSnapshot( db.databaseName(), primaryAddress );
         if ( !coreSnapshot.isPresent() )
         {
             return Optional.empty();
         }
 
-        if ( !catchupOrStoreCopyAll( primaryAddress, addressProvider ) )
+        if ( !storeDownloader.bringUpToDate( db, primaryAddress, addressProvider ) )
         {
             return Optional.empty();
         }
 
         return coreSnapshot;
-    }
-
-    private boolean catchupOrStoreCopyAll( AdvertisedSocketAddress primaryAddress, CatchupAddressProvider secondaryAddressProvider )
-            throws IOException, DatabaseShutdownException
-    {
-        for ( LocalDatabase database : databaseService.registeredDatabases().values() )
-        {
-            if ( !storeDownloader.bringUpToDate( database, primaryAddress, secondaryAddressProvider ) )
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     private Optional<AdvertisedSocketAddress> lookupPrimary( CatchupAddressProvider addressProvider )

@@ -64,7 +64,7 @@ public class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = snapshotDownloader.getCoreSnapshot( remoteAddress );
+        Optional<CoreSnapshot> downloadedSnapshot = snapshotDownloader.getCoreSnapshot( "database_name", remoteAddress );
 
         // then
         assertTrue( downloadedSnapshot.isPresent() );
@@ -79,7 +79,7 @@ public class SnapshotDownloaderTest
 
         // when
         SnapshotDownloader downloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        Optional<CoreSnapshot> downloadedSnapshot = downloader.getCoreSnapshot( remoteAddress );
+        Optional<CoreSnapshot> downloadedSnapshot = downloader.getCoreSnapshot( "database_name", remoteAddress );
 
         // then
         assertFalse( downloadedSnapshot.isPresent() );

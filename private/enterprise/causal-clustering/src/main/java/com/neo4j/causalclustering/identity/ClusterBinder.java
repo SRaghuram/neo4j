@@ -16,6 +16,8 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -34,7 +36,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
 
         void waitingForBootstrap();
 
-        void bootstrapped( CoreSnapshot snapshot, ClusterId clusterId );
+        void bootstrapped( Map<String,CoreSnapshot> snapshots, ClusterId clusterId );
 
         void boundToCluster( ClusterId clusterId );
     }
@@ -131,7 +133,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             return new BoundState( clusterId );
         }
 
-        CoreSnapshot snapshot = null;
+        Map<String,CoreSnapshot> snapshots = Collections.emptyMap();
         CoreTopology topology;
 
         do
@@ -146,8 +148,8 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
             else if ( hostShouldBootstrapCluster( topology ) )
             {
                 clusterId = new ClusterId( UUID.randomUUID() );
-                snapshot = coreBootstrapper.bootstrap( topology.members().keySet() );
-                monitor.bootstrapped( snapshot, clusterId );
+                snapshots = coreBootstrapper.bootstrap( topology.members().keySet() );
+                monitor.bootstrapped( snapshots, clusterId );
                 shouldRetryPublish = publishClusterId( clusterId );
             }
 
@@ -163,7 +165,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
         }
 
         clusterIdStorage.writeState( clusterId );
-        return new BoundState( clusterId, snapshot );
+        return new BoundState( clusterId, snapshots );
     }
 
     @Override

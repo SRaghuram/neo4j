@@ -73,13 +73,6 @@ class CatchupClient implements VersionedCatchupClients
     }
 
     @Override
-    public <RESULT> NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest )
-    {
-        Builder<RESULT> reqBuilder = new Builder<>( channelFuture, defaultDatabaseName, log );
-        return reqBuilder.any( allVersionsRequest );
-    }
-
-    @Override
     public void close()
     {
     }
@@ -92,7 +85,6 @@ class CatchupClient implements VersionedCatchupClients
         private Function<CatchupClientV1,PreparedRequest<RESULT>> v1Request;
         private Function<CatchupClientV2,PreparedRequest<RESULT>> v2Request;
         private Function<CatchupClientV3,PreparedRequest<RESULT>> v3Request;
-        private Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest;
         private CatchupResponseCallback<RESULT> responseHandler;
 
         private Builder( CompletableFuture<CatchupChannel> channel, String defaultDatabaseName, Log log )
@@ -124,13 +116,6 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public NeedsResponseHandler<RESULT> any( Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest )
-        {
-            this.allVersionsRequest = allVersionsRequest;
-            return this;
-        }
-
-        @Override
         public CatchupRequestBuilder<RESULT> withResponseHandler( CatchupResponseCallback<RESULT> responseHandler )
         {
             this.responseHandler = responseHandler;
@@ -156,17 +141,17 @@ class CatchupClient implements VersionedCatchupClients
             if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_1 ) )
             {
                 CatchupClient.V1 client = new CatchupClient.V1( catchupChannel, defaultDatabaseName );
-                return performRequest( client, v1Request, allVersionsRequest, protocol, catchupChannel );
+                return performRequest( client, v1Request, protocol, catchupChannel );
             }
             else if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_2 ) )
             {
-                CatchupClient.V2 client = new CatchupClient.V2( catchupChannel );
-                return performRequest( client, v2Request, allVersionsRequest, protocol, catchupChannel );
+                CatchupClient.V2 client = new CatchupClient.V2( catchupChannel, defaultDatabaseName );
+                return performRequest( client, v2Request, protocol, catchupChannel );
             }
             else if ( protocol.equals( Protocol.ApplicationProtocols.CATCHUP_3 ) )
             {
                 CatchupClient.V3 client = new CatchupClient.V3( catchupChannel );
-                return performRequest( client, v3Request, allVersionsRequest, protocol, catchupChannel );
+                return performRequest( client, v3Request, protocol, catchupChannel );
             }
             else
             {
@@ -176,19 +161,14 @@ class CatchupClient implements VersionedCatchupClients
             }
         }
 
-        private <CLIENT extends CatchupClientCommon> OperationProgressMonitor<RESULT> performRequest( CLIENT client,
+        private <CLIENT> OperationProgressMonitor<RESULT> performRequest( CLIENT client,
                 Function<CLIENT,PreparedRequest<RESULT>> specificVersionRequest,
-                Function<CatchupClientCommon,PreparedRequest<RESULT>> allVersionsRequest,
                 ApplicationProtocol protocol, CatchupChannel catchupChannel )
         {
-            PreparedRequest<RESULT> request;
             if ( specificVersionRequest != null )
             {
-                request = specificVersionRequest.apply( client );
-            }
-            else if ( allVersionsRequest != null )
-            {
-                request = allVersionsRequest.apply( client );
+                PreparedRequest<RESULT> request = specificVersionRequest.apply( client );
+                return withProgressMonitor( request.execute( responseHandler ), catchupChannel );
             }
             else
             {
@@ -196,8 +176,6 @@ class CatchupClient implements VersionedCatchupClients
                 log.error( message );
                 throw new IllegalStateException( message );
             }
-
-            return withProgressMonitor( request.execute( responseHandler ), catchupChannel );
         }
 
         private OperationProgressMonitor<RESULT> withProgressMonitor( CompletableFuture<RESULT> request, CatchupChannel catchupChannel )
@@ -220,7 +198,7 @@ class CatchupClient implements VersionedCatchupClients
         @Override
         public PreparedRequest<CoreSnapshot> getCoreSnapshot()
         {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest(), handler, channel );
+            return handler -> makeBlockingRequest( new CoreSnapshotRequest( defaultDatabaseName ), handler, channel );
         }
 
         @Override
@@ -258,16 +236,18 @@ class CatchupClient implements VersionedCatchupClients
     private static class V2 implements CatchupClientV2
     {
         private final CatchupChannel channel;
+        private final String defaultDatabaseName;
 
-        private V2( CatchupChannel channel )
+        private V2( CatchupChannel channel, String defaultDatabaseName )
         {
             this.channel = channel;
+            this.defaultDatabaseName = defaultDatabaseName;
         }
 
         @Override
         public PreparedRequest<CoreSnapshot> getCoreSnapshot()
         {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest(), handler, channel );
+            return handler -> makeBlockingRequest( new CoreSnapshotRequest( defaultDatabaseName ), handler, channel );
         }
 
         @Override
@@ -312,9 +292,9 @@ class CatchupClient implements VersionedCatchupClients
         }
 
         @Override
-        public PreparedRequest<CoreSnapshot> getCoreSnapshot()
+        public PreparedRequest<CoreSnapshot> getCoreSnapshot( String databaseName )
         {
-            return handler -> makeBlockingRequest( new CoreSnapshotRequest(), handler, channel );
+            return handler -> makeBlockingRequest( new CoreSnapshotRequest( databaseName ), handler, channel );
         }
 
         @Override

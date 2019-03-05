@@ -9,31 +9,16 @@ import com.neo4j.causalclustering.catchup.RequestMessageType;
 import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.StoreCopyRequest;
 
-public class GetIndexFilesRequest implements StoreCopyRequest
+import java.util.Objects;
+
+public class GetIndexFilesRequest extends StoreCopyRequest
 {
-    private final StoreId expectedStoreId;
     private final long indexId;
-    private final long requiredTransactionId;
-    private final String databaseName;
 
     public GetIndexFilesRequest( StoreId expectedStoreId, long indexId, long requiredTransactionId, String databaseName )
     {
-        this.expectedStoreId = expectedStoreId;
+        super( RequestMessageType.INDEX_SNAPSHOT, databaseName, expectedStoreId, requiredTransactionId );
         this.indexId = indexId;
-        this.requiredTransactionId = requiredTransactionId;
-        this.databaseName = databaseName;
-    }
-
-    @Override
-    public StoreId expectedStoreId()
-    {
-        return expectedStoreId;
-    }
-
-    @Override
-    public long requiredTransactionId()
-    {
-        return requiredTransactionId;
     }
 
     public long indexId()
@@ -42,21 +27,38 @@ public class GetIndexFilesRequest implements StoreCopyRequest
     }
 
     @Override
-    public RequestMessageType messageType()
+    public boolean equals( Object o )
     {
-        return RequestMessageType.INDEX_SNAPSHOT;
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        if ( !super.equals( o ) )
+        {
+            return false;
+        }
+        GetIndexFilesRequest that = (GetIndexFilesRequest) o;
+        return indexId == that.indexId;
     }
 
     @Override
-    public String databaseName()
+    public int hashCode()
     {
-        return databaseName;
+        return Objects.hash( super.hashCode(), indexId );
     }
 
     @Override
     public String toString()
     {
-        return "GetIndexFilesRequest{" + "expectedStoreId=" + expectedStoreId + ", indexId=" + indexId + ", requiredTransactionId=" + requiredTransactionId +
-                '}';
+        return "GetIndexFilesRequest{" +
+               "expectedStoreId=" + expectedStoreId() +
+               ", indexId=" + indexId +
+               ", requiredTransactionId=" + requiredTransactionId() +
+               ", databaseName=" + databaseName() +
+               "}";
     }
 }

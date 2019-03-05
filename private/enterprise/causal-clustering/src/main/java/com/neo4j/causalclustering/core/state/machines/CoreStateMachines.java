@@ -88,17 +88,17 @@ public class CoreStateMachines
         idAllocationStateMachine.flush();
     }
 
-    public void addSnapshots( String databaseName, CoreSnapshot coreSnapshot )
+    public void augmentSnapshot( CoreSnapshot coreSnapshot )
     {
-        coreSnapshot.add( databaseName, CoreStateFiles.ID_ALLOCATION, idAllocationStateMachine.snapshot() );
-        coreSnapshot.add( databaseName, CoreStateFiles.LOCK_TOKEN, replicatedLockTokenStateMachine.snapshot() );
+        coreSnapshot.add( CoreStateFiles.ID_ALLOCATION, idAllocationStateMachine.snapshot() );
+        coreSnapshot.add( CoreStateFiles.LOCK_TOKEN, replicatedLockTokenStateMachine.snapshot() );
         // transactions and tokens live in the store
     }
 
-    public void installSnapshots( String databaseName, CoreSnapshot coreSnapshot )
+    public void installSnapshot( CoreSnapshot coreSnapshot )
     {
-        idAllocationStateMachine.installSnapshot( coreSnapshot.get( databaseName, CoreStateFiles.ID_ALLOCATION ) );
-        replicatedLockTokenStateMachine.installSnapshot( coreSnapshot.get( databaseName, CoreStateFiles.LOCK_TOKEN) );
+        idAllocationStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.ID_ALLOCATION ) );
+        replicatedLockTokenStateMachine.installSnapshot( coreSnapshot.get( CoreStateFiles.LOCK_TOKEN ) );
         // transactions and tokens live in the store
     }
 

@@ -95,7 +95,7 @@ public class CoreServerModule extends CatchupServersModule
 
         SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupClientFactory );
         StoreDownloader storeDownloader = new StoreDownloader( catchupComponents(), logProvider );
-        CoreDownloader downloader = new CoreDownloader( databaseService, snapshotDownloader, storeDownloader, logProvider );
+        CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader, logProvider );
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
         this.downloadService = new CoreDownloaderService( jobScheduler, downloader, snapshotService, suspendOnStoreCopy, databaseService,

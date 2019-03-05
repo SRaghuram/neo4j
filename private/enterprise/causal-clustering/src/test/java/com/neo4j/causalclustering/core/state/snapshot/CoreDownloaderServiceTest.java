@@ -5,6 +5,13 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.StubLocalDatabaseService;
+import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
+import com.neo4j.causalclustering.core.state.CoreSnapshotService;
+import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.helper.Suspendable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,39 +22,33 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
-import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.impl.util.CountingJobScheduler;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
+import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class CoreDownloaderServiceTest
 {
     private final AdvertisedSocketAddress someMemberAddress = new AdvertisedSocketAddress( "localhost", 1234 );
     private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( someMemberAddress );
-    private final DatabaseHealth dbHealth = mock( DatabaseHealth.class );
     private final CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private final CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
     private final Suspendable suspendedServices = mock( Suspendable.class );
-    private final DatabaseService databases = mock( DatabaseService.class );
+    private final StubLocalDatabaseService databaseService = new StubLocalDatabaseService();
+    private final LocalDatabase database = mock( LocalDatabase.class );
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
     private JobScheduler centralJobScheduler;
@@ -57,11 +58,12 @@ public class CoreDownloaderServiceTest
     public void create()
     {
         centralJobScheduler = createInitialisedScheduler();
+        databaseService.registerDatabase( DEFAULT_DATABASE_NAME, database );
     }
 
     private CoreDownloaderService createDownloader()
     {
-        return new CoreDownloaderService( centralJobScheduler, coreDownloader, snapshotService, suspendedServices, databases, applicationProcess,
+        return new CoreDownloaderService( centralJobScheduler, coreDownloader, snapshotService, suspendedServices, databaseService, applicationProcess,
                 logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
     }
 
@@ -74,7 +76,7 @@ public class CoreDownloaderServiceTest
     @Test
     public void shouldRunPersistentDownloader() throws Exception
     {
-        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.of( mock( CoreSnapshot.class ) ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( mock( CoreSnapshot.class ) ) );
 
         CoreDownloaderService coreDownloaderService = createDownloader();
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
@@ -82,7 +84,7 @@ public class CoreDownloaderServiceTest
 
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
-        verify( coreDownloader ).downloadSnapshotAndStores( any() );
+        verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
     }
 
     @Test
@@ -94,7 +96,7 @@ public class CoreDownloaderServiceTest
         CoreDownloader coreDownloader = new BlockingCoreDownloader( blockDownloader );
 
         CoreDownloaderService coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, snapshotService,
-                suspendedServices, databases, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
+                suspendedServices, databaseService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
 
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         Thread.sleep( 50 );
@@ -112,12 +114,12 @@ public class CoreDownloaderServiceTest
 
         BlockingCoreDownloader( Semaphore semaphore )
         {
-            super( null, null, null, NullLogProvider.getInstance() );
+            super( null, null, NullLogProvider.getInstance() );
             this.semaphore = semaphore;
         }
 
         @Override
-        Optional<CoreSnapshot> downloadSnapshotAndStores( CatchupAddressProvider addressProvider )
+        Optional<CoreSnapshot> downloadSnapshotAndStore( LocalDatabase db, CatchupAddressProvider addressProvider )
         {
             semaphore.acquireUninterruptibly();
             return Optional.of( mock( CoreSnapshot.class ) );

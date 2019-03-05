@@ -167,7 +167,7 @@ public final class CatchupServerBuilder
 
             List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = Arrays.asList(
                     new CatchupProtocolServerInstallerV1.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler, defaultDatabaseName ),
-                    new CatchupProtocolServerInstallerV2.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ),
+                    new CatchupProtocolServerInstallerV2.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler, defaultDatabaseName ),
                     new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, debugLogProvider, catchupServerHandler ) );
 
             ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository = new ProtocolInstallerRepository<>(

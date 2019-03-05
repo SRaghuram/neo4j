@@ -8,11 +8,10 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.RequestMessageType;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
-public class CoreSnapshotRequest implements CatchupProtocolMessage
+public class CoreSnapshotRequest extends CatchupProtocolMessage
 {
-    @Override
-    public RequestMessageType messageType()
+    public CoreSnapshotRequest( String databaseName )
     {
-        return RequestMessageType.CORE_SNAPSHOT;
+        super( RequestMessageType.CORE_SNAPSHOT, databaseName );
     }
 }

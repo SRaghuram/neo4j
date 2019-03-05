@@ -255,16 +255,16 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     }
 
     @Override
-    public void augmentSnapshot( CoreSnapshot coreSnapshot )
+    public void augmentSnapshot( String databaseName, CoreSnapshot coreSnapshot )
     {
-        dbStateMap.forEach( ( dbName, dbState ) -> dbState.stateMachines().addSnapshots( dbName, coreSnapshot ) );
+        dbStateMap.get( databaseName ).stateMachines().augmentSnapshot( coreSnapshot );
         coreSnapshot.add( CoreStateFiles.SESSION_TRACKER, sessionTracker.snapshot() );
     }
 
     @Override
-    public void installSnapshot( CoreSnapshot coreSnapshot )
+    public void installSnapshot( String databaseName, CoreSnapshot coreSnapshot )
     {
-        dbStateMap.forEach( ( dbName, dbState ) -> dbState.stateMachines().installSnapshots( dbName, coreSnapshot ) );
+        dbStateMap.get( databaseName ).stateMachines().installSnapshot( coreSnapshot );
         sessionTracker.installSnapshot( coreSnapshot.get( CoreStateFiles.SESSION_TRACKER ) );
     }
 

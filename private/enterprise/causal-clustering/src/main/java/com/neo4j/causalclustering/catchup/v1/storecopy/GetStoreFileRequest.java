@@ -17,49 +17,21 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.io.File;
 import java.util.List;
+import java.util.Objects;
 
-public class GetStoreFileRequest implements StoreCopyRequest
+public class GetStoreFileRequest extends StoreCopyRequest
 {
-    private final StoreId expectedStoreId;
     private final File file;
-    private final long requiredTransactionId;
-    private final String databaseName;
 
     public GetStoreFileRequest( StoreId expectedStoreId, File file, long requiredTransactionId, String databaseName )
     {
-        this.expectedStoreId = expectedStoreId;
+        super( RequestMessageType.STORE_FILE, databaseName, expectedStoreId, requiredTransactionId );
         this.file = file;
-        this.requiredTransactionId = requiredTransactionId;
-        this.databaseName = databaseName;
-    }
-
-    @Override
-    public long requiredTransactionId()
-    {
-        return requiredTransactionId;
-    }
-
-    @Override
-    public StoreId expectedStoreId()
-    {
-        return expectedStoreId;
     }
 
     public File file()
     {
         return file;
-    }
-
-    @Override
-    public RequestMessageType messageType()
-    {
-        return RequestMessageType.STORE_FILE;
-    }
-
-    @Override
-    public String databaseName()
-    {
-        return databaseName;
     }
 
     public static class Encoder extends MessageToByteEncoder<GetStoreFileRequest>
@@ -91,9 +63,38 @@ public class GetStoreFileRequest implements StoreCopyRequest
     }
 
     @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        if ( !super.equals( o ) )
+        {
+            return false;
+        }
+        GetStoreFileRequest that = (GetStoreFileRequest) o;
+        return Objects.equals( file, that.file );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( super.hashCode(), file );
+    }
+
+    @Override
     public String toString()
     {
-        return "GetStoreFileRequest{" + "expectedStoreId=" + expectedStoreId + ", file=" + file.getName() + ", requiredTransactionId=" + requiredTransactionId +
-                '}';
+        return "GetStoreFileRequest{" +
+               "expectedStoreId=" + expectedStoreId() +
+               ", file=" + file.getName() +
+               ", requiredTransactionId=" + requiredTransactionId() +
+               ", databaseName=" + databaseName() +
+               "}";
     }
 }

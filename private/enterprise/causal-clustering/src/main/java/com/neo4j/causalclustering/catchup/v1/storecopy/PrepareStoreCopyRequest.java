@@ -7,39 +7,53 @@ package com.neo4j.causalclustering.catchup.v1.storecopy;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
 import com.neo4j.causalclustering.identity.StoreId;
-import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
-public class PrepareStoreCopyRequest implements DatabaseCatchupRequest
+import java.util.Objects;
+
+public class PrepareStoreCopyRequest extends CatchupProtocolMessage
 {
     private final StoreId storeId;
-    private final String databaseName;
 
     public PrepareStoreCopyRequest( StoreId expectedStoreId, String databaseName )
     {
+        super( RequestMessageType.PREPARE_STORE_COPY, databaseName );
         this.storeId = expectedStoreId;
-        this.databaseName = databaseName;
     }
 
-    public StoreId getStoreId()
+    public StoreId storeId()
     {
         return storeId;
     }
 
     @Override
-    public RequestMessageType messageType()
+    public boolean equals( Object o )
     {
-        return RequestMessageType.PREPARE_STORE_COPY;
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        if ( !super.equals( o ) )
+        {
+            return false;
+        }
+        PrepareStoreCopyRequest that = (PrepareStoreCopyRequest) o;
+        return Objects.equals( storeId, that.storeId );
     }
 
     @Override
-    public String databaseName()
+    public int hashCode()
     {
-        return databaseName;
+        return Objects.hash( super.hashCode(), storeId );
     }
 
     @Override
     public String toString()
     {
-        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseName + "'}";
+        return "PrepareStoreCopyRequest{storeId=" + storeId + ", databaseName='" + databaseName() + "}";
     }
 }

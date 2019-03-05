@@ -6,55 +6,12 @@
 package com.neo4j.causalclustering.catchup.v1.storecopy;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
-import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
-import java.util.Objects;
-
-public class GetStoreIdRequest implements DatabaseCatchupRequest
+public class GetStoreIdRequest extends CatchupProtocolMessage
 {
-    private final String databaseName;
-
     public GetStoreIdRequest( String databaseName )
     {
-        this.databaseName = databaseName;
-    }
-
-    @Override
-    public RequestMessageType messageType()
-    {
-        return RequestMessageType.STORE_ID;
-    }
-
-    @Override
-    public String databaseName()
-    {
-        return databaseName;
-    }
-
-    @Override
-    public boolean equals( Object o )
-    {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( !(o instanceof GetStoreIdRequest) )
-        {
-            return false;
-        }
-        GetStoreIdRequest that = (GetStoreIdRequest) o;
-        return Objects.equals( databaseName, that.databaseName );
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash( databaseName );
-    }
-
-    @Override
-    public String toString()
-    {
-        return "GetStoreIdRequest{databaseName='" + databaseName + "'}";
+        super( RequestMessageType.STORE_ID, databaseName );
     }
 }

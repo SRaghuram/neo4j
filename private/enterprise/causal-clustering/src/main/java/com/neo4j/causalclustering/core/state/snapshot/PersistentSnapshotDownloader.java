@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
 import com.neo4j.causalclustering.common.DatabaseService;
+import com.neo4j.causalclustering.common.LocalDatabase;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -41,7 +42,7 @@ public class PersistentSnapshotDownloader implements Runnable
     private final Panicker panicker;
     private final Monitor monitor;
     private volatile State state;
-    private volatile boolean keepRunning;
+    private volatile boolean stopped;
 
     PersistentSnapshotDownloader( CatchupAddressProvider addressProvider, CommandApplicationProcess applicationProcess, Suspendable auxiliaryServices,
             DatabaseService databaseService, CoreDownloader downloader, CoreSnapshotService snapshotService, Log log, TimeoutStrategy backoffStrategy,
@@ -58,7 +59,6 @@ public class PersistentSnapshotDownloader implements Runnable
         this.panicker = panicker;
         this.monitor = monitors.newMonitor( Monitor.class );
         this.state = State.INITIATED;
-        this.keepRunning = true;
     }
 
     private enum State
@@ -84,20 +84,25 @@ public class PersistentSnapshotDownloader implements Runnable
             auxiliaryServices.disable();
             databaseService.stopForStoreCopy();
 
-            TimeoutStrategy.Timeout backoff = backoffStrategy.newTimeout();
-            Optional<CoreSnapshot> snapshot;
-            while ( keepRunning )
+            // iteration over all databases should go away once we have separate database lifecycles
+            // each database will then download its snapshot and store independently from others
+            for ( LocalDatabase db : databaseService.registeredDatabases().values() )
             {
-                snapshot = downloader.downloadSnapshotAndStores( addressProvider );
-                if ( snapshot.isPresent() )
+                TimeoutStrategy.Timeout backoff = backoffStrategy.newTimeout();
+                while ( !stopped )
                 {
-                    snapshotService.installSnapshot( snapshot.get() );
-                    log.info( "Core snapshot installed: " + snapshot );
-                    keepRunning = false;
-                }
-                else
-                {
-                    Thread.sleep( backoff.getAndIncrement() );
+                    Optional<CoreSnapshot> snapshot = downloader.downloadSnapshotAndStore( db, addressProvider );
+                    if ( snapshot.isPresent() )
+                    {
+                        String databaseName = db.databaseName();
+                        snapshotService.installSnapshot( databaseName, snapshot.get() );
+                        log.info( "Core snapshot for database '" + databaseName + "' installed: " + snapshot );
+                        break;
+                    }
+                    else
+                    {
+                        Thread.sleep( backoff.getAndIncrement() );
+                    }
                 }
             }
 
@@ -143,7 +148,7 @@ public class PersistentSnapshotDownloader implements Runnable
 
     void stop() throws InterruptedException
     {
-        this.keepRunning = false;
+        stopped = true;
 
         while ( !hasCompleted() )
         {

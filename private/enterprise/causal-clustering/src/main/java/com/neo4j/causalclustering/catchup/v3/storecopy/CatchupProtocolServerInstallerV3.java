@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
 import com.neo4j.causalclustering.catchup.RequestMessageTypeEncoder;
 import com.neo4j.causalclustering.catchup.ResponseMessageTypeEncoder;
 import com.neo4j.causalclustering.catchup.ServerMessageTypeHandler;
-import com.neo4j.causalclustering.catchup.SimpleRequestDecoder;
 import com.neo4j.causalclustering.catchup.storecopy.FileChunkEncoder;
 import com.neo4j.causalclustering.catchup.storecopy.FileHeaderEncoder;
 import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponseEncoder;
@@ -25,7 +24,6 @@ import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestDecoderV
 import com.neo4j.causalclustering.catchup.v2.storecopy.PrepareStoreCopyRequestDecoderV2;
 import com.neo4j.causalclustering.catchup.v2.tx.TxPullRequestDecoderV2;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotEncoder;
-import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequest;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
@@ -121,7 +119,7 @@ public class CatchupProtocolServerInstallerV3 implements ProtocolInstaller<Orien
         RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
         decoderDispatcher.register( CatchupServerProtocol.State.TX_PULL, new TxPullRequestDecoderV2() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_ID, new GetStoreIdRequestDecoderV2() );
-        decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, new SimpleRequestDecoder( CoreSnapshotRequest::new ) );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, new CoreSnapshotRequestDecoderV3() );
         decoderDispatcher.register( CatchupServerProtocol.State.PREPARE_STORE_COPY, new PrepareStoreCopyRequestDecoderV2() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_FILE, new GetStoreFileRequestMarshalV2.Decoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_INDEX_SNAPSHOT, new GetIndexFilesRequestMarshalV2.Decoder() );

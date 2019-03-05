@@ -5,7 +5,16 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
-import org.junit.Test;
+import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
+import com.neo4j.causalclustering.common.LocalDatabase;
+import com.neo4j.causalclustering.common.StubLocalDatabaseService;
+import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
+import com.neo4j.causalclustering.core.state.CoreSnapshotService;
+import com.neo4j.causalclustering.error_handling.Panicker;
+import com.neo4j.causalclustering.helper.Suspendable;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import java.io.IOException;
@@ -13,33 +22,27 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
-import com.neo4j.causalclustering.common.DatabaseService;
-import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
-import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.error_handling.Panicker;
-import com.neo4j.causalclustering.helper.Suspendable;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
 
-public class PersistentSnapshotDownloaderTest
+class PersistentSnapshotDownloaderTest
 {
     private final AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "localhost", 1234 );
-    private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress(
-            fromAddress );
+    private final CatchupAddressProvider catchupAddressProvider = CatchupAddressProvider.fromSingleAddress( fromAddress );
     private final Panicker panicker = mock( Panicker.class );
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
     private final NoPauseTimeoutStrategy backoffStrategy = new NoPauseTimeoutStrategy();
@@ -48,8 +51,9 @@ public class PersistentSnapshotDownloaderTest
     private CoreDownloader coreDownloader = mock( CoreDownloader.class );
     private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
 
-    private final DatabaseService databaseService = mock( DatabaseService.class );
+    private final StubLocalDatabaseService databaseService = spy( new StubLocalDatabaseService() );
     private final Suspendable auxiliaryServices = mock( Suspendable.class );
+    private final LocalDatabase database = mock( LocalDatabase.class );
 
     private PersistentSnapshotDownloader createDownloader()
     {
@@ -57,11 +61,17 @@ public class PersistentSnapshotDownloaderTest
                 coreDownloader, snapshotService, mock( Log.class ), backoffStrategy, panicker, new Monitors() );
     }
 
+    @BeforeEach
+    void setUp()
+    {
+        databaseService.registerDatabase( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, database );
+    }
+
     @Test
-    public void shouldHaltServicesDuringDownload() throws Throwable
+    void shouldHaltServicesDuringDownload() throws Throwable
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
@@ -74,7 +84,7 @@ public class PersistentSnapshotDownloaderTest
         inOrder.verify( auxiliaryServices ).disable();
         inOrder.verify( databaseService ).stopForStoreCopy();
 
-        inOrder.verify( coreDownloader ).downloadSnapshotAndStores( any() );
+        inOrder.verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
 
         inOrder.verify( databaseService ).start();
         inOrder.verify( auxiliaryServices ).enable();
@@ -84,10 +94,10 @@ public class PersistentSnapshotDownloaderTest
     }
 
     @Test
-    public void shouldResumeCommandApplicationProcessIfInterrupted() throws Exception
+    void shouldResumeCommandApplicationProcessIfInterrupted() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.empty() );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
@@ -104,10 +114,10 @@ public class PersistentSnapshotDownloaderTest
     }
 
     @Test
-    public void shouldResumeCommandApplicationProcessIfDownloaderIsStopped() throws Exception
+    void shouldResumeCommandApplicationProcessIfDownloaderIsStopped() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.empty() );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
         // when
@@ -124,7 +134,7 @@ public class PersistentSnapshotDownloaderTest
     }
 
     @Test
-    public void shouldEventuallySucceed()
+    void shouldEventuallySucceed()
     {
         // given
         coreDownloader = new EventuallySuccessfulDownloader( 3 );
@@ -141,10 +151,10 @@ public class PersistentSnapshotDownloaderTest
     }
 
     @Test
-    public void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
+    void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
 
@@ -153,16 +163,16 @@ public class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( coreDownloader ).downloadSnapshotAndStores( catchupAddressProvider );
+        verify( coreDownloader ).downloadSnapshotAndStore( database, catchupAddressProvider );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
     }
 
     @Test
-    public void shouldNotStartIfCurrentlyRunning() throws Exception
+    void shouldNotStartIfCurrentlyRunning() throws Exception
     {
         // given
-        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.empty() );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         Thread thread = new Thread( persistentSnapshotDownloader );
 
@@ -179,11 +189,11 @@ public class PersistentSnapshotDownloaderTest
     }
 
     @Test
-    public void shoulPanicOnUnknonExcpetion() throws IOException, DatabaseShutdownException
+    void shoulPanicOnUnknonExcpetion() throws IOException, DatabaseShutdownException
     {
         // given
         RuntimeException runtimeException = new RuntimeException();
-        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenThrow( runtimeException );
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenThrow( runtimeException );
         final Log log = mock( Log.class );
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         // when
@@ -204,12 +214,12 @@ public class PersistentSnapshotDownloaderTest
 
         private EventuallySuccessfulDownloader( int after )
         {
-            super( null, null, null, NullLogProvider.getInstance() );
+            super( null, null, NullLogProvider.getInstance() );
             this.after = after;
         }
 
         @Override
-        Optional<CoreSnapshot> downloadSnapshotAndStores( CatchupAddressProvider addressProvider )
+        Optional<CoreSnapshot> downloadSnapshotAndStore( LocalDatabase db, CatchupAddressProvider addressProvider )
         {
             return after-- <= 0 ? Optional.of( snapshot ) : Optional.empty();
         }

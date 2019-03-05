@@ -19,11 +19,10 @@ import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
-import com.neo4j.causalclustering.common.StubLocalDatabaseService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.identity.StoreId;
-import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -32,20 +31,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -163,10 +159,10 @@ abstract class CommercialCatchupTest
 
     static class RequestResponse
     {
-        private final DatabaseCatchupRequest request;
+        private final CatchupProtocolMessage request;
         final ResponseAdaptor responseHandler;
 
-        RequestResponse( DatabaseCatchupRequest request, ResponseAdaptor responseHandler )
+        RequestResponse( CatchupProtocolMessage request, ResponseAdaptor responseHandler )
         {
             this.request = request;
             this.responseHandler = responseHandler;
@@ -178,93 +174,22 @@ abstract class CommercialCatchupTest
     {
         if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_1 )
         {
-            new CatchupProtocolClientInstallerV1( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV1( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, responseHandler, DEFAULT_DB ).install(
-                    server );
+            new CatchupProtocolClientInstallerV1( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
+            new CatchupProtocolServerInstallerV1( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler, DEFAULT_DB ).install( server );
         }
         else if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_2 )
         {
-            new CatchupProtocolClientInstallerV2( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV2( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, responseHandler ).install( server );
+            new CatchupProtocolClientInstallerV2( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
+            new CatchupProtocolServerInstallerV2( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler, DEFAULT_DB ).install( server );
         }
         else if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_3 )
         {
-            new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, Collections.emptyList(), LOG_PROVIDER, responseHandler ).install( server );
+            new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
+            new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );
         }
         else
         {
             throw new IllegalArgumentException( "Unsupported protocol " + applicationProtocols );
-        }
-    }
-
-    static class StubDatabaseManager implements DatabaseManager
-    {
-        private final StubLocalDatabaseService databaseService;
-
-        StubDatabaseManager( StubLocalDatabaseService databaseService )
-        {
-            this.databaseService = databaseService;
-        }
-
-        @Override
-        public Optional<DatabaseContext> getDatabaseContext( String name )
-        {
-            return databaseService.get( name ).map( d -> new DatabaseContext( d.database(), new GraphDatabaseFacade() ) );
-        }
-
-        @Override
-        public DatabaseContext createDatabase( String databaseName )
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void dropDatabase( String databaseName )
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void stopDatabase( String databaseName )
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void startDatabase( String databaseName )
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public List<String> listDatabases()
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void init() throws Throwable
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void start() throws Throwable
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void stop() throws Throwable
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void shutdown() throws Throwable
-        {
-            throw new UnsupportedOperationException();
         }
     }
 

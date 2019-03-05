@@ -13,9 +13,9 @@ import java.util.Optional;
 
 public interface CoreStateRepository
 {
-    void augmentSnapshot( CoreSnapshot coreSnapshot );
+    void augmentSnapshot( String databaseName, CoreSnapshot coreSnapshot );
 
-    void installSnapshot( CoreSnapshot coreSnapshot );
+    void installSnapshot( String databaseName, CoreSnapshot coreSnapshot );
 
     void flush( long lastApplied ) throws IOException;
 

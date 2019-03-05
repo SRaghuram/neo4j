@@ -53,6 +53,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -116,7 +117,8 @@ class CoreBootstrapperIT
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, 0 );
@@ -138,7 +140,8 @@ class CoreBootstrapperIT
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, 0 );
@@ -164,7 +167,8 @@ class CoreBootstrapperIT
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, nodeCount );
@@ -196,7 +200,8 @@ class CoreBootstrapperIT
                 fileSystem, config, logProvider, pageCache, storageEngineFactory );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
 
         // then
         verifySnapshot( snapshot, membership, config, nodeCount );
@@ -224,7 +229,8 @@ class CoreBootstrapperIT
                 fileSystem, defaultConfig, logProvider, pageCache, storageEngineFactory );
 
         // when
-        CoreSnapshot snapshot = bootstrapper.bootstrap( membership );
+        Map<String,CoreSnapshot> snapshots = bootstrapper.bootstrap( membership );
+        CoreSnapshot snapshot = snapshots.get( DEFAULT_DATABASE_NAME );
 
         // then
         verifySnapshot( snapshot, membership, defaultConfig, nodeCount );
@@ -294,6 +300,7 @@ class CoreBootstrapperIT
 
     private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig, int nodeCount ) throws IOException
     {
+        assertNotNull( snapshot );
         assertEquals( 0, snapshot.prevIndex() );
         assertEquals( 0, snapshot.prevTerm() );
 
@@ -305,7 +312,7 @@ class CoreBootstrapperIT
 
         for ( Map.Entry<String,LocalDatabase> databaseEntry : databaseService.registeredDatabases().entrySet() )
         {
-            verifyDatabaseSpecificState( type -> snapshot.get( databaseEntry.getKey(), type ), nodeCount );
+            verifyDatabaseSpecificState( snapshot::get, nodeCount );
             if ( databaseEntry.getKey().equals( SYSTEM_DATABASE_NAME ) )
             {
                 verifyDatabase( databaseEntry.getValue().databaseLayout(), pageCache, Config.defaults() );

@@ -67,17 +67,17 @@ public class CatchupProtocolServerInstallerV1 implements ProtocolInstaller<Orien
 
     private final LogProvider logProvider;
     private final CatchupServerHandler catchupServerHandler;
-    private String activeDatabaseName;
+    private final String defaultDatabaseName;
 
     public CatchupProtocolServerInstallerV1( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
-            LogProvider logProvider, CatchupServerHandler catchupServerHandler, String activeDatabaseName )
+            LogProvider logProvider, CatchupServerHandler catchupServerHandler, String defaultDatabaseName )
     {
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.modifiers = modifiers;
         this.log = logProvider.getLog( getClass() );
         this.logProvider = logProvider;
         this.catchupServerHandler = catchupServerHandler;
-        this.activeDatabaseName = activeDatabaseName;
+        this.defaultDatabaseName = defaultDatabaseName;
     }
 
     /**
@@ -121,12 +121,12 @@ public class CatchupProtocolServerInstallerV1 implements ProtocolInstaller<Orien
     private ChannelInboundHandler requestDecoders( CatchupServerProtocol protocol )
     {
         RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
-        decoderDispatcher.register( CatchupServerProtocol.State.TX_PULL, new TxPullRequestDecoderV1( activeDatabaseName ) );
-        decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_ID, new SimpleRequestDecoder( () -> new GetStoreIdRequest( activeDatabaseName ) ) );
-        decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, new SimpleRequestDecoder( CoreSnapshotRequest::new ) );
-        decoderDispatcher.register( CatchupServerProtocol.State.PREPARE_STORE_COPY, new PrepareStoreCopyRequestDecoder( activeDatabaseName ) );
-        decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_FILE, new GetStoreFileRequest.Decoder( activeDatabaseName ) );
-        decoderDispatcher.register( CatchupServerProtocol.State.GET_INDEX_SNAPSHOT, new GetIndexFilesRequestMarshalV1.Decoder( activeDatabaseName ) );
+        decoderDispatcher.register( CatchupServerProtocol.State.TX_PULL, new TxPullRequestDecoderV1( defaultDatabaseName ) );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_ID, new SimpleRequestDecoder( () -> new GetStoreIdRequest( defaultDatabaseName ) ) );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, newCoreSnapshotRequestDecoder() );
+        decoderDispatcher.register( CatchupServerProtocol.State.PREPARE_STORE_COPY, new PrepareStoreCopyRequestDecoder( defaultDatabaseName ) );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_FILE, new GetStoreFileRequest.Decoder( defaultDatabaseName ) );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_INDEX_SNAPSHOT, new GetIndexFilesRequestMarshalV1.Decoder( defaultDatabaseName ) );
         return decoderDispatcher;
     }
 
@@ -142,5 +142,10 @@ public class CatchupProtocolServerInstallerV1 implements ProtocolInstaller<Orien
         return modifiers.stream()
                 .map( ModifierProtocolInstaller::protocols )
                 .collect( Collectors.toList() );
+    }
+
+    private SimpleRequestDecoder newCoreSnapshotRequestDecoder()
+    {
+        return new SimpleRequestDecoder( () -> new CoreSnapshotRequest( defaultDatabaseName ) );
     }
 }

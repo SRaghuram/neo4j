@@ -5,16 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.v2;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.handler.stream.ChunkedWriteHandler;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.RequestDecoderDispatcher;
@@ -42,6 +32,16 @@ import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller.Orientation;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
@@ -53,10 +53,11 @@ public class CatchupProtocolServerInstallerV2 implements ProtocolInstaller<Orien
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Server,CatchupProtocolServerInstallerV2>
     {
-        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+        public Factory( NettyPipelineBuilderFactory pipelineBuilderFactory, LogProvider logProvider, CatchupServerHandler catchupServerHandler,
+                String defaultDatabaseName )
         {
-            super( APPLICATION_PROTOCOL,
-                    modifiers -> new CatchupProtocolServerInstallerV2( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler ) );
+            super( APPLICATION_PROTOCOL, modifiers ->
+                    new CatchupProtocolServerInstallerV2( pipelineBuilderFactory, modifiers, logProvider, catchupServerHandler, defaultDatabaseName ) );
         }
     }
 
@@ -66,15 +67,17 @@ public class CatchupProtocolServerInstallerV2 implements ProtocolInstaller<Orien
 
     private final LogProvider logProvider;
     private final CatchupServerHandler catchupServerHandler;
+    private final String defaultDatabaseName;
 
     public CatchupProtocolServerInstallerV2( NettyPipelineBuilderFactory pipelineBuilderFactory, List<ModifierProtocolInstaller<Orientation.Server>> modifiers,
-            LogProvider logProvider, CatchupServerHandler catchupServerHandler )
+            LogProvider logProvider, CatchupServerHandler catchupServerHandler, String defaultDatabaseName )
     {
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.modifiers = modifiers;
         this.log = logProvider.getLog( getClass() );
         this.logProvider = logProvider;
         this.catchupServerHandler = catchupServerHandler;
+        this.defaultDatabaseName = defaultDatabaseName;
     }
 
     /**
@@ -121,7 +124,7 @@ public class CatchupProtocolServerInstallerV2 implements ProtocolInstaller<Orien
         RequestDecoderDispatcher<CatchupServerProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
         decoderDispatcher.register( CatchupServerProtocol.State.TX_PULL, new TxPullRequestDecoderV2() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_ID, new GetStoreIdRequestDecoderV2() );
-        decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, new SimpleRequestDecoder( CoreSnapshotRequest::new ) );
+        decoderDispatcher.register( CatchupServerProtocol.State.GET_CORE_SNAPSHOT, newCoreSnapshotRequestDecoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.PREPARE_STORE_COPY, new PrepareStoreCopyRequestDecoderV2() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_STORE_FILE, new GetStoreFileRequestMarshalV2.Decoder() );
         decoderDispatcher.register( CatchupServerProtocol.State.GET_INDEX_SNAPSHOT, new GetIndexFilesRequestMarshalV2.Decoder() );
@@ -140,5 +143,10 @@ public class CatchupProtocolServerInstallerV2 implements ProtocolInstaller<Orien
         return modifiers.stream()
                 .map( ModifierProtocolInstaller::protocols )
                 .collect( Collectors.toList() );
+    }
+
+    private SimpleRequestDecoder newCoreSnapshotRequestDecoder()
+    {
+        return new SimpleRequestDecoder( () -> new CoreSnapshotRequest( defaultDatabaseName ) );
     }
 }

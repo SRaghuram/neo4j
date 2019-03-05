@@ -7,7 +7,54 @@ package com.neo4j.causalclustering.messaging;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
 
-public interface CatchupProtocolMessage extends Message
+import java.util.Objects;
+
+public abstract class CatchupProtocolMessage implements Message
 {
-    RequestMessageType messageType();
+    private final RequestMessageType type;
+    private final String databaseName;
+
+    protected CatchupProtocolMessage( RequestMessageType type, String databaseName )
+    {
+        this.type = type;
+        this.databaseName = databaseName;
+    }
+
+    public final RequestMessageType messageType()
+    {
+        return type;
+    }
+
+    public final String databaseName()
+    {
+        return databaseName;
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        CatchupProtocolMessage that = (CatchupProtocolMessage) o;
+        return type == that.type &&
+               Objects.equals( databaseName, that.databaseName );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( type, databaseName );
+    }
+
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName() + "{type=" + type + ", databaseName='" + databaseName + "'}";
+    }
 }

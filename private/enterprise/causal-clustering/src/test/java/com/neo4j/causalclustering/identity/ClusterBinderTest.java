@@ -33,6 +33,7 @@ import org.neo4j.time.FakeClock;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -43,6 +44,7 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class ClusterBinderTest
 {
@@ -208,6 +210,7 @@ public class ClusterBinderTest
     public void shouldBootstrapWhenBootstrappable() throws Throwable
     {
         // given
+        String databaseName = DEFAULT_DATABASE_NAME;
         Map<MemberId,CoreServerInfo> members = IntStream.range(0, minCoreHosts)
                 .mapToObj( i -> Pair.of( new MemberId( UUID.randomUUID() ), TestTopology.addressesForCore( i, false ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
@@ -218,7 +221,7 @@ public class ClusterBinderTest
         when( topologyService.localCoreServers() ).thenReturn( bootstrappableTopology );
         when( topologyService.setClusterId( any(), eq("default" ) ) ).thenReturn( true );
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
-        when( coreBootstrapper.bootstrap( any() ) ).thenReturn( snapshot );
+        when( coreBootstrapper.bootstrap( any() ) ).thenReturn( singletonMap( databaseName, snapshot ) );
 
         ClusterBinder binder = clusterBinder( new StubSimpleStorage<>(), topologyService );
 
@@ -230,8 +233,7 @@ public class ClusterBinderTest
         Optional<ClusterId> clusterId = binder.get();
         assertTrue( clusterId.isPresent() );
         verify( topologyService ).setClusterId( clusterId.get(), "default" );
-        assertTrue( boundState.snapshot().isPresent() );
-        assertEquals( boundState.snapshot().get(), snapshot );
+        assertEquals( singletonMap( databaseName, snapshot ), boundState.snapshots() );
     }
 
     private class StubSimpleStorage<T> implements SimpleStorage<T>

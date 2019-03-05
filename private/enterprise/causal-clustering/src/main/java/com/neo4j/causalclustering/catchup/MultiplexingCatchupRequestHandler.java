@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -22,7 +22,7 @@ import org.neo4j.logging.LogProvider;
  *
  * @param <T> The type of request to multiplex.
  */
-class MultiplexingCatchupRequestHandler<T extends DatabaseCatchupRequest> extends SimpleChannelInboundHandler<T>
+class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
 {
     private final Class<T> messageType;
     private final Supplier<DatabaseManager> databaseManagerSupplier;

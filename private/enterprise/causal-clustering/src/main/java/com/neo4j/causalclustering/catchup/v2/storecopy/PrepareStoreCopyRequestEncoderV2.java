@@ -20,6 +20,6 @@ public class PrepareStoreCopyRequestEncoderV2 extends MessageToByteEncoder<Prepa
     {
         //TODO: Make every CatchupRequestV2 provide a Marshall and use that here
         StringMarshal.marshal( byteBuf, request.databaseName() );
-        StoreIdMarshal.INSTANCE.marshal( request.getStoreId(), new NetworkWritableChannel( byteBuf ) );
+        StoreIdMarshal.INSTANCE.marshal( request.storeId(), new NetworkWritableChannel( byteBuf ) );
     }
 }

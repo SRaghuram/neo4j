@@ -65,7 +65,7 @@ class TestCatchupServer extends Server
 
         List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = Arrays.asList(
                 new CatchupProtocolServerInstallerV1.Factory( pipelineBuilder, logProvider, catchupServerHandler, DEFAULT_DATABASE_NAME ),
-                new CatchupProtocolServerInstallerV2.Factory( pipelineBuilder, logProvider, catchupServerHandler ),
+                new CatchupProtocolServerInstallerV2.Factory( pipelineBuilder, logProvider, catchupServerHandler, DEFAULT_DATABASE_NAME ),
                 new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, logProvider, catchupServerHandler )
         );
 

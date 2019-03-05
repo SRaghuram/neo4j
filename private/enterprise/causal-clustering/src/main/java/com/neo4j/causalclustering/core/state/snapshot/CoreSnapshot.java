@@ -8,13 +8,11 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
-import com.neo4j.causalclustering.messaging.marshalling.StringMarshal;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 
@@ -25,8 +23,7 @@ public class CoreSnapshot
     private final long prevIndex;
     private final long prevTerm;
 
-    //Casts throughout this class are safe because we check that the state type corresponds to the CoreStateFiles type parameter on insertion
-    private final Map<Pair<String,CoreStateFiles>,Object> snapshotCollection = new HashMap<>();
+    private final Map<CoreStateFiles<?>,Object> snapshotCollection = new HashMap<>();
 
     public CoreSnapshot( long prevIndex, long prevTerm )
     {
@@ -44,25 +41,14 @@ public class CoreSnapshot
         return prevTerm;
     }
 
-    public <T> void add( String databaseName, CoreStateFiles<T> type, T state )
-    {
-        snapshotCollection.put( Pair.of( databaseName, type ), state );
-    }
-
     public <T> void add( CoreStateFiles<T> type, T state )
     {
-        add( null, type, state );
-    }
-
-    public <T> T get( String databaseName, CoreStateFiles<T> type )
-    {
-        //noinspection unchecked
-        return (T) snapshotCollection.get( Pair.of( databaseName, type) );
+        snapshotCollection.put( type, state );
     }
 
     public <T> T get( CoreStateFiles<T> type )
     {
-        return get( null, type );
+        return (T) snapshotCollection.get( type );
     }
 
     public int size()
@@ -79,13 +65,13 @@ public class CoreSnapshot
             channel.putLong( coreSnapshot.prevTerm );
 
             channel.putInt( coreSnapshot.size() );
-            for ( Map.Entry<Pair<String,CoreStateFiles>,Object> entry : coreSnapshot.snapshotCollection.entrySet() )
+            for ( Map.Entry<CoreStateFiles<?>,Object> entry : coreSnapshot.snapshotCollection.entrySet() )
             {
-                CoreStateFiles type = entry.getKey().other();
+                CoreStateFiles type = entry.getKey();
+                Object state = entry.getValue();
+
                 channel.putInt( type.typeId() );
-                //noinspection unchecked
-                type.marshal().marshal( entry.getValue(), channel );
-                StringMarshal.marshal( channel, entry.getKey().first() );
+                type.marshal().marshal( state, channel );
             }
         }
 
@@ -102,9 +88,7 @@ public class CoreSnapshot
                 int typeOrdinal = channel.getInt();
                 CoreStateFiles type = CoreStateFiles.values().get( typeOrdinal );
                 Object state = type.marshal().unmarshal( channel );
-                String databaseName = StringMarshal.unmarshal( channel );
-                //noinspection unchecked
-                coreSnapshot.add( databaseName, type, state );
+                coreSnapshot.add( type, state );
             }
 
             return coreSnapshot;

@@ -5,14 +5,14 @@
  */
 package com.neo4j.causalclustering.catchup;
 
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-class UnknownDatabaseHandler<T extends DatabaseCatchupRequest> extends SimpleChannelInboundHandler<T>
+class UnknownDatabaseHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
 {
     private final CatchupServerProtocol protocol;
     private final Log log;

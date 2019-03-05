@@ -7,27 +7,26 @@ package com.neo4j.causalclustering.catchup.v1.tx;
 
 import com.neo4j.causalclustering.catchup.RequestMessageType;
 import com.neo4j.causalclustering.identity.StoreId;
-import com.neo4j.causalclustering.messaging.DatabaseCatchupRequest;
+import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 
 import java.util.Objects;
 
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
-public class TxPullRequest implements DatabaseCatchupRequest
+public class TxPullRequest extends CatchupProtocolMessage
 {
     private final long previousTxId;
     private final StoreId expectedStoreId;
-    private final String databaseName;
 
     public TxPullRequest( long previousTxId, StoreId expectedStoreId, String databaseName )
     {
+        super( RequestMessageType.TX_PULL_REQUEST, databaseName );
         if ( previousTxId < BASE_TX_ID )
         {
             throw new IllegalArgumentException( "Cannot request transaction from " + previousTxId );
         }
         this.previousTxId = previousTxId;
         this.expectedStoreId = expectedStoreId;
-        this.databaseName = databaseName;
     }
 
     /**
@@ -44,18 +43,6 @@ public class TxPullRequest implements DatabaseCatchupRequest
     }
 
     @Override
-    public RequestMessageType messageType()
-    {
-        return RequestMessageType.TX_PULL_REQUEST;
-    }
-
-    @Override
-    public String databaseName()
-    {
-        return databaseName;
-    }
-
-    @Override
     public boolean equals( Object o )
     {
         if ( this == o )
@@ -66,20 +53,24 @@ public class TxPullRequest implements DatabaseCatchupRequest
         {
             return false;
         }
+        if ( !super.equals( o ) )
+        {
+            return false;
+        }
         TxPullRequest that = (TxPullRequest) o;
-        return previousTxId == that.previousTxId && Objects.equals( expectedStoreId, that.expectedStoreId ) &&
-                Objects.equals( databaseName, that.databaseName );
+        return previousTxId == that.previousTxId &&
+               Objects.equals( expectedStoreId, that.expectedStoreId );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( previousTxId, expectedStoreId, databaseName );
+        return Objects.hash( super.hashCode(), previousTxId, expectedStoreId );
     }
 
     @Override
     public String toString()
     {
-        return "TxPullRequest{" + "previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseName='" + databaseName + '\'' + '}';
+        return "TxPullRequest{previousTxId=" + previousTxId + ", expectedStoreId=" + expectedStoreId + ", databaseName='" + databaseName() + "'}";
     }
 }

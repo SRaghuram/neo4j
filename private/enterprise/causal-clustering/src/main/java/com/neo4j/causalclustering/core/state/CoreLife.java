@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.ClusterBinder;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
@@ -66,11 +67,13 @@ public class CoreLife extends SafeLifecycle
         raftMessageHandler.start( boundState.clusterId() );
 
         boolean startedByDownloader = false;
-        if ( boundState.snapshot().isPresent() )
+        if ( !boundState.snapshots().isEmpty() )
         {
             // this means that we bootstrapped the cluster
-            CoreSnapshot snapshot = boundState.snapshot().get();
-            snapshotService.installSnapshot( snapshot );
+            for ( Map.Entry<String,CoreSnapshot> entry : boundState.snapshots().entrySet() )
+            {
+                snapshotService.installSnapshot( entry.getKey(), entry.getValue() );
+            }
         }
         else
         {

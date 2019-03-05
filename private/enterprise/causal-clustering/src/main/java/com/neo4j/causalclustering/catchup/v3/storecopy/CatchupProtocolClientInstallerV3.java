@@ -32,7 +32,6 @@ import com.neo4j.causalclustering.catchup.v2.storecopy.GetStoreIdRequestEncoderV
 import com.neo4j.causalclustering.catchup.v2.storecopy.PrepareStoreCopyRequestEncoderV2;
 import com.neo4j.causalclustering.catchup.v2.tx.TxPullRequestEncoderV2;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotDecoder;
-import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotRequestEncoder;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshotResponseHandler;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -100,7 +99,7 @@ public class CatchupProtocolClientInstallerV3 implements ProtocolInstaller<Proto
                 .add( "enc_req_tx", new TxPullRequestEncoderV2() )
                 .add( "enc_req_index", new GetIndexFilesRequestMarshalV2.Encoder() )
                 .add( "enc_req_store", new GetStoreFileRequestMarshalV2.Encoder() )
-                .add( "enc_req_snapshot", new CoreSnapshotRequestEncoder() )
+                .add( "enc_req_snapshot", new CoreSnapshotRequestEncoderV3() )
                 .add( "enc_req_store_id", new GetStoreIdRequestEncoderV2() )
                 .add( "enc_req_type", new ResponseMessageTypeEncoder() )
                 .add( "enc_res_type", new RequestMessageTypeEncoder() )

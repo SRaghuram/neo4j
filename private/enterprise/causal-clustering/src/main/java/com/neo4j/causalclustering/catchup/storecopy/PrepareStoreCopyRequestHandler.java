@@ -51,7 +51,7 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
                 return;
             }
 
-            if ( !DataSourceChecks.hasSameStoreId( prepareStoreCopyRequest.getStoreId(), db ) )
+            if ( !DataSourceChecks.hasSameStoreId( prepareStoreCopyRequest.storeId(), db ) )
             {
                 response = PrepareStoreCopyResponse.error( PrepareStoreCopyResponse.Status.E_STORE_ID_MISMATCH );
             }
