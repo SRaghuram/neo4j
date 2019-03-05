@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.CantCompileQueryException
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation.AggregationConverter.aggregateExpressionConverter
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation.Distinct

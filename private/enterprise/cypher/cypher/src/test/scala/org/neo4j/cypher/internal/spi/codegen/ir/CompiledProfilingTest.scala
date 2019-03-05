@@ -9,7 +9,7 @@ import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.planner.v4_0.spi.KernelStatisticProvider
+import org.neo4j.cypher.internal.planner.spi.KernelStatisticProvider
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.{AcceptVisitor, ScanAllNodes, WhileLoop}

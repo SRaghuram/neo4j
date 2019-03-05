@@ -11,7 +11,7 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.{asIntegral, randGeneratorFor}
 import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanContext
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.logical.plans
 import org.neo4j.cypher.internal.v4_0.logical.plans.{DoNotGetValue, IndexOrderNone, IndexedProperty}

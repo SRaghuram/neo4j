@@ -13,8 +13,8 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CypherRuntimeOption
 import org.neo4j.cypher.internal.ir.v4_0.{PlannerQuery, ProvidedOrder}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
-import org.neo4j.cypher.internal.planner.v4_0.spi._
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
+import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.runtime.{NoInput, QueryContext}

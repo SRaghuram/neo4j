@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 
 import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanContext
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}

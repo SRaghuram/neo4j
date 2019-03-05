@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.mockito.Mockito._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
-import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.v4_0.logical.plans.{AllNodesScan, ProduceResult, Selection, _}
 import org.neo4j.cypher.internal.v4_0.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.v4_0.ast._

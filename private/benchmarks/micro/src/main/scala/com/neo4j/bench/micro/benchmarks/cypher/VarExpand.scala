@@ -13,7 +13,7 @@ import com.neo4j.bench.micro.data.TypeParamValues.LNG
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
 import org.neo4j.cypher.internal.ir.v4_0._
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanContext
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.neo4j.cypher.internal.v4_0.expressions.{RelTypeName, SemanticDirection, True}
 import org.neo4j.cypher.internal.v4_0.logical.plans

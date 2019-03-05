@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.codegen.QueryExecutionTracer
 import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.compiler.v4_0.planner.LogicalPlanConstructionTestSupport
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
-import org.neo4j.cypher.internal.planner.v4_0.spi.{GraphStatistics, PlanContext}
+import org.neo4j.cypher.internal.planner.spi.{GraphStatistics, PlanContext}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction

@@ -13,8 +13,8 @@ import org.neo4j.cypher.internal.compiler.v4_0.phases.{LogicalPlanState, Planner
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.idp.{IDPQueryGraphSolver, IDPQueryGraphSolverMonitor, SingleComponentPlanner, cartesianProductsOrValueJoins}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
-import org.neo4j.cypher.internal.planner.v4_0.spi.{IDPPlannerName, PlanContext, PlannerNameFor, PlanningAttributes}
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
+import org.neo4j.cypher.internal.planner.spi.{IDPPlannerName, PlanContext, PlannerNameFor, PlanningAttributes}
 import org.neo4j.cypher.internal.queryReduction.DDmin.Oracle
 import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor

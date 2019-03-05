@@ -12,7 +12,7 @@ import org.neo4j.cypher.{CypherPlannerOption, CypherRuntimeOption, CypherUpdateS
 import org.neo4j.cypher.internal.compatibility.v4_0.Cypher4_0Planner
 import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
-import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.internal.kernel.api.{Kernel, SchemaRead}

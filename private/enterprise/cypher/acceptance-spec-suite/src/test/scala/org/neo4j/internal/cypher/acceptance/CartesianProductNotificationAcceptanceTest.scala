@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.compiler.v4_0._
 import org.neo4j.cypher.internal.compiler.v4_0.phases.{PlannerContext, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.idp._
 import org.neo4j.cypher.internal.compiler.v4_0.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory}
-import org.neo4j.cypher.internal.planner.v4_0.spi.{IDPPlannerName, PlanContext}
+import org.neo4j.cypher.internal.planner.spi.{IDPPlannerName, PlanContext}
 import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.spi.v4_0.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}

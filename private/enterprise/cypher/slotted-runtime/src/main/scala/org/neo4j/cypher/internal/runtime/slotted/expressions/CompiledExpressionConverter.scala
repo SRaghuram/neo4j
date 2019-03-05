@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
-import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CodeGeneration.compileGroupingExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CodeGeneration, CompiledExpression, CompiledProjection, IntermediateCodeGeneration, _}

@@ -7,7 +7,7 @@ package com.neo4j.bench.micro.data
 
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.planner.v4_0.spi.PlanContext
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.logical.plans._

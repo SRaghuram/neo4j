@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.compiler.v4_0.planner.LogicalPlanningTestSuppor
 import org.neo4j.cypher.internal.ir.v4_0.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
-import org.neo4j.cypher.internal.planner.v4_0.spi.TokenContext
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.QueryIndexes
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Literal, Property, Variable}
