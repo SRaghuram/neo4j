@@ -996,7 +996,7 @@ public class RunExportCommand implements Runnable
         // E.g., source/graph.db --> workDir/tempStoreDir/graph.db
         Path tempStoreDir = workingDir.toPath().resolve( "tempStoreDir" );
         BenchmarkUtil.assertDoesNotExist( tempStoreDir );
-        File destinationDbDir = tempStoreDir.resolve( sourceDbDir.toPath().getFileName() ).toFile();
+        File destinationDbDir = tempStoreDir.toFile();
         if ( sourceDbDir.getParentFile().equals( workingDir ) )
         {
             throw new RuntimeException( format( "Source database:                    %s\n" +
