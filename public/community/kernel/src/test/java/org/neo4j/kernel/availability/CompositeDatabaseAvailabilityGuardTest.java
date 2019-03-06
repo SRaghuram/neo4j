@@ -1,9 +1,23 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.kernel.availability;
+package org.neo4j.kernel.availability;
 
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,11 +26,6 @@ import org.mockito.stubbing.Answer;
 
 import java.time.Clock;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.kernel.availability.AvailabilityListener;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
-import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.logging.internal.NullLogService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -25,9 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 class CompositeDatabaseAvailabilityGuardTest
@@ -44,7 +52,7 @@ class CompositeDatabaseAvailabilityGuardTest
     {
         mockClock = mock( Clock.class );
         compositeGuard = new CompositeDatabaseAvailabilityGuard( mockClock, NullLogService.getInstance() );
-        defaultGuard = compositeGuard.createDatabaseAvailabilityGuard( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        defaultGuard = compositeGuard.createDatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME );
         systemGuard = compositeGuard.createDatabaseAvailabilityGuard( SYSTEM_DATABASE_NAME );
     }
 
@@ -85,36 +93,17 @@ class CompositeDatabaseAvailabilityGuardTest
     }
 
     @Test
-    void shutdownWhenAnyOfTheGuardsAreShuttingDown()
+    void compositeGuardDoesNotSupportShutdownCheck()
     {
-        assertFalse( compositeGuard.isShutdown() );
-
-        defaultGuard.shutdown();
-
-        assertTrue( compositeGuard.isShutdown() );
+        assertThrows( UnsupportedOperationException.class, () -> compositeGuard.isShutdown() );
     }
 
     @Test
-    void addRemoveListenersOnAllGuards()
+    void compositeGuardDoesNotSupportListeners()
     {
         AvailabilityListener listener = mock( AvailabilityListener.class );
-        compositeGuard.addListener( listener );
-
-        compositeGuard.require( requirement );
-
-        verify( listener, times( 2 ) ).unavailable();
-
-        compositeGuard.fulfill( requirement );
-
-        verify( listener, times( 2 ) ).available();
-
-        compositeGuard.removeListener( listener );
-
-        compositeGuard.require( requirement );
-        compositeGuard.fulfill( requirement );
-
-        verify( listener, times( 2 ) ).unavailable();
-        verify( listener, times( 2 ) ).available();
+        assertThrows( UnsupportedOperationException.class, () -> compositeGuard.addListener( listener ) );
+        assertThrows( UnsupportedOperationException.class, () -> compositeGuard.removeListener( listener ) );
     }
 
     @Test

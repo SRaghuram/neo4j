@@ -136,6 +136,6 @@ public class CoreDatabaseContext implements EditionDatabaseContext
         // I would prefer the following: responsibility for the creation of per db availability guards is passed to the DatabaseService#register methods
         // The databases service would then become a field/getter on the edition module (much like CoreStateService) and we would just get() it in
         // the constructor here. Could actually then further cleanup by making LocalDatabase objects carry their own PerDatabaseCoreStateComponents.
-        return editionModule.createDatabaseAvailabilityGuard( databaseName, clock, logService, config );
+        return editionModule.createDatabaseAvailabilityGuard( databaseName, clock, logService );
     }
 }

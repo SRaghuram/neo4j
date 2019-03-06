@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.dbms.database.MultiDatabaseManager;
-import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
@@ -21,7 +20,6 @@ import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableI
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 
-import java.time.Clock;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -44,8 +42,6 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
-import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
 import org.neo4j.kernel.impl.core.TokenHolder;
@@ -73,7 +69,6 @@ public class CommercialEditionModule extends CommunityEditionModule
     {
         super( globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
-        initGlobalGuard( globalModule.getGlobalClock(), globalModule.getLogService() );
         initBackupIfNeeded( globalModule, globalModule.getGlobalConfig() );
     }
 
@@ -161,19 +156,6 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public AvailabilityGuard getGlobalAvailabilityGuard( Clock clock, LogService logService, Config config )
-    {
-        initGlobalGuard( clock, logService );
-        return globalAvailabilityGuard;
-    }
-
-    @Override
-    public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService, Config config )
-    {
-        return ((CompositeDatabaseAvailabilityGuard) getGlobalAvailabilityGuard( clock, logService, config )).createDatabaseAvailabilityGuard( databaseName );
-    }
-
-    @Override
     public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
         createCommercialSecurityModule( this, globalModule, globalProcedures );
@@ -194,14 +176,6 @@ public class CommercialEditionModule extends CommunityEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         editionModule.setSecurityProvider( securityProvider );
-    }
-
-    private void initGlobalGuard( Clock clock, LogService logService )
-    {
-        if ( globalAvailabilityGuard == null )
-        {
-            globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( clock, logService );
-        }
     }
 
     private void initBackupIfNeeded( GlobalModule globalModule, Config config )

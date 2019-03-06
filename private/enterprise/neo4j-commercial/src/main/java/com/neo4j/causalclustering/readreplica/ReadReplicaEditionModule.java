@@ -33,7 +33,6 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import com.neo4j.dbms.database.MultiDatabaseManager;
-import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
@@ -57,7 +56,7 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -115,7 +114,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         SystemNanoClock globalClock = globalModule.getGlobalClock();
         threadToTransactionBridge = globalDependencies.satisfyDependency(
-                new ThreadToStatementContextBridge( getGlobalAvailabilityGuard( globalClock, logService, globaConfig ) ) );
+                new ThreadToStatementContextBridge( getGlobalAvailabilityGuard( globalClock, logService ) ) );
         this.accessCapability = new ReadOnly();
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService,
@@ -268,23 +267,10 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         return new SecurePipelineFactory();
     }
 
-    @Override
-    public AvailabilityGuard getGlobalAvailabilityGuard( Clock clock, LogService logService, Config config )
-    {
-        initGlobalGuard( clock, logService );
-        return globalAvailabilityGuard;
-    }
-
     protected CatchupServerHandler getHandlerFactory( GlobalModule globalModule, FileSystemAbstraction fileSystem )
     {
         Supplier<DatabaseManager> databaseManagerSupplier = globalModule.getGlobalDependencies().provideDependency( DatabaseManager.class );
         return new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem );
-    }
-
-    @Override
-    public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService, Config config )
-    {
-        return ((CompositeDatabaseAvailabilityGuard) getGlobalAvailabilityGuard( clock, logService, config )).createDatabaseAvailabilityGuard( databaseName );
     }
 
     @Override

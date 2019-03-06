@@ -1,18 +1,27 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.kernel.availability;
+package org.neo4j.kernel.availability;
 
 import java.time.Clock;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.AvailabilityListener;
-import org.neo4j.kernel.availability.AvailabilityRequirement;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.logging.internal.LogService;
 
 import static java.util.stream.Collectors.joining;
@@ -60,12 +69,10 @@ public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
         return guards.stream().allMatch( DatabaseAvailabilityGuard::isAvailable );
     }
 
-    /**
-     * Since lifecycle of databases in 3.5 is glued together we can assume that we shutdown databases together.
-     */
     @Override
     public boolean isShutdown()
     {
+        //TODO:
         return guards.stream().anyMatch( DatabaseAvailabilityGuard::isShutdown );
     }
 
@@ -117,13 +124,13 @@ public class CompositeDatabaseAvailabilityGuard implements AvailabilityGuard
     @Override
     public void addListener( AvailabilityListener listener )
     {
-        guards.forEach( guard -> guard.addListener( listener ) );
+        throw new UnsupportedOperationException( "Composite guard does not support this operation." );
     }
 
     @Override
     public void removeListener( AvailabilityListener listener )
     {
-        guards.forEach( guard -> guard.removeListener( listener ) );
+        throw new UnsupportedOperationException( "Composite guard does not support this operation." );
     }
 
     @Override

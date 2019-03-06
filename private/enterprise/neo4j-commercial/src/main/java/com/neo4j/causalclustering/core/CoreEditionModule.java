@@ -69,7 +69,6 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import com.neo4j.dbms.database.MultiDatabaseManager;
-import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
@@ -77,7 +76,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
@@ -101,7 +99,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -168,7 +165,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         globalLife.add( new IdFilesSanitationModule( coreStartupState, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem,
                 logProvider ) );
 
-        AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( globalModule.getGlobalClock(), logService, globalConfig );
+        AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( globalModule.getGlobalClock(), logService );
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
 
         final PanicService panicService = new PanicService( logService.getUserLogProvider() );
@@ -274,8 +271,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
 
         globalLife.add( coreServerModule.membershipWaiterLifecycle );
-
-        initGlobalGuard( globalModule.getGlobalClock(), logService );
     }
 
     @Override
@@ -452,19 +447,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     @Override
-    public AvailabilityGuard getGlobalAvailabilityGuard( Clock clock, LogService logService, Config config )
-    {
-        initGlobalGuard( clock, logService );
-        return globalAvailabilityGuard;
-    }
-
-    @Override
-    public DatabaseAvailabilityGuard createDatabaseAvailabilityGuard( String databaseName, Clock clock, LogService logService, Config config )
-    {
-        return ((CompositeDatabaseAvailabilityGuard) getGlobalAvailabilityGuard( clock, logService, config )).createDatabaseAvailabilityGuard( databaseName );
-    }
-
-    @Override
     public void createSecurityModule( GlobalModule globalModule, GlobalProcedures globalProcedures )
     {
         SecurityProvider securityProvider;
@@ -481,13 +463,5 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
-    }
-
-    private void initGlobalGuard( Clock clock, LogService logService )
-    {
-        if ( globalAvailabilityGuard == null )
-        {
-            globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( clock, logService );
-        }
     }
 }
