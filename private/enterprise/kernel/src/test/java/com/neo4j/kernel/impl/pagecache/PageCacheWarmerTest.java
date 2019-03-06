@@ -356,7 +356,7 @@ class PageCacheWarmerTest
         Path profileDir = baseDir.resolve( Profile.PROFILE_DIR );
         Path dirA = baseDir.resolve( "dirA" );
         Path dirAA = dirA.resolve( "dirA" );
-        Path dirB = baseDir.resolve( "dirB " );
+        Path dirB = baseDir.resolve( "dirB" );
         Path fileAAA = dirAA.resolve( "a" );
         Path fileAA = dirA.resolve( "a" );
         Path fileBA = dirB.resolve( "a" );
