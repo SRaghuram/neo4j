@@ -11,21 +11,26 @@ import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator;
-import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.junit.Rule;
+import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.client.model.Annotation.AUTHOR;
 import static com.neo4j.bench.client.model.Annotation.COMMENT;
@@ -40,20 +45,37 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 
+
 public class CreateAnnotationsTest
 {
-    private final Neo4jRule neo4j = new CommercialNeo4jRule().
-            withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE ).
-            withProcedure( CreateAnnotation.class );
 
-    private final TemporaryFolder testFolder = new TemporaryFolder();
+    @RegisterExtension
+    static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
+        .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+        .withProcedure( CreateAnnotation.class )
+        .build();
+
     private static final QueryRetrier QUERY_RETRIER = new QueryRetrier();
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( testFolder ).around( neo4j );
 
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
+
+    private URI boltUri;
+
+    @BeforeEach
+    public void setUp( GraphDatabaseService databaseService )
+    {
+        HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
+                .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        boltUri = URI.create( "bolt://" + address.toString() );
+    }
+
+    @AfterEach
+    public void cleanUpDb( GraphDatabaseService databaseService )
+    {
+        // this is hacky HACK, needs to be fixed in Neo4jExtension
+        databaseService.execute( "MATCH (n) DETACH DELETE n" );
+    }
 
     @Test
     public void shouldCreateTestRunAnnotations() throws Exception
@@ -75,7 +97,8 @@ public class CreateAnnotationsTest
                 .withAssertions( true )
                 .build();
         generateStoreUsing( generator );
-        StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD );
+
+        StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD );
         try ( Session session = client.session() )
         {
             long expectedAnnotationCount = generator.days() * generator.resultsPerDay();
@@ -119,7 +142,7 @@ public class CreateAnnotationsTest
                 .withAssertions( true )
                 .build();
         generateStoreUsing( generator );
-        StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD );
+        StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD );
         try ( Session session = client.session() )
         {
             long expectedAnnotationCount = generator.days() *
@@ -167,7 +190,7 @@ public class CreateAnnotationsTest
 
     private void generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD ) )
         {
             QUERY_RETRIER.execute( client, new DropSchema() );
             QUERY_RETRIER.execute( client, new CreateSchema() );
