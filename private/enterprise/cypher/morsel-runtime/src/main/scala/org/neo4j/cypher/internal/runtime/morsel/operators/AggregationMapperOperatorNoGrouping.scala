@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQue
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.values.storable.Values
 
 
 /*
@@ -32,6 +33,8 @@ class AggregationMapperOperatorNoGrouping(val workIdentity: WorkIdentity,
                                        resources.expressionCursors,
                                        Array.empty[IndexReadSession])
 
+    val hasInput = currentRow.isValidRow
+
     //loop over the entire morsel and apply the aggregation
     while (currentRow.isValidRow) {
       var accCount = 0
@@ -48,11 +51,11 @@ class AggregationMapperOperatorNoGrouping(val workIdentity: WorkIdentity,
     currentRow.resetToFirstRow()
     while (i < aggregations.length) {
       val aggregation = aggregations(i)
-      currentRow.setRefAt(aggregation.mapperOutputSlot, aggregationMappers(i).result(queryState))
+      val localAggregationValue = if (hasInput) aggregationMappers(i).result(queryState) else Values.NO_VALUE
+      currentRow.setRefAt(aggregation.mapperOutputSlot, localAggregationValue)
       i += 1
     }
     currentRow.moveToNextRow()
     currentRow.finishedWriting()
-
   }
 }

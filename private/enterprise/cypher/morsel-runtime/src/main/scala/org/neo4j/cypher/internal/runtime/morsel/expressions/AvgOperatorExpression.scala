@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{Aggregat
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{AnyType, CTAny}
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.LongValue
+import org.neo4j.values.storable.{LongValue, Values}
 import org.neo4j.values.storable.Values.longValue
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
 
@@ -51,6 +51,7 @@ class AvgReducer(expression: Expression) extends AggregationFunction {
         func.applyValueDirectly(avgOfMorsel)
         i += 1
       }
+    case Values.NO_VALUE =>
     case x =>
       throw new IllegalStateException(s"Unexpected value in avg reducer: $x")
   }

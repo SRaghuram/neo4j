@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{Aggregat
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{AnyType, CTAny}
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.{ListValue, VirtualValues}
 
 import scala.collection.mutable.ArrayBuffer
@@ -37,6 +38,7 @@ private class CollectReducer(expression: Expression) extends AggregationFunction
   override def result(state: OldQueryState): AnyValue = VirtualValues.concat(collections.toArray:_*)
   override def apply(data: ExecutionContext, state: OldQueryState): Unit = expression(data, state) match {
     case l: ListValue => collections.append(l)
+    case Values.NO_VALUE =>
     case _ => throw new IllegalStateException()
   }
 }
