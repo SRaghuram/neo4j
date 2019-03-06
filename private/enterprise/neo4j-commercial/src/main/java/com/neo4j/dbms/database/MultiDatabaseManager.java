@@ -5,50 +5,31 @@
  */
 package com.neo4j.dbms.database;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 
-import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
-import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.facade.spi.ClassicCoreSPI;
-import org.neo4j.graphdb.factory.module.DatabaseModule;
+import org.neo4j.dmbs.database.AbstractDatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.helpers.Exceptions;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Logger;
 
 import static java.lang.String.format;
-import static java.util.Comparator.naturalOrder;
 import static java.util.Objects.requireNonNull;
 
-public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseManager
+public class MultiDatabaseManager extends AbstractDatabaseManager
 {
     private final ConcurrentHashMap<String, DatabaseContext> databaseMap = new ConcurrentHashMap<>();
-    private final GlobalModule globalModule;
-    private final AbstractEditionModule edition;
-    private final GlobalProcedures globalProcedures;
-    private final Logger log;
-    private final GraphDatabaseFacade graphDatabaseFacade;
     private volatile boolean started;
 
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, GlobalProcedures globalProcedures,
             Logger log, GraphDatabaseFacade graphDatabaseFacade )
     {
-        this.globalModule = globalModule;
-        this.edition = edition;
-        this.globalProcedures = globalProcedures;
-        this.log = log;
-        this.graphDatabaseFacade = graphDatabaseFacade;
+        super( globalModule, edition, globalProcedures, log, graphDatabaseFacade );
     }
 
     @Override
@@ -61,7 +42,12 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
             {
                 throw new IllegalStateException( format( "Database with name `%s` already exists.", databaseName ) );
             }
-            return createNewDatabaseContext( databaseName );
+            DatabaseContext databaseContext = createNewDatabaseContext( databaseName );
+            if ( started )
+            {
+                databaseContext.getDatabase().start();
+            }
+            return databaseContext;
         } );
     }
 
@@ -117,85 +103,26 @@ public class MultiDatabaseManager extends LifecycleAdapter implements DatabaseMa
     public void start() throws Throwable
     {
         started = true;
-        Throwable startException = doWithAllDatabases( this::startDatabase );
-        if ( startException != null )
-        {
-            throw startException;
-        }
+        super.start();
     }
 
     @Override
     public void stop() throws Throwable
     {
         started = false;
-        Throwable stopException = doWithAllDatabases( this::stopDatabase );
-        if ( stopException != null )
-        {
-            throw stopException;
-        }
+        super.stop();
+    }
 
+    @Override
+    protected Map<String,DatabaseContext> getDatabaseMap()
+    {
+        return databaseMap;
     }
 
     @Override
     public void shutdown()
     {
         databaseMap.clear();
-    }
-
-    @Override
-    public List<String> listDatabases()
-    {
-        ArrayList<String> databaseNames = new ArrayList<>( databaseMap.keySet() );
-        databaseNames.sort( naturalOrder() );
-        return databaseNames;
-    }
-
-    private DatabaseContext createNewDatabaseContext( String databaseName )
-    {
-        log.log( "Creating '%s' database.", databaseName );
-        Config globalConfig = globalModule.getGlobalConfig();
-        GraphDatabaseFacade facade =
-                globalConfig.get( GraphDatabaseSettings.default_database ).equals( databaseName ) ? graphDatabaseFacade : new GraphDatabaseFacade();
-        DatabaseModule dataSource = new DatabaseModule( databaseName, globalModule, edition, globalProcedures, facade );
-        ClassicCoreSPI spi = new ClassicCoreSPI( globalModule, dataSource, log, dataSource.coreAPIAvailabilityGuard, edition.getThreadToTransactionBridge() );
-        Database database = dataSource.database;
-        facade.init( spi, edition.getThreadToTransactionBridge(), globalConfig, database.getTokenHolders() );
-        if ( started )
-        {
-            database.start();
-        }
-        return new DatabaseContext( database, facade );
-    }
-
-    private Throwable doWithAllDatabases( BiConsumer<String, DatabaseContext> consumer )
-    {
-        Throwable combinedException = null;
-        for ( Map.Entry<String,DatabaseContext> databaseContextEntry : databaseMap.entrySet() )
-        {
-            try
-            {
-                consumer.accept( databaseContextEntry.getKey(), databaseContextEntry.getValue() );
-            }
-            catch ( Throwable t )
-            {
-                combinedException = Exceptions.chain( combinedException, t );
-            }
-        }
-        return combinedException;
-    }
-
-    private void startDatabase( String databaseName, DatabaseContext context )
-    {
-        log.log( "Starting '%s' database.", databaseName );
-        Database database = context.getDatabase();
-        database.start();
-    }
-
-    private void stopDatabase( String databaseName, DatabaseContext context )
-    {
-        log.log( "Stop '%s' database.", databaseName );
-        Database database = context.getDatabase();
-        database.stop();
     }
 
     private void dropDatabase( String databaseName, DatabaseContext context )
