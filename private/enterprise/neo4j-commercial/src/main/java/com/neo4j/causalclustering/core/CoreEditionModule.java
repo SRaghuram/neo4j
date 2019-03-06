@@ -71,7 +71,6 @@ import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomRe
 import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
-import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
 import java.io.File;
@@ -106,8 +105,6 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
-import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -142,7 +139,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     //TODO: Find a way to be more generic about this to help with 4.0 plans
     private final String defaultDatabaseName;
     private final GlobalModule globalModule;
-    private final GlobalTransactionStats globalTransactionStats;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
     {
@@ -279,7 +275,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         globalLife.add( coreServerModule.membershipWaiterLifecycle );
 
-        this.globalTransactionStats = new GlobalTransactionStats();
         initGlobalGuard( globalModule.getGlobalClock(), logService );
     }
 
@@ -319,12 +314,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     protected SchemaWriteGuard createSchemaWriteGuard()
     {
         return SchemaWriteGuard.ALLOW_ALL_WRITES;
-    }
-
-    @Override
-    public TransactionCounters globalTransactionCounter()
-    {
-        return globalTransactionStats;
     }
 
     @Override
@@ -460,12 +449,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     protected DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
         return new SecurePipelineFactory();
-    }
-
-    @Override
-    public DatabaseTransactionStats createTransactionMonitor()
-    {
-        return globalTransactionStats.createDatabaseTransactionMonitor();
     }
 
     @Override

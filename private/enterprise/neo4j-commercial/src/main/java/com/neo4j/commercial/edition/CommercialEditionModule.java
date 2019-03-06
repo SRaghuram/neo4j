@@ -20,7 +20,6 @@ import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
-import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -56,8 +55,6 @@ import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
-import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
-import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
@@ -72,13 +69,10 @@ import static org.neo4j.function.Predicates.any;
 
 public class CommercialEditionModule extends CommunityEditionModule
 {
-    private final GlobalTransactionStats globalTransactionStats;
-
     public CommercialEditionModule( GlobalModule globalModule )
     {
         super( globalModule );
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
-        globalTransactionStats = new GlobalTransactionStats();
         initGlobalGuard( globalModule.getGlobalClock(), globalModule.getLogService() );
         initBackupIfNeeded( globalModule, globalModule.getGlobalConfig() );
     }
@@ -164,18 +158,6 @@ public class CommercialEditionModule extends CommunityEditionModule
     private static void createConfiguredDatabases( DatabaseManager databaseManager, Config config )
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.default_database ) );
-    }
-
-    @Override
-    public DatabaseTransactionStats createTransactionMonitor()
-    {
-        return globalTransactionStats.createDatabaseTransactionMonitor();
-    }
-
-    @Override
-    public TransactionCounters globalTransactionCounter()
-    {
-        return globalTransactionStats;
     }
 
     @Override

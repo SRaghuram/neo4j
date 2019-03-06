@@ -36,7 +36,6 @@ import com.neo4j.dbms.database.MultiDatabaseManager;
 import com.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurityProvider;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
-import com.neo4j.kernel.impl.transaction.stats.GlobalTransactionStats;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
 import java.time.Clock;
@@ -64,8 +63,6 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
-import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
-import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -93,7 +90,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     private final String defaultDatabaseName;
     private final Config globaConfig;
     private final GlobalModule globalModule;
-    private final GlobalTransactionStats transactionStats;
 
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
@@ -182,7 +178,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         addPanicEventHandlers( panicService, globalLife, databaseHealthSupplier, serverModule.catchupServer(), serverModule.backupServer() );
 
-        this.transactionStats = new GlobalTransactionStats();
         initGlobalGuard( globalClock, logService );
     }
 
@@ -271,18 +266,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     private DuplexPipelineWrapperFactory pipelineWrapperFactory()
     {
         return new SecurePipelineFactory();
-    }
-
-    @Override
-    public DatabaseTransactionStats createTransactionMonitor()
-    {
-        return transactionStats.createDatabaseTransactionMonitor();
-    }
-
-    @Override
-    public TransactionCounters globalTransactionCounter()
-    {
-        return transactionStats;
     }
 
     @Override
