@@ -5,6 +5,7 @@
  */
 package org.neo4j.kernel.impl.locking;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
@@ -19,13 +20,17 @@ import static org.neo4j.configuration.Settings.setting;
  * A {@link StatementLocksFactory} that created {@link DeferringStatementLocks} based on the given
  * {@link Locks} and {@link Config}.
  */
-public class DeferringStatementLocksFactory implements StatementLocksFactory, LoadableConfig
+public class DeferringStatementLocksFactory implements StatementLocksFactory
 {
-    @Internal
-    @Description( "Enable deferring of locks to commit time. This feature weakens the isolation level. " +
-                  "It can result in both domain and storage level inconsistencies." )
-    public static final Setting<Boolean> deferred_locks_enabled =
-            setting( "unsupported.dbms.deferred_locks.enabled", Settings.BOOLEAN, Settings.FALSE );
+    @ServiceProvider
+    public static class Configuration implements LoadableConfig
+    {
+        @Internal
+        @Description( "Enable deferring of locks to commit time. This feature weakens the isolation level. " +
+                "It can result in both domain and storage level inconsistencies." )
+        public static final Setting<Boolean> deferred_locks_enabled =
+                setting( "unsupported.dbms.deferred_locks.enabled", Settings.BOOLEAN, Settings.FALSE );
+    }
 
     private Locks locks;
     private boolean deferredLocksEnabled;
@@ -34,7 +39,7 @@ public class DeferringStatementLocksFactory implements StatementLocksFactory, Lo
     public void initialize( Locks locks, Config config )
     {
         this.locks = requireNonNull( locks );
-        this.deferredLocksEnabled = config.get( deferred_locks_enabled );
+        this.deferredLocksEnabled = config.get( Configuration.deferred_locks_enabled );
     }
 
     @Override

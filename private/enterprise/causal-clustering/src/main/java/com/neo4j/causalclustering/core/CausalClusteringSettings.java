@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.ConfigurationMigrator;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
@@ -58,6 +59,7 @@ import static org.neo4j.configuration.Settings.prefixSetting;
 import static org.neo4j.configuration.Settings.setting;
 
 @Description( "Settings for Causal Clustering" )
+@ServiceProvider
 public class CausalClusteringSettings implements LoadableConfig
 {
     @Description( "Time out for a new member to catch up" )

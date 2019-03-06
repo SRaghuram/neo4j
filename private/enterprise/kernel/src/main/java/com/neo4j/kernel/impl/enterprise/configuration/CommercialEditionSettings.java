@@ -7,6 +7,7 @@ package com.neo4j.kernel.impl.enterprise.configuration;
 
 import java.util.List;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.LoadableConfig;
@@ -24,6 +25,7 @@ import static org.neo4j.kernel.impl.store.id.IdType.RELATIONSHIP;
 /**
  * Enterprise edition specific settings
  */
+@ServiceProvider
 public class CommercialEditionSettings implements LoadableConfig
 {
     public static final String COMMERCIAL_SECURITY_MODULE_ID = "commercial-security-module";

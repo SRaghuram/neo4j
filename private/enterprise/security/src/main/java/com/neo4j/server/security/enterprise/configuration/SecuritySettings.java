@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Internal;
@@ -40,6 +41,7 @@ import static org.neo4j.procedure.impl.ProcedureConfig.PROC_ALLOWED_SETTING_ROLE
  * Settings for security module
  */
 @Description( "Security configuration settings" )
+@ServiceProvider
 public class SecuritySettings implements LoadableConfig
 {
     public static final String NATIVE_REALM_NAME = "native";

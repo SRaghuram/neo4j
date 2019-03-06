@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise.configuration;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.ConfigurationMigrator;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.LoadableConfig;
@@ -24,6 +25,7 @@ import static org.neo4j.configuration.Settings.setting;
  * Settings for online backup
  */
 @Description( "Online backup configuration settings" )
+@ServiceProvider
 public class OnlineBackupSettings implements LoadableConfig
 {
     public static final int DEFAULT_BACKUP_PORT = 6362;

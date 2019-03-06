@@ -35,9 +35,15 @@ Apache Software License, Version 2.0
   Commons Lang
   config
   Data Mapper for Jackson
+  error-prone annotations
   fastinfoset
+  FindBugs-jsr305
   Graphite Integration for Metrics
+  Guava InternalFutureFailureAccess and InternalFutures
+  Guava ListenableFuture only
+  Guava: Google Core Libraries for Java
   hazelcast-all
+  J2ObjC Annotations
   Jackson
   Javassist
   JAX-RS provider for JSON content type
@@ -2806,6 +2812,8 @@ version.
 
 ------------------------------------------------------------------------------
 MIT License
+  Animal Sniffer Annotations
+  Checker Qual
   jersey-container-servlet
   jersey-container-servlet-core
   jersey-core-client

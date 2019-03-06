@@ -8,6 +8,7 @@ package com.neo4j.server.enterprise;
 import java.net.URI;
 import java.time.Duration;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
 import org.neo4j.configuration.DocumentedDefaultValue;
 import org.neo4j.configuration.Internal;
@@ -21,6 +22,7 @@ import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.configuration.Settings.setting;
 
 @Description( "Settings available in the Commercial server" )
+@ServiceProvider
 public class CommercialServerSettings implements LoadableConfig
 {
     @SuppressWarnings( "unused" ) // accessed from the browser
