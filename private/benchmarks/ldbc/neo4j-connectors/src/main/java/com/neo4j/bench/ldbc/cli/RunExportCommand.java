@@ -634,7 +634,7 @@ public class RunExportCommand implements Runnable
         {
             if ( reuseDb.equals( ReusePolicy.REUSE ) )
             {
-                copyDir( sourceDbDir, ldbcRunConfig.storeDir );
+                copyStore( ldbcRunConfig );
             }
 
             for ( ProfilerType profiler : additionalProfilers )
@@ -697,6 +697,12 @@ public class RunExportCommand implements Runnable
         return resultsDirectories;
     }
 
+    private void copyStore( LdbcRunConfig ldbcRunConfig )
+    {
+        //We need to resolve the subfolder of the store.
+        copyDir( sourceDbDir, ldbcRunConfig.storeDir.toPath().resolve( sourceDbDir.toPath().getFileName() ).toFile() );
+    }
+
     private void runBenchmarkRepetition(
             BenchmarkGroup benchmarkGroup,
             Benchmark summaryBenchmark,
@@ -717,7 +723,7 @@ public class RunExportCommand implements Runnable
                     System.out.println( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
                     org.apache.commons.io.FileUtils.deleteDirectory( ldbcRunConfig.storeDir );
                 }
-                copyDir( sourceDbDir, ldbcRunConfig.storeDir );
+                copyStore( ldbcRunConfig );
             }
 
             List<InternalProfiler> internalProfilers = new ArrayList<>();
@@ -996,14 +1002,13 @@ public class RunExportCommand implements Runnable
         // E.g., source/graph.db --> workDir/tempStoreDir/graph.db
         Path tempStoreDir = workingDir.toPath().resolve( "tempStoreDir" );
         BenchmarkUtil.assertDoesNotExist( tempStoreDir );
-        File destinationDbDir = tempStoreDir.toFile();
         if ( sourceDbDir.getParentFile().equals( workingDir ) )
         {
             throw new RuntimeException( format( "Source database:                    %s\n" +
                                                 "Must not be in working directory:   %s",
                                                 sourceDbDir.getAbsolutePath(), workingDir.getAbsolutePath() ) );
         }
-        return destinationDbDir;
+        return tempStoreDir.toFile();
     }
 
     // ===============================================================================================================
