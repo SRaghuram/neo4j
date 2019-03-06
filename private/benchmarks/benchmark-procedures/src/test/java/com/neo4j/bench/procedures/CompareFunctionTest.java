@@ -15,10 +15,10 @@ import com.neo4j.bench.procedures.detection.CompareFunction;
 import com.neo4j.bench.procedures.detection.DateTimeFunction;
 import com.neo4j.bench.procedures.detection.VarianceProcedure;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -49,7 +49,7 @@ public class CompareFunctionTest
             .withFunction( DateTimeFunction.class )
             .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
 
-    @Before
+    @BeforeEach
     public void generateStore() throws Exception
     {
         SyntheticStoreGenerator generator = new SyntheticStoreGeneratorBuilder()
@@ -72,7 +72,7 @@ public class CompareFunctionTest
         generateStoreUsing( generator );
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void shouldCalculateVariancesForBenchmarkGroup() throws Throwable
     {
@@ -105,7 +105,7 @@ public class CompareFunctionTest
         }
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void shouldCalculateVariancesForSpecificBenchmarksInBenchmarkGroup() throws Throwable
     {
@@ -137,7 +137,7 @@ public class CompareFunctionTest
         }
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void shouldCalculateComparison() throws Throwable
     {

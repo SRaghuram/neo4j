@@ -7,8 +7,8 @@ package com.neo4j.bench.ldbc.connection;
 
 import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.Domain.Rels;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Calendar;
@@ -17,7 +17,8 @@ import org.neo4j.graphdb.RelationshipType;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TimeStampedRelationshipTypesCacheTest
 {
@@ -83,7 +84,7 @@ public class TimeStampedRelationshipTypesCacheTest
     // Comment Has Creator
     // ===================
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailCommentHasCreatorForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
@@ -95,11 +96,14 @@ public class TimeStampedRelationshipTypesCacheTest
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
-        cache.commentHasCreatorForDateRange(
-                calendar,
-                minDate,
-                maxDate,
-                dateUtil );
+        assertThrows( DbException.class, () ->
+        {
+                cache.commentHasCreatorForDateRange(
+                        calendar,
+                        minDate,
+                        maxDate,
+                        dateUtil );
+        });
     }
 
     @Test
@@ -486,7 +490,7 @@ public class TimeStampedRelationshipTypesCacheTest
     // Post Has Creator
     // ===================
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailPostHasCreatorForDateRangeWithInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
@@ -498,12 +502,14 @@ public class TimeStampedRelationshipTypesCacheTest
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
-        cache.postHasCreatorForDateRange(
-                calendar,
-                minDate,
-                maxDate,
-                dateUtil
-                                        );
+        assertThrows( DbException.class, () ->
+        {
+            cache.postHasCreatorForDateRange(
+                    calendar,
+                    minDate,
+                    maxDate,
+                    dateUtil );
+        });
     }
 
     @Test
@@ -890,7 +896,7 @@ public class TimeStampedRelationshipTypesCacheTest
     // Post Is Located In
     // ===================
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailPostIsLocatedInForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
@@ -902,12 +908,14 @@ public class TimeStampedRelationshipTypesCacheTest
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
-        cache.postIsLocatedInForDateRange(
+        assertThrows( DbException.class, () ->
+        {
+            cache.postIsLocatedInForDateRange(
                 calendar,
                 minDate,
                 maxDate,
-                dateUtil
-                                         );
+                dateUtil );
+        });
     }
 
     @Test
@@ -1294,7 +1302,7 @@ public class TimeStampedRelationshipTypesCacheTest
     // Comment Is Located In
     // =====================
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailCommentIsLocatedInForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
@@ -1306,11 +1314,14 @@ public class TimeStampedRelationshipTypesCacheTest
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
 
-        cache.commentIsLocatedInForDateRange(
-                calendar,
-                minDate,
-                maxDate,
-                dateUtil );
+        assertThrows( DbException.class, () ->
+        {
+            cache.commentIsLocatedInForDateRange(
+                    calendar,
+                    minDate,
+                    maxDate,
+                    dateUtil );
+        });
     }
 
     @Test
@@ -1697,7 +1708,7 @@ public class TimeStampedRelationshipTypesCacheTest
     // Has Member
     // ===================
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailHasMemberForDateRangeForInvalid() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
@@ -1708,22 +1719,28 @@ public class TimeStampedRelationshipTypesCacheTest
                 new LdbcDateCodecUtil() );
         long minDate = 1982012301L;
         long maxDate = 1982012300L;
-        cache.hasMemberForDateRange(
-                calendar,
-                minDate,
-                maxDate,
-                dateUtil
-                                   );
+
+        assertThrows( DbException.class, () ->
+        {
+            cache.hasMemberForDateRange(
+                    calendar,
+                    minDate,
+                    maxDate,
+                    dateUtil );
+        });
     }
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailHasMemberForDatesAfterIfNotInitialized() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
-        cache.hasMemberForDatesAfter( 1982012301L );
+        assertThrows( DbException.class, () ->
+        {
+            cache.hasMemberForDatesAfter( 1982012301L );
+        });
     }
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailHasMemberForDatesAfterIfBelowRange() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
@@ -1734,13 +1751,17 @@ public class TimeStampedRelationshipTypesCacheTest
                 new LdbcDateCodecUtil() );
 
         cache.resizeHasMemberForNewDate( 1982012302L, calendar, dateUtil );
-        cache.hasMemberForDatesAfter( 1982012301L );
+
+        assertThrows( DbException.class, () ->
+        {
+            cache.hasMemberForDatesAfter( 1982012301L );
+        });
     }
 
     // TODO remove ignore
     // TODO at present param gen creates params out of range, so cache returns empty array instead or error
-    @Ignore
-    @Test( expected = DbException.class )
+    @Disabled
+    @Test
     public void shouldFailHasMemberForDatesAfterIfAboveRange() throws DbException
     {
         TimeStampedRelationshipTypesCache cache = new TimeStampedRelationshipTypesCache();
@@ -1750,7 +1771,10 @@ public class TimeStampedRelationshipTypesCacheTest
                 LdbcDateCodec.Resolution.HOUR,
                 new LdbcDateCodecUtil() );
         cache.resizeHasMemberForNewDate( 1982012301L, calendar, dateUtil );
+        assertThrows( DbException.class, () ->
+        {
         cache.hasMemberForDatesAfter( 1982012302L );
+        });
     }
 
     @Test
@@ -2216,7 +2240,7 @@ public class TimeStampedRelationshipTypesCacheTest
     // Works At
     // =========
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailWorksAtForYearsBeforeForInvalidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
@@ -2225,7 +2249,10 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
         year = 1982;
 
-        cache.worksAtForYearsBefore( year );
+        assertThrows( DbException.class, () ->
+        {
+            cache.worksAtForYearsBefore( year );
+        });
     }
 
     @Test
@@ -2292,7 +2319,7 @@ public class TimeStampedRelationshipTypesCacheTest
         assertThat( exceptionThrown, equalTo( true ) );
     }
 
-    @Test( expected = DbException.class )
+    @Test
     public void shouldFailWorksAtForAllYearsForInvalidInput() throws DbException
     {
         TimeStampedRelationshipTypesCache cache;
@@ -2300,7 +2327,10 @@ public class TimeStampedRelationshipTypesCacheTest
         cache = new TimeStampedRelationshipTypesCache();
 
         // Has not been initialized
-        cache.worksAtForAllYears();
+        assertThrows( DbException.class, () ->
+        {
+            cache.worksAtForAllYears();
+        });
     }
 
     @Test

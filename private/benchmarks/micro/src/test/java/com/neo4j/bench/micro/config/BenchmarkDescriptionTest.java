@@ -9,7 +9,7 @@ import com.neo4j.bench.micro.benchmarks.test_only.DuplicateAllowedBenchmark;
 import com.neo4j.bench.micro.benchmarks.test_only.DuplicateBaseBenchmark;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidDisabledBenchmark;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidEnabledBenchmark1;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.annotations.Mode;
 
 import java.util.ArrayList;

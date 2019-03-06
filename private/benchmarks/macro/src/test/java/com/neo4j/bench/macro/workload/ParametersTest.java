@@ -8,7 +8,7 @@ package com.neo4j.bench.macro.workload;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 import java.nio.file.Path;

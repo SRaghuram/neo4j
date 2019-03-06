@@ -29,7 +29,7 @@ import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import io.findify.s3mock.S3Mock;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.junit.rules.TemporaryFolder;
 

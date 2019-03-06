@@ -27,13 +27,13 @@ import com.neo4j.bench.client.model.TestRunReport;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -52,11 +52,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class AddProfilesIT
 {
-    @Rule
-    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
+    @TempDir
+    public Path temporaryFolder;
 
     private static final Map<String,String> PARAMS = new HashMap<String,String>()
     {{
@@ -70,50 +67,54 @@ public class AddProfilesIT
 
     private File createJfrAndAsyncAndGcProfilesForBenchmark1a() throws IOException
     {
-        File topLevelDir = temporaryFolder.newFolder( "benchmark1a" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".jfr" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-jfr.svg" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".async" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-async.svg" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".gc" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.json" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.csv" );
+        Path topLevelDir = temporaryFolder.resolve(  "benchmark1a" );
+        Files.createDirectory( topLevelDir );
+
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".jfr" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-jfr.svg" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".async" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-async.svg" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".gc" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.json" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + "-gc.csv" ) );
 
         // these should be ignored by profile loader
-        temporaryFolder.newFile( "benchmark1a/archive.tar.gz" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + "INVALID" + "-jfr.svg" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".invalid_suffix" );
-        temporaryFolder.newFile( "benchmark1a/" + GROUP_1.name() + "." + "WRONG" + "-gc-json" );
-        return topLevelDir;
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/archive.tar.gz" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + "INVALID" + "-jfr.svg" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + BENCHMARK_1_A.name() + ".invalid_suffix" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1a/" + GROUP_1.name() + "." + "WRONG" + "-gc-json" ) );
+        return topLevelDir.toFile();
     }
 
     private File createAsyncProfilesForBenchmark1b() throws IOException
     {
-        File topLevelDir = temporaryFolder.newFolder( "benchmark1b" );
-        temporaryFolder.newFile( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".async" );
-        temporaryFolder.newFile( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + "-async.svg" );
+        Path topLevelDir = temporaryFolder.resolve( "benchmark1b" );
+        Files.createDirectories( topLevelDir );
+        Files.createFile( temporaryFolder.resolve( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".async" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + "-async.svg" ) );
 
         // these should be ignored by profile loader
-        temporaryFolder.newFile( "benchmark1b/archive.tar.gz" );
-        temporaryFolder.newFile( "benchmark1b/" + GROUP_1.name() + "." + "INVALID" + "-async.svg" );
-        temporaryFolder.newFile( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".invalid_suffix" );
-        temporaryFolder.newFile( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + ".gc" );
-        temporaryFolder.newFile( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + "-gc.csv" );
-        return topLevelDir;
+        Files.createFile( temporaryFolder.resolve( "benchmark1b/archive.tar.gz" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1b/" + GROUP_1.name() + "." + "INVALID" + "-async.svg" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1b/" + GROUP_1.name() + "." + BENCHMARK_1_B.name() + ".invalid_suffix" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + ".gc" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark1b/" + GROUP_1.name() + "." + "WRONG" + "-gc.csv" ) );
+        return topLevelDir.toFile();
     }
 
     private File createJfrProfilesBenchmark2a() throws IOException
     {
-        File topLevelDir = temporaryFolder.newFolder( "benchmark2a" );
-        temporaryFolder.newFile( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + ".jfr" );
-        temporaryFolder.newFile( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + "-jfr.svg" );
+        Path topLevelDir = temporaryFolder.resolve( "benchmark2a" );
+        Files.createDirectories( topLevelDir );
+        Files.createFile( temporaryFolder.resolve( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + ".jfr" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + "-jfr.svg" ) );
 
         // these should be ignored by profile loader
-        temporaryFolder.newFile( "benchmark2a/archive.tar.gz" );
-        temporaryFolder.newFile( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + "-jfr.svg" );
-        temporaryFolder.newFile( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + ".invalid_suffix" );
-        temporaryFolder.newFile( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + ".gc" );
-        return topLevelDir;
+        Files.createFile( temporaryFolder.resolve( "benchmark2a/archive.tar.gz" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + "-jfr.svg" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark2a/" + GROUP_2.name() + "." + BENCHMARK_2_A.name() + ".invalid_suffix" ) );
+        Files.createFile( temporaryFolder.resolve( "benchmark2a/" + GROUP_2.name() + "." + "INVALID" + ".gc" ) );
+        return topLevelDir.toFile();
     }
 
     @Test
@@ -290,7 +291,7 @@ public class AddProfilesIT
                 Lists.newArrayList( benchmarkPlan1a, benchmarkPlan1b ),
                 Lists.newArrayList( new TestRunError( "group", "name", "an error message\n\n" ) ) );
 
-        File testRunReportJson = temporaryFolder.newFile();
+        File testRunReportJson = Files.createTempFile( temporaryFolder, "", "").toFile();
         JsonUtil.serializeJson( testRunReportJson.toPath(), testRunReportBefore );
 
         // no profiles should exist yet

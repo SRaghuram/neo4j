@@ -8,9 +8,7 @@ package com.neo4j.bench.micro;
 import com.neo4j.bench.micro.config.Neo4jArchive;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.compressors.CompressorException;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,8 +20,6 @@ import static org.junit.Assert.assertTrue;
 
 public class Neo4jArchiveTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
     public void shouldExtractNeo4jWrapperFromArchiveAndParseJvmArgs()

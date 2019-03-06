@@ -8,8 +8,8 @@ package com.neo4j.bench.micro.config;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidDisabledBenchmark;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidEnabledBenchmark1;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidEnabledBenchmark2;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -29,7 +29,7 @@ public class SuiteDescriptionTest
 {
     private SuiteDescription suiteDescription;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
         Validation validation = new Validation();

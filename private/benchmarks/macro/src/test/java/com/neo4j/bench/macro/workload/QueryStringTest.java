@@ -8,7 +8,7 @@ package com.neo4j.bench.macro.workload;
 import com.neo4j.bench.client.options.Planner;
 import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.macro.execution.Options;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 

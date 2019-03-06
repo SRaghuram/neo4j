@@ -8,9 +8,8 @@ package com.neo4j.bench.client.process;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.Main;
 import com.neo4j.bench.client.util.Jvm;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -25,8 +24,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ProcessTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     public void shouldSelectRightJava() throws Exception
     {
@@ -45,11 +44,11 @@ public class ProcessTest
     @Test
     public void shouldLaunchSimpleProcessAndWriteItsOutputToFile() throws Exception
     {
-        Path folder = temporaryFolder.newFolder().toPath();
+        Path folder = Files.createTempDirectory( temporaryFolder, "" );
         Files.createFile( folder.resolve( "file1.txt" ) );
         Files.createFile( folder.resolve( "file2.txt" ) );
 
-        File processOutput = temporaryFolder.newFile();
+        File processOutput = Files.createTempFile( temporaryFolder, "", "" ).toFile();
 
         assertThat( "Expected process output to be empty", Files.lines( processOutput.toPath() ).count(), equalTo( 0L ) );
 

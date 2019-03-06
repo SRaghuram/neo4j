@@ -6,7 +6,7 @@
 package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.model.Benchmark.Mode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;

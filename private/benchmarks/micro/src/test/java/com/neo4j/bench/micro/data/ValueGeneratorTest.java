@@ -9,7 +9,7 @@ import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;

@@ -7,9 +7,9 @@ package com.neo4j.bench.ldbc.business_intelligence.integration;
 
 import com.ldbc.driver.DbException;
 import com.neo4j.bench.ldbc.importer.Scenario;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 
-@Ignore
+@Disabled
 public class EmbeddedCypherSnbBiExecutionTest extends SnbBiExecutionTest
 {
     Scenario buildValidationData() throws DbException

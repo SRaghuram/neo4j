@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ListCommandIT
 {

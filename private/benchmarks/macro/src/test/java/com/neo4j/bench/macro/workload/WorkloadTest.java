@@ -10,10 +10,8 @@ import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -38,11 +36,9 @@ import static java.util.stream.Collectors.toList;
 
 public class WorkloadTest
 {
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void allWorkloadsShouldHaveUniqueName()
@@ -145,7 +141,8 @@ public class WorkloadTest
     {
         try
         {
-            BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.createAt( temporaryFolder.newFolder().toPath(), query.benchmarkGroup() );
+            BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory
+                    .createAt( Files.createTempDirectory( temporaryFolder, "" ), query.benchmarkGroup() );
             BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( query.benchmark() );
             return benchmarkDir.create( UUID.randomUUID().toString(), new ArrayList<>() );
         }

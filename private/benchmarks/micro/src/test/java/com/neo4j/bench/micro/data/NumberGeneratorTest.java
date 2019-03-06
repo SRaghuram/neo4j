@@ -6,8 +6,7 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -36,6 +35,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static java.lang.String.format;
 
@@ -182,7 +182,7 @@ public class NumberGeneratorTest
         {
             NUMBER value1 = fun1.next( rng1 );
             NUMBER value2 = fun2.next( rng2 );
-            Assert.assertThat( value1, equalTo( value2 ) );
+            assertThat( value1, equalTo( value2 ) );
         }
         long duration = System.currentTimeMillis() - start;
         System.out.println( format( "Duration = %s (ms)", duration ) );
@@ -230,44 +230,56 @@ public class NumberGeneratorTest
         return idCounts;
     }
 
-    @Test( expected = Exception.class )
+    @Test
     public void shouldThrowExceptionWhenStrideLowerThan1()
     {
         int max = 10;
         int stride = 0;
         int offset = 1;
         boolean sliding = false;
-        stridingLong( stride, max, offset, sliding ).create();
+        assertThrows( Exception.class, () ->
+        {
+            stridingLong( stride, max, offset, sliding ).create();
+        });
     }
 
-    @Test( expected = Exception.class )
+    @Test
     public void shouldThrowExceptionWhenStrideGreaterOrEqualToMax()
     {
         int max = 10;
         int stride = 10;
         int offset = 1;
         boolean sliding = false;
-        stridingLong( stride, max, offset, sliding ).create();
+        assertThrows( Exception.class, () ->
+        {
+            stridingLong( stride, max, offset, sliding ).create();
+        });
     }
 
-    @Test( expected = Exception.class )
+    @Test
     public void shouldThrowExceptionWhenOffsetLowerThan0()
     {
         int max = 10;
         int stride = 1;
         int offset = -1;
         boolean sliding = false;
-        stridingLong( stride, max, offset, sliding ).create();
+        assertThrows( Exception.class, () ->
+        {
+            stridingLong( stride, max, offset, sliding ).create();
+        });
     }
 
-    @Test( expected = Exception.class )
+    @Test
     public void shouldThrowExceptionWhenOffsetGreaterOrEqualToMax()
     {
         int max = 10;
         int stride = 1;
         int offset = 10;
         boolean sliding = false;
-        stridingLong( stride, max, offset, sliding ).create();
+        assertThrows( Exception.class, () ->
+        {
+            stridingLong( stride, max, offset, sliding ).create();
+        });
     }
 
     @Test

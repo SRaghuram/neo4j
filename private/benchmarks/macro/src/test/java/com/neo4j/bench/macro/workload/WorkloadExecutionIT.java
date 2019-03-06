@@ -27,12 +27,12 @@ import com.neo4j.bench.macro.execution.OptionsBuilder;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.execution.process.ForkFailureException;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,11 +45,11 @@ import static java.time.Duration.ofSeconds;
 
 public class WorkloadExecutionIT
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     // TODO make it possible to run against non-standard workloads somehow
-    @Ignore
+    @Disabled
     @Test
     public void executeTestWorkloadInForks() throws Exception
     {
@@ -57,10 +57,10 @@ public class WorkloadExecutionIT
         {
             int measurementForkCount = 3;
             ArrayList<ProfilerType> profilers = Lists.newArrayList();
-            Path outputDir = temporaryFolder.newFolder().toPath();
+            Path outputDir = Files.createTempDirectory( temporaryFolder, "");
             Path workloadConfigFile = resources.resourceFile( "/test_workloads/test/integration_test.json" );
             Workload workload = Workload.fromFile( workloadConfigFile );
-            Store emptyStore = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
+            Store emptyStore = TestSupport.createEmptyStore( Files.createTempDirectory( temporaryFolder, "") );
             runEveryQueryForWorkloadUsingForkingRunner( measurementForkCount,
                                                         profilers,
                                                         ExecutionMode.EXECUTE,
@@ -72,7 +72,7 @@ public class WorkloadExecutionIT
     }
 
     // TODO make it possible to run against non-standard workloads somehow
-    @Ignore
+    @Disabled
     @Test
     public void executeTestWorkloadInProcess() throws Exception
     {
@@ -80,11 +80,10 @@ public class WorkloadExecutionIT
         {
             int measurementForkCount = 0;
             ArrayList<ProfilerType> profilers = Lists.newArrayList();
-            Path outputDir = temporaryFolder.newFolder().toPath();
-//            Workload workload = Workload.fromName( "test", resources );
+            Path outputDir = Files.createTempDirectory( temporaryFolder, "");
             Path workloadConfigFile = resources.resourceFile( "/test_workloads/test/integration_test.json" );
             Workload workload = Workload.fromFile( workloadConfigFile );
-            Store emptyStore = TestSupport.createEmptyStore( temporaryFolder.newFolder().toPath() );
+            Store emptyStore = TestSupport.createEmptyStore( Files.createTempDirectory( temporaryFolder, "") );
             runEveryQueryForWorkloadUsingForkingRunner( measurementForkCount,
                                                         profilers,
                                                         ExecutionMode.EXECUTE,
@@ -102,13 +101,13 @@ public class WorkloadExecutionIT
         {
             Path workloadConfigFile = resources.resourceFile( "/test_workloads/test/integration_test.json" );
             Workload workload = Workload.fromFile( workloadConfigFile );
-            Path storeDir = temporaryFolder.newFolder().toPath();
+            Path storeDir = Files.createTempDirectory( temporaryFolder, "");
             runEveryQueryFromWorkloadUsingEmbeddedRunner( workload, storeDir );
         }
     }
 
     // TODO make it possible to run against non-standard workloads somehow
-    @Ignore
+    @Disabled
     @Test
     public void executeTestWorkloadUsingInteractiveMode() throws Exception
     {
@@ -116,7 +115,7 @@ public class WorkloadExecutionIT
         {
             Path workloadConfigFile = resources.resourceFile( "/test_workloads/test/integration_test.json" );
             Workload workload = Workload.fromFile( workloadConfigFile );
-            Path storeDir = temporaryFolder.newFolder().toPath();
+            Path storeDir = Files.createTempDirectory( temporaryFolder, "");
             runEveryQueryFromWorkloadUsingInteractiveMode( workload, storeDir );
         }
     }
@@ -124,7 +123,7 @@ public class WorkloadExecutionIT
     private void runEveryQueryFromWorkloadUsingEmbeddedRunner( Workload workload,
                                                                Path storeDir ) throws Exception
     {
-        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( temporaryFolder.newFolder().toPath(),
+        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( Files.createTempDirectory( temporaryFolder, ""),
                                                                              workload.benchmarkGroup() );
 
         MeasurementControl warmupControl = or( ofCount( 10 ), ofDuration( ofSeconds( 10 ) ) );
@@ -136,7 +135,7 @@ public class WorkloadExecutionIT
             BenchmarkDirectory benchmarkDir = groupDir.findOrCreate( query.benchmark() );
             ForkDirectory forkDir = benchmarkDir.create( "fork_name", new ArrayList<>() );
 
-            Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+            Path neo4jConfigFile = Files.createTempFile( temporaryFolder, "", "");
             Neo4jConfig neo4jConfig = Neo4jConfig.fromFile( neo4jConfigFile );
 
             queryRunner.run(
@@ -165,7 +164,7 @@ public class WorkloadExecutionIT
 
         for ( Query query : workload.queries() )
         {
-            Path outputDir = temporaryFolder.newFolder().toPath();
+            Path outputDir = Files.createTempDirectory( temporaryFolder, "");
             Options options = optionsBuilder
                     .withOutputDir( outputDir )
                     .withStoreDir( storeDir )
@@ -183,8 +182,8 @@ public class WorkloadExecutionIT
                                                              Workload workload,
                                                              Store storeDir ) throws Exception
     {
-        Path neo4jConfiguration = temporaryFolder.newFile().toPath();
-        Path resultsJson = temporaryFolder.newFile().toPath();
+        Path neo4jConfiguration = Files.createTempFile( temporaryFolder, "", "" );
+        Path resultsJson = Files.createTempFile( temporaryFolder, "", "" );
         Path profilerRecordingsDir = outputDir.resolve( "profiler_recordings-" + workload.name() );
         boolean skipFlameGraphs = true;
 

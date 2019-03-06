@@ -12,11 +12,11 @@ import com.neo4j.bench.client.results.BenchmarkDirectory;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JvmVersion;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -28,16 +28,17 @@ import static org.junit.Assert.assertThat;
 
 public class JfrProfilerTest
 {
-    @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
+    @TempDir
+    public Path tempFolder;
+
     private ForkDirectory forkDirectory;
     private BenchmarkGroup benchmarkGroup;
     private Benchmark benchmark;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception
     {
-        Path parentDir = tempFolder.newFolder().toPath();
+        Path parentDir = Files.createTempDirectory( tempFolder, "" );
 
         benchmarkGroup = new BenchmarkGroup( "group" );
         benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, Collections.emptyMap() );

@@ -7,7 +7,7 @@ package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;

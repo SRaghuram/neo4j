@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.client.model.Benchmark.Mode.THROUGHPUT;

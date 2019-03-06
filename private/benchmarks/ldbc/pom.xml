@@ -16,8 +16,6 @@
 
     <properties>
         <neo4j.version>${project.version}</neo4j.version>
-        <junit.version>5.4.0</junit.version>
-        <junit.platform.version>1.4.0</junit.platform.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
 

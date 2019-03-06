@@ -9,9 +9,8 @@ import com.neo4j.bench.client.profiling.GcLog.EventType;
 import com.neo4j.bench.client.profiling.GcLog.GcLogEvent;
 import com.neo4j.bench.client.util.JsonUtil;
 import org.apache.commons.io.FileUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,8 +25,8 @@ import static org.junit.Assert.assertEquals;
 
 public class GcLogTest
 {
-    @Rule
-    public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void shouldSerializeGcLogEvent() throws IOException
@@ -45,7 +44,7 @@ public class GcLogTest
         assertThat( gcLogEvent.value(), equalTo( value ) );
         assertThat( gcLogEvent.cumulativeValue(), equalTo( cumulativeValue ) );
 
-        File gcLogEventJson = temporaryFolder.newFile();
+        File gcLogEventJson = Files.createTempFile( temporaryFolder, "", "" ).toFile();
         JsonUtil.serializeJson( gcLogEventJson.toPath(), gcLogEvent );
         GcLog.GcLogEvent deserializeGcLogEvent = JsonUtil.deserializeJson( gcLogEventJson.toPath(), GcLog.GcLogEvent.class );
         assertThat( deserializeGcLogEvent, equalTo( gcLogEvent ) );
@@ -57,7 +56,7 @@ public class GcLogTest
         File gcLogFile = FileUtils.toFile( GcLogTest.class.getResource( "/gc-jdk8.log" ) );
         GcLog gcLog = GcLog.parse( gcLogFile.toPath() );
 
-        Path csv = temporaryFolder.newFile().toPath();
+        Path csv = Files.createTempFile( temporaryFolder, "", "" );
         gcLog.toCSV( csv );
         long actualCsvRowCount = Files.lines( csv ).count();
         long expectCsvRowCount = gcLog.events().size() + 1;
@@ -74,7 +73,7 @@ public class GcLogTest
         File gcLogFile = FileUtils.toFile( GcLogTest.class.getResource( "/gc-jdk8.log" ) );
         GcLog gcLog = GcLog.parse( gcLogFile.toPath() );
 
-        File gcLogJson = temporaryFolder.newFile();
+        File gcLogJson = Files.createTempFile( temporaryFolder, "", "" ).toFile();
         JsonUtil.serializeJson( gcLogJson.toPath(), gcLog );
 
         GcLog deserializeGcLog = JsonUtil.deserializeJson( gcLogJson.toPath(), GcLog.class );

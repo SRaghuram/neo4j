@@ -7,7 +7,7 @@ package com.neo4j.bench.micro.data;
 
 import com.google.common.collect.Lists;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,7 +18,8 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.makeSelectivityCumul
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.middlePad;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.prefixPad;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.suffixPad;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isOneOf;
@@ -36,20 +37,25 @@ public class ValueGeneratorUtilTest
         assertThat( cumulativeSelectivity, equalTo( 1D ) );
     }
 
-    @Test( expected = Kaboom.class )
+    @Test
     public void shouldFailToMakeSelectivityCumulativeWhenTargetIsTooLow() throws IOException
     {
         List<Double> lowerSelectivities = Lists.newArrayList( 2D, 1D );
         Double targetSelectivity = 3D;
-        Double cumulativeSelectivity = makeSelectivityCumulative( targetSelectivity, lowerSelectivities );
-        assertThat( cumulativeSelectivity, equalTo( 1D ) );
+        assertThrows( Kaboom.class, () ->
+        {
+            makeSelectivityCumulative( targetSelectivity, lowerSelectivities );
+        });
     }
 
-    @Test( expected = Kaboom.class )
+    @Test
     public void shouldFailToCalculateCumulativeSelectivitiesWhenInputIsNotInAscendingOrder() throws IOException
     {
         List<Double> originalSelectivities = Lists.newArrayList( 2D, 1D );
-        calculateCumulativeSelectivities( originalSelectivities );
+        assertThrows( Kaboom.class, () ->
+        {
+            calculateCumulativeSelectivities( originalSelectivities );
+        });
     }
 
     @Test
@@ -100,10 +106,13 @@ public class ValueGeneratorUtilTest
         assertThat( withPadSmall, isOneOf( "12345", "12345" ) );
     }
 
-    @Test( expected = Kaboom.class )
+    @Test
     public void shouldFailToPrefixPadWhenLengthTooShort() throws IOException
     {
-        prefixPad( "12345", '0', 4 );
+        assertThrows( Kaboom.class, () ->
+        {
+            prefixPad( "12345", '0', 4 );
+        });
     }
 
     @Test
@@ -116,10 +125,13 @@ public class ValueGeneratorUtilTest
         assertThat( withPadSmall, isOneOf( "12345", "12345" ) );
     }
 
-    @Test( expected = Kaboom.class )
+    @Test
     public void shouldFailToSuffixPadWhenLengthTooShort() throws IOException
     {
-        suffixPad( "12345", '0', 4 );
+        assertThrows( Kaboom.class, () ->
+        {
+            suffixPad( "12345", '0', 4 );
+        });
     }
 
     @Test
@@ -132,9 +144,12 @@ public class ValueGeneratorUtilTest
         assertThat( withPadSmall, isOneOf( "012345", "123450" ) );
     }
 
-    @Test( expected = Kaboom.class )
+    @Test
     public void shouldFailToMiddlePadWhenLengthTooShort() throws IOException
     {
-        middlePad( "12345", '0', 4 );
+        assertThrows( Kaboom.class, () ->
+        {
+            middlePad( "12345", '0', 4 );
+        });
     }
 }

@@ -10,12 +10,13 @@ import com.neo4j.bench.micro.data.DataGenerator.LabelLocality;
 import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
 import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.function.Supplier;
 
 import org.neo4j.graphdb.Label;
@@ -58,8 +59,8 @@ import static java.lang.String.format;
 
 public class DataGeneratorConfigTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void fullySpecifiedDataGeneratorConfigurationsShouldBeEqual() throws IOException
@@ -690,10 +691,10 @@ public class DataGeneratorConfigTest
         assertThat( format( "%s\n%s", config1, config2 ),
                 config1.equals( config2 ), equalTo( value ) );
 
-        File config1File = temporaryFolder.newFile();
+        File config1File = Files.createTempFile( temporaryFolder, "", "" ).toFile();
         config1.serialize( config1File.toPath() );
 
-        File config2File = temporaryFolder.newFile();
+        File config2File = Files.createTempFile( temporaryFolder, "", "" ).toFile();
         config2.serialize( config2File.toPath() );
 
         DataGeneratorConfig config1After = DataGeneratorConfig.from( config1File.toPath() );

@@ -8,7 +8,7 @@ package com.neo4j.bench.micro.config;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidDisabledBenchmark;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidEnabledBenchmark1;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidEnabledBenchmark2;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

@@ -38,7 +38,7 @@ import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;

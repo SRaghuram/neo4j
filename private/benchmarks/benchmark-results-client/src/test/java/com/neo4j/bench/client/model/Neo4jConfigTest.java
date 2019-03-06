@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.client.model;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;

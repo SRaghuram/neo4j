@@ -26,20 +26,21 @@ import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.CsvSchema;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
-import com.neo4j.bench.ldbc.connection.Neo4jImporter;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.apache.commons.io.FileUtils;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -51,8 +52,8 @@ import static org.junit.Assert.assertThat;
 
 public class IntegrationValidationTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void shouldCreatePublicValidationSet() throws Exception
@@ -147,7 +148,7 @@ public class IntegrationValidationTest
                 MapUtils.loadPropertiesToMap( new File( scenario.updatesDir(), "updateStream.properties" ) );
         configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs( updateStreamConfiguration );
 
-        dbDir = temporaryFolder.newFolder();
+        dbDir = Files.createTempDirectory( temporaryFolder, "").toFile();
 
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
@@ -195,7 +196,7 @@ public class IntegrationValidationTest
                 timeSource
         );
         Client client = new Client();
-        ClientMode clientMode = client.getClientModeFor( controlService );
+        ClientMode<?> clientMode = client.getClientModeFor( controlService );
         clientMode.init();
         clientMode.startExecutionAndAwaitCompletion();
 
@@ -243,7 +244,7 @@ public class IntegrationValidationTest
     }
 
     // TODO un-ignore Cypher validation test. currently disabled to speed up LDBC automation development.
-    @Ignore
+    @Disabled
     @Test
     public void shouldValidateAgainstPublicNeo4jValidationSetCypherRemote() throws Exception
     {
@@ -279,7 +280,7 @@ public class IntegrationValidationTest
         int threadCount = 4;
         int statusDisplayIntervalAsSeconds = 1;
         TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-        String resultDirPath = temporaryFolder.newFolder().getAbsolutePath();
+        String resultDirPath = Files.createTempDirectory( temporaryFolder, "").toString();
         Double timeCompressionRatio = 1.0;
         ConsoleAndFileDriverConfiguration.ConsoleAndFileValidationParamOptions validationCreationParams = null;
         String databaseValidationFilePath = scenario.validationParamsFile().getAbsolutePath();
@@ -324,7 +325,7 @@ public class IntegrationValidationTest
         VALIDATE
          */
 
-        File dbDir = temporaryFolder.newFolder();
+        File dbDir = Files.createTempDirectory( temporaryFolder, "").toFile();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
@@ -363,7 +364,7 @@ public class IntegrationValidationTest
                 new SystemTimeSource()
         );
         Client client = new Client();
-        ClientMode clientMode = client.getClientModeFor( controlService );
+        ClientMode<?> clientMode = client.getClientModeFor( controlService );
         clientMode.init();
         DbValidationResult dbValidationResult = ((ValidateDatabaseMode) clientMode).startExecutionAndAwaitCompletion();
 
@@ -403,7 +404,8 @@ public class IntegrationValidationTest
         ) );
         FileUtils.writeStringToFile(
                 validationParameterCreationConfigurationFile,
-                anonymizedConfiguration.toPropertiesString()
+                anonymizedConfiguration.toPropertiesString(),
+                Charset.defaultCharset()
         );
     }
 }

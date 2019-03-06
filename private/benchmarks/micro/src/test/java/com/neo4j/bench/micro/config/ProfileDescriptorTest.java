@@ -8,12 +8,13 @@ package com.neo4j.bench.micro.config;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.JsonUtil;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.noProfile;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
@@ -22,8 +23,8 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class ProfileDescriptorTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void shouldSerializeNoProfile() throws IOException
@@ -36,17 +37,17 @@ public class ProfileDescriptorTest
     {
         shouldSerializeAndDeserialize(
                 profileTo(
-                        temporaryFolder.newFolder().toPath(),
+                        Files.createTempDirectory( temporaryFolder, "" ),
                         Lists.newArrayList( ProfilerType.JFR ) ) );
         shouldSerializeAndDeserialize(
                 profileTo(
-                        temporaryFolder.newFolder().toPath(),
+                        Files.createTempDirectory( temporaryFolder, "" ),
                         Lists.newArrayList( ProfilerType.JFR, ProfilerType.ASYNC ) ) );
     }
 
     private Object shouldSerializeAndDeserialize( Object before ) throws IOException
     {
-        File jsonFile = temporaryFolder.newFile();
+        File jsonFile = Files.createTempFile( temporaryFolder, "", "" ).toFile();
         JsonUtil.serializeJson( jsonFile.toPath(), before );
         Object after = JsonUtil.deserializeJson( jsonFile.toPath(), before.getClass() );
         assertThat( before, equalTo( after ) );

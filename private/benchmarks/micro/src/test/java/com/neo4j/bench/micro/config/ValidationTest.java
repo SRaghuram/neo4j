@@ -6,7 +6,7 @@
 package com.neo4j.bench.micro.config;
 
 import com.google.common.collect.Sets;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.bench.micro.config.Validation.ValidationError.CONFIGURED_BENCHMARK_DOES_NOT_EXIST;
 import static com.neo4j.bench.micro.config.Validation.ValidationError.CONFIGURED_PARAMETER_DOES_NOT_EXIST;

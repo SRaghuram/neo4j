@@ -7,7 +7,7 @@ package com.neo4j.bench.ldbc;
 
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.db.DummyLdbcSnbInteractiveOperationInstances;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;

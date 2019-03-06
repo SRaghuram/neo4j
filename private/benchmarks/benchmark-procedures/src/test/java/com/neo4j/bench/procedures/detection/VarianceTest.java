@@ -6,7 +6,7 @@
 package com.neo4j.bench.procedures.detection;
 
 import com.neo4j.bench.client.Units;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.stream.IntStream;
 
@@ -16,9 +16,10 @@ import static com.neo4j.bench.procedures.detection.TestSequences.literal;
 import static com.neo4j.bench.procedures.detection.TestSequences.uniform;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -122,19 +123,25 @@ public class VarianceTest
                         lessThanOrEqualTo( variance10.diffAtPercentile( i + 1 ) ) ) );
     }
 
-    @Test( expected = Exception.class )
-    public void shouldThrowExceptionWhenTryingToAccessNegativePercentile() throws Exception
+    @Test
+    public void shouldThrowExceptionWhenTryingToAccessNegativePercentile()
     {
-        Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
-        Variance variance = Variance.calculateFor( series );
-        variance.diffAtPercentile( -1 );
+        assertThrows( Exception.class, () ->
+        {
+            Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
+            Variance variance = Variance.calculateFor( series );
+            variance.diffAtPercentile( -1 );
+        });
     }
 
-    @Test( expected = Exception.class )
-    public void shouldThrowExceptionWhenTryingToAccessPercentileGreaterThan100() throws Exception
+    @Test
+    public void shouldThrowExceptionWhenTryingToAccessPercentileGreaterThan100()
     {
-        Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
-        Variance variance = Variance.calculateFor( series );
-        variance.diffAtPercentile( 101 );
+        assertThrows( Exception.class, () ->
+        {
+            Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
+            Variance variance = Variance.calculateFor( series );
+            variance.diffAtPercentile( 101 );
+        });
     }
 }

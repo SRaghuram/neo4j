@@ -21,11 +21,11 @@ import com.neo4j.bench.macro.Main;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;
 import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -57,10 +57,10 @@ public class ConvenientLocalExecutionIT
     private static final Planner PLANNER = Planner.DEFAULT;
     private static final Runtime RUNTIME = Runtime.DEFAULT;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
-    @Ignore
+    @Disabled
     @Test
     public void executeWorkload() throws Exception
     {
@@ -111,7 +111,7 @@ public class ConvenientLocalExecutionIT
 
     private Path neo4jConfigFile() throws Exception
     {
-        Path neo4jConfigFile = temporaryFolder.newFile().toPath();
+        Path neo4jConfigFile = Files.createTempFile( temporaryFolder, "", "" );
         Neo4jConfig neo4jConfig = neo4jConfig();
         neo4jConfig.writeAsProperties( neo4jConfigFile );
         return neo4jConfigFile;
@@ -128,7 +128,7 @@ public class ConvenientLocalExecutionIT
     // Required fields for running Single query
     private static final String QUERY_NAME = null; // "Read 14" (from "ldbc_sf001")
 
-    @Ignore
+    @Disabled
     @Test
     public void executeQuery() throws Exception
     {

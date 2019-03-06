@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.procedures.detection;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.bench.client.model.Benchmark.Mode.THROUGHPUT;
 import static com.neo4j.bench.procedures.detection.TestSequences.gradualDegradation;
@@ -20,7 +20,7 @@ public class AnomaliesTest
     private static final String NEO4J_SERIES = "3.1";
 
     @Test
-    @Ignore
+    @Disabled
     // TODO un ignore
     public void test() throws Exception
     {

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.client;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.neo4j.bench.client.Units.conversionFactor;
 import static com.neo4j.bench.client.Units.toAbbreviation;

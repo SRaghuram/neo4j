@@ -13,12 +13,13 @@ import com.neo4j.bench.micro.config.BenchmarkConfigFile;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.SuiteDescription;
 import com.neo4j.bench.micro.config.Validation;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -39,12 +40,12 @@ import static java.util.stream.Collectors.toMap;
 
 public class ConfigCommandIT
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     private SuiteDescription suiteDescription;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
         Validation validation = new Validation();
@@ -58,7 +59,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         Main.main( new String[]{
                 "config", "default",
                 "--path", benchmarkConfig.getAbsolutePath()
@@ -82,7 +83,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteNonExistentGroupConfig() throws Exception
     {
         // when
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         try
         {
             Main.main( new String[]{
@@ -102,7 +103,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteGroupConfigWhenNoGroupSpecified() throws Exception
     {
         // when
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         try
         {
             Main.main( new String[]{
@@ -122,7 +123,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -148,7 +149,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -173,7 +174,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteNonExistentBenchmarkConfig() throws Exception
     {
         // when
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         try
         {
             Main.main( new String[]{
@@ -193,7 +194,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteBenchmarkConfigWhenNoBenchmarkSpecified() throws Exception
     {
         // when
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         try
         {
             Main.main( new String[]{
@@ -213,7 +214,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -249,7 +250,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         String benchmarkName = ValidDisabledBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -286,7 +287,7 @@ public class ConfigCommandIT
         Validation validation = new Validation();
         String benchmarkName1 = ValidEnabledBenchmark1.class.getName();
         String benchmarkName2 = ValidEnabledBenchmark2.class.getName();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         Main.main( new String[]{
                 "config", "benchmarks",
                 "--verbose",
@@ -339,7 +340,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -383,7 +384,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = temporaryFolder.newFile();
+        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
         String benchmarkName = ValidDisabledBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -435,7 +436,7 @@ public class ConfigCommandIT
                 .filter( benchDesc -> benchDesc.className().startsWith( benchmarkNamePrefix ) );
     }
 
-    private String packagePrefixOf( Class clazz )
+    private String packagePrefixOf( Class<?> clazz )
     {
         String testBenchmark = clazz.getName();
         return testBenchmark.substring( 0, testBenchmark.lastIndexOf( "." ) );

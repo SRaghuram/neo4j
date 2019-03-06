@@ -9,7 +9,7 @@ import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.Stores;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
 import java.util.Arrays;

@@ -6,7 +6,7 @@
 package com.neo4j.bench.procedures.detection;
 
 import com.neo4j.bench.client.model.Neo4j;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 

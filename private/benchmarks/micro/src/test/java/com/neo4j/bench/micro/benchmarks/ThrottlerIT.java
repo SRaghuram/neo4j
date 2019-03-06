@@ -6,7 +6,7 @@
 package com.neo4j.bench.micro.benchmarks;
 
 import com.google.common.collect.Lists;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.text.DecimalFormat;

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.macro.execution.measurement;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 

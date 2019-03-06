@@ -29,9 +29,9 @@ import com.neo4j.bench.ldbc.importer.Scenario;
 import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.apache.commons.io.FileUtils;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
-@Ignore
+@Disabled
 public class IntegrationValidationTest
 {
     @Rule

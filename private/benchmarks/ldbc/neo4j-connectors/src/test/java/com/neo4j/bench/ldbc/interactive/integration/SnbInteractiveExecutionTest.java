@@ -21,11 +21,12 @@ import com.neo4j.bench.ldbc.cli.LdbcCli;
 import com.neo4j.bench.ldbc.importer.LdbcSnbImporter;
 import com.neo4j.bench.ldbc.importer.Scenario;
 import org.apache.commons.io.FileUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -74,8 +75,8 @@ public abstract class SnbInteractiveExecutionTest
     private static final long SPINNER_SLEEP_DURATION_AS_MILLI = 1;
     private static final boolean PRINT_HELP = false;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     abstract Scenario buildValidationData() throws DbException;
 
@@ -112,7 +113,7 @@ public abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.newFolder();
+        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
@@ -128,7 +129,7 @@ public abstract class SnbInteractiveExecutionTest
                 false
         );
         Store store = Store.createFrom( storeDir.toPath() );
-        File resultDir = temporaryFolder.newFolder();
+        File resultDir = Files.createTempDirectory( temporaryFolder, "").toFile();
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
         try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.graphDbDirectory().toFile() ) )
@@ -184,7 +185,7 @@ public abstract class SnbInteractiveExecutionTest
 
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
-            File ldbcConfigFile = temporaryFolder.newFile();
+            File ldbcConfigFile = Files.createTempFile( temporaryFolder, "", "").toFile();
             FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
             LdbcCli.benchmark(
                     store,
@@ -249,7 +250,7 @@ public abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.newFolder();
+        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
@@ -264,7 +265,7 @@ public abstract class SnbInteractiveExecutionTest
                 true,
                 false
         );
-        File resultDir = temporaryFolder.newFolder();
+        File resultDir = Files.createTempDirectory( temporaryFolder, "").toFile();
         Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
@@ -334,7 +335,7 @@ public abstract class SnbInteractiveExecutionTest
 
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
-            File ldbcConfigFile = temporaryFolder.newFile();
+            File ldbcConfigFile = Files.createTempFile( temporaryFolder, "", "").toFile();
             FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
             LdbcCli.benchmark(
                     store,
@@ -400,7 +401,7 @@ public abstract class SnbInteractiveExecutionTest
             long operationCount,
             Scenario scenario ) throws Exception
     {
-        File storeDir = temporaryFolder.newFolder();
+        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),
@@ -415,7 +416,7 @@ public abstract class SnbInteractiveExecutionTest
                 true,
                 false
         );
-        File resultDir = temporaryFolder.newFolder();
+        File resultDir = Files.createTempDirectory( temporaryFolder, "").toFile();
         Store store = Store.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
@@ -484,7 +485,7 @@ public abstract class SnbInteractiveExecutionTest
 
             configuration = (ConsoleAndFileDriverConfiguration) modifyConfiguration( configuration );
 
-            File ldbcConfigFile = temporaryFolder.newFile();
+            File ldbcConfigFile = Files.createTempFile( temporaryFolder, "", "").toFile();
             FileUtils.writeStringToFile( ldbcConfigFile, configuration.toPropertiesString() );
             LdbcCli.benchmark(
                     store,

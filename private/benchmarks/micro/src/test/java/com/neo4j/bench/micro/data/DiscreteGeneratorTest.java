@@ -6,7 +6,7 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;

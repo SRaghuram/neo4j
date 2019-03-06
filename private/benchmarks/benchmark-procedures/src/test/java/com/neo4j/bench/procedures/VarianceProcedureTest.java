@@ -13,10 +13,10 @@ import com.neo4j.bench.client.util.SyntheticStoreGenerator;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
 import com.neo4j.bench.procedures.detection.VarianceProcedure;
 import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -46,7 +46,7 @@ public class VarianceProcedureTest
             .withFunction( VarianceProcedure.class )
             .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
 
-    @Before
+    @BeforeEach
     public void generateStore() throws Exception
     {
         SyntheticStoreGenerator generator = new SyntheticStoreGeneratorBuilder()
@@ -69,7 +69,7 @@ public class VarianceProcedureTest
         generateStoreUsing( generator );
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void shouldCalculateVariancesForBenchmark() throws Throwable
     {
@@ -99,7 +99,7 @@ public class VarianceProcedureTest
         }
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void shouldCalculateVariancesForBenchmarkGroup() throws Throwable
     {
@@ -131,7 +131,7 @@ public class VarianceProcedureTest
         }
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void shouldCalculateVariancesForSpecificBenchmarksInBenchmarkGroup() throws Throwable
     {

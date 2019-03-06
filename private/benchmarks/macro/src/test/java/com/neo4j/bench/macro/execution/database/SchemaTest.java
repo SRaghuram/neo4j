@@ -15,7 +15,7 @@ import com.neo4j.bench.macro.execution.database.Schema.RelationshipExistsSchemaE
 import com.neo4j.bench.macro.execution.database.Schema.SchemaEntry;
 import com.neo4j.bench.macro.workload.WorkloadConfigError;
 import com.neo4j.bench.macro.workload.WorkloadConfigException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;

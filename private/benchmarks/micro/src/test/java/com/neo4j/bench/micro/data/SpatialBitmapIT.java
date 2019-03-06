@@ -7,9 +7,8 @@ package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -30,8 +29,8 @@ import static java.lang.Math.round;
 
 public class SpatialBitmapIT
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void shouldMakePrettyBitmap() throws IOException
@@ -94,7 +93,7 @@ public class SpatialBitmapIT
             spatialBitmap.addPointToBitmap( pointX, pointY );
         }
         while ( !fun.wrapped() );
-        Path path = temporaryFolder.newFile( filename ).toPath();
+        Path path = temporaryFolder.resolve( filename );
         System.out.println( "Writing image to: " + path.toFile().getAbsolutePath() );
         spatialBitmap.writeTo( path );
     }

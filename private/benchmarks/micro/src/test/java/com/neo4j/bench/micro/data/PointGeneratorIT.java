@@ -10,7 +10,7 @@ import com.neo4j.bench.client.util.RichRandom;
 import com.neo4j.bench.micro.data.CRS.Cartesian;
 import com.neo4j.bench.micro.data.CRS.WGS84;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.SplittableRandom;
 

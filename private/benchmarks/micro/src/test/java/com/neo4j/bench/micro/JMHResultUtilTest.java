@@ -7,7 +7,7 @@ package com.neo4j.bench.micro;
 
 import com.neo4j.bench.client.model.Benchmark.Mode;
 import com.neo4j.bench.micro.config.ParameterValue;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.IterationParams;
 import org.openjdk.jmh.runner.IterationType;

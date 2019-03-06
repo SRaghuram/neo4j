@@ -21,10 +21,8 @@ import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.bench.micro.data.Stores;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -43,11 +41,8 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class InteractiveRunIT
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
@@ -148,8 +143,8 @@ public class InteractiveRunIT
             ErrorPolicy errorPolicy,
             String... methods ) throws Exception
     {
-        File storesDir = temporaryFolder.newFolder();
-        Path profilerRecordingDirectory = temporaryFolder.newFolder().toPath();
+        File storesDir = Files.createTempDirectory( temporaryFolder, "" ).toFile();
+        Path profilerRecordingDirectory = Files.createTempDirectory( temporaryFolder, "" );
         boolean generateStoresInFork = true;
         int measurementForks = 1;
         Main.run(

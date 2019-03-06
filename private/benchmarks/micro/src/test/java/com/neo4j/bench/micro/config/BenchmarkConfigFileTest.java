@@ -7,8 +7,8 @@ package com.neo4j.bench.micro.config;
 
 import com.neo4j.bench.micro.benchmarks.test_only.ValidDisabledBenchmark;
 import com.neo4j.bench.micro.benchmarks.test_only.ValidEnabledBenchmark1;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +31,7 @@ public class BenchmarkConfigFileTest
 {
     private SuiteDescription suiteDescription;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
         Validation validation = new Validation();

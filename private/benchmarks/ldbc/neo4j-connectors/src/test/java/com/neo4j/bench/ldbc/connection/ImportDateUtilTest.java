@@ -5,43 +5,53 @@
  */
 package com.neo4j.bench.ldbc.connection;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.text.ParseException;
 import java.util.Calendar;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ImportDateUtilTest
 {
     private static final LdbcDateCodecUtil LDBC_DATE_CODEC_UTIL = new LdbcDateCodecUtil();
 
-    @Test( expected = RuntimeException.class )
+    @Test
     public void shouldNotCreateUtcToEncodedStringConverter() throws ParseException
     {
-        ImportDateUtil.createFor(
-                LdbcDateCodec.Format.NUMBER_UTC,
-                LdbcDateCodec.Format.STRING_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+        assertThrows( RuntimeException.class, () ->
+        {
+            ImportDateUtil.createFor(
+                    LdbcDateCodec.Format.NUMBER_UTC,
+                    LdbcDateCodec.Format.STRING_ENCODED,
+                    LdbcDateCodec.Resolution.HOUR );
+        });
     }
 
-    @Test( expected = RuntimeException.class )
+    @Test
     public void shouldNotCreateEncodedNumberToEncodedStringConverter() throws ParseException
     {
-        ImportDateUtil.createFor(
-                LdbcDateCodec.Format.NUMBER_ENCODED,
-                LdbcDateCodec.Format.STRING_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+        assertThrows( RuntimeException.class, () ->
+        {
+            ImportDateUtil.createFor(
+                    LdbcDateCodec.Format.NUMBER_ENCODED,
+                    LdbcDateCodec.Format.STRING_ENCODED,
+                    LdbcDateCodec.Resolution.HOUR );
+        });
     }
 
-    @Test( expected = RuntimeException.class )
+    @Test
     public void shouldNotCreateEncodedStringToEncodedStringConverter() throws ParseException
     {
-        ImportDateUtil.createFor(
-                LdbcDateCodec.Format.STRING_ENCODED,
-                LdbcDateCodec.Format.STRING_ENCODED,
-                LdbcDateCodec.Resolution.HOUR );
+        assertThrows( RuntimeException.class, () ->
+        {
+            ImportDateUtil.createFor(
+                    LdbcDateCodec.Format.STRING_ENCODED,
+                    LdbcDateCodec.Format.STRING_ENCODED,
+                    LdbcDateCodec.Resolution.HOUR );
+        });
     }
 
     @Test
