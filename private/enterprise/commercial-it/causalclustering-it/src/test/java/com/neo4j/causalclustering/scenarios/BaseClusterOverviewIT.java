@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -261,7 +260,7 @@ public abstract class BaseClusterOverviewIT
             List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.database() );
 
             CoreClusterMember follower = cluster.getMemberWithRole( Role.FOLLOWER );
-            follower.raft().triggerElection( Clock.systemUTC() );
+            follower.raft().triggerElection();
 
             ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, 1 ),

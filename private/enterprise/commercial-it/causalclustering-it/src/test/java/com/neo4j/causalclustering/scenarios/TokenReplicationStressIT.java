@@ -16,7 +16,6 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.HashSet;
@@ -186,7 +185,7 @@ class TokenReplicationStressIT
                 raftServer.stop();
 
                 // trigger an election and await until a new leader is elected
-                follower.raft().triggerElection( Clock.systemUTC() );
+                follower.raft().triggerElection();
                 Assert.assertEventually( "Leader re-election did not happen", () -> awaitLeader( cluster ), not( equalTo( leader ) ), 1, MINUTES );
 
                 // make the previous leader responsive again

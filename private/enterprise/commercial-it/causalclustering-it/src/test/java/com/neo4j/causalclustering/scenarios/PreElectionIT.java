@@ -13,7 +13,6 @@ import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -55,7 +54,7 @@ public class PreElectionIT
         CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 1, TimeUnit.MINUTES );
 
         // when
-        follower.raft().triggerElection( Clock.systemUTC() );
+        follower.raft().triggerElection();
 
         // then
         try

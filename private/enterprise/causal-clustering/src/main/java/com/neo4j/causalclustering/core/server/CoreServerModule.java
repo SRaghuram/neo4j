@@ -107,7 +107,7 @@ public class CoreServerModule extends CatchupServersModule
         catchupServer = createCatchupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
         backupServer = createBackupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
 
-        RaftLogPruner raftLogPruner = new RaftLogPruner( consensusModule.raftMachine(), commandApplicationProcess, globalModule.getGlobalClock() );
+        RaftLogPruner raftLogPruner = new RaftLogPruner( consensusModule.raftMachine(), commandApplicationProcess );
         globalDependencies.satisfyDependency( raftLogPruner );
 
         globalLife.add( new PruningScheduler( raftLogPruner, jobScheduler,

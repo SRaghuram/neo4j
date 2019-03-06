@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
-import java.time.Clock;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -768,7 +767,7 @@ class BoltCausalClusteringIT
         {
             if ( !coreClusterMember.equals( initialLeader ) )
             {
-                coreClusterMember.raft().triggerElection( Clock.systemUTC() );
+                coreClusterMember.raft().triggerElection();
                 cluster.awaitLeader();
             }
         }

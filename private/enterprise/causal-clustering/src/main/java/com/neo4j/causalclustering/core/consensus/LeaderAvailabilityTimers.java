@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import java.time.Clock;
 import java.time.Duration;
 
-import org.neo4j.function.ThrowingConsumer;
+import org.neo4j.function.ThrowingAction;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
@@ -52,7 +52,7 @@ class LeaderAvailabilityTimers
         }
     }
 
-    synchronized void start( ThrowingConsumer<Clock, Exception> electionAction, ThrowingConsumer<Clock, Exception> heartbeatAction )
+    synchronized void start( ThrowingAction<Exception> electionAction, ThrowingAction<Exception> heartbeatAction )
     {
         this.electionTimer = timerService.create( RaftMachine.Timeouts.ELECTION, Group.RAFT_TIMER, renewing( electionAction) );
         this.electionTimer.set( uniformRandomTimeout( electionTimeout, electionTimeout * 2, MILLISECONDS ) );
@@ -95,13 +95,13 @@ class LeaderAvailabilityTimers
         return electionTimeout;
     }
 
-    private TimeoutHandler renewing( ThrowingConsumer<Clock, Exception> action )
+    private TimeoutHandler renewing( ThrowingAction<Exception> action )
     {
         return timeout ->
         {
             try
             {
-                action.accept( clock );
+                action.apply();
             }
             catch ( Exception e )
             {

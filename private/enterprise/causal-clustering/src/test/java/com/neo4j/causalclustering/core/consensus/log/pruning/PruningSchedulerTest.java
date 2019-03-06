@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.consensus.log.pruning;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import org.junit.Test;
 
-import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -117,7 +116,7 @@ public class PruningSchedulerTest
         // given
         final AtomicReference<Throwable> ex = new AtomicReference<>();
         final DoubleLatch checkPointerLatch = new DoubleLatch( 1 );
-        RaftLogPruner logPruner = new RaftLogPruner( null, null, Clock.systemUTC() )
+        RaftLogPruner logPruner = new RaftLogPruner( null, null )
         {
             @Override
             public void prune()

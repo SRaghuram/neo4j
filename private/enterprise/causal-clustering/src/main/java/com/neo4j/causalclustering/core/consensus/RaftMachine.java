@@ -25,7 +25,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 
 import java.io.IOException;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
@@ -104,9 +103,7 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
      */
     public synchronized void postRecoveryActions()
     {
-        leaderAvailabilityTimers.start( this::electionTimeout,
-                clock -> handle( RaftMessages.ReceivedInstantAwareMessage.of( clock.instant(), new RaftMessages.Timeout.Heartbeat( myself ) ) ) );
-
+        leaderAvailabilityTimers.start( this::electionTimeout, () -> handle( new RaftMessages.Timeout.Heartbeat( myself ) ) );
         inFlightCache.enable();
     }
 
@@ -115,17 +112,17 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, PanicEventHandl
         leaderAvailabilityTimers.stop();
     }
 
-    private synchronized void electionTimeout( Clock clock ) throws IOException
+    private synchronized void electionTimeout() throws IOException
     {
         if ( leaderAvailabilityTimers.isElectionTimedOut() )
         {
-            triggerElection( clock );
+            triggerElection();
         }
     }
 
-    public void triggerElection( Clock clock ) throws IOException
+    public void triggerElection() throws IOException
     {
-        handle( RaftMessages.ReceivedInstantAwareMessage.of( clock.instant(), new RaftMessages.Timeout.Election( myself ) ) );
+        handle( new RaftMessages.Timeout.Election( myself ) );
     }
 
     public synchronized RaftCoreState coreState()
