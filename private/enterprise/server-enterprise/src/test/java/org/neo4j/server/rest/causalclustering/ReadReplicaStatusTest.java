@@ -65,7 +65,7 @@ public class ReadReplicaStatusTest
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         databaseHealth = dependencyResolver.satisfyDependency(
                 new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
-        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
+        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker( NullLogProvider.getInstance() ) );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }

@@ -81,7 +81,7 @@ public class CatchupProcessManagerTest
 
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
-                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
+                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker( NullLogProvider.getInstance() ),
                 NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() ) );
     }
 
@@ -124,7 +124,7 @@ public class CatchupProcessManagerTest
             return catchupProcess;
         };
         catchupProcessManager = new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
-                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
+                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker( NullLogProvider.getInstance() ),
                 factory, NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() );
         // when
         catchupProcessManager.init();

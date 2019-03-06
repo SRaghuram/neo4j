@@ -88,7 +88,7 @@ public class CoreStatusTest
 
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor() );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
-        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
+        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker( NullLogProvider.getInstance() ) );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }

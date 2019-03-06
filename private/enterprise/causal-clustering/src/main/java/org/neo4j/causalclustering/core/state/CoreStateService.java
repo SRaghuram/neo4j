@@ -125,7 +125,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         fs = platformModule.fileSystem;
         sessionTracker = replicationModule.getSessionTracker();
         allocationSizes = getIdTypeAllocationSizeFromConfig( config );
-        commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
+        commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker( logProvider ) );
 
         versionContextSupplier = platformModule.versionContextSupplier;
         cursorTracerSupplier = platformModule.tracers.pageCursorTracerSupplier;

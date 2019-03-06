@@ -39,7 +39,7 @@ public class BatchingTxApplierTest
 {
     private final TransactionIdStore idStore = mock( TransactionIdStore.class );
     private final TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
-    private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
+    private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker( NullLogProvider.getInstance() );
 
     private final long startTxId = 31L;
     private final int maxBatchSize = 16;

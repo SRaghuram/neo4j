@@ -41,7 +41,7 @@ import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_N
 public class ReplicatedTransactionStateMachineTest
 {
     private final NullLogProvider logProvider = NullLogProvider.getInstance();
-    private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
+    private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker( NullLogProvider.getInstance() );
     private final int batchSize = 16;
 
     @Test
