@@ -8,6 +8,7 @@ package org.neo4j.management.impl;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.neo4j.common.Dependencies;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.schema.SchemaDescriptorFactory;
@@ -15,7 +16,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
 import org.neo4j.kernel.impl.core.TokenHolders;
-import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.management.impl.IndexSamplingManagerBean.StoreAccess;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;

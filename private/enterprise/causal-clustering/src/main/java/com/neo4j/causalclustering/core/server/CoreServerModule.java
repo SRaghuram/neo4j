@@ -37,8 +37,8 @@ import com.neo4j.causalclustering.net.Server;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.neo4j.common.Dependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
 import org.neo4j.logging.LogProvider;

@@ -12,11 +12,11 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Set;
 
+import org.neo4j.common.Dependencies;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
-import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 

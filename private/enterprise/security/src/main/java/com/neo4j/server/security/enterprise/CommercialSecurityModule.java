@@ -110,7 +110,7 @@ public class CommercialSecurityModule extends SecurityModule
     public void setup( Dependencies dependencies ) throws KernelException
     {
         // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
-        org.neo4j.kernel.impl.util.Dependencies platformDependencies = (org.neo4j.kernel.impl.util.Dependencies) dependencies.dependencySatisfier();
+        org.neo4j.common.Dependencies platformDependencies = (org.neo4j.common.Dependencies) dependencies.dependencySatisfier();
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
 
         this.config = dependencies.config();
@@ -118,15 +118,8 @@ public class CommercialSecurityModule extends SecurityModule
         this.fileSystem = dependencies.fileSystem();
         this.accessCapability = dependencies.accessCapability();
 
-        if ( config.get( CommercialEditionSettings.mode ) == CommercialEditionSettings.Mode.CORE ||
-                config.get( CommercialEditionSettings.mode ) == CommercialEditionSettings.Mode.READ_REPLICA )
-        {
-            initSystemGraphOnStart = false;
-        }
-        else
-        {
-            initSystemGraphOnStart = true;
-        }
+        initSystemGraphOnStart = config.get( CommercialEditionSettings.mode ) != CommercialEditionSettings.Mode.CORE &&
+                config.get( CommercialEditionSettings.mode ) != CommercialEditionSettings.Mode.READ_REPLICA;
 
         GlobalProcedures globalProcedures = dependencies.procedures();
         JobScheduler jobScheduler = dependencies.scheduler();
