@@ -132,7 +132,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         // when
         for ( Config config : memberConfigs )
         {
-            runRestore( fs, new File( backupLocation, databaseName ), config );
+            runRestore( fs, backupLocation, config );
         }
 
         unbindCluster( cluster, fs );
