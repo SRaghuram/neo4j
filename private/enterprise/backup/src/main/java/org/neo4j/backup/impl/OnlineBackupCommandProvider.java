@@ -8,6 +8,7 @@ package org.neo4j.backup.impl;
 import javax.annotation.Nonnull;
 
 import org.neo4j.OnlineBackupCommandSection;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
 import org.neo4j.commandline.admin.CommandContext;
@@ -21,11 +22,14 @@ import org.neo4j.logging.NullLogProvider;
 
 import static java.lang.String.format;
 
-public class OnlineBackupCommandProvider extends AdminCommand.Provider
+@ServiceProvider
+public class OnlineBackupCommandProvider implements AdminCommand.Provider
 {
-    public OnlineBackupCommandProvider()
+    @Nonnull
+    @Override
+    public String getName()
     {
-        super( "backup" );
+        return "backup";
     }
 
     @Override

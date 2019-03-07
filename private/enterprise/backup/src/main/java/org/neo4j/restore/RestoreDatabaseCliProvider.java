@@ -8,16 +8,21 @@ package org.neo4j.restore;
 import javax.annotation.Nonnull;
 
 import org.neo4j.OnlineBackupCommandSection;
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
 import org.neo4j.commandline.admin.CommandContext;
 import org.neo4j.commandline.arguments.Arguments;
 
-public class RestoreDatabaseCliProvider extends AdminCommand.Provider
+@ServiceProvider
+public class RestoreDatabaseCliProvider implements AdminCommand.Provider
 {
-    public RestoreDatabaseCliProvider()
+
+    @Nonnull
+    @Override
+    public String getName()
     {
-        super( "restore" );
+        return "restore";
     }
 
     @Override

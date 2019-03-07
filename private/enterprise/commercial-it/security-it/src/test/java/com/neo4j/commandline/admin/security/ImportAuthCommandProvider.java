@@ -5,17 +5,20 @@
  */
 package com.neo4j.commandline.admin.security;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.AdminCommand;
 import org.neo4j.commandline.admin.AdminCommandSection;
 import org.neo4j.commandline.admin.CommandContext;
 import org.neo4j.commandline.admin.security.AuthenticationCommandSection;
 import org.neo4j.commandline.arguments.Arguments;
 
-public class ImportAuthCommandProvider extends AdminCommand.Provider
+@ServiceProvider
+public class ImportAuthCommandProvider implements AdminCommand.Provider
 {
-    public ImportAuthCommandProvider()
+    @Override
+    public String getName()
     {
-        super( ImportAuthCommand.COMMAND_NAME );
+        return ImportAuthCommand.COMMAND_NAME;
     }
 
     @Override
