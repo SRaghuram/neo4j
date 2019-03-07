@@ -13,7 +13,6 @@ import com.neo4j.bench.micro.data.RelationshipDefinition;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.internal.kernel.api.Kernel;
-import org.neo4j.internal.kernel.api.exceptions.schema.IllegalTokenNameException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 public abstract class AbstractKernelBenchmark extends BaseDatabaseBenchmark
@@ -70,7 +69,7 @@ public abstract class AbstractKernelBenchmark extends BaseDatabaseBenchmark
             return tokens;
         }
 
-        int[] propertyKeysToIds( String[] keys ) throws IllegalTokenNameException
+        int[] propertyKeysToIds( String[] keys ) throws KernelException
         {
             int[] tokens = new int[keys.length];
             for ( int i = 0; i < tokens.length; i++ )

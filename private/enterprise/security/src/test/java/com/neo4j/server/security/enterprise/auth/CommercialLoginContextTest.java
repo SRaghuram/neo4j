@@ -16,9 +16,9 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.util.Collections;
-import java.util.function.ToIntFunction;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
@@ -34,7 +34,7 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 class CommercialLoginContextTest
 {
-    private static final ToIntFunction<String> token = prop -> -1;
+    private static final LoginContext.PropertyKeyIdLookup token = prop -> -1;
     private static final String user = "user";
 
     private MultiRealmAuthManager authManager;

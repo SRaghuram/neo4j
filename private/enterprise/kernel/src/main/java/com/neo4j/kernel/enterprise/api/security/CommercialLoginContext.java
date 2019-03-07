@@ -7,7 +7,6 @@ package com.neo4j.kernel.enterprise.api.security;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.function.ToIntFunction;
 
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -17,7 +16,7 @@ public interface CommercialLoginContext extends LoginContext
     Set<String> roles();
 
     @Override
-    CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName );
+    CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName );
 
     CommercialLoginContext AUTH_DISABLED = new CommercialLoginContext()
     {
@@ -34,7 +33,7 @@ public interface CommercialLoginContext extends LoginContext
         }
 
         @Override
-        public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+        public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
         {
             return CommercialSecurityContext.AUTH_DISABLED;
         }

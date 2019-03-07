@@ -7,7 +7,6 @@ package com.neo4j.kernel.enterprise.api.security;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.function.ToIntFunction;
 
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -35,7 +34,7 @@ public class CommercialSecurityContext extends SecurityContext
     }
 
     @Override
-    public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+    public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
     {
         return this;
     }

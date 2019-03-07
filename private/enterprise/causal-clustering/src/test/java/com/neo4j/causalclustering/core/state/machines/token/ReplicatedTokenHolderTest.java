@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.function.Supplier;
 
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
@@ -59,7 +60,7 @@ public class ReplicatedTokenHolderTest
     }
 
     @Test
-    public void shouldReturnExistingTokenId()
+    public void shouldReturnExistingTokenId() throws KernelException
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );

@@ -10,10 +10,9 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.function.ToIntFunction;
-
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AccessMode;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.api.security.OverriddenAccessMode;
 import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
@@ -30,7 +29,7 @@ public class CommercialSecurityContextDescriptionTest
     public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
 
     private EnterpriseUserManager manager;
-    private final ToIntFunction<String> token = s -> -1;
+    private final LoginContext.PropertyKeyIdLookup token = s -> -1;
 
     @Before
     public void setUp() throws Throwable

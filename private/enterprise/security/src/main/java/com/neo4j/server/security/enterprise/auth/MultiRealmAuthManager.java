@@ -34,12 +34,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.IntPredicate;
-import java.util.function.ToIntFunction;
 
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.graphdb.security.AuthProviderTimeoutException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 
@@ -301,7 +301,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
         return infoList;
     }
 
-    IntPredicate getPropertyPermissions( Set<String> roles, ToIntFunction<String> tokenLookup )
+    IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.PropertyKeyIdLookup tokenLookup )
     {
         if ( propertyAuthorization )
         {
@@ -316,7 +316,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
 
                         try
                         {
-                            blackListed.add( tokenLookup.applyAsInt( propName ) );
+                            blackListed.add( tokenLookup.getOrCreatePropertyKeyId( propName ) );
                         }
                         catch ( Exception e )
                         {

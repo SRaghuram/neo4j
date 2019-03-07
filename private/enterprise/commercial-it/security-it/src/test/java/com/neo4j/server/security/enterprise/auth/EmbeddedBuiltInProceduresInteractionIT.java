@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.ToIntFunction;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.QueryExecutionException;
@@ -101,7 +100,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
         return new CommercialLoginContext()
         {
             @Override
-            public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+            public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
             {
                 return new CommercialSecurityContext( subject(), inner.mode(), Collections.emptySet(), false );
             }

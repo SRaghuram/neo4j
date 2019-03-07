@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.IntPredicate;
-import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -52,7 +51,7 @@ class StandardCommercialLoginContext implements CommercialLoginContext
         return neoShiroSubject;
     }
 
-    private StandardAccessMode mode( ToIntFunction<String> tokenLookup )
+    private StandardAccessMode mode( PropertyKeyIdLookup tokenLookup )
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         return new StandardAccessMode(
@@ -67,9 +66,9 @@ class StandardCommercialLoginContext implements CommercialLoginContext
     }
 
     @Override
-    public CommercialSecurityContext authorize( ToIntFunction<String> propertyIdLookup, String dbName )
+    public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
     {
-        StandardAccessMode mode = mode( propertyIdLookup );
+        StandardAccessMode mode = mode( propertyKeyIdLookup );
         return new CommercialSecurityContext( neoShiroSubject, mode, mode.roles, isAdmin() );
     }
 
@@ -92,7 +91,7 @@ class StandardCommercialLoginContext implements CommercialLoginContext
                 .collect( Collectors.toSet() );
     }
 
-    private IntPredicate queryForPropertyPermissions( ToIntFunction<String> tokenLookup )
+    private IntPredicate queryForPropertyPermissions( PropertyKeyIdLookup tokenLookup )
     {
         return authManager.getPropertyPermissions( roles(), tokenLookup );
     }

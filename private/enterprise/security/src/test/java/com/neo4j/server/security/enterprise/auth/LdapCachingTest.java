@@ -22,11 +22,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.ToIntFunction;
 import javax.naming.NamingException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 
 import static org.hamcrest.Matchers.is;
@@ -41,7 +41,7 @@ class LdapCachingTest
     private TestRealm testRealm;
     private FakeTicker fakeTicker;
 
-    private final ToIntFunction<String> token = s -> -1;
+    private final LoginContext.PropertyKeyIdLookup token = s -> -1;
 
     @BeforeEach
     void setup() throws Throwable

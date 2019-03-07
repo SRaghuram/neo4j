@@ -12,11 +12,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.function.Supplier;
 
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
-import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.state.TxState;
 import org.neo4j.kernel.impl.core.AbstractTokenHolderBase;
@@ -55,7 +53,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     }
 
     @Override
-    public void getOrCreateIds( String[] names, int[] ids )
+    public void getOrCreateIds( String[] names, int[] ids ) throws KernelException
     {
         for ( int i = 0; i < names.length; i++ )
         {
@@ -64,7 +62,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     }
 
     @Override
-    public void getOrCreateInternalIds( String[] names, int[] ids )
+    public void getOrCreateInternalIds( String[] names, int[] ids ) throws KernelException
     {
         for ( int i = 0; i < names.length; i++ )
         {
@@ -102,7 +100,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         {
             storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.NONE, Long.MAX_VALUE, NO_DECORATION );
         }
-        catch ( CreateConstraintFailureException | TransactionFailureException | ConstraintValidationException e )
+        catch ( KernelException e )
         {
             throw new RuntimeException( "Unable to create token '" + tokenName + "'", e );
         }

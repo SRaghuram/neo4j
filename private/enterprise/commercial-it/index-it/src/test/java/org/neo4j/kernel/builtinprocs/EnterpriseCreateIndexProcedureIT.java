@@ -31,7 +31,6 @@ import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.Transaction;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.internal.kernel.api.exceptions.schema.IllegalTokenNameException;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException;
@@ -194,7 +193,7 @@ public class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         }
     }
 
-    private int[] createProperties( Transaction transaction, String... properties ) throws IllegalTokenNameException
+    private int[] createProperties( Transaction transaction, String... properties ) throws KernelException
     {
         int[] propertyKeyIds = new int[properties.length];
         for ( int i = 0; i < properties.length; i++ )
