@@ -29,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
@@ -174,6 +175,22 @@ public class PersistentSnapshotDownloaderTest
         // then
         verify( applicationProcess, times( 1 ) ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess, times( 1 ) ).resumeApplier( OPERATION_NAME );
+    }
+
+    @Test
+    public void shouldNotStartDatabaseServiceWhenStoppedDuringDownload() throws Throwable
+    {
+        when( coreDownloader.downloadSnapshotAndStores( any() ) ).thenReturn( Optional.empty() );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+        Thread thread = new Thread( persistentSnapshotDownloader );
+
+        thread.start();
+        awaitOneIteration( backoffStrategy );
+        persistentSnapshotDownloader.stop();
+        thread.join();
+
+        verify( databaseService ).stopForStoreCopy();
+        verify( databaseService, never() ).start();
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException

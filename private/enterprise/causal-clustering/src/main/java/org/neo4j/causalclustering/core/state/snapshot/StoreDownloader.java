@@ -23,7 +23,6 @@ import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static java.lang.String.format;
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_GENERAL_ERROR;
 import static org.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static org.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
@@ -64,8 +63,8 @@ public class StoreDownloader
             }
             else if ( catchupResult == E_TRANSACTION_PRUNED )
             {
-                String message = "Member at %s has pruned the transaction logs necessary for a catchup and a full store copy is required.";
-                log.warn( format( message, primaryAddress ) );
+                log.warn( "Member at " + primaryAddress + " has pruned the transaction logs necessary for a catchup and a full store copy is required. " +
+                          "Existing store will be deleted" );
                 database.delete();
             }
             else
