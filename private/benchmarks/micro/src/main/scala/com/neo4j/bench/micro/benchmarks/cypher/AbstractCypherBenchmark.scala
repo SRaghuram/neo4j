@@ -11,7 +11,7 @@ import java.util.function.LongSupplier
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.CypherRuntimeOption
-import org.neo4j.cypher.internal.ir.v4_0.{PlannerQuery, ProvidedOrder}
+import org.neo4j.cypher.internal.ir.{PlannerQuery, ProvidedOrder}
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
 import org.neo4j.cypher.internal.planner.spi._

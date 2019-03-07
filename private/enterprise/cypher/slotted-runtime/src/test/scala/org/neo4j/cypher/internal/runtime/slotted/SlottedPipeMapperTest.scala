@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.mockito.Mockito._
 
 import org.neo4j.cypher.internal.compiler.v4_0.planner.LogicalPlanningTestSupport2
-import org.neo4j.cypher.internal.ir.v4_0.{CreateNode, VarPatternLength}
+import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
