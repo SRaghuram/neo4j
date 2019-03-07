@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.labelscan.LabelScanStore;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
+import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.SchemaState;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
@@ -259,7 +260,7 @@ class TransactionStatusResultTest
                         mock( StorageEngine.class, RETURNS_MOCKS ), new CanWrite(),
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
-                        mock( IndexStatisticsStore.class ), dependencies )
+                        mock( IndexStatisticsStore.class ), dependencies, mock( AvailabilityGuard.class ) )
             {
                 @Override
                 public Statistics getStatistics()

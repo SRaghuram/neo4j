@@ -113,8 +113,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         LifeSupport globalLife = globalModule.getGlobalLife();
 
         SystemNanoClock globalClock = globalModule.getGlobalClock();
-        threadToTransactionBridge = globalDependencies.satisfyDependency(
-                new ThreadToStatementContextBridge( getGlobalAvailabilityGuard( globalClock, logService ) ) );
+        threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
         this.accessCapability = new ReadOnly();
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService,

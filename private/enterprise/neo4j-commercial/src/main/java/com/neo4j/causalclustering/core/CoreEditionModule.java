@@ -166,7 +166,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 logProvider ) );
 
         AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( globalModule.getGlobalClock(), logService );
-        threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge( globalGuard ) );
+        threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
 
         final PanicService panicService = new PanicService( logService.getUserLogProvider() );
         // used by test

@@ -516,11 +516,6 @@ class SystemGraphRealmIT
 
     private class TestThreadToStatementContextBridge extends ThreadToStatementContextBridge
     {
-        TestThreadToStatementContextBridge()
-        {
-            super( null );
-        }
-
         @Override
         public boolean hasTransaction()
         {
