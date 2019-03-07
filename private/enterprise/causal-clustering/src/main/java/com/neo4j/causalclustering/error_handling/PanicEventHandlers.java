@@ -11,9 +11,9 @@ import java.util.function.Supplier;
 
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityRequirement;
-import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.monitoring.DatabaseHealth;
 
 import static com.neo4j.causalclustering.error_handling.PanicException.EXCEPTION;
 
