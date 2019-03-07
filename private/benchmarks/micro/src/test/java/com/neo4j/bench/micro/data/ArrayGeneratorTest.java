@@ -6,7 +6,7 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import org.junit.Assert;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -179,7 +179,7 @@ public class ArrayGeneratorTest
         {
             Object value1 = fun1.next( rng1 );
             Object value2 = fun2.next( rng2 );
-            Assert.assertThat( value1, equalTo( value2 ) );
+            assertThat( value1, equalTo( value2 ) );
         }
         long duration = System.currentTimeMillis() - start;
         System.out.println( format( "Duration = %s (ms)", duration ) );

@@ -6,21 +6,17 @@
 package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.util.BenchmarkUtil;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BranchAndVersionTest
 {
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
 
     @Test
     public void shouldPassValidateWithExpectedParameters()

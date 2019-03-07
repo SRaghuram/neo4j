@@ -30,9 +30,9 @@ import static com.neo4j.bench.micro.config.BenchmarkConfigFile.fromFile;
 import static com.neo4j.bench.micro.config.SuiteDescription.fromConfig;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
@@ -50,7 +50,7 @@ public class ConfigCommandIT
     {
         Validation validation = new Validation();
         suiteDescription = SuiteDescription.byReflection( validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -69,9 +69,9 @@ public class ConfigCommandIT
         BenchmarkConfigFile configFile = fromFile( benchmarkConfig.toPath(), validation );
         assertThat( configFile.entries().size(), equalTo( benchmarkCount ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )
@@ -134,9 +134,9 @@ public class ConfigCommandIT
         BenchmarkConfigFile configFile = fromFile( benchmarkConfig.toPath(), validation );
         assertThat( configFile.entries().size(), equalTo( benchmarkCount ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )
@@ -160,9 +160,9 @@ public class ConfigCommandIT
         BenchmarkConfigFile configFile = fromFile( benchmarkConfig.toPath(), validation );
         assertThat( configFile.entries().size(), equalTo( benchmarkCount ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )
@@ -230,9 +230,9 @@ public class ConfigCommandIT
         assertThat( configFile.getEntry( benchmarkName ).values(), equalTo( emptyMap() ) );
         assertTrue( configFile.getEntry( benchmarkName ).isEnabled() );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )
@@ -265,9 +265,9 @@ public class ConfigCommandIT
         assertThat( configFile.getEntry( benchmarkName ).values(), equalTo( emptyMap() ) );
         assertTrue( configFile.getEntry( benchmarkName ).isEnabled() );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )
@@ -311,9 +311,9 @@ public class ConfigCommandIT
         assertThat( configFile.getEntry( benchmarkName2 ).values(),
                 equalTo( map( "boolean", newHashSet( "true" ) ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )
@@ -351,7 +351,7 @@ public class ConfigCommandIT
 
         BenchmarkConfigFile configFile = fromFile( benchmarkConfig.toPath(), validation );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         Map<String,Boolean> allBenchmarks = suiteDescription.benchmarks().stream()
                 .collect( toMap( BenchmarkDescription::className, benchDesc -> false ) );
@@ -364,9 +364,9 @@ public class ConfigCommandIT
         assertTrue( configFile.entries().stream()
                 .allMatch( entry -> entry.isEnabled() == allBenchmarks.get( entry.name() ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )
@@ -395,7 +395,7 @@ public class ConfigCommandIT
 
         BenchmarkConfigFile configFile = fromFile( benchmarkConfig.toPath(), validation );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         Map<String,Boolean> allBenchmarks = suiteDescription.benchmarks().stream()
                 .collect( toMap( BenchmarkDescription::className, benchDesc -> false ) );
@@ -409,9 +409,9 @@ public class ConfigCommandIT
         assertTrue( configFile.entries().stream()
                 .allMatch( entry -> entry.isEnabled() == allBenchmarks.get( entry.name() ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
         SuiteDescription finalSuiteDescription = fromConfig( suiteDescription, configFile, validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         List<BenchmarkDescription> enabledBenchmarks = finalSuiteDescription.benchmarks().stream()
                 .filter( BenchmarkDescription::isEnabled )

@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class IntegrationValidationTest
 {

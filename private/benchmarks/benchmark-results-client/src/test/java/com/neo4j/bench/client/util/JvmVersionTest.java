@@ -13,7 +13,7 @@ import java.nio.file.Paths;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class JvmVersionTest
 {
@@ -26,7 +26,6 @@ public class JvmVersionTest
         JvmVersion jvmVersion = JvmVersion.getVersion( Jvm.fromJdkPath( Paths.get( javaHome ) ) );
         assertThat( jvmVersion.majorVersion(), is( majorVersion ) );
         assertThat( jvmVersion.runtimeName(), not( isEmptyOrNullString() ) );
-
     }
 
 }

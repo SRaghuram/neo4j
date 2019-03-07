@@ -12,6 +12,7 @@ import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -19,9 +20,10 @@ import java.util.List;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.ByteUnit;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static java.lang.StrictMath.abs;
+import static java.lang.String.format;
 
 public class PathModelTest
 {
@@ -94,10 +96,11 @@ public class PathModelTest
 
         double diff = abs( 1.0 - clusterTx.size() / (double) size );
 
-        String message =
-                "Expected a diff of less than " + maxDiff * 100 + "%. Got actual diff: " + diff * 100 + "%. Got size: " + clusterTx.size() + " actual wanted " +
-                size;
-
-        assertTrue( message, diff < maxDiff );
+        assertTrue( diff < maxDiff,
+                    format( "Expected a diff of less than {0}%. Got actual diff: {1}%. Got size: {2} actual wanted {3}",
+                            maxDiff * 100,
+                            diff * 100,
+                            clusterTx.size(),
+                            size ) );
     }
 }

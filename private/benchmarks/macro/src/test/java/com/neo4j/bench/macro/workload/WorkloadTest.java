@@ -24,8 +24,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -52,7 +52,7 @@ public class WorkloadTest
                                                                  .filter( workloadName -> workloadsByName.get( workloadName ).size() != 1 )
                                                                  .collect( toList() );
 
-            assertTrue( duplicateWorkloadNames.toString(), duplicateWorkloadNames.isEmpty() );
+            assertTrue( duplicateWorkloadNames.isEmpty(), duplicateWorkloadNames.toString() );
         }
     }
 
@@ -65,8 +65,8 @@ public class WorkloadTest
             try ( Stream<Path> workloadDirs = Files.list( workloadsDir )
                                                    .filter( Files::isDirectory ) )
             {
-                workloadDirs.forEach( workloadDir -> assertTrue( "Workload directory did not contain config file" + workloadDir.toAbsolutePath(),
-                                                                 containsAtLeastOneConfigurationFile( workloadDir ) ) );
+                workloadDirs.forEach( workloadDir -> assertTrue( containsAtLeastOneConfigurationFile( workloadDir ),
+                        "Workload directory did not contain config file" + workloadDir.toAbsolutePath() ) );
             }
         }
     }

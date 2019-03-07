@@ -17,9 +17,9 @@ import java.util.Set;
 import static com.google.common.collect.Sets.newHashSet;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AnnotationsTest
 {
@@ -29,7 +29,7 @@ public class AnnotationsTest
         Annotations annotations = new Annotations();
         Annotations.AnnotationsValidationResult validationResult = annotations.validate();
 
-        assertTrue( validationResult.message(), validationResult.isValid() );
+        assertTrue( validationResult.isValid(), validationResult.message() );
     }
 
     @Test

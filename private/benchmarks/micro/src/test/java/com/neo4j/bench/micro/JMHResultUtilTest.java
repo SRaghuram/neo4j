@@ -26,10 +26,10 @@ import static com.neo4j.bench.micro.JMHResultUtil.THREADS_PARAM;
 import static com.neo4j.bench.micro.JMHResultUtil.extractParameterValues;
 import static com.neo4j.bench.micro.JMHResultUtil.parametersAsMap;
 import static com.neo4j.bench.micro.JMHResultUtil.toNameSuffix;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -155,7 +155,7 @@ public class JMHResultUtilTest
         assertTrue( nameSuffix.indexOf( param1.param() ) < nameSuffix.indexOf( param2.param() ) );
         assertTrue( nameSuffix.indexOf( param2.param() ) < nameSuffix.indexOf( param3.param() ) );
         assertTrue( nameSuffix.indexOf( param3.param() ) < nameSuffix.indexOf( paramThreads.param() ) );
-        assertTrue( format( "Incorrect name with Seed: %s%n", seed ),
-                nameSuffix.endsWith( "(" + MODE_PARAM + ",LATENCY)" ) );
+        assertTrue( nameSuffix.endsWith( "(" + MODE_PARAM + ",LATENCY)" ),
+                    format( "Incorrect name with Seed: %s%n", seed ) );
     }
 }

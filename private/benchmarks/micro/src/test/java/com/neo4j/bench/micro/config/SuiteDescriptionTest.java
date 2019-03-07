@@ -22,8 +22,8 @@ import static com.neo4j.bench.micro.config.Validation.ValidationError.PARAM_OF_E
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SuiteDescriptionTest
 {
@@ -34,7 +34,7 @@ public class SuiteDescriptionTest
     {
         Validation validation = new Validation();
         suiteDescription = SuiteDescription.byReflection( validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -59,9 +59,9 @@ public class SuiteDescriptionTest
 
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
-        assertTrue( validation.report(),
-                validation.errorsEqual( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
-        assertFalse( validation.report(), validation.isValid() );
+        assertTrue( validation.errorsEqual( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ),
+                    validation.report());
+        assertFalse( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -89,9 +89,9 @@ public class SuiteDescriptionTest
 
         SuiteDescription.fromConfig( suiteDescription, configFile, validation );
 
-        assertTrue( validation.report(),
-                validation.errorsEqual( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
-        assertFalse( validation.report(), validation.isValid() );
+        assertTrue( validation.errorsEqual( CONFIGURED_PARAMETER_DOES_NOT_EXIST ),
+                    validation.report() );
+        assertFalse( validation.isValid(),  validation.report() );
     }
 
     @Test

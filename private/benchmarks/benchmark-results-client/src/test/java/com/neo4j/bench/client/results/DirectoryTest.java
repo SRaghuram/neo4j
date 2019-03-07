@@ -23,8 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import static com.neo4j.bench.client.util.BenchmarkUtil.sanitize;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -51,7 +51,7 @@ public class DirectoryTest
         Path groupDirPath = Paths.get( groupDir.toAbsolutePath() );
         Path expectedGroupDirPath = parentDir.resolve( GROUP_1.name() );
         assertThat( "Group dir had unexpected location", expectedGroupDirPath, equalTo( groupDirPath ) );
-        assertTrue( "Group dir was not created", Files.exists( expectedGroupDirPath ) );
+        assertTrue( Files.exists( expectedGroupDirPath ), "Group dir was not created" );
         assertThat( "Group dir did not know its group", groupDir.benchmarkGroup(), equalTo( GROUP_1 ) );
     }
 
@@ -66,7 +66,7 @@ public class DirectoryTest
         Path benchDirPath1 = Paths.get( benchDir1.toAbsolutePath() );
         Path expectedBenchDirPath1 = groupDirPath.resolve( sanitize( BENCH_1.name() ) );
         assertThat( "Bench dir had unexpected location", expectedBenchDirPath1, equalTo( benchDirPath1 ) );
-        assertTrue( "Bench dir was not created", Files.exists( expectedBenchDirPath1 ) );
+        assertTrue( Files.exists( expectedBenchDirPath1 ), "Bench dir was not created" );
         assertThat( "Group dir did not contain expected benchmark", groupDir.benchmarks(), containsInAnyOrder( BENCH_1 ) );
         assertThat( "Bench dir did not know its benchmark", benchDir1.benchmark(), equalTo( BENCH_1 ) );
 
@@ -119,7 +119,7 @@ public class DirectoryTest
         Path forkDirPath1 = Paths.get( forkDir1.toAbsolutePath() );
         Path expectedForkDirPath1 = benchDirPath.resolve( sanitize( FORK1 ) );
         assertThat( "Fork dir had unexpected location", expectedForkDirPath1, equalTo( forkDirPath1 ) );
-        assertTrue( "Fork dir was not created", Files.exists( expectedForkDirPath1 ) );
+        assertTrue( Files.exists( expectedForkDirPath1 ), "Fork dir was not created" );
         assertThat( "Fork dir should know its profilers", forkDir1.profilers(), equalTo( expectedProfilers1 ) );
         assertThat( "Fork dir should know its name", forkDir1.name(), equalTo( FORK1 ) );
 
@@ -164,14 +164,14 @@ public class DirectoryTest
         assertThat( "Fork directory should be empty immediately after creation", Files.list( forkDirPath ).count(), equalTo( 1L ) );
 
         Path file1 = forkDir.pathFor( "file1" );
-        assertFalse( "File should not yet be created", Files.exists( file1 ) );
+        assertFalse( Files.exists( file1 ), "File should not yet be created" );
         assertThat( "File path should be within fork directory", file1.getParent(), equalTo( forkDirPath ) );
 
         BenchmarkUtil.assertException( RuntimeException.class,
                                        () -> forkDir.findOrFail( "file1" ) );
 
         assertThat( "Same filenames mapped to different files", forkDir.create( "file1" ), equalTo( file1 ) );
-        assertTrue( "File should be created now", Files.exists( file1 ) );
+        assertTrue( Files.exists( file1 ), "File should be created now" );
 
         BenchmarkUtil.assertException( RuntimeException.class,
                                        () -> forkDir.create( "file1" ) );
@@ -180,14 +180,14 @@ public class DirectoryTest
         assertThat( "Same filenames mapped to different files", forkDir.findOrCreate( "file1" ), equalTo( file1 ) );
 
         Path file2 = forkDir.pathFor( "file2" );
-        assertFalse( "File should not yet be created", Files.exists( file2 ) );
+        assertFalse( Files.exists( file2 ), "File should not yet be created" );
         assertThat( "Same filenames mapped to different files", forkDir.findOrCreate( "file2" ), equalTo( file2 ) );
-        assertTrue( "File should be created now", Files.exists( file2 ) );
+        assertTrue( Files.exists( file2 ), "File should be created now" );
 
         assertThat( "Files created for same fork should have same parent folder", file1.getParent(), equalTo( file2.getParent() ) );
 
         Path planFile = forkDir.pathForPlan();
         assertThat( "Path to plan file should have correct name", planFile.getFileName().toString(), equalTo( ForkDirectory.PLAN_JSON ) );
-        assertFalse( "Plan file should not yet be created", Files.exists( planFile ) );
+        assertFalse( Files.exists( planFile ), "Plan file should not yet be created" );
     }
 }

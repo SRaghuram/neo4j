@@ -19,13 +19,13 @@ import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.micro.config.BenchmarkConfigFile.fromMap;
 import static com.neo4j.bench.micro.config.Validation.ValidationError.PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK;
 import static com.neo4j.bench.micro.config.Validation.ValidationError.PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BenchmarkConfigFileTest
 {
@@ -36,7 +36,7 @@ public class BenchmarkConfigFileTest
     {
         Validation validation = new Validation();
         suiteDescription = SuiteDescription.byReflection( validation );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     // READ
@@ -54,7 +54,7 @@ public class BenchmarkConfigFileTest
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
         assertTrue( benchmarkConfigFile.getEntry( benchmarkName ).isEnabled() );
         assertThat( benchmarkConfigFile.getEntry( benchmarkName ).values().size(), equalTo( 0 ) );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -69,7 +69,7 @@ public class BenchmarkConfigFileTest
         // then
         assertThat( benchmarkConfigFile.entries().size(), equalTo( 1 ) );
         assertFalse( benchmarkConfigFile.getEntry( benchmarkName ).isEnabled() );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -90,7 +90,7 @@ public class BenchmarkConfigFileTest
         assertThat( benchmarkConfigFile.getEntry( benchmarkName ).values().get( paramName ),
                 equalTo( newHashSet( paramValue ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -133,8 +133,8 @@ public class BenchmarkConfigFileTest
         assertThat( benchmarkConfigFile.getEntry( benchmarkName1 ), notNullValue() );
         assertThat( benchmarkConfigFile.getEntry( benchmarkName2 ), notNullValue() );
 
-        assertTrue( validation.report(), validation.errorsEqual(/*no errors*/ ) );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.errorsEqual(/*no errors*/ ), validation.report() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -147,8 +147,8 @@ public class BenchmarkConfigFileTest
         fromMap( map( benchmarkName, "true", benchmarkName + "." + paramName, "" ), validation );
 
         // then
-        assertTrue( validation.report(),
-                validation.errorsEqual( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ) );
+        assertTrue( validation.errorsEqual( PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES ),
+                    validation.report() );
         assertFalse( validation.isValid() );
     }
 
@@ -163,8 +163,8 @@ public class BenchmarkConfigFileTest
         BenchmarkConfigFile.fromMap( map( benchmarkName + "." + paramName, "1" ), validation );
 
         // then
-        assertTrue( validation.report(),
-                validation.errorsEqual( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ) );
+        assertTrue( validation.errorsEqual( PARAM_CONFIGURED_WITHOUT_ENABLING_DISABLING_BENCHMARK ),
+                    validation.report() );
         assertFalse( validation.isValid() );
     }
 

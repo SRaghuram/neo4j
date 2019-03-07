@@ -10,7 +10,7 @@ import com.neo4j.bench.client.options.Runtime;
 import com.neo4j.bench.macro.execution.Options;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class QueryTest
 {

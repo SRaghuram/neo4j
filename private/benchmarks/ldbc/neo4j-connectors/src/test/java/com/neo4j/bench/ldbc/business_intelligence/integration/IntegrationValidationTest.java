@@ -30,22 +30,23 @@ import com.neo4j.bench.ldbc.utils.PlannerType;
 import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Disabled;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 @Disabled
 public class IntegrationValidationTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     @Test
     public void shouldCreatePublicValidationSet() throws Exception
@@ -134,7 +135,7 @@ public class IntegrationValidationTest
                 scenario.paramsDir().getAbsolutePath()
         );
 
-        dbDir = temporaryFolder.newFolder();
+        dbDir = Files.createTempDirectory( temporaryFolder, "").toFile();
 
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
@@ -199,7 +200,7 @@ public class IntegrationValidationTest
         int threadCount = 4;
         int statusDisplayIntervalAsSeconds = 1;
         TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-        String resultDirPath = temporaryFolder.newFolder().getAbsolutePath();
+        String resultDirPath = Files.createTempDirectory( temporaryFolder, "").toString();
 
         Double timeCompressionRatio = 1.0;
         ConsoleAndFileDriverConfiguration.ConsoleAndFileValidationParamOptions validationCreationParams = null;
@@ -242,7 +243,7 @@ public class IntegrationValidationTest
         VALIDATE EMBEDDED API
          */
 
-        File dbDir = temporaryFolder.newFolder();
+        File dbDir = Files.createTempDirectory( temporaryFolder, "" ).toFile();
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),

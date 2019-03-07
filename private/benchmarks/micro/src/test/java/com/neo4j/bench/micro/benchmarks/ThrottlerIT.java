@@ -13,7 +13,7 @@ import java.text.DecimalFormat;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static java.lang.String.format;
 
@@ -40,7 +40,7 @@ public class ThrottlerIT
             String description = format( "Target: %s (op/s), Actual: %s (op/s)",
                     DECIMAL_FORMAT.format( targetOpPerSec ),
                     DECIMAL_FORMAT.format( actualOpPerSec ) );
-            assertTrue( description, areSimilar( targetOpPerSec, actualOpPerSec, PERCENTAGE_TOLERANCE ) );
+            assertTrue( areSimilar( targetOpPerSec, actualOpPerSec, PERCENTAGE_TOLERANCE ), description );
         }
     }
 

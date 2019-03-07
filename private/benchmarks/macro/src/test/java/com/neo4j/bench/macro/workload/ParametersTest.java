@@ -7,24 +7,20 @@ package com.neo4j.bench.macro.workload;
 
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.ExpectedException;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Map;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 public class ParametersTest
 {
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
 
     @Test
     public void shouldParseParameters()

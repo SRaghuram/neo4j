@@ -36,15 +36,18 @@ import com.neo4j.bench.client.queries.SetStoreVersion;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.JsonUtil;
-import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.junit.Rule;
+import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,8 +56,12 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Session;
-import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.FAIL;
@@ -70,24 +77,38 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class SubmitTestRunsAndPlansIT
 {
-    private final Neo4jRule neo4j = new CommercialNeo4jRule()
-            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
+    @RegisterExtension
+    static final Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
+            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+            .build();
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( temporaryFolder ).around( neo4j );
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
 
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
+    @TempDir
+    public Path temporaryFolder;
+
+    private URI boltUri;
+
+    @BeforeEach
+    public void setUp( GraphDatabaseService databaseService )
+    {
+        HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
+                .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        boltUri = URI.create( "bolt://" + address.toString() );
+    }
+
+    @AfterEach
+    public void cleanUpDb( GraphDatabaseService databaseService )
+    {
+        // this is hacky HACK, needs to be fixed in Neo4jExtension
+        databaseService.execute( "MATCH (n) DETACH DELETE n" );
+    }
 
     @Test
     public void shouldNotCorruptSchemaWhenCallingSetVersionMultipleTimes() throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             new QueryRetrier().execute( client, new SetStoreVersion( StoreClient.VERSION ), 1 );
             new QueryRetrier().execute( client, new SetStoreVersion( StoreClient.VERSION ), 1 );
@@ -98,7 +119,7 @@ public class SubmitTestRunsAndPlansIT
     @Test
     public void shouldRespectErrorReportingPolicy() throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             new QueryRetrier().execute( client, new DropSchema(), 1 );
             new QueryRetrier().execute( client, new CreateSchema(), 1 );
@@ -113,7 +134,7 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup group = new BenchmarkGroup( "group1" );
             Benchmark benchmark1 = Benchmark.benchmarkFor( "desc1", "bench1", Benchmark.Mode.LATENCY, emptyMap() );
             Benchmark benchmark2 = Benchmark.benchmarkFor( "desc2", "bench2", Benchmark.Mode.LATENCY, emptyMap() );
-            File testRunResultsJson1 = temporaryFolder.newFile();
+            File testRunResultsJson1 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
             TestRunReport testRunReport = createTestRunReportTwoProjects(
                     testRun1,
                     newArrayList(), // no plans
@@ -124,7 +145,7 @@ public class SubmitTestRunsAndPlansIT
             // no exception is expected
             Main.main( new String[]{
                     "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                     ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                     ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson1.getAbsolutePath(),
@@ -155,7 +176,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun2 = new TestRun( "id2", 1, 1, 1, 1, "user" );
-            final File testRunResultsJson2 = temporaryFolder.newFile();
+            final File testRunResultsJson2 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
             testRunReport = createTestRunReportTwoProjects(
                     testRun2,
                     newArrayList(), // no plans
@@ -168,7 +189,7 @@ public class SubmitTestRunsAndPlansIT
                                            () ->
                                                    Main.main( new String[]{
                                                            "report",
-                                                           ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                                                           ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                                                            ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                                                            ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                                                            ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
@@ -202,7 +223,7 @@ public class SubmitTestRunsAndPlansIT
                                            () ->
                                                    Main.main( new String[]{
                                                            "report",
-                                                           ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                                                           ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                                                            ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                                                            ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                                                            ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
@@ -233,7 +254,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun3 = new TestRun( "id3", 1, 1, 1, 1, "user" );
-            File testRunResultsJson3 = temporaryFolder.newFile();
+            File testRunResultsJson3 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
             testRunReport = createTestRunReportTwoProjects(
                     testRun3,
                     newArrayList(), // no plans
@@ -245,7 +266,7 @@ public class SubmitTestRunsAndPlansIT
             // no exception is expected
             Main.main( new String[]{
                     "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                     ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                     ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson3.getAbsolutePath(),
@@ -276,7 +297,7 @@ public class SubmitTestRunsAndPlansIT
     @Test
     public void shouldMaintainSchemaConsistency() throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             new QueryRetrier().execute( client, new DropSchema(), 1 );
             new QueryRetrier().execute( client, new CreateSchema(), 1 );
@@ -293,7 +314,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
 
-            File testRunResultsJson1 = temporaryFolder.newFile();
+            File testRunResultsJson1 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
             ArrayList<TestRunError> errors = newArrayList();
             TestRunReport testRunReport1 = createTestRunReportTwoProjects(
                     testRun1,
@@ -311,7 +332,7 @@ public class SubmitTestRunsAndPlansIT
                     AddProfilesCommand.CMD_S3_BUCKET, "some-s3-bucket"} );
             Main.main( new String[]{
                     "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                     ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                     ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson1.getAbsolutePath(),
@@ -349,7 +370,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ),
                     new BenchmarkPlan( group, benchmark4, plan( "c" ) ) );
-            File testRunResultsJson2 = temporaryFolder.newFile();
+            File testRunResultsJson2 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
             TestRunReport testRunReport2 = createTestRunReport(
                     testRun2,
                     benchmarkPlans2,
@@ -359,7 +380,7 @@ public class SubmitTestRunsAndPlansIT
             JsonUtil.serializeJson( testRunResultsJson2.toPath(), testRunReport2 );
             Main.main( new String[]{
                     "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                     ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                     ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson2.getAbsolutePath(),
@@ -426,7 +447,7 @@ public class SubmitTestRunsAndPlansIT
     @Test
     public void shouldCreateNewPlansWhenNecessary() throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             // general
             new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
@@ -440,7 +461,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ) );
-            File testRunResultsJson = temporaryFolder.newFile();
+            File testRunResultsJson = Files.createTempFile( temporaryFolder, "", "" ).toFile();
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
@@ -454,7 +475,7 @@ public class SubmitTestRunsAndPlansIT
                     AddProfilesCommand.CMD_S3_BUCKET, "some-s3-bucket"} );
             Main.main( new String[]{
                     "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                     ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                     ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson.getAbsolutePath(),
@@ -525,7 +546,7 @@ public class SubmitTestRunsAndPlansIT
     @Test
     public void shouldReusePlansWhenPossible() throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             // general
             new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
@@ -539,7 +560,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
-            File testRunResultsJson = temporaryFolder.newFile();
+            File testRunResultsJson = Files.createTempFile( temporaryFolder, "", "" ).toFile();
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
@@ -553,7 +574,7 @@ public class SubmitTestRunsAndPlansIT
                     AddProfilesCommand.CMD_S3_BUCKET, "some-s3-bucket"} );
             Main.main( new String[]{
                     "report",
-                    ReportCommand.CMD_RESULTS_STORE_URI, neo4j.boltURI().toString(),
+                    ReportCommand.CMD_RESULTS_STORE_URI, boltUri.toString(),
                     ReportCommand.CMD_RESULTS_STORE_USER, USERNAME,
                     ReportCommand.CMD_RESULTS_STORE_PASSWORD, PASSWORD,
                     ReportCommand.CMD_TEST_RUN_RESULTS, testRunResultsJson.getAbsolutePath(),
@@ -645,22 +666,23 @@ public class SubmitTestRunsAndPlansIT
     }
 
     private static File createProfileFiles(
-            TemporaryFolder temporaryFolder,
+            Path temporaryFolder,
             BenchmarkGroup group,
             Benchmark benchmark1,
             Benchmark benchmark2 ) throws IOException
     {
-        File topFolder = temporaryFolder.newFolder( "profiles" );
-        temporaryFolder.newFile( "archive.tar.gz" );
+        Path topFolder = temporaryFolder.resolve( "profiles" );
+        Files.createDirectories( topFolder );
+        Files.createFile( temporaryFolder.resolve( "archive.tar.gz" ));
 
-        temporaryFolder.newFile( "profiles/" + group.name() + "." + benchmark1.name() + ".jfr" );
-        temporaryFolder.newFile( "profiles/" + group.name() + "." + benchmark1.name() + "-jfr.svg" );
-        temporaryFolder.newFile( "profiles/" + group.name() + "." + benchmark1.name() + ".async" );
-        temporaryFolder.newFile( "profiles/" + group.name() + "." + benchmark1.name() + "-async.svg" );
+        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".jfr" ) );
+        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-jfr.svg" ) );
+        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".async" ) );
+        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-async.svg" ) );
 
-        temporaryFolder.newFile( "profiles/" + group.name() + "." + benchmark2.name() + ".jfr" );
-        temporaryFolder.newFile( "profiles/" + group.name() + "." + benchmark2.name() + "-jfr.svg" );
-        return topFolder;
+        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark2.name() + ".jfr" ) );
+        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark2.name() + "-jfr.svg" ) );
+        return topFolder.toFile();
     }
 
     private void assertLabelCount( String label, int expectedCount, StoreClient client )

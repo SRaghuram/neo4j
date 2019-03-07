@@ -14,22 +14,28 @@ import com.neo4j.bench.client.util.SyntheticStoreGenerator.SyntheticStoreGenerat
 import com.neo4j.bench.procedures.detection.CompareFunction;
 import com.neo4j.bench.procedures.detection.DateTimeFunction;
 import com.neo4j.bench.procedures.detection.VarianceProcedure;
-import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
+import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.net.URI;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.client.model.Edition.ENTERPRISE;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -42,15 +48,18 @@ public class CompareFunctionTest
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
 
-    @Rule
-    public Neo4jRule neo4j = new CommercialNeo4jRule()
+    @RegisterExtension
+    static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
             .withProcedure( VarianceProcedure.class )
             .withFunction( CompareFunction.class )
             .withFunction( DateTimeFunction.class )
-            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
+            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+            .build();
+
+    private URI boltUri;
 
     @BeforeEach
-    public void generateStore() throws Exception
+    public void generateStore( GraphDatabaseService databaseService ) throws Exception
     {
         SyntheticStoreGenerator generator = new SyntheticStoreGeneratorBuilder()
                 .withDays( 10 )
@@ -70,6 +79,17 @@ public class CompareFunctionTest
                 .build();
 
         generateStoreUsing( generator );
+
+        HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
+                .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        boltUri = URI.create( "bolt://" + address.toString() );
+    }
+
+    @AfterEach
+    public void cleanUpDb( GraphDatabaseService databaseService )
+    {
+        // this is hacky HACK, needs to be fixed in Neo4jExtension
+        databaseService.execute( "MATCH (n) DETACH DELETE n" );
     }
 
     @Disabled
@@ -77,7 +97,7 @@ public class CompareFunctionTest
     public void shouldCalculateVariancesForBenchmarkGroup() throws Throwable
     {
         try ( Session session = GraphDatabase
-                .driver( neo4j.boltURI(), Config.build().withoutEncryption().toConfig() )
+                .driver( boltUri, Config.build().withoutEncryption().toConfig() )
                 .session() )
         {
 
@@ -110,7 +130,7 @@ public class CompareFunctionTest
     public void shouldCalculateVariancesForSpecificBenchmarksInBenchmarkGroup() throws Throwable
     {
         try ( Session session = GraphDatabase
-                .driver( neo4j.boltURI(), Config.build().withoutEncryption().toConfig() )
+                .driver( boltUri, Config.build().withoutEncryption().toConfig() )
                 .session() )
         {
             String groupName = "'0'";
@@ -142,7 +162,7 @@ public class CompareFunctionTest
     public void shouldCalculateComparison() throws Throwable
     {
         try ( Session session = GraphDatabase
-                .driver( neo4j.boltURI(), Config.build().withoutEncryption().toConfig() )
+                .driver( boltUri, Config.build().withoutEncryption().toConfig() )
                 .session() )
         {
             String query =
@@ -199,7 +219,7 @@ public class CompareFunctionTest
 
     private void generateStoreUsing( SyntheticStoreGenerator generator ) throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD ) )
         {
             QUERY_RETRIER.execute( client, new CreateSchema() );
             new QueryRetrier().execute( client, new VerifyStoreSchema() );

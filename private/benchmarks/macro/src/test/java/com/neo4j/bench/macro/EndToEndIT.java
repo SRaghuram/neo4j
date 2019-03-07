@@ -26,12 +26,14 @@ import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.macro.execution.Options.ExecutionMode;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
-import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
+import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import io.findify.s3mock.S3Mock;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -39,6 +41,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
 import java.net.ServerSocket;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -47,27 +50,49 @@ import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
-import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.io.FileMatchers.anExistingFile;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class EndToEndIT
 {
     private static final String RUN_REPORT_BENCHMARKS_SH = "run-report-benchmarks.sh";
 
-    @Rule
-    public Neo4jRule neo4jBootstrap =
-            new CommercialNeo4jRule().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    static Neo4jExtension neo4jExtension =
+            CommercialNeo4jExtension.builder().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE ).build();
+
+    @TempDir
+    public Path temporaryFolder;
+
+    private URI boltUri;
+
+    @BeforeEach
+    public void setUp( GraphDatabaseService databaseService )
+    {
+        HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
+                .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        boltUri = URI.create( "bolt://" + address.toString() );
+    }
+
+    @AfterEach
+    public void cleanUpDb( GraphDatabaseService databaseService )
+    {
+        // this is hacky HACK, needs to be fixed in Neo4jExtension
+        databaseService.execute( "MATCH (n) DETACH DELETE n" );
+    }
 
     @Test
     @Tag( "endtoend" )
@@ -84,13 +109,13 @@ public class EndToEndIT
             runReportScript = baseDir.resolve( RUN_REPORT_BENCHMARKS_SH );
         }
 
-        assertNotNull( format( "%s is not valid base dir", baseDir ), baseDir );
-        assertTrue(format( "%s not found, your are running tests from invalid location", runReportScript.getFileName() ),
-                Files.exists( runReportScript ) );
+        assertNotNull( baseDir, format( "%s is not valid base dir", baseDir ) );
+        assertTrue( Files.exists( runReportScript ),
+                format( "%s not found, your are running tests from invalid location", runReportScript.getFileName() ) );
 
         Path macroJar = baseDir.resolve( "target/macro.jar" );
-        assertTrue( "macro.jar not found, make sure you have assembly in place, by running mvn package",
-                    Files.exists( macroJar ) );
+        assertTrue( Files.exists( macroJar ),
+                "macro.jar not found, make sure you have assembly in place, by running mvn package" );
 
         // assert if environment is setup
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
@@ -103,13 +128,13 @@ public class EndToEndIT
         assertSysctlParameter( 0, "kernel.kptr_restrict");
 
         // setup results store schema
-        try ( StoreClient storeClient = StoreClient.connect( neo4jBootstrap.boltURI(), "", "" ) )
+        try ( StoreClient storeClient = StoreClient.connect( boltUri, "", "" ) )
         {
             storeClient.execute( new CreateSchema() );
         }
 
         // start s3 storage mock
-        Path s3Path = temporaryFolder.newFolder( "s3" ).toPath();
+        Path s3Path = temporaryFolder.resolve( "s3" );
         int s3Port = randomLocalPort();
         S3Mock api = new S3Mock.Builder().withPort( s3Port ).withFileBackend( s3Path.toString() ).build();
         api.start();
@@ -123,15 +148,15 @@ public class EndToEndIT
         client.createBucket( "benchmarking.neo4j.com" );
 
         // prepare neo4j config file
-        Path neo4jConfig = temporaryFolder.newFile( "neo4j.config" ).toPath();
+        Path neo4jConfig = temporaryFolder.resolve( "neo4j.config" );
         Neo4jConfig.withDefaults().writeAsProperties( neo4jConfig );
 
         // create empty store
-        Path dbPath = temporaryFolder.newFolder( "db" ).toPath();
+        Path dbPath = temporaryFolder.resolve( "db" );
         TestSupport.createEmptyStore( dbPath );
 
-        Path resultsPath = temporaryFolder.newFile( "results.json" ).toPath();
-        Path workPath = temporaryFolder.newFolder( "work" ).toPath();
+        Path resultsPath = temporaryFolder.resolve( "results.json" );
+        Path workPath = temporaryFolder.resolve( "work" );
 
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                 // workload
@@ -159,7 +184,7 @@ public class EndToEndIT
                 // time_unit
                 "MILLISECONDS",
                 // results_store_uri
-                neo4jBootstrap.boltURI().toString(),
+                boltUri.toString(),
                 "results_store_user",
                 "results_store_password",
                 "neo4j_commit",
@@ -207,7 +232,7 @@ public class EndToEndIT
 
     private void assertStoreSchema()
     {
-        try ( StoreClient storeClient = StoreClient.connect( neo4jBootstrap.boltURI(), "", "" ) )
+        try ( StoreClient storeClient = StoreClient.connect( boltUri, "", "" ) )
         {
             storeClient.execute( new VerifyStoreSchema() );
         }

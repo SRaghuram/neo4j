@@ -33,9 +33,9 @@ import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
 import static org.openjdk.jmh.annotations.Mode.SampleTime;
 import static org.openjdk.jmh.annotations.Mode.Throughput;
@@ -75,7 +75,7 @@ public class BenchmarkDescriptionTest
                 new BenchmarkMethodDescription( "methodTwo", new Mode[]{Throughput, AverageTime} ),
                 new BenchmarkMethodDescription( "methodOne", new Mode[]{SampleTime} ) ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -106,7 +106,7 @@ public class BenchmarkDescriptionTest
         assertThat( newHashSet( benchDesc.methods() ),
                 equalTo( newHashSet( new BenchmarkMethodDescription( "method", new Mode[]{SampleTime} ) ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
 
         // when
         benchDesc = benchDesc
@@ -143,7 +143,7 @@ public class BenchmarkDescriptionTest
         assertThat( newHashSet( benchDesc.methods() ),
                 equalTo( newHashSet( new BenchmarkMethodDescription( "method", new Mode[]{SampleTime} ) ) ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -182,7 +182,7 @@ public class BenchmarkDescriptionTest
         assertThat( benchDesc.parameters().size(), equalTo( 1 ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).allowedValues(), equalTo( allowedValues ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).values(), equalTo( newHashSet( "1" ) ) );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -221,7 +221,7 @@ public class BenchmarkDescriptionTest
         assertThat( benchDesc.parameters().size(), equalTo( 1 ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).allowedValues(), equalTo( allowedValues ) );
         assertThat( benchDesc.parameters().get( "numProblems" ).values(), equalTo( newHashSet( "3" ) ) );
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test
@@ -281,8 +281,8 @@ public class BenchmarkDescriptionTest
                 validation );
 
         // then
-        assertTrue( validation.report(),
-                validation.errorsEqual( CONFIGURED_BENCHMARK_DOES_NOT_EXIST ) );
+        assertTrue( validation.errorsEqual( CONFIGURED_BENCHMARK_DOES_NOT_EXIST ),
+                    validation.report() );
         assertFalse( validation.isValid() );
     }
 
@@ -313,8 +313,8 @@ public class BenchmarkDescriptionTest
         benchDesc.copyWithConfig( config, validation );
 
         // then
-        assertTrue( validation.report(),
-                validation.errorsEqual( CONFIGURED_VALUE_IS_NOT_ALLOWED ) );
+        assertTrue( validation.errorsEqual( CONFIGURED_VALUE_IS_NOT_ALLOWED ),
+                    validation.report() );
         assertFalse( validation.isValid() );
     }
 
@@ -345,8 +345,8 @@ public class BenchmarkDescriptionTest
         benchDesc.copyWithConfig( config, validation );
 
         // then
-        assertTrue( validation.report(),
-                validation.errorsEqual( CONFIGURED_PARAMETER_DOES_NOT_EXIST ) );
+        assertTrue( validation.errorsEqual( CONFIGURED_PARAMETER_DOES_NOT_EXIST ),
+                    validation.report() );
         assertFalse( validation.isValid() );
     }
 
@@ -358,8 +358,8 @@ public class BenchmarkDescriptionTest
         BenchmarkDescription.of( DuplicateAllowedBenchmark.class, validation );
 
         // then
-        assertTrue( validation.report(),
-                validation.errorsEqual( DUPLICATE_ALLOWED_VALUE ) );
+        assertTrue( validation.errorsEqual( DUPLICATE_ALLOWED_VALUE ),
+                    validation.report() );
         assertFalse( validation.isValid() );
     }
 
@@ -371,8 +371,8 @@ public class BenchmarkDescriptionTest
         BenchmarkDescription.of( DuplicateBaseBenchmark.class, validation );
 
         // then
-        assertTrue( validation.report(),
-                validation.errorsEqual( DUPLICATE_BASE_VALUE ) );
+        assertTrue( validation.errorsEqual( DUPLICATE_BASE_VALUE ),
+                    validation.report() );
         assertFalse( validation.isValid() );
     }
 
@@ -407,7 +407,7 @@ public class BenchmarkDescriptionTest
                         validation );
         assertThat( benchDesc.executionCount( 1 ), equalTo( 3 ) );
 
-        assertTrue( validation.report(), validation.isValid() );
+        assertTrue( validation.isValid(), validation.report() );
     }
 
     @Test

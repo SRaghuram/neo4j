@@ -34,8 +34,8 @@ import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class SnbBiExecutionTest
 {
@@ -238,19 +238,15 @@ public abstract class SnbBiExecutionTest
         ResultsDirectory resultsDirectory = new ResultsDirectory( configuration );
         for ( File file : resultsDirectory.expectedFiles() )
         {
-            assertTrue( format( "Expected file to exist: %s\nOnly found: %s",
-                    file.getAbsolutePath(),
-                    resultsDirectory.files().stream().map( File::getName ).collect( toList() ) ),
-                    file.exists() );
+            assertTrue( file.exists(),
+                        format( "Expected file to exist: %s\nOnly found: %s", file.getAbsolutePath(),
+                                resultsDirectory.files().stream().map( File::getName ).collect( toList() ) ) );
         }
 
-        assertTrue(
-                format( "Expected that: %s\n" +
-                        "Will contain: %s",
-                        resultsDirectory.files(),
-                        resultsDirectory.expectedFiles() ),
-                resultsDirectory.files().containsAll( resultsDirectory.expectedFiles() )
-        );
+        assertTrue( resultsDirectory.files().containsAll( resultsDirectory.expectedFiles()),
+                    format( "Expected that: %s\nWill contain: %s",
+                            resultsDirectory.files(),
+                            resultsDirectory.expectedFiles() ) );
 
         long actualOperationCount = resultsDirectory.getResultsLogFileLength( false );
         assertThat( "Operation count = " + actualOperationCount,

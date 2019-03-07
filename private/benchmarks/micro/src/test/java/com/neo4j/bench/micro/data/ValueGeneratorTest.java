@@ -8,12 +8,13 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
-import org.junit.Rule;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -71,12 +72,12 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.nonContendingStridin
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class ValueGeneratorTest
 {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public Path temporaryFolder;
 
     private static final int SAMPLE_SIZE = 10_000;
 
@@ -467,7 +468,7 @@ public class ValueGeneratorTest
             values.add( fun.next( rng ) );
         }
 
-        File jsonFile = temporaryFolder.newFile();
+        File jsonFile = Files.createTempFile( temporaryFolder, "", "" ).toFile();
         JsonUtil.serializeJson( jsonFile.toPath(), factory );
         ValueGeneratorFactory factoryAfter = JsonUtil.deserializeJson( jsonFile.toPath(), factory.getClass() );
 

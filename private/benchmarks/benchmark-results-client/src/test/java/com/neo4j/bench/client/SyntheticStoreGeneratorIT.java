@@ -10,22 +10,27 @@ import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.DropSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.SyntheticStoreGenerator;
-import com.neo4j.harness.junit.rule.CommercialNeo4jRule;
-import org.junit.Rule;
+import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.harness.junit.extension.Neo4jExtension;
+import org.neo4j.helpers.HostnamePort;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_PASSWORD;
 import static com.neo4j.bench.client.ReIndexStoreCommand.CMD_RESULTS_STORE_URI;
@@ -42,23 +47,38 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.core.AnyOf.anyOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SyntheticStoreGeneratorIT
 {
-    private final TemporaryFolder testFolder = new TemporaryFolder();
 
-    private final Neo4jRule neo4j = new CommercialNeo4jRule()
-            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE );
+    @RegisterExtension
+    static Neo4jExtension neo4jExtension = CommercialNeo4jExtension.builder()
+            .withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE )
+            .build();
 
     private static final int CLIENT_RETRY_COUNT = 0;
     private static final QueryRetrier QUERY_RETRIER = new QueryRetrier();
 
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( testFolder ).around( neo4j );
-
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
+
+    private URI boltUri;
+
+    @BeforeEach
+    public void setUp( GraphDatabaseService databaseService )
+    {
+        HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
+                .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        boltUri = URI.create( "bolt://" + address.toString() );
+    }
+
+    @AfterEach
+    public void cleanUpDb( GraphDatabaseService databaseService )
+    {
+        // this is hacky HACK, needs to be fixed in Neo4jExtension
+        databaseService.execute( "MATCH (n) DETACH DELETE n" );
+    }
 
     @Test
     public void shouldCreateStoreWithPersonalRuns() throws Exception
@@ -117,9 +137,9 @@ public class SyntheticStoreGeneratorIT
         Main.main( new String[]{"index",
                                 CMD_RESULTS_STORE_USER, USERNAME,
                                 CMD_RESULTS_STORE_PASSWORD, PASSWORD,
-                                CMD_RESULTS_STORE_URI, neo4j.boltURI().toString()} );
+                                CMD_RESULTS_STORE_URI, boltUri.toString()} );
 
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             QUERY_RETRIER.execute( client, new DropSchema(), CLIENT_RETRY_COUNT );
             QUERY_RETRIER.execute( client, new CreateSchema(), CLIENT_RETRY_COUNT );
@@ -130,7 +150,7 @@ public class SyntheticStoreGeneratorIT
 
     private void verifySchema( SyntheticStoreGenerator generator ) throws Exception
     {
-        try ( StoreClient client = StoreClient.connect( neo4j.boltURI(), USERNAME, PASSWORD, 1 ) )
+        try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
             new QueryRetrier().execute( client, new VerifyStoreSchema(), 1 );
 

@@ -11,8 +11,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static com.neo4j.bench.client.util.JvmVersion.parseMajorVersion;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 public class JvmTest
 {
