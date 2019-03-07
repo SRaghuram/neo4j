@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, Groupin
 import org.neo4j.cypher.internal.runtime.slotted.expressions.NestedPipeSlottedExpression
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.expressions.{functions, _}
-import org.neo4j.cypher.internal.v4_0.logical.plans.{NestedPlanExpression, ResolvedFunctionInvocation}
+import org.neo4j.cypher.internal.logical.plans.{NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}

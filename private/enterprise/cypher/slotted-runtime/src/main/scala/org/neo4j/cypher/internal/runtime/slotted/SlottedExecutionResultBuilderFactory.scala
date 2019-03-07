@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.Slo
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.{BaseExecutionResultBuilderFactory, ExecutionResultBuilder}
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue

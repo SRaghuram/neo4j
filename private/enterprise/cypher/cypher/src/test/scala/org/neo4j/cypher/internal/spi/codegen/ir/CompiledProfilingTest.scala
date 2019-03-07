@@ -15,8 +15,8 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGe
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.{AcceptVisitor, ScanAllNodes, WhileLoop}
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
-import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, NodeHashJoin}
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.Transaction.Type
 import org.neo4j.internal.kernel.api.helpers.{StubNodeCursor, StubRead}

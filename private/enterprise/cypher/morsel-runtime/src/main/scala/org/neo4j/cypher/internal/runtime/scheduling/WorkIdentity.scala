@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.scheduling
 
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 
 object WorkIdentity {
   def fromPlan(plan: LogicalPlan): WorkIdentity =

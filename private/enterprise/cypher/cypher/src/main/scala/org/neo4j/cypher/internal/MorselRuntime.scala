@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.morsel.{Dispatcher, Pipeline, PipelineB
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedPipeMapper, SlottedPipelineBreakingPolicy}
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState

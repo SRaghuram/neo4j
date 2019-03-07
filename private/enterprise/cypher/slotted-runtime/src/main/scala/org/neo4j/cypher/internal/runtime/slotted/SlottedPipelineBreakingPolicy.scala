@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
-import org.neo4j.cypher.internal.v4_0.logical.plans._
+import org.neo4j.cypher.internal.logical.plans._
 
 object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
 

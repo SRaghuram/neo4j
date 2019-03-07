@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.v4_0.logical.plans.{Aggregation, Distinct, LogicalLeafPlan, LogicalPlan}
+import org.neo4j.cypher.internal.logical.plans.{Aggregation, Distinct, LogicalLeafPlan, LogicalPlan}
 
 /**
   * Policy that determines what parts of an operator tree belong together.

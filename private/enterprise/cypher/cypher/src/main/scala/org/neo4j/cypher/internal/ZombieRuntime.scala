@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpression
 import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.runtime.zombie.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, QueryIndexes, QueryStatistics}
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalNotification
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState

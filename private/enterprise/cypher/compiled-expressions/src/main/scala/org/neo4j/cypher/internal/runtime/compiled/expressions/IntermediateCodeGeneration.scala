@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, Expression
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions._
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
-import org.neo4j.cypher.internal.v4_0.logical.plans.{ASTCachedNodeProperty, CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
+import org.neo4j.cypher.internal.logical.plans.{ASTCachedNodeProperty, CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
 import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, InternalException}
 import org.neo4j.cypher.operations._

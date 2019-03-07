@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.JoinTableType
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 
 trait CodeGenPlan {
 

@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.v4_0.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 
 import scala.collection.mutable
 
 /**
-  * Refinement of [[org.neo4j.cypher.internal.v4_0.logical.plans.TreeBuilder]].
+  * Refinement of [[org.neo4j.cypher.internal.logical.plans.TreeBuilder]].
   *
   * Traverses the logical plan tree structure and builds up the corresponding output structure.
   * The traversal order is a kind of depth-first combined in/post-order (left first), in that

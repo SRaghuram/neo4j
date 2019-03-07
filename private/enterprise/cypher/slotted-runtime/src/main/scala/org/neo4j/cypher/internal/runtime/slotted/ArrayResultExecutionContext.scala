@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ResourceLinenumber, ValuePopulation}
-import org.neo4j.cypher.internal.v4_0.logical.plans.CachedNodeProperty
+import org.neo4j.cypher.internal.logical.plans.CachedNodeProperty
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.graphdb.NotFoundException

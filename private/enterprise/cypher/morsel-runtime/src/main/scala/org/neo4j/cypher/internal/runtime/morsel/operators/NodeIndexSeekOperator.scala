@@ -16,8 +16,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQue
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
-import org.neo4j.cypher.internal.v4_0.logical.plans.IndexOrder
-import org.neo4j.cypher.internal.v4_0.logical.plans.QueryExpression
+import org.neo4j.cypher.internal.logical.plans.{IndexOrder, QueryExpression}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.values.storable.Value
 

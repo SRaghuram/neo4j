@@ -16,8 +16,8 @@ import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.neo4j.cypher.internal.v4_0.expressions.{RelTypeName, SemanticDirection, True}
-import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans._
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.graphdb.{Label, RelationshipType}
 import org.neo4j.kernel.impl.coreapi.InternalTransaction

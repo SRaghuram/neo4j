@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.v4_0.logical.plans.IndexOrder
+import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 

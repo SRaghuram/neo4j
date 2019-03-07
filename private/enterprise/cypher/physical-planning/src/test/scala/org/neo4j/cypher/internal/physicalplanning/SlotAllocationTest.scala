@@ -11,12 +11,8 @@ import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy.breakFor
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, _}
-import org.neo4j.cypher.internal.v4_0.logical.{plans => logicalPlans}
-import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans.Union
-import org.neo4j.cypher.internal.v4_0.logical.plans.UnwindCollection
-import org.neo4j.cypher.internal.v4_0.logical.plans.ValueHashJoin
+import org.neo4j.cypher.internal.logical.{plans => logicalPlans}
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast.ASTAnnotationMap
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.neo4j.cypher.internal.v4_0.expressions._
@@ -584,7 +580,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
         NodeHashJoin(Set("x"), lhs, rhs),
         LeftOuterHashJoin(Set("x"), lhs, rhs),
         RightOuterHashJoin(Set("x"), lhs, rhs),
-        plans.ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x")))
+        logicalPlans.ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x")))
       )
 
     for (join <- joins) {
@@ -636,7 +632,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     // given UNWIND [1,2,3] as x RETURN x
     val leaf = Argument()
     val unwind = UnwindCollection(leaf, "x", listOfInt(1, 2, 3))
-    val produceResult = ProduceResult(unwind, Seq("x"))
+    val produceResult = logicalPlans.ProduceResult(unwind, Seq("x"))
 
     // when
     val allocations = SlotAllocation.allocateSlots(produceResult, semanticTable, breakFor(unwind), NO_EXPR_VARS).slotConfigurations
@@ -656,8 +652,8 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     // given UNWIND [1,2,3] as x RETURN x ORDER BY x
     val leaf = Argument()
     val unwind = UnwindCollection(leaf, "x", listOfInt(1, 2, 3))
-    val sort = Sort(unwind, List(Ascending("x")))
-    val produceResult = ProduceResult(sort, Seq("x"))
+    val sort = logicalPlans.Sort(unwind, List(Ascending("x")))
+    val produceResult = logicalPlans.ProduceResult(sort, Seq("x"))
 
     // when
     val allocations = SlotAllocation.allocateSlots(produceResult, semanticTable, breakFor(unwind), NO_EXPR_VARS).slotConfigurations

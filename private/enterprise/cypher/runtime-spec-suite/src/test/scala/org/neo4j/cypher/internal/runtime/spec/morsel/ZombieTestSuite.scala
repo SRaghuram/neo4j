@@ -9,7 +9,7 @@ import java.util.concurrent.{Callable, Executors, TimeUnit}
 
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.v4_0.logical.plans.{Ascending, Descending}
+import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
 import org.neo4j.cypher.result.RuntimeResult
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)

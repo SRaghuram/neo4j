@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.v4_0.logical.plans.IndexedProperty
+import org.neo4j.cypher.internal.logical.plans.IndexedProperty
 
 object SlottedIndexedProperty {
   def apply(node: String, property: IndexedProperty, slots: SlotConfiguration): SlottedIndexedProperty = {

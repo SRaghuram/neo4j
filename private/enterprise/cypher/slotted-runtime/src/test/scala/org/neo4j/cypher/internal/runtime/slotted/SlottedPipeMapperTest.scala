@@ -24,8 +24,8 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, Rela
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{CountStar, LabelToken, SemanticDirection}
-import org.neo4j.cypher.internal.v4_0.logical.plans
-import org.neo4j.cypher.internal.v4_0.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand, VariablePredicate}
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.{Aggregation, AllNodesScan, Apply, Argument, CartesianProduct, Create, DoNotIncludeTies, Eager, Expand, ExpandAll, ExpandInto, IndexOrderNone, LogicalPlan, NodeByLabelScan, NodeUniqueIndexSeek, Optional, OptionalExpand, Projection, Selection, SingleQueryExpression, Sort, UnwindCollection, VarExpand, VariablePredicate}
 import org.neo4j.cypher.internal.v4_0.util.LabelId
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite

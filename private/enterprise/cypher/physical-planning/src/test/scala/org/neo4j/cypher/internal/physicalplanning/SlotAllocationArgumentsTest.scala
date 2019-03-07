@@ -9,8 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.compiler.v4_0.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.ir.CreateNode
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.v4_0.logical.plans._
-import org.neo4j.cypher.internal.v4_0.logical.plans.UnwindCollection
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
