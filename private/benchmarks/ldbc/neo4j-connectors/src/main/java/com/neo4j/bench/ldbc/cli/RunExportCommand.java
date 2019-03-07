@@ -542,7 +542,7 @@ public class RunExportCommand implements Runnable
                                                                  benchmarkParams );
 
             LdbcRunConfig ldbcRunConfig = new LdbcRunConfig(
-                    localDbDir( sourceDbDir, workingDir ),
+                    localDbDir( workingDir ),
                     writeParams,
                     readParams,
                     neo4jApi,
@@ -634,7 +634,7 @@ public class RunExportCommand implements Runnable
         {
             if ( reuseDb.equals( ReusePolicy.REUSE ) )
             {
-                copyDir( sourceDbDir, ldbcRunConfig.storeDir );
+                copyStore( ldbcRunConfig );
             }
 
             for ( ProfilerType profiler : additionalProfilers )
@@ -697,6 +697,12 @@ public class RunExportCommand implements Runnable
         return resultsDirectories;
     }
 
+    private void copyStore( LdbcRunConfig ldbcRunConfig )
+    {
+        //We need to resolve the subfolder of the store.
+        copyDir( sourceDbDir, new File( ldbcRunConfig.storeDir, sourceDbDir.getName() ) );
+    }
+
     private void runBenchmarkRepetition(
             BenchmarkGroup benchmarkGroup,
             Benchmark summaryBenchmark,
@@ -717,7 +723,7 @@ public class RunExportCommand implements Runnable
                     System.out.println( format( "Deleting database: %s", ldbcRunConfig.storeDir.getAbsolutePath() ) );
                     org.apache.commons.io.FileUtils.deleteDirectory( ldbcRunConfig.storeDir );
                 }
-                copyDir( sourceDbDir, ldbcRunConfig.storeDir );
+                copyStore( ldbcRunConfig );
             }
 
             List<InternalProfiler> internalProfilers = new ArrayList<>();
@@ -990,20 +996,13 @@ public class RunExportCommand implements Runnable
         return (null == neo4jPackage) ? Lists.newArrayList() : Neo4jArchive.extractJvmArgs( neo4jPackage );
     }
 
-    private static File localDbDir( File sourceDbDir, File workingDir )
+    private static File localDbDir( File workingDir )
     {
         // create a top level store directory, to copy the graph.db folder into
         // E.g., source/graph.db --> workDir/tempStoreDir/graph.db
         Path tempStoreDir = workingDir.toPath().resolve( "tempStoreDir" );
         BenchmarkUtil.assertDoesNotExist( tempStoreDir );
-        File destinationDbDir = tempStoreDir.resolve( sourceDbDir.toPath().getFileName() ).toFile();
-        if ( sourceDbDir.getParentFile().equals( workingDir ) )
-        {
-            throw new RuntimeException( format( "Source database:                    %s\n" +
-                                                "Must not be in working directory:   %s",
-                                                sourceDbDir.getAbsolutePath(), workingDir.getAbsolutePath() ) );
-        }
-        return destinationDbDir;
+        return tempStoreDir.toFile();
     }
 
     // ===============================================================================================================
