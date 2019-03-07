@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.monitoring.tracing;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.monitoring.tracing.DefaultTracerFactory;
@@ -12,10 +13,11 @@ import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
+@ServiceProvider
 public class VerboseTracerFactory extends DefaultTracerFactory
 {
     @Override
-    public String getImplementationName()
+    public String getName()
     {
         return "verbose";
     }

@@ -7,6 +7,7 @@ package org.neo4j.kernel.stresstests.transaction.checkpoint.tracers;
 
 import java.time.Clock;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.transaction.tracing.CheckPointTracer;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
@@ -16,12 +17,13 @@ import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
+@ServiceProvider
 public class TimerTracerFactory implements TracerFactory
 {
     private TimerTransactionTracer timerTransactionTracer = new TimerTransactionTracer();
 
     @Override
-    public String getImplementationName()
+    public String getName()
     {
         return "timer";
     }

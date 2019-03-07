@@ -21,7 +21,7 @@ class VerboseTracerFactoryTest
     @Test
     void verboseTracerFactoryRegisterTracerWithCodeNameVerbose()
     {
-        assertEquals( "verbose", tracerFactory().getImplementationName() );
+        assertEquals( VerboseTracerFactory.class, tracerFactory().getClass() );
     }
 
     @Test
