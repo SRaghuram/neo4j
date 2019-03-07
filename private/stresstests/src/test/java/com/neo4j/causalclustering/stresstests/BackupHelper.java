@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.common.ClusterMember;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Path;
@@ -22,7 +23,9 @@ import org.neo4j.backup.impl.BackupExecutionException;
 import org.neo4j.backup.impl.ConsistencyCheckExecutionException;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Log;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.transaction_advertised_address;
@@ -41,14 +44,18 @@ class BackupHelper
             StoreIdDownloadFailedException.class
     );
 
+    private static final String DB_NAME = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
     AtomicLong backupNumber = new AtomicLong();
     AtomicLong successfulBackups = new AtomicLong();
 
+    private final FileSystemAbstraction fs;
     private final File baseBackupDir;
     private final Log log;
 
     BackupHelper( Resources resources )
     {
+        this.fs = resources.fileSystem();
         this.baseBackupDir = resources.backupDir();
         this.log = resources.logProvider().getLog( getClass() );
     }
@@ -64,23 +71,23 @@ class BackupHelper
     Optional<File> backup( ClusterMember<?> member ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
         AdvertisedSocketAddress address = member.config().get( transaction_advertised_address );
-        String backupName = "backup-" + backupNumber.getAndIncrement();
-        Path backupDir = baseBackupDir.toPath().resolve( backupName );
+        Path backupDir = createBackupDir( DB_NAME );
 
         try
         {
             OnlineBackupContext context = OnlineBackupContext.builder()
+                    .withDatabaseName( DB_NAME )
                     .withAddress( address.getHostname(), address.getPort() )
                     .withBackupDirectory( backupDir )
                     .withReportsDirectory( backupDir )
                     .build();
 
             OnlineBackupExecutor.buildDefault().executeBackup( context );
-            log.info( String.format( "Created backup %s from %s", backupName, member ) );
+            log.info( String.format( "Created backup %s from %s", backupDir, member ) );
 
             successfulBackups.incrementAndGet();
 
-            return Optional.of( new File( baseBackupDir, backupName ) );
+            return Optional.of( backupDir.resolve( DB_NAME ).toFile() );
         }
         catch ( BackupExecutionException e )
         {
@@ -121,5 +128,23 @@ class BackupHelper
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Construct a path equivalent to `--backup-dir` parameter.
+     */
+    private Path createBackupDir( String databaseName )
+    {
+        try
+        {
+            String backupSubDirName = databaseName + "-backup-" + backupNumber.getAndIncrement();
+            File backupDir = new File( baseBackupDir, backupSubDirName );
+            fs.mkdirs( backupDir );
+            return backupDir.toPath();
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 }
