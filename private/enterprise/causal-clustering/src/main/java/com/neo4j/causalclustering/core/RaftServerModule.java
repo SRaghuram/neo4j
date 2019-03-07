@@ -23,6 +23,7 @@ import com.neo4j.causalclustering.logging.MessageLogger;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
+import com.neo4j.causalclustering.messaging.RaftOutbound;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
@@ -66,12 +67,13 @@ public class RaftServerModule
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
+    private final RaftOutbound raftOutbound;
 
     private RaftServerModule( GlobalModule globalModule, ConsensusModule consensusModule, IdentityModule identityModule,
             CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
             CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider,
             ApplicationSupportedProtocols supportedApplicationProtocol, Collection<ModifierSupportedProtocols> supportedModifierProtocols,
-            ChannelInboundHandler installedProtocolsHandler, String activeDatabaseName, Panicker panicker )
+            ChannelInboundHandler installedProtocolsHandler, String activeDatabaseName, Panicker panicker, RaftOutbound raftOutbound )
     {
         this.globalModule = globalModule;
         this.consensusModule = consensusModule;
@@ -82,6 +84,7 @@ public class RaftServerModule
         this.pipelineBuilderFactory = pipelineBuilderFactory;
         this.catchupAddressProvider = catchupAddressProvider;
         this.supportedModifierProtocols = supportedModifierProtocols;
+        this.raftOutbound = raftOutbound;
         LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>>
                 messageHandlerChain = createMessageHandlerChain( coreServerModule, panicker );
 
@@ -92,10 +95,10 @@ public class RaftServerModule
             CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
             CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider addressProvider, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols, ChannelInboundHandler installedProtocolsHandler,
-            String activeDatabaseName, Panicker panicker )
+            String activeDatabaseName, Panicker panicker, RaftOutbound raftOutbound )
     {
         new RaftServerModule( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilderFactory, messageLogger, addressProvider,
-                supportedApplicationProtocol, supportedModifierProtocols, installedProtocolsHandler, activeDatabaseName, panicker );
+                supportedApplicationProtocol, supportedModifierProtocols, installedProtocolsHandler, activeDatabaseName, panicker, raftOutbound );
     }
 
     private void createRaftServer( CoreServerModule coreServerModule, LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> messageHandlerChain,
@@ -177,6 +180,6 @@ public class RaftServerModule
         BatchingMessageHandler.Config batchConfig = new BatchingMessageHandler.Config(
                 config.get( CausalClusteringSettings.raft_in_queue_max_batch ), config.get( CausalClusteringSettings.raft_in_queue_max_batch_bytes ) );
 
-        return BatchingMessageHandler.composable( inQueueConfig, batchConfig, jobFactory, logProvider );
+        return BatchingMessageHandler.composable( inQueueConfig, batchConfig, jobFactory, logProvider, raftOutbound );
     }
 }

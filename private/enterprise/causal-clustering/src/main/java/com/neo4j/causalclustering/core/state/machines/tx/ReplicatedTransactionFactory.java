@@ -56,7 +56,9 @@ public class ReplicatedTransactionFactory
         @Override
         public TransactionRepresentation extract( TransactionRepresentationReplicatedTransaction replicatedTransaction )
         {
-            return replicatedTransaction.tx();
+            PhysicalTransactionRepresentation tx = (PhysicalTransactionRepresentation) replicatedTransaction.tx();
+            tx.setAdditionalHeader( extraHeader );
+            return tx;
         }
 
         @Override

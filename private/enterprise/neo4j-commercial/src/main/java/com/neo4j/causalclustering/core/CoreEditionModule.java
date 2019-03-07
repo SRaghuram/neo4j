@@ -233,7 +233,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         RaftOutbound raftOutbound =
                 new RaftOutbound( topologyService, new RaftSender( logProvider, raftChannelPoolService ), clusteringModule.clusterIdentity(), logProvider,
-                        logThresholdMillis );
+                        logThresholdMillis, identityModule.myself(), globalModule.getGlobalClock() );
         Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
 
         consensusModule = new ConsensusModule( identityModule.myself(), globalModule,
@@ -271,7 +271,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
                         catchupStrategySelector );
         RaftServerModule.createAndStart( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilders.server(), messageLogger,
-                catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, defaultDatabaseName, panicService );
+                catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, defaultDatabaseName, panicService,
+                raftOutbound );
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );

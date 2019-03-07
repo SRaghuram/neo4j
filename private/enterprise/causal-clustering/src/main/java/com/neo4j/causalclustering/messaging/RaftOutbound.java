@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.address.UnknownAddressMonitor;
 
+import java.time.Clock;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -27,15 +28,20 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
     private final Supplier<Optional<ClusterId>> clusterIdentity;
     private final UnknownAddressMonitor unknownAddressMonitor;
     private final Log log;
+    private final MemberId myself;
+    private final Clock clock;
+    private Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> localMessageHandler;
 
     public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<AdvertisedSocketAddress,Message> outbound,
-                         Supplier<Optional<ClusterId>> clusterIdentity, LogProvider logProvider, long logThresholdMillis )
+                         Supplier<Optional<ClusterId>> clusterIdentity, LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
     {
         this.coreTopologyService = coreTopologyService;
         this.outbound = outbound;
         this.clusterIdentity = clusterIdentity;
         this.log = logProvider.getLog( getClass() );
         this.unknownAddressMonitor = new UnknownAddressMonitor( log, Clocks.systemClock(), logThresholdMillis );
+        this.myself = myself;
+        this.clock = clock;
     }
 
     @Override
@@ -48,14 +54,26 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
             return;
         }
 
-        Optional<CoreServerInfo> coreServerInfo = coreTopologyService.localCoreServers().find( to );
-        if ( coreServerInfo.isPresent() )
+        if ( to.equals( myself ) )
         {
-            outbound.send( coreServerInfo.get().getRaftServer(), RaftMessages.ClusterIdAwareMessage.of( clusterId.get(), message ), block );
+            localMessageHandler.handle( RaftMessages.ReceivedInstantClusterIdAwareMessage.of( clock.instant(), clusterId.get(), message ) );
         }
         else
         {
-            unknownAddressMonitor.logAttemptToSendToMemberWithNoKnownAddress( to );
+            Optional<CoreServerInfo> coreServerInfo = coreTopologyService.localCoreServers().find( to );
+            if ( coreServerInfo.isPresent() )
+            {
+                outbound.send( coreServerInfo.get().getRaftServer(), RaftMessages.ClusterIdAwareMessage.of( clusterId.get(), message ), block );
+            }
+            else
+            {
+                unknownAddressMonitor.logAttemptToSendToMemberWithNoKnownAddress( to );
+            }
         }
+    }
+
+    public void registerLocalMessageHandler( Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> messageHandler )
+    {
+        this.localMessageHandler = messageHandler;
     }
 }

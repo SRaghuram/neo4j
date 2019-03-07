@@ -16,6 +16,7 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
+import com.neo4j.causalclustering.messaging.RaftOutbound;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,6 +56,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     private final Log log;
     private final BoundedPriorityQueue<ReceivedInstantClusterIdAwareMessage<?>> inQueue;
     private final ContinuousJob job;
+    private final RaftOutbound raftOutbound;
     private final List<ReplicatedContent> contentBatch; // reused for efficiency
     private final List<RaftLogEntry> entryBatch; // reused for efficiency
     private final Config batchConfig;
@@ -65,7 +67,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
 
     BatchingMessageHandler( LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> handler,
             BoundedPriorityQueue.Config inQueueConfig, Config batchConfig, Function<Runnable,ContinuousJob> jobFactory,
-            LogProvider logProvider )
+            LogProvider logProvider, RaftOutbound raftOutbound )
     {
         this.handler = handler;
         this.log = logProvider.getLog( getClass() );
@@ -74,19 +76,21 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
         this.entryBatch = new ArrayList<>( batchConfig.maxBatchCount );
         this.inQueue = new BoundedPriorityQueue<>( inQueueConfig, ContentSize::of, new MessagePriority() );
         this.job = jobFactory.apply( this );
+        this.raftOutbound = raftOutbound;
     }
 
     static ComposableMessageHandler composable( BoundedPriorityQueue.Config inQueueConfig, Config batchConfig,
-            Function<Runnable,ContinuousJob> jobSchedulerFactory, LogProvider logProvider )
+            Function<Runnable,ContinuousJob> jobSchedulerFactory, LogProvider logProvider, RaftOutbound raftOutbound )
     {
         return delegate -> new BatchingMessageHandler( delegate, inQueueConfig, batchConfig, jobSchedulerFactory,
-                logProvider );
+                logProvider, raftOutbound );
     }
 
     @Override
     public void start( ClusterId clusterId ) throws Throwable
     {
         handler.start( clusterId );
+        raftOutbound.registerLocalMessageHandler( this );
         job.start();
     }
 
