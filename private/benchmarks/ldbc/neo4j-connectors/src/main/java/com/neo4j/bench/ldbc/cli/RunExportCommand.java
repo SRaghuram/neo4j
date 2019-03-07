@@ -542,7 +542,7 @@ public class RunExportCommand implements Runnable
                                                                  benchmarkParams );
 
             LdbcRunConfig ldbcRunConfig = new LdbcRunConfig(
-                    localDbDir( sourceDbDir, workingDir ),
+                    localDbDir( workingDir ),
                     writeParams,
                     readParams,
                     neo4jApi,
@@ -700,7 +700,7 @@ public class RunExportCommand implements Runnable
     private void copyStore( LdbcRunConfig ldbcRunConfig )
     {
         //We need to resolve the subfolder of the store.
-        copyDir( sourceDbDir, ldbcRunConfig.storeDir.toPath().resolve( sourceDbDir.toPath().getFileName() ).toFile() );
+        copyDir( sourceDbDir, new File(ldbcRunConfig.storeDir, sourceDbDir.getName() ) );
     }
 
     private void runBenchmarkRepetition(
@@ -996,18 +996,12 @@ public class RunExportCommand implements Runnable
         return (null == neo4jPackage) ? Lists.newArrayList() : Neo4jArchive.extractJvmArgs( neo4jPackage );
     }
 
-    private static File localDbDir( File sourceDbDir, File workingDir )
+    private static File localDbDir( File workingDir )
     {
         // create a top level store directory, to copy the graph.db folder into
         // E.g., source/graph.db --> workDir/tempStoreDir/graph.db
         Path tempStoreDir = workingDir.toPath().resolve( "tempStoreDir" );
         BenchmarkUtil.assertDoesNotExist( tempStoreDir );
-        if ( sourceDbDir.getParentFile().equals( workingDir ) )
-        {
-            throw new RuntimeException( format( "Source database:                    %s\n" +
-                                                "Must not be in working directory:   %s",
-                                                sourceDbDir.getAbsolutePath(), workingDir.getAbsolutePath() ) );
-        }
         return tempStoreDir.toFile();
     }
 
