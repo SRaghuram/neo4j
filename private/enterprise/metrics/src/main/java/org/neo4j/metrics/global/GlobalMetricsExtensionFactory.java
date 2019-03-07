@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 
 import java.util.function.Supplier;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -20,6 +21,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
+@ServiceProvider
 public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetricsExtensionFactory.Dependencies>
 {
     public interface Dependencies

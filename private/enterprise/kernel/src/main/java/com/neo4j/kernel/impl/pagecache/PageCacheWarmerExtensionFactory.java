@@ -8,6 +8,7 @@ package com.neo4j.kernel.impl.pagecache;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerLoggingMonitor;
 import com.neo4j.kernel.impl.pagecache.monitor.PageCacheWarmerMonitor;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
@@ -22,6 +23,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 
+@ServiceProvider
 public class PageCacheWarmerExtensionFactory
         extends ExtensionFactory<PageCacheWarmerExtensionFactory.Dependencies>
 {
