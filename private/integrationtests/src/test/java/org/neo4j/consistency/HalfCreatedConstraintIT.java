@@ -9,7 +9,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +72,9 @@ public class HalfCreatedConstraintIT
         }
         catch ( IllegalStateException e )
         {
-            assertThat( e.getMessage(), containsString( "Index entered a FAILED state. Please see database logs.: Cause of failure:" ) );
+            assertThat( e.getMessage(), containsString(
+                    "Index IndexDefinition[label:MARKER on:property] (IndexRule[id=1, descriptor=Index( UNIQUE, :label[0](property[0]) ), " +
+                            "provider={key=native-btree, version=1.0}, owner=null]) entered a FAILED state. Please see database logs.: Cause of failure:" ) );
         }
     }
 
