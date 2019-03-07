@@ -37,13 +37,13 @@ import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 import org.neo4j.kernel.api.schema.index.TestIndexDescriptorFactory;
 import org.neo4j.kernel.api.security.AnonymousContext;
-import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.index.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.storageengine.api.ConstraintRule;
 import org.neo4j.storageengine.api.StorageIndexReference;
 import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.token.TokenHolders;
 import org.neo4j.values.storable.Values;
 
 import static java.util.Arrays.asList;

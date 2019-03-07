@@ -44,8 +44,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
-import org.neo4j.kernel.impl.core.DelegatingTokenHolder;
-import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -57,6 +55,8 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.token.DelegatingTokenHolder;
+import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
 
 import static java.lang.String.format;

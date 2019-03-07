@@ -63,14 +63,14 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
-import org.neo4j.kernel.impl.core.TokenHolders;
-import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.LocksFactory;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.token.TokenHolders;
+import org.neo4j.token.TokenRegistry;
 import org.neo4j.token.api.TokenHolder;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.array_block_id_allocation_size;

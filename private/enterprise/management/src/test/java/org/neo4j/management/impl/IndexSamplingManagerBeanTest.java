@@ -15,10 +15,10 @@ import org.neo4j.internal.schema.SchemaDescriptorFactory;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.index.IndexingService;
 import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingMode;
-import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.management.impl.IndexSamplingManagerBean.StoreAccess;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
+import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
 
 import static org.mockito.Mockito.mock;

@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdRangeAcquir
 
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
-import org.neo4j.kernel.impl.core.TokenHolders;
 import org.neo4j.kernel.impl.locking.Locks;
+import org.neo4j.token.TokenHolders;
 
 public class PerDatabaseCoreStateComponents
 {

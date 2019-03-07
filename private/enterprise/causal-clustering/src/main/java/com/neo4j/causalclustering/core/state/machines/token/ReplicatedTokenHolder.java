@@ -17,13 +17,13 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.api.state.TxState;
-import org.neo4j.kernel.impl.core.AbstractTokenHolderBase;
-import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageReader;
+import org.neo4j.token.AbstractTokenHolderBase;
+import org.neo4j.token.TokenRegistry;
 
 import static org.neo4j.storageengine.api.txstate.TxStateVisitor.NO_DECORATION;
 

@@ -17,7 +17,6 @@ import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
-import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.recordstorage.CacheAccessBackDoor;
 import org.neo4j.internal.recordstorage.CacheInvalidationTransactionApplier;
 import org.neo4j.internal.recordstorage.Command;
@@ -29,7 +28,6 @@ import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
-import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.StoreFactory;
@@ -49,6 +47,8 @@ import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.token.TokenRegistry;
+import org.neo4j.token.api.NamedToken;
 
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.commandsToBytes;
 import static com.neo4j.causalclustering.core.state.machines.token.TokenType.LABEL;
