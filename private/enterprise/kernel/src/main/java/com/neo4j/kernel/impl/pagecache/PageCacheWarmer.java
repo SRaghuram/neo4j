@@ -88,7 +88,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         {
             return Resource.EMPTY;
         }
-        List<PagedFile> pagedFilesInDatabase = pagedFilesInDatabase();
+        List<PagedFile> pagedFilesInDatabase = pageCache.listExistingMappings();
         Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
         for ( Profile profile : existingProfiles )
         {
@@ -136,7 +136,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
             return OptionalLong.empty();
         }
         long pagesLoaded = 0;
-        List<PagedFile> pagedFilesInDatabase = pagedFilesInDatabase();
+        List<PagedFile> pagedFilesInDatabase = pageCache.listExistingMappings();
         Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
         for ( PagedFile file : pagedFilesInDatabase )
         {
@@ -169,7 +169,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         // fast, that it rivals the overhead of starting and stopping threads. Because of this, the complexity of
         // profiling in parallel is just not worth it.
         long pagesInMemory = 0;
-        List<PagedFile> pagedFilesInDatabase = pagedFilesInDatabase();
+        List<PagedFile> pagedFilesInDatabase = pageCache.listExistingMappings();
         Profile[] existingProfiles = findExistingProfiles( pagedFilesInDatabase );
         for ( PagedFile file : pagedFilesInDatabase )
         {
@@ -300,14 +300,6 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         return new ThreadPoolExecutor(
                 0, IO_PARALLELISM, 10, TimeUnit.SECONDS, workQueue,
                 threadFactory, rejectionPolicy );
-    }
-
-    private List<PagedFile> pagedFilesInDatabase() throws IOException
-    {
-        Path databasePath = databaseDirectory.toPath();
-        return pageCache.listExistingMappings().stream()
-                .filter( pagedFile -> pagedFile.file().toPath().startsWith( databasePath ) )
-                .collect( Collectors.toList() );
     }
 
     private static Stream<Profile> filterRelevant( Profile[] profiles, PagedFile pagedFile )

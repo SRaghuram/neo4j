@@ -48,7 +48,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -123,29 +122,6 @@ class PageCacheWarmerTest
         {
             PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.databaseDir() );
             warmer.start();
-            warmer.stop();
-            assertSame( OptionalLong.empty(), warmer.profile() );
-        }
-    }
-
-    @Test
-    void listOnlyDatabaseRelatedFilesInListOfMetadata() throws IOException
-    {
-        File ignoredFile = new File( testDirectory.storeDir(), "b" );
-        try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
-                PagedFile include = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE );
-                PagedFile ignore = pageCache.map( ignoredFile, pageCache.pageSize(), StandardOpenOption.CREATE ) )
-        {
-            PageCacheWarmer warmer = new PageCacheWarmer( fs, pageCache, scheduler, testDirectory.databaseDir() );
-            warmer.start();
-            warmer.profile();
-
-            ArrayList<StoreFileMetadata> filesMetadata = new ArrayList<>();
-            warmer.addFilesTo( filesMetadata );
-
-            assertThat( filesMetadata, hasSize( 1 ) );
-            assertTrue( filesMetadata.get( 0 ).file().getName().startsWith( file.getName() ) );
-
             warmer.stop();
             assertSame( OptionalLong.empty(), warmer.profile() );
         }
