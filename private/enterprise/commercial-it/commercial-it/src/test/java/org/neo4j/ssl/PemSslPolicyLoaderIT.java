@@ -121,6 +121,7 @@ public class PemSslPolicyLoaderIT
             ByteBuf expected = ByteBufAllocator.DEFAULT.buffer().writeBytes( SecureServer.RESPONSE );
             assertTrue( secureClient.sslHandshakeFuture().get( 1, MINUTES ).isActive() );
             secureClient.assertResponse( expected );
+            expected.release();
         }
         finally
         {
