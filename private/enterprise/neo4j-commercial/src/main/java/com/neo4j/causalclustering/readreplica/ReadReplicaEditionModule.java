@@ -115,6 +115,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         SystemNanoClock globalClock = globalModule.getGlobalClock();
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
         this.accessCapability = new ReadOnly();
+        initGlobalGuard( globalClock, logService );
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService,
                 fileWatcherFileNameFilter() );
@@ -175,8 +176,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         editionInvariants( globalModule, globalDependencies, globaConfig, globalLife );
 
         addPanicEventHandlers( panicService, globalLife, databaseHealthSupplier, serverModule.catchupServer(), serverModule.backupServer() );
-
-        initGlobalGuard( globalClock, logService );
     }
 
     @Override

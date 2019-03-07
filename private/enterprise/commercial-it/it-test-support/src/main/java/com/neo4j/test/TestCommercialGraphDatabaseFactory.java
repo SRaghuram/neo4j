@@ -13,7 +13,6 @@ import java.io.File;
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
@@ -40,17 +39,13 @@ public class TestCommercialGraphDatabaseFactory extends TestGraphDatabaseFactory
     protected GraphDatabaseBuilder.DatabaseCreator createDatabaseCreator( File storeDir,
             GraphDatabaseFactoryState state )
     {
-        return new GraphDatabaseBuilder.DatabaseCreator()
+        return config ->
         {
-            @Override
-            public GraphDatabaseService newDatabase( Config config )
-            {
-                File databasesRoot = storeDir.getParentFile();
-                augmentConfig( config, databasesRoot, storeDir );
-                TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
-                TestCommercialGraphDatabaseFacadeFactory facadeFactory = new TestCommercialGraphDatabaseFacadeFactory( testState, false );
-                return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
-            }
+            File databasesRoot = storeDir.getParentFile();
+            augmentConfig( config, databasesRoot, storeDir );
+            TestGraphDatabaseFactoryState testState = (TestGraphDatabaseFactoryState) state;
+            TestCommercialGraphDatabaseFacadeFactory facadeFactory = new TestCommercialGraphDatabaseFacadeFactory( testState, false );
+            return facadeFactory.newFacade( databasesRoot, config, GraphDatabaseDependencies.newDependencies( state.databaseDependencies() ) );
         };
     }
 
