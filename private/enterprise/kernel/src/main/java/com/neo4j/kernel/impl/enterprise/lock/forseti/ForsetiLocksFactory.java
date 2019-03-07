@@ -7,19 +7,22 @@ package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
 import java.time.Clock;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.kernel.impl.locking.DynamicLocksFactory;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.ResourceTypes;
 import org.neo4j.storageengine.api.lock.ResourceType;
 
-public class ForsetiLocksFactory extends DynamicLocksFactory
+@ServiceProvider
+public class ForsetiLocksFactory implements DynamicLocksFactory
 {
     public static final String KEY = "forseti";
 
-    public ForsetiLocksFactory()
+    @Override
+    public String getName()
     {
-        super( KEY );
+        return KEY;
     }
 
     @Override
