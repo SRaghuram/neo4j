@@ -74,8 +74,9 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
         if ( existingTokenId == null )
         {
             log.info( format( "Applying %s with newTokenId=%d", tokenRequest, newTokenId ) );
+            // The 'applyToStore' method applies EXTERNAL transactions, which will update the token holders for us.
+            // Thus there is no need for us to update the token registry directly.
             applyToStore( commands, commandIndex );
-            tokenRegistry.put( new NamedToken( tokenRequest.tokenName(), newTokenId ) );
             callback.accept( Result.of( newTokenId ) );
         }
         else

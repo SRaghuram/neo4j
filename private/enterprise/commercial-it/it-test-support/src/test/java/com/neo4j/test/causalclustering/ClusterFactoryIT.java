@@ -70,7 +70,7 @@ class ClusterFactoryIT
         class NestedClassIsFine
         {
             @Inject
-            ClusterFactory factory;
+            private ClusterFactory factory;
 
             @Test
             void checkClusterIsRunning() throws Exception
