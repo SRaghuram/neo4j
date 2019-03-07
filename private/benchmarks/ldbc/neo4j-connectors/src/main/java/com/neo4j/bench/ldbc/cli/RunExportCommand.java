@@ -700,7 +700,7 @@ public class RunExportCommand implements Runnable
     private void copyStore( LdbcRunConfig ldbcRunConfig )
     {
         //We need to resolve the subfolder of the store.
-        copyDir( sourceDbDir, new File(ldbcRunConfig.storeDir, sourceDbDir.getName() ) );
+        copyDir( sourceDbDir, new File( ldbcRunConfig.storeDir, sourceDbDir.getName() ) );
     }
 
     private void runBenchmarkRepetition(
