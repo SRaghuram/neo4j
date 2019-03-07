@@ -251,7 +251,7 @@ public class UniquenessConstraintCreationIT
         commit();
 
         // then
-        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders().propertyKeyTokens() );
+        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
         StorageIndexReference indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
                 .uniqueForLabel( typeId, propertyKeyId ) ) );
         ConstraintRule constraintRule = schemaRuleAccess.constraintsGetSingle(
