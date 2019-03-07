@@ -11,7 +11,6 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import java.nio.file.Path;
 
 import org.neo4j.com.storecopy.FileMoveProvider;
-import org.neo4j.common.Service;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -20,6 +19,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
@@ -103,7 +103,7 @@ public class OnlineBackupExecutor
         private ProgressMonitorFactory progressMonitorFactory = ProgressMonitorFactory.NONE;
         private Monitors monitors = new Monitors();
         private BackupSupportingClassesFactory supportingClassesFactory;
-        private StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
+        private StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
 
         private Builder()
         {

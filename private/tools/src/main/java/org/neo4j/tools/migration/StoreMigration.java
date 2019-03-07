@@ -8,7 +8,6 @@ package org.neo4j.tools.migration;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
@@ -44,6 +43,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.StoreLogService;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
@@ -107,7 +107,7 @@ public class StoreMigration
             DatabaseExtensionContext extensionContext = new DatabaseExtensionContext( databaseLayout, DatabaseInfo.UNKNOWN, deps );
             Iterable<ExtensionFactory<?>> extensionFactories = GraphDatabaseDependencies.newDependencies().extensions();
             DatabaseExtensions databaseExtensions = life.add( new DatabaseExtensions( extensionContext, extensionFactories, deps, ignore() ) );
-            StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
+            StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
 
             final LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
                     .withConfig( config ).build();

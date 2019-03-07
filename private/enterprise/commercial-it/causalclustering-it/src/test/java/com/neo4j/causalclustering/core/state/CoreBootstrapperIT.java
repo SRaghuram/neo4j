@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
@@ -39,6 +38,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.service.Services;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -100,7 +100,7 @@ class CoreBootstrapperIT
         this.storeDirectory = new File( dataDirectory, DEFAULT_DATABASES_ROOT_DIR_NAME );
         this.txLogsDirectory = new File( dataDirectory, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         this.defaultConfig = Config.builder().withHome( neo4jHome ).build();
-        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
+        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) );
     }
 
     @Test

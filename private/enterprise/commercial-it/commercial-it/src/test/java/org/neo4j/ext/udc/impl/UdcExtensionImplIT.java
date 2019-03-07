@@ -31,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.neo4j.common.Edition;
-import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.ext.udc.UdcConstants;
 import org.neo4j.ext.udc.UdcSettings;
