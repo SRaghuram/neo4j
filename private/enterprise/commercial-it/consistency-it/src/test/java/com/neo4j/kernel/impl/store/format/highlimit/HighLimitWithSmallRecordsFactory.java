@@ -5,13 +5,16 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 
-public class HighLimitWithSmallRecordsFactory extends RecordFormats.Factory
+@ServiceProvider
+public class HighLimitWithSmallRecordsFactory implements RecordFormats.Factory
 {
-    public HighLimitWithSmallRecordsFactory()
+    @Override
+    public String getName()
     {
-        super( HighLimitWithSmallRecords.NAME, HighLimitWithSmallRecords.STORE_VERSION );
+        return HighLimitWithSmallRecords.NAME;
     }
 
     @Override

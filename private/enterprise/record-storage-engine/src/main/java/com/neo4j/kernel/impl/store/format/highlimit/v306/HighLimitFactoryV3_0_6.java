@@ -5,13 +5,16 @@
  */
 package com.neo4j.kernel.impl.store.format.highlimit.v306;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 
-public class HighLimitFactoryV3_0_6 extends RecordFormats.Factory
+@ServiceProvider
+public class HighLimitFactoryV3_0_6 implements RecordFormats.Factory
 {
-    public HighLimitFactoryV3_0_6()
+    @Override
+    public String getName()
     {
-        super( HighLimitV3_0_6.NAME, HighLimitV3_0_6.STORE_VERSION );
+        return HighLimitV3_0_6.NAME;
     }
 
     @Override
