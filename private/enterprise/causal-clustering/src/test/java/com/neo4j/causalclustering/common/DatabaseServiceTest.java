@@ -16,6 +16,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.StoreLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.logging.NullLog;
@@ -143,12 +144,13 @@ class DatabaseServiceTest
         verify( databaseManager, never() ).start();
     }
 
-    DatabaseAvailabilityGuard newAvailabilityGuard()
+    private DatabaseAvailabilityGuard newAvailabilityGuard()
     {
-        return new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clock.systemUTC(), NullLog.getInstance() );
+        return new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clock.systemUTC(), NullLog.getInstance(),
+                mock( CompositeDatabaseAvailabilityGuard.class ) );
     }
 
-    DatabaseService newLocalDatabaseService( AvailabilityGuard availabilityGuard, DatabaseManager databaseManager )
+    private DatabaseService newLocalDatabaseService( AvailabilityGuard availabilityGuard, DatabaseManager databaseManager )
     {
         return new DefaultDatabaseService<>( StubLocalDatabase::new, () -> databaseManager, mock( StoreLayout.class ), availabilityGuard,
                 () -> mock( DatabaseHealth.class ), mock( FileSystemAbstraction.class ), mock( PageCache.class ),

@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.stream.LongStream;
 
 import org.neo4j.cursor.Cursor;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DescriptiveAvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
@@ -68,7 +69,8 @@ class TxPullRequestHandlerTest
 
     private StoreId storeId = new StoreId( 1, 2, 3, 4 );
     private Database database = mock( Database.class );
-    private DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, new FakeClock(), NullLog.getInstance() );
+    private DatabaseAvailabilityGuard availabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, new FakeClock(), NullLog.getInstance(),
+            mock( CompositeDatabaseAvailabilityGuard.class ) );
     private LogicalTransactionStore logicalTransactionStore = mock( LogicalTransactionStore.class );
     private TransactionIdStore transactionIdStore = mock( TransactionIdStore.class );
 

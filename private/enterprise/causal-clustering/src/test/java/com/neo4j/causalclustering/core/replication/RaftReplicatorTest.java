@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -65,7 +66,8 @@ class RaftReplicatorTest
     @BeforeEach
     void setUp()
     {
-        availabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clocks.systemClock(), NullLog.getInstance() );
+        availabilityGuard = new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clocks.systemClock(), NullLog.getInstance(),
+                mock( CompositeDatabaseAvailabilityGuard.class ) );
         databaseService = mock( DatabaseService.class );
     }
 
