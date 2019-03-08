@@ -21,12 +21,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.impl.transaction.log.rotation.LogRotation;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -66,8 +65,7 @@ public class ReadReplicaStoreCopyIT
             }
             catch ( Exception e )
             {
-                assertThat( e, instanceOf( TransactionFailureException.class ) );
-                assertThat( e.getMessage(), containsString( "stopped to copy a store" ) );
+                assertThat( e, instanceOf( DatabaseShutdownException.class ) );
             }
         }
         finally
