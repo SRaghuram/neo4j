@@ -129,7 +129,7 @@ public class WorkloadExecutionIT
 
         MeasurementControl warmupControl = or( ofCount( 10 ), ofDuration( ofSeconds( 10 ) ) );
         MeasurementControl measurementControl = or( ofCount( 10 ), ofDuration( ofSeconds( 10 ) ) );
-
+        Store store = TestSupport.createEmptyStore( storeDir );
         QueryRunner queryRunner = QueryRunner.runnerFor( ExecutionMode.EXECUTE );
         for ( Query query : workload.queries() )
         {
@@ -139,7 +139,6 @@ public class WorkloadExecutionIT
             Path neo4jConfigFile = temporaryFolder.newFile().toPath();
             Neo4jConfig neo4jConfig = Neo4jConfig.fromFile( neo4jConfigFile );
 
-            Store store = TestSupport.createEmptyStore( storeDir );
             queryRunner.run(
                     Jvm.defaultJvmOrFail(),
                     store,
