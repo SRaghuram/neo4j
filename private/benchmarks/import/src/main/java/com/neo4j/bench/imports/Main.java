@@ -157,8 +157,7 @@ public class Main
         Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
         long startTime = System.currentTimeMillis();
 
-//        String[] sizes = {"100m", "1bn", "10bn", "100bn"};
-        String[] sizes = {"100m"};
+        String[] sizes = {"100m", "1bn", "10bn", "100bn"};
         for ( String size : sizes )
         {
             int exitCode = runImport( size, benchmarkGroupBenchmarkMetrics, importGroup, neo4jConfig );
