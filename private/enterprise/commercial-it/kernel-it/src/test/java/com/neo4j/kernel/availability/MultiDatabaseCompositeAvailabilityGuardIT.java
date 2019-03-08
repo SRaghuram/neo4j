@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -50,7 +50,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
         GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" ).getDatabaseFacade();
         secondDatabase.shutdown();
 
-        assertThrows( DatabaseShutdownException.class, bridge::assertInUnterminatedTransaction );
+        assertThrows( NotInTransactionException.class, bridge::assertInUnterminatedTransaction );
     }
 
     private ThreadToStatementContextBridge getTransactionBridge()

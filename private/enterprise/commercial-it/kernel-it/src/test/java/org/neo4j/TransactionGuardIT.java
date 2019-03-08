@@ -637,7 +637,7 @@ public class TransactionGuardIT
             } );
         }
         @Override
-        protected GlobalModule createGlobalPlatform( File storeDir, Config config, ExternalDependencies dependencies )
+        protected GlobalModule createGlobalModule( File storeDir, Config config, ExternalDependencies dependencies )
         {
             return new GlobalModule( storeDir, config, databaseInfo, dependencies )
             {

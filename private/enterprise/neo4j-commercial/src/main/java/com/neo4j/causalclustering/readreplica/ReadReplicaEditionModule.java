@@ -37,7 +37,6 @@ import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurit
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
-import java.time.Clock;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
@@ -56,7 +55,6 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -115,7 +113,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         SystemNanoClock globalClock = globalModule.getGlobalClock();
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
         this.accessCapability = new ReadOnly();
-        initGlobalGuard( globalClock, logService );
 
         watcherServiceFactory = layout -> createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService,
                 fileWatcherFileNameFilter() );
@@ -138,7 +135,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
                         .map( DatabaseContext::getDependencies)
                         .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
                         .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
-        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, globalModule,
+        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalModule.getGlobalAvailabilityGuard(), globalModule,
                 databaseManagerSupplier, logProvider, globaConfig );
 
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
@@ -195,7 +192,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
             Optional<Server> backupServer )
     {
         // order matters
-        panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalAvailabilityGuard ) );
+        panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
         panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( databaseHealthSupplier ) );
         panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( catchupServer ) );
         backupServer.ifPresent( server -> panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( server ) ) );
@@ -292,14 +289,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     protected NetworkConnectionTracker createConnectionTracker()
     {
         return new DefaultNetworkConnectionTracker();
-    }
-
-    private void initGlobalGuard( Clock clock, LogService logService )
-    {
-        if ( globalAvailabilityGuard == null )
-        {
-            globalAvailabilityGuard = new CompositeDatabaseAvailabilityGuard( clock, logService );
-        }
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

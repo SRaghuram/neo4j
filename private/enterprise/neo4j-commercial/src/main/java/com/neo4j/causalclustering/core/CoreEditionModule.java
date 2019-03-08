@@ -99,6 +99,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -165,7 +166,6 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         globalLife.add( new IdFilesSanitationModule( coreStartupState, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem,
                 logProvider ) );
 
-        AvailabilityGuard globalGuard = getGlobalAvailabilityGuard( globalModule.getGlobalClock(), logService );
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
 
         final PanicService panicService = new PanicService( logService.getUserLogProvider() );
@@ -185,7 +185,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                         .map( resolver -> resolver.resolveDependency( DatabaseHealth.class ) )
                         .orElseThrow( () -> new IllegalStateException( "Default database not found." ) );
 
-        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalAvailabilityGuard, globalModule,
+        CompositeDatabaseAvailabilityGuard globalGuard = globalModule.getGlobalAvailabilityGuard();
+        this.databaseService = createDatabasesService( databaseHealthSupplier, fileSystem, globalGuard, globalModule,
                 databaseManagerSupplier, logProvider, globalConfig );
 
         SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
@@ -296,7 +297,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     private void addPanicEventHandlers( LifeSupport life, PanicService panicService, Supplier<DatabaseHealth> databaseHealthSupplier )
     {
         // order matters
-        panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalAvailabilityGuard ) );
+        panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
         panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( databaseHealthSupplier ) );
         panicService.addPanicEventHandler( coreServerModule.commandApplicationProcess() );
         panicService.addPanicEventHandler( consensusModule.raftMachine() );
