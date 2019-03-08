@@ -19,9 +19,9 @@ import static java.lang.String.format;
 
 public class JvmVersion
 {
-    private static final String JAVA_VM_VENDOR_RUNTIME_PROPERTY = "java.vm.vendor = ";
-    private static final String JAVA_RUNTIME_NAME_RUNTIME_PROPERTY = "java.runtime.name = ";
-    private static final String JAVA_VERSION_RUNTIME_PROPERTY = "java.version = ";
+    private static final String JAVA_VM_VENDOR_PROPERTY = "java.vm.vendor = ";
+    private static final String JAVA_RUNTIME_NAME_PROPERTY = "java.runtime.name = ";
+    private static final String JAVA_VERSION_PROPERTY = "java.version = ";
 
     public static JvmVersion create( int majorVersion, String implementor, String runtimeName )
     {
@@ -44,7 +44,7 @@ public class JvmVersion
 
                 // majorVersion is obligatory
                 int majorVersion = lines.stream()
-                        .filter( line -> line.contains( JAVA_VERSION_RUNTIME_PROPERTY ) )
+                        .filter( line -> line.contains( JAVA_VERSION_PROPERTY ) )
                         .findAny()
                         .flatMap( JvmVersion::findJdkVersion )
                         .map( JvmVersion::parseMajorVersion )
@@ -52,14 +52,14 @@ public class JvmVersion
 
                 // runtimeName is obligatory
                 String runtimeName = lines.stream()
-                        .filter( line -> line.contains( JAVA_VERSION_RUNTIME_PROPERTY ) )
+                        .filter( line -> line.contains( JAVA_RUNTIME_NAME_PROPERTY ) )
                         .findAny()
                         .flatMap( JvmVersion::findRuntimeName )
                         .orElseThrow( () -> new RuntimeException( "Java runtime name unknown" ) );
 
                 //implementor can be an empty string
                 String implementor = lines.stream()
-                        .filter( line -> line.contains( JAVA_VM_VENDOR_RUNTIME_PROPERTY ) )
+                        .filter( line -> line.contains( JAVA_VM_VENDOR_PROPERTY ) )
                         .findAny()
                         .flatMap( JvmVersion::findImplementor )
                         .orElse( null );
@@ -91,17 +91,17 @@ public class JvmVersion
 
     private static Optional<String> findJdkVersion( String line )
     {
-        return getPropertyValue( line, JAVA_VERSION_RUNTIME_PROPERTY );
+        return getPropertyValue( line, JAVA_VERSION_PROPERTY );
     }
 
     private static Optional<String> findRuntimeName( String line )
     {
-        return getPropertyValue( line, JAVA_RUNTIME_NAME_RUNTIME_PROPERTY );
+        return getPropertyValue( line, JAVA_RUNTIME_NAME_PROPERTY );
     }
 
     private static Optional<String> findImplementor( String line )
     {
-        return getPropertyValue( line, JAVA_VM_VENDOR_RUNTIME_PROPERTY );
+        return getPropertyValue( line, JAVA_VM_VENDOR_PROPERTY );
     }
 
     private static Optional<String> getPropertyValue( String line, String javaVersionProperty )

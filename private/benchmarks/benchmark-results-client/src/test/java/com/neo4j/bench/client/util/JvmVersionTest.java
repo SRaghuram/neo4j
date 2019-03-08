@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.file.Paths;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 
 public class JvmVersionTest
@@ -23,6 +25,8 @@ public class JvmVersionTest
         int majorVersion = JvmVersion.parseMajorVersion( System.getProperty( "java.version" ) );
         JvmVersion jvmVersion = JvmVersion.getVersion( Jvm.fromJdkPath( Paths.get( javaHome ) ) );
         assertThat( jvmVersion.majorVersion(), is( majorVersion ) );
+        assertThat( jvmVersion.runtimeName(), not( isEmptyOrNullString() ) );
+
     }
 
 }
