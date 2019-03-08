@@ -270,12 +270,31 @@ class PersonalUserManager implements EnterpriseUserManager
         {
             assertUserManager();
             userManager.grantPrivilegeToRole( roleName, resourcePrivilege );
-            securityLog.info( subject, "added `%s` privilege on `%s` for role `%s`",
+            securityLog.info( subject, "granted `%s` privilege on `%s` for role `%s`",
                     resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName );
         }
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
-            securityLog.error( subject, "tried to add `%s` privilege on `%s` for role `%s`: %s",
+            securityLog.error( subject, "tried to grant `%s` privilege on `%s` for role `%s`: %s",
+                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName, e.getMessage() );
+            throw e;
+        }
+    }
+
+    @Override
+    public void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege )
+            throws InvalidArgumentsException
+    {
+        try
+        {
+            assertUserManager();
+            userManager.revokePrivilegeFromRole( roleName, resourcePrivilege );
+            securityLog.info( subject, "revoked `%s` privilege on `%s` for role `%s`",
+                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName );
+        }
+        catch ( AuthorizationViolationException | InvalidArgumentsException e )
+        {
+            securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for role `%s`: %s",
                     resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName, e.getMessage() );
             throw e;
         }

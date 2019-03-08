@@ -263,9 +263,25 @@ public class SystemGraphOperations
         queryExecutor.executeQueryWithParamCheck( query, params );
     }
 
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    {
+        assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+        Map<String,Object> params = map(
+                "roleName", roleName,
+                "action", resourcePrivilege.getAction(),
+                "resource", resourcePrivilege.getResource(),
+                "scope", resourcePrivilege.getScope()
+        );
+        String query =
+                "MATCH (role:Role)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource) " +
+                "WHERE role.name = $roleName AND p.action = $action AND res.type = $resource AND res.scope = $scope " +
+                "DETACH DELETE p RETURN 0";
+        queryExecutor.executeQueryWithParamCheck( query, params );
+    }
+
     Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
     {
-        assertValidUsername( username );
+        //assertUserExists( username );
         String query = "MATCH (u:User {name: $username})-[:HAS_DB_ROLE]->(r:DbRole)-[:FOR_ROLE]->(t:Role),  " +
                 "(r)-[:FOR_DATABASE]->(db:Database) " +
                 "OPTIONAL MATCH (t)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res) " +

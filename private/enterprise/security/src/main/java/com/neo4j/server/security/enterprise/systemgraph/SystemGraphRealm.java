@@ -326,6 +326,14 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
+    public void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    {
+        assertNotPredefinedRoleName( roleName );
+        systemGraphOperations.revokePrivilegeFromRole( roleName, resourcePrivilege );
+        clearCachedAuthorizationInfo();
+    }
+
+    @Override
     public Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
     {
         return systemGraphOperations.showPrivilegesForUser( username );

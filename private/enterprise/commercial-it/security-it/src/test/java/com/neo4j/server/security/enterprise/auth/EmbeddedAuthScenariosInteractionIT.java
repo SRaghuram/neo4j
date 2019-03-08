@@ -52,6 +52,37 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     }
 
     @Test
+    void shouldRevokePrivilegeFromRole() throws Throwable
+    {
+        // Given
+        String roleName = "CustomRole";
+        userManager.newUser( "Alice", password( "foo" ), false );
+        userManager.newRole( roleName, "Alice" );
+
+        // When
+        CommercialLoginContext subject = neo.login( "Alice", "foo" );
+
+        // Then
+        testFailRead( subject, 3 );
+        testFailWrite( subject );
+
+        // When
+        userManager.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        userManager.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+
+        // Then
+        testSuccessfulRead( subject, 3 );
+        testSuccessfulWrite( subject );
+
+        // When
+        userManager.revokePrivilegeFromRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+
+        // Then
+        testSuccessfulRead( subject, 4 );
+        testFailWrite( subject );
+    }
+
+    @Test
     void shouldAllowUserManagementForCustomRoleWithAdminPrivilege() throws Throwable
     {
         // Given

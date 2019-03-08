@@ -47,7 +47,25 @@ public interface EnterpriseUserManager extends UserManager
      */
     void removeRoleFromUser( String roleName, String username ) throws IOException, InvalidArgumentsException;
 
+    /**
+     * Grant privilege on a resource to a role. The role have to exist.
+     * If the role already have this privilege nothing will change.
+     *
+     * @param roleName name of role
+     * @param resourcePrivilege privilege to grant
+     * @throws InvalidArgumentsException if the role does not exist
+     */
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException;
+
+    /**
+     * Revoke a privilege on a resource from a role. The role have to exist.
+     * If the role does not have a existing grant on the privilege, no change will happen.
+     *
+     * @param roleName name of role
+     * @param resourcePrivilege privilege to revoke
+     * @throws InvalidArgumentsException if the role does not exist
+     */
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException;
 
     /**
      * Show the privileges for a user.
@@ -109,6 +127,11 @@ public interface EnterpriseUserManager extends UserManager
 
         @Override
         public void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege )
+        {
+        }
+
+        @Override
+        public void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege )
         {
         }
 

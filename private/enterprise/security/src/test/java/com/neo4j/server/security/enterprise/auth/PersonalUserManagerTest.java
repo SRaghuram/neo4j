@@ -61,18 +61,18 @@ class PersonalUserManagerTest
     }
 
     @Test
-    void shouldLogSuccessAssignPrivilege() throws IOException, InvalidArgumentsException
+    void shouldLogSuccessGrantPrivilege() throws IOException, InvalidArgumentsException
     {
         PersonalUserManager userManager = getUserManager( "Alice", true );
         userManager.newRole( ROLE_NAME );
         log.clear();
 
         userManager.grantPrivilegeToRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
-        log.assertExactly( info( "[Alice]: added `%s` privilege on `%s` for role `%s`", "read", "graph", ROLE_NAME ) );
+        log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for role `%s`", "read", "graph", ROLE_NAME ) );
     }
 
     @Test
-    void shouldLogFailureAssignPrivilege()
+    void shouldLogFailureGrantPrivilege()
     {
         PersonalUserManager userManager = getUserManager( "Alice", true );
         log.clear();
@@ -81,12 +81,12 @@ class PersonalUserManagerTest
         catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME,
                 new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
         log.assertExactly(
-                error( "[Alice]: tried to add `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "assignPrivilegeToRoleException" )
+                error( "[Alice]: tried to grant `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "assignPrivilegeToRoleException" )
         );
     }
 
     @Test
-    void shouldLogUnauthorizedAssignPrivilege()
+    void shouldLogUnauthorizedGrantPrivilege()
     {
         PersonalUserManager userManager = getUserManager( "Bob", false );
         log.clear();
@@ -94,7 +94,42 @@ class PersonalUserManagerTest
         catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME,
                 new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
         log.assertExactly(
-                error( "[Bob]: tried to add `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "Permission denied." ) );
+                error( "[Bob]: tried to grant `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "Permission denied." ) );
+    }
+
+    @Test
+    void shouldLogSuccessRevokePrivilege() throws IOException, InvalidArgumentsException
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        userManager.newRole( ROLE_NAME );
+        log.clear();
+
+        userManager.revokePrivilegeFromRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for role `%s`", "read", "graph", ROLE_NAME ) );
+    }
+
+    @Test
+    void shouldLogFailureRevokePrivilege()
+    {
+        PersonalUserManager userManager = getUserManager( "Alice", true );
+        log.clear();
+        evilUserManager.setFailNextCall();
+
+        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly(
+                error( "[Alice]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "revokePrivilegeFromRoleException" )
+        );
+    }
+
+    @Test
+    void shouldLogUnauthorizedRevokePrivilege()
+    {
+        PersonalUserManager userManager = getUserManager( "Bob", false );
+        log.clear();
+
+        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly(
+                error( "[Bob]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "Permission denied." ) );
     }
 
     @Test
@@ -349,6 +384,17 @@ class PersonalUserManagerTest
                 throw new InvalidArgumentsException( "assignPrivilegeToRoleException" );
             }
             delegate.grantPrivilegeToRole( roleName, resourcePrivilege );
+        }
+
+        @Override
+        public void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+        {
+            if ( failNextCall )
+            {
+                failNextCall = false;
+                throw new InvalidArgumentsException( "revokePrivilegeFromRoleException" );
+            }
+            delegate.revokePrivilegeFromRole( roleName, resourcePrivilege );
         }
 
         @Override
