@@ -9,7 +9,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -183,7 +182,7 @@ public class MetricsTestHelper
             }
             catch ( IOException e )
             {
-                throw new UncheckedIOException( e );
+                return false;
             }
         };
     }
