@@ -15,16 +15,19 @@ import com.neo4j.bench.micro.config.SuiteDescription;
 import com.neo4j.bench.micro.config.Validation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
 import static com.google.common.collect.Sets.newHashSet;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static com.neo4j.bench.micro.TestUtils.map;
 import static com.neo4j.bench.micro.config.BenchmarkConfigFile.fromFile;
 import static com.neo4j.bench.micro.config.SuiteDescription.fromConfig;
@@ -38,10 +41,11 @@ import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class ConfigCommandIT
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     private SuiteDescription suiteDescription;
 
@@ -59,7 +63,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         Main.main( new String[]{
                 "config", "default",
                 "--path", benchmarkConfig.getAbsolutePath()
@@ -83,7 +87,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteNonExistentGroupConfig() throws Exception
     {
         // when
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         try
         {
             Main.main( new String[]{
@@ -103,7 +107,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteGroupConfigWhenNoGroupSpecified() throws Exception
     {
         // when
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         try
         {
             Main.main( new String[]{
@@ -123,7 +127,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -149,7 +153,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         Main.main( new String[]{
                 "config", "groups",
                 "--path", benchmarkConfig.getAbsolutePath(),
@@ -174,7 +178,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteNonExistentBenchmarkConfig() throws Exception
     {
         // when
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         try
         {
             Main.main( new String[]{
@@ -194,7 +198,7 @@ public class ConfigCommandIT
     public void shouldFailToWriteBenchmarkConfigWhenNoBenchmarkSpecified() throws Exception
     {
         // when
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         try
         {
             Main.main( new String[]{
@@ -214,7 +218,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -250,7 +254,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         String benchmarkName = ValidDisabledBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -287,7 +291,7 @@ public class ConfigCommandIT
         Validation validation = new Validation();
         String benchmarkName1 = ValidEnabledBenchmark1.class.getName();
         String benchmarkName2 = ValidEnabledBenchmark2.class.getName();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         Main.main( new String[]{
                 "config", "benchmarks",
                 "--verbose",
@@ -340,7 +344,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         String benchmarkName = ValidEnabledBenchmark1.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",
@@ -384,7 +388,7 @@ public class ConfigCommandIT
     {
         // when
         Validation validation = new Validation();
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File benchmarkConfig = createTempFile( temporaryFolder.absolutePath() );
         String benchmarkName = ValidDisabledBenchmark.class.getName();
         Main.main( new String[]{
                 "config", "benchmarks",

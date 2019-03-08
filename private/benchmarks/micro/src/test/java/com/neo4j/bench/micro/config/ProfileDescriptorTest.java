@@ -9,22 +9,27 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.util.JsonUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.noProfile;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class ProfileDescriptorTest
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void shouldSerializeNoProfile() throws IOException
@@ -37,17 +42,17 @@ public class ProfileDescriptorTest
     {
         shouldSerializeAndDeserialize(
                 profileTo(
-                        Files.createTempDirectory( temporaryFolder, "" ),
+                        createTempDirectoryPath( temporaryFolder.absolutePath() ),
                         Lists.newArrayList( ProfilerType.JFR ) ) );
         shouldSerializeAndDeserialize(
                 profileTo(
-                        Files.createTempDirectory( temporaryFolder, "" ),
+                        createTempDirectoryPath( temporaryFolder.absolutePath() ),
                         Lists.newArrayList( ProfilerType.JFR, ProfilerType.ASYNC ) ) );
     }
 
     private Object shouldSerializeAndDeserialize( Object before ) throws IOException
     {
-        File jsonFile = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File jsonFile = createTempFile( temporaryFolder.absolutePath() );
         JsonUtil.serializeJson( jsonFile.toPath(), before );
         Object after = JsonUtil.deserializeJson( jsonFile.toPath(), before.getClass() );
         assertThat( before, equalTo( after ) );

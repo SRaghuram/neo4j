@@ -9,7 +9,7 @@ import com.google.common.collect.Lists;
 import com.neo4j.bench.client.Main;
 import com.neo4j.bench.client.util.Jvm;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -19,13 +19,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class ProcessTest
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     public void shouldSelectRightJava() throws Exception
     {
@@ -44,11 +51,11 @@ public class ProcessTest
     @Test
     public void shouldLaunchSimpleProcessAndWriteItsOutputToFile() throws Exception
     {
-        Path folder = Files.createTempDirectory( temporaryFolder, "" );
+        Path folder = createTempDirectoryPath( temporaryFolder.absolutePath() );
         Files.createFile( folder.resolve( "file1.txt" ) );
         Files.createFile( folder.resolve( "file2.txt" ) );
 
-        File processOutput = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File processOutput = createTempFile( temporaryFolder.absolutePath() );
 
         assertThat( "Expected process output to be empty", Files.lines( processOutput.toPath() ).count(), equalTo( 0L ) );
 

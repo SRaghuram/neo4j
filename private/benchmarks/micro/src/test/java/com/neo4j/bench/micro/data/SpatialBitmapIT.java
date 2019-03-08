@@ -8,7 +8,7 @@ package com.neo4j.bench.micro.data;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -16,6 +16,9 @@ import java.nio.file.Path;
 import java.util.SplittableRandom;
 
 import org.neo4j.graphdb.spatial.Point;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.micro.data.PointGenerator.circleGrid;
 import static com.neo4j.bench.micro.data.PointGenerator.clusterGrid;
@@ -27,10 +30,11 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.round;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class SpatialBitmapIT
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void shouldMakePrettyBitmap() throws IOException
@@ -93,7 +97,7 @@ public class SpatialBitmapIT
             spatialBitmap.addPointToBitmap( pointX, pointY );
         }
         while ( !fun.wrapped() );
-        Path path = temporaryFolder.resolve( filename );
+        Path path = temporaryFolder.absolutePath().toPath().resolve( filename );
         System.out.println( "Writing image to: " + path.toFile().getAbsolutePath() );
         spatialBitmap.writeTo( path );
     }

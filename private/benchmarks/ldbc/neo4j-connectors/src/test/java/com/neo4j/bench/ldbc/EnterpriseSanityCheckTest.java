@@ -7,13 +7,11 @@ package com.neo4j.bench.ldbc;
 
 import com.ldbc.driver.util.MapUtils;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -21,15 +19,21 @@ import java.util.Properties;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class EnterpriseSanityCheckTest
 {
-    @TempDir
-    public Path testFolder;
+    @Inject
+    public TestDirectory testFolder;
 
     @Test
     public void shouldUseInterpreted() throws Exception
@@ -57,7 +61,7 @@ public class EnterpriseSanityCheckTest
 
     private void shouldUseRuntime( Optional<String> maybeRequestedRuntime, String expectedRuntime ) throws Exception
     {
-        File dbDir = Files.createTempDirectory( testFolder, "" ).toFile();
+        File dbDir = createTempDirectory( testFolder.absolutePath() );
         GraphDatabaseService db = Neo4jDb.newDb( dbDir, configFile() );
         String requestedRuntime = maybeRequestedRuntime.isPresent() ? "runtime=" + maybeRequestedRuntime.get() : "";
         Result result = db.execute( "CYPHER " + requestedRuntime + " MATCH (n) RETURN n" );
@@ -71,7 +75,7 @@ public class EnterpriseSanityCheckTest
 
     private File configFile() throws IOException
     {
-        File neo4jConfigFile = Files.createTempFile( testFolder, "", "" ).toFile();
+        File neo4jConfigFile = createTempFile( testFolder.absolutePath() );
         Map<String,String> neo4jConfigMap = new HashMap<>();
         neo4jConfigMap.put( record_format.name(), "high_limit" );
         Properties neo4jConfigProperties = MapUtils.mapToProperties( neo4jConfigMap );

@@ -40,8 +40,8 @@ import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,6 +62,9 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.FAIL;
@@ -69,12 +72,15 @@ import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.IGNORE;
 import static com.neo4j.bench.client.ReportCommand.ErrorReportingPolicy.REPORT_THEN_FAIL;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
 import static com.neo4j.bench.client.queries.VerifyStoreSchema.patternCountInStore;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
+
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class SubmitTestRunsAndPlansIT
 {
     @RegisterExtension
@@ -85,8 +91,8 @@ public class SubmitTestRunsAndPlansIT
     private static final String USERNAME = "neo4j";
     private static final String PASSWORD = "neo4j";
 
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     private URI boltUri;
 
@@ -134,7 +140,7 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup group = new BenchmarkGroup( "group1" );
             Benchmark benchmark1 = Benchmark.benchmarkFor( "desc1", "bench1", Benchmark.Mode.LATENCY, emptyMap() );
             Benchmark benchmark2 = Benchmark.benchmarkFor( "desc2", "bench2", Benchmark.Mode.LATENCY, emptyMap() );
-            File testRunResultsJson1 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+            File testRunResultsJson1 = createTempFile( temporaryFolder.absolutePath() );
             TestRunReport testRunReport = createTestRunReportTwoProjects(
                     testRun1,
                     newArrayList(), // no plans
@@ -176,7 +182,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun2 = new TestRun( "id2", 1, 1, 1, 1, "user" );
-            final File testRunResultsJson2 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+            final File testRunResultsJson2 = createTempFile( temporaryFolder.absolutePath() );
             testRunReport = createTestRunReportTwoProjects(
                     testRun2,
                     newArrayList(), // no plans
@@ -254,7 +260,7 @@ public class SubmitTestRunsAndPlansIT
              */
 
             TestRun testRun3 = new TestRun( "id3", 1, 1, 1, 1, "user" );
-            File testRunResultsJson3 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+            File testRunResultsJson3 = createTempFile( temporaryFolder.absolutePath() );
             testRunReport = createTestRunReportTwoProjects(
                     testRun3,
                     newArrayList(), // no plans
@@ -314,7 +320,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
 
-            File testRunResultsJson1 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+            File testRunResultsJson1 = createTempFile( temporaryFolder.absolutePath() );
             ArrayList<TestRunError> errors = newArrayList();
             TestRunReport testRunReport1 = createTestRunReportTwoProjects(
                     testRun1,
@@ -370,7 +376,7 @@ public class SubmitTestRunsAndPlansIT
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ),
                     new BenchmarkPlan( group, benchmark4, plan( "c" ) ) );
-            File testRunResultsJson2 = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+            File testRunResultsJson2 = createTempFile( temporaryFolder.absolutePath() );
             TestRunReport testRunReport2 = createTestRunReport(
                     testRun2,
                     benchmarkPlans2,
@@ -461,7 +467,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "b" ) ) );
-            File testRunResultsJson = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+            File testRunResultsJson = createTempFile( temporaryFolder.absolutePath() );
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
@@ -560,7 +566,7 @@ public class SubmitTestRunsAndPlansIT
             List<BenchmarkPlan> benchmarkPlans = newArrayList(
                     new BenchmarkPlan( group, benchmark1, plan( "a" ) ),
                     new BenchmarkPlan( group, benchmark2, plan( "a" ) ) );
-            File testRunResultsJson = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+            File testRunResultsJson = createTempFile( temporaryFolder.absolutePath() );
             ArrayList<TestRunError> errors = newArrayList( new TestRunError( "group1", "benchmark1", "description 1" ),
                                                            new TestRunError( "group2", "benchmark2", "description 2" ) );
             TestRunReport testRunReport1 =
@@ -666,22 +672,23 @@ public class SubmitTestRunsAndPlansIT
     }
 
     private static File createProfileFiles(
-            Path temporaryFolder,
+            TestDirectory temporaryFolder,
             BenchmarkGroup group,
             Benchmark benchmark1,
             Benchmark benchmark2 ) throws IOException
     {
-        Path topFolder = temporaryFolder.resolve( "profiles" );
+        Path absolutePath = temporaryFolder.absolutePath().toPath();
+        Path topFolder = absolutePath.resolve( "profiles" );
         Files.createDirectories( topFolder );
-        Files.createFile( temporaryFolder.resolve( "archive.tar.gz" ));
+        Files.createFile( absolutePath.resolve( "archive.tar.gz" ));
 
-        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".jfr" ) );
-        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-jfr.svg" ) );
-        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".async" ) );
-        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-async.svg" ) );
+        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".jfr" ) );
+        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-jfr.svg" ) );
+        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + ".async" ) );
+        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark1.name() + "-async.svg" ) );
 
-        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark2.name() + ".jfr" ) );
-        Files.createFile( temporaryFolder.resolve( "profiles/" + group.name() + "." + benchmark2.name() + "-jfr.svg" ) );
+        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark2.name() + ".jfr" ) );
+        Files.createFile( absolutePath.resolve( "profiles/" + group.name() + "." + benchmark2.name() + "-jfr.svg" ) );
         return topFolder.toFile();
     }
 

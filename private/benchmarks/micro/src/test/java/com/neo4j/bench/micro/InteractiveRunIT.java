@@ -17,11 +17,13 @@ import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.client.util.TestDirectorySupport;
 import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
@@ -31,7 +33,13 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
 import static com.google.common.collect.Lists.newArrayList;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.micro.config.BenchmarkDescription.of;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
 
@@ -39,10 +47,11 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class InteractiveRunIT
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
@@ -143,8 +152,8 @@ public class InteractiveRunIT
             ErrorPolicy errorPolicy,
             String... methods ) throws Exception
     {
-        File storesDir = Files.createTempDirectory( temporaryFolder, "" ).toFile();
-        Path profilerRecordingDirectory = Files.createTempDirectory( temporaryFolder, "" );
+        File storesDir = createTempDirectory( temporaryFolder.absolutePath() );
+        Path profilerRecordingDirectory = createTempDirectoryPath( temporaryFolder.absolutePath() );
         boolean generateStoresInFork = true;
         int measurementForks = 1;
         Main.run(

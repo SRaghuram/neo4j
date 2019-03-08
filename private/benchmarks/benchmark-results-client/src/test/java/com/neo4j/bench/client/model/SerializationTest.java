@@ -11,29 +11,33 @@ import com.neo4j.bench.client.SubmitTestRunsAndPlansIT;
 import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.JsonUtil;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
 import static com.neo4j.bench.client.model.Edition.COMMUNITY;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class SerializationTest
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void shouldSerializeBenchmark() throws IOException
@@ -72,7 +76,7 @@ public class SerializationTest
     public void shouldSerializeBenchmarkConfigFromFile() throws IOException
     {
         // given
-        File benchmarkConfig = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File benchmarkConfig = createTempFile(temporaryFolder.absolutePath());
         try ( FileWriter fileWriter = new FileWriter( benchmarkConfig ) )
         {
             fileWriter.append( "key1=value1" );
@@ -240,7 +244,7 @@ public class SerializationTest
     public void shouldSerializeNeo4jConfigFromFile() throws IOException
     {
         // given
-        File neo4jConfig = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File neo4jConfig = createTempFile(temporaryFolder.absolutePath());
         try ( FileWriter fileWriter = new FileWriter( neo4jConfig ) )
         {
             fileWriter.append( "key1=value1" );
@@ -418,7 +422,7 @@ public class SerializationTest
 
     private Object shouldSerializeAndDeserialize( Object before ) throws IOException
     {
-        File jsonFile = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File jsonFile = createTempFile(temporaryFolder.absolutePath());
         JsonUtil.serializeJson( jsonFile.toPath(), before );
         Object after = JsonUtil.deserializeJson( jsonFile.toPath(), before.getClass() );
         assertThat( before, equalTo( after ) );

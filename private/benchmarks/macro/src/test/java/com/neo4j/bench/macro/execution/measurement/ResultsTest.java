@@ -14,7 +14,7 @@ import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -26,15 +26,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class ResultsTest
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void shouldFailToLoadWhenNoHeader() throws Exception
@@ -68,7 +75,7 @@ public class ResultsTest
     @Test
     public void shouldFailToLoadWhenTooFewColumns() throws Exception
     {
-        File validResultFile = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File validResultFile = createTempFile( temporaryFolder.absolutePath() );
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( validResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_ms,rows" );
@@ -77,7 +84,7 @@ public class ResultsTest
         }
         Results.loadFromFile( validResultFile.toPath() );
 
-        File invalidResultFile = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File invalidResultFile = createTempFile( temporaryFolder.absolutePath() );
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( invalidResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_invalid,rows" );
@@ -91,7 +98,7 @@ public class ResultsTest
     @Test
     public void shouldFailToLoadWhenTooManyColumns() throws Exception
     {
-        File validResultFile = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File validResultFile = createTempFile( temporaryFolder.absolutePath() );
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( validResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_ms,rows" );
@@ -100,7 +107,7 @@ public class ResultsTest
         }
         Results.loadFromFile( validResultFile.toPath() );
 
-        File invalidResultFile = Files.createTempFile( temporaryFolder, "", "").toFile();
+        File invalidResultFile = createTempFile( temporaryFolder.absolutePath() );
         try ( BufferedWriter bufferedWriter = Files.newBufferedWriter( invalidResultFile.toPath() ) )
         {
             bufferedWriter.write( "scheduled_start,start,duration_invalid,rows" );
@@ -187,7 +194,7 @@ public class ResultsTest
 
     private Path createForkDirPath() throws IOException
     {
-        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( Files.createTempDirectory( temporaryFolder, "" ), GROUP );
+        BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( createTempDirectoryPath( temporaryFolder.absolutePath() ), GROUP );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH );
         ForkDirectory forkDir = benchDir.create( FORK, new ArrayList<>() );
         return Paths.get( forkDir.toAbsolutePath() );

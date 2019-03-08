@@ -11,18 +11,20 @@ import com.neo4j.bench.micro.data.DataGenerator.Order;
 import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
 import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.function.Supplier;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFile;
 import static com.neo4j.bench.micro.data.DiscreteGenerator.discrete;
 import static com.neo4j.bench.micro.data.NumberGenerator.ascLong;
 import static com.neo4j.bench.micro.data.NumberGenerator.randDouble;
@@ -57,10 +59,11 @@ import static org.hamcrest.core.IsEqual.equalTo;
 
 import static java.lang.String.format;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class DataGeneratorConfigTest
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void fullySpecifiedDataGeneratorConfigurationsShouldBeEqual() throws IOException
@@ -691,10 +694,10 @@ public class DataGeneratorConfigTest
         assertThat( format( "%s\n%s", config1, config2 ),
                 config1.equals( config2 ), equalTo( value ) );
 
-        File config1File = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File config1File = createTempFile( temporaryFolder.absolutePath() );
         config1.serialize( config1File.toPath() );
 
-        File config2File = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File config2File = createTempFile( temporaryFolder.absolutePath() );
         config2.serialize( config2File.toPath() );
 
         DataGeneratorConfig config1After = DataGeneratorConfig.from( config1File.toPath() );

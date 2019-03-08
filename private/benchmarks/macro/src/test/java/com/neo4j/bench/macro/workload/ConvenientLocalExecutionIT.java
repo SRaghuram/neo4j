@@ -23,18 +23,23 @@ import com.neo4j.bench.macro.execution.Options;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.process.JvmArgs.jvmArgsFromString;
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempFilePath;
+
 import static java.lang.String.format;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class ConvenientLocalExecutionIT
 {
     // Required fields for running whole Workload or Single query
@@ -57,8 +62,8 @@ public class ConvenientLocalExecutionIT
     private static final Planner PLANNER = Planner.DEFAULT;
     private static final Runtime RUNTIME = Runtime.DEFAULT;
 
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Disabled
     @Test
@@ -111,7 +116,7 @@ public class ConvenientLocalExecutionIT
 
     private Path neo4jConfigFile() throws Exception
     {
-        Path neo4jConfigFile = Files.createTempFile( temporaryFolder, "", "" );
+        Path neo4jConfigFile = createTempFilePath( temporaryFolder.absolutePath() );
         Neo4jConfig neo4jConfig = neo4jConfig();
         neo4jConfig.writeAsProperties( neo4jConfigFile );
         return neo4jConfigFile;

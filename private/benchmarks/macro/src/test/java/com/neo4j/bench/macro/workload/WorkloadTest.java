@@ -11,7 +11,7 @@ import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.BenchmarkUtil;
 import com.neo4j.bench.client.util.Resources;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -26,6 +26,12 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -34,11 +40,12 @@ import static org.hamcrest.Matchers.nullValue;
 
 import static java.util.stream.Collectors.toList;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class WorkloadTest
 {
 
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void allWorkloadsShouldHaveUniqueName()
@@ -142,7 +149,7 @@ public class WorkloadTest
         try
         {
             BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory
-                    .createAt( Files.createTempDirectory( temporaryFolder, "" ), query.benchmarkGroup() );
+                    .createAt( createTempDirectoryPath( temporaryFolder.absolutePath() ), query.benchmarkGroup() );
             BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( query.benchmark() );
             return benchmarkDir.create( UUID.randomUUID().toString(), new ArrayList<>() );
         }

@@ -13,27 +13,30 @@ import com.neo4j.bench.micro.data.DataGenerator.PropertyLocality;
 import com.neo4j.bench.micro.data.DataGenerator.RelationshipLocality;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.stream.IntStream;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
 import static com.neo4j.bench.micro.data.DataGeneratorTestUtil.assertGraphStatsAreConsistentWithBuilderConfiguration;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.INT;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class DataGeneratorDataCharacteristicsIT
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     private static final Neo4jConfig NEO4J_CONFIG = Neo4jConfig.empty();
 
@@ -55,7 +58,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withNeo4jConfig( NEO4J_CONFIG )
@@ -82,7 +85,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -110,7 +113,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -142,7 +145,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -207,7 +210,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -272,7 +275,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -338,7 +341,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -380,7 +383,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -422,7 +425,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -452,7 +455,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -482,7 +485,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -523,7 +526,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -564,7 +567,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -605,7 +608,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -646,7 +649,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )
@@ -682,7 +685,7 @@ public class DataGeneratorDataCharacteristicsIT
     {
         // Given
 
-        File storeDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        File storeDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         builder
                 .withGraphWriter( graphWriter )

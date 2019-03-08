@@ -12,24 +12,29 @@ import com.neo4j.bench.client.results.BenchmarkDirectory;
 import com.neo4j.bench.client.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.client.results.ForkDirectory;
 import com.neo4j.bench.client.util.JvmVersion;
+import com.neo4j.bench.client.util.TestDirectorySupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class JfrProfilerTest
 {
-    @TempDir
-    public Path tempFolder;
+    @Inject
+    public TestDirectory tempFolder;
 
     private ForkDirectory forkDirectory;
     private BenchmarkGroup benchmarkGroup;
@@ -38,7 +43,7 @@ public class JfrProfilerTest
     @BeforeEach
     public void setUp() throws Exception
     {
-        Path parentDir = Files.createTempDirectory( tempFolder, "" );
+        Path parentDir = TestDirectorySupport.createTempDirectoryPath( tempFolder.absolutePath() );
 
         benchmarkGroup = new BenchmarkGroup( "group" );
         benchmark = Benchmark.benchmarkFor( "description", "simpleName", Mode.LATENCY, Collections.emptyMap() );

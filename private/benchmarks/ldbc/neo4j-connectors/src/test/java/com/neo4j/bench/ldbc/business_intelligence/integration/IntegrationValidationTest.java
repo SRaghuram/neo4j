@@ -31,22 +31,26 @@ import com.neo4j.bench.ldbc.utils.RuntimeType;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
+
+import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @Disabled
+@ExtendWith( TestDirectoryExtension.class )
 public class IntegrationValidationTest
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     @Test
     public void shouldCreatePublicValidationSet() throws Exception
@@ -135,7 +139,7 @@ public class IntegrationValidationTest
                 scenario.paramsDir().getAbsolutePath()
         );
 
-        dbDir = Files.createTempDirectory( temporaryFolder, "").toFile();
+        dbDir = createTempDirectory( temporaryFolder.absolutePath() );
 
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
@@ -200,7 +204,7 @@ public class IntegrationValidationTest
         int threadCount = 4;
         int statusDisplayIntervalAsSeconds = 1;
         TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-        String resultDirPath = Files.createTempDirectory( temporaryFolder, "").toString();
+        String resultDirPath = createTempDirectory( temporaryFolder.absolutePath() ).toString();
 
         Double timeCompressionRatio = 1.0;
         ConsoleAndFileDriverConfiguration.ConsoleAndFileValidationParamOptions validationCreationParams = null;
@@ -243,7 +247,7 @@ public class IntegrationValidationTest
         VALIDATE EMBEDDED API
          */
 
-        File dbDir = Files.createTempDirectory( temporaryFolder, "" ).toFile();
+        File dbDir = createTempDirectory( temporaryFolder.absolutePath() );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema(),

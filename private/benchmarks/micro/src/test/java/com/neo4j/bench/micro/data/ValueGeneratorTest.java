@@ -6,19 +6,22 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.client.util.JsonUtil;
+import com.neo4j.bench.client.util.TestDirectorySupport;
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket;
 import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.SplittableRandom;
+
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.micro.data.ArrayGenerator.DEFAULT_SIZE;
 import static com.neo4j.bench.micro.data.ArrayGenerator.doubleArray;
@@ -74,10 +77,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class ValueGeneratorTest
 {
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     private static final int SAMPLE_SIZE = 10_000;
 
@@ -468,7 +472,7 @@ public class ValueGeneratorTest
             values.add( fun.next( rng ) );
         }
 
-        File jsonFile = Files.createTempFile( temporaryFolder, "", "" ).toFile();
+        File jsonFile = TestDirectorySupport.createTempFile( temporaryFolder.absolutePath() );
         JsonUtil.serializeJson( jsonFile.toPath(), factory );
         ValueGeneratorFactory factoryAfter = JsonUtil.deserializeJson( jsonFile.toPath(), factory.getClass() );
 

@@ -29,8 +29,8 @@ import com.neo4j.bench.macro.workload.Workload;
 import com.neo4j.harness.junit.extension.CommercialNeo4jExtension;
 import io.findify.s3mock.S3Mock;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -55,6 +55,9 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -66,6 +69,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class EndToEndIT
 {
     private static final String RUN_REPORT_BENCHMARKS_SH = "run-report-benchmarks.sh";
@@ -74,8 +78,8 @@ public class EndToEndIT
     static Neo4jExtension neo4jExtension =
             CommercialNeo4jExtension.builder().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE ).build();
 
-    @TempDir
-    public Path temporaryFolder;
+    @Inject
+    public TestDirectory temporaryFolder;
 
     private URI boltUri;
 
@@ -134,7 +138,8 @@ public class EndToEndIT
         }
 
         // start s3 storage mock
-        Path s3Path = temporaryFolder.resolve( "s3" );
+        Path absoluteTempPath = temporaryFolder.absolutePath().toPath();
+        Path s3Path = absoluteTempPath.resolve( "s3" );
         int s3Port = randomLocalPort();
         S3Mock api = new S3Mock.Builder().withPort( s3Port ).withFileBackend( s3Path.toString() ).build();
         api.start();
@@ -148,15 +153,15 @@ public class EndToEndIT
         client.createBucket( "benchmarking.neo4j.com" );
 
         // prepare neo4j config file
-        Path neo4jConfig = temporaryFolder.resolve( "neo4j.config" );
+        Path neo4jConfig = absoluteTempPath.resolve( "neo4j.config" );
         Neo4jConfig.withDefaults().writeAsProperties( neo4jConfig );
 
         // create empty store
-        Path dbPath = temporaryFolder.resolve( "db" );
+        Path dbPath = absoluteTempPath.resolve( "db" );
         TestSupport.createEmptyStore( dbPath );
 
-        Path resultsPath = temporaryFolder.resolve( "results.json" );
-        Path workPath = temporaryFolder.resolve( "work" );
+        Path resultsPath = absoluteTempPath.resolve( "results.json" );
+        Path workPath = absoluteTempPath.resolve( "work" );
 
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                 // workload
