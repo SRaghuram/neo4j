@@ -21,7 +21,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.NullLogService;
@@ -76,7 +76,7 @@ class ReadReplicaEditionModuleTest
 
         assertFalse( filter.test( metadataStoreName ) );
         assertFalse( filter.test( databaseLayout.nodeStore().getName() ) );
-        assertTrue( filter.test( TransactionLogFiles.DEFAULT_NAME + ".1" ) );
+        assertTrue( filter.test( TransactionLogFilesHelper.DEFAULT_NAME + ".1" ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 }

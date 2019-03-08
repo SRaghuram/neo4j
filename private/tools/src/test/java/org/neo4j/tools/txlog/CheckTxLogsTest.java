@@ -41,7 +41,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
@@ -921,7 +921,7 @@ public class CheckTxLogsTest
     private File logFile( long version )
     {
         fsRule.get().mkdirs( storeDirectory );
-        return new File( storeDirectory, TransactionLogFiles.DEFAULT_NAME + "." + version );
+        return new File( storeDirectory, TransactionLogFilesHelper.DEFAULT_NAME + "." + version );
     }
 
     private static PropertyRecord propertyRecord( long id, boolean inUse, long prevProp, long nextProp, long... blocks )

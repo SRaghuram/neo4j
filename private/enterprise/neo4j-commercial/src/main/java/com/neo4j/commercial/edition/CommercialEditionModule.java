@@ -48,7 +48,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
@@ -91,7 +91,8 @@ public class CommercialEditionModule extends CommunityEditionModule
     @Override
     protected Predicate<String> fileWatcherFileNameFilter()
     {
-        return any( fileName -> fileName.startsWith( TransactionLogFiles.DEFAULT_NAME ), filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
+        return any( fileName -> fileName.startsWith( TransactionLogFilesHelper.DEFAULT_NAME ),
+                filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 
     @Override

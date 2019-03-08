@@ -19,7 +19,7 @@ import org.neo4j.internal.id.BufferedIdController;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFiles;
+import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertFalse;
@@ -53,7 +53,7 @@ public class CoreEditionModuleIT
         String metadataStoreName = layout.metadataStore().getName();
         assertFalse( filter.test( metadataStoreName ) );
         assertFalse( filter.test( layout.nodeStore().getName() ) );
-        assertTrue( filter.test( TransactionLogFiles.DEFAULT_NAME + ".1" ) );
+        assertTrue( filter.test( TransactionLogFilesHelper.DEFAULT_NAME + ".1" ) );
         assertTrue( filter.test( metadataStoreName + PageCacheWarmer.SUFFIX_CACHEPROF ) );
     }
 }
