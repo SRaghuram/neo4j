@@ -65,6 +65,8 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
         assertEmpty( adminSubject, format( "CALL dbms.security.changePassword('%s')", secret ) );
         assertEmpty( adminSubject, format( "CALL dbms.security.changeUserPassword('readSubject', '%s')", secret ) );
         assertEmpty( adminSubject, format( "CALL dbms.security.changeUserPassword('editorSubject', '%s', true)", secret ) );
+        assertEmpty( adminSubject, format( "CALL dbms.security.createUser('userA', '%s')", secret ) );
+        assertEmpty( adminSubject, format( "CALL dbms.security.createUser('userB', '%s', true)", secret ) );
         assertFail( adminSubject, format( "CALL dbms.security.changeUserPassword(null, '%s')", secret ), "" );
         assertFail( adminSubject, format( "CALL dbms.security.changeUserPassword('malformedUser, '%s')", secret ), "" );
         assertEmpty( adminSubject, format( "EXPLAIN CALL dbms.security.changePassword('%s')", secret ) );
@@ -86,7 +88,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
                                    .map( dataMap -> (String) dataMap.get( "query" ) )
                                    .collect( Collectors.toList() );
 
-                           assertThat( queryTexts.size(), equalTo( 5 ) );
+                           assertThat( queryTexts.size(), equalTo( 7 ) );
                            for ( String queryText : queryTexts )
                            {
                                assertThat( queryText, containsString( "dbms.security" ) );

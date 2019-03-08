@@ -349,6 +349,24 @@ public class ConfiguredQueryLoggerTest
     }
 
     @Test
+    public void shouldNotLogCreateUserPassword()
+    {
+        String inputQuery = "CALL dbms.security.createUser('user', 'abc123')";
+        String outputQuery = "CALL dbms.security.createUser('user', '******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    public void shouldNotLogCreateUserPasswordWithRequiredChange()
+    {
+        String inputQuery = "CALL dbms.security.createUser('user', 'abc123', true)";
+        String outputQuery = "CALL dbms.security.createUser('user', '******', true)";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
     public void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTimeWithSeveralParms()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('neo4j',$first) " +
