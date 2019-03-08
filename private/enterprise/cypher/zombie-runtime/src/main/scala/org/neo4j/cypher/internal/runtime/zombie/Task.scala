@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.runtime.morsel.{Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 /**
   * A single task
   */
-trait Task[THREAD_LOCAL_RESOURCE <: AutoCloseable] extends WorkIdentity {
+trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
 
   /**
     * Execute the next work-unit of this task. After the first call, [[executeWorkUnit]] will be

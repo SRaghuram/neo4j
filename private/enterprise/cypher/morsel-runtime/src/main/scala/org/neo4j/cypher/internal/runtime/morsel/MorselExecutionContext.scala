@@ -43,7 +43,6 @@ class MorselExecutionContext(private val morsel: Morsel,
                              private var validRows: Int,
                              private var currentRow: Int,
                              val slots: SlotConfiguration,
-                            // TODO reviewer: will revisit this default once zombie is merged with morsel
                              val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
 
   private var firstRow: Int = 0

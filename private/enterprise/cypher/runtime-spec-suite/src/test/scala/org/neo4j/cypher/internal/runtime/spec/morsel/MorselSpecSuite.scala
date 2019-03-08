@@ -12,8 +12,6 @@ import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
 
 object MorselSpecSuite {
   val SIZE_HINT = 1000
-  // TODO reviewer: is it necessary that this is 100 rather than 4?
-//  val MORSEL_SIZE = 100
 }
 
 class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MorselRuntime)
