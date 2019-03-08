@@ -5,34 +5,53 @@
  */
 package com.neo4j.causalclustering.core.state.machines.token;
 
+import org.junit.Rule;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.internal.kernel.api.NamedToken;
+import org.neo4j.internal.recordstorage.CacheAccessBackDoor;
+import org.neo4j.internal.recordstorage.CacheInvalidationTransactionApplier;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.internal.recordstorage.HighIdTransactionApplier;
+import org.neo4j.internal.recordstorage.NeoStoreTransactionApplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.core.TokenRegistry;
+import org.neo4j.kernel.impl.locking.LockGroup;
+import org.neo4j.kernel.impl.store.NeoStores;
+import org.neo4j.kernel.impl.store.PropertyType;
+import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.storageengine.api.SchemaRule;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
+import org.neo4j.test.rule.NeoStoresRule;
 
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.commandsToBytes;
 import static com.neo4j.causalclustering.core.state.machines.token.TokenType.LABEL;
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.kernel.impl.locking.LockService.NO_LOCK_SERVICE;
+import static org.neo4j.storageengine.api.CommandVersion.AFTER;
+import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 public class ReplicatedTokenStateMachineTest
 {
@@ -40,14 +59,17 @@ public class ReplicatedTokenStateMachineTest
     private final int UNEXPECTED_TOKEN_ID = 1024;
     private final String databaseName = DEFAULT_DATABASE_NAME;
 
+    @Rule
+    public NeoStoresRule neoStoresRule = new NeoStoresRule( ReplicatedTokenStateMachineTest.class );
+
     @Test
-    public void shouldCreateTokenId()
+    public void shouldCreateTokenId() throws Exception
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
                 NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
-        stateMachine.installCommitProcess( mock( TransactionCommitProcess.class ), -1 );
+        stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
         byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
@@ -58,14 +80,14 @@ public class ReplicatedTokenStateMachineTest
     }
 
     @Test
-    public void shouldAllocateTokenIdToFirstReplicateRequest()
+    public void shouldAllocateTokenIdToFirstReplicateRequest() throws Exception
     {
         // given
         TokenRegistry registry = new TokenRegistry( "Label" );
         ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
                 NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
 
-        stateMachine.installCommitProcess( mock( TransactionCommitProcess.class ), -1 );
+        stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         ReplicatedTokenRequest winningRequest =
                 new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) ) );
@@ -104,10 +126,54 @@ public class ReplicatedTokenStateMachineTest
 
     private static List<StorageCommand> tokenCommands( int expectedTokenId )
     {
+        LabelTokenRecord record = new LabelTokenRecord( expectedTokenId ).initialize( true, 7 );
+        record.addNameRecord( DynamicRecord.dynamicRecord( 7, true, true, -1, PropertyType.STRING.intValue(), "Person".getBytes( StandardCharsets.UTF_8 ) ) );
         return singletonList( new Command.LabelTokenCommand(
-                new LabelTokenRecord( expectedTokenId ),
-                new LabelTokenRecord( expectedTokenId )
+                new LabelTokenRecord( expectedTokenId ), record
         ) );
+    }
+
+    private TransactionCommitProcess labelRegistryUpdatingCommitProcess( TokenRegistry registry ) throws Exception
+    {
+        NeoStores stores = neoStoresRule.builder().build();
+        TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
+        when( commitProcess.commit( any( TransactionToApply.class ), any( CommitEvent.class ), eq( EXTERNAL ) ) ).then( inv ->
+        {
+            TransactionToApply tta = inv.getArgument( 0 );
+            CacheAccessBackDoor backdoor = new CacheAccessBackDoor()
+            {
+                @Override
+                public void addSchemaRule( SchemaRule schemaRule )
+                {
+                }
+
+                @Override
+                public void removeSchemaRuleFromCache( long id )
+                {
+                }
+
+                @Override
+                public void addRelationshipTypeToken( NamedToken type )
+                {
+                }
+
+                @Override
+                public void addLabelToken( NamedToken labelId )
+                {
+                    registry.put( labelId );
+                }
+
+                @Override
+                public void addPropertyKeyToken( NamedToken index )
+                {
+                }
+            };
+            tta.accept( new HighIdTransactionApplier( stores ) );
+            tta.accept( new NeoStoreTransactionApplier( AFTER, stores, backdoor, NO_LOCK_SERVICE, 13, new LockGroup() ) );
+            tta.accept( new CacheInvalidationTransactionApplier( stores, backdoor ) );
+            return 13L;
+        } );
+        return commitProcess;
     }
 
     private static class StubTransactionCommitProcess extends TransactionRepresentationCommitProcess
