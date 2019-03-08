@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.CommunityCompilerFactory;
 import org.neo4j.cypher.internal.CypherConfiguration;
 import org.neo4j.cypher.internal.CypherRuntimeConfiguration;
 import org.neo4j.cypher.internal.EnterpriseCompilerFactory;
-import org.neo4j.cypher.internal.compiler.v4_0.CypherPlannerConfiguration;
+import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.query.QueryExecutionEngine;
 import org.neo4j.kernel.impl.util.Dependencies;
