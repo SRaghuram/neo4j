@@ -22,7 +22,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.kernel.monitoring.Monitors;
@@ -38,6 +37,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class PersistentSnapshotDownloaderTest
 {
@@ -53,7 +53,6 @@ class PersistentSnapshotDownloaderTest
 
     private final StubLocalDatabaseService databaseService = spy( new StubLocalDatabaseService() );
     private final Suspendable auxiliaryServices = mock( Suspendable.class );
-    private final LocalDatabase database = mock( LocalDatabase.class );
 
     private PersistentSnapshotDownloader createDownloader()
     {
@@ -64,7 +63,9 @@ class PersistentSnapshotDownloaderTest
     @BeforeEach
     void setUp()
     {
-        databaseService.registerDatabase( GraphDatabaseSettings.DEFAULT_DATABASE_NAME, database );
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .register();
     }
 
     @Test
@@ -154,6 +155,7 @@ class PersistentSnapshotDownloaderTest
     void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
     {
         // given
+        LocalDatabase defaultDatabase = databaseService.get( DEFAULT_DATABASE_NAME ).get();
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
@@ -163,7 +165,7 @@ class PersistentSnapshotDownloaderTest
         persistentSnapshotDownloader.run();
 
         // then
-        verify( coreDownloader ).downloadSnapshotAndStore( database, catchupAddressProvider );
+        verify( coreDownloader ).downloadSnapshotAndStore( defaultDatabase, catchupAddressProvider );
         verify( applicationProcess ).pauseApplier( OPERATION_NAME );
         verify( applicationProcess ).resumeApplier( OPERATION_NAME );
     }

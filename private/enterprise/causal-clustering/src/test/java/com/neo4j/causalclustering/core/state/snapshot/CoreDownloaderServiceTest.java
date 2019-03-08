@@ -48,7 +48,6 @@ public class CoreDownloaderServiceTest
     private final CommandApplicationProcess applicationProcess = mock( CommandApplicationProcess.class );
     private final Suspendable suspendedServices = mock( Suspendable.class );
     private final StubLocalDatabaseService databaseService = new StubLocalDatabaseService();
-    private final LocalDatabase database = mock( LocalDatabase.class );
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
     private JobScheduler centralJobScheduler;
@@ -58,7 +57,9 @@ public class CoreDownloaderServiceTest
     public void create()
     {
         centralJobScheduler = createInitialisedScheduler();
-        databaseService.registerDatabase( DEFAULT_DATABASE_NAME, database );
+        databaseService.givenDatabaseWithConfig()
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .register();
     }
 
     private CoreDownloaderService createDownloader()
