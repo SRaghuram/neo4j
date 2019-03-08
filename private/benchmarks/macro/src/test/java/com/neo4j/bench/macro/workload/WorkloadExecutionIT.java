@@ -129,7 +129,6 @@ public class WorkloadExecutionIT
 
         MeasurementControl warmupControl = or( ofCount( 10 ), ofDuration( ofSeconds( 10 ) ) );
         MeasurementControl measurementControl = or( ofCount( 10 ), ofDuration( ofSeconds( 10 ) ) );
-
         Store store = TestSupport.createEmptyStore( storeDir );
         QueryRunner queryRunner = QueryRunner.runnerFor( ExecutionMode.EXECUTE );
         for ( Query query : workload.queries() )
