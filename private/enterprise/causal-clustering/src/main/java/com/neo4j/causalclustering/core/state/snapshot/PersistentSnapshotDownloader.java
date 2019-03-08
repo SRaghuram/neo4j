@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import org.neo4j.kernel.monitoring.Monitors;
@@ -88,28 +89,23 @@ public class PersistentSnapshotDownloader implements Runnable
             // each database will then download its snapshot and store independently from others
             for ( LocalDatabase db : databaseService.registeredDatabases().values() )
             {
-                TimeoutStrategy.Timeout backoff = backoffStrategy.newTimeout();
-                while ( !stopped )
+                Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( db );
+
+                if ( snapshot.isPresent() )
                 {
-                    Optional<CoreSnapshot> snapshot = downloader.downloadSnapshotAndStore( db, addressProvider );
-                    if ( snapshot.isPresent() )
-                    {
-                        String databaseName = db.databaseName();
-                        snapshotService.installSnapshot( databaseName, snapshot.get() );
-                        log.info( "Core snapshot for database '" + databaseName + "' installed: " + snapshot );
-                        break;
-                    }
-                    else
-                    {
-                        Thread.sleep( backoff.getAndIncrement() );
-                    }
+                    String databaseName = db.databaseName();
+                    snapshotService.installSnapshot( databaseName, snapshot.get() );
+                    log.info( "Core snapshot for database '" + databaseName + "' installed: " + snapshot );
                 }
             }
 
-            /* Starting the databases will invoke the commit process factory in the EnterpriseCoreEditionModule, which has important side-effects. */
-            log.info( "Starting local databases" );
-            databaseService.start();
-            auxiliaryServices.enable();
+            if ( !stopped )
+            {
+                /* Starting the databases will invoke the commit process factory in the EnterpriseCoreEditionModule, which has important side-effects. */
+                log.info( "Starting local databases" );
+                databaseService.start();
+                auxiliaryServices.enable();
+            }
         }
         catch ( InterruptedException e )
         {
@@ -130,6 +126,39 @@ public class PersistentSnapshotDownloader implements Runnable
             applicationProcess.resumeApplier( OPERATION_NAME );
             monitor.downloadSnapshotComplete();
             state = State.COMPLETED;
+        }
+    }
+
+    /**
+     * Attempt to download a {@link CoreSnapshot} and bring the database up-to-date by pulling transactions
+     * or doing a store-copy. Method will retry until a snapshot is downloaded and the database is caught up
+     * or until the downloader is {@link #stop() stopped}.
+     *
+     * @return an optional containing snapshot when it was downloaded and the database is up-to-date.
+     * An empty optional when this downloader was stopped.
+     */
+    private Optional<CoreSnapshot> downloadSnapshotAndStore( LocalDatabase db ) throws IOException, DatabaseShutdownException, InterruptedException
+    {
+        TimeoutStrategy.Timeout backoff = backoffStrategy.newTimeout();
+        while ( true )
+        {
+            // check if we were stopped before doing a potentially long running catchup operation
+            if ( stopped )
+            {
+                log.info( "Persistent snapshot downloader was stopped before download succeeded" );
+                return Optional.empty();
+            }
+
+            Optional<CoreSnapshot> optionalSnapshot = downloader.downloadSnapshotAndStore( db, addressProvider );
+
+            if ( optionalSnapshot.isPresent() )
+            {
+                return optionalSnapshot;
+            }
+            else
+            {
+                Thread.sleep( backoff.getAndIncrement() );
+            }
         }
     }
 

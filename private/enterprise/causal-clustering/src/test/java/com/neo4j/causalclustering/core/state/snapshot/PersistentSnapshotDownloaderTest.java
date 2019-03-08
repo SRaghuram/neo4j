@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -203,6 +204,22 @@ class PersistentSnapshotDownloaderTest
 
         // then
         verify( panicker ).panic( runtimeException );
+    }
+
+    @Test
+    void shouldNotStartDatabaseServiceWhenStoppedDuringDownload() throws Throwable
+    {
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+        Thread thread = new Thread( persistentSnapshotDownloader );
+
+        thread.start();
+        awaitOneIteration( backoffStrategy );
+        persistentSnapshotDownloader.stop();
+        thread.join();
+
+        verify( databaseService ).stopForStoreCopy();
+        verify( databaseService, never() ).start();
     }
 
     private void awaitOneIteration( NoPauseTimeoutStrategy backoffStrategy ) throws TimeoutException
