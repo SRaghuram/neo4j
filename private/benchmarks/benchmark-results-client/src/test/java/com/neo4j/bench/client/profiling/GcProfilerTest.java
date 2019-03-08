@@ -52,7 +52,7 @@ public class GcProfilerTest
     public void jvmArgsForJdk8() throws Exception
     {
         GcProfiler profiler = new GcProfiler();
-        JvmVersion jvmVersion = JvmVersion.create( 8, "Oracle Corporation" );
+        JvmVersion jvmVersion = JvmVersion.create( 8, "Oracle Corporation", "" );
         List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
         assertThat( jvmArgs, hasItem( equalTo( "-XX:+PrintGC" ) ) );
     }
@@ -61,7 +61,7 @@ public class GcProfilerTest
     public void jvmArgsForJdk9() throws Exception
     {
         GcProfiler profiler = new GcProfiler();
-        JvmVersion jvmVersion = JvmVersion.create( 9, "Oracle Corporation" );
+        JvmVersion jvmVersion = JvmVersion.create( 9, "Oracle Corporation", "" );
         List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
         System.out.println( jvmArgs );
         assertThat( jvmArgs, hasItem( startsWith( "-Xlog:gc,safepoint,gc+age=trace" ) ) );

@@ -5,19 +5,13 @@
  */
 package com.neo4j.bench.client.util;
 
-import com.google.common.base.CharMatcher;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.lang.ProcessBuilder.Redirect;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,53 +19,16 @@ import static java.lang.String.format;
 
 public class JvmVersion
 {
-    private static final String RELEASE_FILE = "release";
     private static final String JAVA_VM_VENDOR_RUNTIME_PROPERTY = "java.vm.vendor = ";
+    private static final String JAVA_RUNTIME_NAME_RUNTIME_PROPERTY = "java.runtime.name = ";
     private static final String JAVA_VERSION_RUNTIME_PROPERTY = "java.version = ";
-    private static final String JAVA_VERSION_RELEASE_PROPERTY = "JAVA_VERSION";
-    private static final String IMPLEMENTOR_RELEASE_PROPERTY = "IMPLEMENTOR";
 
-    public static JvmVersion create( int majorVersion, String implementor )
+    public static JvmVersion create( int majorVersion, String implementor, String runtimeName )
     {
-        return new JvmVersion( majorVersion, implementor );
+        return new JvmVersion( majorVersion, implementor, runtimeName );
     }
 
     static JvmVersion getVersion( Jvm jvm )
-    {
-        return jvm.jdkPath()
-                .flatMap( JvmVersion::getVersionFromRelease )
-                .orElseGet( () -> getVersionFromRuntime( jvm ) );
-    }
-
-    static Optional<JvmVersion> getVersionFromRelease( Path jdkPath )
-    {
-        Path releaseFile = jdkPath.resolve( RELEASE_FILE );
-        if ( Files.exists( releaseFile ) )
-        {
-            Properties release = toProperties( releaseFile );
-
-            String javaVersionRaw = release.getProperty( JAVA_VERSION_RELEASE_PROPERTY );
-            if ( StringUtils.isEmpty( javaVersionRaw ) )
-            {
-                throw new RuntimeException( String.format( "Invalid %s file, should contain \"%s\" property", releaseFile, JAVA_VERSION_RELEASE_PROPERTY ) );
-            }
-            int majorVersion = parseMajorVersion( CharMatcher.is( '\"' ).trimFrom( javaVersionRaw ) );
-
-            String implementorRaw = release.getProperty( IMPLEMENTOR_RELEASE_PROPERTY );
-            String implementor = null;
-            if ( StringUtils.isNotEmpty( implementorRaw ) )
-            {
-                implementor = CharMatcher.is( '\"' ).trimFrom( implementorRaw );
-            }
-            return Optional.of( new JvmVersion( majorVersion, implementor ) );
-        }
-        else
-        {
-            throw new RuntimeException( String.format( "Invalid JDK, release file %s not found", releaseFile ) );
-        }
-    }
-
-    static JvmVersion getVersionFromRuntime( Jvm jvm )
     {
         String jvmPath = jvm.launchJava();
         ProcessBuilder processBuilder = new ProcessBuilder( jvm.launchJava(), "-XshowSettings:properties", "-version" )
@@ -93,6 +50,13 @@ public class JvmVersion
                         .map( JvmVersion::parseMajorVersion )
                         .orElseThrow( () -> new RuntimeException( "Java major version unknown" ) );
 
+                // runtimeName is obligatory
+                String runtimeName = lines.stream()
+                        .filter( line -> line.contains( JAVA_VERSION_RUNTIME_PROPERTY ) )
+                        .findAny()
+                        .flatMap( JvmVersion::findRuntimeName )
+                        .orElseThrow( () -> new RuntimeException( "Java runtime name unknown" ) );
+
                 //implementor can be an empty string
                 String implementor = lines.stream()
                         .filter( line -> line.contains( JAVA_VM_VENDOR_RUNTIME_PROPERTY ) )
@@ -100,7 +64,7 @@ public class JvmVersion
                         .flatMap( JvmVersion::findImplementor )
                         .orElse( null );
 
-                return new JvmVersion( majorVersion, implementor );
+                return new JvmVersion( majorVersion, implementor, runtimeName );
             }
             throw new RuntimeException( format( "%s process finished with non-zero exit code", jvmPath ) );
         }
@@ -130,6 +94,11 @@ public class JvmVersion
         return getPropertyValue( line, JAVA_VERSION_RUNTIME_PROPERTY );
     }
 
+    private static Optional<String> findRuntimeName( String line )
+    {
+        return getPropertyValue( line, JAVA_RUNTIME_NAME_RUNTIME_PROPERTY );
+    }
+
     private static Optional<String> findImplementor( String line )
     {
         return getPropertyValue( line, JAVA_VM_VENDOR_RUNTIME_PROPERTY );
@@ -157,20 +126,6 @@ public class JvmVersion
         return versionStrings[1];
     }
 
-    private static Properties toProperties( Path releaseFile )
-    {
-        Properties release = new Properties();
-        try
-        {
-            release.load( Files.newInputStream( releaseFile ) );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-        return release;
-    }
-
     /**
      * As described in https://docs.oracle.com/javase/10/docs/api/java/lang/Runtime.Version.html,
      * unfortunately this class is not available in JDK 8, so we need to have our own
@@ -190,11 +145,13 @@ public class JvmVersion
 
     private final int jvmMajorVersion;
     private final String implementor;
+    private final String runtimeName;
 
-    private JvmVersion( int jvmMajorVersion, String implementor )
+    private JvmVersion( int jvmMajorVersion, String implementor, String runtimeName )
     {
         this.jvmMajorVersion = jvmMajorVersion;
         this.implementor = implementor;
+        this.runtimeName = runtimeName;
     }
 
     public int majorVersion()
@@ -205,6 +162,11 @@ public class JvmVersion
     public Optional<String> implementor()
     {
         return Optional.ofNullable( implementor );
+    }
+
+    public String runtimeName()
+    {
+        return runtimeName;
     }
 
 }
