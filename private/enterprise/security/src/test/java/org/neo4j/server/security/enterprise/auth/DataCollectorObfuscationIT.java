@@ -8,13 +8,9 @@ package org.neo4j.server.security.enterprise.auth;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
@@ -25,9 +21,7 @@ import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
 public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<EnterpriseLoginContext>
@@ -55,7 +49,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
     }
 
     @Test
-    void shouldObfuscatePasswordInDbStatsRetrieve()
+    void shouldOmitDBMSQueriesInDbStatsRetrieve()
     {
         String secret = "abc123";
         String sillySecret = ".changePassword(\\'si\"lly\\')";
@@ -66,6 +60,11 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
         assertEmpty( adminSubject, format( "CALL dbms.security.changeUserPassword('editorSubject', '%s', true)", secret ) );
         assertEmpty( adminSubject, format( "CALL dbms.security.createUser('userA', '%s')", secret ) );
         assertEmpty( adminSubject, format( "CALL dbms.security.createUser('userB', '%s', true)", secret ) );
+        assertEmpty( adminSubject, "CALL dbms.security.suspendUser('userB')" );
+        assertSuccess( adminSubject, "call dbms.security.listRoles()", ResourceIterator::close );
+        assertEmpty( adminSubject, "CALL dbms.security.createRole('monkey')" );
+        assertSuccess( adminSubject, "CALL dbms.killQuery('query-1234')", ResourceIterator::close );
+        assertEmpty( adminSubject, "CALL dbms.setTXMetaData({prop: 'itsAProp'})" );
         assertFail( adminSubject, format( "CALL dbms.security.changeUserPassword(null, '%s')", secret ), "" );
         assertFail( adminSubject, format( "CALL dbms.security.changeUserPassword('malformedUser, '%s')", secret ), "" );
         assertEmpty( adminSubject, format( "EXPLAIN CALL dbms.security.changePassword('%s')", secret ) );
@@ -74,11 +73,11 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
                                              "CALL dbms.security.changeUserPassword('readSubject','%s') RETURN 1",
                                              sillySecret, otherSillySecret ), ResourceIterator::close );
         assertSuccess( adminSubject, "CALL db.stats.stop('QUERIES')", ResourceIterator::close );
-        assertObfuscation( "CALL db.stats.retrieve('QUERIES')", secret, sillySecret, otherSillySecret );
-        assertObfuscation( "CALL db.stats.retrieveAllAnonymized('graphToken')", secret, sillySecret, otherSillySecret );
+        assertNoQueries( "CALL db.stats.retrieve('QUERIES')" );
+        assertNoQueries( "CALL db.stats.retrieveAllAnonymized('graphToken')" );
     }
 
-    private void assertObfuscation( String query, String... secrets )
+    private void assertNoQueries( String query, String... secrets )
     {
         assertSuccess( adminSubject, query,
                        itr -> {
@@ -88,59 +87,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
                                    .map( dataMap -> (String) dataMap.get( "query" ) )
                                    .collect( Collectors.toList() );
 
-                           assertThat( queryTexts.size(), equalTo( 7 ) );
-                           for ( String queryText : queryTexts )
-                           {
-                               assertThat( queryText, containsString( "dbms.security" ) );
-                               for ( String secret : secrets )
-                               {
-                                   assertThat( queryText, not( containsString( secret ) ) );
-                               }
-                           }
+                           assertThat( queryTexts.size(), equalTo( 0 ) );
                        } );
-    }
-
-    @Test
-    void shouldObfuscateParameterPasswordInDbStatsRetrieve()
-    {
-        Map<String,Object> secret = Collections.singletonMap( "password", "abc123" );
-        Map<String,Object> secrets = new HashMap<>();
-        secrets.put( "first", ".changePassword(silly)" );
-        secrets.put( "second", ".other$silly" );
-
-        assertSuccess( adminSubject, "CALL db.stats.collect('QUERIES')", ResourceIterator::close );
-        assertEmpty( readSubject, "CALL dbms.changePassword($password)", secret );
-        assertEmpty( writeSubject, "CALL dbms.changePassword({password})", secret );
-        assertSuccess( adminSubject, "CALL dbms.security.changeUserPassword('writeSubject',$first) " +
-                                     "CALL dbms.security.changeUserPassword('readSubject',$second) RETURN 1",
-                                     secrets, ResourceIterator::close );
-        assertSuccess( adminSubject, "CALL db.stats.stop('QUERIES')", ResourceIterator::close );
-        assertSuccess( adminSubject, "CALL db.stats.retrieve('QUERIES')", itr -> {
-            @SuppressWarnings( "unchecked" )
-            Stream<Map<String, Object>> parameterMapStream = itr.stream()
-                    .map( s -> (Map) s.get( "data" ) )
-                    .map( dataMap -> (List<Map>)dataMap.get( "invocations" ) )
-                    .flatMap( Collection::stream )
-                    .map( invocation -> (Map)invocation.get( "params" ) );
-
-            List<Map<String,Object>> parameterMaps = parameterMapStream.collect( Collectors.toList() );
-
-            assertThat( parameterMaps.size(), equalTo( 3 ) );
-            for ( Map<String, Object> parameterMap : parameterMaps )
-            {
-                assertObfuscatedIfExists( parameterMap, "secret" );
-                assertObfuscatedIfExists( parameterMap, "first" );
-                assertObfuscatedIfExists( parameterMap, "second" );
-            }
-        } );
-    }
-
-    private void assertObfuscatedIfExists( Map<String,Object> map, String key )
-    {
-        Object value = map.get( key );
-        if ( value != null )
-        {
-            assertThat( value, equalTo( "******" ) );
-        }
     }
 }
