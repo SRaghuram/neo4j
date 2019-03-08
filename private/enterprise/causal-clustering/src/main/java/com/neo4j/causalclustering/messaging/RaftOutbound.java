@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 import com.neo4j.causalclustering.messaging.address.UnknownAddressMonitor;
 
 import java.time.Clock;
@@ -30,10 +31,11 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
     private final Log log;
     private final MemberId myself;
     private final Clock clock;
-    private Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> localMessageHandler;
+    private final MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> localMessageHandler;
 
     public RaftOutbound( CoreTopologyService coreTopologyService, Outbound<AdvertisedSocketAddress,Message> outbound,
-                         Supplier<Optional<ClusterId>> clusterIdentity, LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
+            MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> localMessageHandler,
+            Supplier<Optional<ClusterId>> clusterIdentity, LogProvider logProvider, long logThresholdMillis, MemberId myself, Clock clock )
     {
         this.coreTopologyService = coreTopologyService;
         this.outbound = outbound;
@@ -42,6 +44,7 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
         this.unknownAddressMonitor = new UnknownAddressMonitor( log, Clocks.systemClock(), logThresholdMillis );
         this.myself = myself;
         this.clock = clock;
+        this.localMessageHandler = localMessageHandler;
     }
 
     @Override
@@ -70,10 +73,5 @@ public class RaftOutbound implements Outbound<MemberId,RaftMessages.RaftMessage>
                 unknownAddressMonitor.logAttemptToSendToMemberWithNoKnownAddress( to );
             }
         }
-    }
-
-    public void registerLocalMessageHandler( Inbound.MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> messageHandler )
-    {
-        this.localMessageHandler = messageHandler;
     }
 }

@@ -18,32 +18,45 @@ import org.neo4j.logging.LogProvider;
 public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>>
 {
     private final LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegateHandler;
-    private volatile ClusterId boundClusterId;
+    private final RaftMessageDispatcher raftMessageDispatcher;
     private final Log log;
 
-    public ClusterBindingHandler( LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegateHandler, LogProvider logProvider )
+    private volatile ClusterId boundClusterId;
+
+    public ClusterBindingHandler( RaftMessageDispatcher raftMessageDispatcher,
+            LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegateHandler,
+            LogProvider logProvider )
     {
         this.delegateHandler = delegateHandler;
+        this.raftMessageDispatcher = raftMessageDispatcher;
         log = logProvider.getLog( getClass() );
     }
 
-    public static ComposableMessageHandler composable( LogProvider logProvider )
+    public static ComposableMessageHandler composable( RaftMessageDispatcher raftMessageDispatcher, LogProvider logProvider )
     {
-        return delegate -> new ClusterBindingHandler( delegate, logProvider );
+        return delegate -> new ClusterBindingHandler( raftMessageDispatcher, delegate, logProvider );
     }
 
     @Override
     public void start( ClusterId clusterId ) throws Exception
     {
-        this.boundClusterId = clusterId;
+        boundClusterId = clusterId;
         delegateHandler.start( clusterId );
+        raftMessageDispatcher.registerHandlerChain( boundClusterId, this );
     }
 
     @Override
     public void stop() throws Exception
     {
-        this.boundClusterId = null;
-        delegateHandler.stop();
+        try
+        {
+            delegateHandler.stop();
+        }
+        finally
+        {
+            raftMessageDispatcher.deregisterHandlerChain( boundClusterId );
+            boundClusterId = null;
+        }
     }
 
     @Override

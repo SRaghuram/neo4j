@@ -9,8 +9,9 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 import java.time.Instant;
@@ -18,9 +19,12 @@ import java.util.UUID;
 
 import org.neo4j.logging.NullLogProvider;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
-public class ClusterBindingHandlerTest
+class ClusterBindingHandlerTest
 {
     private ClusterId clusterId = new ClusterId( UUID.randomUUID() );
 
@@ -31,10 +35,11 @@ public class ClusterBindingHandlerTest
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
 
-    private ClusterBindingHandler handler = new ClusterBindingHandler( delegate , NullLogProvider.getInstance() );
+    private RaftMessageDispatcher messageDispatcher = Mockito.mock( RaftMessageDispatcher.class );
+    private ClusterBindingHandler handler = new ClusterBindingHandler( messageDispatcher, delegate, NullLogProvider.getInstance() );
 
     @Test
-    public void shouldDropMessagesIfHasNotBeenStarted()
+    void shouldDropMessagesIfHasNotBeenStarted()
     {
         // when
         handler.handle( heartbeat );
@@ -44,7 +49,7 @@ public class ClusterBindingHandlerTest
     }
 
     @Test
-    public void shouldDropMessagesIfHasBeenStopped() throws Throwable
+    void shouldDropMessagesIfHasBeenStopped() throws Throwable
     {
         // given
         handler.start( clusterId );
@@ -58,7 +63,7 @@ public class ClusterBindingHandlerTest
     }
 
     @Test
-    public void shouldDropMessagesIfForDifferentClusterId() throws Throwable
+    void shouldDropMessagesIfForDifferentClusterId() throws Throwable
     {
         // given
         handler.start( clusterId );
@@ -74,7 +79,7 @@ public class ClusterBindingHandlerTest
     }
 
     @Test
-    public void shouldDelegateMessages() throws Throwable
+    void shouldDelegateMessages() throws Throwable
     {
         // given
         handler.start( clusterId );
@@ -87,7 +92,7 @@ public class ClusterBindingHandlerTest
     }
 
     @Test
-    public void shouldDelegateStartCalls() throws Throwable
+    void shouldDelegateStartCalls() throws Throwable
     {
         // when
         handler.start( clusterId );
@@ -97,12 +102,57 @@ public class ClusterBindingHandlerTest
     }
 
     @Test
-    public void shouldDelegateStopCalls() throws Throwable
+    void shouldDelegateStopCalls() throws Throwable
     {
         // when
         handler.stop();
 
         // then
         verify( delegate ).stop();
+    }
+
+    @Test
+    void shouldRegisterInRaftMessageDispatcherWhenStarted() throws Throwable
+    {
+        // when
+        handler.start( clusterId );
+
+        // then
+        verify( messageDispatcher ).registerHandlerChain( clusterId, handler );
+    }
+
+    @Test
+    void shouldDeregisterInRaftMessageDispatcherWhenStopped() throws Throwable
+    {
+        // given
+        handler.start( clusterId );
+
+        // when
+        handler.stop();
+
+        // then
+        InOrder inOrder = inOrder( messageDispatcher );
+        inOrder.verify( messageDispatcher ).registerHandlerChain( clusterId, handler );
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( clusterId );
+    }
+
+    @Test
+    void shouldDeregisterInRaftMessageDispatcherWhenDelegateFailsToStop() throws Throwable
+    {
+        // given
+        RuntimeException error = new RuntimeException( "Unable to stop" );
+        Mockito.doThrow( error ).when( delegate ).stop();
+        handler.start( clusterId );
+
+        // when
+        RuntimeException thrownError = assertThrows( RuntimeException.class, handler::stop );
+        assertEquals( error, thrownError );
+
+        // then
+        InOrder inOrder = inOrder( messageDispatcher, delegate );
+        inOrder.verify( delegate ).start( clusterId );
+        inOrder.verify( messageDispatcher ).registerHandlerChain( clusterId, handler );
+        inOrder.verify( delegate ).stop();
+        inOrder.verify( messageDispatcher ).deregisterHandlerChain( clusterId );
     }
 }

@@ -225,9 +225,10 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         final MessageLogger<MemberId> messageLogger = createMessageLogger( globalConfig, globalLife, identityModule.myself() );
 
-        RaftOutbound raftOutbound =
-                new RaftOutbound( topologyService, new RaftSender( logProvider, raftChannelPoolService ), clusteringModule.clusterIdentity(), logProvider,
-                        logThresholdMillis, identityModule.myself(), globalModule.getGlobalClock() );
+        RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider );
+        RaftSender raftSender = new RaftSender( logProvider, raftChannelPoolService );
+        RaftOutbound raftOutbound = new RaftOutbound( topologyService, raftSender, raftMessageDispatcher,
+                clusteringModule.clusterIdentity(), logProvider, logThresholdMillis, identityModule.myself(), globalModule.getGlobalClock() );
         Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
 
         consensusModule = new ConsensusModule( identityModule.myself(), globalModule,
@@ -266,7 +267,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                         catchupStrategySelector );
         RaftServerModule.createAndStart( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilders.server(), messageLogger,
                 catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, defaultDatabaseName, panicService,
-                raftOutbound );
+                raftMessageDispatcher );
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
