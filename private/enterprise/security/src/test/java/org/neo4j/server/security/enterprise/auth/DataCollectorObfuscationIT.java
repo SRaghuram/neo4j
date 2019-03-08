@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.mockfs.UncloseableDelegatingFileSystemAbstraction;
@@ -56,7 +55,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
     }
 
     @Test
-    void shouldObfuscatePasswordInDbStatsRetrieve() throws Exception
+    void shouldObfuscatePasswordInDbStatsRetrieve()
     {
         String secret = "abc123";
         String sillySecret = ".changePassword(\\'si\"lly\\')";
@@ -72,7 +71,8 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
         assertEmpty( adminSubject, format( "EXPLAIN CALL dbms.security.changePassword('%s')", secret ) );
         assertEmpty( adminSubject, format( "CALL dbms.security.changePassword('%s')", sillySecret ) );
         assertSuccess( adminSubject, format( "CALL dbms.security.changeUserPassword('writeSubject','%s') " +
-                                             "CALL dbms.security.changeUserPassword('readSubject','%s') RETURN 1", sillySecret, otherSillySecret ), ResourceIterator::close );
+                                             "CALL dbms.security.changeUserPassword('readSubject','%s') RETURN 1",
+                                             sillySecret, otherSillySecret ), ResourceIterator::close );
         assertSuccess( adminSubject, "CALL db.stats.stop('QUERIES')", ResourceIterator::close );
         assertObfuscation( "CALL db.stats.retrieve('QUERIES')", secret, sillySecret, otherSillySecret );
         assertObfuscation( "CALL db.stats.retrieveAllAnonymized('graphToken')", secret, sillySecret, otherSillySecret );
@@ -101,7 +101,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
     }
 
     @Test
-    void shouldObfuscateParameterPasswordInDbStatsRetrieve() throws Exception
+    void shouldObfuscateParameterPasswordInDbStatsRetrieve()
     {
         Map<String,Object> secret = Collections.singletonMap( "password", "abc123" );
         Map<String,Object> secrets = new HashMap<>();
@@ -112,16 +112,18 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
         assertEmpty( readSubject, "CALL dbms.changePassword($password)", secret );
         assertEmpty( writeSubject, "CALL dbms.changePassword({password})", secret );
         assertSuccess( adminSubject, "CALL dbms.security.changeUserPassword('writeSubject',$first) " +
-                                     "CALL dbms.security.changeUserPassword('readSubject',$second) RETURN 1", secrets, ResourceIterator::close );
+                                     "CALL dbms.security.changeUserPassword('readSubject',$second) RETURN 1",
+                                     secrets, ResourceIterator::close );
         assertSuccess( adminSubject, "CALL db.stats.stop('QUERIES')", ResourceIterator::close );
         assertSuccess( adminSubject, "CALL db.stats.retrieve('QUERIES')", itr -> {
+            @SuppressWarnings( "unchecked" )
             Stream<Map<String, Object>> parameterMapStream = itr.stream()
                     .map( s -> (Map) s.get( "data" ) )
                     .map( dataMap -> (List<Map>)dataMap.get( "invocations" ) )
                     .flatMap( Collection::stream )
                     .map( invocation -> (Map)invocation.get( "params" ) );
 
-            List<Map<String,Object>> parameterMaps = parameterMapStream.collect( Collectors.<Map<String,Object>>toList() );
+            List<Map<String,Object>> parameterMaps = parameterMapStream.collect( Collectors.toList() );
 
             assertThat( parameterMaps.size(), equalTo( 3 ) );
             for ( Map<String, Object> parameterMap : parameterMaps )
