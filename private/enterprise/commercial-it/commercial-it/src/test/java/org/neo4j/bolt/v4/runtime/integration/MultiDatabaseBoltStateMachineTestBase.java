@@ -186,7 +186,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     /**
      * Returns a {@link BoltStateMachine} for test
      */
-    abstract protected BoltStateMachineV1 newStateMachineInReadyState() throws Throwable;
+    protected abstract BoltStateMachineV1 newStateMachineInReadyState() throws Throwable;
 
     private void runWithFailure( String query, BoltStateMachineV1 machine, Status status ) throws Throwable
     {

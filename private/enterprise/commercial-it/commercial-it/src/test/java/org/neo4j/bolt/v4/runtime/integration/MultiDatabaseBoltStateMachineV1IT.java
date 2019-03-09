@@ -65,14 +65,14 @@ class MultiDatabaseBoltStateMachineV1IT extends MultiDatabaseBoltStateMachineTes
         machine.process( new RunMessage( query ), recorder );
         assertThat( recorder.nextResponse(), failedWithStatus( status ) );
         assertThat( machine.state(), instanceOf( FailedState.class ) );
-        verifyStatementProcessorIsEmpty( machine );
+        verifyStatementProcessor( machine, isEmpty );
 
         // PULL_ALL
         machine.process( PullAllMessage.INSTANCE, recorder );
         RecordedBoltResponse response = recorder.nextResponse();
         assertThat( response, wasIgnored() );
         assertThat( machine.state(), instanceOf( FailedState.class ) );
-        verifyStatementProcessorIsEmpty( machine );
+        verifyStatementProcessor( machine, isEmpty );
     }
 
     @Override
@@ -91,7 +91,7 @@ class MultiDatabaseBoltStateMachineV1IT extends MultiDatabaseBoltStateMachineTes
         // COMMIT
         machine.process( newCommitMessage(), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( StreamingState.class ) );
+        assertThat( machine.state(), instanceOf( ReadyState.class ) );
         verifyStatementProcessorIsEmpty( machine );
 
         discardAll( machine, recorder );
@@ -105,7 +105,7 @@ class MultiDatabaseBoltStateMachineV1IT extends MultiDatabaseBoltStateMachineTes
         // BEGIN
         machine.process( newBeginMessage(), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( StreamingState.class ) );
+        assertThat( machine.state(), instanceOf( ReadyState.class ) );
         verifyStatementProcessorNotEmpty( machine );
 
         pullAll( machine, recorder, false );
@@ -119,7 +119,7 @@ class MultiDatabaseBoltStateMachineV1IT extends MultiDatabaseBoltStateMachineTes
         assertThat( response, succeeded() );
         assertThat( machine.state(), instanceOf( ReadyState.class ) );
 
-        if( isEmpty )
+        if ( isEmpty )
         {
             verifyStatementProcessorIsEmpty( machine );
         }
