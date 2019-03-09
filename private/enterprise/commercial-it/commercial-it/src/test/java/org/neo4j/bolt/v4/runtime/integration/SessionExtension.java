@@ -60,6 +60,14 @@ public class SessionExtension implements BeforeEachCallback, AfterEachCallback
         return resolver.resolveDependency( DatabaseManager.class );
     }
 
+    public String defaultDatabaseName()
+    {
+        assertTestStarted();
+        DependencyResolver resolver = gdb.getDependencyResolver();
+        Config config = resolver.resolveDependency( Config.class );
+        return config.get( GraphDatabaseSettings.default_database );
+    }
+
     private void assertTestStarted()
     {
         if ( boltFactory == null || gdb == null )
