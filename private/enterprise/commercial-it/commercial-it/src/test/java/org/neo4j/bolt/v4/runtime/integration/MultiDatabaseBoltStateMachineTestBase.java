@@ -26,7 +26,6 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.bolt.runtime.StatementProcessor.EMPTY;
 import static org.neo4j.bolt.testing.BoltMatchers.containsRecord;
-import static org.neo4j.kernel.api.exceptions.Status.General.DatabaseUnavailable;
 import static org.neo4j.kernel.api.exceptions.Status.Request.Invalid;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.SyntaxError;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
@@ -118,7 +117,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
         databaseManager.stopDatabase( defaultDatabaseName() );
 
         BoltStateMachineV1 machine = newStateMachineInReadyState();
-        runWithFailure( "RETURN 1", machine, DatabaseUnavailable );
+        runWithFailure( "RETURN 1", machine, Status.General.UnknownError );
     }
 
     @Test

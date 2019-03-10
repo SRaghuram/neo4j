@@ -144,6 +144,7 @@ class MultiDatabaseBoltStateMachineV1IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltStateMachineV1 machine = (BoltStateMachineV1) env.newMachine( BoltProtocolV1.VERSION, BOLT_CHANNEL );
         machine.process( newInitMessage(), nullResponseHandler() );
+        assertThat( machine.state(), instanceOf( ReadyState.class ) );
         return machine;
     }
 
