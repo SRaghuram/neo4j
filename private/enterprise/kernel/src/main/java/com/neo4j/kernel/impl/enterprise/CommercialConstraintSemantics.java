@@ -56,13 +56,13 @@ public class CommercialConstraintSemantics extends StandardConstraintSemantics
     public ConstraintRule createNodeKeyConstraintRule(
             long ruleId, NodeKeyConstraintDescriptor descriptor, long indexId )
     {
-        return ConstraintRule.constraintRule( ruleId, descriptor, indexId );
+        return accessor.createNodeKeyConstraintRule( ruleId, descriptor, indexId );
     }
 
     @Override
     public ConstraintRule createExistenceConstraint( long ruleId, ConstraintDescriptor descriptor )
     {
-        return ConstraintRule.constraintRule( ruleId, descriptor );
+        return accessor.createExistenceConstraint( ruleId, descriptor );
     }
 
     @Override
