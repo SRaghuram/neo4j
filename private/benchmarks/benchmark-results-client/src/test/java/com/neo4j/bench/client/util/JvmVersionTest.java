@@ -25,6 +25,7 @@ public class JvmVersionTest
         int majorVersion = JvmVersion.parseMajorVersion( System.getProperty( "java.version" ) );
         JvmVersion jvmVersion = JvmVersion.getVersion( Jvm.fromJdkPath( Paths.get( javaHome ) ) );
         assertThat( jvmVersion.majorVersion(), is( majorVersion ) );
+        assertThat( jvmVersion.vendor(), not( isEmptyOrNullString() ) );
         assertThat( jvmVersion.runtimeName(), not( isEmptyOrNullString() ) );
 
     }

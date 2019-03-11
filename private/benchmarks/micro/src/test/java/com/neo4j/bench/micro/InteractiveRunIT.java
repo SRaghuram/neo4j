@@ -148,10 +148,7 @@ public class InteractiveRunIT
             String... methods ) throws Exception
     {
 
-        // TODO remove, this is solely for TC build debug
         Jvm jvm = Jvm.defaultJvmOrFail();
-        System.out.println( String.format( "running interactively under VM %s in major version %s and implementor", jvm.jdkPath(),
-                jvm.version().majorVersion(), jvm.version().implementor() ) );
 
         File storesDir = temporaryFolder.newFolder();
         Path profilerRecordingDirectory = temporaryFolder.newFolder().toPath();

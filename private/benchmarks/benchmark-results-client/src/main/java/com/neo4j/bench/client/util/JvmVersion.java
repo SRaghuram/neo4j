@@ -26,9 +26,9 @@ public class JvmVersion
     private static final String JAVA_RUNTIME_NAME_PROPERTY = "java.runtime.name = ";
     private static final String JAVA_VERSION_PROPERTY = "java.version = ";
 
-    public static JvmVersion create( int majorVersion, String implementor, String runtimeName )
+    public static JvmVersion create( int majorVersion, String vendor, String runtimeName )
     {
-        return new JvmVersion( majorVersion, implementor, runtimeName );
+        return new JvmVersion( majorVersion, vendor, runtimeName );
     }
 
     static JvmVersion getVersion( Jvm jvm )
@@ -60,14 +60,14 @@ public class JvmVersion
                         .flatMap( JvmVersion::findRuntimeName )
                         .orElseThrow( () -> new RuntimeException( "Java runtime name unknown" ) );
 
-                //implementor can be an empty string
-                String implementor = lines.stream()
+                // vendor is obligatory
+                String vendor = lines.stream()
                         .filter( line -> line.contains( JAVA_VM_VENDOR_PROPERTY ) )
                         .findAny()
-                        .flatMap( JvmVersion::findImplementor )
-                        .orElse( null );
+                        .flatMap( JvmVersion::findVendor )
+                        .orElseThrow( () -> new RuntimeException( "Java vendor unknown" ) );
 
-                return new JvmVersion( majorVersion, implementor, runtimeName );
+                return new JvmVersion( majorVersion, vendor, runtimeName );
             }
             throw new RuntimeException( format( "%s process finished with non-zero exit code", jvmPath ) );
         }
@@ -102,7 +102,7 @@ public class JvmVersion
         return getPropertyValue( line, JAVA_RUNTIME_NAME_PROPERTY );
     }
 
-    private static Optional<String> findImplementor( String line )
+    private static Optional<String> findVendor( String line )
     {
         return getPropertyValue( line, JAVA_VM_VENDOR_PROPERTY );
     }
@@ -147,13 +147,13 @@ public class JvmVersion
     }
 
     private final int jvmMajorVersion;
-    private final String implementor;
+    private final String vendor;
     private final String runtimeName;
 
-    private JvmVersion( int jvmMajorVersion, String implementor, String runtimeName )
+    private JvmVersion( int jvmMajorVersion, String vendor, String runtimeName )
     {
         this.jvmMajorVersion = jvmMajorVersion;
-        this.implementor = implementor;
+        this.vendor = vendor;
         this.runtimeName = runtimeName;
     }
 
@@ -162,9 +162,9 @@ public class JvmVersion
         return jvmMajorVersion;
     }
 
-    public Optional<String> implementor()
+    public String vendor()
     {
-        return Optional.ofNullable( implementor );
+        return vendor;
     }
 
     public String runtimeName()
