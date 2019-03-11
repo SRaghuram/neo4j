@@ -52,7 +52,7 @@ INSTALL_TEMP_DIR=$(mktemp -d)
 mkdir -p "$JFR_FLAMEGRAPH_DIR"
 cp -R "$INSTALL_TEMP_DIR"/jfr-flame-graph/build/install/jfr-flame-graph/* "$JFR_FLAMEGRAPH_DIR"
 
-if [[ ! "$OSTYPE" == "darwin" ]]; then
+if [[ ! "$OSTYPE" == *"darwin"* ]]; then
 	echo "installing async profiler"
 	INSTALL_TEMP_DIR=$(mktemp -d)
 	(
