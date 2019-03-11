@@ -10,23 +10,30 @@ import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.nio.file.Paths;
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static java.lang.StrictMath.abs;
 import static java.lang.String.format;
 
+@ExtendWith( TestDirectoryExtension.class )
 public class PathModelTest
 {
+
+    @Inject
+    private TestDirectory testDirectory;
+
     @Test
     public void ensureDiffIsWithinExpectedBounds() throws Throwable
     {
@@ -64,7 +71,7 @@ public class PathModelTest
             }
         };
 
-        Stores stores = new Stores( Paths.get( "." ) );
+        Stores stores = new Stores( testDirectory.absolutePath().toPath() );
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group1" );
         Benchmark benchmark = Benchmark.benchmarkFor( "test benchmark", "benchmark1", Benchmark.Mode.LATENCY, Collections.emptyMap() );
 
@@ -97,7 +104,7 @@ public class PathModelTest
         double diff = abs( 1.0 - clusterTx.size() / (double) size );
 
         assertTrue( diff < maxDiff,
-                    format( "Expected a diff of less than {0}%. Got actual diff: {1}%. Got size: {2} actual wanted {3}",
+                    format( "Expected a diff of less than %f%%. Got actual diff: %f%%. Got size: %d actual wanted %d",
                             maxDiff * 100,
                             diff * 100,
                             clusterTx.size(),
