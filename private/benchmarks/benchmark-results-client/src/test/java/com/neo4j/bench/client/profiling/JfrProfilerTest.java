@@ -50,7 +50,7 @@ public class JfrProfilerTest
     @Test
     public void jvmArgsForPreJdk11() throws Exception
     {
-        JvmVersion jvmVersion = JvmVersion.create( 8, "Oracle Corporation", "Java(TM) SE Runtime Environment" );
+        JvmVersion jvmVersion = JvmVersion.create( 8, JvmVersion.ORACLE_VENDOR, JvmVersion.JAVA_TM_SE_RUNTIME_ENVIRONMENT);
         JfrProfiler profiler = new JfrProfiler();
         List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
         assertThat( jvmArgs, hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) );
@@ -59,7 +59,7 @@ public class JfrProfilerTest
     @Test
     public void jvmArgsForPostJdk11() throws Exception
     {
-        JvmVersion jvmVersion = JvmVersion.create( 11, "Oracle Corporation", "" );
+        JvmVersion jvmVersion = JvmVersion.create( 11, JvmVersion.ORACLE_VENDOR, "" );
         JfrProfiler profiler = new JfrProfiler();
         List<String> jvmArgs = profiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark );
         assertThat( jvmArgs, not( hasItem( equalTo( "-XX:+UnlockCommercialFeatures" ) ) ) );

@@ -64,8 +64,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
                 "-XX:FlightRecorderOptions=stackdepth=256" );
         List<String> jvmArgs = Lists.newArrayList();
 
-        if ( jvmVersion.majorVersion() < 11 &&
-             jvmVersion.runtimeName().equals( "Java(TM) SE Runtime Environment" ) )
+        if ( jvmVersion.hasCommercialFeatures() )
         {
             jvmArgs = Lists.newArrayList( "-XX:+UnlockCommercialFeatures" );
         }

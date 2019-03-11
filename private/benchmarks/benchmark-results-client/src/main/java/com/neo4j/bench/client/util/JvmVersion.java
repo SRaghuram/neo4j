@@ -19,6 +19,9 @@ import static java.lang.String.format;
 
 public class JvmVersion
 {
+    public static final String JAVA_TM_SE_RUNTIME_ENVIRONMENT = "Java(TM) SE Runtime Environment";
+    public static final String ORACLE_VENDOR = "Oracle Corporation";
+
     private static final String JAVA_VM_VENDOR_PROPERTY = "java.vm.vendor = ";
     private static final String JAVA_RUNTIME_NAME_PROPERTY = "java.runtime.name = ";
     private static final String JAVA_VERSION_PROPERTY = "java.version = ";
@@ -167,6 +170,12 @@ public class JvmVersion
     public String runtimeName()
     {
         return runtimeName;
+    }
+
+    public boolean hasCommercialFeatures()
+    {
+        return majorVersion() < 11 &&
+                runtimeName().equals( JAVA_TM_SE_RUNTIME_ENVIRONMENT );
     }
 
 }
