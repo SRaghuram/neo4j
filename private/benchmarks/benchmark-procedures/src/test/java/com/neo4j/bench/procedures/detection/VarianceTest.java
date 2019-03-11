@@ -126,10 +126,10 @@ public class VarianceTest
     @Test
     public void shouldThrowExceptionWhenTryingToAccessNegativePercentile()
     {
+        Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
+        Variance variance = Variance.calculateFor( series );
         assertThrows( Exception.class, () ->
         {
-            Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
-            Variance variance = Variance.calculateFor( series );
             variance.diffAtPercentile( -1 );
         });
     }
@@ -137,10 +137,10 @@ public class VarianceTest
     @Test
     public void shouldThrowExceptionWhenTryingToAccessPercentileGreaterThan100()
     {
+        Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
+        Variance variance = Variance.calculateFor( series );
         assertThrows( Exception.class, () ->
         {
-            Series series = new Series( NEO4J_SERIES, uniform( -1, 2 ), LATENCY );
-            Variance variance = Variance.calculateFor( series );
             variance.diffAtPercentile( 101 );
         });
     }

@@ -14,9 +14,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -122,19 +121,15 @@ public class BenchmarkGroupBenchmarkMetricsTest
                 Benchmark.benchmarkFor( "description", "test1", Mode.LATENCY, new HashMap<>() ),
                 metrics(),
                 config() );
-        try
+
+        assertThrows( IllegalStateException.class , () ->
         {
             result.add(
                     new BenchmarkGroup( "A" ),
                     Benchmark.benchmarkFor( "description", "test1", Mode.LATENCY, new HashMap<>() ),
                     metrics(),
                     config() );
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( e, instanceOf( IllegalStateException.class ) );
-        }
+        });
     }
 
     private static Metrics metrics()
