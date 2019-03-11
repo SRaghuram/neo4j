@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.NullLog;
+import org.neo4j.util.concurrent.Futures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,7 +34,8 @@ class OperationProgressMonitorTest
     private final Supplier<OptionalLong> zeroMillisSinceLastResponse = () -> OptionalLong.of( 0 );
     private final Supplier<OptionalLong> incrementingMillisSinceLastResponse = new IncrementingLastResponseTimer( 0 );
     private final Supplier<OptionalLong> foreverSinceLastResponse = new IncrementingLastResponseTimer();
-    private final Log log = NullLog.getInstance();
+    private final AssertableLogProvider logProvider = new AssertableLogProvider();
+    private final Log log = logProvider.getLog( OperationProgressMonitor.class );
 
     @Test
     void getShouldBeCalledMultipleTimesThenSucceed() throws Throwable
@@ -68,10 +69,9 @@ class OperationProgressMonitorTest
                 .thenThrow( TimeoutException.class );
 
         OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, incrementingMillisSinceLastResponse, log );
-        AssertableLogProvider logProvider = new AssertableLogProvider();
 
         // when
-        assertThrows( FooException.class, () -> retryFuture.get( FooException::new, logProvider.getLog( getClass() ) ) );
+        assertThrows( TimeoutException.class, retryFuture::get );
 
         // then
         logProvider.assertContainsLogCallContaining( "Request timed out" );
@@ -83,17 +83,16 @@ class OperationProgressMonitorTest
     {
         // given
         long inactivityTimeout = 1;
-        Future<Object> future = mock( Future.class );
-        when( future.get( anyLong(), any() ) )
-                .thenThrow( ExecutionException.class );
+        RuntimeException cause = new RuntimeException( "Future failed" );
+        Future<Object> future = Futures.failedFuture( cause );
 
         OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, zeroMillisSinceLastResponse, log );
 
         // when
-        assertThrows( FooException.class, () -> retryFuture.get( FooException::new, NullLog.getInstance() ) );
+        ExecutionException error = assertThrows( ExecutionException.class, retryFuture::get );
 
         // then
-        verify( future ).get( anyLong(), any() );
+        assertEquals( cause, error.getCause() );
     }
 
     @Test
@@ -108,23 +107,14 @@ class OperationProgressMonitorTest
 
         OperationProgressMonitor<Object> retryFuture = OperationProgressMonitor.of( future, inactivityTimeout, foreverSinceLastResponse, log );
 
-        for ( int i = 0; i < 3; i++ )
-        {
-            // when
-            try
-            {
-                assertThrows( FooException.class, () -> retryFuture.get( FooException::new, NullLog.getInstance() ) );
-            }
-            finally
-            {
-                // make sure interruption status of the current thread is cleared
-                // retrier re-interrupts the thread when InterruptedException is thrown
-                Thread.interrupted();
-            }
+        assertThrows( ExecutionException.class, retryFuture::get );
+        verify( future, times( 1 ) ).cancel( anyBoolean() );
 
-            // then
-            verify( future, times( i + 1 ) ).cancel( anyBoolean() );
-        }
+        assertThrows( InterruptedException.class, retryFuture::get );
+        verify( future, times( 2 ) ).cancel( anyBoolean() );
+
+        assertThrows( TimeoutException.class, retryFuture::get );
+        verify( future, times( 3 ) ).cancel( anyBoolean() );
     }
 
     private static class IncrementingLastResponseTimer implements Supplier<OptionalLong>
@@ -146,14 +136,6 @@ class OperationProgressMonitorTest
         public OptionalLong get()
         {
             return noResponseEver ? OptionalLong.empty() : OptionalLong.of( ++noResponseSince );
-        }
-    }
-
-    private static class FooException extends Exception
-    {
-        FooException( Throwable cause )
-        {
-            super( cause );
         }
     }
 }

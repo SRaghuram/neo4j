@@ -10,7 +10,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.neo4j.logging.Log;
@@ -36,28 +35,7 @@ public final class OperationProgressMonitor<T>
         return new OperationProgressMonitor<>( future, inactivityTimeoutMillis, millisSinceLastResponseSupplier, log );
     }
 
-    public Future<T> future()
-    {
-        return future;
-    }
-
-    public T get() throws Exception
-    {
-        return get( "Operation timed out." );
-    }
-
-    public T get( String message ) throws Exception
-    {
-        return get( e ->  new Exception( message, e ), log );
-    }
-
-    public <E extends Throwable> T get( Function<Throwable,E> exceptionFactory, Log log ) throws E
-    {
-        return waitForCompletion( millisSinceLastResponseSupplier, exceptionFactory, inactivityTimeoutMillis, log );
-    }
-
-    private <E extends Throwable> T waitForCompletion( Supplier<OptionalLong> millisSinceLastResponseSupplier,
-            Function<Throwable,E> exceptionFactory, long inactivityTimeoutMillis, Log log ) throws E
+    public T get() throws ExecutionException, InterruptedException, TimeoutException
     {
         long remainingTimeoutMillis = inactivityTimeoutMillis;
         while ( true )
@@ -66,25 +44,18 @@ public final class OperationProgressMonitor<T>
             {
                 return future.get( remainingTimeoutMillis, TimeUnit.MILLISECONDS );
             }
-            catch ( InterruptedException e )
+            catch ( InterruptedException | ExecutionException e )
             {
-                Thread.currentThread().interrupt();
+                // no need to re-interrupt because InterruptedException is rethrown
                 future.cancel( false );
-                throw exceptionFactory.apply( e );
-            }
-            catch ( ExecutionException e )
-            {
-                future.cancel( false );
-                throw exceptionFactory.apply( e );
+                throw e;
             }
             catch ( TimeoutException e )
             {
                 OptionalLong millisSinceLastResponse = millisSinceLastResponseSupplier.get();
                 if ( !millisSinceLastResponse.isPresent() )
                 {
-                    log.warn( "Request timed out with no responses after " + inactivityTimeoutMillis + " ms." );
-                    future.cancel( false );
-                    throw exceptionFactory.apply( e );
+                    throwOnTimeout( "Request timed out with no responses after " + inactivityTimeoutMillis + " ms." );
                 }
                 else
                 {
@@ -94,12 +65,17 @@ public final class OperationProgressMonitor<T>
                     }
                     else
                     {
-                        log.warn( "Request timed out after period of inactivity. Time since last response: " + millisSinceLastResponse + " ms." );
-                        future.cancel( false );
-                        throw exceptionFactory.apply( e );
+                        throwOnTimeout( "Request timed out after period of inactivity. Time since last response: " + millisSinceLastResponse + " ms." );
                     }
                 }
             }
         }
+    }
+
+    private void throwOnTimeout( String message ) throws TimeoutException
+    {
+        log.warn( message );
+        future.cancel( false );
+        throw new TimeoutException( message );
     }
 }
