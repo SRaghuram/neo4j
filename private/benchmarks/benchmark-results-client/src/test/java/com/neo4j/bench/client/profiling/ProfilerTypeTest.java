@@ -5,7 +5,8 @@
  */
 package com.neo4j.bench.client.profiling;
 
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 import static java.util.stream.Collectors.joining;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ProfilerTypeTest
 {
@@ -27,10 +29,13 @@ public class ProfilerTypeTest
         assertThat( profilerTypes.size(), equalTo( ProfilerType.values().length ) );
     }
 
-    @Test( expected = IllegalStateException.class )
+    @Test
     public void shouldFailToParseWhenDuplicateProfilers()
     {
         String profilerNamesWithDuplicate = ALL_PROFILER_NAMES + "," + ProfilerType.values()[0].name();
-        ProfilerType.deserializeProfilers( profilerNamesWithDuplicate );
+        assertThrows( IllegalStateException.class, () ->
+        {
+            ProfilerType.deserializeProfilers( profilerNamesWithDuplicate );
+        });
     }
 }
