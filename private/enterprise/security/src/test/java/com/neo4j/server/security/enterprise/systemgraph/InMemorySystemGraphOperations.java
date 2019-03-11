@@ -21,12 +21,11 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.LegacyCredential;
 
+import static com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm.IS_SUSPENDED;
 import static org.mockito.Mockito.mock;
 
 public class InMemorySystemGraphOperations extends SystemGraphOperations
 {
-    private static final String SUSPENDED = "is_suspended";
-
     private Map<String,User> users = new HashMap<>();
     private Map<String,Set<String>> rolesForUsers = new HashMap<>();
     private Map<String,RoleRecord> roles = new HashMap<>();
@@ -62,7 +61,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     AuthorizationInfo doGetAuthorizationInfo( String username )
     {
         User user = users.get( username );
-        if ( user == null || user.passwordChangeRequired() || user.hasFlag( SUSPENDED ) )
+        if ( user == null || user.passwordChangeRequired() || user.hasFlag( IS_SUSPENDED ) )
         {
             return new SimpleAuthorizationInfo();
         }
@@ -77,7 +76,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
         {
             throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
         }
-        User augmented = user.augment().withFlag( SUSPENDED ).build();
+        User augmented = user.augment().withFlag( IS_SUSPENDED ).build();
         users.put( username, augmented );
     }
 
@@ -89,7 +88,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
         {
             throw new InvalidArgumentsException( "User '" + username + "' does not exist." );
         }
-        User augmented = user.augment().withoutFlag( SUSPENDED ).build();
+        User augmented = user.augment().withoutFlag( IS_SUSPENDED ).build();
         users.put( username, augmented );
     }
 
@@ -117,6 +116,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
             throw new InvalidArgumentsException( "Role '" + roleName + "' does not exist." );
         }
         roles.remove( roleName );
+        removeRoleFromUsers( roleName, role.users() );
         return true;
     }
 
@@ -152,6 +152,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
         assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
         RoleRecord roleRecord = roles.get( roleName );
         roles.put( roleName, roleRecord.augment().withoutUser( username ).build() );
+        removeRoleFromUsers( roleName, Collections.singleton( username ) );
     }
 
     @Override
@@ -223,5 +224,14 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     Set<String> getDbNamesForUser( String username )
     {
         throw new UnsupportedOperationException( "getDbNamesForUser not implemented for this stub" );
+    }
+
+    private void removeRoleFromUsers( String roleName, Set<String> users )
+    {
+        for ( String user : users )
+        {
+            Set<String> roles = rolesForUsers.get( user );
+            roles.remove( roleName );
+        }
     }
 }

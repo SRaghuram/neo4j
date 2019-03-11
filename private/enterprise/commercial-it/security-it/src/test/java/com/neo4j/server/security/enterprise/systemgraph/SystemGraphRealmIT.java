@@ -157,6 +157,56 @@ class SystemGraphRealmIT
     }
 
     @Test
+    void shouldMigrateOnlyUserAsAdminEvenWithoutRolesFile() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "jane" )
+                .build(), securityLog, dbManager
+        );
+
+        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "jane" ) );
+        assertAuthenticationSucceeds( realm, "jane" );
+        log.assertExactly(
+                info( "Completed import of %s %s and %s %s into system graph.", "1", "user", "0", "roles" ),
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" )
+        );
+    }
+
+    @Test
+    void shouldNotMigrateMultipleExistingUsersAsAdminWithCustomUsernames() throws Throwable
+    {
+        SystemGraphImportOptions importOptions = new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "jane", "alice" )
+                .build();
+
+        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class,
+                () -> TestSystemGraphRealm.testRealm( importOptions, securityLog, dbManager ) );
+        assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
+    }
+
+    @Test
+    void shouldMigrateDefaultAdminWithMultipleExistingUsers() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "jane", "alice", "neo4j" )
+                .build(), securityLog, dbManager
+        );
+
+        assertThat( realm.getUsernamesForRole( PredefinedRoles.ADMIN ), contains( "neo4j" ) );
+        assertAuthenticationSucceeds( realm, "jane" );
+        log.assertExactly(
+                info( "Completed import of %s %s and %s %s into system graph.", "3", "users", "0", "roles" ),
+                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "neo4j" )
+        );
+    }
+
+    @Test
     void shouldSetDefaultAdmin() throws Throwable
     {
         // Given existing users but no admin
