@@ -5,22 +5,13 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
-import com.neo4j.causalclustering.core.consensus.ConsensusModule;
-import com.neo4j.causalclustering.core.consensus.ContinuousJob;
-import com.neo4j.causalclustering.core.consensus.LeaderAvailabilityHandler;
-import com.neo4j.causalclustering.core.consensus.RaftMessageMonitoringHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
-import com.neo4j.causalclustering.core.consensus.RaftMessageTimerResetMonitor;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolServerInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.core.server.CoreServerModule;
-import com.neo4j.causalclustering.core.state.RaftMessageApplier;
-import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.MessageLogger;
-import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
@@ -39,13 +30,11 @@ import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;
 import java.util.concurrent.Executor;
-import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.monitoring.Monitors;
 import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
@@ -58,52 +47,29 @@ public class RaftServerModule
     public static final String RAFT_SERVER_NAME = "raft-server";
 
     private final GlobalModule globalModule;
-    private final ConsensusModule consensusModule;
     private final IdentityModule identityModule;
     private final ApplicationSupportedProtocols supportedApplicationProtocol;
     private final MessageLogger<MemberId> messageLogger;
     private final LogProvider logProvider;
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
-    private final CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
 
-    private RaftServerModule( GlobalModule globalModule, ConsensusModule consensusModule, IdentityModule identityModule,
-            CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
-            CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider,
-            ApplicationSupportedProtocols supportedApplicationProtocol, Collection<ModifierSupportedProtocols> supportedModifierProtocols,
-            ChannelInboundHandler installedProtocolsHandler, String activeDatabaseName, Panicker panicker,
-            RaftMessageDispatcher raftMessageDispatcher )
+    public RaftServerModule( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
+            MessageLogger<MemberId> messageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
+            Collection<ModifierSupportedProtocols> supportedModifierProtocols )
     {
         this.globalModule = globalModule;
-        this.consensusModule = consensusModule;
         this.identityModule = identityModule;
         this.supportedApplicationProtocol = supportedApplicationProtocol;
         this.messageLogger = messageLogger;
         this.logProvider = globalModule.getLogService().getInternalLogProvider();
         this.pipelineBuilderFactory = pipelineBuilderFactory;
-        this.catchupAddressProvider = catchupAddressProvider;
         this.supportedModifierProtocols = supportedModifierProtocols;
-
-        LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> messageHandlerChain = createMessageHandlerChain( raftMessageDispatcher,
-                coreServerModule, panicker );
-
-        createRaftServer( coreServerModule, raftMessageDispatcher, messageHandlerChain, installedProtocolsHandler, activeDatabaseName );
     }
 
-    static void createAndStart( GlobalModule globalModule, ConsensusModule consensusModule, IdentityModule identityModule,
-            CoreServerModule coreServerModule, NettyPipelineBuilderFactory pipelineBuilderFactory, MessageLogger<MemberId> messageLogger,
-            CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider addressProvider, ApplicationSupportedProtocols supportedApplicationProtocol,
-            Collection<ModifierSupportedProtocols> supportedModifierProtocols, ChannelInboundHandler installedProtocolsHandler,
-            String activeDatabaseName, Panicker panicker, RaftMessageDispatcher raftMessageDispatcher )
-    {
-        new RaftServerModule( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilderFactory, messageLogger, addressProvider,
-                supportedApplicationProtocol, supportedModifierProtocols, installedProtocolsHandler, activeDatabaseName, panicker,
-                raftMessageDispatcher );
-    }
-
-    private void createRaftServer( CoreServerModule coreServerModule, RaftMessageDispatcher raftMessageDispatcher,
+    public void start( CoreServerModule coreServerModule, RaftMessageDispatcher raftMessageDispatcher,
             LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> messageHandlerChain,
-            ChannelInboundHandler installedProtocolsHandler, String activeDatabaseName )
+            ChannelInboundHandler installedProtocolsHandler, String defaultDatabaseName )
     {
         ApplicationProtocolRepository applicationProtocolRepository =
                 new ApplicationProtocolRepository( Protocol.ApplicationProtocols.values(), supportedApplicationProtocol );
@@ -114,7 +80,7 @@ public class RaftServerModule
         RaftProtocolServerInstallerV2.Factory raftProtocolServerInstallerV2 =
                 new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
         RaftProtocolServerInstallerV1.Factory raftProtocolServerInstallerV1 =
-                new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory, activeDatabaseName,
+                new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory, defaultDatabaseName,
                         logProvider );
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository =
                 new ProtocolInstallerRepository<>( asList( raftProtocolServerInstallerV1, raftProtocolServerInstallerV2 ),
@@ -147,41 +113,5 @@ public class RaftServerModule
         globalLife.add( coreServerModule.catchupServer() ); // must start last and stop first, since it handles external requests
         coreServerModule.backupServer().ifPresent( globalLife::add );
         globalLife.add( coreServerModule.downloadService() );
-    }
-
-    private LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> createMessageHandlerChain(
-            RaftMessageDispatcher raftMessageDispatcher, CoreServerModule coreServerModule, Panicker panicker )
-    {
-        RaftMessageApplier messageApplier = new RaftMessageApplier( logProvider,
-                consensusModule.raftMachine(), coreServerModule.downloadService(),
-                coreServerModule.commandApplicationProcess(), catchupAddressProvider, panicker );
-
-        Monitors globalMonitors = globalModule.getGlobalMonitors();
-        ComposableMessageHandler monitoringHandler =
-                RaftMessageMonitoringHandler.composable( globalModule.getGlobalClock(), globalMonitors );
-        ComposableMessageHandler batchingMessageHandler = createBatchingHandler( globalModule.getGlobalConfig() );
-        ComposableMessageHandler leaderAvailabilityHandler = LeaderAvailabilityHandler.composable( consensusModule.getLeaderAvailabilityTimers(),
-                globalMonitors.newMonitor( RaftMessageTimerResetMonitor.class ), consensusModule.raftMachine()::term );
-        ComposableMessageHandler clusterBindingHandler = ClusterBindingHandler.composable( raftMessageDispatcher, logProvider );
-
-        return clusterBindingHandler
-                .compose( leaderAvailabilityHandler )
-                .compose( batchingMessageHandler )
-                .compose( monitoringHandler )
-                .apply( messageApplier );
-    }
-
-    private ComposableMessageHandler createBatchingHandler( Config config )
-    {
-        Function<Runnable,ContinuousJob> jobFactory = runnable -> new ContinuousJob(
-                globalModule.getJobScheduler().threadFactory( Group.RAFT_BATCH_HANDLER ), runnable,
-                logProvider );
-
-        BoundedPriorityQueue.Config inQueueConfig = new BoundedPriorityQueue.Config( config.get( CausalClusteringSettings.raft_in_queue_size ),
-                config.get( CausalClusteringSettings.raft_in_queue_max_bytes ) );
-        BatchingMessageHandler.Config batchConfig = new BatchingMessageHandler.Config(
-                config.get( CausalClusteringSettings.raft_in_queue_max_batch ), config.get( CausalClusteringSettings.raft_in_queue_max_batch_bytes ) );
-
-        return BatchingMessageHandler.composable( inQueueConfig, batchConfig, jobFactory, logProvider );
     }
 }

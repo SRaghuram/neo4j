@@ -44,6 +44,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.BetterMessageLogger;
 import com.neo4j.causalclustering.logging.MessageLogger;
 import com.neo4j.causalclustering.logging.NullMessageLogger;
+import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.RaftChannelPoolService;
@@ -265,9 +266,16 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider catchupAddressProvider =
                 new CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider( consensusModule.raftMachine(), topologyService,
                         catchupStrategySelector );
-        RaftServerModule.createAndStart( globalModule, consensusModule, identityModule, coreServerModule, pipelineBuilders.server(), messageLogger,
-                catchupAddressProvider, supportedRaftProtocols, supportedModifierProtocols, serverInstalledProtocolHandler, defaultDatabaseName, panicService,
-                raftMessageDispatcher );
+
+        RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( globalModule, raftMessageDispatcher,
+                catchupAddressProvider, panicService );
+        LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain =
+                raftMessageHandlerChainFactory.createMessageHandlerChain( consensusModule, coreServerModule );
+
+        RaftServerModule raftServerModule = new RaftServerModule( globalModule, identityModule, pipelineBuilders.server(), messageLogger,
+                supportedRaftProtocols, supportedModifierProtocols );
+        raftServerModule.start( coreServerModule, raftMessageDispatcher, raftMessageHandlerChain, serverInstalledProtocolHandler, defaultDatabaseName );
+
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
