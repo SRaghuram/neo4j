@@ -87,7 +87,7 @@ public class RunExportCommand implements Runnable
             name = {CMD_NEO4J_CONFIG},
             description = "Neo4j configuration used during benchmark",
             title = "Neo4j Configuration",
-            required = false )
+            required = true )
     private File neo4jConfigFile;
 
     private static final String CMD_TOOL_COMMIT = "--tool_commit";
