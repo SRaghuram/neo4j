@@ -9,10 +9,8 @@ import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolServerInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
-import com.neo4j.causalclustering.core.server.CoreServerModule;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.MessageLogger;
-import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingInbound;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.Server;
@@ -34,15 +32,17 @@ import java.util.concurrent.Executor;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
 
 import static java.util.Arrays.asList;
-import static org.neo4j.kernel.recovery.Recovery.recoveryRequiredChecker;
+import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
-public class RaftServerModule
+/**
+ * Factory to create a global Raft server that listens to incoming messages
+ * and forwards them to the appropriate handler chain via {@link RaftMessageDispatcher}.
+ */
+public class RaftServerFactory
 {
     public static final String RAFT_SERVER_NAME = "raft-server";
 
@@ -54,7 +54,7 @@ public class RaftServerModule
     private final NettyPipelineBuilderFactory pipelineBuilderFactory;
     private final Collection<ModifierSupportedProtocols> supportedModifierProtocols;
 
-    public RaftServerModule( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
+    public RaftServerFactory( GlobalModule globalModule, IdentityModule identityModule, NettyPipelineBuilderFactory pipelineBuilderFactory,
             MessageLogger<MemberId> messageLogger, ApplicationSupportedProtocols supportedApplicationProtocol,
             Collection<ModifierSupportedProtocols> supportedModifierProtocols )
     {
@@ -67,10 +67,10 @@ public class RaftServerModule
         this.supportedModifierProtocols = supportedModifierProtocols;
     }
 
-    public void start( CoreServerModule coreServerModule, RaftMessageDispatcher raftMessageDispatcher,
-            LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> messageHandlerChain,
-            ChannelInboundHandler installedProtocolsHandler, String defaultDatabaseName )
+    public Server createRaftServer( RaftMessageDispatcher raftMessageDispatcher, ChannelInboundHandler installedProtocolsHandler )
     {
+        Config config = globalModule.getGlobalConfig();
+
         ApplicationProtocolRepository applicationProtocolRepository =
                 new ApplicationProtocolRepository( Protocol.ApplicationProtocols.values(), supportedApplicationProtocol );
         ModifierProtocolRepository modifierProtocolRepository =
@@ -80,7 +80,7 @@ public class RaftServerModule
         RaftProtocolServerInstallerV2.Factory raftProtocolServerInstallerV2 =
                 new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
         RaftProtocolServerInstallerV1.Factory raftProtocolServerInstallerV1 =
-                new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory, defaultDatabaseName,
+                new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory, config.get( default_database ),
                         logProvider );
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository =
                 new ProtocolInstallerRepository<>( asList( raftProtocolServerInstallerV1, raftProtocolServerInstallerV2 ),
@@ -89,29 +89,17 @@ public class RaftServerModule
         HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
                 protocolInstallerRepository, pipelineBuilderFactory, logProvider );
 
-        Config globalConfig = globalModule.getGlobalConfig();
-        ListenSocketAddress raftListenAddress = globalConfig.get( CausalClusteringSettings.raft_listen_address );
+        ListenSocketAddress raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
 
         Executor raftServerExecutor = globalModule.getJobScheduler().executor( Group.RAFT_SERVER );
         Server raftServer = new Server( handshakeServerInitializer, installedProtocolsHandler, logProvider,
                 globalModule.getLogService().getUserLogProvider(), raftListenAddress, RAFT_SERVER_NAME, raftServerExecutor,
-                BootstrapConfiguration.serverConfig( globalConfig ) );
-        globalModule.getGlobalDependencies().satisfyDependency( raftServer ); // resolved in tests
+                BootstrapConfiguration.serverConfig( config ) );
 
         LoggingInbound<ReceivedInstantClusterIdAwareMessage<?>> loggingRaftInbound =
                 new LoggingInbound<>( nettyHandler, messageLogger, identityModule.myself() );
         loggingRaftInbound.registerHandler( raftMessageDispatcher );
 
-        RecoveryRequiredChecker recoveryChecker =
-                recoveryRequiredChecker( globalModule.getFileSystem(), globalModule.getPageCache(), globalConfig, globalModule.getStorageEngineFactory() );
-
-        //TODO: Understand that we add the CatchupServer to life here because we need to enforce an ordering between Raft and Catchup, but we should surface
-        // all the separate components and do this ordered adding to life somewhere top level. Putting this in this method is just a bit weird.
-        LifeSupport globalLife = globalModule.getGlobalLife();
-        globalLife.add( raftServer ); // must start before core state so that it can trigger snapshot downloads when necessary
-        globalLife.add( coreServerModule.createCoreLife( messageHandlerChain, logProvider, recoveryChecker ) );
-        globalLife.add( coreServerModule.catchupServer() ); // must start last and stop first, since it handles external requests
-        coreServerModule.backupServer().ifPresent( globalLife::add );
-        globalLife.add( coreServerModule.downloadService() );
+        return raftServer;
     }
 }

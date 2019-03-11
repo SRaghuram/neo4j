@@ -47,7 +47,7 @@ import org.neo4j.test.assertion.Assert;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_election_timeout;
-import static com.neo4j.causalclustering.core.RaftServerModule.RAFT_SERVER_NAME;
+import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.MINUTES;

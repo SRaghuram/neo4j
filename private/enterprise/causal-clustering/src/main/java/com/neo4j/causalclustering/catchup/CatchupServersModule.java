@@ -34,6 +34,8 @@ import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig
 
 public abstract class CatchupServersModule
 {
+    private static final String CATCHUP_SERVER_NAME = "catchup-server";
+
     protected Server catchupServer;
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
     protected Optional<Server> backupServer;
@@ -111,7 +113,7 @@ public abstract class CatchupServersModule
                 .bootstrapConfig( serverConfig( globalConfig ) )
                 .userLogProvider( userLogProvider )
                 .debugLogProvider( logProvider )
-                .serverName( "catchup-server" )
+                .serverName( CATCHUP_SERVER_NAME )
                 .build();
     }
 
@@ -138,11 +140,6 @@ public abstract class CatchupServersModule
     public final CatchupComponentsRepository catchupComponents()
     {
         return databaseComponents;
-    }
-
-    public final DatabaseService databaseService()
-    {
-        return databaseService;
     }
 
     public abstract Server catchupServer();

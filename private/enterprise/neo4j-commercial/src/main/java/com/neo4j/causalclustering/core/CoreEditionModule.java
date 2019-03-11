@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.consensus.ConsensusModule;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolClientInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
@@ -52,6 +53,7 @@ import com.neo4j.causalclustering.messaging.RaftOutbound;
 import com.neo4j.causalclustering.messaging.RaftSender;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
+import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.Protocol;
 import com.neo4j.causalclustering.protocol.ProtocolInstaller;
@@ -107,6 +109,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
@@ -117,6 +120,7 @@ import org.neo4j.time.Clocks;
 
 import static java.util.Arrays.asList;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.kernel.recovery.Recovery.recoveryRequiredChecker;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -269,18 +273,35 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( globalModule, raftMessageDispatcher,
                 catchupAddressProvider, panicService );
-        LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain =
+        LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain =
                 raftMessageHandlerChainFactory.createMessageHandlerChain( consensusModule, coreServerModule );
 
-        RaftServerModule raftServerModule = new RaftServerModule( globalModule, identityModule, pipelineBuilders.server(), messageLogger,
+        RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), messageLogger,
                 supportedRaftProtocols, supportedModifierProtocols );
-        raftServerModule.start( coreServerModule, raftMessageDispatcher, raftMessageHandlerChain, serverInstalledProtocolHandler, defaultDatabaseName );
+        Server raftServer = raftServerFactory.createRaftServer( raftMessageDispatcher, serverInstalledProtocolHandler );
+        globalDependencies.satisfyDependencies( raftServer ); // resolved in tests
+        globalLife.add( raftServer );
+
+        // needs to be after Raft server in the lifecycle
+        addCoreServerComponentsToLifecycle( coreServerModule, raftMessageHandlerChain, globalLife );
 
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
 
         globalLife.add( coreServerModule.membershipWaiterLifecycle );
+    }
+
+    private void addCoreServerComponentsToLifecycle( CoreServerModule coreServerModule,
+            LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain, LifeSupport lifeSupport )
+    {
+        RecoveryRequiredChecker recoveryChecker = recoveryRequiredChecker( globalModule.getFileSystem(), globalModule.getPageCache(), globalConfig,
+                globalModule.getStorageEngineFactory() );
+
+        lifeSupport.add( coreServerModule.createCoreLife( raftMessageHandlerChain, logProvider, recoveryChecker ) );
+        lifeSupport.add( coreServerModule.catchupServer() ); // must start last and stop first, since it handles external requests
+        coreServerModule.backupServer().ifPresent( lifeSupport::add );
+        lifeSupport.add( coreServerModule.downloadService() );
     }
 
     @Override
