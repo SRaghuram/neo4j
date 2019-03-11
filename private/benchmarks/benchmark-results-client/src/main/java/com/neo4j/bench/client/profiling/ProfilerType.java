@@ -220,9 +220,15 @@ public enum ProfilerType
 
     public static List<ProfilerType> deserializeProfilers( String profilerTypes )
     {
-        return Arrays.stream( profilerTypes.split( "," ) )
-                     .filter( profilerName -> !profilerName.isEmpty() )
-                     .map( ProfilerType::valueOf )
-                     .collect( toList() );
+        List<ProfilerType> profilers = Arrays.stream( profilerTypes.split( "," ) )
+                                             .filter( profilerName -> !profilerName.isEmpty() )
+                                             .map( ProfilerType::valueOf )
+                                             .collect( toList() );
+        List<ProfilerType> distinctProfilers = profilers.stream().distinct().collect( toList() );
+        if ( profilers.size() != distinctProfilers.size() )
+        {
+            throw new IllegalStateException( "Duplicate profilers: " + profilers );
+        }
+        return profilers;
     }
 }
