@@ -5,8 +5,8 @@
  */
 package com.neo4j.bench.micro.profile;
 
-import com.neo4j.bench.micro.benchmarks.Kaboom;
 import com.neo4j.bench.client.profiling.ProfilerType;
+import com.neo4j.bench.micro.benchmarks.Kaboom;
 import org.openjdk.jmh.profile.Profiler;
 
 import java.nio.file.Path;
@@ -38,9 +38,9 @@ public class ProfileDescriptor
         }
         if ( profilers.isEmpty() && null != targetDirectory )
         {
-            throw new Kaboom( "Profiler output directory set, but no profilers enabled" );
+            System.err.println( "WARNING! Profiler output directory set, but no profilers enabled" );
         }
-        return null == targetDirectory
+        return profilers.isEmpty()
                ? noProfile()
                : profileTo( targetDirectory, profilers.toArray( new Class[profilers.size()] ) );
     }
