@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiPredicate;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -18,17 +21,15 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.EnterpriseGraphDatabaseFactory;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.neo4j.metrics.source.db.TransactionMetrics;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.time.Duration.ofMinutes;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.metrics.MetricsSettings.csvMaxArchives;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.csvRotationThreshold;
@@ -45,8 +46,6 @@ class RotatableCsvOutputIT
     private GraphDatabaseService database;
     private static final BiPredicate<Long,Long> MONOTONIC = ( newValue, currentValue ) -> newValue >= currentValue;
     private static final int MAX_ARCHIVES = 20;
-    // this threshold should be bigger then size of file file header in bytes but smaller then file 2 lines
-    private static final String FILE_SIZE_THRESHOLD = "54";
 
     @BeforeEach
     void setup()
@@ -54,7 +53,7 @@ class RotatableCsvOutputIT
         outputPath = testDirectory.directory( "metrics" );
         database = new EnterpriseGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() )
                 .setConfig( csvPath, outputPath.getAbsolutePath() )
-                .setConfig( csvRotationThreshold, FILE_SIZE_THRESHOLD )
+                .setConfig( csvRotationThreshold, "21" )
                 .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
@@ -69,26 +68,30 @@ class RotatableCsvOutputIT
     @Test
     void rotateMetricsFile()
     {
-        assertTimeoutPreemptively( ofMinutes( 2 ), () ->
+        assertTimeoutPreemptively( ofMinutes( 3 ), () ->
         {
             // Commit a transaction and wait for rotation to happen
             doTransaction();
-            waitForRotation( outputPath, TransactionMetrics.TX_COMMITTED );
+            String committedMetricFile = "neo4j.transaction.committed.csv";
 
             // Latest file should now have recorded the transaction
-            File metricsFile = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
-            long committedTransactions = readLongCounterAndAssert( metricsFile, MONOTONIC );
-            assertEquals( 1, committedTransactions );
+            checkTransactionCount( committedMetricFile, 1L );
 
-            // Commit yet another transaction and wait for rotation to happen again
+            // Commit yet another transaction and wait for it to appear in metrics
             doTransaction();
-            waitForRotation( outputPath, TransactionMetrics.TX_COMMITTED );
 
             // Latest file should now have recorded the new transaction
-            File metricsFile2 = metricsCsv( outputPath, TransactionMetrics.TX_COMMITTED );
-            long committedTransactions2 = readLongCounterAndAssert( metricsFile2, MONOTONIC );
-            assertEquals( 2, committedTransactions2 );
+            checkTransactionCount( committedMetricFile, 2L );
         } );
+    }
+
+    private void checkTransactionCount( String metricFileName, long expectedValue ) throws Exception
+    {
+        assertEventually( () ->
+        {
+            File metricsCsv = metricsCsv( outputPath, metricFileName );
+            return readLongCounterAndAssert( metricsCsv, MONOTONIC );
+        }, equalTo( expectedValue ), 2, TimeUnit.MINUTES );
     }
 
     private void doTransaction()
@@ -100,39 +103,27 @@ class RotatableCsvOutputIT
         }
     }
 
-    private static void waitForRotation( File dbDir, String metric ) throws InterruptedException
+    private static File metricsCsv( File dbDir, String metric )
     {
-        // Find highest missing file
-        int i = 0;
-        while ( getMetricFile( dbDir, metric, i ).exists() )
+        while ( true )
         {
-            i++;
+            Optional<File> metricsFile = findLatestMetricsFile( dbDir, metric );
+            if ( metricsFile.isPresent() )
+            {
+                return metricsFile.get();
+            }
+            LockSupport.parkNanos( MILLISECONDS.toNanos( 10 ) );
         }
+    }
 
-        if ( i >= MAX_ARCHIVES )
+    private static Optional<File> findLatestMetricsFile( File metricsPath, String metric )
+    {
+        String[] metricFiles = metricsPath.list( ( dir, name ) -> name.equals( metric ) );
+        if ( isNotEmpty( metricFiles ) )
         {
-            fail( "Test did not finish before " + MAX_ARCHIVES + " rotations, which means we have rotated away from the " +
-                    "file we want to assert on." );
+            return Optional.of( new File( metricsPath, metricFiles[0] ) );
         }
-
-        // wait for file to exists
-        metricsCsv( dbDir, metric, i );
+        return Optional.empty();
     }
 
-    private static File metricsCsv( File dbDir, String metric ) throws InterruptedException
-    {
-        return metricsCsv( dbDir, metric, 0 );
-    }
-
-    private static File metricsCsv( File dbDir, String metric, long index ) throws InterruptedException
-    {
-        File csvFile = getMetricFile( dbDir, metric, index );
-        assertEventually( "Metrics file should exist", csvFile::exists, is( true ), 40, SECONDS );
-        return csvFile;
-    }
-
-    private static File getMetricFile( File dbDir, String metric, long index )
-    {
-        return new File( dbDir, index > 0 ? metric + ".csv." + index : metric + ".csv" );
-    }
 }
