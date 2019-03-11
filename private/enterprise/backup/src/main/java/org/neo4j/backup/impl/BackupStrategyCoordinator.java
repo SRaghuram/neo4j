@@ -7,7 +7,6 @@ package org.neo4j.backup.impl;
 
 import java.io.File;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
@@ -45,26 +44,25 @@ class BackupStrategyCoordinator
      * Iterate over all the provided strategies trying to perform a successful backup.
      * Will also do consistency checks if specified in {@link OnlineBackupContext}
      *
-     * @param onlineBackupContext filesystem, command arguments and configuration
+     * @param context the backup context.
      * @throws BackupExecutionException when backup failed
      * @throws ConsistencyCheckExecutionException when backup succeeded but consistency check found inconsistencies or failed
      */
-    public void performBackup( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException, ConsistencyCheckExecutionException
+    public void performBackup( OnlineBackupContext context ) throws BackupExecutionException, ConsistencyCheckExecutionException
     {
-        OnlineBackupRequiredArguments requiredArgs = onlineBackupContext.getRequiredArguments();
-        File destination = requiredArgs.getDatabaseBackupDir().toFile();
-        ConsistencyFlags consistencyFlags = onlineBackupContext.getConsistencyFlags();
+        File destination = context.getDatabaseBackupDir().toFile();
+        ConsistencyFlags consistencyFlags = context.getConsistencyFlags();
 
-        strategy.doBackup( onlineBackupContext );
+        strategy.doBackup( context );
 
-        if ( requiredArgs.isDoConsistencyCheck() )
+        if ( context.consistencyCheckEnabled() )
         {
-            performConsistencyCheck( onlineBackupContext.getConfig(), requiredArgs, consistencyFlags, DatabaseLayout.of( destination ) );
+            performConsistencyCheck( context, consistencyFlags, DatabaseLayout.of( destination ) );
         }
     }
 
     private void performConsistencyCheck(
-            Config config, OnlineBackupRequiredArguments requiredArgs, ConsistencyFlags consistencyFlags,
+            OnlineBackupContext context, ConsistencyFlags consistencyFlags,
             DatabaseLayout layout ) throws ConsistencyCheckExecutionException
     {
         ConsistencyCheckService.Result ccResult;
@@ -72,12 +70,12 @@ class BackupStrategyCoordinator
         {
             ccResult = consistencyCheckService.runFullConsistencyCheck(
                     layout,
-                    config,
+                    context.getConfig(),
                     progressMonitorFactory,
                     logProvider,
                     fs,
                     false,
-                    requiredArgs.getReportDir().toFile(),
+                    context.getReportDir().toFile(),
                     consistencyFlags );
         }
         catch ( Exception e )

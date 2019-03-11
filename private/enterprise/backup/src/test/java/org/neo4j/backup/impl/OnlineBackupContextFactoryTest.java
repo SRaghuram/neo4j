@@ -67,10 +67,9 @@ class OnlineBackupContextFactoryTest
     {
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=:1234" ) );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( DEFAULT_BACKUP_HOSTNAME, requiredArguments.getAddress().getHostname() );
-        assertEquals( 1234, requiredArguments.getAddress().getPort() );
+        assertEquals( DEFAULT_BACKUP_HOSTNAME, context.getAddress().getHostname() );
+        assertEquals( 1234, context.getAddress().getPort() );
     }
 
     @Test
@@ -78,10 +77,9 @@ class OnlineBackupContextFactoryTest
     {
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=abc" ) );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( "abc", requiredArguments.getAddress().getHostname() );
-        assertEquals( DEFAULT_BACKUP_PORT, requiredArguments.getAddress().getPort() );
+        assertEquals( "abc", context.getAddress().getHostname() );
+        assertEquals( DEFAULT_BACKUP_PORT, context.getAddress().getPort() );
     }
 
     @Test
@@ -89,10 +87,9 @@ class OnlineBackupContextFactoryTest
     {
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=foo.bar.server:" ) );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( "foo.bar.server", requiredArguments.getAddress().getHostname() );
-        assertEquals( DEFAULT_BACKUP_PORT, requiredArguments.getAddress().getPort() );
+        assertEquals( "foo.bar.server", context.getAddress().getHostname() );
+        assertEquals( DEFAULT_BACKUP_PORT, context.getAddress().getPort() );
     }
 
     @Test
@@ -100,10 +97,9 @@ class OnlineBackupContextFactoryTest
     {
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=:1234" ) );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( DEFAULT_BACKUP_HOSTNAME, requiredArguments.getAddress().getHostname() );
-        assertEquals( 1234, requiredArguments.getAddress().getPort() );
+        assertEquals( DEFAULT_BACKUP_HOSTNAME, context.getAddress().getHostname() );
+        assertEquals( 1234, context.getAddress().getPort() );
     }
 
     @Test
@@ -111,10 +107,9 @@ class OnlineBackupContextFactoryTest
     {
         OnlineBackupContextFactory handler = new OnlineBackupContextFactory( homeDir, configDir );
         OnlineBackupContext context = handler.createContext( requiredAnd( "--from=foo.bar.server:1234" ) );
-        OnlineBackupRequiredArguments requiredArguments = context.getRequiredArguments();
 
-        assertEquals( "foo.bar.server", requiredArguments.getAddress().getHostname() );
-        assertEquals( 1234, requiredArguments.getAddress().getPort() );
+        assertEquals( "foo.bar.server", context.getAddress().getHostname() );
+        assertEquals( 1234, context.getAddress().getPort() );
     }
 
     @Test
@@ -257,8 +252,8 @@ class OnlineBackupContextFactoryTest
         OnlineBackupContext context = builder.createContext( requiredAnd( "--from=[fd00:ce10::2]:6362" ) );
 
         // then
-        assertEquals( "fd00:ce10::2", context.getRequiredArguments().getAddress().getHostname() );
-        assertEquals( 6362, context.getRequiredArguments().getAddress().getPort() );
+        assertEquals( "fd00:ce10::2", context.getAddress().getHostname() );
+        assertEquals( 6362, context.getAddress().getPort() );
     }
 
     private String[] requiredAnd( String... additionalArgs )

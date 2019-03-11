@@ -47,7 +47,6 @@ class BackupStrategyCoordinatorTest
 
     // test method parameter mocks
     private final OnlineBackupContext onlineBackupContext = mock( OnlineBackupContext.class );
-    private final OnlineBackupRequiredArguments requiredArguments = mock( OnlineBackupRequiredArguments.class );
 
     // mock returns
     private final ProgressMonitorFactory progressMonitorFactory = mock( ProgressMonitorFactory.class );
@@ -60,9 +59,8 @@ class BackupStrategyCoordinatorTest
         Path backupsDir = testDirectory.directory( "backups" ).toPath();
 
         when( fileSystem.isDirectory( any() ) ).thenReturn( true );
-        when( onlineBackupContext.getRequiredArguments() ).thenReturn( requiredArguments );
-        when( requiredArguments.getReportDir() ).thenReturn( reportsDir );
-        when( requiredArguments.getDatabaseBackupDir() ).thenReturn( backupsDir.resolve( DEFAULT_DATABASE_NAME ) );
+        when( onlineBackupContext.getReportDir() ).thenReturn( reportsDir );
+        when( onlineBackupContext.getDatabaseBackupDir() ).thenReturn( backupsDir.resolve( DEFAULT_DATABASE_NAME ) );
         subject = new BackupStrategyCoordinator( fileSystem, consistencyCheckService, logProvider, progressMonitorFactory, firstStrategy );
     }
 
@@ -70,7 +68,7 @@ class BackupStrategyCoordinatorTest
     void consistencyCheckIsRunIfSpecified() throws Exception
     {
         // given
-        when( requiredArguments.isDoConsistencyCheck() ).thenReturn( true );
+        when( onlineBackupContext.consistencyCheckEnabled() ).thenReturn( true );
         when( consistencyCheckService.runFullConsistencyCheck( any(), any(), eq( progressMonitorFactory ), any( LogProvider.class ), any(), eq( false ), any(),
                 any() ) ).thenReturn( consistencyCheckResult );
         when( consistencyCheckResult.isSuccessful() ).thenReturn( true );
@@ -86,7 +84,7 @@ class BackupStrategyCoordinatorTest
     void consistencyCheckIsNotRunIfNotSpecified() throws Exception
     {
         // given
-        when( requiredArguments.isDoConsistencyCheck() ).thenReturn( false );
+        when( onlineBackupContext.consistencyCheckEnabled() ).thenReturn( false );
 
         // when
         subject.performBackup( onlineBackupContext );
@@ -100,7 +98,7 @@ class BackupStrategyCoordinatorTest
     void commandFailedWhenConsistencyCheckFails() throws Exception
     {
         // given
-        when( requiredArguments.isDoConsistencyCheck() ).thenReturn( true );
+        when( onlineBackupContext.consistencyCheckEnabled() ).thenReturn( true );
         when( consistencyCheckResult.isSuccessful() ).thenReturn( false );
         when( consistencyCheckService.runFullConsistencyCheck( any(), any(), eq( progressMonitorFactory ), any( LogProvider.class ), any(), eq( false ), any(),
                 any() ) ).thenReturn( consistencyCheckResult );

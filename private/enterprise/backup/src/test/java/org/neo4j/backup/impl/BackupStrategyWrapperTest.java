@@ -18,7 +18,6 @@ import java.nio.file.Path;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
-import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -70,8 +69,7 @@ class BackupStrategyWrapperTest
     private Path reportDir;
     private Path availableFreshBackupLocation;
     private Path availableOldBackupLocation;
-    private OnlineBackupRequiredArguments requiredArguments;
-    private final Config config = mock( Config.class );
+    private final Config config = Config.defaults();
     private final AdvertisedSocketAddress address = new AdvertisedSocketAddress( "neo4j.com", 6362 );
     private final PageCache pageCache = mock( PageCache.class );
     private final LogProvider logProvider = mock( LogProvider.class );
@@ -99,7 +97,7 @@ class BackupStrategyWrapperTest
     void lifecycleIsRun() throws Throwable
     {
         // given
-        onlineBackupContext = new OnlineBackupContext( requiredArguments( true ), config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -115,8 +113,7 @@ class BackupStrategyWrapperTest
     void fullBackupIsPerformedWhenNoOtherBackupExists() throws Exception
     {
         // given
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // and
         when( backupCopyService.backupExists( any() ) ).thenReturn( false );
@@ -135,8 +132,7 @@ class BackupStrategyWrapperTest
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
 
         // and we don't want to fallback to full backups
-        requiredArguments = requiredArguments( false );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( false );
 
         // and incremental backup fails because it's a different store
         BackupExecutionException incrementalBackupError = new BackupExecutionException( "Store mismatch" );
@@ -157,8 +153,7 @@ class BackupStrategyWrapperTest
         when( backupCopyService.backupExists( any() ) ).thenReturn( false );
 
         // and we don't want to fallback to full backups
-        requiredArguments = requiredArguments( false );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( false );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -175,8 +170,7 @@ class BackupStrategyWrapperTest
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
 
         // and
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -190,8 +184,7 @@ class BackupStrategyWrapperTest
     {
         // given conditions for incremental exist
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // and incremental fails
         doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
@@ -214,8 +207,7 @@ class BackupStrategyWrapperTest
         doThrow( incrementalBackupError ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
 
         // and
-        requiredArguments = requiredArguments( false );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( false );
 
         // when
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
@@ -232,8 +224,7 @@ class BackupStrategyWrapperTest
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
 
         // and fallback to full is true
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // and an incremental backup fails
         doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
@@ -260,8 +251,7 @@ class BackupStrategyWrapperTest
         when( backupCopyService.backupExists( DatabaseLayout.of( databaseBackupDir ) ) ).thenReturn( true );
 
         // and fallback to full flag has been set
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // and a new location for the existing backup is found
         Path newLocationForExistingBackup = testDirectory.directory( "new-backup-location" ).toPath();
@@ -297,8 +287,7 @@ class BackupStrategyWrapperTest
         doThrow( ioException ).when( backupCopyService ).moveBackupLocation( any(), any() );
 
         // and fallback to full
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // and backup exists
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
@@ -323,8 +312,7 @@ class BackupStrategyWrapperTest
     void performingFullBackupInvokesRecovery() throws Exception
     {
         // given full backup flag is set
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -338,8 +326,7 @@ class BackupStrategyWrapperTest
     {
         // given backup exists
         when( backupCopyService.backupExists( any() ) ).thenReturn( true );
-        requiredArguments = requiredArguments( true );
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // and incremental backups are successful
         doNothing().when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
@@ -356,7 +343,7 @@ class BackupStrategyWrapperTest
     {
         // given
         fallbackToFullPasses();
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -370,7 +357,7 @@ class BackupStrategyWrapperTest
     {
         // given
         bothBackupsFail();
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
@@ -389,7 +376,7 @@ class BackupStrategyWrapperTest
 
         // and
         fallbackToFullPasses();
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -403,7 +390,7 @@ class BackupStrategyWrapperTest
     {
         // given
         fallbackToFullPasses();
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -430,8 +417,7 @@ class BackupStrategyWrapperTest
         incrementalBackupIsSuccessful( true );
 
         // and
-        requiredArguments = requiredArguments(false);
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( false );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -450,8 +436,7 @@ class BackupStrategyWrapperTest
         incrementalBackupIsSuccessful( false );
 
         // and
-        requiredArguments = requiredArguments(false);
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( false );
 
         // when backups are performed
         assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
@@ -468,7 +453,7 @@ class BackupStrategyWrapperTest
 
         // and
         fallbackToFullPasses();
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -485,7 +470,7 @@ class BackupStrategyWrapperTest
 
         // and
         bothBackupsFail();
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         assertThrows( BackupExecutionException.class, () -> backupWrapper.doBackup( onlineBackupContext ) );
@@ -502,7 +487,7 @@ class BackupStrategyWrapperTest
         fallbackToFullPasses();
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class,
-                () -> backupWrapper.doBackup( new OnlineBackupContext( requiredArguments, config, consistencyFlags() ) ) );
+                () -> backupWrapper.doBackup( onlineBackupContext = newBackupContext( true ) ) );
 
         assertSame( ioError, error.getCause() );
     }
@@ -515,7 +500,7 @@ class BackupStrategyWrapperTest
 
         // and fallback to full
         fallbackToFullPasses();
-        onlineBackupContext = new OnlineBackupContext( requiredArguments, config, consistencyFlags() );
+        onlineBackupContext = newBackupContext( true );
 
         // when
         backupWrapper.doBackup( onlineBackupContext );
@@ -538,27 +523,26 @@ class BackupStrategyWrapperTest
 
     private void bothBackupsFail() throws Exception
     {
-        requiredArguments = requiredArguments( true );
         doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
         doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performFullBackup( any(), any() );
     }
 
     private void fallbackToFullPasses() throws Exception
     {
-        requiredArguments = requiredArguments( true );
         doThrow( BackupExecutionException.class ).when( backupStrategyImplementation ).performIncrementalBackup( any(), any() );
         doNothing().when( backupStrategyImplementation ).performFullBackup( any(), any() );
     }
 
-    private OnlineBackupRequiredArguments requiredArguments( boolean fallbackToFull )
+    private OnlineBackupContext newBackupContext( boolean fallbackToFull )
     {
-        Path databaseBackupDir = desiredBackupLayout.databaseDirectory().toPath().resolve( DEFAULT_DATABASE_NAME );
-        return new OnlineBackupRequiredArguments( address, DEFAULT_DATABASE_NAME, databaseBackupDir,
-                fallbackToFull, true, reportDir );
-    }
-
-    private static ConsistencyFlags consistencyFlags()
-    {
-        return new ConsistencyFlags( true, true, true, true );
+        return OnlineBackupContext.builder()
+                .withAddress( address )
+                .withConfig( config )
+                .withDatabaseName( DEFAULT_DATABASE_NAME )
+                .withBackupDirectory( desiredBackupLayout.databaseDirectory().toPath() )
+                .withFallbackToFullBackup( fallbackToFull )
+                .withConsistencyCheck( true )
+                .withReportsDirectory( reportDir )
+                .build();
     }
 }

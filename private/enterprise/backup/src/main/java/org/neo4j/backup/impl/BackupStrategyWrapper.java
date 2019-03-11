@@ -62,13 +62,13 @@ class BackupStrategyWrapper
 
     private void performBackupWithoutLifecycle( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
-        Path backupLocation = onlineBackupContext.getRequiredArguments().getDatabaseBackupDir();
-        AdvertisedSocketAddress address = onlineBackupContext.getRequiredArguments().getAddress();
+        Path backupLocation = onlineBackupContext.getDatabaseBackupDir();
+        AdvertisedSocketAddress address = onlineBackupContext.getAddress();
         Config config = onlineBackupContext.getConfig();
         DatabaseLayout backupLayout = DatabaseLayout.of( backupLocation.toFile() );
 
         boolean previousBackupExists = backupCopyService.backupExists( backupLayout );
-        boolean fallbackToFull = onlineBackupContext.getRequiredArguments().isFallbackToFull();
+        boolean fallbackToFull = onlineBackupContext.fallbackToFullBackupEnabled();
 
         if ( previousBackupExists )
         {
@@ -131,7 +131,7 @@ class BackupStrategyWrapper
      */
     private void fullBackupWithTemporaryFolderResolutions( OnlineBackupContext onlineBackupContext ) throws BackupExecutionException
     {
-        Path userSpecifiedBackupLocation = onlineBackupContext.getRequiredArguments().getDatabaseBackupDir();
+        Path userSpecifiedBackupLocation = onlineBackupContext.getDatabaseBackupDir();
         Path temporaryFullBackupLocation = backupCopyService.findAnAvailableLocationForNewFullBackup( userSpecifiedBackupLocation );
         boolean backupToATemporaryLocation = !userSpecifiedBackupLocation.equals( temporaryFullBackupLocation );
 
@@ -142,7 +142,7 @@ class BackupStrategyWrapper
                     temporaryFullBackupLocation, userSpecifiedBackupLocation );
         }
 
-        AdvertisedSocketAddress address = onlineBackupContext.getRequiredArguments().getAddress();
+        AdvertisedSocketAddress address = onlineBackupContext.getAddress();
         DatabaseLayout backupLayout = DatabaseLayout.of( temporaryFullBackupLocation.toFile() );
         backupStrategy.performFullBackup( backupLayout, address );
 

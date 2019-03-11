@@ -75,15 +75,16 @@ public class BackupSupportingClassesFactory
     {
         PageCache pageCache = createPageCache( fileSystemAbstraction, context.getConfig(), jobScheduler );
         return new BackupSupportingClasses(
-                backupDelegatorFromConfig( pageCache, context.getConfig(), context.getRequiredArguments() ),
+                backupDelegatorFromConfig( pageCache, context ),
                 pageCache,
                 Arrays.asList( pageCache, jobScheduler ) );
     }
 
-    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, Config config, OnlineBackupRequiredArguments arguments )
+    private BackupDelegator backupDelegatorFromConfig( PageCache pageCache, OnlineBackupContext onlineBackupContext )
     {
-        CatchupClientFactory catchUpClient = catchUpClient( config, arguments );
-        String databaseName = arguments.getDatabaseName();
+        Config config = onlineBackupContext.getConfig();
+        String databaseName = onlineBackupContext.getDatabaseName();
+        CatchupClientFactory catchUpClient = catchUpClient( onlineBackupContext );
 
         TxPullClient txPullClient = new TxPullClient( catchUpClient, databaseName, () -> monitors, logProvider );
         ExponentialBackoffStrategy backOffStrategy =
@@ -104,13 +105,14 @@ public class BackupSupportingClassesFactory
         return factory.forClient( config, OnlineBackupSettings.ssl_policy, sslPolicyLoader );
     }
 
-    private CatchupClientFactory catchUpClient( Config config, OnlineBackupRequiredArguments arguments )
+    private CatchupClientFactory catchUpClient( OnlineBackupContext onlineBackupContext )
     {
+        Config config = onlineBackupContext.getConfig();
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( config, logProvider );
         ApplicationSupportedProtocols supportedCatchupProtocols = getSupportedCatchupProtocols( supportedProtocolCreator );
 
         return CatchupClientBuilder.builder()
-                .defaultDatabaseName( arguments.getDatabaseName() )
+                .defaultDatabaseName( onlineBackupContext.getDatabaseName() )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( createPipelineWrapper( config ) ) )

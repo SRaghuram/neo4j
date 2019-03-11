@@ -7,17 +7,17 @@ package org.neo4j.backup.impl;
 
 import java.util.Collection;
 
+import org.neo4j.common.Service;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.api.CloseableResourceManager;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 class BackupSupportingClasses implements AutoCloseable
 {
-    // Strategies
     private final BackupDelegator backupDelegator;
     private final CloseableResourceManager closeableResourceManager;
-
-    // Dependency Helpers
     private final PageCache pageCache;
+    private final StorageEngineFactory storageEngineFactory;
 
     BackupSupportingClasses( BackupDelegator backupDelegator, PageCache pageCache,
             Collection<AutoCloseable> closeables )
@@ -25,6 +25,7 @@ class BackupSupportingClasses implements AutoCloseable
         this.backupDelegator = backupDelegator;
         this.pageCache = pageCache;
         this.closeableResourceManager = new CloseableResourceManager();
+        this.storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
         closeables.forEach( closeableResourceManager::registerCloseableResource );
     }
 
@@ -36,6 +37,11 @@ class BackupSupportingClasses implements AutoCloseable
     public PageCache getPageCache()
     {
         return pageCache;
+    }
+
+    public StorageEngineFactory getStorageEngineFactory()
+    {
+        return storageEngineFactory;
     }
 
     @Override

@@ -70,7 +70,7 @@ public class OnlineBackupExecutor
 
             BackupStrategy strategy = new DefaultBackupStrategy( supportingClasses.getBackupDelegator(), internalLogProvider, storeFiles );
             BackupStrategyWrapper wrapper = new BackupStrategyWrapper( strategy, copyService, fs, pageCache, userLogProvider, internalLogProvider,
-                    context.getStorageEngineFactory() );
+                    supportingClasses.getStorageEngineFactory() );
 
             BackupStrategyCoordinator coordinator = new BackupStrategyCoordinator( fs, consistencyCheckService, internalLogProvider,
                     progressMonitorFactory, wrapper );
@@ -80,14 +80,12 @@ public class OnlineBackupExecutor
 
     private void verify( OnlineBackupContext context ) throws BackupExecutionException
     {
-        OnlineBackupRequiredArguments arguments = context.getRequiredArguments();
-
         // user specifies target backup directory and backup procedure creates a sub-directory with the same name as the database
         // verify existence of the directory as specified by the user
-        checkDestination( arguments.getDatabaseBackupDir().getParent() );
+        checkDestination( context.getDatabaseBackupDir().getParent() );
 
         // consistency check report is placed directly into the specified directory, verify its existence
-        checkDestination( arguments.getReportDir() );
+        checkDestination( context.getReportDir() );
     }
 
     private void checkDestination( Path path ) throws BackupExecutionException

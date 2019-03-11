@@ -10,27 +10,35 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckSettings;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.ListenSocketAddress;
-import org.neo4j.storageengine.api.StorageEngineFactory;
 
 public class OnlineBackupContext
 {
-    private final OnlineBackupRequiredArguments requiredArguments;
-    private final Config config;
+    private final AdvertisedSocketAddress address;
+    private final String databaseName;
+    private final Path databaseBackupDir;
+    private final Path reportDir;
+    private final boolean fallbackToFullBackup;
+    private final boolean consistencyCheck;
     private final ConsistencyFlags consistencyFlags;
-    private final StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
+    private final Config config;
 
-    OnlineBackupContext( OnlineBackupRequiredArguments requiredArguments, Config config, ConsistencyFlags consistencyFlags )
+    private OnlineBackupContext( AdvertisedSocketAddress address, String databaseName, Path databaseBackupDir, Path reportDir, boolean fallbackToFullBackup,
+            boolean consistencyCheck, ConsistencyFlags consistencyFlags, Config config )
     {
-        this.requiredArguments = requiredArguments;
-        this.config = config;
+        this.address = address;
+        this.databaseName = databaseName;
+        this.databaseBackupDir = databaseBackupDir;
+        this.reportDir = reportDir;
+        this.fallbackToFullBackup = fallbackToFullBackup;
+        this.consistencyCheck = consistencyCheck;
         this.consistencyFlags = consistencyFlags;
+        this.config = config;
     }
 
     public static Builder builder()
@@ -38,9 +46,34 @@ public class OnlineBackupContext
         return new Builder();
     }
 
-    OnlineBackupRequiredArguments getRequiredArguments()
+    public AdvertisedSocketAddress getAddress()
     {
-        return requiredArguments;
+        return address;
+    }
+
+    public String getDatabaseName()
+    {
+        return databaseName;
+    }
+
+    public Path getDatabaseBackupDir()
+    {
+        return databaseBackupDir;
+    }
+
+    public boolean fallbackToFullBackupEnabled()
+    {
+        return fallbackToFullBackup;
+    }
+
+    public boolean consistencyCheckEnabled()
+    {
+        return consistencyCheck;
+    }
+
+    public Path getReportDir()
+    {
+        return reportDir;
     }
 
     Config getConfig()
@@ -51,11 +84,6 @@ public class OnlineBackupContext
     ConsistencyFlags getConsistencyFlags()
     {
         return consistencyFlags;
-    }
-
-    StorageEngineFactory getStorageEngineFactory()
-    {
-        return storageEngineFactory;
     }
 
     public static final class Builder
@@ -153,26 +181,6 @@ public class OnlineBackupContext
             {
                 config = Config.defaults();
             }
-
-            AdvertisedSocketAddress address = buildAddress();
-            OnlineBackupRequiredArguments requiredArgs = buildRequiredArgs( address );
-            ConsistencyFlags consistencyFlags = buildConsistencyFlags();
-
-            return new OnlineBackupContext( requiredArgs, config, consistencyFlags );
-        }
-
-        private AdvertisedSocketAddress buildAddress()
-        {
-            if ( address == null )
-            {
-                ListenSocketAddress defaultListenAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
-                address = new AdvertisedSocketAddress( defaultListenAddress.getHostname(), defaultListenAddress.getPort() );
-            }
-            return address;
-        }
-
-        private OnlineBackupRequiredArguments buildRequiredArgs( AdvertisedSocketAddress address )
-        {
             if ( databaseName == null )
             {
                 databaseName = config.get( GraphDatabaseSettings.default_database );
@@ -185,9 +193,23 @@ public class OnlineBackupContext
             {
                 reportsDirectory = Paths.get( "." );
             }
+
+            AdvertisedSocketAddress address = buildAddress();
             Path databaseBackupDirectory = backupDirectory.resolve( databaseName );
-            return new OnlineBackupRequiredArguments( address, databaseName, databaseBackupDirectory,
-                    fallbackToFullBackup, consistencyCheck, reportsDirectory );
+            ConsistencyFlags consistencyFlags = buildConsistencyFlags();
+
+            return new OnlineBackupContext( address, databaseName, databaseBackupDirectory, reportsDirectory,
+                    fallbackToFullBackup, consistencyCheck, consistencyFlags, config );
+        }
+
+        private AdvertisedSocketAddress buildAddress()
+        {
+            if ( address == null )
+            {
+                ListenSocketAddress defaultListenAddress = config.get( OnlineBackupSettings.online_backup_listen_address );
+                address = new AdvertisedSocketAddress( defaultListenAddress.getHostname(), defaultListenAddress.getPort() );
+            }
+            return address;
         }
 
         private ConsistencyFlags buildConsistencyFlags()
