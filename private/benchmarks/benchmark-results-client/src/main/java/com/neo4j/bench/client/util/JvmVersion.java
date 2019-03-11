@@ -20,15 +20,13 @@ import static java.lang.String.format;
 public class JvmVersion
 {
     public static final String JAVA_TM_SE_RUNTIME_ENVIRONMENT = "Java(TM) SE Runtime Environment";
-    public static final String ORACLE_VENDOR = "Oracle Corporation";
 
-    private static final String JAVA_VM_VENDOR_PROPERTY = "java.vm.vendor = ";
     private static final String JAVA_RUNTIME_NAME_PROPERTY = "java.runtime.name = ";
     private static final String JAVA_VERSION_PROPERTY = "java.version = ";
 
-    public static JvmVersion create( int majorVersion, String vendor, String runtimeName )
+    public static JvmVersion create( int majorVersion, String runtimeName )
     {
-        return new JvmVersion( majorVersion, vendor, runtimeName );
+        return new JvmVersion( majorVersion, runtimeName );
     }
 
     static JvmVersion getVersion( Jvm jvm )
@@ -60,14 +58,7 @@ public class JvmVersion
                         .flatMap( JvmVersion::findRuntimeName )
                         .orElseThrow( () -> new RuntimeException( "Java runtime name unknown" ) );
 
-                // vendor is obligatory
-                String vendor = lines.stream()
-                        .filter( line -> line.contains( JAVA_VM_VENDOR_PROPERTY ) )
-                        .findAny()
-                        .flatMap( JvmVersion::findVendor )
-                        .orElseThrow( () -> new RuntimeException( "Java vendor unknown" ) );
-
-                return new JvmVersion( majorVersion, vendor, runtimeName );
+                return new JvmVersion( majorVersion, runtimeName );
             }
             throw new RuntimeException( format( "%s process finished with non-zero exit code", jvmPath ) );
         }
@@ -100,11 +91,6 @@ public class JvmVersion
     private static Optional<String> findRuntimeName( String line )
     {
         return getPropertyValue( line, JAVA_RUNTIME_NAME_PROPERTY );
-    }
-
-    private static Optional<String> findVendor( String line )
-    {
-        return getPropertyValue( line, JAVA_VM_VENDOR_PROPERTY );
     }
 
     private static Optional<String> getPropertyValue( String line, String javaVersionProperty )
@@ -147,24 +133,17 @@ public class JvmVersion
     }
 
     private final int jvmMajorVersion;
-    private final String vendor;
     private final String runtimeName;
 
-    private JvmVersion( int jvmMajorVersion, String vendor, String runtimeName )
+    private JvmVersion( int jvmMajorVersion, String runtimeName )
     {
         this.jvmMajorVersion = jvmMajorVersion;
-        this.vendor = vendor;
         this.runtimeName = runtimeName;
     }
 
     public int majorVersion()
     {
         return jvmMajorVersion;
-    }
-
-    public String vendor()
-    {
-        return vendor;
     }
 
     public String runtimeName()
