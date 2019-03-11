@@ -45,6 +45,10 @@ public class JvmVersion
             {
                 List<String> lines = IOUtils.readLines( process.getInputStream(), Charset.defaultCharset() );
 
+                System.out.println( String.format( "JVM %s properties", jvm.launchJava() ) );
+
+                lines.forEach( System.out::println );
+
                 // majorVersion is obligatory
                 int majorVersion = lines.stream()
                         .filter( line -> line.contains( JAVA_VERSION_PROPERTY ) )
