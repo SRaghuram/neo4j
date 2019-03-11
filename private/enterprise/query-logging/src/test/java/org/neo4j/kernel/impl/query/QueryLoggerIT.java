@@ -402,7 +402,7 @@ public class QueryLoggerIT
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ),
-                containsString(  "CALL dbms.security.changePassword(******)") ) ;
+                containsString(  "CALL dbms.security.changePassword('******')") ) ;
         assertThat( logLines.get( 0 ),not( containsString( "abc123" ) ) );
         assertThat( logLines.get( 0 ), containsString( neo.subject().username() ) );
     }
