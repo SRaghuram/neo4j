@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;

@@ -40,7 +40,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;

@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.storecopy;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;

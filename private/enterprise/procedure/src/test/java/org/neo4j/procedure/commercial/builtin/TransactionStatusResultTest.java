@@ -15,8 +15,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.collection.pool.Pool;
-import org.neo4j.common.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;

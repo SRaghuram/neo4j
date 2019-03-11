@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.catchup.tx;
 import java.io.IOException;
 import java.util.Map;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.LongRange;

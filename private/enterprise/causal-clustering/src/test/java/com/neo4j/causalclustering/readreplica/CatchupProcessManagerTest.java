@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;

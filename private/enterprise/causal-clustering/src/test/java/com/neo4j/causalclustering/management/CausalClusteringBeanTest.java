@@ -16,7 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;

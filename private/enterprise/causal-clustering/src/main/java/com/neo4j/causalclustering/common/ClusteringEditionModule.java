@@ -14,7 +14,7 @@ import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import java.io.File;
 import java.util.function.Predicate;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseManager;

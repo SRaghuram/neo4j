@@ -12,7 +12,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Set;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;

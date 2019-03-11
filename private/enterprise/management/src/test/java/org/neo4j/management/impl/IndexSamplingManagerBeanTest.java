@@ -8,7 +8,7 @@ package org.neo4j.management.impl;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
 import org.neo4j.internal.schema.SchemaDescriptorFactory;

@@ -21,7 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;

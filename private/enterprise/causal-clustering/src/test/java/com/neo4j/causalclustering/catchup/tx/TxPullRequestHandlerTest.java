@@ -22,7 +22,7 @@ import org.mockito.ArgumentCaptor;
 import java.util.Collections;
 import java.util.stream.LongStream;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.cursor.Cursor;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;

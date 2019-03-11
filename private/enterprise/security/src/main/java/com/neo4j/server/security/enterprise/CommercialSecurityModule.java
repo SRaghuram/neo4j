@@ -110,7 +110,7 @@ public class CommercialSecurityModule extends SecurityModule
     public void setup( Dependencies dependencies ) throws KernelException
     {
         // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
-        org.neo4j.common.Dependencies platformDependencies = (org.neo4j.common.Dependencies) dependencies.dependencySatisfier();
+        org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
 
         this.config = dependencies.config();

@@ -85,7 +85,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;

@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.identity.StoreId;
 import java.io.File;
 import java.io.IOException;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.lifecycle.Lifecycle;

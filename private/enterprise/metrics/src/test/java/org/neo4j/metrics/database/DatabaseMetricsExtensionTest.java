@@ -12,7 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.function.Supplier;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;

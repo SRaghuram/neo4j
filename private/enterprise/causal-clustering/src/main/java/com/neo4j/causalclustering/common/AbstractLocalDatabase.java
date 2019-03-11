@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;

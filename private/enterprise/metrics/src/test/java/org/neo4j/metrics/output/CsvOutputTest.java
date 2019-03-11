@@ -13,7 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.nio.file.Files;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;

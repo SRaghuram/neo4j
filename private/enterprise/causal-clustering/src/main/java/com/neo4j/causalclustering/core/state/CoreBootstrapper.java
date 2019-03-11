@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;

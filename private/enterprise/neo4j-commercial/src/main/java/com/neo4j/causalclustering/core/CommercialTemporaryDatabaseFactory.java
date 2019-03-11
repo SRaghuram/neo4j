@@ -14,7 +14,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.common.Dependencies;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.GraphDatabaseService;
