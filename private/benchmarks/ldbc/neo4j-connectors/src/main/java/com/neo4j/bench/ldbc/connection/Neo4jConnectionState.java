@@ -312,6 +312,5 @@ public class Neo4jConnectionState extends DbConnectionState
         {
             return true;
         }
-
     }
 }
