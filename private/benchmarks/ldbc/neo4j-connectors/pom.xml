@@ -12,8 +12,6 @@
     <artifactId>neo4j-connectors</artifactId>
 
     <properties>
-        <ldbc-driver-version>0.3.0</ldbc-driver-version>
-        <neo4j-java-driver-version>1.4.4</neo4j-java-driver-version>
         <ldbc-driver-version>0.3.2</ldbc-driver-version>
         <airline.version>0.7</airline.version>
         <fastutil.version>7.0.10</fastutil.version>
@@ -37,9 +35,6 @@
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
-            <version>${neo4j-java-driver-version}</version>
-            <!-- TODO had to change scope -->
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.neo4j.app</groupId>
