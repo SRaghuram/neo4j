@@ -6,13 +6,7 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 Apache Software License, Version 2.0
   Apache Commons BeanUtils
   Apache Commons Collections
-  error-prone annotations
-  FindBugs-jsr305
   Graphite Integration for Metrics
-  Guava InternalFutureFailureAccess and InternalFutures
-  Guava ListenableFuture only
-  Guava: Google Core Libraries for Java
-  J2ObjC Annotations
   Metrics Core
   Metrics Integration with JMX
   Prometheus Java Simpleclient
@@ -227,8 +221,6 @@ Apache Software License, Version 2.0
 
 ------------------------------------------------------------------------------
 MIT License
-  Animal Sniffer Annotations
-  Checker Qual
   SLF4J API Module
 ------------------------------------------------------------------------------
 

@@ -20,12 +20,6 @@ Apache Software License, Version 2.0
   Apache Shiro :: Event
   Apache Shiro :: Lang
   Caffeine cache
-  error-prone annotations
-  FindBugs-jsr305
-  Guava InternalFutureFailureAccess and InternalFutures
-  Guava ListenableFuture only
-  Guava: Google Core Libraries for Java
-  J2ObjC Annotations
   jPowerShell
   jProcesses
   Netty/All-in-One
@@ -453,8 +447,6 @@ This Agreement is governed by the laws of the State of New York and the intellec
 
 ------------------------------------------------------------------------------
 MIT License
-  Animal Sniffer Annotations
-  Checker Qual
   SLF4J API Module
   SLF4J NOP Binding
 ------------------------------------------------------------------------------

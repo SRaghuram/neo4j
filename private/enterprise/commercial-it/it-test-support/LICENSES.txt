@@ -31,13 +31,7 @@ Apache Software License, Version 2.0
   Caffeine cache
   config
   Data Mapper for Jackson
-  error-prone annotations
-  FindBugs-jsr305
-  Guava InternalFutureFailureAccess and InternalFutures
-  Guava ListenableFuture only
-  Guava: Google Core Libraries for Java
   hazelcast-all
-  J2ObjC Annotations
   Jackson
   Jetty :: Asynchronous HTTP Client
   Jetty :: Http Utility
@@ -901,8 +895,6 @@ version(s), and exceptions or additional permissions here}."
 
 ------------------------------------------------------------------------------
 MIT License
-  Animal Sniffer Annotations
-  Checker Qual
   SLF4J API Module
   SLF4J NOP Binding
 ------------------------------------------------------------------------------
