@@ -61,6 +61,8 @@ trait CreateGraphFromCounts {
         try {
           creator.create()
         } catch {
+          // Uniqueness constraints are listed under both constraints and indexes. We create them as a constraint
+          // and then fail here when we try to create an index, but a unique index already exists.
           case _: ConstraintViolationException =>
         }
       }

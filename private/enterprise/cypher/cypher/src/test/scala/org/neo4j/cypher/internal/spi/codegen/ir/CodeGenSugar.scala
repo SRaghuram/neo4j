@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.codegen.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.compatibility.v3_5.runtime.executionplan.Provider
 import org.neo4j.cypher.internal.compiler.v3_5.planner.LogicalPlanConstructionTestSupport
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
-import org.neo4j.cypher.internal.planner.v3_5.spi.{CostBasedPlannerName, GraphStatistics, PlanContext}
+import org.neo4j.cypher.internal.planner.v3_5.spi.{CostBasedPlannerName, InstrumentedGraphStatistics, PlanContext}
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
@@ -22,7 +22,11 @@ import org.neo4j.cypher.internal.runtime.compiled.{CompiledExecutionResult, Comp
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
+import org.neo4j.cypher.internal.v3_5.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v3_5.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.v3_5.util.TaskCloser
+import org.neo4j.cypher.internal.v3_5.util.attribution.Id
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.cypher.result.{QueryProfile, QueryResult, RuntimeResult}
 import org.neo4j.graphdb.GraphDatabaseService
@@ -35,10 +39,6 @@ import org.neo4j.kernel.impl.query.clientconnection.ClientConnectionInfo
 import org.neo4j.time.Clocks
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
-import org.neo4j.cypher.internal.v3_5.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.v3_5.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v3_5.util.TaskCloser
-import org.neo4j.cypher.internal.v3_5.util.attribution.Id
 import org.scalatest.mock.MockitoSugar
 
 trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport with AstConstructionTestSupport {
@@ -46,7 +46,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
   private val semanticTable = mock[SemanticTable]
 
   def compile(plan: LogicalPlan): CompiledPlan = {
-    val statistics: GraphStatistics = mock[GraphStatistics]
+    val statistics: InstrumentedGraphStatistics = mock[InstrumentedGraphStatistics]
     val context = mock[PlanContext]
     doReturn(statistics, Nil: _*).when(context).statistics
     new CodeGenerator(GeneratedQueryStructure, Clocks.systemClock())
