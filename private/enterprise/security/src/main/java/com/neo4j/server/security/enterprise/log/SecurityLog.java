@@ -210,7 +210,7 @@ public class SecurityLog extends LifecycleAdapter implements Log
     }
 
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown() throws Exception
     {
         if ( this.rotatingSupplier != null )
         {

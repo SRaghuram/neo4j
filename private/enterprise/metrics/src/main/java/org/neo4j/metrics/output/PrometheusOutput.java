@@ -56,7 +56,7 @@ public class PrometheusOutput implements Lifecycle, EventReporter
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         if ( server == null )
         {

@@ -53,13 +53,13 @@ public class CoreLife extends SafeLifecycle
     }
 
     @Override
-    public void init0() throws Throwable
+    public void init0() throws Exception
     {
         databaseService.init();
     }
 
     @Override
-    public void start0() throws Throwable
+    public void start0() throws Exception
     {
         ensureRecovered();
 
@@ -94,7 +94,7 @@ public class CoreLife extends SafeLifecycle
         raftMachine.postRecoveryActions();
     }
 
-    private void ensureRecovered() throws Throwable
+    private void ensureRecovered() throws Exception
     {
         for ( LocalDatabase db : databaseService.registeredDatabases().values() )
         {
@@ -119,7 +119,7 @@ public class CoreLife extends SafeLifecycle
     }
 
     @Override
-    public void stop0() throws Throwable
+    public void stop0() throws Exception
     {
         raftMachine.stopTimers();
         raftMessageHandler.stop();
@@ -128,7 +128,7 @@ public class CoreLife extends SafeLifecycle
     }
 
     @Override
-    public void shutdown0() throws Throwable
+    public void shutdown0() throws Exception
     {
         databaseService.shutdown();
     }

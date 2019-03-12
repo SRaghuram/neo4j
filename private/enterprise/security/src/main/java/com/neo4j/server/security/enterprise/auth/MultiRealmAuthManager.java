@@ -188,7 +188,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
     }
 
     @Override
-    public void init() throws Throwable
+    public void init() throws Exception
     {
         for ( Realm realm : realms )
         {
@@ -208,7 +208,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         for ( Realm realm : realms )
         {
@@ -220,7 +220,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         for ( Realm realm : realms )
         {
@@ -232,7 +232,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
     }
 
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown() throws Exception
     {
         for ( Realm realm : realms )
         {

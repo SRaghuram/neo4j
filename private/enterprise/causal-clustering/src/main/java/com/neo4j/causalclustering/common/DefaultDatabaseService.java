@@ -85,7 +85,7 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
         currentRequirement = requirement;
     }
 
-    private synchronized void stopWithRequirement( AvailabilityRequirement requirement ) throws Throwable
+    private synchronized void stopWithRequirement( AvailabilityRequirement requirement ) throws Exception
     {
         log.info( "Stopping, reason: " + requirement.description() );
         raiseAvailabilityGuard( requirement );
@@ -95,13 +95,13 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
     }
 
     @Override
-    public void init() throws Throwable
+    public void init() throws Exception
     {
         databaseManagerSupplier.get().init();
     }
 
     @Override
-    public synchronized void start() throws Throwable
+    public synchronized void start() throws Exception
     {
         if ( areAvailable() )
         {
@@ -114,13 +114,13 @@ public class DefaultDatabaseService<DB extends LocalDatabase> implements Lifecyc
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         stopWithRequirement( notStoppedReq );
     }
 
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown() throws Exception
     {
         databaseManagerSupplier.get().shutdown();
     }

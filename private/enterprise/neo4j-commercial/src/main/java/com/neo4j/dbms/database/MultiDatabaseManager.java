@@ -100,14 +100,14 @@ public class MultiDatabaseManager extends AbstractDatabaseManager
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         started = true;
         super.start();
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         started = false;
         super.stop();

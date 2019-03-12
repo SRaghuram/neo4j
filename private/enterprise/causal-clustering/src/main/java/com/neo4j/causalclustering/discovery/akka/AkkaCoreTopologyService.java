@@ -134,7 +134,7 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void stop0() throws Throwable
+    public void stop0() throws Exception
     {
         coreTopologyActorRef = Optional.empty();
         directoryActorRef = Optional.empty();

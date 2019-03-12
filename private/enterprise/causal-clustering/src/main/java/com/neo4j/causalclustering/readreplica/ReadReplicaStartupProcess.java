@@ -80,7 +80,7 @@ class ReadReplicaStartupProcess implements Lifecycle
     }
 
     @Override
-    public void init() throws Throwable
+    public void init() throws Exception
     {
         databaseService.init();
         catchupProcessManager.init();
@@ -92,7 +92,7 @@ class ReadReplicaStartupProcess implements Lifecycle
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
         Map<String,? extends LocalDatabase> dbsToSync = copyRegisteredDatabases();
@@ -244,14 +244,14 @@ class ReadReplicaStartupProcess implements Lifecycle
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         catchupProcessManager.stop();
         databaseService.stop();
     }
 
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown() throws Exception
     {
         catchupProcessManager.shutdown();
         databaseService.shutdown();

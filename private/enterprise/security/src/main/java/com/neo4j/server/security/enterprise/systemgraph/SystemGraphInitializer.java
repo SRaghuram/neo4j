@@ -58,7 +58,7 @@ public class SystemGraphInitializer
         this.log = log;
     }
 
-    public void initializeSystemGraph() throws Throwable
+    public void initializeSystemGraph() throws Exception
     {
         // If the system graph has not been initialized (typically the first time you start neo4j with the system graph auth provider)
         // we set it up with auth data in the following order:
@@ -103,7 +103,7 @@ public class SystemGraphInitializer
         return !queryExecutor.executeQueryWithParamCheck( query, params );
     }
 
-    private void ensureDefaultUsersAndRoles() throws Throwable
+    private void ensureDefaultUsersAndRoles() throws Exception
     {
         Set<String> addedDefaultUsers = ensureDefaultUsers();
         ensureDefaultRoles( addedDefaultUsers );
@@ -116,7 +116,7 @@ public class SystemGraphInitializer
     }
 
     /* Adds neo4j user if no users exist */
-    private Set<String> ensureDefaultUsers() throws Throwable
+    private Set<String> ensureDefaultUsers() throws Exception
     {
         if ( numberOfUsers() == 0 )
         {
@@ -159,7 +159,7 @@ public class SystemGraphInitializer
     }
 
     /* Builds all predefined roles if no roles exist. Adds 'neo4j' to admin role if no admin is assigned */
-    private void ensureDefaultRoles( Set<String> addedDefaultUsers ) throws Throwable
+    private void ensureDefaultRoles( Set<String> addedDefaultUsers ) throws Exception
     {
         List<String> newAdmins = new LinkedList<>( addedDefaultUsers );
 
@@ -234,7 +234,7 @@ public class SystemGraphInitializer
         }
     }
 
-    private void migrateFromFlatFileRealm() throws Throwable
+    private void migrateFromFlatFileRealm() throws Exception
     {
         UserRepository userRepository = startUserRepository( importOptions.migrationUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.migrationRoleRepositorySupplier );
@@ -251,7 +251,7 @@ public class SystemGraphInitializer
         stopRoleRepository( roleRepository );
     }
 
-    private void importUsersAndRoles() throws Throwable
+    private void importUsersAndRoles() throws Exception
     {
         UserRepository userRepository = startUserRepository( importOptions.importUserRepositorySupplier );
         RoleRepository roleRepository = startRoleRepository( importOptions.importRoleRepositorySupplier );
@@ -290,7 +290,7 @@ public class SystemGraphInitializer
         return queryExecutor.executeQueryLong( query );
     }
 
-    private UserRepository startUserRepository( Supplier<UserRepository> supplier ) throws Throwable
+    private UserRepository startUserRepository( Supplier<UserRepository> supplier ) throws Exception
     {
         UserRepository userRepository = supplier.get();
         userRepository.init();
@@ -298,13 +298,13 @@ public class SystemGraphInitializer
         return userRepository;
     }
 
-    private void stopUserRepository( UserRepository userRepository ) throws Throwable
+    private void stopUserRepository( UserRepository userRepository ) throws Exception
     {
         userRepository.stop();
         userRepository.shutdown();
     }
 
-    private RoleRepository startRoleRepository( Supplier<RoleRepository> supplier ) throws Throwable
+    private RoleRepository startRoleRepository( Supplier<RoleRepository> supplier ) throws Exception
     {
         RoleRepository roleRepository = supplier.get();
         roleRepository.init();
@@ -312,13 +312,13 @@ public class SystemGraphInitializer
         return roleRepository;
     }
 
-    private void stopRoleRepository( RoleRepository roleRepository ) throws Throwable
+    private void stopRoleRepository( RoleRepository roleRepository ) throws Exception
     {
         roleRepository.stop();
         roleRepository.shutdown();
     }
 
-    private boolean doImportUsersAndRoles( UserRepository userRepository, RoleRepository roleRepository, boolean purgeOnSuccess ) throws Throwable
+    private boolean doImportUsersAndRoles( UserRepository userRepository, RoleRepository roleRepository, boolean purgeOnSuccess ) throws Exception
     {
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();
         ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
@@ -421,7 +421,7 @@ public class SystemGraphInitializer
         return Pair.of( usernames.size(), roleNames.size() );
     }
 
-    private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Throwable
+    private boolean validateImportSucceeded( UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
         // Take a new snapshot of the import repositories
         ListSnapshot<User> users = userRepository.getPersistedSnapshot();

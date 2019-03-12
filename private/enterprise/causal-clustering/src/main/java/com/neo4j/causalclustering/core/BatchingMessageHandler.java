@@ -87,7 +87,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     }
 
     @Override
-    public void start( ClusterId clusterId ) throws Throwable
+    public void start( ClusterId clusterId ) throws Exception
     {
         handler.start( clusterId );
         raftOutbound.registerLocalMessageHandler( this );
@@ -95,7 +95,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Receiv
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         stopped = true;
         handler.stop();

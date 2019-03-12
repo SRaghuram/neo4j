@@ -33,14 +33,14 @@ public class ClusterBindingHandler implements LifecycleMessageHandler<RaftMessag
     }
 
     @Override
-    public void start( ClusterId clusterId ) throws Throwable
+    public void start( ClusterId clusterId ) throws Exception
     {
         this.boundClusterId = clusterId;
         delegateHandler.start( clusterId );
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         this.boundClusterId = null;
         delegateHandler.stop();

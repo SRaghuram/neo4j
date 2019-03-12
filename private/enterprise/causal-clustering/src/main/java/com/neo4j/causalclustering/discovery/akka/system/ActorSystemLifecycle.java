@@ -85,7 +85,7 @@ public class ActorSystemLifecycle
         joinMessageFactory.addSeenAddresses( addresses );
     }
 
-    public void shutdown() throws Throwable
+    public void shutdown() throws Exception
     {
         if ( actorSystemComponents == null )
         {

@@ -93,7 +93,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         if ( !authenticationEnabled && !authorizationEnabled )
         {
@@ -106,7 +106,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
-    public void stop()
+    public void stop() throws Exception
     {
     }
 

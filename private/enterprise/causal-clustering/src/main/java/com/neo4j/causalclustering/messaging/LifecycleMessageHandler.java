@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.identity.ClusterId;
  */
 public interface LifecycleMessageHandler<M extends Message> extends Inbound.MessageHandler<M>
 {
-    void start( ClusterId clusterId ) throws Throwable;
+    void start( ClusterId clusterId ) throws Exception;
 
-    void stop() throws Throwable;
+    void stop() throws Exception;
 }

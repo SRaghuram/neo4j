@@ -127,7 +127,7 @@ public class CatchupProcessManager extends SafeLifecycle
     }
 
     @Override
-    public void start0() throws Throwable
+    public void start0() throws Exception
     {
         catchupProcesses = databaseService.registeredDatabases().entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getValue() ) ) );

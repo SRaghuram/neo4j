@@ -75,7 +75,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public void stop0() throws Throwable
+    public void stop0() throws Exception
     {
         actorSystemLifecycle.shutdown();
     }

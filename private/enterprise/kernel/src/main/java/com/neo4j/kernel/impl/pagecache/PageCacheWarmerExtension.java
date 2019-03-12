@@ -51,7 +51,7 @@ class PageCacheWarmerExtension extends LifecycleAdapter
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         if ( started )
         {

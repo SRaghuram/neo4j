@@ -24,8 +24,9 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-class TopologyServiceThatPrioritisesItself implements TopologyService
+class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements TopologyService
 {
     private final MemberId myself;
     private final String matchingGroupName;
@@ -92,26 +93,6 @@ class TopologyServiceThatPrioritisesItself implements TopologyService
     public MemberId myself()
     {
         return myself;
-    }
-
-    @Override
-    public void init() throws Throwable
-    {
-    }
-
-    @Override
-    public void start() throws Throwable
-    {
-    }
-
-    @Override
-    public void stop() throws Throwable
-    {
-    }
-
-    @Override
-    public void shutdown() throws Throwable
-    {
     }
 
     private static CoreServerInfo coreServerInfo( String... groupNames )

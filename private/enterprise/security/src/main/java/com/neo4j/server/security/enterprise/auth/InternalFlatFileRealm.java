@@ -116,7 +116,7 @@ public class InternalFlatFileRealm extends AuthorizingRealm implements RealmLife
 
     @Deprecated
     @Override
-    public void initialize() throws Throwable
+    public void initialize() throws Exception
     {
         initialUserRepository.init();
         defaultAdminRepository.init();
@@ -126,7 +126,7 @@ public class InternalFlatFileRealm extends AuthorizingRealm implements RealmLife
 
     @Deprecated
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         initialUserRepository.start();
         defaultAdminRepository.start();
@@ -205,7 +205,7 @@ public class InternalFlatFileRealm extends AuthorizingRealm implements RealmLife
     }
 
     /* Adds neo4j user if no users exist */
-    private Set<String> ensureDefaultUsers() throws Throwable
+    private Set<String> ensureDefaultUsers() throws Exception
     {
         if ( authenticationEnabled || authorizationEnabled )
         {
@@ -290,7 +290,7 @@ public class InternalFlatFileRealm extends AuthorizingRealm implements RealmLife
 
     @Deprecated
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         initialUserRepository.stop();
         defaultAdminRepository.stop();
@@ -306,7 +306,7 @@ public class InternalFlatFileRealm extends AuthorizingRealm implements RealmLife
 
     @Deprecated
     @Override
-    public void shutdown() throws Throwable
+    public void shutdown() throws Exception
     {
         initialUserRepository.shutdown();
         defaultAdminRepository.shutdown();

@@ -107,7 +107,7 @@ public class ClusterBinder implements Supplier<Optional<ClusterId>>
      * @throws InterruptedException If the process gets interrupted.
      * @throws TimeoutException If the process times out.
      */
-    public BoundState bindToCluster() throws Throwable
+    public BoundState bindToCluster() throws Exception
     {
         DatabaseName newName = new DatabaseName( dbName );
 

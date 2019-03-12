@@ -40,7 +40,7 @@ public class FileRoleRepository extends AbstractRoleRepository implements FileRe
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         clear();
 

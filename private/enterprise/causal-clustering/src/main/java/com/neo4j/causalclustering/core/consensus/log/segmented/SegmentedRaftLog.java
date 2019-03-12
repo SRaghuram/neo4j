@@ -119,7 +119,7 @@ public class SegmentedRaftLog extends LifecycleAdapter implements RaftLog
     }
 
     @Override
-    public synchronized void stop() throws Throwable
+    public synchronized void stop() throws Exception
     {
         if ( readerPoolPruner != null )
         {

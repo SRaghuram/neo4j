@@ -36,7 +36,7 @@ public class ContinuousJob extends LifecycleAdapter
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         log.info( "ContinuousJob " + thread.getName() + " stopping" );
         abortableJob.keepRunning = false;

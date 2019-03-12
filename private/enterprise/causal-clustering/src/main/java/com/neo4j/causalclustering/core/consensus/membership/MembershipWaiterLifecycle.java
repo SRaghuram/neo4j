@@ -35,7 +35,7 @@ public class MembershipWaiterLifecycle extends LifecycleAdapter
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         CompletableFuture<Boolean> caughtUp = membershipWaiter.waitUntilCaughtUpMember( raft );
 
@@ -46,7 +46,11 @@ public class MembershipWaiterLifecycle extends LifecycleAdapter
         catch ( ExecutionException e )
         {
             log.error( "Server failed to join cluster", e.getCause() );
-            throw e.getCause();
+            if ( e.getCause() instanceof Exception )
+            {
+                throw (Exception) e.getCause();
+            }
+            throw e;
         }
         catch ( InterruptedException | TimeoutException e )
         {

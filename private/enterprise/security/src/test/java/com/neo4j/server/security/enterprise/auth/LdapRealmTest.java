@@ -469,7 +469,7 @@ public class LdapRealmTest
         }
     }
 
-    private void makeAndInit()
+    private void makeAndInit() throws Exception
     {
         try
         {

@@ -5,14 +5,6 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
@@ -23,9 +15,19 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.neo4j.helpers.AdvertisedSocketAddress;
 
-class FakeTopologyService implements TopologyService
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+class FakeTopologyService extends LifecycleAdapter implements TopologyService
 {
     private final ClusterId clusterId;
     private final Map<MemberId,CoreServerInfo> coreMembers;
@@ -136,30 +138,6 @@ class FakeTopologyService implements TopologyService
     public MemberId myself()
     {
         return myself;
-    }
-
-    @Override
-    public void init() throws Throwable
-    {
-
-    }
-
-    @Override
-    public void start() throws Throwable
-    {
-
-    }
-
-    @Override
-    public void stop() throws Throwable
-    {
-
-    }
-
-    @Override
-    public void shutdown() throws Throwable
-    {
-
     }
 
     public void replaceWithRole( MemberId memberId, RoleInfo role )

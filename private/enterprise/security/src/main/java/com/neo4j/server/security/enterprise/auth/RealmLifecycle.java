@@ -7,25 +7,25 @@ package com.neo4j.server.security.enterprise.auth;
 
 public interface RealmLifecycle
 {
-    void initialize() throws Throwable;
-    void start() throws Throwable;
-    void stop() throws Throwable;
-    void shutdown() throws Throwable;
+    void initialize() throws Exception;
+    void start() throws Exception;
+    void stop() throws Exception;
+    void shutdown() throws Exception;
 
     class Adapter implements RealmLifecycle
     {
         @Override
-        public void initialize()
+        public void initialize() throws Exception
         {
         }
 
         @Override
-        public void start()
+        public void start() throws Exception
         {
         }
 
         @Override
-        public void stop()
+        public void stop() throws Exception
         {
         }
 

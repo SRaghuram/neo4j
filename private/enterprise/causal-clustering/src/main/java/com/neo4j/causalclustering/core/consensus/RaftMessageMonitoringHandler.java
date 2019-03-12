@@ -65,13 +65,13 @@ public class RaftMessageMonitoringHandler implements LifecycleMessageHandler<Raf
     }
 
     @Override
-    public void start( ClusterId clusterId ) throws Throwable
+    public void start( ClusterId clusterId ) throws Exception
     {
         raftMessageHandler.start( clusterId );
     }
 
     @Override
-    public void stop() throws Throwable
+    public void stop() throws Exception
     {
         raftMessageHandler.stop();
     }

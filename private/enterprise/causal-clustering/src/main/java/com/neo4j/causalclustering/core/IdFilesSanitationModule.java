@@ -43,7 +43,7 @@ public class IdFilesSanitationModule extends LifecycleAdapter
     }
 
     @Override
-    public void start() throws Throwable
+    public void start() throws Exception
     {
         if ( !coreStartupState.wasUnboundOnStartup() )
         {

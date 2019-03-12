@@ -34,20 +34,20 @@ public abstract class SuspendableLifeCycle implements Lifecycle, Suspendable
     }
 
     @Override
-    public final synchronized void disable() throws Throwable
+    public final synchronized void disable() throws Exception
     {
         stop0();
         enabled = false;
     }
 
     @Override
-    public final synchronized void init() throws Throwable
+    public final synchronized void init() throws Exception
     {
         init0();
     }
 
     @Override
-    public final synchronized void start() throws Throwable
+    public final synchronized void start() throws Exception
     {
         if ( !enabled )
         {
@@ -61,24 +61,24 @@ public abstract class SuspendableLifeCycle implements Lifecycle, Suspendable
     }
 
     @Override
-    public final synchronized void stop() throws Throwable
+    public final synchronized void stop() throws Exception
     {
         stop0();
         stoppedByLifeCycle = true;
     }
 
     @Override
-    public final synchronized void shutdown() throws Throwable
+    public final synchronized void shutdown() throws Exception
     {
         shutdown0();
         stoppedByLifeCycle = true;
     }
 
-    protected abstract void init0() throws Throwable;
+    protected abstract void init0() throws Exception;
 
-    protected abstract void start0() throws Throwable;
+    protected abstract void start0() throws Exception;
 
-    protected abstract void stop0() throws Throwable;
+    protected abstract void stop0() throws Exception;
 
-    protected abstract void shutdown0() throws Throwable;
+    protected abstract void shutdown0() throws Exception;
 }

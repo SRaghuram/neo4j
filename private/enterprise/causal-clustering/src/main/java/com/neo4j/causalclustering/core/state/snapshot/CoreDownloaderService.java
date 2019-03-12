@@ -74,7 +74,7 @@ public class CoreDownloaderService extends LifecycleAdapter
     }
 
     @Override
-    public synchronized void stop() throws Throwable
+    public synchronized void stop() throws Exception
     {
         stopped = true;
 

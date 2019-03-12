@@ -643,7 +643,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     }
 
     @Override
-    public void initialize()
+    public void initialize() throws Exception
     {
         if ( authorizationEnabled )
         {
@@ -653,12 +653,12 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     }
 
     @Override
-    public void start()
+    public void start() throws Exception
     {
     }
 
     @Override
-    public void stop()
+    public void stop() throws Exception
     {
     }
 

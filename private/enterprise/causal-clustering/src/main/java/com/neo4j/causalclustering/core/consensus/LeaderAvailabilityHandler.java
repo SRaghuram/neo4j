@@ -34,13 +34,13 @@ public class LeaderAvailabilityHandler implements LifecycleMessageHandler<RaftMe
     }
 
     @Override
-    public synchronized void start( ClusterId clusterId ) throws Throwable
+    public synchronized void start( ClusterId clusterId ) throws Exception
     {
         delegateHandler.start( clusterId );
     }
 
     @Override
-    public synchronized void stop() throws Throwable
+    public synchronized void stop() throws Exception
     {
         delegateHandler.stop();
     }
