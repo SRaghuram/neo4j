@@ -397,6 +397,12 @@ class BenchmarksRunner
         {
             moveProfilerRecordingsTo( profileDescriptor.targetDirectory(), stores );
         }
+
+        // Print Pretty Results Summary
+        boolean verbose = true;
+        String prettyResultsString = new BenchmarkGroupBenchmarkMetricsPrinter( verbose )
+                .toPrettyString( benchmarkGroupBenchmarkMetrics, errorReporter.errors() );
+        System.out.println( prettyResultsString );
     }
 
     private static List<BenchmarkDescription> generateStores(

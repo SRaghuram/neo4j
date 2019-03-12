@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -59,6 +60,67 @@ public class Units
         default:
             throw new RuntimeException( "Unsupported time unit: " + timeUnit );
         }
+    }
+
+    public static TimeUnit smallerValueUnit( TimeUnit unit, Mode mode )
+    {
+        switch ( mode )
+        {
+        // 1000000 us/op == 1000 ms/op == 1 s/op
+        case LATENCY:
+        case SINGLE_SHOT:
+            return largerUnit( unit );
+        // 1 op/us == 1000 op/ms == 1000000 op/s
+        case THROUGHPUT:
+            return smallerUnit( unit );
+        default:
+            throw new IllegalArgumentException( format( "Unable to convert %s %s to smaller unit", unit.name(), mode.name() ) );
+        }
+    }
+
+    public static TimeUnit toLargerValueUnit( TimeUnit unit, Mode mode )
+    {
+        switch ( mode )
+        {
+        // 1000000 us/op == 1000 ms/op == 1 s/op
+        case LATENCY:
+        case SINGLE_SHOT:
+            return smallerUnit( unit );
+        // 1 op/us == 1000 op/ms == 1000000 op/s
+        case THROUGHPUT:
+            return largerUnit( unit );
+        default:
+            throw new IllegalArgumentException( format( "Unable to convert %s %s to smaller unit", unit.name(), mode.name() ) );
+        }
+    }
+
+    private static TimeUnit smallerUnit( TimeUnit unit )
+    {
+        try
+        {
+            return TimeUnit.values()[unit.ordinal() - 1];
+        }
+        catch ( Exception e )
+        {
+            throw new IllegalStateException( format( "Unable to convert %s to smaller unit", unit.name() ) );
+        }
+    }
+
+    private static TimeUnit largerUnit( TimeUnit unit )
+    {
+        try
+        {
+            return TimeUnit.values()[unit.ordinal() + 1];
+        }
+        catch ( Exception e )
+        {
+            throw new IllegalStateException( format( "Unable to convert %s to larger unit", unit.name() ) );
+        }
+    }
+
+    public static double convertValueTo( double fromValue, TimeUnit fromUnit, TimeUnit toUnit, Mode mode )
+    {
+        return fromValue * Units.conversionFactor( fromUnit, toUnit, mode );
     }
 
     // conversion factor is necessary because TimeUnit convert can only deal with long values
