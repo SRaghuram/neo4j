@@ -158,7 +158,7 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
         ReadReplicaServerModule serverModule =
                 new ReadReplicaServerModule( databaseService, pipelineBuilders, handlerFactory, platformModule, activeDatabaseName );
 
-        CommandIndexTracker commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker( logProvider ) );
+        CommandIndexTracker commandIndexTracker = platformModule.dependencies.satisfyDependency( new CommandIndexTracker() );
 
         CompositeSuspendable servicesToStopOnStoreCopy = new CompositeSuspendable();
         Executor catchupExecutor = platformModule.jobScheduler.executor( Group.CATCHUP );

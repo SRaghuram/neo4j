@@ -10,7 +10,6 @@ import java.util.function.Consumer;
 import org.neo4j.causalclustering.core.state.Result;
 import org.neo4j.causalclustering.core.state.machines.StateMachine;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import org.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -58,7 +57,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     public synchronized void installCommitProcess( TransactionCommitProcess commitProcess, long lastCommittedIndex )
     {
         this.lastCommittedIndex = lastCommittedIndex;
-        commandIndexTracker.setAppliedCommandIndex( lastCommittedIndex );
+        commandIndexTracker.registerAppliedCommandIndex( lastCommittedIndex );
         log.info( format("Updated lastCommittedIndex to %d", lastCommittedIndex) );
         this.queue = new TransactionQueue( maxBatchSize, ( first, last ) ->
         {
@@ -104,7 +103,7 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
                     }
 
                     callback.accept( Result.of( txId ) );
-                    commandIndexTracker.setAppliedCommandIndex( commandIndex );
+                    commandIndexTracker.registerAppliedCommandIndex( commandIndex );
                 } );
                 queue.queue( transaction );
             }

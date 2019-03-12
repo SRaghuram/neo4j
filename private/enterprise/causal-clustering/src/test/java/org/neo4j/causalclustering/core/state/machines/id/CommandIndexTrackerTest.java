@@ -8,36 +8,32 @@ package org.neo4j.causalclustering.core.state.machines.id;
 import org.junit.Test;
 
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CommandIndexTrackerTest
 {
-
     @Test
     public void shouldReflectIncreasingUpdates()
     {
         // given
-        CommandIndexTracker commandIndexTracker = new CommandIndexTracker( NullLogProvider.getInstance() );
+        CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
         assertEquals( -1, commandIndexTracker.getAppliedCommandIndex(), "Initial command index should equal -1" );
         // when
-        commandIndexTracker.setAppliedCommandIndex( 17 );
+        commandIndexTracker.registerAppliedCommandIndex( 17 );
         // then
         assertEquals( 17, commandIndexTracker.getAppliedCommandIndex(), "Updated index doesn't match expected value" );
     }
 
     @Test
-    public void shouldLogAndIgnoreDecreasingUpdates()
+    public void shouldIgnoreDecreasingUpdates()
     {
         // given
-        AssertableLogProvider logProvider = new AssertableLogProvider();
-        CommandIndexTracker commandIndexTracker = new CommandIndexTracker( logProvider );
+        CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
         // when
-        commandIndexTracker.setAppliedCommandIndex( 5 );
-        commandIndexTracker.setAppliedCommandIndex( 3 );
+        commandIndexTracker.registerAppliedCommandIndex( 5 );
+        commandIndexTracker.registerAppliedCommandIndex( 3 );
         // then
         assertEquals( 5, commandIndexTracker.getAppliedCommandIndex(), "Index should have ignored decreasing update" );
-        logProvider.assertContainsLogCallContaining( "Warning, a command index tracker may only increase!" );
     }
 }

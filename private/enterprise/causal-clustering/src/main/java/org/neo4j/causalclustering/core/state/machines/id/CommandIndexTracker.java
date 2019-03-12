@@ -5,11 +5,6 @@
  */
 package org.neo4j.causalclustering.core.state.machines.id;
 
-import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
-
-import static java.lang.String.format;
-
 /**
  * Keeps track of the raft command index of last applied transaction.
  *
@@ -20,24 +15,16 @@ import static java.lang.String.format;
  */
 public class CommandIndexTracker
 {
-    private final Log log;
     private volatile long appliedCommandIndex;
 
-    public CommandIndexTracker( LogProvider logProvider )
+    public CommandIndexTracker()
     {
-        appliedCommandIndex = -1;
-        log = logProvider.getLog( this.getClass() );
+        this.appliedCommandIndex = -1;
     }
 
-    public synchronized void setAppliedCommandIndex( long appliedCommandIndex )
+    public synchronized void registerAppliedCommandIndex( long appliedCommandIndex )
     {
-        if ( this.appliedCommandIndex > appliedCommandIndex )
-        {
-            log.warn( format( "Warning, a command index tracker may only increase! Current index %d, attempted set to %d.",
-                    this.appliedCommandIndex, appliedCommandIndex ) );
-            return;
-        }
-        this.appliedCommandIndex = appliedCommandIndex;
+        this.appliedCommandIndex = Math.max( this.appliedCommandIndex, appliedCommandIndex );
     }
 
     public long getAppliedCommandIndex()

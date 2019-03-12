@@ -65,7 +65,7 @@ public class ReadReplicaStatusTest
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         databaseHealth = dependencyResolver.satisfyDependency(
                 new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
-        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker( NullLogProvider.getInstance() ) );
+        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }
@@ -93,7 +93,7 @@ public class ReadReplicaStatusTest
     public void statusIncludesAppliedRaftLogIndex() throws IOException
     {
         // given
-        commandIndexTracker.setAppliedCommandIndex( 321 );
+        commandIndexTracker.registerAppliedCommandIndex( 321 );
 
         // when
         Response description = status.description();

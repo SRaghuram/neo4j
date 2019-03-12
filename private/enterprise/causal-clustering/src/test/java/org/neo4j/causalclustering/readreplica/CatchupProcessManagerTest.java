@@ -22,7 +22,6 @@ import org.neo4j.causalclustering.catchup.CatchupComponentsRepository.PerDatabas
 import org.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import org.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import org.neo4j.causalclustering.common.LocalDatabase;
-import org.neo4j.causalclustering.common.StubLocalDatabase;
 import org.neo4j.causalclustering.common.StubLocalDatabaseService;
 import org.neo4j.causalclustering.core.consensus.schedule.CountingTimerService;
 import org.neo4j.causalclustering.core.consensus.schedule.Timer;
@@ -81,7 +80,7 @@ public class CatchupProcessManagerTest
 
         //Construct the manager under test
         catchupProcessManager = spy( new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
-                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker( NullLogProvider.getInstance() ),
+                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
                 NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() ) );
     }
 
@@ -124,7 +123,7 @@ public class CatchupProcessManagerTest
             return catchupProcess;
         };
         catchupProcessManager = new CatchupProcessManager( new FakeExecutor(), catchupComponents, databaseService, startStopOnStoreCopy,
-                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker( NullLogProvider.getInstance() ),
+                () -> databaseHealth, topologyService, catchUpClient, strategyPipeline, timerService, new CommandIndexTracker(),
                 factory, NullLogProvider.getInstance(), versionContextSupplier, pageCursorTracerSupplier, Config.defaults() );
         // when
         catchupProcessManager.init();

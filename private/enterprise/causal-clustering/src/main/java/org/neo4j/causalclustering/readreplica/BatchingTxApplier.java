@@ -72,7 +72,7 @@ public class BatchingTxApplier extends LifecycleAdapter
             commitProcess.commit( first, NULL, EXTERNAL );
             pageCursorTracerSupplier.get().reportEvents();  // Report paging metrics for the commit
             long lastAppliedRaftLogIndex = LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( last.transactionRepresentation().additionalHeader() );
-            commandIndexTracker.setAppliedCommandIndex( lastAppliedRaftLogIndex );
+            commandIndexTracker.registerAppliedCommandIndex( lastAppliedRaftLogIndex );
         } );
     }
 

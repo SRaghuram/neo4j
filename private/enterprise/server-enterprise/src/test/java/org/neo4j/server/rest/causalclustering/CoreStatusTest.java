@@ -88,7 +88,7 @@ public class CoreStatusTest
 
         raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor() );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
-        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker( NullLogProvider.getInstance() ) );
+        commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }
@@ -163,7 +163,7 @@ public class CoreStatusTest
     public void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException, InterruptedException
     {
         // given ideal normal conditions
-        commandIndexTracker.setAppliedCommandIndex( 123 );
+        commandIndexTracker.registerAppliedCommandIndex( 123 );
         when( raftMachine.getLeader() ).thenReturn( core2 );
         raftMessageTimerResetMonitor.timerReset();
         Thread.sleep( 1 ); // Sometimes the test can be fast. This guarantees at least 1 ms since message received
