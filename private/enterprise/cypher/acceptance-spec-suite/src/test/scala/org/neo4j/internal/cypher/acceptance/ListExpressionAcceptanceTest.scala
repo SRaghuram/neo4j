@@ -393,4 +393,19 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     result.toList should equal(List(Map("result" -> 7)))
   }
+
+  test("should handle deeply nested list-comprehensions") {
+    def rec(count: Int): String =
+      count match {
+        case 0 => "[0]"
+        case n =>
+          val i = "i" + count
+          val inner = rec(count - 1)
+          s"[$i IN [1] | $i + $inner[0]]"
+      }
+
+    val query = "RETURN "+rec(10)+" AS x"
+    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    result.toList should be(List(Map("x" -> List(10))))
+  }
 }

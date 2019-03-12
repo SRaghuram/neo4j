@@ -20,7 +20,7 @@ class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {
   private var _expressionVariables = new Array[AnyValue](8)
 
   def expressionVariables(nExpressionSlots: Int): Array[AnyValue] = {
-    if (nExpressionSlots < _expressionVariables.length)
+    if (_expressionVariables.length < nExpressionSlots)
       _expressionVariables = new Array[AnyValue](nExpressionSlots)
     _expressionVariables
   }
