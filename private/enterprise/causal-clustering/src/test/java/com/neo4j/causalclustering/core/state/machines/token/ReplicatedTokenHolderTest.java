@@ -40,7 +40,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class ReplicatedTokenHolderTest
 {
-    private Supplier storageEngineSupplier = mock( Supplier.class );
+    private StorageEngine storageEngine;
+    private Supplier<StorageEngine> storageEngineSupplier = () -> storageEngine;
     private String databaseName = DEFAULT_DATABASE_NAME;
 
     @Test
@@ -77,8 +78,7 @@ public class ReplicatedTokenHolderTest
     public void shouldReplicateTokenRequestForNewToken() throws Exception
     {
         // given
-        StorageEngine storageEngine = mockedStorageEngine();
-        when( storageEngineSupplier.get() ).thenReturn( storageEngine );
+        storageEngine = mockedStorageEngine();
 
         IdGeneratorFactory idGeneratorFactory = mock( IdGeneratorFactory.class );
         IdGenerator idGenerator = mock( IdGenerator.class );
@@ -108,10 +108,10 @@ public class ReplicatedTokenHolderTest
             txState.accept( new TxStateVisitor.Adapter()
             {
                 @Override
-                public void visitCreatedLabelToken( long id, String name )
+                public void visitCreatedLabelToken( long id, String name, boolean internal )
                 {
                     LabelTokenRecord before = new LabelTokenRecord( id );
-                    LabelTokenRecord after = null;
+                    LabelTokenRecord after;
                     try
                     {
                         after = before.clone();
@@ -121,6 +121,7 @@ public class ReplicatedTokenHolderTest
                         throw new AssertionError( "Record should be cloneable: " + before, e );
                     }
                     after.setInUse( true );
+                    after.setInternal( internal );
                     target.add( new Command.LabelTokenCommand( before, after ) );
                 }
             } );

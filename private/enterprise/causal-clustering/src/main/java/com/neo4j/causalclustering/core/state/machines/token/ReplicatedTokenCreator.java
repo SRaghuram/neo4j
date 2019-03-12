@@ -9,5 +9,5 @@ import org.neo4j.kernel.api.txstate.TransactionState;
 
 public interface ReplicatedTokenCreator
 {
-    void createToken( TransactionState txState, String tokenName, int tokenId );
+    void createToken( TransactionState txState, String tokenName, boolean internal, int tokenId );
 }

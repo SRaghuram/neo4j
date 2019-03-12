@@ -64,9 +64,9 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     }
 
     @Override
-    protected int createToken( String tokenName )
+    protected int createToken( String tokenName, boolean internal )
     {
-        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseName, type, tokenName, createCommands( tokenName ) );
+        ReplicatedTokenRequest tokenRequest = new ReplicatedTokenRequest( databaseName, type, tokenName, createCommands( tokenName, internal ) );
         try
         {
             return (int) replicator.replicate( tokenRequest ).consume();
@@ -81,13 +81,13 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         }
     }
 
-    private byte[] createCommands( String tokenName )
+    private byte[] createCommands( String tokenName, boolean internal )
     {
         StorageEngine storageEngine = storageEngineSupplier.get();
         Collection<StorageCommand> commands = new ArrayList<>();
         TransactionState txState = new TxState();
         int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId() );
-        tokenCreator.createToken( txState, tokenName, tokenId );
+        tokenCreator.createToken( txState, tokenName, internal, tokenId );
         try ( StorageReader reader = storageEngine.newReader();
               CommandCreationContext creationContext = storageEngine.newCommandCreationContext() )
         {
