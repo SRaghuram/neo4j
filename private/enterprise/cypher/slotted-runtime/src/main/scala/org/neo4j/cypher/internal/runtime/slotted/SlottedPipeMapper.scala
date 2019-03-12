@@ -317,7 +317,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
   private def expressionSlotForPredicate(predicate: Option[VariablePredicate]): Int =
     predicate match {
-      case None => -1
+      case None => SlottedPipeMapper.NO_PREDICATE_OFFSET
       case Some(VariablePredicate(ExpressionVariable(offset, _), _)) => offset
       case Some(VariablePredicate(v, _)) =>
         throw new InternalException(s"Failure during slotted physical planning: the expression slot of variable $v has not been allocated.")
@@ -586,6 +586,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
 }
 
 object SlottedPipeMapper {
+
+  val NO_PREDICATE_OFFSET: Int = -1
 
   def createProjectionsForResult(columns: Seq[String], slots: SlotConfiguration): Seq[(String, Expression)] = {
     val runtimeColumns: Seq[(String, commandExpressions.Expression)] =

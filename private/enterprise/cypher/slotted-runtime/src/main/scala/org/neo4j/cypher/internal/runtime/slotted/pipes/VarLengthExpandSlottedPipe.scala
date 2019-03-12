@@ -9,20 +9,24 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGet
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyTypes, Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedPipeMapper}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, RelationshipContainer, RelationshipIterator}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.storageengine.api.RelationshipVisitor
-import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{RelationshipValue, VirtualValues}
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.VirtualValues.EMPTY_LIST
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.RelationshipValue
 
 import scala.collection.mutable
 
+/**
+  * On predicates... to communicate the tested entity to the predicate, expressions
+  * variable slots have been allocated. The offsets of these slots are `temp*Offset`.
+  * If no predicate exists the offset will be `SlottedPipeMapper.NO_PREDICATE_OFFSET`
+  */
 case class VarLengthExpandSlottedPipe(source: Pipe,
                                       fromSlot: Slot,
                                       relOffset: Int,
@@ -149,7 +153,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
                               tempOffset: Int,
                               predicate: Expression,
                               entity: AnyValue): Boolean =
-    tempOffset == -1 || {
+    tempOffset == SlottedPipeMapper.NO_PREDICATE_OFFSET || {
       state.expressionVariables(tempOffset) = entity
       predicate(row, state) eq Values.TRUE
     }

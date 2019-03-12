@@ -420,7 +420,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         SemanticDirection.INCOMING, SemanticDirection.INCOMING,
         LazyTypes.empty, varLength.min, varLength.max, shouldExpandAll = false,
         varExpandSlots,
-        -1, -1,
+        SlottedPipeMapper.NO_PREDICATE_OFFSET, // no node predicate
+        SlottedPipeMapper.NO_PREDICATE_OFFSET, // no relationship predicate
         commands.predicates.True(), commands.predicates.True(), Size(3, 0))()
     )
   }
