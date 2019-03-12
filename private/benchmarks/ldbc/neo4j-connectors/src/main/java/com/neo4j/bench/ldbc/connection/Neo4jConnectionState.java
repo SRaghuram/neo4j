@@ -271,6 +271,12 @@ public class Neo4jConnectionState extends DbConnectionState
         }
 
         @Override
+        public void warn( String message, Throwable cause )
+        {
+
+        }
+
+        @Override
         public void debug( String s, Object... objects )
         {
 //            if ( null == logger )

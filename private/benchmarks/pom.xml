@@ -17,8 +17,8 @@
     <name>Neo4j - Benchmarks</name>
 
     <properties>
-        <neo4j-java-driver.version>1.4.4</neo4j-java-driver.version>
         <license-text.header>build/license-header.txt</license-text.header>
+        <neo4j-java-driver.version>1.7.3</neo4j-java-driver.version>
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
     </properties>
@@ -36,6 +36,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.neo4j.driver</groupId>
+                <artifactId>neo4j-java-driver</artifactId>
+                <version>${neo4j-java-driver.version}</version>
+                <scope>compile</scope>
+            </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-migrationsupport</artifactId>

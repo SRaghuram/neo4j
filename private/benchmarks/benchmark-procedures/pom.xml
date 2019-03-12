@@ -14,7 +14,6 @@
 
     <properties>
         <uberjar.name>benchmark-procedures</uberjar.name>
-        <neo4j-java-driver.version>1.4.4</neo4j-java-driver.version>
         <commons.compress.version>1.12</commons.compress.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
@@ -42,13 +41,9 @@
             <artifactId>benchmark-results-client</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- TODO had to add driver, this needs further due diligence, why 
-            it's needed -->
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
-            <version>${neo4j-java-driver.version}</version>
-            <scope>compile</scope>
         </dependency>
 
         <dependency>
@@ -148,7 +143,7 @@
                             </transformers>
                             <filters>
                                 <filter>
-                                    <!-- Shading signed JARs will fail without 
+                                    <!-- Shading signed JARs will fail without
                                         this. http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar -->
                                     <artifact>*:*</artifact>
                                     <excludes>
