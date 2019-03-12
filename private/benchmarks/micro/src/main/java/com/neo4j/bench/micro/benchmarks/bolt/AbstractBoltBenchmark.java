@@ -40,10 +40,10 @@ import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
 import org.neo4j.bolt.v1.messaging.response.RecordMessage;
 import org.neo4j.bolt.v1.packstream.PackOutput;
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
-import org.neo4j.configuration.Config;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.udc.UsageData;
@@ -58,6 +58,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     {
         DependencyResolver resolver = db.getDependencyResolver();
         DatabaseManager databaseManager = resolver.resolveDependency( DatabaseManager.class );
+        Config config = resolver.resolveDependency( Config.class );
         Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ),
                                                                  resolver.resolveDependency( UserManagerSupplier.class ) );
 
@@ -66,7 +67,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                 new UsageData( null ),
                 authentication,
                 Clock.systemUTC(),
-                Config.defaults(),
+                config,
                 NullLogService.getInstance()
         );
     }
