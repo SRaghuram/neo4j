@@ -10,17 +10,23 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.List;
 
 import org.neo4j.bolt.v1.transport.integration.Neo4jWithSocket;
 import org.neo4j.bolt.v1.transport.integration.TransportTestUtil;
+import org.neo4j.bolt.v1.transport.socket.client.SecureSocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.SocketConnection;
 import org.neo4j.bolt.v1.transport.socket.client.TransportConnection;
-import org.neo4j.bolt.v3.messaging.request.BeginMessage;
 import org.neo4j.bolt.v3.messaging.request.CommitMessage;
 import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.bolt.v3.messaging.request.RollbackMessage;
-import org.neo4j.bolt.v3.messaging.request.RunMessage;
+import org.neo4j.bolt.v4.messaging.BeginMessage;
 import org.neo4j.bolt.v4.messaging.PullNMessage;
+import org.neo4j.bolt.v4.messaging.RunMessage;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
@@ -29,6 +35,7 @@ import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonMap;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -49,6 +56,7 @@ import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
+@RunWith( Parameterized.class )
 public class BoltV4TransportCommercialIT
 {
     private static final String USER_AGENT = "TestClient/4.0";
@@ -61,11 +69,20 @@ public class BoltV4TransportCommercialIT
     private TransportConnection connection;
     private TransportTestUtil util;
 
+    @Parameterized.Parameter
+    public Class<? extends TransportConnection> connectionClass;
+
+    @Parameterized.Parameters( name = "{0}" )
+    public static List<Class<? extends TransportConnection>> transports()
+    {
+        return asList( SocketConnection.class, SecureSocketConnection.class );
+    }
+
     @Before
-    public void setUp()
+    public void setUp() throws Exception
     {
         address = server.lookupDefaultConnector();
-        connection = new SocketConnection();
+        connection = connectionClass.newInstance();
         util = new TransportTestUtil( newNeo4jPack(), newMessageEncoder() );
 
         GraphDatabaseService gds = server.graphDatabaseService();
@@ -306,6 +323,75 @@ public class BoltV4TransportCommercialIT
             // Then
             assertThat( connection, util.eventuallyReceives( msgSuccess(), msgSuccess(), msgSuccess(), msgSuccess() ) );
         }
+    }
+
+    @Test
+    public void shouldBeAbleToRunOnSelectedDatabase() throws Exception
+    {
+        negotiateBoltV4();
+
+        DatabaseManager databaseManager = server.getDatabaseManager();
+        databaseManager.createDatabase( "first" );
+        databaseManager.createDatabase( "second" );
+
+        // create a node
+        sessionRun( "CREATE (n{ name: 'Molly'}) RETURN n.name", "first", stringValue( "Molly" ) );
+
+        // Then we can query this just created node on the same database
+        sessionRun( "MATCH (n) WHERE n.name = 'Molly' RETURN count(n)", "first", longValue( 1L ) );
+        // Then we cannot query this just created node on a different database
+        sessionRun( "MATCH (n) WHERE n.name = 'Molly' RETURN count(n)", "second", longValue( 0L ) );
+    }
+
+    @Test
+    public void shouldBeAbleToRunOnSelectedDatabaseInTransaction() throws Exception
+    {
+        negotiateBoltV4();
+
+        DatabaseManager databaseManager = server.getDatabaseManager();
+        databaseManager.createDatabase( "first" );
+        databaseManager.createDatabase( "second" );
+
+        // create a node
+        transactionRun( "CREATE (n{ name: 'Molly'}) RETURN n.name", "first", stringValue( "Molly" ) );
+
+        // Then we can query this just created node on the same database
+        transactionRun( "MATCH (n) WHERE n.name = 'Molly' RETURN count(n)", "first", longValue( 1L ) );
+        // Then we cannot query this just created node on a different database
+        transactionRun( "MATCH (n) WHERE n.name = 'Molly' RETURN count(n)", "second", longValue( 0L ) );
+    }
+
+    private void sessionRun( String query, String databaseName, AnyValue expected ) throws Exception
+    {
+        connection.send( util.chunk( new RunMessage( query, VirtualValues.EMPTY_MAP, asMapValue( map( "db_name", databaseName ) ) ) ) );
+        assertThat( connection, util.eventuallyReceives( msgSuccess( allOf( hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+
+        // "pull all"
+        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 100L ) ) ) ) );
+        assertThat( connection, util.eventuallyReceives( msgRecord( eqRecord( equalTo( expected ) ) ),
+                msgSuccess( allOf( not( hasKey( "has_more" ) ), hasKey( "t_last" ) ) ) ) );
+    }
+
+    private void transactionRun( String query, String databaseName, AnyValue expected ) throws Exception
+    {
+        // begin a transaction
+        connection.send( util.chunk( new BeginMessage( asMapValue( map( "db_name", databaseName ) ) ) ) );
+        assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
+
+        // run
+        connection.send( util.chunk( new RunMessage( query ) ) );
+        assertThat( connection, util.eventuallyReceives(
+                msgSuccess( allOf( hasEntry( is( "stmt_id" ), equalTo( 0L ) ), hasKey( "fields" ), hasKey( "t_first" ) ) ) ) );
+
+        // "pull all"
+        connection.send( util.chunk( new PullNMessage( asMapValue( map( "n", 100L, "stmt_id", 0L ) ) ) ) );
+        assertThat( connection, util.eventuallyReceives(
+                msgRecord( eqRecord( equalTo( expected ) ) ),
+                msgSuccess( allOf( not( hasKey( "has_more" ) ), hasKey( "t_last" ) ) ) ) );
+
+        // commit the transaction
+        connection.send( util.chunk( CommitMessage.COMMIT_MESSAGE ) );
+        assertThat( connection, util.eventuallyReceives( msgSuccess() ) );
     }
 
     private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "compiled", "morsel debug=singleThreaded", "morsel" };

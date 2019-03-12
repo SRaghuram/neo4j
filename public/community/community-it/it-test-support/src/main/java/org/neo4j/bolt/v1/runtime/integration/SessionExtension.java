@@ -1,11 +1,24 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.bolt.v4.runtime.integration;
+package org.neo4j.bolt.v1.runtime.integration;
 
-import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -31,18 +44,25 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
+import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.udc.UsageData;
 
 public class SessionExtension implements BeforeEachCallback, AfterEachCallback
 {
+    private final TestGraphDatabaseFactory graphDatabaseFactory;
     private GraphDatabaseAPI gdb;
     private BoltStateMachineFactoryImpl boltFactory;
     private List<BoltStateMachine> runningMachines = new ArrayList<>();
     private boolean authEnabled;
 
-    private Authentication authentication( AuthManager authManager, UserManagerSupplier userManagerSupplier )
+    public SessionExtension()
     {
-        return new BasicAuthentication( authManager, userManagerSupplier );
+        this( new TestGraphDatabaseFactory() );
+    }
+
+    public SessionExtension( TestGraphDatabaseFactory graphDatabaseFactory )
+    {
+        this.graphDatabaseFactory = graphDatabaseFactory;
     }
 
     public BoltStateMachine newMachine( long version, BoltChannel boltChannel )
@@ -68,24 +88,16 @@ public class SessionExtension implements BeforeEachCallback, AfterEachCallback
         return config.get( GraphDatabaseSettings.default_database );
     }
 
-    private void assertTestStarted()
-    {
-        if ( boltFactory == null || gdb == null )
-        {
-            throw new IllegalStateException( "Cannot access test environment before test is running." );
-        }
-    }
-
     @Override
     public void beforeEach( ExtensionContext extensionContext )
     {
         Map<Setting<?>,String> configMap = new HashMap<>();
         configMap.put( GraphDatabaseSettings.auth_enabled, Boolean.toString( authEnabled ) );
-        gdb = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newImpermanentDatabase( configMap );
+        gdb = (GraphDatabaseAPI) graphDatabaseFactory.newImpermanentDatabase( configMap );
         DependencyResolver resolver = gdb.getDependencyResolver();
-        Config config = resolver.resolveDependency( Config.class );
         Authentication authentication = authentication( resolver.resolveDependency( AuthManager.class ),
                 resolver.resolveDependency( UserManagerSupplier.class ) );
+        Config config = resolver.resolveDependency( Config.class );
         boltFactory = new BoltStateMachineFactoryImpl(
                 resolver.resolveDependency( DatabaseManager.class ),
                 new UsageData( null ),
@@ -112,5 +124,18 @@ public class SessionExtension implements BeforeEachCallback, AfterEachCallback
         }
 
         gdb.shutdown();
+    }
+
+    private void assertTestStarted()
+    {
+        if ( boltFactory == null || gdb == null )
+        {
+            throw new IllegalStateException( "Cannot access test environment before test is running." );
+        }
+    }
+
+    private Authentication authentication( AuthManager authManager, UserManagerSupplier userManagerSupplier )
+    {
+        return new BasicAuthentication( authManager, userManagerSupplier );
     }
 }

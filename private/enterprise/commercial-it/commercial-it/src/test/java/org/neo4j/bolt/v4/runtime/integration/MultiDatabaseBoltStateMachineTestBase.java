@@ -5,6 +5,7 @@
  */
 package org.neo4j.bolt.v4.runtime.integration;
 
+import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -14,6 +15,7 @@ import org.neo4j.bolt.runtime.StatementProcessor;
 import org.neo4j.bolt.testing.BoltTestUtil;
 import org.neo4j.bolt.testing.RecordedBoltResponse;
 import org.neo4j.bolt.v1.runtime.BoltStateMachineV1;
+import org.neo4j.bolt.v1.runtime.integration.SessionExtension;
 import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.collection.MapUtil;
@@ -37,7 +39,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     protected static final BoltChannel BOLT_CHANNEL = BoltTestUtil.newTestBoltChannel( "conn-v0-test-boltchannel-id" );
 
     @RegisterExtension
-    static final SessionExtension env = new SessionExtension();
+    static final SessionExtension env = new SessionExtension( new TestCommercialGraphDatabaseFactory() );
 
     protected DatabaseManager databaseManager()
     {
