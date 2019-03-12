@@ -270,7 +270,33 @@ public class ConfiguredQueryLoggerTest
     public void shouldNotLogPassword()
     {
         String inputQuery = "CALL dbms.security.changePassword('abc123')";
-        String outputQuery = "CALL dbms.security.changePassword(******)";
+        String outputQuery = "CALL dbms.security.changePassword('******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    public void shouldNotLogPasswordDeprecated()
+    {
+        String inputQuery = "CALL dbms.changePassword('abc123')";
+        String outputQuery = "CALL dbms.changePassword('******')";
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    public void shouldNotLogChangeUserPassword()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123')";
+        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    public void shouldNotLogChangeUserPasswordWithChangeRequired()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123', true)";
+        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******', true)";
 
         runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
     }
@@ -279,7 +305,7 @@ public class ConfiguredQueryLoggerTest
     public void shouldNotLogPasswordNull()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword(null, 'password')";
-        String outputQuery = "CALL dbms.security.changeUserPassword(null, ******)";
+        String outputQuery = "CALL dbms.security.changeUserPassword(null, '******')";
 
         runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
     }
@@ -288,7 +314,7 @@ public class ConfiguredQueryLoggerTest
     public void shouldNotLogPasswordWhenMalformedArgument()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('user, 'password')";
-        String outputQuery = "CALL dbms.security.changeUserPassword('user, ******)";
+        String outputQuery = "CALL dbms.security.changeUserPassword('user, '******')";
 
         runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
     }
@@ -297,16 +323,7 @@ public class ConfiguredQueryLoggerTest
     public void shouldNotLogPasswordExplain()
     {
         String inputQuery = "EXPLAIN CALL dbms.security.changePassword('abc123')";
-        String outputQuery = "EXPLAIN CALL dbms.security.changePassword(******)";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    public void shouldNotLogChangeUserPassword()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword('abc123')";
-        String outputQuery = "CALL dbms.security.changeUserPassword(******)";
+        String outputQuery = "EXPLAIN CALL dbms.security.changePassword('******')";
 
         runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
     }
@@ -315,7 +332,7 @@ public class ConfiguredQueryLoggerTest
     public void shouldNotLogPasswordEvenIfPasswordIsSilly()
     {
         String inputQuery = "CALL dbms.security.changePassword('.changePassword(\\'si\"lly\\')')";
-        String outputQuery = "CALL dbms.security.changePassword(******)";
+        String outputQuery = "CALL dbms.security.changePassword('******')";
 
         runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
     }
@@ -325,8 +342,26 @@ public class ConfiguredQueryLoggerTest
     {
         String inputQuery = "CALL dbms.security.changeUserPassword('neo4j','.changePassword(silly)') " +
                 "CALL dbms.security.changeUserPassword('smith','other$silly') RETURN 1";
-        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j',******) " +
-                "CALL dbms.security.changeUserPassword('smith',******) RETURN 1";
+        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j','******') " +
+                "CALL dbms.security.changeUserPassword('smith','******') RETURN 1";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    public void shouldNotLogCreateUserPassword()
+    {
+        String inputQuery = "CALL dbms.security.createUser('user', 'abc123')";
+        String outputQuery = "CALL dbms.security.createUser('user', '******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    public void shouldNotLogCreateUserPasswordWithRequiredChange()
+    {
+        String inputQuery = "CALL dbms.security.createUser('user', 'abc123', true)";
+        String outputQuery = "CALL dbms.security.createUser('user', '******', true)";
 
         runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
     }
@@ -343,33 +378,33 @@ public class ConfiguredQueryLoggerTest
         params.put( "first", ".changePassword(silly)" );
         params.put( "second", ".other$silly" );
 
-        runAndCheck( inputQuery, outputQuery, params, "first: ******, second: ******" );
+        runAndCheck( inputQuery, outputQuery, params, "first: '******', second: '******'" );
     }
 
     @Test
     public void shouldNotLogPasswordInParams()
     {
-        String inputQuery = "CALL dbms.changePassword($password)";
-        String outputQuery = "CALL dbms.changePassword($password)";
+        String inputQuery = "CALL dbms.security.changePassword($password)";
+        String outputQuery = "CALL dbms.security.changePassword($password)";
 
         runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", ".changePassword(silly)" ),
-                "password: ******" );
+                "password: '******'" );
     }
 
     @Test
     public void shouldNotLogPasswordInDeprecatedParams()
     {
-        String inputQuery = "CALL dbms.changePassword({password})";
-        String outputQuery = "CALL dbms.changePassword({password})";
+        String inputQuery = "CALL dbms.security.changePassword({password})";
+        String outputQuery = "CALL dbms.security.changePassword({password})";
 
-        runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", "abc123" ), "password: ******" );
+        runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", "abc123" ), "password: '******'" );
     }
 
     @Test
     public void shouldNotLogPasswordDifferentWhitespace()
     {
         String inputQuery = "CALL dbms.security.changeUserPassword(%s'abc123'%s)";
-        String outputQuery = "CALL dbms.security.changeUserPassword(%s******%s)";
+        String outputQuery = "CALL dbms.security.changeUserPassword(%s'******'%s)";
 
         runAndCheck(
                 format( inputQuery, "'user',", "" ),

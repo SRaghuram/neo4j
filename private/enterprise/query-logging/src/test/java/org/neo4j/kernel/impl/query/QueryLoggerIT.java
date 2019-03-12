@@ -412,7 +412,7 @@ public class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
 
-        String expectedMessage = "CALL dbms.security.changePassword(******)";
+        String expectedMessage = "CALL dbms.security.changePassword('******')";
         int line = findLogLineThatContains( expectedMessage, logLines );
 
         assertNotEquals( "Expected a log line containing '" + expectedMessage + "'", line, NOT_FOUND );

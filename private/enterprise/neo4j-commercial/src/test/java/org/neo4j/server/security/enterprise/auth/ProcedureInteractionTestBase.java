@@ -407,7 +407,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void assertFail( S subject, String call, String partOfErrorMsg )
     {
-        String err = assertCallEmpty( subject, call );
+        String err = assertCallEmpty( subject, call, null );
         if ( StringUtils.isEmpty( partOfErrorMsg ) )
         {
             assertThat( err, not( equalTo( "" ) ) );
@@ -420,13 +420,23 @@ public abstract class ProcedureInteractionTestBase<S>
 
     protected void assertEmpty( S subject, String call )
     {
-        String err = assertCallEmpty( subject, call );
+        assertEmpty( subject, call, null );
+    }
+
+    protected void assertEmpty( S subject, String call, Map<String, Object> params )
+    {
+        String err = assertCallEmpty( subject, call, params );
         assertThat( err, equalTo( "" ) );
     }
 
     void assertSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
-        String err = neo.executeQuery( subject, call, null, resultConsumer );
+        assertSuccess( subject, call, null, resultConsumer );
+    }
+
+    void assertSuccess( S subject, String call, Map<String, Object> params, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
+    {
+        String err = neo.executeQuery( subject, call, params, resultConsumer );
         assertThat( err, equalTo( "" ) );
     }
 
@@ -437,9 +447,9 @@ public abstract class ProcedureInteractionTestBase<S>
         return result;
     }
 
-    private String assertCallEmpty( S subject, String call )
+    private String assertCallEmpty( S subject, String call, Map<String, Object> params )
     {
-        return neo.executeQuery( subject, call, null,
+        return neo.executeQuery( subject, call, params,
                 result ->
                 {
                     List<Map<String,Object>> collect = result.stream().collect( toList() );

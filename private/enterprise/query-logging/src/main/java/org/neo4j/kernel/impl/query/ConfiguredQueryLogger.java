@@ -5,11 +5,7 @@
  */
 package org.neo4j.kernel.impl.query;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.api.query.ExecutingQuery;
@@ -28,14 +24,6 @@ class ConfiguredQueryLogger implements QueryLogger
     private final boolean logAllocatedBytes;
     private final boolean logPageDetails;
     private final boolean logRuntime;
-
-    private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-            // call signature
-            "(?:(?i)call)\\s+dbms(?:\\.security)?\\.change(?:User)?Password\\(" +
-            // optional username parameter, in single, double quotes, or parametrized
-            "(?:\\s*(?:'(?:(?<=\\\\)'|[^'])*'|\"(?:(?<=\\\\)\"|[^\"])*\"|[^,]*)\\s*,)?" +
-            // password parameter, in single, double quotes, or parametrized
-            "\\s*('(?:(?<=\\\\)'|[^'])*'|\"(?:(?<=\\\\)\"|[^\"])*\"|\\$\\w*|\\{\\w*})\\s*\\)" );
 
     ConfiguredQueryLogger( Log log, Config config )
     {
@@ -69,26 +57,6 @@ class ConfiguredQueryLogger implements QueryLogger
         String sourceString = query.clientConnection().asConnectionDetails();
         String queryText = query.queryText();
 
-        Set<String> passwordParams = new HashSet<>();
-        Matcher matcher = PASSWORD_PATTERN.matcher( queryText );
-
-        while ( matcher.find() )
-        {
-            String password = matcher.group( 1 ).trim();
-            if ( password.charAt( 0 ) == '$' )
-            {
-                passwordParams.add( password.substring( 1 ) );
-            }
-            else if ( password.charAt( 0 ) == '{' )
-            {
-                passwordParams.add( password.substring( 1, password.length() - 1 ) );
-            }
-            else
-            {
-                queryText = queryText.replace( password, "******" );
-            }
-        }
-
         StringBuilder result = new StringBuilder();
         result.append( TimeUnit.MICROSECONDS.toMillis( query.elapsedTimeMicros() ) ).append( " ms: " );
         if ( logDetailedTime )
@@ -106,7 +74,7 @@ class ConfiguredQueryLogger implements QueryLogger
         result.append( sourceString ).append( " - " ).append( queryText );
         if ( logQueryParameters )
         {
-            QueryLogFormatter.formatMapValue( result.append(" - "), query.queryParameters(), passwordParams );
+            QueryLogFormatter.formatMapValue( result.append(" - "), query.queryParameters() );
         }
         if ( logRuntime )
         {
