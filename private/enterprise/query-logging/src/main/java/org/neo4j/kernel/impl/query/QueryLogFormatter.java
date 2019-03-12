@@ -49,7 +49,7 @@ class QueryLogFormatter
         result.append( ") - " );
     }
 
-    static void formatMapValue( StringBuilder result, MapValue params, Collection<String> obfuscate )
+    static void formatMapValue( StringBuilder result, MapValue params )
     {
         result.append( '{' );
         if ( params != null )
@@ -61,14 +61,7 @@ class QueryLogFormatter
                         .append( key )
                         .append( ": " );
 
-                if ( obfuscate.contains( key ) )
-                {
-                    result.append( "******" );
-                }
-                else
-                {
-                    result.append( formatAnyValue( value ) );
-                }
+                result.append( formatAnyValue( value ) );
                 sep[0] = ", ";
             } );
         }
