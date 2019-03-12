@@ -59,7 +59,16 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     {
         for ( int i = 0; i < names.length; i++ )
         {
-            ids[i] = getOrCreateId( names[i] );
+            ids[i] = innerGetOrCreateId( names[i], false );
+        }
+    }
+
+    @Override
+    public void getOrCreateInternalIds( String[] names, int[] ids )
+    {
+        for ( int i = 0; i < names.length; i++ )
+        {
+            ids[i] = innerGetOrCreateId( names[i], true );
         }
     }
 
