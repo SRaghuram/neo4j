@@ -12,6 +12,7 @@ import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkConfig;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetrics;
+import com.neo4j.bench.client.model.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.client.model.BenchmarkTool;
 import com.neo4j.bench.client.model.Benchmarks;
 import com.neo4j.bench.client.model.Environment;
@@ -53,10 +54,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.neo4j.kernel.configuration.BoltConnector;
 import org.neo4j.kernel.configuration.HttpConnector;
@@ -71,11 +71,9 @@ import static com.neo4j.bench.micro.config.RuntimeEstimator.estimatedRuntimeFor;
 import static com.neo4j.bench.micro.config.RuntimeEstimator.storeGenerationFor;
 import static com.neo4j.bench.micro.config.SuiteDescription.fromConfig;
 import static com.neo4j.bench.micro.config.Validation.assertValid;
-
 import static java.lang.String.format;
 import static java.time.temporal.ChronoUnit.MILLIS;
-import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.joining;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 class BenchmarksRunner
@@ -137,11 +135,7 @@ class BenchmarksRunner
                                     errorPolicy,
                                     jvm.launchJava() ) );
 
-        // TODO uncomment once we pass in the correct neo4j.conf
-//        if ( neo4jConfigFile != null )
-//        {
-//            BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
-//        }
+        BenchmarkUtil.assertFileNotEmpty( requireNonNull( neo4jConfigFile ).toPath() );
 
         Annotations.AnnotationsValidationResult annotationsValidationResult = new Annotations().validate();
         if ( !annotationsValidationResult.isValid() )
@@ -169,8 +163,8 @@ class BenchmarksRunner
         }
 
         Neo4jConfig neo4jConfigDef = (neo4jConfigFile == null)
-                ? Neo4jConfig.withDefaults()
-                : Neo4jConfig.withDefaults().mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) );
+                                     ? Neo4jConfig.withDefaults()
+                                     : Neo4jConfig.withDefaults().mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) );
 
         neo4jConfigDef
             .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
@@ -192,7 +186,7 @@ class BenchmarksRunner
                                     "\t\t* Benchmark Execution:  %s\n" +
                                     "\t--------------------------------------------------------",
                                     Arrays.toString( defaultJvmArgs ),
-                                    Stream.of( jvmArgs ).collect( Collectors.joining( " " ) ),
+                                    String.join( " ", jvmArgs ),
                                     durationToString( durationEstimate ),
                                     durationToString( storeGenerationDurationEstimate ),
                                     durationToString( benchmarkDurationEstimateMs ) ) );
@@ -227,9 +221,6 @@ class BenchmarksRunner
                     errorReporter,
                     builderModifier );
 
-            // Print details about error in benchmark measurements
-            System.out.println( benchmarkGroupBenchmarkMetrics.errorDetails() );
-
             Instant finish = Instant.now();
 
             System.out.println( format( "Complete benchmark execution took: %s\n",
@@ -246,7 +237,7 @@ class BenchmarksRunner
             Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty()
                                                                 : Neo4jConfig.fromFile( neo4jConfigFile );
             BenchmarkTool tool = new BenchmarkTool( Repository.MICRO_BENCH, toolCommit, toolOwner, toolBranch );
-            Java java = Java.current( Stream.of( jvmArgs ).collect( joining( " " ) ) );
+            Java java = Java.current( String.join( " ", jvmArgs ) );
 
             return new TestRunReport(
                     testRun,
@@ -284,7 +275,7 @@ class BenchmarksRunner
             int executeForks,
             ErrorPolicy errorPolicy,
             Jvm jvm,
-            String... methods ) throws Exception
+            String... methods )
     {
         Annotations.AnnotationsValidationResult annotationsValidationResult = new Annotations().validate();
         if ( !annotationsValidationResult.isValid() )
@@ -300,7 +291,7 @@ class BenchmarksRunner
         {
             benchmark = benchmark.copyRetainingMethods( methods );
         }
-        List<BenchmarkDescription> benchmarks = singletonList( benchmark );
+        List<BenchmarkDescription> benchmarks = Collections.singletonList( benchmark );
 
         String[] noJvmArgs = {};
         ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
@@ -334,7 +325,7 @@ class BenchmarksRunner
             Stores stores,
             boolean generateStoresInFork,
             ErrorReporter errorReporter,
-            BiConsumer<ChainedOptionsBuilder,String> builderModifier ) throws Exception
+            BiConsumer<ChainedOptionsBuilder,String> builderModifier )
     {
         // each benchmark description will represent 1 method and 1 combination of param values, i.e., one benchmark
         // necessary to ensure only specific failing benchmarks are excluded from results, not all for a given class
@@ -412,7 +403,7 @@ class BenchmarksRunner
             Jvm jvm,
             String[] jvmArgs,
             boolean runInFork,
-            ErrorReporter errorReporter ) throws Exception
+            ErrorReporter errorReporter )
     {
         // Run every benchmark once to create stores -- triggers store generation in benchmark setups
         // Ensures generation does not occur in benchmark setup later, which would, for example, pollute the heap
@@ -485,7 +476,7 @@ class BenchmarksRunner
             ProfileDescriptor profileDescriptor,
             Stores stores,
             ErrorReporter errorReporter,
-            BiConsumer<ChainedOptionsBuilder,String> builderModifier ) throws Exception
+            BiConsumer<ChainedOptionsBuilder,String> builderModifier )
     {
         System.out.println( "\n\n" );
         System.out.println( "------------------------------------------------------------------------" );
@@ -550,7 +541,7 @@ class BenchmarksRunner
             int[] threadCounts,
             Stores stores,
             ErrorReporter errorReporter,
-            BiConsumer<ChainedOptionsBuilder,String> builderModifier ) throws Exception
+            BiConsumer<ChainedOptionsBuilder,String> builderModifier )
     {
         System.out.println( "\n\n" );
         System.out.println( "-------------------------------------------------------------------------" );
