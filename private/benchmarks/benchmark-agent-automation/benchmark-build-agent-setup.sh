@@ -50,6 +50,7 @@ ln -s /usr/lib/jvm/java-8-oracle /usr/lib/jvm/oracle-jdk-8
 grep -v JAVA_HOME /etc/profile > /tmp/profile.fixed
 cat /tmp/profile.fixed > /etc/profile
 rm -f /tmp/profile.fixed
+# shellcheck disable=SC1091
 source /etc/profile  # This ensures that the correct environment is available for other installations below
 # install oracle jdk 8 -- end
 
