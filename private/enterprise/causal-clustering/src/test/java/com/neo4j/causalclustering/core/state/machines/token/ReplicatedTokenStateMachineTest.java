@@ -44,6 +44,7 @@ import static com.neo4j.causalclustering.core.state.machines.token.TokenType.LAB
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -72,11 +73,29 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         // when
-        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
+        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), 1, r -> {} );
 
         // then
         assertEquals( EXPECTED_TOKEN_ID, (int) registry.getId( "Person" ) );
+    }
+
+    @Test
+    public void shouldCreateInternalTokenId() throws Exception
+    {
+        // given
+        TokenRegistry registry = new TokenRegistry( "Label" );
+        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
+                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+        stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
+
+        // when
+        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) );
+        stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), 1, r -> {} );
+
+        // then
+        assertNull( registry.getId( "Person" ) );
+        assertEquals( EXPECTED_TOKEN_ID, (int) registry.getIdInternal( "Person" ) );
     }
 
     @Test
@@ -90,9 +109,9 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
 
         ReplicatedTokenRequest winningRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) ) );
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) ) );
         ReplicatedTokenRequest losingRequest =
-                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID ) ) );
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, false ) ) );
 
         // when
         stateMachine.applyCommand( winningRequest, 1, r -> {} );
@@ -100,6 +119,30 @@ public class ReplicatedTokenStateMachineTest
 
         // then
         assertEquals( EXPECTED_TOKEN_ID, (int) registry.getId( "Person" ) );
+    }
+
+    @Test
+    public void shouldAllocateInternalTokenIdToFirstReplicateRequest() throws Exception
+    {
+        // given
+        TokenRegistry registry = new TokenRegistry( "Label" );
+        ReplicatedTokenStateMachine stateMachine = new ReplicatedTokenStateMachine( registry,
+                NullLogProvider.getInstance(), EmptyVersionContextSupplier.EMPTY );
+
+        stateMachine.installCommitProcess( labelRegistryUpdatingCommitProcess( registry ), -1 );
+
+        ReplicatedTokenRequest winningRequest =
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, true ) ) );
+        ReplicatedTokenRequest losingRequest =
+                new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandsToBytes( tokenCommands( UNEXPECTED_TOKEN_ID, true ) ) );
+
+        // when
+        stateMachine.applyCommand( winningRequest, 1, r -> {} );
+        stateMachine.applyCommand( losingRequest, 2, r -> {} );
+
+        // then
+        assertNull( registry.getId( "Person" ) );
+        assertEquals( EXPECTED_TOKEN_ID, (int) registry.getIdInternal( "Person" ) );
     }
 
     @Test
@@ -115,7 +158,7 @@ public class ReplicatedTokenStateMachineTest
         stateMachine.installCommitProcess( commitProcess, -1 );
 
         // when
-        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID ) );
+        byte[] commandBytes = commandsToBytes( tokenCommands( EXPECTED_TOKEN_ID, false ) );
         stateMachine.applyCommand( new ReplicatedTokenRequest( databaseName, LABEL, "Person", commandBytes ), logIndex, r -> {} );
 
         // then
@@ -124,10 +167,11 @@ public class ReplicatedTokenStateMachineTest
         assertEquals( logIndex, decodeLogIndexFromTxHeader( transactions.get( 0 ).additionalHeader() ) );
     }
 
-    private static List<StorageCommand> tokenCommands( int expectedTokenId )
+    private static List<StorageCommand> tokenCommands( int expectedTokenId, boolean internal )
     {
         LabelTokenRecord record = new LabelTokenRecord( expectedTokenId ).initialize( true, 7 );
         record.addNameRecord( DynamicRecord.dynamicRecord( 7, true, true, -1, PropertyType.STRING.intValue(), "Person".getBytes( StandardCharsets.UTF_8 ) ) );
+        record.setInternal( internal );
         return singletonList( new Command.LabelTokenCommand(
                 new LabelTokenRecord( expectedTokenId ), record
         ) );

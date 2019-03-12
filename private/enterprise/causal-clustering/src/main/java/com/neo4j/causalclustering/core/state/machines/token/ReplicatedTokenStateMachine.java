@@ -67,8 +67,10 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
 
         Collection<StorageCommand> commands = bytesToCommands( tokenRequest.commandBytes() );
         int newTokenId = extractTokenId( commands );
+        boolean internal = isInternal( commands );
 
-        Integer existingTokenId = tokenRegistry.getId( tokenRequest.tokenName() );
+        String name = tokenRequest.tokenName();
+        Integer existingTokenId = internal ? tokenRegistry.getIdInternal( name ) : tokenRegistry.getId( name );
 
         if ( existingTokenId == null )
         {
@@ -104,12 +106,24 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
 
     private int extractTokenId( Collection<StorageCommand> commands )
     {
+        StorageCommand.TokenCommand tokenCommand = getSingleTokenCommand( commands );
+        return tokenCommand.tokenId();
+    }
+
+    private boolean isInternal( Collection<StorageCommand> commands )
+    {
+        StorageCommand.TokenCommand tokenCommand = getSingleTokenCommand( commands );
+        return tokenCommand.isInternal();
+    }
+
+    private StorageCommand.TokenCommand getSingleTokenCommand( Collection<StorageCommand> commands )
+    {
         StorageCommand command = single( commands );
         if ( !( command instanceof StorageCommand.TokenCommand ) )
         {
             throw new IllegalArgumentException( "Was expecting a single token command, got " + command );
         }
-        return ((StorageCommand.TokenCommand) command).tokenId();
+        return (StorageCommand.TokenCommand) command;
     }
 
     @Override
