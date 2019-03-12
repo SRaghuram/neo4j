@@ -40,8 +40,9 @@ public class RelationshipTypeTokenRecordFormatTest
         verifyNoMoreInteractions( doubleUnits );
 
         // then
+        cursor.setOffset( 0 );
         RelationshipTypeTokenRecord read = new RelationshipTypeTokenRecord( typeId );
-        format.read( record, cursor, NORMAL, recordSize );
+        format.read( read, cursor, NORMAL, recordSize );
         assertEquals( record, read );
     }
 
