@@ -30,11 +30,13 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       // Parallel scan
       val scan = queryContext.transactionalContext.dataRead.allNodesScan()
       val tasks = new Array[ContinuableInputOperatorTask](state.numberOfWorkers)
-      for (i <- 0 until state.numberOfWorkers) {
+      var i = 0
+      while (i < state.numberOfWorkers) {
         // Each task gets its own cursor which is reuses until it's done.
         val cursor = resources.cursorPools.nodeCursorPool.allocate()
         val rowForTask = inputMorsel.nextCopy
         tasks(i) = new ParallelScanTask(rowForTask, scan, cursor, state.morselSize)
+        i += 1
       }
       tasks
     }

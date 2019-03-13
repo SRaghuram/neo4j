@@ -275,7 +275,8 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
     var sortedRefs = refs.sortBy(_._2.offset)
     var sortedCached = cachedProperties.toSeq.sortBy(_._2.offset)
-    for (i <- 0 until numberOfReferences) {
+    var i = 0
+    while (i < numberOfReferences) {
       if (sortedRefs.nonEmpty && sortedRefs.head._2.offset == i) {
         val (variable, slot) = sortedRefs.head
         onVariable(variable, slot)
@@ -284,6 +285,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
         onCachedNodeProperty(sortedCached.head._1)
         sortedCached = sortedCached.tail
       }
+      i += 1
     }
   }
 
