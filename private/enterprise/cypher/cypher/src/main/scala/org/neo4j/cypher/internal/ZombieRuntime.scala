@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.morsel.expressions.MorselExpressionConverters
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
@@ -23,6 +24,7 @@ import org.neo4j.cypher.result.{NaiveQuerySubscription, QueryProfile, RuntimeRes
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
 object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
@@ -81,6 +83,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                         queryIndexes,
                         physicalPlan.nExpressionSlots,
                         physicalPlan.logicalPlan,
+                        physicalPlan.parameterMapping,
                         query.resultColumns,
                         executor,
                         context.runtimeEnvironment.tracer)
@@ -91,6 +94,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                  queryIndexes: QueryIndexes,
                                  nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
+                                 parameterMapping: Map[String, Int],
                                  fieldNames: Array[String],
                                  queryExecutor: QueryExecutor,
                                  schedulerTracer: SchedulerTracer) extends ExecutionPlan {
@@ -112,7 +116,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                               inputDataStream,
                               logicalPlan,
                               queryContext,
-                              params,
+                              createParameterArray(params, parameterMapping),
                               fieldNames,
                               queryExecutor,
                               schedulerTracer,
@@ -134,7 +138,7 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             inputDataStream: InputDataStream,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
-                            params: MapValue,
+                            params: Array[AnyValue],
                             override val fieldNames: Array[String],
                             queryExecutor: QueryExecutor,
                             schedulerTracer: SchedulerTracer,

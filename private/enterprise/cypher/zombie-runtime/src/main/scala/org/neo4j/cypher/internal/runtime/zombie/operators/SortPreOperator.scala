@@ -10,11 +10,10 @@ import java.util.Comparator
 import org.neo4j.cypher.internal.DefaultComparatorTopTable
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators.MorselSorting
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.{ColumnOrder, SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
 

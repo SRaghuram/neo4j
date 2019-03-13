@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.zombie.ExecutablePipeline
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.AnyValue
 
 /**
   * Executor of queries. It's currently a merge of a dispatcher, a scheduler and a spatula.
@@ -21,7 +21,7 @@ trait QueryExecutor {
                               stateDefinition: StateDefinition,
                               inputDataStream: InputDataStream,
                               queryContext: QueryContext,
-                              params: MapValue,
+                              params: Array[AnyValue],
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,
