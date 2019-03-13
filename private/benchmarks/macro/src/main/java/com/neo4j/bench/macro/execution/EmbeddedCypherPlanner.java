@@ -50,7 +50,7 @@ public class EmbeddedCypherPlanner implements QueryRunner
                     query.copyWith( PLAN ).queryString(),
                     query.benchmarkGroup(),
                     query.benchmark(),
-                    query.parameters().create( forkDirectory ),
+                    query.parameters(),
                     forkDirectory,
                     warmupControl,
                     measurementControl );
