@@ -75,6 +75,7 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
                                                  columns,
                                                  physicalPlan.logicalPlan,
                                                  physicalPlan.slotConfigurations,
+                                                 physicalPlan.parameterMapping,
                                                  context.config.lenientCreateRelationship,
                                                  query.hasLoadCSV)
 
