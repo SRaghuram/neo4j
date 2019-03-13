@@ -25,8 +25,9 @@ import com.neo4j.causalclustering.core.consensus.term.TermState;
 import com.neo4j.causalclustering.core.consensus.vote.VoteState;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.CoreStateStorageService;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
@@ -66,7 +67,8 @@ public class ConsensusModule
     private final LeaderAvailabilityTimers leaderAvailabilityTimers;
 
     public ConsensusModule( MemberId myself, final GlobalModule globalModule, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
-            File clusterStateDirectory, CoreTopologyService coreTopologyService, CoreStateStorageService coreStorageService, String activeDatabaseName )
+            ClusterStateLayout layout, CoreTopologyService coreTopologyService, CoreStateStorageFactory storageFactory,
+            String defaultDatabaseName )
     {
         final Config globalConfig = globalModule.getGlobalConfig();
         final LogService logService = globalModule.getLogService();
@@ -78,18 +80,23 @@ public class ConsensusModule
         LogProvider logProvider = logService.getInternalLogProvider();
 
         Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = new HashMap<>();
-        marshals.put( 1, CoreReplicatedContentMarshalFactory.marshalV1( activeDatabaseName ) );
+        marshals.put( 1, CoreReplicatedContentMarshalFactory.marshalV1( defaultDatabaseName ) );
         marshals.put( 2, CoreReplicatedContentMarshalFactory.marshalV2() );
 
         JobScheduler jobScheduler = globalModule.getJobScheduler();
-        RaftLog underlyingLog = createRaftLog( globalConfig, globalLife, fileSystem, clusterStateDirectory, marshals, logProvider, jobScheduler );
+        RaftLog underlyingLog = createRaftLog( globalConfig, globalLife, fileSystem, layout, marshals, logProvider, jobScheduler, defaultDatabaseName );
 
         raftLog = new MonitoredRaftLog( underlyingLog, globalMonitors );
 
-        StateStorage<TermState> durableTermState = coreStorageService.stateStorage( CoreStateFiles.RAFT_TERM );
+        RotatingStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( defaultDatabaseName );
+        globalLife.add( durableTermState );
         StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, globalMonitors );
-        StateStorage<VoteState> voteState = coreStorageService.stateStorage( CoreStateFiles.RAFT_VOTE );
-        StateStorage<RaftMembershipState> raftMembershipStorage = coreStorageService.stateStorage( CoreStateFiles.RAFT_MEMBERSHIP );
+
+        RotatingStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( defaultDatabaseName );
+        globalLife.add( voteState );
+
+        RotatingStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( defaultDatabaseName );
+        globalLife.add( raftMembershipStorage );
 
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 
@@ -139,9 +146,9 @@ public class ConsensusModule
         return new LeaderAvailabilityTimers( electionTimeout, electionTimeout.dividedBy( 3 ), systemClock(), timerService, logProvider );
     }
 
-    private RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, File clusterStateDirectory,
+    private RaftLog createRaftLog( Config config, LifeSupport life, FileSystemAbstraction fileSystem, ClusterStateLayout layout,
             Map<Integer,ChannelMarshal<ReplicatedContent>> marshalSelector, LogProvider logProvider,
-            JobScheduler scheduler )
+            JobScheduler scheduler, String defaultDatabaseName )
     {
         RaftLogImplementation raftLogImplementation =
                 RaftLogImplementation
@@ -161,7 +168,7 @@ public class ConsensusModule
             CoreLogPruningStrategy pruningStrategy =
                     new CoreLogPruningStrategyFactory( config.get( CausalClusteringSettings.raft_log_pruning_strategy ),
                             logProvider ).newInstance();
-            File directory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory );
+            File directory = layout.raftLogDirectory( defaultDatabaseName );
 
             return life.add( new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider,
                     readerPoolSize, systemClock(), scheduler, pruningStrategy ) );

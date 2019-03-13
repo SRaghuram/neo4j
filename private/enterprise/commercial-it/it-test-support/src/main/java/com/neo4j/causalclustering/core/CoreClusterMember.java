@@ -8,8 +8,7 @@ package com.neo4j.causalclustering.core;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -55,8 +54,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     private final File neo4jHome;
     private final DiscoveryServiceFactory discoveryServiceFactory;
     private final DatabaseLayout defaultDatabaseLayout;
-    private final File clusterStateDir;
-    private final File raftLogDir;
+    private final ClusterStateLayout clusterStateLayout;
     private final Map<String,String> config = stringMap();
     private final int serverId;
     private final String boltAdvertisedSocketAddress;
@@ -138,8 +136,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
 
         this.discoveryServiceFactory = discoveryServiceFactory;
         File dataDir = new File( neo4jHome, "data" );
-        clusterStateDir = ClusterStateDirectory.withoutInitializing( null, dataDir ).get();
-        raftLogDir = CoreStateFiles.RAFT_LOG.at( clusterStateDir );
+        clusterStateLayout = ClusterStateLayout.of( dataDir );
         databasesDirectory = new File( dataDir, "databases" );
         memberConfig = Config.defaults( config );
 
@@ -242,10 +239,9 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
 
     public SortedMap<Long, File> getLogFileNames() throws IOException
     {
-        File logFilesDir = CoreStateFiles.RAFT_LOG.at( clusterStateDir );
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            return new FileNames( logFilesDir ).getAllFiles( fileSystem, null );
+            return new FileNames( raftLogDirectory() ).getAllFiles( fileSystem, null );
         }
     }
 
@@ -302,14 +298,20 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         return monitors;
     }
 
+    public ClusterStateLayout clusterStateLayout()
+    {
+        return clusterStateLayout;
+    }
+
     public File clusterStateDirectory()
     {
-        return clusterStateDir;
+        return clusterStateLayout.getClusterStateDirectory();
     }
 
     public File raftLogDirectory()
     {
-        return raftLogDir;
+        String defaultDatabaseName = memberConfig.get( GraphDatabaseSettings.default_database );
+        return clusterStateLayout.raftLogDirectory( defaultDatabaseName );
     }
 
     public void disableCatchupServer() throws Throwable

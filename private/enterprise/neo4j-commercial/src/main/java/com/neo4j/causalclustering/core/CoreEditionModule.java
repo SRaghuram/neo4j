@@ -22,13 +22,13 @@ import com.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import com.neo4j.causalclustering.core.server.CoreServerModule;
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusteringModule;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.CoreStateService;
-import com.neo4j.causalclustering.core.state.CoreStateStorageService;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
+import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
+import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.diagnostics.CoreMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -98,7 +98,6 @@ import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseContext;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
@@ -157,17 +156,14 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
         this.defaultDatabaseName = globalConfig.get( GraphDatabaseSettings.default_database );
-        final DatabaseLayout activeDatabaseLayout = globalModule.getStoreLayout().databaseLayout( defaultDatabaseName );
 
         final File dataDir = globalConfig.get( GraphDatabaseSettings.data_directory );
-        /* Database directory is passed here to support migration from earlier versions of cluster state, which were stored *inside* the database directory */
-        final ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fileSystem, dataDir, activeDatabaseLayout.databaseDirectory(), false );
-        clusterStateDirectory.initialize();
-        globalDependencies.satisfyDependency( clusterStateDirectory );
-        CoreStateStorageService storage = new CoreStateStorageService( fileSystem, clusterStateDirectory, globalLife, logProvider, globalConfig );
-        storage.migrateIfNecessary( defaultDatabaseName );
+        ClusterStateLayout clusterStateLayout = ClusterStateLayout.of( dataDir );
+        globalDependencies.satisfyDependency( clusterStateLayout );
+        CoreStateStorageFactory storageFactory = new CoreStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
 
-        CoreStartupState coreStartupState = new CoreStartupState( storage ); // must be constructed before storage is touched by other modules
+        CoreStartupState coreStartupState =
+                new CoreStartupState( fileSystem, clusterStateLayout ); // must be constructed before storage is touched by other modules
         globalLife.add( new IdFilesSanitationModule( coreStartupState, globalDependencies.provideDependency( DatabaseManager.class ), fileSystem,
                 logProvider ) );
 
@@ -180,7 +176,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         watcherServiceFactory = layout ->
                 createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        IdentityModule identityModule = new IdentityModule( globalModule, storage );
+        SimpleStorage<MemberId> memberIdStorage = storageFactory.createMemberIdStorage();
+        IdentityModule identityModule = new IdentityModule( globalModule, memberIdStorage );
 
         //Build local databases object
         final Supplier<DatabaseManager> databaseManagerSupplier = () -> globalDependencies.resolveDependency( DatabaseManager.class );
@@ -197,7 +194,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         SslPolicyLoader sslPolicyLoader = SslPolicyLoader.create( globalConfig, logProvider );
         globalDependencies.satisfyDependency( sslPolicyLoader );
 
-        ClusteringModule clusteringModule = getClusteringModule( globalModule, discoveryServiceFactory, storage, identityModule, sslPolicyLoader );
+        ClusteringModule clusteringModule = getClusteringModule( globalModule, discoveryServiceFactory, storageFactory, identityModule, sslPolicyLoader );
 
         PipelineBuilders pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globalConfig, sslPolicyLoader );
 
@@ -237,17 +234,18 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         Outbound<MemberId,RaftMessages.RaftMessage> loggingOutbound = new LoggingOutbound<>( raftOutbound, identityModule.myself(), messageLogger );
 
         consensusModule = new ConsensusModule( identityModule.myself(), globalModule,
-                loggingOutbound, clusterStateDirectory.get(), topologyService, storage, defaultDatabaseName );
+                loggingOutbound, clusterStateLayout, topologyService, storageFactory, defaultDatabaseName );
 
         globalDependencies.satisfyDependency( consensusModule.raftMachine() );
         replicationModule = new ReplicationModule( consensusModule.raftMachine(), identityModule.myself(), globalModule, globalConfig,
-                loggingOutbound, storage, logProvider, globalGuard, databaseService );
+                loggingOutbound, storageFactory, logProvider, globalGuard, databaseService, defaultDatabaseName );
 
-        StateStorage<Long> lastFlushedStorage = storage.stateStorage( CoreStateFiles.LAST_FLUSHED );
+        RotatingStorage<Long> lastFlushedStorage = storageFactory.createLastFlushedStorage( defaultDatabaseName );
+        globalLife.add( lastFlushedStorage );
 
         consensusModule.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStorage::getInitialState );
 
-        coreStateService = new CoreStateService( identityModule.myself(), globalModule, storage, globalConfig,
+        coreStateService = new CoreStateService( identityModule.myself(), globalModule, storageFactory, globalConfig,
                 consensusModule.raftMachine(), databaseService, replicationModule, lastFlushedStorage, panicService );
 
         this.accessCapability = new LeaderCanWrite( consensusModule.raftMachine() );
@@ -433,11 +431,11 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     protected ClusteringModule getClusteringModule( GlobalModule globalModule, DiscoveryServiceFactory discoveryServiceFactory,
-            CoreStateStorageService storage, IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
+            CoreStateStorageFactory storageFactory, IdentityModule identityModule, SslPolicyLoader sslPolicyLoader )
     {
         TemporaryDatabaseFactory temporaryDatabaseFactory = new CommercialTemporaryDatabaseFactory();
-        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storage, databaseService, temporaryDatabaseFactory,
-                sslPolicyLoader,
+        return new ClusteringModule( discoveryServiceFactory, identityModule.myself(), globalModule, storageFactory, databaseService,
+                temporaryDatabaseFactory, sslPolicyLoader,
                 dbName -> databaseInitializerMap.getOrDefault( dbName, DatabaseInitializer.NO_INITIALIZATION ) );
     }
 

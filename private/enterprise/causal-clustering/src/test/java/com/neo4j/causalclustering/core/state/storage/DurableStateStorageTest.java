@@ -181,13 +181,11 @@ class DurableStateStorageTest
 
     private File stateFileA()
     {
-        return new File( new File( testDirectory.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).directoryName() ),
-                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).baseName() + ".a" );
+        return new File( testDirectory.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).name() + ".a" );
     }
 
     private File stateFileB()
     {
-        return new File( new File( testDirectory.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).directoryName() ),
-                CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).baseName() + ".b" );
+        return new File( testDirectory.directory(), CoreStateFiles.DUMMY( new AtomicIntegerMarshal() ).name() + ".b" );
     }
 }

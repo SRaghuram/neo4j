@@ -5,30 +5,34 @@
  */
 package com.neo4j.causalclustering.core.state.storage;
 
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.identity.MemberId;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.util.UUID;
 
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SimpleStorageTest
+@ExtendWith( TestDirectoryExtension.class )
+class SimpleStorageTest
 {
-    @Rule
-    public EphemeralFileSystemRule fsa = new EphemeralFileSystemRule();
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void shouldWriteAndReadState() throws Exception
+    void shouldWriteAndReadState() throws Exception
     {
         // given
-        File dummyState = new File( CoreStateFiles.DUMMY( MemberId.Marshal.INSTANCE ).directoryName() );
-        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fsa.get(), dummyState, new MemberId.Marshal(), NullLogProvider.getInstance() );
+        File dir = testDirectory.directory();
+        FileSystemAbstraction fs = testDirectory.getFileSystem();
+        SimpleStorage<MemberId> storage = new SimpleFileStorage<>( fs, dir, new MemberId.Marshal(), NullLogProvider.getInstance() );
 
         // when
         MemberId idA = new MemberId( UUID.randomUUID() );

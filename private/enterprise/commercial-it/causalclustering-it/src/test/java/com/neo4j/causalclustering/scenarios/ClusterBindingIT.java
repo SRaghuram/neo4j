@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.DataCreator;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
+import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.test.causalclustering.ClusterRule;
@@ -215,9 +215,9 @@ public class ClusterBindingIT
 
     private void changeClusterId( CoreClusterMember coreMember ) throws IOException
     {
-        File clusterIdStateDir = CoreStateFiles.CLUSTER_ID.at( coreMember.clusterStateDirectory() );
-        File clusterIdStateFile = new File( clusterIdStateDir, CoreStateFiles.CLUSTER_ID.baseName() );
-        SimpleStorage<ClusterId> clusterIdStorage = new SimpleFileStorage<>( fs, clusterIdStateFile, new ClusterId.Marshal(), NullLogProvider.getInstance() );
+        ClusterStateLayout layout = coreMember.clusterStateLayout();
+        CoreStateStorageFactory storageFactory = new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), coreMember.config() );
+        SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
         clusterIdStorage.writeState( new ClusterId( UUID.randomUUID() ) );
     }
 

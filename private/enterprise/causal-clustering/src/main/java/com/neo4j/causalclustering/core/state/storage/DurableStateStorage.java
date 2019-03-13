@@ -19,7 +19,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class DurableStateStorage<STATE> extends LifecycleAdapter implements StateStorage<STATE>
+public class DurableStateStorage<STATE> extends LifecycleAdapter implements RotatingStorage<STATE>
 {
     private final StateRecoveryManager<STATE> recoveryManager;
     private final Log log;
@@ -45,11 +45,11 @@ public class DurableStateStorage<STATE> extends LifecycleAdapter implements Stat
         this.numberOfEntriesBeforeRotation = numberOfEntriesBeforeRotation;
         this.log = logProvider.getLog( getClass() );
         this.recoveryManager = new StateRecoveryManager<>( fsa, this.marshal );
-        File parent = fileType.at( baseDir );
-        this.fileA = new File( parent, fileType.baseName() + ".a" );
-        this.fileB = new File( parent, fileType.baseName() + ".b" );
+        this.fileA = new File( baseDir, fileType.name() + ".a" );
+        this.fileB = new File( baseDir, fileType.name() + ".b" );
     }
 
+    @Override
     public boolean exists()
     {
         return fsa.fileExists( fileA ) && fsa.fileExists( fileB );

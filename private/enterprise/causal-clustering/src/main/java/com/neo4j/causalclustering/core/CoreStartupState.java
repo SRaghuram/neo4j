@@ -5,9 +5,9 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.state.CoreStateStorageService;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
-import static com.neo4j.causalclustering.core.state.CoreStateFiles.CORE_MEMBER_ID;
+import org.neo4j.io.fs.FileSystemAbstraction;
 
 /**
  * This class semantically captures the cluster state as it was on startup. Because the
@@ -18,12 +18,12 @@ class CoreStartupState
 {
     private final boolean wasUnboundOnStartup;
 
-    CoreStartupState( CoreStateStorageService storage )
+    CoreStartupState( FileSystemAbstraction fs, ClusterStateLayout layout )
     {
         /* This check is extremely simple and only considers a single file of the cluster state. It is
            good enough, but it could be improved together with more strict handling of cluster-state. */
 
-        wasUnboundOnStartup = !storage.simpleStorage( CORE_MEMBER_ID ).exists();
+        wasUnboundOnStartup = !fs.fileExists( layout.clusterIdStateFile() );
     }
 
     boolean wasUnboundOnStartup()

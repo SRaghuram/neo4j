@@ -7,8 +7,7 @@ package com.neo4j.causalclustering.management;
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,12 +33,13 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class CausalClusteringBeanTest
 {
     private final FileSystemAbstraction fs = new EphemeralFileSystemAbstraction();
     private final File dataDir = new File( "dataDir" );
-    private final ClusterStateDirectory clusterStateDirectory = ClusterStateDirectory.withoutInitializing( fs, dataDir );
+    private final ClusterStateLayout clusterStateLayout = ClusterStateLayout.of( dataDir );
     private final RaftMachine raftMachine = mock( RaftMachine.class );
     private CausalClustering ccBean;
 
@@ -51,11 +51,12 @@ public class CausalClusteringBeanTest
     {
         Dependencies dependencies = new Dependencies();
         Database database = mock( Database.class );
+        when( database.getDatabaseName() ).thenReturn( DEFAULT_DATABASE_NAME );
         when( database.getDependencyResolver() ).thenReturn( dependencies );
         when( database.getDatabaseLayout() ).thenReturn( testDirectory.databaseLayout() );
         KernelData kernelData = new KernelData( fs, mock( PageCache.class ), new File( "storeDir" ), Config.defaults() );
 
-        dependencies.satisfyDependency( clusterStateDirectory );
+        dependencies.satisfyDependency( clusterStateLayout );
         dependencies.satisfyDependency( raftMachine );
         dependencies.satisfyDependency( DatabaseInfo.CORE );
 
@@ -77,7 +78,7 @@ public class CausalClusteringBeanTest
     @Test
     public void returnSumOfRaftLogDirectory() throws Exception
     {
-        File raftLogDirectory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory.get() );
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( DEFAULT_DATABASE_NAME );
         fs.mkdirs( raftLogDirectory );
 
         createFileOfSize( new File( raftLogDirectory, "raftLog1" ), 5 );
@@ -89,18 +90,16 @@ public class CausalClusteringBeanTest
     @Test
     public void excludeRaftLogFromReplicatedStateSize() throws Exception
     {
-        File stateDir = clusterStateDirectory.get();
-
         // Raft log
-        File raftLogDirectory = CoreStateFiles.RAFT_LOG.at( stateDir );
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( DEFAULT_DATABASE_NAME );
         fs.mkdirs( raftLogDirectory );
         createFileOfSize( new File( raftLogDirectory, "raftLog1" ), 5 );
 
         // Other state
-        File idAllocationDir = CoreStateFiles.ID_ALLOCATION.at( stateDir );
+        File idAllocationDir = clusterStateLayout.idAllocationStateDirectory( DEFAULT_DATABASE_NAME );
         fs.mkdirs( idAllocationDir );
         createFileOfSize( new File( idAllocationDir, "state" ), 10 );
-        File lockTokenDir = CoreStateFiles.LOCK_TOKEN.at( stateDir );
+        File lockTokenDir = clusterStateLayout.lockTokenStateDirectory( DEFAULT_DATABASE_NAME );
         fs.mkdirs( lockTokenDir );
         createFileOfSize( new File( lockTokenDir, "state" ), 20 );
 

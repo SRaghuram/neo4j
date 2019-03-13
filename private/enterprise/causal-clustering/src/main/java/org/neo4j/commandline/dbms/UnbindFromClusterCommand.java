@@ -5,7 +5,7 @@
  */
 package org.neo4j.commandline.dbms;
 
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.Closeable;
 import java.io.File;
@@ -81,11 +81,11 @@ public class UnbindFromClusterCommand implements AdminCommand
                 confirmTargetDirectoryIsWritable( databaseLayout.getStoreLayout() );
             }
 
-            ClusterStateDirectory clusterStateDirectory = ClusterStateDirectory.withoutInitializing( outsideWorld.fileSystem(), dataDirectory );
+            File clusterStateDirectory = ClusterStateLayout.of( dataDirectory ).getClusterStateDirectory();
 
-            if ( outsideWorld.fileSystem().fileExists( clusterStateDirectory.get() ) )
+            if ( outsideWorld.fileSystem().fileExists( clusterStateDirectory ) )
             {
-                deleteClusterStateIn( clusterStateDirectory.get() );
+                deleteClusterStateIn( clusterStateDirectory );
             }
             else
             {

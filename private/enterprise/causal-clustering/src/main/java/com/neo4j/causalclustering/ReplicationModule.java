@@ -14,9 +14,8 @@ import com.neo4j.causalclustering.core.replication.RaftReplicator;
 import com.neo4j.causalclustering.core.replication.session.GlobalSession;
 import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerState;
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import com.neo4j.causalclustering.core.state.CoreStateStorageService;
-import com.neo4j.causalclustering.core.state.storage.StateStorage;
+import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
+import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.helper.ExponentialBackoffStrategy;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -37,10 +36,11 @@ public class ReplicationModule
     private final SessionTracker sessionTracker;
 
     public ReplicationModule( RaftMachine raftMachine, MemberId myself, GlobalModule globalModule, Config config,
-            Outbound<MemberId,RaftMessages.RaftMessage> outbound, CoreStateStorageService stateStorageService, LogProvider logProvider,
-            AvailabilityGuard globalAvailabilityGuard, DatabaseService localDatabases )
+            Outbound<MemberId,RaftMessages.RaftMessage> outbound, CoreStateStorageFactory storageFactory, LogProvider logProvider,
+            AvailabilityGuard globalAvailabilityGuard, DatabaseService localDatabases, String defaultDatabaseName )
     {
-        StateStorage<GlobalSessionTrackerState> sessionTrackerStorage = stateStorageService.stateStorage( CoreStateFiles.SESSION_TRACKER );
+        RotatingStorage<GlobalSessionTrackerState> sessionTrackerStorage = storageFactory.createSessionTrackerStorage( defaultDatabaseName );
+        globalModule.getGlobalLife().add( sessionTrackerStorage );
 
         sessionTracker = new SessionTracker( sessionTrackerStorage );
 

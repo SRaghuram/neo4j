@@ -6,8 +6,7 @@
 package com.neo4j.causalclustering.management;
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.File;
 import java.util.EnumSet;
@@ -61,16 +60,17 @@ public class CausalClusteringBean extends ManagementBeanProvider
 
     private static class CausalClusteringBeanImpl extends Neo4jMBean implements CausalClustering
     {
-        private final ClusterStateDirectory clusterStateDirectory;
+        private final String databaseName;
+        private final ClusterStateLayout clusterStateLayout;
         private final RaftMachine raftMachine;
         private final FileSystemAbstraction fs;
 
         CausalClusteringBeanImpl( ManagementData management, boolean isMXBean )
         {
             super( management, isMXBean );
-            clusterStateDirectory = management.resolveDependency( ClusterStateDirectory.class );
+            databaseName = management.getDatabase().getDatabaseName();
+            clusterStateLayout = management.resolveDependency( ClusterStateLayout.class );
             raftMachine = management.resolveDependency( RaftMachine.class );
-
             fs = management.getKernelData().getFilesystemAbstraction();
         }
 
@@ -83,30 +83,27 @@ public class CausalClusteringBean extends ManagementBeanProvider
         @Override
         public long getRaftLogSize()
         {
-            File raftLogDirectory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory.get() );
+            File raftLogDirectory = clusterStateLayout.raftLogDirectory( databaseName );
             return FileSystemUtils.size( fs, raftLogDirectory );
         }
 
         @Override
         public long getReplicatedStateSize()
         {
-            File replicatedStateDirectory = clusterStateDirectory.get();
+            long size = 0;
 
-            File[] files = fs.listFiles( replicatedStateDirectory );
-            if ( files == null )
+            for ( File directory : clusterStateLayout.allGlobalStateEntries() )
             {
-                return 0L;
+                size += FileSystemUtils.size( fs, directory );
             }
 
-            long size = 0L;
-            for ( File file : files )
+            File raftLogDirectory = clusterStateLayout.raftLogDirectory( databaseName );
+            for ( File directory : clusterStateLayout.allDatabaseStateEntries( databaseName ) )
             {
-                if ( fs.isDirectory( file ) && file.getName().equals( CoreStateFiles.RAFT_LOG.directoryName() ) )
+                if ( !directory.equals( raftLogDirectory ) )
                 {
-                    continue;
+                    size += FileSystemUtils.size( fs, directory );
                 }
-
-                size += FileSystemUtils.size( fs, file );
             }
 
             return size;

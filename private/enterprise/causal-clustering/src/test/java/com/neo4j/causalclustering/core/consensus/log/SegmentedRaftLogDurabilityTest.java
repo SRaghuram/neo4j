@@ -9,9 +9,8 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedInteger;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.segmented.CoreLogPruningStrategyFactory;
 import com.neo4j.causalclustering.core.consensus.log.segmented.SegmentedRaftLog;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +19,10 @@ import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
@@ -31,14 +33,17 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class SegmentedRaftLogDurabilityTest
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
+class SegmentedRaftLogDurabilityTest
 {
-    @Rule
-    public final EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
+    @Inject
+    private EphemeralFileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
 
     private final RaftLogFactory logFactory = fileSystem ->
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
+        File directory = testDirectory.directory();
         fileSystem.mkdir( directory );
 
         long rotateAtSizeBytes = 128;
@@ -55,14 +60,14 @@ public class SegmentedRaftLogDurabilityTest
     };
 
     @Test
-    public void shouldAppendDataAndNotCommitImmediately() throws Exception
+    void shouldAppendDataAndNotCommitImmediately() throws Exception
     {
-        RaftLog log = logFactory.createBasedOn( fsRule.get() );
+        RaftLog log = logFactory.createBasedOn( fs );
 
         final RaftLogEntry logEntry = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         log.append( logEntry );
 
-        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fsRule.get(), myLog ->
+        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fs, myLog ->
         {
             assertThat( myLog.appendIndex(), is( 0L ) );
             assertThat( readLogEntry( myLog, 0 ), equalTo( logEntry ) );
@@ -70,27 +75,27 @@ public class SegmentedRaftLogDurabilityTest
     }
 
     @Test
-    public void shouldAppendAndCommit() throws Exception
+    void shouldAppendAndCommit() throws Exception
     {
-        RaftLog log = logFactory.createBasedOn( fsRule.get() );
+        RaftLog log = logFactory.createBasedOn( fs );
 
         RaftLogEntry logEntry = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         log.append( logEntry );
 
-        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fsRule.get(),
+        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fs,
                 myLog -> assertThat( myLog.appendIndex(), is( 0L ) ) );
     }
 
     @Test
-    public void shouldAppendAfterReloadingFromFileSystem() throws Exception
+    void shouldAppendAfterReloadingFromFileSystem() throws Exception
     {
-        RaftLog log = logFactory.createBasedOn( fsRule.get() );
+        RaftLog log = logFactory.createBasedOn( fs );
 
         RaftLogEntry logEntryA = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         log.append( logEntryA );
 
-        fsRule.get().crash();
-        log = logFactory.createBasedOn( fsRule.get() );
+        fs.crash();
+        log = logFactory.createBasedOn( fs );
 
         RaftLogEntry logEntryB = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 2 ) );
         log.append( logEntryB );
@@ -101,9 +106,9 @@ public class SegmentedRaftLogDurabilityTest
     }
 
     @Test
-    public void shouldTruncatePreviouslyAppendedEntries() throws Exception
+    void shouldTruncatePreviouslyAppendedEntries() throws Exception
     {
-        RaftLog log = logFactory.createBasedOn( fsRule.get() );
+        RaftLog log = logFactory.createBasedOn( fs );
 
         RaftLogEntry logEntryA = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         RaftLogEntry logEntryB = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 2 ) );
@@ -112,14 +117,14 @@ public class SegmentedRaftLogDurabilityTest
         log.append( logEntryB );
         log.truncate( 1 );
 
-        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fsRule.get(),
+        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fs,
                 myLog -> assertThat( myLog.appendIndex(), is( 0L ) ) );
     }
 
     @Test
-    public void shouldReplacePreviouslyAppendedEntries() throws Exception
+    void shouldReplacePreviouslyAppendedEntries() throws Exception
     {
-        RaftLog log = logFactory.createBasedOn( fsRule.get() );
+        RaftLog log = logFactory.createBasedOn( fs );
 
         final RaftLogEntry logEntryA = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         final RaftLogEntry logEntryB = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 2 ) );
@@ -136,7 +141,7 @@ public class SegmentedRaftLogDurabilityTest
         log.append( logEntryD );
         log.append( logEntryE );
 
-        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fsRule.get(), myLog ->
+        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fs, myLog ->
         {
             assertThat( myLog.appendIndex(), is( 2L ) );
             assertThat( readLogEntry( myLog, 0 ), equalTo( logEntryA ) );
@@ -146,9 +151,9 @@ public class SegmentedRaftLogDurabilityTest
     }
 
     @Test
-    public void shouldLogDifferentContentTypes() throws Exception
+    void shouldLogDifferentContentTypes() throws Exception
     {
-        RaftLog log = logFactory.createBasedOn( fsRule.get() );
+        RaftLog log = logFactory.createBasedOn( fs );
 
         final RaftLogEntry logEntryA = new RaftLogEntry( 1, ReplicatedInteger.valueOf( 1 ) );
         final RaftLogEntry logEntryB = new RaftLogEntry( 1, ReplicatedString.valueOf( "hejzxcjkzhxcjkxz" ) );
@@ -156,7 +161,7 @@ public class SegmentedRaftLogDurabilityTest
         log.append( logEntryA );
         log.append( logEntryB );
 
-        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fsRule.get(), myLog ->
+        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fs, myLog ->
         {
             assertThat( myLog.appendIndex(), is( 1L ) );
             assertThat( readLogEntry( myLog, 0 ), equalTo( logEntryA ) );
@@ -165,9 +170,9 @@ public class SegmentedRaftLogDurabilityTest
     }
 
     @Test
-    public void shouldRecoverAfterEventuallyPruning() throws Exception
+    void shouldRecoverAfterEventuallyPruning() throws Exception
     {
-        RaftLog log = logFactory.createBasedOn( fsRule.get() );
+        RaftLog log = logFactory.createBasedOn( fs );
 
         long term = 0L;
 
@@ -189,7 +194,7 @@ public class SegmentedRaftLogDurabilityTest
 
         final long finalAppendIndex = log.appendIndex();
         final long finalPrunedIndex = prunedIndex;
-        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fsRule.get(), myLog ->
+        verifyCurrentLogAndNewLogLoadedFromFileSystem( log, fs, myLog ->
         {
             assertThat( log, hasNoContent( 0 ) );
             assertThat( log, hasNoContent( finalPrunedIndex ) );
@@ -203,9 +208,9 @@ public class SegmentedRaftLogDurabilityTest
             RaftLog log, EphemeralFileSystemAbstraction fileSystem, LogVerifier logVerifier ) throws Exception
     {
         logVerifier.verifyLog( log );
-        logVerifier.verifyLog( logFactory.createBasedOn( fsRule.get() ) );
+        logVerifier.verifyLog( logFactory.createBasedOn( fs ) );
         fileSystem.crash();
-        logVerifier.verifyLog( logFactory.createBasedOn( fsRule.get() ) );
+        logVerifier.verifyLog( logFactory.createBasedOn( fs ) );
     }
 
     private interface RaftLogFactory

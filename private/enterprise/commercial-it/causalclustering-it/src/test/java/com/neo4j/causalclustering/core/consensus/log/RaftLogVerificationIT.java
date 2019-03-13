@@ -5,43 +5,46 @@
  */
 package com.neo4j.causalclustering.core.consensus.log;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@ExtendWith( TestDirectoryExtension.class )
 public abstract class RaftLogVerificationIT
 {
-    @Rule
-    public final EphemeralFileSystemRule fsRule = new EphemeralFileSystemRule();
+    @Inject
+    private TestDirectory testDirectory;
 
     private VerifyingRaftLog raftLog;
 
-    protected abstract RaftLog createRaftLog() throws Throwable;
+    protected abstract RaftLog createRaftLog( TestDirectory testDirectory ) throws Throwable;
 
     protected abstract long operations();
 
-    @Before
-    public void before() throws Throwable
+    @BeforeEach
+    void before() throws Throwable
     {
-        raftLog = new VerifyingRaftLog( createRaftLog() );
+        raftLog = new VerifyingRaftLog( createRaftLog( testDirectory ) );
     }
 
-    @After
-    public void after() throws Throwable
+    @AfterEach
+    void after() throws Throwable
     {
         raftLog.verify();
     }
 
     @Test
-    public void verifyAppend() throws Throwable
+    void verifyAppend() throws Throwable
     {
         for ( int i = 0; i < operations(); i++ )
         {
@@ -50,7 +53,7 @@ public abstract class RaftLogVerificationIT
     }
 
     @Test
-    public void verifyAppendWithIntermittentTruncation() throws Throwable
+    void verifyAppendWithIntermittentTruncation() throws Throwable
     {
         for ( int i = 0; i < operations(); i++ )
         {
@@ -63,7 +66,7 @@ public abstract class RaftLogVerificationIT
     }
 
     @Test
-    public void randomAppendAndTruncate() throws Exception
+    void randomAppendAndTruncate() throws Exception
     {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         // given
@@ -85,7 +88,7 @@ public abstract class RaftLogVerificationIT
     }
 
     @Test
-    public void shouldBeAbleToAppendAfterSkip() throws Throwable
+    void shouldBeAbleToAppendAfterSkip() throws Throwable
     {
         int term = 0;
         raftLog.append( new RaftLogEntry( term, valueOf( 10 ) ) );

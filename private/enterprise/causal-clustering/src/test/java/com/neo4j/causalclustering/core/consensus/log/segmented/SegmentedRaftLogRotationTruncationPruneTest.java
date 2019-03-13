@@ -8,35 +8,30 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class SegmentedRaftLogRotationTruncationPruneTest
+@ExtendWith( TestDirectoryExtension.class )
+class SegmentedRaftLogRotationTruncationPruneTest
 {
-
-    private FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
-
-    @After
-    public void tearDown() throws Exception
-    {
-        fileSystem.close();
-    }
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void shouldPruneAwaySingleEntriesIfRotationHappenedEveryEntry() throws Exception
+    void shouldPruneAwaySingleEntriesIfRotationHappenedEveryEntry() throws Exception
     {
         /*
          * If you have a raft log which rotates after every append, therefore having a single entry in every segment,
@@ -63,7 +58,7 @@ public class SegmentedRaftLogRotationTruncationPruneTest
     }
 
     @Test
-    public void shouldPruneAwaySingleEntriesAfterTruncationIfRotationHappenedEveryEntry() throws Exception
+    void shouldPruneAwaySingleEntriesAfterTruncationIfRotationHappenedEveryEntry() throws Exception
     {
         /*
          * Given a log with many single-entry segments, a series of truncations at descending values followed by
@@ -113,15 +108,13 @@ public class SegmentedRaftLogRotationTruncationPruneTest
 
     private RaftLog createRaftLog() throws Exception
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
-        FileSystemAbstraction fileSystem = new EphemeralFileSystemAbstraction();
-        fileSystem.mkdir( directory );
+        File directory = testDirectory.directory();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "1 entries", logProvider ).newInstance();
 
-        SegmentedRaftLog newRaftLog = new SegmentedRaftLog( fileSystem, directory, 1,
+        SegmentedRaftLog newRaftLog = new SegmentedRaftLog( testDirectory.getFileSystem(), directory, 1,
                 ignored -> new DummyRaftableContentSerializer(), logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(),
                 pruningStrategy );
 

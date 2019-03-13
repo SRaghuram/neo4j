@@ -16,11 +16,13 @@ import com.neo4j.causalclustering.core.state.machines.CoreStateMachines;
 import com.neo4j.causalclustering.core.state.machines.dummy.DummyMachine;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.core.state.machines.id.FreeIdFilteredIdGeneratorFactory;
+import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.id.IdReusabilityCondition;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationStateMachine;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdGeneratorFactory;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdRangeAcquirer;
 import com.neo4j.causalclustering.core.state.machines.locks.LeaderOnlyLockManager;
+import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenStateMachine;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedLabelTokenHolder;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedPropertyKeyTokenHolder;
@@ -30,6 +32,7 @@ import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogInde
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
+import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -97,7 +100,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     private final IdContextFactory idContextFactory;
     private final Map<String,PerDatabaseCoreStateComponents> dbStateMap;
     private final Replicator replicator;
-    private final CoreStateStorageService storage;
+    private final CoreStateStorageFactory storageFactory;
     private final MemberId myself;
     private final Map<IdType,Integer> allocationSizes;
     private final LogService logging;
@@ -107,12 +110,12 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     private final VersionContextSupplier versionContextSupplier;
     private final PageCursorTracerSupplier cursorTracerSupplier;
     private final FileSystemAbstraction fs;
-    private final GlobalModule platform;
+    private final GlobalModule globalModule;
     private final Config config;
     private final RaftMachine raftMachine;
     private final AggregateStateMachinesCommandDispatcher dispatchers;
 
-    public CoreStateService( MemberId myself, GlobalModule globalModule, CoreStateStorageService storage, Config config,
+    public CoreStateService( MemberId myself, GlobalModule globalModule, CoreStateStorageFactory storageFactory, Config config,
             RaftMachine raftMachine, DatabaseService databaseService, ReplicationModule replicationModule, StateStorage<Long> lastFlushedStorage,
             Panicker panicker )
     {
@@ -120,13 +123,13 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         this.panicker = panicker;
         this.logProvider = logging.getInternalLogProvider();
         this.lastFlushedStorage = lastFlushedStorage;
-        this.storage = storage;
+        this.storageFactory = storageFactory;
         this.raftMachine = raftMachine;
         this.replicator = replicationModule.getReplicator();
         this.myself = myself;
         this.config = config;
+        this.globalModule = globalModule;
 
-        platform = globalModule;
         fs = globalModule.getFileSystem();
         sessionTracker = replicationModule.getSessionTracker();
         allocationSizes = getIdTypeAllocationSizeFromConfig( config );
@@ -150,8 +153,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
     public PerDatabaseCoreStateComponents create( CoreLocalDatabase localDatabase )
     {
         String databaseName = localDatabase.databaseName();
-        ReplicatedIdAllocationStateMachine idAllocationStateMachine = new ReplicatedIdAllocationStateMachine(
-                storage.stateStorage( CoreStateFiles.ID_ALLOCATION, databaseName ) );
+        ReplicatedIdAllocationStateMachine idAllocationStateMachine = createIdAllocationStateMachine( databaseName );
 
         Supplier<StorageEngine> storageEngineSupplier = () -> localDatabase.database().getDependencyResolver().resolveDependency( StorageEngine.class );
 
@@ -171,8 +173,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         ReplicatedLabelTokenHolder labelTokenHolder = new ReplicatedLabelTokenHolder( databaseName, labelTokenRegistry, replicator,
                 idContext.getIdGeneratorFactory(), storageEngineSupplier );
 
-        ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine =
-                new ReplicatedLockTokenStateMachine( storage.stateStorage( CoreStateFiles.LOCK_TOKEN, databaseName ) );
+        ReplicatedLockTokenStateMachine replicatedLockTokenStateMachine = createLockTokenStateMachine( databaseName );
 
         ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( labelTokenRegistry,
                 logProvider, versionContextSupplier );
@@ -187,7 +188,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
                         config.get( state_machine_apply_max_batch_size ), logProvider, cursorTracerSupplier,
                         versionContextSupplier );
 
-        Locks lockManager = createLockManager( config, platform.getGlobalClock(), logging, replicator, myself, raftMachine,
+        Locks lockManager = createLockManager( config, globalModule.getGlobalClock(), logging, replicator, myself, raftMachine,
                 replicatedLockTokenStateMachine, databaseName );
 
         RecoverConsensusLogIndex consensusLogIndexRecovery = new RecoverConsensusLogIndex( localDatabase, logProvider );
@@ -204,6 +205,20 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         localDatabase.setCoreStateComponents( dbState );
         dbStateMap.put( databaseName, dbState );
         return dbState;
+    }
+
+    private ReplicatedIdAllocationStateMachine createIdAllocationStateMachine( String databaseName )
+    {
+        RotatingStorage<IdAllocationState> idAllocationStorage = storageFactory.createIdAllocationStorage( databaseName );
+        globalModule.getGlobalLife().add( idAllocationStorage );
+        return new ReplicatedIdAllocationStateMachine( idAllocationStorage );
+    }
+
+    private ReplicatedLockTokenStateMachine createLockTokenStateMachine( String databaseName )
+    {
+        RotatingStorage<ReplicatedLockTokenState> lockTokenStorage = storageFactory.createLockTokenStorage( databaseName );
+        globalModule.getGlobalLife().add( lockTokenStorage );
+        return new ReplicatedLockTokenStateMachine( lockTokenStorage );
     }
 
     private TransactionCommitProcess createCommitProcess( TransactionAppender appender, StorageEngine storageEngine, CoreLocalDatabase localDatabase,

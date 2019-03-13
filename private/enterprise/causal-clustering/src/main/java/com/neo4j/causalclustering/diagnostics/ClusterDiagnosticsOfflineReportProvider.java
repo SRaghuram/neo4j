@@ -6,9 +6,7 @@
 package com.neo4j.causalclustering.diagnostics;
 
 import com.neo4j.causalclustering.core.consensus.log.segmented.FileNames;
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
-import com.neo4j.causalclustering.core.state.ClusterStateException;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -29,8 +27,8 @@ import org.neo4j.logging.NullLog;
 public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineReportProvider
 {
     private FileSystemAbstraction fs;
-    private File clusterStateDirectory;
-    private ClusterStateException clusterStateException;
+    private ClusterStateLayout clusterStateLayout;
+    private String defaultDatabaseName;
 
     public ClusterDiagnosticsOfflineReportProvider()
     {
@@ -41,15 +39,8 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
     public void init( FileSystemAbstraction fs, Config config, File storeDirectory )
     {
         this.fs = fs;
-        final File dataDir = config.get( GraphDatabaseSettings.data_directory );
-        try
-        {
-            clusterStateDirectory = new ClusterStateDirectory( fs, dataDir, storeDirectory, true ).initialize().get();
-        }
-        catch ( ClusterStateException e )
-        {
-            clusterStateException = e;
-        }
+        this.clusterStateLayout = ClusterStateLayout.of( config.get( GraphDatabaseSettings.data_directory ) );
+        this.defaultDatabaseName = config.get( GraphDatabaseSettings.default_database );
     }
 
     @Override
@@ -70,14 +61,7 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getRaftLogs( List<DiagnosticsReportSource> sources )
     {
-        if ( clusterStateDirectory == null )
-        {
-            sources.add( DiagnosticsReportSources.newDiagnosticsString( "raft.txt",
-                    () -> "error creating ClusterStateDirectory: " + clusterStateException.getMessage() ) );
-            return;
-        }
-
-        File raftLogDirectory = CoreStateFiles.RAFT_LOG.at( clusterStateDirectory );
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
         FileNames fileNames = new FileNames( raftLogDirectory );
         SortedMap<Long,File> allFiles = fileNames.getAllFiles( fs, NullLog.getInstance() );
 
@@ -89,16 +73,18 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getClusterState( List<DiagnosticsReportSource> sources )
     {
-        if ( clusterStateDirectory == null )
+        for ( File directory : clusterStateLayout.allGlobalStateEntries() )
         {
-            sources.add( DiagnosticsReportSources.newDiagnosticsString( "ccstate.txt",
-                    () -> "error creating ClusterStateDirectory: " + clusterStateException.getMessage() ) );
-            return;
+            addDirectory( "ccstate", directory, sources );
         }
 
-        for ( File file : fs.listFiles( clusterStateDirectory, ( dir, name ) -> !name.equals( CoreStateFiles.RAFT_LOG.directoryName() ) ) )
+        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
+        for ( File directory : clusterStateLayout.allDatabaseStateEntries( defaultDatabaseName ) )
         {
-            addDirectory( "ccstate", file, sources );
+            if ( !directory.equals( raftLogDirectory ) )
+            {
+                addDirectory( "ccstate", directory, sources );
+            }
         }
     }
 

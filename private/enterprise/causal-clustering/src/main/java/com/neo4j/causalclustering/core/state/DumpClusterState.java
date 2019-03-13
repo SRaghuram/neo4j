@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
+import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 
 import java.io.File;
@@ -17,13 +17,12 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.logging.NullLogProvider;
 
 public class DumpClusterState
 {
-    private final CoreStateStorageService storageService;
-    private final LifeSupport lifeSupport;
+    private final CoreStateStorageFactory storageFactory;
     private final PrintStream out;
     private final String databaseToDump;
 
@@ -77,47 +76,41 @@ public class DumpClusterState
 
     DumpClusterState( FileSystemAbstraction fs, File dataDirectory, PrintStream out, String databaseToDump )
     {
-        this.lifeSupport = new LifeSupport();
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fs, dataDirectory ).initialize();
-        this.storageService = new CoreStateStorageService( fs, clusterStateDirectory, lifeSupport, NullLogProvider.getInstance(), Config.defaults() );
+        this.storageFactory = newCoreStateStorageService( fs, dataDirectory );
         this.out = out;
         this.databaseToDump = databaseToDump;
     }
 
     void dump()
     {
-        lifeSupport.start();
+        try ( Lifespan lifespan = new Lifespan() )
+        {
+            dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID, storageFactory.createMemberIdStorage() );
+            dumpSimpleState( CoreStateFiles.DB_NAME, storageFactory.createMultiClusteringDbNameStorage() );
+            dumpSimpleState( CoreStateFiles.CLUSTER_ID, storageFactory.createClusterIdStorage() );
 
-        dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID );
-        dumpSimpleState( CoreStateFiles.DB_NAME );
-        dumpSimpleState( CoreStateFiles.CLUSTER_ID );
-        dumpState( CoreStateFiles.LAST_FLUSHED );
-        dumpState( CoreStateFiles.LOCK_TOKEN );
-        dumpState( CoreStateFiles.ID_ALLOCATION );
-        dumpState( CoreStateFiles.SESSION_TRACKER );
+            dumpState( CoreStateFiles.LAST_FLUSHED, lifespan.add( storageFactory.createLastFlushedStorage( databaseToDump ) ) );
+            dumpState( CoreStateFiles.LOCK_TOKEN, lifespan.add( storageFactory.createLockTokenStorage( databaseToDump ) ) );
+            dumpState( CoreStateFiles.ID_ALLOCATION, lifespan.add( storageFactory.createIdAllocationStorage( databaseToDump ) ) );
+            dumpState( CoreStateFiles.SESSION_TRACKER, lifespan.add( storageFactory.createSessionTrackerStorage( databaseToDump ) ) );
 
-        /* raft state */
-        dumpState( CoreStateFiles.RAFT_MEMBERSHIP );
-        dumpState( CoreStateFiles.RAFT_TERM );
-        dumpState( CoreStateFiles.RAFT_VOTE );
-
-        lifeSupport.shutdown();
+            /* raft state */
+            dumpState( CoreStateFiles.RAFT_MEMBERSHIP, lifespan.add( storageFactory.createRaftMembershipStorage( databaseToDump ) ) );
+            dumpState( CoreStateFiles.RAFT_TERM, lifespan.add( storageFactory.createRaftTermStorage( databaseToDump ) ) );
+            dumpState( CoreStateFiles.RAFT_VOTE, lifespan.add( storageFactory.createRaftVoteStorage( databaseToDump ) ) );
+        }
     }
 
-    private <E> void dumpState( CoreStateFiles<E> fileType ) throws ClusterStateException
+    private <E> void dumpState( CoreStateFiles<E> fileType, RotatingStorage<E> storage )
     {
-        DurableStateStorage<E> storage = storageService.durableStorage( fileType, databaseToDump );
-
         if ( storage.exists() )
         {
             out.println( String.format( "%s: %s", fileType, storage.getInitialState() ) );
         }
     }
 
-    private <E> void dumpSimpleState( CoreStateFiles<E> fileType ) throws ClusterStateException
+    private <E> void dumpSimpleState( CoreStateFiles<E> fileType, SimpleStorage<E> storage )
     {
-        SimpleStorage<E> storage = storageService.simpleStorage( fileType );
-
         if ( storage.exists() )
         {
             String stateStr;
@@ -131,5 +124,11 @@ public class DumpClusterState
             }
             out.println( String.format( "%s: %s", fileType, stateStr ) );
         }
+    }
+
+    private static CoreStateStorageFactory newCoreStateStorageService( FileSystemAbstraction fs, File dataDirectory )
+    {
+        ClusterStateLayout layout = ClusterStateLayout.of( dataDirectory );
+        return new CoreStateStorageFactory( fs, layout, NullLogProvider.getInstance(), Config.defaults() );
     }
 }

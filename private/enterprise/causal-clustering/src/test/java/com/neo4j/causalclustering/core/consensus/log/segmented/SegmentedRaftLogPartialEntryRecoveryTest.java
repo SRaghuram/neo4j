@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.NewLeaderBarrier;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogCursor;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
-import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.machines.id.ReplicatedIdAllocationRequest;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenRequest;
 import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenRequest;
@@ -16,27 +15,29 @@ import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.time.Clocks;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
@@ -45,27 +46,25 @@ import static org.neo4j.logging.NullLogProvider.getInstance;
  * do not cause a problem. This is guaranteed by rotating after recovery and making sure that half written
  * entries at the end do not stop recovery from proceeding.
  */
-public class SegmentedRaftLogPartialEntryRecoveryTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
+class SegmentedRaftLogPartialEntryRecoveryTest
 {
-    @Rule
-    public final DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
-    @Rule
-    public final TestDirectory dir = TestDirectory.testDirectory( fsRule.get() );
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
+
     private File logDirectory;
     private final String databaseName = DEFAULT_DATABASE_NAME;
 
-    @Rule
-    public RuleChain chain = RuleChain.outerRule( fsRule ).around( dir );
-
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
-        File directory = new File( CoreStateFiles.RAFT_LOG.directoryName() );
-        logDirectory = dir.directory( directory.getName() );
+        logDirectory = testDirectory.directory();
 
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "100 entries", logProvider ).newInstance();
-        return new SegmentedRaftLog( fsRule.get(), logDirectory, rotateAtSize, ignored -> CoreReplicatedContentMarshalFactory.marshalV1( databaseName ),
+        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> CoreReplicatedContentMarshalFactory.marshalV1( databaseName ),
                 logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy );
     }
 
@@ -73,12 +72,12 @@ public class SegmentedRaftLogPartialEntryRecoveryTest
     {
         FileNames fileNames = new FileNames( logDirectory );
         // TODO: Marshal map
-        return new RecoveryProtocol( fsRule.get(), fileNames, new ReaderPool( 8, getInstance(), fileNames, fsRule.get(), Clocks.fakeClock() ),
+        return new RecoveryProtocol( fs, fileNames, new ReaderPool( 8, getInstance(), fileNames, fs, Clocks.fakeClock() ),
                 ignored -> CoreReplicatedContentMarshalFactory.marshalV1( databaseName ), getInstance() );
     }
 
     @Test
-    public void incompleteEntriesAtTheEndShouldNotCauseFailures() throws Throwable
+    void incompleteEntriesAtTheEndShouldNotCauseFailures() throws Throwable
     {
         // Given
         // we use a RaftLog to create a raft log file and then we will start chopping bits off from the end
@@ -116,7 +115,7 @@ public class SegmentedRaftLogPartialEntryRecoveryTest
     }
 
     @Test
-    public void incompleteHeaderOfLastOfMoreThanOneLogFilesShouldNotCauseFailure() throws Throwable
+    void incompleteHeaderOfLastOfMoreThanOneLogFilesShouldNotCauseFailure() throws Throwable
     {
         // Given
         // we use a RaftLog to create two log files, in order to chop the header of the second
@@ -143,7 +142,7 @@ public class SegmentedRaftLogPartialEntryRecoveryTest
     }
 
     @Test
-    public void shouldNotAppendAtTheEndOfLogFileWithIncompleteEntries() throws Throwable
+    void shouldNotAppendAtTheEndOfLogFileWithIncompleteEntries() throws Throwable
     {
         // Given
         // we use a RaftLog to create a raft log file and then we will chop some bits off the end
@@ -161,13 +160,13 @@ public class SegmentedRaftLogPartialEntryRecoveryTest
         String logFilename = recoveryState.segments.last().getFilename();
         recoveryState.segments.close();
         File logFile = new File( logDirectory, logFilename );
-        StoreChannel lastFile = fsRule.get().open( logFile, OpenMode.READ_WRITE );
+        StoreChannel lastFile = fs.open( logFile, OpenMode.READ_WRITE );
         long currentSize = lastFile.size();
         lastFile.close();
 
         // When
         // We induce an incomplete entry at the end of the last file
-        lastFile = fsRule.get().open( logFile, OpenMode.READ_WRITE );
+        lastFile = fs.open( logFile, OpenMode.READ_WRITE );
         lastFile.truncate( currentSize - 1 );
         lastFile.close();
 
@@ -202,13 +201,13 @@ public class SegmentedRaftLogPartialEntryRecoveryTest
     private void truncateAndRecover( File logFile, long truncateDownToSize )
             throws IOException, DamagedLogStorageException, DisposedException
     {
-        StoreChannel lastFile = fsRule.get().open( logFile, OpenMode.READ_WRITE );
+        StoreChannel lastFile = fs.open( logFile, OpenMode.READ_WRITE );
         long currentSize = lastFile.size();
         lastFile.close();
         RecoveryProtocol recovery;
         while ( currentSize-- > truncateDownToSize )
         {
-            lastFile = fsRule.get().open( logFile, OpenMode.READ_WRITE );
+            lastFile = fs.open( logFile, OpenMode.READ_WRITE );
             lastFile.truncate( currentSize );
             lastFile.close();
             recovery = createRecoveryProtocol();

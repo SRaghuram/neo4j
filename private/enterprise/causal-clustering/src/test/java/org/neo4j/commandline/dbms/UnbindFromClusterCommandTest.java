@@ -5,7 +5,7 @@
  */
 package org.neo4j.commandline.dbms;
 
-import com.neo4j.causalclustering.core.state.ClusterStateDirectory;
+import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,12 +25,10 @@ import org.neo4j.commandline.admin.CommandLocator;
 import org.neo4j.commandline.admin.OutsideWorld;
 import org.neo4j.commandline.admin.Usage;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.IOUtils;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -46,18 +44,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class UnbindFromClusterCommandTest
 {
     @Inject
     private TestDirectory testDir;
     @Inject
-    private EphemeralFileSystemAbstraction fileSystem;
+    private FileSystemAbstraction fs;
 
     private Path homeDir;
     private Path confDir;
 
-    private FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
     private OutsideWorld outsideWorld = mock( OutsideWorld.class );
     private FileChannel channel;
 
@@ -77,12 +74,12 @@ class UnbindFromClusterCommandTest
         IOUtils.closeAll( channel );
     }
 
-    private File createClusterStateDir( FileSystemAbstraction fs )
+    private File createClusterStateDir( FileSystemAbstraction fs ) throws IOException
     {
         File dataDir = new File( homeDir.toFile(), "data" );
-        ClusterStateDirectory clusterStateDirectory = new ClusterStateDirectory( fs, dataDir, false );
-        clusterStateDirectory.initialize();
-        return clusterStateDirectory.get();
+        File clusterStateDirectory = ClusterStateLayout.of( dataDir ).getClusterStateDirectory();
+        fs.mkdirs( clusterStateDirectory );
+        return clusterStateDirectory;
     }
 
     @Test

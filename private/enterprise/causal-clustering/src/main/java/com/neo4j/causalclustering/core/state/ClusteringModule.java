@@ -36,8 +36,6 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.causalclustering.core.state.CoreStateFiles.CLUSTER_ID;
-import static com.neo4j.causalclustering.core.state.CoreStateFiles.DB_NAME;
 import static com.neo4j.causalclustering.discovery.ResolutionResolverFactory.chooseResolver;
 import static java.lang.Thread.sleep;
 
@@ -47,7 +45,7 @@ public class ClusteringModule
     private final ClusterBinder clusterBinder;
 
     public ClusteringModule( DiscoveryServiceFactory discoveryServiceFactory, MemberId myself, GlobalModule globalModule,
-            CoreStateStorageService coreStateStorage, DatabaseService databaseService, TemporaryDatabaseFactory temporaryDatabaseFactory,
+            CoreStateStorageFactory storageFactory, DatabaseService databaseService, TemporaryDatabaseFactory temporaryDatabaseFactory,
             SslPolicyLoader sslPolicyLoader,
             Function<String,DatabaseInitializer> databaseInitializers )
     {
@@ -73,10 +71,8 @@ public class ClusteringModule
         CoreBootstrapper coreBootstrapper = new CoreBootstrapper( databaseService, temporaryDatabaseFactory, databaseInitializers, fileSystem,
                 globalConfig, logProvider, pageCache, globalModule.getStorageEngineFactory() );
 
-        SimpleStorage<ClusterId> clusterIdStorage;
-        SimpleStorage<DatabaseName> dbNameStorage;
-        clusterIdStorage = coreStateStorage.simpleStorage( CLUSTER_ID );
-        dbNameStorage = coreStateStorage.simpleStorage( DB_NAME );
+        SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
+        SimpleStorage<DatabaseName> dbNameStorage = storageFactory.createMultiClusteringDbNameStorage();
 
         String dbName = globalConfig.get( CausalClusteringSettings.database );
         int minimumCoreHosts = globalConfig.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
