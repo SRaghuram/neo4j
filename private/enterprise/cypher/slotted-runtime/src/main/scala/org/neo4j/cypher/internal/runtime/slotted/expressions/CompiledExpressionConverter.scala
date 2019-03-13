@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
+import org.neo4j.cypher.InternalException
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -15,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{Community
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -106,6 +108,13 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
   private def shouldThrow = !neverFail && assertionsEnabled()
 }
 
+object CompiledExpressionConverter {
+  def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
+    case s: SlottedQueryState => s.parameterArray
+    case _ => throw new InternalException(s"Expected a slotted query state")
+  }
+}
+
 case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
 
   override def registerOwningPipe(pipe: Pipe): Unit = {}
@@ -114,7 +123,7 @@ case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupin
 
   override def computeGroupingKey(context: ExecutionContext,
                                   state: QueryState): AnyValue =
-    projection.computeGroupingKey(context, state.query, state.params, state.cursors, state.expressionVariables)
+    projection.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
 
   override def getGroupingKey(context: ExecutionContext): AnyValue = projection.getGroupingKey(context)
@@ -128,7 +137,7 @@ case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Bo
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
   override def project(ctx: ExecutionContext, state: QueryState): Unit =
-    projection.project(ctx, state.query, state.params, state.cursors, state.expressionVariables)
+    projection.project(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 }
 
 case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression) extends ExtendedExpression {
@@ -138,7 +147,7 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
   override def arguments: Seq[Expression] = legacy.arguments
 
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
-    ce.evaluate(ctx, state.query, state.params, state.cursors, state.expressionVariables)
+    ce.evaluate(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
   override def symbolTableDependencies: Set[String] = legacy.symbolTableDependencies
 
@@ -149,3 +158,4 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
     case _              => false
   }
 }
+

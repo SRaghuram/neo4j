@@ -14,7 +14,7 @@ import org.neo4j.codegen.FieldReference.{field, staticField}
 import org.neo4j.codegen.MethodDeclaration.method
 import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen.Parameter.param
-import org.neo4j.codegen.TypeReference.{OBJECT, typeReference}
+import org.neo4j.codegen.TypeReference.OBJECT
 import org.neo4j.codegen._
 import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
@@ -22,7 +22,6 @@ import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, Expression
 import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
-import org.neo4j.values.virtual.MapValue
 
 /**
   * Produces runnable code from an IntermediateRepresentation
@@ -41,21 +40,21 @@ object CodeGeneration {
   private val EVALUATE_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",
                                                                   param(classOf[ExecutionContext], "context"),
                                                                   param(classOf[DbAccess], "dbAccess"),
-                                                                  param(classOf[MapValue], "params"),
+                                                                  param(classOf[Array[AnyValue]], "params"),
                                                                   param(classOf[ExpressionCursors], "cursors"),
                                                                   param(classOf[Array[AnyValue]], "expressionVariables"))
 
   private val PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "project",
                                                                  param(classOf[ExecutionContext], "context"),
                                                                  param(classOf[DbAccess], "dbAccess"),
-                                                                 param(classOf[MapValue], "params"),
+                                                                 param(classOf[Array[AnyValue]], "params"),
                                                                  param(classOf[ExpressionCursors], "cursors"),
                                                                  param(classOf[Array[AnyValue]], "expressionVariables"))
 
   private val GROUPING_KEY_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "computeGroupingKey",
                                                                       param(classOf[ExecutionContext], "context"),
                                                                       param(classOf[DbAccess], "dbAccess"),
-                                                                      param(classOf[MapValue], "params"),
+                                                                      param(classOf[Array[AnyValue]], "params"),
                                                                       param(classOf[ExpressionCursors], "cursors"),
                                                                       param(classOf[Array[AnyValue]], "expressionVariables"))
 

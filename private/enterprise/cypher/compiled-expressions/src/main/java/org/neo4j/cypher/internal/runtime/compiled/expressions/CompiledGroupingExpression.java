@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.ExpressionCursors;
 import org.neo4j.values.AnyValue;
-import org.neo4j.values.virtual.MapValue;
 
 /**
  * Interface implemented by compiled projection.
@@ -35,7 +34,7 @@ public interface CompiledGroupingExpression
      */
     AnyValue computeGroupingKey( ExecutionContext context,
                                  DbAccess dbAccess,
-                                 MapValue params,
+                                 AnyValue[] params,
                                  ExpressionCursors cursors,
                                  AnyValue[] expressionVariables );
 
