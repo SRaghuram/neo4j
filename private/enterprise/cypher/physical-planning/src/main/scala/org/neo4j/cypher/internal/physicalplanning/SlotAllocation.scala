@@ -70,7 +70,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
 
   import SlotAllocation._
 
-  private val allocations = new  SlotConfigurations
+  private val allocations = new SlotConfigurations
   private val argumentSizes = new ArgumentSizes
   private val applyPlans = new ApplyPlans
   private val nestedPlanArgumentConfigurations = new NestedPlanArgumentConfigurations

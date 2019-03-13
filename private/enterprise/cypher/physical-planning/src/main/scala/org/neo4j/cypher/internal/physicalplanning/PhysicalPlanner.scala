@@ -20,16 +20,18 @@ object PhysicalPlanner {
            breakingPolicy: PipelineBreakingPolicy,
            allocateArgumentSlots: Boolean = false): PhysicalPlan = {
     val Result(logicalPlan, nExpressionSlots, availableExpressionVars) = expressionVariableAllocation.allocate(beforeRewrite)
-    val slotMetaData = SlotAllocation.allocateSlots(logicalPlan, semanticTable, breakingPolicy, availableExpressionVars, allocateArgumentSlots)
+    val (withSlottedParameters, parameterMapping) = slottedParameters(logicalPlan)
+    val slotMetaData = SlotAllocation.allocateSlots(withSlottedParameters, semanticTable, breakingPolicy, availableExpressionVars, allocateArgumentSlots)
     val slottedRewriter = new SlottedRewriter(tokenContext)
-    val finalLogicalPlan = slottedRewriter(logicalPlan, slotMetaData.slotConfigurations)
+    val finalLogicalPlan = slottedRewriter(withSlottedParameters, slotMetaData.slotConfigurations)
     PhysicalPlan(finalLogicalPlan,
                  nExpressionSlots,
                  slotMetaData.slotConfigurations,
                  slotMetaData.argumentSizes,
                  slotMetaData.applyPlans,
                  slotMetaData.nestedPlanArgumentConfigurations,
-                 availableExpressionVars)
+                 availableExpressionVars,
+                 parameterMapping)
   }
 }
 
@@ -39,4 +41,5 @@ case class PhysicalPlan(logicalPlan: LogicalPlan,
                         argumentSizes: ArgumentSizes,
                         applyPlans: ApplyPlans,
                         nestedPlanArgumentConfigurations: NestedPlanArgumentConfigurations,
-                        availableExpressionVariables: AvailableExpressionVariables)
+                        availableExpressionVariables: AvailableExpressionVariables,
+                        parameterMapping: Map[String, Int])

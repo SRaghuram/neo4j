@@ -26,7 +26,8 @@ class CompiledExpressionConverterTest extends CypherFunSuite with AstConstructio
                                     new ArgumentSizes,
                                     new ApplyPlans,
                                     new NestedPlanArgumentConfigurations,
-                                    new AvailableExpressionVariables)
+                                    new AvailableExpressionVariables,
+                                    Map.empty)
 
     val converter = new CompiledExpressionConverter(log, physicalPlan, TokenContext.EMPTY, neverFail = true)
 
