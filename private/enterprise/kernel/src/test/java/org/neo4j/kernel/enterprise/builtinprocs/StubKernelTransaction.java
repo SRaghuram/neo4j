@@ -279,4 +279,10 @@ class StubKernelTransaction implements KernelTransaction
     {
         throw new UnsupportedOperationException( "not implemented" );
     }
+
+    @Override
+    public boolean isSchemaTransaction()
+    {
+        return false;
+    }
 }
