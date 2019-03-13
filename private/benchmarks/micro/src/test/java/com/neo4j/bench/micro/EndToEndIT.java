@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.macro;
+package com.neo4j.bench.micro;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.AnonymousAWSCredentials;
@@ -12,21 +12,11 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.model.Neo4jConfig;
-import com.neo4j.bench.client.options.Planner;
-import com.neo4j.bench.client.options.Runtime;
-import com.neo4j.bench.client.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
-import com.neo4j.bench.client.results.RunPhase;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.Resources;
 import com.neo4j.bench.client.util.TestSupport;
-import com.neo4j.bench.macro.execution.Options.ExecutionMode;
-import com.neo4j.bench.macro.workload.Query;
-import com.neo4j.bench.macro.workload.Workload;
 import io.findify.s3mock.S3Mock;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
 import java.net.ServerSocket;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -58,7 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public class EndToEndIT
@@ -93,16 +83,22 @@ public class EndToEndIT
         assertTrue(format( "%s not found, your are running tests from invalid location", runReportScript.getFileName() ),
                     Files.exists( runReportScript ) );
 
-        Path macroJar = baseDir.resolve( "target/macro.jar" );
-        assertTrue( "macro.jar not found, make sure you have assembly in place, by running mvn package",
-                    Files.exists( macroJar ) );
+        Path microJar = baseDir.resolve( "target/micro-benchmarks.jar" );
+        assertTrue( "micro-benchmarks.jar not found, make sure you have assembly in place, by running mvn package",
+                    Files.exists( microJar ) );
+
+        // copy files into temporary location
+        Path workPath = temporaryFolder.newFolder( ).toPath();
+        Files.copy( runReportScript, workPath.resolve( RUN_REPORT_BENCHMARKS_SH ) );
+        Files.createDirectories( workPath.resolve( "micro/target" ) );
+        Files.copy( microJar, workPath.resolve( "micro/target/micro-benchmarks.jar" ) );
 
         // assert if environment is setup
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
-        for ( ProfilerType profiler : profilers )
-        {
-            profiler.assertEnvironmentVariablesPresent( true );
-        }
+//        for ( ProfilerType profiler : profilers )
+//        {
+//            profiler.assertEnvironmentVariablesPresent( true );
+//        }
 
         assertSysctlParameter( 1, "kernel.perf_event_paranoid" );
         assertSysctlParameter( 0, "kernel.kptr_restrict");
@@ -131,70 +127,52 @@ public class EndToEndIT
         Path neo4jConfig = temporaryFolder.newFile( "neo4j.config" ).toPath();
         Neo4jConfig.withDefaults().writeAsProperties( neo4jConfig );
 
-        // create empty store
-        Path dbPath = temporaryFolder.newFolder( "db" ).toPath();
-        TestSupport.createEmptyStore( dbPath );
-
-        Path resultsPath = temporaryFolder.newFile( "results.json" ).toPath();
-        Path workPath = temporaryFolder.newFolder( "work" ).toPath();
-
+        File benchmarkConfig = temporaryFolder.newFile( "benchmarkConfig" );
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
-                // workload
-                "zero",
-                // db
-                dbPath.toString(),
-                // warmup_count
-                "1",
-                // measurement_count
-                "1",
-                // db_edition
-                "ENTERPRISE",
-                // jvm
-                Jvm.defaultJvmOrFail().launchJava(),
-                // neo4j_config
-                neo4jConfig.toString(),
-                // work_dir
-                workPath.toString(),
-                // profilers
-                profilers.stream().map( ProfilerType::name ).collect( joining( "," ) ),
-                // forks
-                "1",
-                // results_path
-                resultsPath.toString(),
-                // time_unit
-                "MILLISECONDS",
+                // neo4j_version
+                "3.3.0",
+                // neo4j_commit
+                "neo4j_commit",
+                // neo4j_branch
+                "neo4j_branch",
+                // neo4j_branch_owner
+                "neo4j_branch_owner",
+                // tool_branch
+                "tool_branch",
+                // tool_branch_owner
+                "tool_branch_owner",
+                // tool_commit
+                "tool_commit",
                 // results_store_uri
                 neo4jBootstrap.boltURI().toString(),
-                "results_store_user",
-                "results_store_password",
-                "neo4j_commit",
-                // neo4j_version
-                "3.5.1",
-                "neo4j_branch",
-                "neo4j_branch_owner",
-                "tool_commit",
-                "tool_branch_owner",
-                "tool_branch",
-                // teamcity_build
-                "1",
-                // parent_teamcity_build
+                // results_store_user
+                "neo4j",
+                // results_store_password
+                "neo4j",
+                // benchmark_config
+                benchmarkConfig.toString(),
+                // teamcity_build_id
                 "0",
-                // execution_mode
-                ExecutionMode.EXECUTE.name(),
+                // parent_teamcity_build_id
+                "1",
+                // tarball
+                "tarball",
                 // jvm_args
-                "-Xmx1g",
-                // recreate_schema
-                "false",
-                // planner
-                Planner.DEFAULT.name(),
-                // runtime
-                Runtime.DEFAULT.name(),
+                "",
+                // jmh_args
+                "",
+                // neo4j_config_path
+                "neo4j_config_path",
+                // jvm_path
+                Jvm.defaultJvmOrFail().launchJava(),
+                // with_jfr
+                "true",
+                // with_async
+                "true",
+                // triggered_by
                 "triggered_by",
-                // error_policy
-                ErrorPolicy.FAIL.name(),
-                // AWS endpoint URL
                 endpointUrl ) )
-                .directory( baseDir.toFile() )
+                .directory( workPath.toFile() )
                 .redirectOutput( Redirect.PIPE )
                 .redirectErrorStream( true );
 
@@ -249,21 +227,21 @@ public class EndToEndIT
         Path recordingDir = recordingDirs.get( 0 );
         assertThat( recordingsBasePath.resolve( recordingDir.getFileName() + ".tar.gz" ).toFile(),anExistingFile() );
 
-        Workload workload = Workload.fromName( "zero", new Resources() );
-        for ( Query query : workload.queries() )
-        {
-            for ( ProfilerType profilerType : profilers )
-            {
-                ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor(
-                        query.benchmarkGroup(), query.benchmark(), RunPhase.MEASUREMENT, profilerType );
-                for ( RecordingType recordingType : profilerType.allRecordingTypes() )
-                {
-                    String profilerArtifactFilename = recordingDescriptor.filename( recordingType );
-                    File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
-                    assertThat( file, anExistingFile() );
-                }
-            }
-        }
+//        Workload workload = Workload.fromName( "zero", new Resources() );
+//        for ( Query query : workload.queries() )
+//        {
+//            for ( ProfilerType profilerType : profilers )
+//            {
+//                ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor(
+//                        query.benchmarkGroup(), query.benchmark(), RunPhase.MEASUREMENT, profilerType );
+//                for ( RecordingType recordingType : profilerType.allRecordingTypes() )
+//                {
+//                    String profilerArtifactFilename = recordingDescriptor.filename( recordingType );
+//                    File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
+//                    assertThat( file, anExistingFile() );
+//                }
+//            }
+//        }
     }
 
     private static int randomLocalPort() throws IOException
