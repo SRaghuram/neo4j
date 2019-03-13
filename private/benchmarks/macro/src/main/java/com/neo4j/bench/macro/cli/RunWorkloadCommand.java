@@ -360,7 +360,7 @@ public class RunWorkloadCommand implements Runnable
                 {
                     BenchmarkDirectory benchmarkDir = ForkRunner.runForksFor( groupDir,
                                                                               query,
-                                                                              Store.createFrom( storeDir.toPath() ),
+                                                                              Store.createFrom( storeDir.toPath().toAbsolutePath() ),
                                                                               neo4jEdition,
                                                                               neo4jConfig,
                                                                               profilers,
