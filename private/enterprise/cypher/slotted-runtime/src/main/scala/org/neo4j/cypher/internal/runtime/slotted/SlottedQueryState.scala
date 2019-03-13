@@ -17,7 +17,7 @@ import scala.collection.mutable
 
 class SlottedQueryState(query: QueryContext,
                         resources: ExternalCSVResource,
-                        params: Array[AnyValue],
+                        val parameterArray: Array[AnyValue],
                         cursors: ExpressionCursors,
                         queryIndexes: Array[IndexReadSession],
                         expressionVariables: Array[AnyValue],
@@ -29,16 +29,17 @@ class SlottedQueryState(query: QueryContext,
                         input: InputDataStream = NoInput)
   extends QueryState(query, resources, VirtualValues.EMPTY_MAP, cursors, queryIndexes, expressionVariables, decorator, initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
+
   override def withDecorator(decorator: PipeDecorator) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator,
+    new SlottedQueryState(query, resources, parameterArray, cursors, queryIndexes, expressionVariables, decorator,
                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
   override def withInitialContext(initialContext: ExecutionContext) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator,
+    new SlottedQueryState(query, resources, parameterArray, cursors, queryIndexes, expressionVariables, decorator,
                           Some(initialContext), cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
   override def withQueryContext(query: QueryContext) =
-    new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, decorator,
+    new SlottedQueryState(query, resources, parameterArray, cursors, queryIndexes, expressionVariables, decorator,
                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
 }
 

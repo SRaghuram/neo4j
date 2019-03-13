@@ -41,7 +41,7 @@ class MergeSortOperator(val workIdentity: WorkIdentity,
       val firstRow = sortedInputs.peek()
       val queryState = new OldQueryState(queryContext,
                                          resources = null,
-                                         params = state.params,
+                                         parameterArray = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
                                          resources.expressionVariables(state.nExpressionSlots))

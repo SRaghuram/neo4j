@@ -76,7 +76,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       val resultFactory = ArrayResultExecutionContextFactory(columns)
       val queryState = new OldQueryState(context,
                                          resources = null,
-                                         params = state.params,
+                                         parameterArray = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
                                          resources.expressionVariables(state.nExpressionSlots))

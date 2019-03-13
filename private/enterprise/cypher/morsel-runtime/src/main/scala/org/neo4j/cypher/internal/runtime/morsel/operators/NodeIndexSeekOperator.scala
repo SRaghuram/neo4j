@@ -62,7 +62,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources): Boolean = {
       val queryState = new OldQueryState(context,
                                          resources = null,
-                                         params = state.params,
+                                         parameterArray = state.params,
                                          resources.expressionCursors,
                                          Array.empty[IndexReadSession],
                                          resources.expressionVariables(state.nExpressionSlots))
