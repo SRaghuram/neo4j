@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 import java.io.File;
 import java.io.IOException;
 
+import org.neo4j.cursor.EmptyIOCursor;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.OpenMode;
@@ -107,7 +108,7 @@ class SegmentFile implements AutoCloseable
         {
             readerPool.release( reader );
             refCount.decrease();
-            return IOCursor.getEmpty();
+            return EmptyIOCursor.empty();
         }
         catch ( IOException e )
         {
