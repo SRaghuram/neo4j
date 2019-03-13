@@ -250,7 +250,7 @@ public class CoreBootstrapper
 
     private void ensureRecoveredOrThrow( DatabaseLayout databaseLayout, Config config ) throws Exception
     {
-        if ( Recovery.isRecoveryRequired( fs, databaseLayout, config, storageEngineFactory ) )
+        if ( Recovery.isRecoveryRequired( fs, databaseLayout, config ) )
         {
             String message = "Cannot bootstrap. Recovery is required. Please ensure that the store being seeded comes from a cleanly shutdown " +
                     "instance of Neo4j or a Neo4j backup";

@@ -102,7 +102,6 @@ public class StoreFiles
      */
     public StoreId readStoreId( DatabaseLayout databaseLayout ) throws IOException
     {
-        File neoStoreFile = databaseLayout.metadataStore();
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( fs, pageCache, databaseLayout );
         org.neo4j.storageengine.api.StoreId kernelStoreId = selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) ).storeId( dependencies );

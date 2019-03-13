@@ -30,7 +30,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.neo4j.common.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
@@ -48,7 +47,6 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -76,7 +74,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.Settings.TRUE;
 import static org.neo4j.graphdb.Label.label;
-import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 @ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
 @ClusterExtension
@@ -489,8 +486,7 @@ class OnlineBackupCommandCcIT
 
     private boolean isRecoveryRequired( DatabaseLayout layout ) throws Exception
     {
-        StorageEngineFactory storageEngineFactory = selectStorageEngine( Service.loadAll( StorageEngineFactory.class ) );
-        return Recovery.isRecoveryRequired( testDirectory.getFileSystem(), layout, Config.defaults(), storageEngineFactory );
+        return Recovery.isRecoveryRequired( testDirectory.getFileSystem(), layout, Config.defaults() );
     }
 
     private static String leaderBackupAddress( Cluster cluster ) throws TimeoutException

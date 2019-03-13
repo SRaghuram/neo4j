@@ -17,7 +17,6 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.util.VisibleForTesting;
 
 /**
@@ -30,12 +29,11 @@ class BackupStrategyWrapper
     private final BackupCopyService backupCopyService;
     private final Log userLog;
     private final Log debugLog;
-    private final StorageEngineFactory storageEngineFactory;
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
 
     BackupStrategyWrapper( BackupStrategy backupStrategy, BackupCopyService backupCopyService, FileSystemAbstraction fs, PageCache pageCache,
-            LogProvider userLogProvider, LogProvider logProvider, StorageEngineFactory storageEngineFactory )
+            LogProvider userLogProvider, LogProvider logProvider )
     {
         this.backupStrategy = backupStrategy;
         this.backupCopyService = backupCopyService;
@@ -43,7 +41,6 @@ class BackupStrategyWrapper
         this.pageCache = pageCache;
         this.userLog = userLogProvider.getLog( getClass() );
         this.debugLog = logProvider.getLog( getClass() );
-        this.storageEngineFactory = storageEngineFactory;
     }
 
     /**
@@ -160,7 +157,7 @@ class BackupStrategyWrapper
     {
         try
         {
-            Recovery.performRecovery( fs, pageCache, config, backupLayout, storageEngineFactory );
+            Recovery.performRecovery( fs, pageCache, config, backupLayout );
         }
         catch ( IOException e )
         {
