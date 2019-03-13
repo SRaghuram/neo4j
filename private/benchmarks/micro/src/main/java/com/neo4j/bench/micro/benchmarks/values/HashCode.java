@@ -185,19 +185,6 @@ public class HashCode extends AbstractValuesBenchmark
     @Benchmark
     @CompilerControl( CompilerControl.Mode.DONT_INLINE )
     @BenchmarkMode( {Mode.AverageTime} )
-    @Fork( jvmArgsAppend = "-Dorg.neo4j.kernel.impl.locking.ResourceTypes.useStrongHashing=false" )
-    public long indexEntryHashCode220( ThreadState threadState )
-    {
-        return ResourceTypes.indexEntryResourceId(
-                ARBITRARY_UNIMPORTANT_IMAGINARY_LABEL_ID,
-                new ExactPredicate[]{IndexQuery.exact(
-                        ARBITRARY_UNIMPORTANT_IMAGINARY_PROPERTY_KEY_ID,
-                        threadState.nextValue.get() )} );
-    }
-
-    @Benchmark
-    @CompilerControl( CompilerControl.Mode.DONT_INLINE )
-    @BenchmarkMode( {Mode.AverageTime} )
     @Fork( jvmArgsAppend = "-Dorg.neo4j.kernel.impl.locking.ResourceTypes.useStrongHashing=true" )
     public long indexEntryHashCode4xx( ThreadState threadState )
     {
