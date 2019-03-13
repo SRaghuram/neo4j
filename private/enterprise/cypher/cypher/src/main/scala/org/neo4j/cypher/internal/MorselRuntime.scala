@@ -27,6 +27,7 @@ import org.neo4j.cypher.result.{NaiveQuerySubscription, QueryProfile, RuntimeRes
 import org.neo4j.graphdb.ResourceIterator
 import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
 import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
 object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
@@ -71,6 +72,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                         queryIndexes,
                         physicalPlan.nExpressionSlots,
                         physicalPlan.logicalPlan,
+                        physicalPlan.parameterMapping,
                         fieldNames,
                         dispatcher,
                         tracer,
@@ -94,6 +96,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                                  queryIndexes: QueryIndexes,
                                  nExpressionSlots: Int,
                                  logicalPlan: LogicalPlan,
+                                 parameterMapping: Map[String, Int],
                                  fieldNames: Array[String],
                                  dispatcher: Dispatcher,
                                  schedulerTracer: SchedulerTracer,
@@ -117,7 +120,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                               nExpressionSlots,
                               logicalPlan,
                               queryContext,
-                              params,
+                              createParameterArray(params, parameterMapping),
                               fieldNames,
                               dispatcher,
                               schedulerTracer,
@@ -137,7 +140,7 @@ object MorselRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                             nExpressionSlots: Int,
                             logicalPlan: LogicalPlan,
                             queryContext: QueryContext,
-                            params: MapValue,
+                            params: Array[AnyValue],
                             override val fieldNames: Array[String],
                             dispatcher: Dispatcher,
                             schedulerTracer: SchedulerTracer,

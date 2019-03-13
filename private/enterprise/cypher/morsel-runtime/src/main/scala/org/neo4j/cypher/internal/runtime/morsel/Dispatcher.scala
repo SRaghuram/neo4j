@@ -9,13 +9,13 @@ import org.neo4j.cypher.internal.runtime.scheduling.{Scheduler, SchedulerTracer}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.AnyValue
 
 class Dispatcher(morselSize: Int, scheduler: Scheduler[QueryResources], transactionBinder: TransactionBinder) {
 
   def execute[E <: Exception](pipeline: Pipeline,
                               queryContext: QueryContext,
-                              params: MapValue,
+                              params: Array[AnyValue],
                               schedulerTracer: SchedulerTracer,
                               queryIndexes: Array[IndexReadSession],
                               nExpressionSlots: Int,

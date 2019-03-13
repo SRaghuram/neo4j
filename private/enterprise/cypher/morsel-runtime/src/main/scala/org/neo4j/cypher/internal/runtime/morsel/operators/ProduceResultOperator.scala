@@ -10,11 +10,9 @@ import java.util
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{QueryResources, _}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.ArrayResultExecutionContextFactory
-import org.neo4j.cypher.internal.runtime.morsel.QueryResources
-import org.neo4j.cypher.internal.runtime.morsel._
+import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 class ProduceResultOperator(val workIdentity: WorkIdentity, slots: SlotConfiguration, columns: Seq[(String, Expression)]) extends LazyReduceOperator {

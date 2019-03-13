@@ -5,16 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.operators
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
+import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{QueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{IndexSeek, IndexSeekMode, NodeIndexSeeker}
 import org.neo4j.cypher.internal.runtime.morsel._
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
 import org.neo4j.cypher.internal.logical.plans.{IndexOrder, QueryExpression}
 import org.neo4j.internal.kernel.api._

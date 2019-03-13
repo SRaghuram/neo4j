@@ -8,12 +8,12 @@ package org.neo4j.cypher.internal.runtime.morsel
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.IndexReadSession
-import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.AnyValue
 
 /**
   * The query state of the morsel runtime
   */
-case class QueryState(params: MapValue,
+case class QueryState(params: Array[AnyValue],
                       visitor: QueryResultVisitor[_],
                       morselSize: Int,
                       queryIndexes: Array[IndexReadSession],
