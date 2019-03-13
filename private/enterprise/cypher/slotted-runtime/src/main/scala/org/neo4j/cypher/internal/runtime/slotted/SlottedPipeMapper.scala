@@ -135,7 +135,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val relOffset = slots.getReferenceOffsetFor(relName)
         val toSlot = slots(toName)
 
-        // The node/edge predicates are evaluated on the source pipeline, not the produced one
+        // The node/relationship predicates are evaluated on the source pipeline, not the produced one
         val sourceSlots = physicalPlan.slotConfigurations(sourcePlan.id)
         val tempNodeOffset = expressionSlotForPredicate(nodePredicate)
         val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)

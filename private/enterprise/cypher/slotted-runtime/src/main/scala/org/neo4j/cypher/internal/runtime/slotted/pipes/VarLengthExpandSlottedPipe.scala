@@ -87,7 +87,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
             val relationshipIsUniqueInPath = !rels.contains(relationship)
 
             if (relationshipIsUniqueInPath) {
-              // Before expanding, check that both the edge and node in question fulfil the predicate
+              // Before expanding, check that both the relationship and node in question fulfil the predicate
               if (predicateIsTrue(row, state, tempRelationshipOffset, relationshipPredicate, state.query.relationshipById(relId)) &&
                   predicateIsTrue(row, state, tempNodeOffset, nodePredicate, state.query.nodeById(relationship.otherNodeId(fromNode)))
               ) {
