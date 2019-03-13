@@ -34,6 +34,7 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.api.index.IndexingService;
+import org.neo4j.kernel.impl.core.NonUniqueTokenException;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -59,13 +60,13 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
  * <li>Create the backing index and activating the constraint (index population follows).</li>
  * <li>Activating the constraint after successful index population.</li>
  * </ol>
- *
+ * <p>
  * If slave pulls the first mini transaction, but crashes or otherwise does a nonclean shutdown before it gets
  * the other mini transaction (and that index record happens to have been evicted to disk in between)
  * then the next start of that slave would set that constraint index as failed and even delete it
  * and refuse to activate it when it eventually would pull the other mini transaction which wanted to
  * activate the constraint.
- *
+ * <p>
  * This issue is tested in single db mode because it's way easier to reliably test in this environment.
  */
 public class HalfAppliedConstraintRecoveryIT
@@ -73,8 +74,7 @@ public class HalfAppliedConstraintRecoveryIT
     private static final Label LABEL = TestLabels.LABEL_ONE;
     private static final String KEY = "key";
     private static final String KEY2 = "key2";
-    private static final Consumer<GraphDatabaseAPI> UNIQUE_CONSTRAINT_CREATOR =
-            db -> db.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
+    private static final Consumer<GraphDatabaseAPI> UNIQUE_CONSTRAINT_CREATOR = db -> db.schema().constraintFor( LABEL ).assertPropertyIsUnique( KEY ).create();
 
     private static final Consumer<GraphDatabaseAPI> NODE_KEY_CONSTRAINT_CREATOR =
             db -> db.execute( "CREATE CONSTRAINT ON (n:" + LABEL.name() + ") ASSERT (n." + KEY + ") IS NODE KEY" );
@@ -229,7 +229,10 @@ public class HalfAppliedConstraintRecoveryIT
                 createData( db, "v", "v" );
                 t2.execute( state ->
                 {
-                    List<TransactionRepresentation> transactionsButWithoutConstraintCreation = transactions.subList( 0, transactions.size() - 1 );
+
+                    int ordinaryTokenCreateTransactionsToRemove = countInitialTokenCreatesToRemove( transactions );
+                    List<TransactionRepresentation> transactionsButWithoutConstraintCreation =
+                            transactions.subList( ordinaryTokenCreateTransactionsToRemove, transactions.size() - 1 );
                     apply( db, transactionsButWithoutConstraintCreation );
                     return null;
                 } );
@@ -247,8 +250,7 @@ public class HalfAppliedConstraintRecoveryIT
 
         // WHEN
         {
-            GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot )
-                    .newImpermanentDatabase();
+            GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( crashSnapshot ).newImpermanentDatabase();
             try
             {
                 recreate( constraintCreator ).accept( db, transactions );
@@ -263,6 +265,41 @@ public class HalfAppliedConstraintRecoveryIT
                 db.shutdown();
             }
         }
+    }
+
+    /**
+     * Token create commands cannot be applied more than once, since it would fail with {@link NonUniqueTokenException}s, so we have to filter those
+     * create commands out, since the prior call to {@link #createData(GraphDatabaseAPI, String...)} would have caused the tokens to be created.
+     * <p>
+     * We do this filtering by looking at the "internal" flag of the tokens. This is somewhat hacky, but for the time being we are able to rely on the
+     * fact that only the schema store uses internal tokens, so in this test we will only see them immediately before the schema commands themselves.
+     */
+    private int countInitialTokenCreatesToRemove( List<TransactionRepresentation> transactions )
+    {
+        int count = 0;
+        for ( TransactionRepresentation transaction : transactions )
+        {
+            for ( StorageCommand command : transaction )
+            {
+                if ( command instanceof StorageCommand.TokenCommand )
+                {
+                    StorageCommand.TokenCommand tokenCommand = (StorageCommand.TokenCommand) command;
+                    if ( !tokenCommand.isInternal() )
+                    {
+                        count++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        return count;
     }
 
     private static void createData( GraphDatabaseAPI db, String... values )
@@ -281,20 +318,17 @@ public class HalfAppliedConstraintRecoveryIT
 
     private GraphDatabaseAPI newDb()
     {
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors )
-                .newImpermanentDatabase();
+        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().setFileSystem( fs ).setMonitors( monitors ).newImpermanentDatabase();
     }
 
     private static void flushStores( GraphDatabaseAPI db ) throws IOException
     {
-        db.getDependencyResolver().resolveDependency( RecordStorageEngine.class )
-                .testAccessNeoStores().flush( IOLimiter.UNLIMITED );
+        db.getDependencyResolver().resolveDependency( RecordStorageEngine.class ).testAccessNeoStores().flush( IOLimiter.UNLIMITED );
     }
 
     private static void apply( GraphDatabaseAPI db, List<TransactionRepresentation> transactions )
     {
-        TransactionCommitProcess committer =
-                db.getDependencyResolver().resolveDependency( TransactionCommitProcess.class );
+        TransactionCommitProcess committer = db.getDependencyResolver().resolveDependency( TransactionCommitProcess.class );
         transactions.forEach( tx ->
         {
             try
@@ -308,15 +342,13 @@ public class HalfAppliedConstraintRecoveryIT
         } );
     }
 
-    private List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator )
-            throws Exception
+    private List<TransactionRepresentation> createTransactionsForCreatingConstraint( Consumer<GraphDatabaseAPI> uniqueConstraintCreator ) throws Exception
     {
         // A separate db altogether
         GraphDatabaseAPI db = (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newImpermanentDatabase();
         try
         {
-            LogicalTransactionStore txStore =
-                    db.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
+            LogicalTransactionStore txStore = db.getDependencyResolver().resolveDependency( LogicalTransactionStore.class );
             createData( db, "a", "b" );
             List<TransactionRepresentation> initialTransactions = extractTransactions( txStore );
             createConstraint( db, uniqueConstraintCreator );
