@@ -7,6 +7,7 @@ package org.neo4j.server.security.enterprise.log;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,12 +15,18 @@ import java.time.ZoneOffset;
 import java.util.Scanner;
 import java.util.TimeZone;
 
+import org.neo4j.adversaries.ClassGuardedAdversary;
+import org.neo4j.adversaries.CountingAdversary;
+import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
+import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogTimeZone;
 import org.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.neo4j.test.TestEnterpriseGraphDatabaseFactory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static java.lang.String.format;
@@ -27,7 +34,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.array;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 
 public class SecurityLogTest
 {
@@ -57,6 +67,35 @@ public class SecurityLogTest
 
         String[] archiveLines = readLogFile( fs, archive( 1 ) );
         assertThat( archiveLines, array( containsString( "line 1" ) ) );
+    }
+
+    @Test
+    public void shouldFailDatabaseCreationIfNotAbleToCreateSecurityLog()
+    {
+        // Given
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+
+        // Will throw either an IOException or a runtime SecurityException when calling RotatingFileOutputStreamSupplier.openOutputFile()
+        ClassGuardedAdversary adversary = new ClassGuardedAdversary( new CountingAdversary( 1, true ), SecurityLog.class );
+        final AdversarialFileSystemAbstraction evilFileSystem = new AdversarialFileSystemAbstraction( adversary );
+
+        final GraphDatabaseBuilder builder =
+                new TestEnterpriseGraphDatabaseFactory()
+                        .setFileSystem( evilFileSystem )
+                        .setInternalLogProvider( logProvider )
+                        .newImpermanentDatabaseBuilder()
+                        .setConfig( GraphDatabaseSettings.auth_enabled, TRUE );
+
+        // When
+        RuntimeException runtimeException =
+                Assertions.assertThrows( RuntimeException.class, builder::newGraphDatabase );
+
+        // Then
+        assertThat( runtimeException.getMessage(), equalTo( "Failed to load security module.") );
+        assertThat( runtimeException.getCause(), instanceOf( IOException.class ) );
+        assertThat( runtimeException.getCause().getMessage(), equalTo( "Unable to create security log." ) );
+
+        logProvider.assertContainsMessageMatching( is( "Failed to load security module. Caused by: Unable to create security log." ) );
     }
 
     @Test

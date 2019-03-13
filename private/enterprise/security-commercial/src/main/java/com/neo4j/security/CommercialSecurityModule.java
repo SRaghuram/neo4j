@@ -6,6 +6,7 @@
 package com.neo4j.security;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseManager;
@@ -49,7 +50,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     }
 
     @Override
-    public void setup( Dependencies dependencies ) throws KernelException
+    public void setup( Dependencies dependencies ) throws KernelException, IOException
     {
         databaseManager = ( (org.neo4j.kernel.impl.util.Dependencies) dependencies.dependencySatisfier() ).resolveDependency( DatabaseManager.class );
         super.setup( dependencies );
