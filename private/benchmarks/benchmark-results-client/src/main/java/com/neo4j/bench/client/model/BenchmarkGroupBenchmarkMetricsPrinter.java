@@ -82,8 +82,8 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         private final String[] headers = headers();
         private final int[] columnWidths = Arrays.stream( headers ).mapToInt( String::length ).toArray();
         private final int columnPadding = 2;
-        private String format = null;
-        private String separator = null;
+        private String format;
+        private String separator;
 
         abstract String[] headers();
 
