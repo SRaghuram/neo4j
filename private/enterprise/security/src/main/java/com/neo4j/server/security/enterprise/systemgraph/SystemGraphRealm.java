@@ -10,6 +10,8 @@ import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
@@ -42,10 +44,8 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.Credential;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
  * Shiro realm using a Neo4j graph to store users and roles
@@ -96,10 +96,11 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     @Override
     public void start() throws Exception
     {
-        if ( !authenticationEnabled && !authorizationEnabled )
-        {
-            return;
-        }
+        // TODO think about this
+//        if ( !authenticationEnabled && !authorizationEnabled )
+//        {
+//            return;
+//        }
         if ( initOnStart )
         {
             systemGraphInitializer.initializeSystemGraph();
@@ -306,30 +307,37 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     @Override
     public void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
     {
-        systemGraphOperations.addRoleToUserForDb( roleName, DEFAULT_DATABASE_NAME, username );
+        systemGraphOperations.addRoleToUser( roleName, username );
         clearCachedAuthorizationInfoForUser( username );
     }
 
     @Override
     public void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
     {
-        systemGraphOperations.removeRoleFromUserForDb( roleName, DEFAULT_DATABASE_NAME, username );
+        systemGraphOperations.removeRoleFromUser( roleName, username );
         clearCachedAuthorizationInfoForUser( username );
     }
 
     @Override
-    public void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
         assertNotPredefinedRoleName( roleName );
-        systemGraphOperations.grantPrivilegeToRole( roleName, resourcePrivilege );
+        // TODO not sure where to expand the privileges
+        for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+        {
+            systemGraphOperations.grantPrivilegeToRole( roleName, privilege, dbPrivilege.getDbName() );
+        }
         clearCachedAuthorizationInfo();
     }
 
     @Override
-    public void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+    public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
         assertNotPredefinedRoleName( roleName );
-        systemGraphOperations.revokePrivilegeFromRole( roleName, resourcePrivilege );
+        for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+        {
+            systemGraphOperations.revokePrivilegeFromRole( roleName, privilege, dbPrivilege.getDbName() );
+        }
         clearCachedAuthorizationInfo();
     }
 
@@ -340,10 +348,23 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
+    public Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+    {
+        return systemGraphOperations.getPrivilegeForRoles( roles );
+    }
+
+    @Override
     public void setAdmin( String roleName, boolean setToAdmin ) throws InvalidArgumentsException
     {
         assertNotPredefinedRoleName( roleName );
-        systemGraphOperations.setAdmin( roleName, setToAdmin );
+        if ( setToAdmin )
+        {
+            systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ), "*" );
+        }
+        else
+        {
+            systemGraphOperations.revokePrivilegeFromRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ), "*" );
+        }
         clearCachedAuthorizationInfo();
     }
 
@@ -478,13 +499,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     public Set<String> getAllUsernames()
     {
         return systemGraphOperations.getAllUsernames();
-    }
-
-    @VisibleForTesting
-    @SuppressWarnings( "SameParameterValue" )
-    public Set<String> getDbNamesForUser( String username ) throws InvalidArgumentsException
-    {
-        return systemGraphOperations.getDbNamesForUser( username );
     }
 
     private static void assertNotPredefinedRoleName( String roleName ) throws InvalidArgumentsException

@@ -42,18 +42,18 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
         }
     }
 
-    @Test
+    @Disabled
     void shouldUnassignAnyDbRolesWhenDeletingRole() throws Exception
     {
-        userManager.newRole( "new_role" );
-        userManager.addRoleToUser( "new_role", "noneSubject" );
-        assertTrue( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
-                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
-                "Should be connected to default db" );
-        assertEmpty( adminSubject, "CALL dbms.security.deleteRole('new_role')" );
-        assertFalse( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
-                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
-                "Should not be connected to default db" );
+//        userManager.newRole( "new_role" );
+//        userManager.addRoleToUser( "new_role", "noneSubject" );
+//        assertTrue( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
+//                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
+//                "Should be connected to default db" );
+//        assertEmpty( adminSubject, "CALL dbms.security.deleteRole('new_role')" );
+//        assertFalse( ((SystemGraphRealm) userManager).getDbNamesForUser( "noneSubject" )
+//                        .contains( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ),
+//                "Should not be connected to default db" );
     }
 
     /*

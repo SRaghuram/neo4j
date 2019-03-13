@@ -5,50 +5,89 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+
 public class ResourcePrivilege
 {
-    public static final String FULL_SCOPE = "*";
-
     private final Action action;
     private final Resource resource;
-    private final String scope;
 
-    public ResourcePrivilege( Action action, Resource resource )
-    {
-        this( action, resource, FULL_SCOPE );
-    }
-
-    public ResourcePrivilege( Action action, Resource resource, String scope )
+    public ResourcePrivilege( Action action, Resource resource ) throws InvalidArgumentsException
     {
         this.action = action;
         this.resource = resource;
-        this.scope = scope;
+        assertValidPrivilege();
     }
 
-    public ResourcePrivilege( String action, String resource, String scope )
+    public ResourcePrivilege( String action, String resource ) throws InvalidArgumentsException
     {
-        this( Action.valueOf( action.toUpperCase() ), Resource.valueOf( resource.toUpperCase() ), scope );
+        this( Action.valueOf( action.toUpperCase() ), Resource.valueOf( resource.toUpperCase() ) );
     }
 
-    public String getResource()
+    private void assertValidPrivilege() throws InvalidArgumentsException
     {
-        return resource.name().toLowerCase();
+        switch ( action )
+        {
+        case READ:
+            switch ( resource )
+            {
+            case GRAPH:
+                break;
+            case TOKEN:
+            case SCHEMA:
+            case SYSTEM:
+            case PROCEDURE:
+            default:
+                throw new InvalidArgumentsException(
+                        String.format( "Invalid combination of action (%s) and resource (%s)", action.toString(), resource.toString() ) );
+            }
+            break;
+        case WRITE:
+            switch ( resource )
+            {
+            case GRAPH:
+            case TOKEN:
+            case SCHEMA:
+            case SYSTEM:
+                break;
+            case PROCEDURE:
+            default:
+                throw new InvalidArgumentsException(
+                        String.format( "Invalid combination of action (%s) and resource (%s)", action.toString(), resource.toString() ) );
+            }
+            break;
+        case EXECUTE:
+            switch ( resource )
+            {
+            case PROCEDURE:
+                break;
+            case GRAPH:
+            case TOKEN:
+            case SCHEMA:
+            case SYSTEM:
+            default:
+                throw new InvalidArgumentsException(
+                        String.format( "Invalid combination of action (%s) and resource (%s)", action.toString(), resource.toString() ) );
+            }
+            break;
+        default:
+        }
     }
 
-    public String getScope()
+    public Resource getResource()
     {
-        return scope;
+        return resource;
     }
 
-    public String getAction()
+    public Action getAction()
     {
-        return action.name().toLowerCase();
+        return action;
     }
 
     @Override
     public String toString()
     {
-        return String.format( "(%s, %s, %s)", getAction(), getResource(), getScope() );
+        return String.format( "(%s, %s)", getAction(), getResource() );
     }
 
     @Override
@@ -56,7 +95,6 @@ public class ResourcePrivilege
     {
         int hash = 7 * action.hashCode();
         hash += 7 * resource.hashCode();
-        hash += 7 * scope.hashCode();
         return hash;
     }
 
@@ -66,7 +104,7 @@ public class ResourcePrivilege
         if ( obj instanceof ResourcePrivilege )
         {
             ResourcePrivilege other = (ResourcePrivilege) obj;
-            return other.action.equals( this.action ) && other.resource.equals( this.resource ) && other.scope.equals( this.scope );
+            return other.action.equals( this.action ) && other.resource.equals( this.resource );
         }
         return false;
     }
@@ -77,6 +115,12 @@ public class ResourcePrivilege
         READ,
         WRITE,
         EXECUTE;
+
+        @Override
+        public String toString()
+        {
+            return super.toString().toLowerCase();
+        }
     }
 
     // Type of resource a privilege applies to
@@ -85,6 +129,13 @@ public class ResourcePrivilege
         GRAPH,
         SCHEMA,
         TOKEN,
-        PROCEDURE
+        PROCEDURE,
+        SYSTEM;
+
+        @Override
+        public String toString()
+        {
+            return super.toString().toLowerCase();
+        }
     }
 }

@@ -141,6 +141,7 @@ public class CommercialSecurityModule extends SecurityModule
 
         if ( securityConfig.nativeAuthEnabled )
         {
+            // TODO shouldn't this be registered always now with assignable privileges?
             globalProcedures.registerComponent( EnterpriseUserManager.class,
                     ctx -> authManager.getUserManager( ctx.securityContext().subject(), ctx.securityContext().isAdmin() ), true );
             if ( config.get( SecuritySettings.auth_providers ).size() > 1 )
@@ -237,11 +238,8 @@ public class CommercialSecurityModule extends SecurityModule
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createInternalRealm( config, logProvider, fileSystem, securityLog, accessCapability );
-        if ( internalRealm != null )
-        {
-            realms.add( (Realm) internalRealm );
-        }
+        EnterpriseUserManager internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
+        realms.add( (Realm) internalRealm );
 
         if ( securityConfig.hasLdapProvider )
         {
@@ -288,17 +286,6 @@ public class CommercialSecurityModule extends SecurityModule
             }
         }
         return orderedActiveRealms;
-    }
-
-    private EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
-            SecurityLog securityLog, AccessCapability accessCapability )
-    {
-        EnterpriseUserManager internalRealm = null;
-        if ( securityConfig.hasNativeProvider )
-        {
-            internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
-        }
-        return internalRealm;
     }
 
     private static AuthenticationStrategy createAuthenticationStrategy( Config config )

@@ -5,6 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
+import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -45,9 +47,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -371,61 +374,43 @@ class SystemGraphRealmIT
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
                 .mayPerformMigration()
-                .migrateUsers( "admin", "architect", "publisher", "editor", "reader" )
-                .migrateRole( PredefinedRoles.ADMIN, "admin" )
-                .migrateRole( PredefinedRoles.ARCHITECT, "architect" )
-                .migrateRole( PredefinedRoles.PUBLISHER, "publisher" )
-                .migrateRole( PredefinedRoles.EDITOR, "editor" )
-                .migrateRole( PredefinedRoles.READER, "reader" )
                 .build(), securityLog, dbManager );
 
         // When
-        AuthorizationInfo info = getAuthSnapshot( realm, "admin" );
+        Set<DatabasePrivilege> privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.READER ) );
 
         // Then
-        assertThat( info.getStringPermissions(), containsInAnyOrder(
-                equalTo( "system:*" ),
-                equalTo( String.format( "database:%s:write:schema:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
-        assertThat( info.getStringPermissions().size(), equalTo( 4 ) );
+        DatabasePrivilege expected = new DatabasePrivilege( "*" );
+        expected.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        assertThat( privileges, contains( expected ) );
 
         // When
-        info = getAuthSnapshot( realm, "architect" );
-        assertThat( info.getStringPermissions(), containsInAnyOrder(
-                equalTo( String.format( "database:%s:write:schema:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
-        assertThat( info.getStringPermissions().size(), equalTo( 3 ) );
-
-        // When
-        info = getAuthSnapshot( realm, "publisher" );
+        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );
 
         // Then
-        assertThat( info.getStringPermissions(), containsInAnyOrder(
-                equalTo( String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
-        assertThat( info.getStringPermissions().size(), equalTo( 2 ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        assertThat( privileges, contains( expected ) );
 
         // When
-        info = getAuthSnapshot( realm, "editor" );
+        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) );
 
         // Then
-        assertThat( info.getStringPermissions(), contains(
-                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
-        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.TOKEN ) );
+        assertThat( privileges, contains( expected ) );
 
         // When
-        info = getAuthSnapshot( realm, "reader" );
+        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) );
 
         // Then
-        assertThat( info.getStringPermissions(), contains(
-                String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) );
-        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ) );
+        assertThat( privileges, contains( expected ) );
+
+        // When
+        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.ADMIN ) );
+
+        // Then
+        expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ) );
+        assertThat( privileges, contains( expected ) );
     }
 
     @Test
@@ -434,64 +419,56 @@ class SystemGraphRealmIT
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
                 .mayPerformMigration()
-                .migrateUsers( "alice", "bob", "circe" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .migrateRole( "custom", "bob" )
-                .migrateRole( "role", "circe" )
+                .migrateRole( PredefinedRoles.ADMIN )
+                .migrateRole( "custom" )
+                .migrateRole( "role" )
                 .build(), securityLog, dbManager );
 
         // When
-        realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
-        realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.WRITE, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
-        realm.grantPrivilegeToRole( "role", new ResourcePrivilege( Action.WRITE, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
-        realm.grantPrivilegeToRole( "role", new ResourcePrivilege( Action.WRITE, Resource.TOKEN, ResourcePrivilege.FULL_SCOPE ) );
-        realm.grantPrivilegeToRole( "role", new ResourcePrivilege( Action.WRITE, Resource.SCHEMA, ResourcePrivilege.FULL_SCOPE ) );
+        DatabasePrivilege customPriv = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        customPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        customPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+
+        DatabasePrivilege rolePriv = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        rolePriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        rolePriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.TOKEN ) );
+        rolePriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ) );
+
+        realm.grantPrivilegeToRole( "custom", customPriv );
+        realm.grantPrivilegeToRole( "role", rolePriv );
 
         // Then
-        AuthorizationInfo info = getAuthSnapshot( realm, "bob" );
-        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
-        assertThat( info.getStringPermissions(), contains(
-                equalTo( String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ) ),
-                equalTo( String.format( "database:%s:read:graph:*", DEFAULT_DATABASE_NAME ) ) ) );
-
-        info = getAuthSnapshot( realm, "circe" );
-        assertThat( info.getStringPermissions().size(), equalTo( 3 ) );
-        assertThat( info.getStringPermissions(), containsInAnyOrder(
-                String.format( "database:%s:write:graph:*", DEFAULT_DATABASE_NAME ),
-                String.format( "database:%s:write:schema:*", DEFAULT_DATABASE_NAME ),
-                String.format( "database:%s:write:token:*", DEFAULT_DATABASE_NAME )
-        ) );
+        assertThat( realm.getPrivilegeForRoles( singleton( "custom" ) ), contains( customPriv ) );
+        assertThat( realm.getPrivilegeForRoles( singleton( "role" ) ), contains( rolePriv ) );
     }
 
     @Test
     void shouldSetAdminForCustomRole() throws Throwable
     {
+        // TODO
+        // If PredefinedRoles.ADMIN does not exist and no users exist, it tries to create neo4j and assign it admin role which fails
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
                 .shouldNotPerformImport()
                 .mayPerformMigration()
-                .migrateUsers( "alice", "bob" )
-                .migrateRole( PredefinedRoles.ADMIN, "alice" )
-                .migrateRole( "CustomAdmin", "bob" )
+                .migrateUsers( "alice" )
+                .migrateRole( PredefinedRoles.ADMIN )
+                .migrateRole( "CustomAdmin" )
                 .build(), securityLog, dbManager );
 
         // When
         realm.setAdmin( "CustomAdmin", true );
 
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ) );
+
         // Then
-        AuthorizationInfo info = getAuthSnapshot( realm, "bob" );
-        assertThat( info.getStringPermissions(), contains( "system:*" ) );
-        assertThat( info.getStringPermissions().size(), equalTo( 1 ) );
-        assertThat( info.getRoles(), contains( "CustomAdmin" ) );
-        assertThat( info.getRoles().size(), equalTo( 1 ) );
+        assertThat( realm.getPrivilegeForRoles( singleton( "CustomAdmin" ) ), contains( dbPriv ) );
 
         // When
         realm.setAdmin( "CustomAdmin", false );
 
         // Then
-        info = getAuthSnapshot( realm, "bob" );
-        assertThat( info.getStringPermissions().size(), equalTo( 0 ) );
-        assertThat( info.getRoles(), contains( "CustomAdmin" ) );
-        assertThat( info.getRoles().size(), equalTo( 1 ) );
+        assertThat( realm.getPrivilegeForRoles( singleton( "CustomAdmin" ) ), empty() );
     }
 
     @Test
@@ -507,7 +484,9 @@ class SystemGraphRealmIT
         try
         {
             // When
-            realm.grantPrivilegeToRole( "custom", new ResourcePrivilege( Action.READ, Resource.GRAPH, ResourcePrivilege.FULL_SCOPE ) );
+            DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+            dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+            realm.grantPrivilegeToRole( "custom", dbPriv );
             fail( "Should not allow setting privilege on non existing role." );
         }
         catch ( InvalidArgumentsException e )

@@ -5,7 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
+import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.SecureHasher;
 import org.apache.shiro.authz.AuthorizationInfo;
@@ -29,14 +30,11 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     private Map<String,User> users = new HashMap<>();
     private Map<String,Set<String>> rolesForUsers = new HashMap<>();
     private Map<String,RoleRecord> roles = new HashMap<>();
+    private Map<String,Map<String,DatabasePrivilege>> rolePrivileges = new HashMap<>();
 
     public InMemorySystemGraphOperations( SecureHasher secureHasher )
     {
         super( mock( QueryExecutor.class ), secureHasher );
-        for ( String roleName : PredefinedRolesBuilder.roles.keySet() )
-        {
-            roles.put( roleName, new RoleRecord( roleName ) );
-        }
     }
 
     @Override
@@ -130,7 +128,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void addRoleToUserForDb( String roleName, String dbName, String username ) throws InvalidArgumentsException
+    void addRoleToUser( String roleName, String username ) throws InvalidArgumentsException
     {
         assertValidRoleName( roleName );
         assertValidUsername( username );
@@ -144,7 +142,7 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
     }
 
     @Override
-    void removeRoleFromUserForDb( String roleName, String dbName, String username ) throws InvalidArgumentsException
+    void removeRoleFromUser( String roleName, String username ) throws InvalidArgumentsException
     {
         assertValidRoleName( roleName );
         assertValidUsername( username );
@@ -153,6 +151,66 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
         RoleRecord roleRecord = roles.get( roleName );
         roles.put( roleName, roleRecord.augment().withoutUser( username ).build() );
         removeRoleFromUsers( roleName, Collections.singleton( username ) );
+    }
+
+    @Override
+    void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
+    {
+        assertRoleExists( roleName );
+        Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.computeIfAbsent( roleName, k -> new HashMap<>() );
+        DatabasePrivilege dbPrivilege = databasePrivilegeMap.computeIfAbsent( dbName, DatabasePrivilege::new );
+        dbPrivilege.addPrivilege( resourcePrivilege );
+    }
+
+    @Override
+    void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
+    {
+        assertRoleExists( roleName );
+        Map<String,DatabasePrivilege> databasePrivilegeMap = rolePrivileges.get( roleName );
+        if ( databasePrivilegeMap != null )
+        {
+            DatabasePrivilege dbPrivilege = databasePrivilegeMap.get( dbName );
+            if ( dbPrivilege != null )
+            {
+                dbPrivilege.removePrivilege( resourcePrivilege );
+            }
+        }
+    }
+
+    @Override
+    Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
+    {
+        getUser( username, false );
+        return getPrivilegeForRoles( getRoleNamesForUser( username ) );
+    }
+
+    @Override
+    Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+    {
+        Map<String,DatabasePrivilege> privileges = new HashMap<>();
+        for ( String role : roles )
+        {
+            Map<String,DatabasePrivilege> privilegeMap = rolePrivileges.get( role );
+            if ( privilegeMap != null )
+            {
+                for ( DatabasePrivilege dbPrivilege : privilegeMap.values() )
+                {
+                    DatabasePrivilege oldPrivilege = privileges.get( dbPrivilege.getDbName() );
+                    if ( oldPrivilege == null )
+                    {
+                        privileges.put( dbPrivilege.getDbName(), dbPrivilege );
+                    }
+                    else
+                    {
+                        for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+                        {
+                            oldPrivilege.addPrivilege( privilege );
+                        }
+                    }
+                }
+            }
+        }
+        return new HashSet<>( privileges.values() );
     }
 
     @Override
@@ -218,12 +276,6 @@ public class InMemorySystemGraphOperations extends SystemGraphOperations
                 .withCredentials( LegacyCredential.forPassword( newCredentials ) )
                 .withRequiredPasswordChange( requirePasswordChange ).build();
         users.put( username, augmented );
-    }
-
-    @Override
-    Set<String> getDbNamesForUser( String username )
-    {
-        throw new UnsupportedOperationException( "getDbNamesForUser not implemented for this stub" );
     }
 
     private void removeRoleFromUsers( String roleName, Set<String> users )

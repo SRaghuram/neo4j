@@ -190,8 +190,13 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
     @Override
     public void init() throws Exception
     {
+        boolean initUserManager = true;
         for ( Realm realm : realms )
         {
+            if ( userManager == realm )
+            {
+                initUserManager = false;
+            }
             if ( realm instanceof Initializable )
             {
                 ((Initializable) realm).init();
@@ -205,16 +210,44 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
                 ((RealmLifecycle) realm).initialize();
             }
         }
+
+        if ( initUserManager )
+        {
+            if ( userManager instanceof Initializable )
+            {
+                ((Initializable) userManager).init();
+            }
+            if ( userManager instanceof CachingRealm )
+            {
+                ((CachingRealm) userManager).setCacheManager( cacheManager );
+            }
+            if ( userManager instanceof RealmLifecycle )
+            {
+                ((RealmLifecycle) userManager).initialize();
+            }
+        }
     }
 
     @Override
     public void start() throws Exception
     {
+        boolean startUserManager = true;
         for ( Realm realm : realms )
         {
+            if ( userManager == realm )
+            {
+                startUserManager = false;
+            }
             if ( realm instanceof RealmLifecycle )
             {
                 ((RealmLifecycle) realm).start();
+            }
+        }
+        if ( startUserManager )
+        {
+            if ( userManager instanceof RealmLifecycle )
+            {
+                ((RealmLifecycle) userManager).start();
             }
         }
     }
@@ -299,6 +332,11 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
             }
         }
         return infoList;
+    }
+
+    Set<DatabasePrivilege> getPermissions( Set<String> roles )
+    {
+        return userManager.getPrivilegeForRoles( roles );
     }
 
     IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.PropertyKeyIdLookup tokenLookup )

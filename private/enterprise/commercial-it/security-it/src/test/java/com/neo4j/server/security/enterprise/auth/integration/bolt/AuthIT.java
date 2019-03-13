@@ -95,140 +95,140 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldaps", "abc123", true, true, "localhost",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false"
-                        )
-                },
-                {"StartTLS", "abc123", true, false, "localhost",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "true",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false"
-                        )
-                },
-                {"LdapSystemAccount", "abc123", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "true",
-                                SecuritySettings.ldap_authorization_system_password, "secret",
-                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
-                        )
-                },
-                {"Ldaps SystemAccount", "abc123", true, true, "localhost",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "true",
-                                SecuritySettings.ldap_authorization_system_password, "secret",
-                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
-                        )
-                },
-                {"StartTLS SystemAccount", "abc123", true, false, "localhost",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "true",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "true",
-                                SecuritySettings.ldap_authorization_system_password, "secret",
-                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
-                        )
-                },
-                {"Ldap authn cache disabled", "abc123", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false",
-                                SecuritySettings.ldap_authentication_cache_enabled, "false"
-                        )
-                },
-                {"Ldap Digest MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false",
-                                SecuritySettings.ldap_authentication_mechanism, "DIGEST-MD5",
-                                SecuritySettings.ldap_authentication_user_dn_template, "{0}"
-                        )
-                },
-                {"Ldap Cram MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false",
-                                SecuritySettings.ldap_authentication_mechanism, "CRAM-MD5",
-                                SecuritySettings.ldap_authentication_user_dn_template, "{0}"
-                        )
-                },
-                {"Ldap authn Native authz", "abc123", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "true",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "false",
-                                SecuritySettings.ldap_authorization_use_system_account, "false"
-                        )
-                },
-                {"Ldap authz Native authn", "abc123", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "true",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "false",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "true",
-                                SecuritySettings.ldap_authorization_system_password, "secret",
-                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
-                        )
-                },
-                {"Ldap with Native authn", "abc123", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "true",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false"
-                        )
-                },
+//                {"Ldaps", "abc123", true, true, "localhost",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false"
+//                        )
+//                },
+//                {"StartTLS", "abc123", true, false, "localhost",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "true",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false"
+//                        )
+//                },
+//                {"LdapSystemAccount", "abc123", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "true",
+//                                SecuritySettings.ldap_authorization_system_password, "secret",
+//                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
+//                        )
+//                },
+//                {"Ldaps SystemAccount", "abc123", true, true, "localhost",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "true",
+//                                SecuritySettings.ldap_authorization_system_password, "secret",
+//                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
+//                        )
+//                },
+//                {"StartTLS SystemAccount", "abc123", true, false, "localhost",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "true",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "true",
+//                                SecuritySettings.ldap_authorization_system_password, "secret",
+//                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
+//                        )
+//                },
+//                {"Ldap authn cache disabled", "abc123", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false",
+//                                SecuritySettings.ldap_authentication_cache_enabled, "false"
+//                        )
+//                },
+//                {"Ldap Digest MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false",
+//                                SecuritySettings.ldap_authentication_mechanism, "DIGEST-MD5",
+//                                SecuritySettings.ldap_authentication_user_dn_template, "{0}"
+//                        )
+//                },
+//                {"Ldap Cram MD5", "{MD5}6ZoYxCjLONXyYIU2eJIuAw==", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false",
+//                                SecuritySettings.ldap_authentication_mechanism, "CRAM-MD5",
+//                                SecuritySettings.ldap_authentication_user_dn_template, "{0}"
+//                        )
+//                },
+//                {"Ldap authn Native authz", "abc123", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false"
+//                        )
+//                },
+//                {"Ldap authz Native authn", "abc123", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "true",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "false",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "true",
+//                                SecuritySettings.ldap_authorization_system_password, "secret",
+//                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system"
+//                        )
+//                },
+//                {"Ldap with Native authn", "abc123", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "true",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false"
+//                        )
+//                },
                 {"Ldap with Native authz", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
@@ -240,50 +240,50 @@ public class AuthIT extends AuthTestBase
                                 SecuritySettings.ldap_authorization_use_system_account, "false"
                         )
                 },
-                {"Ldap and Native", "abc123", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "true",
-                                SecuritySettings.native_authorization_enabled, "true",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false"
-                        )
-                },
-                {"Ldap with AD", "abc123", false, false, "0.0.0.0",
-                        Arrays.asList(
-                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
-                                SecuritySettings.native_authentication_enabled, "false",
-                                SecuritySettings.native_authorization_enabled, "false",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=local,ou=users,dc=example,dc=com",
-                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system",
-                                SecuritySettings.ldap_authorization_system_password, "secret",
-                                SecuritySettings.ldap_authorization_use_system_account, "true",
-                                SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(samaccountname={0}))",
-                                SecuritySettings.ldap_authorization_group_membership_attribute_names, "memberOf",
-                                SecuritySettings.ldap_authorization_group_to_role_mapping,
-                                "cn=reader,ou=groups,dc=example,dc=com=reader;" +
-                                        "cn=publisher,ou=groups,dc=example,dc=com=publisher;" +
-                                        "cn=architect,ou=groups,dc=example,dc=com=architect;" +
-                                        "cn=admin,ou=groups,dc=example,dc=com=admin;" +
-                                        "cn=role1,ou=groups,dc=example,dc=com=role1",
-                                SecuritySettings.ldap_authentication_use_samaccountname, "true"
-                        )
-                },
-                {"Native with unresponsive ldap", "abc123", false, false, "127.0.0.1",
-                        Arrays.asList(
-                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
-                                SecuritySettings.ldap_use_starttls, "false",
-                                SecuritySettings.native_authentication_enabled, "true",
-                                SecuritySettings.native_authorization_enabled, "true",
-                                SecuritySettings.ldap_authentication_enabled, "true",
-                                SecuritySettings.ldap_authorization_enabled, "true",
-                                SecuritySettings.ldap_authorization_use_system_account, "false"
-                        )
-                },
+//                {"Ldap and Native", "abc123", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "true",
+//                                SecuritySettings.native_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false"
+//                        )
+//                },
+//                {"Ldap with AD", "abc123", false, false, "0.0.0.0",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_provider, SecuritySettings.LDAP_REALM_NAME,
+//                                SecuritySettings.native_authentication_enabled, "false",
+//                                SecuritySettings.native_authorization_enabled, "false",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authentication_user_dn_template, "cn={0},ou=local,ou=users,dc=example,dc=com",
+//                                SecuritySettings.ldap_authorization_system_username, "uid=admin,ou=system",
+//                                SecuritySettings.ldap_authorization_system_password, "secret",
+//                                SecuritySettings.ldap_authorization_use_system_account, "true",
+//                                SecuritySettings.ldap_authorization_user_search_filter, "(&(objectClass=*)(samaccountname={0}))",
+//                                SecuritySettings.ldap_authorization_group_membership_attribute_names, "memberOf",
+//                                SecuritySettings.ldap_authorization_group_to_role_mapping,
+//                                "cn=reader,ou=groups,dc=example,dc=com=reader;" +
+//                                        "cn=publisher,ou=groups,dc=example,dc=com=publisher;" +
+//                                        "cn=architect,ou=groups,dc=example,dc=com=architect;" +
+//                                        "cn=admin,ou=groups,dc=example,dc=com=admin;" +
+//                                        "cn=role1,ou=groups,dc=example,dc=com=role1",
+//                                SecuritySettings.ldap_authentication_use_samaccountname, "true"
+//                        )
+//                },
+//                {"Native with unresponsive ldap", "abc123", false, false, "127.0.0.1",
+//                        Arrays.asList(
+//                                SecuritySettings.auth_providers, SecuritySettings.LDAP_REALM_NAME + ", " + SecuritySettings.NATIVE_REALM_NAME,
+//                                SecuritySettings.ldap_use_starttls, "false",
+//                                SecuritySettings.native_authentication_enabled, "true",
+//                                SecuritySettings.native_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authentication_enabled, "true",
+//                                SecuritySettings.ldap_authorization_enabled, "true",
+//                                SecuritySettings.ldap_authorization_use_system_account, "false"
+//                        )
+//                },
                 {"Native", "abc123", false, false, "0.0.0.0",
                         Arrays.asList(
                                 SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME,
@@ -298,6 +298,7 @@ public class AuthIT extends AuthTestBase
     private final Map<Setting<?>,String> configMap;
     private final boolean confidentialityRequired;
     private final boolean ldapWithAD;
+    private final boolean createUsers;
 
     @SuppressWarnings( "unused" )
     public AuthIT( String suiteName, String password, boolean confidentialityRequired, boolean secureLdap, String host, List<Object> settings )
@@ -306,13 +307,20 @@ public class AuthIT extends AuthTestBase
         this.confidentialityRequired = confidentialityRequired;
         this.configMap = new HashMap<>();
         configMap.put( SecuritySettings.ldap_server, getLdapServerUri( secureLdap, host ) );
+        boolean nativeEnabled = false;
         for ( int i = 0; i < settings.size() - 1; i += 2 )
         {
             Setting setting = (Setting) settings.get( i );
             String value = (String) settings.get( i + 1 );
+            if ( (setting.equals( SecuritySettings.native_authentication_enabled ) || setting.equals( SecuritySettings.native_authorization_enabled )) &&
+                    value.equals( "true" ) )
+            {
+                nativeEnabled = true;
+            }
             configMap.put( setting, value );
         }
 
+        createUsers = nativeEnabled;
         ldapWithAD = suiteName.equals( "Ldap with AD" );
     }
 
@@ -332,7 +340,7 @@ public class AuthIT extends AuthTestBase
 
         CommercialAuthAndUserManager authManager = dbRule.resolveDependency( CommercialAuthAndUserManager.class );
         EnterpriseUserManager userManager = authManager.getUserManager();
-        if ( userManager != null )
+        if ( createUsers )
         {
             userManager.newUser( NONE_USER, password.getBytes(), false );
             userManager.newUser( PROC_USER, password.getBytes(), false );

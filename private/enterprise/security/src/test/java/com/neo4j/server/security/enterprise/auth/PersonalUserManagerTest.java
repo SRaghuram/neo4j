@@ -35,6 +35,15 @@ class PersonalUserManagerTest
 
     private static final String ROLE_NAME = "custom";
 
+    @BeforeEach
+    void setup()
+    {
+        log = new AssertableLogProvider();
+        securityLog = new SecurityLog( log.getLog( getClass() ) );
+        EnterpriseUserManager realm = mock( EnterpriseUserManager.class );
+        evilUserManager = new EvilUserManager( realm );
+    }
+
     @Test
     void shouldLogFailureCreateUser()
     {
@@ -67,8 +76,8 @@ class PersonalUserManagerTest
         userManager.newRole( ROLE_NAME );
         log.clear();
 
-        userManager.grantPrivilegeToRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
-        log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for role `%s`", "read", "graph", ROLE_NAME ) );
+        userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) );
+        log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for role `%s`", Action.READ, Resource.GRAPH, ROLE_NAME ) );
     }
 
     @Test
@@ -78,10 +87,9 @@ class PersonalUserManagerTest
         log.clear();
         evilUserManager.setFailNextCall();
 
-        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME,
-                new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
-        log.assertExactly(
-                error( "[Alice]: tried to grant `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "assignPrivilegeToRoleException" )
+        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Alice]: tried to grant `%s` privilege on `%s` for role `%s`: %s",
+                Action.READ, Resource.GRAPH, ROLE_NAME, "assignPrivilegeToRoleException" )
         );
     }
 
@@ -91,10 +99,9 @@ class PersonalUserManagerTest
         PersonalUserManager userManager = getUserManager( "Bob", false );
         log.clear();
 
-        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME,
-                new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
-        log.assertExactly(
-                error( "[Bob]: tried to grant `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "Permission denied." ) );
+        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Bob]: tried to grant `%s` privilege on `%s` for role `%s`: %s",
+                Action.READ, Resource.GRAPH, ROLE_NAME, "Permission denied." ) );
     }
 
     @Test
@@ -104,8 +111,8 @@ class PersonalUserManagerTest
         userManager.newRole( ROLE_NAME );
         log.clear();
 
-        userManager.revokePrivilegeFromRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
-        log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for role `%s`", "read", "graph", ROLE_NAME ) );
+        userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) );
+        log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for role `%s`", Action.READ, Resource.GRAPH, ROLE_NAME ) );
     }
 
     @Test
@@ -115,9 +122,9 @@ class PersonalUserManagerTest
         log.clear();
         evilUserManager.setFailNextCall();
 
-        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
-        log.assertExactly(
-                error( "[Alice]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "revokePrivilegeFromRoleException" )
+        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Alice]: tried to revoke `%s` privilege on `%s` for role `%s`: %s",
+                Action.READ, Resource.GRAPH, ROLE_NAME, "revokePrivilegeFromRoleException" )
         );
     }
 
@@ -127,9 +134,9 @@ class PersonalUserManagerTest
         PersonalUserManager userManager = getUserManager( "Bob", false );
         log.clear();
 
-        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, new ResourcePrivilege( Action.READ, Resource.GRAPH ) ) );
-        log.assertExactly(
-                error( "[Bob]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", "read", "graph", ROLE_NAME, "Permission denied." ) );
+        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        log.assertExactly( error( "[Bob]: tried to revoke `%s` privilege on `%s` for role `%s`: %s",
+                Action.READ, Resource.GRAPH, ROLE_NAME, "Permission denied." ) );
     }
 
     @Test
@@ -186,13 +193,11 @@ class PersonalUserManagerTest
                 error( "[Alice]: tried to show privileges for user `%s`: %s", "IDoNotExist", "showPrivilegesForUserException" ) );
     }
 
-    @BeforeEach
-    void setup()
+    private DatabasePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
     {
-        log = new AssertableLogProvider();
-        securityLog = new SecurityLog( log.getLog( getClass() ) );
-        EnterpriseUserManager realm = mock( EnterpriseUserManager.class );
-        evilUserManager = new EvilUserManager( realm );
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( action, resource ) );
+        return dbPriv;
     }
 
     private PersonalUserManager getUserManager( String userName, boolean isAdmin )
@@ -210,7 +215,7 @@ class PersonalUserManagerTest
         assertException( f, AuthorizationViolationException.class );
     }
 
-    private AssertableLogProvider.LogMatcher info( String message, String... arguments )
+    private AssertableLogProvider.LogMatcher info( String message, Object... arguments )
     {
         if ( arguments.length == 0 )
         {
@@ -219,7 +224,7 @@ class PersonalUserManagerTest
         return inLog( this.getClass() ).info( message, (Object[]) arguments );
     }
 
-    private AssertableLogProvider.LogMatcher error( String message, String... arguments )
+    private AssertableLogProvider.LogMatcher error( String message, Object... arguments )
     {
         return inLog( this.getClass() ).error( message, (Object[]) arguments );
     }
@@ -376,25 +381,25 @@ class PersonalUserManagerTest
         }
 
         @Override
-        public void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+        public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
                 throw new InvalidArgumentsException( "assignPrivilegeToRoleException" );
             }
-            delegate.grantPrivilegeToRole( roleName, resourcePrivilege );
+            delegate.grantPrivilegeToRole( roleName, dbPrivilege );
         }
 
         @Override
-        public void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege ) throws InvalidArgumentsException
+        public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
         {
             if ( failNextCall )
             {
                 failNextCall = false;
                 throw new InvalidArgumentsException( "revokePrivilegeFromRoleException" );
             }
-            delegate.revokePrivilegeFromRole( roleName, resourcePrivilege );
+            delegate.revokePrivilegeFromRole( roleName, dbPrivilege );
         }
 
         @Override
@@ -406,6 +411,12 @@ class PersonalUserManagerTest
                 throw new InvalidArgumentsException( "showPrivilegesForUserException" );
             }
             return delegate.showPrivilegesForUser( username );
+        }
+
+        @Override
+        public Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+        {
+            return delegate.getPrivilegeForRoles( roles );
         }
 
         @Override

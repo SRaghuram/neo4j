@@ -43,7 +43,9 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         userManager.newRole( "CustomRead", "Alice" );
 
         // When
-        userManager.grantPrivilegeToRole( "CustomRead", new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        userManager.grantPrivilegeToRole( "CustomRead", dbPriv );
 
         // Then
         CommercialLoginContext subject = neo.login( "Alice", "foo" );
@@ -67,15 +69,19 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         testFailWrite( subject );
 
         // When
-        userManager.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
-        userManager.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        userManager.grantPrivilegeToRole( roleName, dbPriv );
 
         // Then
         testSuccessfulRead( subject, 3 );
         testSuccessfulWrite( subject );
 
         // When
-        userManager.revokePrivilegeFromRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        userManager.revokePrivilegeFromRole( roleName, dbPriv );
 
         // Then
         testSuccessfulRead( subject, 4 );

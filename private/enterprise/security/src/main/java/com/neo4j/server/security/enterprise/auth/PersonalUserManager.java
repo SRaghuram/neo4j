@@ -263,39 +263,51 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege )
+    public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege )
             throws InvalidArgumentsException
     {
         try
         {
             assertUserManager();
-            userManager.grantPrivilegeToRole( roleName, resourcePrivilege );
-            securityLog.info( subject, "granted `%s` privilege on `%s` for role `%s`",
-                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName );
+            userManager.grantPrivilegeToRole( roleName, dbPrivilege );
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.info( subject, "granted `%s` privilege on `%s` for role `%s`",
+                        privilege.getAction(), privilege.getResource(), roleName );
+            }
         }
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
-            securityLog.error( subject, "tried to grant `%s` privilege on `%s` for role `%s`: %s",
-                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName, e.getMessage() );
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.error( subject, "tried to grant `%s` privilege on `%s` for role `%s`: %s",
+                        privilege.getAction(), privilege.getResource(), roleName, e.getMessage() );
+            }
             throw e;
         }
     }
 
     @Override
-    public void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege )
+    public void revokePrivilegeFromRole( String roleName, DatabasePrivilege dbPrivilege )
             throws InvalidArgumentsException
     {
         try
         {
             assertUserManager();
-            userManager.revokePrivilegeFromRole( roleName, resourcePrivilege );
-            securityLog.info( subject, "revoked `%s` privilege on `%s` for role `%s`",
-                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName );
+            userManager.revokePrivilegeFromRole( roleName, dbPrivilege );
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.info( subject, "revoked `%s` privilege on `%s` for role `%s`",
+                        privilege.getAction(), privilege.getResource(), roleName );
+            }
         }
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
-            securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for role `%s`: %s",
-                    resourcePrivilege.getAction(), resourcePrivilege.getResource(), roleName, e.getMessage() );
+            for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+            {
+                securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for role `%s`: %s",
+                        privilege.getAction(), privilege.getResource(), roleName, e.getMessage() );
+            }
             throw e;
         }
     }
@@ -313,6 +325,13 @@ class PersonalUserManager implements EnterpriseUserManager
             securityLog.error( subject, "tried to show privileges for user `%s`: %s", username, e.getMessage() );
             throw e;
         }
+    }
+
+    @Override
+    public Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+    {
+        assertUserManager();
+        return userManager.getPrivilegeForRoles( roles );
     }
 
     @Override

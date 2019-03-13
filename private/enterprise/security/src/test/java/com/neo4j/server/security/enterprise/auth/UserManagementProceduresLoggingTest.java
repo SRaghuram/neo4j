@@ -8,6 +8,9 @@ package com.neo4j.server.security.enterprise.auth;
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
+import com.neo4j.server.security.enterprise.systemgraph.QueryExecutor;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphInitializer;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +28,9 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.Log;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
+import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
 import static org.mockito.Mockito.mock;
@@ -51,10 +56,16 @@ class UserManagementProceduresLoggingTest
         log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
-        userManager = new SystemGraphRealm(
-                new InMemorySystemGraphOperations( secureHasher ), null, false, secureHasher, new BasicPasswordPolicy(),
+        SystemGraphImportOptions importOptions =
+                new SystemGraphImportOptions( false, true, true, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
+                        InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
+
+        InMemorySystemGraphOperations ops = new InMemorySystemGraphOperations( secureHasher );
+        SystemGraphInitializer graphInitializer =
+                new SystemGraphInitializer( mock( QueryExecutor.class ), ops, importOptions, secureHasher, mock( Log.class ) );
+        userManager = new SystemGraphRealm( ops, graphInitializer, true, secureHasher, new BasicPasswordPolicy(),
                 new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true );
-        userManager.newUser( "neo4j", password( "neo4j" ), true );
+        ((SystemGraphRealm) userManager).start();
 
         authProcedures = new TestUserManagementProcedures();
         authProcedures.graph = mock( GraphDatabaseAPI.class );

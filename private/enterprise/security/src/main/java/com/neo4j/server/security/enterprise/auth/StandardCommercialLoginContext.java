@@ -47,21 +47,20 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         return neoShiroSubject;
     }
 
-    private StandardAccessMode mode( PropertyKeyIdLookup resolver, String dbname )
+    private StandardAccessMode mode( PropertyKeyIdLookup resolver, String dbName )
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
-        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( dbName, isAuthenticated, passwordChangeRequired, queryForRoleNames() );
+        Set<String> roles = queryForRoleNames();
+        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles );
 
-        for ( AuthorizationInfo authInfo : authManager.getAuthorizationInfo( shiroSubject.getPrincipals() ) )
+        Set<DatabasePrivilege> privileges = authManager.getPermissions( roles );
+        for ( DatabasePrivilege privilege : privileges )
         {
-            Collection<String> stringPermissions = authInfo.getStringPermissions();
-            if ( stringPermissions != null )
+            String privilegeDbName = privilege.getDbName();
+            if ( privilegeDbName.equals( dbName ) || privilegeDbName.equals( "*" ) )
             {
-                for ( String permission : stringPermissions )
-                {
-                    accessModeBuilder.addPrivilege( permission );
-                }
+                accessModeBuilder.addPrivileges( privilege );
             }
         }
 
@@ -192,10 +191,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             return roles.isEmpty() ? "no roles" : "roles [" + String.join( ",", sortedRoles ) + "]";
         }
 
-        // TODO tests for this
         static class Builder
         {
-            private final String dbName;
             private final boolean isAuthenticated;
             private final boolean passwordChangeRequired;
             private final Set<String> roles;
@@ -207,56 +204,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean admin;
             private IntPredicate propertyPermissions;
 
-            Builder( String dbName, boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles )
+            Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles )
             {
-                this.dbName = dbName;
                 this.isAuthenticated = isAuthenticated;
                 this.passwordChangeRequired = passwordChangeRequired;
                 this.roles = roles;
-            }
-
-            void addPrivilege( String privilege )
-            {
-                if ( privilege.startsWith( "system:*" ) )
-                {
-                    admin = true;
-                }
-                else if ( privilege.startsWith( "database:*" ) || privilege.startsWith( "database:" + dbName ) )
-                {
-                    String[] split = privilege.split( ":", 5 );
-                    if ( split.length < 4 )
-                    {
-                        throw new IllegalStateException( "something was stored badly" );
-                    }
-                    switch ( split[2] )
-                    {
-                    case "read":
-                        read = true;
-                        break;
-                    case "write":
-                        switch ( split[3] )
-                        {
-                        case "graph":
-                            write = true;
-                            break;
-                        case "token":
-                            token = true;
-                            break;
-                        case "schema":
-                            schema = true;
-                            break;
-                        default:
-                            throw new IllegalStateException( "unrecognized object" );
-                        }
-                        break;
-                    default:
-                        throw new IllegalStateException( "oopsie" );
-                    }
-                }
-                else
-                {
-                    throw new IllegalStateException( "hmm, what to do" );
-                }
             }
 
             void addPropertyPermissions( IntPredicate propertyPermissions )
@@ -276,6 +228,65 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         passwordChangeRequired,
                         roles,
                         propertyPermissions );
+            }
+
+            void addPrivileges( DatabasePrivilege dbPrivilege )
+            {
+                for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
+                {
+                    switch ( privilege.getAction() )
+                    {
+                    case READ:
+                        switch ( privilege.getResource() )
+                        {
+                        case TOKEN:
+                        case SCHEMA:
+                        case SYSTEM:
+                        case PROCEDURE:
+                            break;
+                        case GRAPH:
+                            read = true;
+                            break;
+                        default:
+                        }
+                        break;
+                    case WRITE:
+                        switch ( privilege.getResource() )
+                        {
+                        case GRAPH:
+                            write = true;
+                            break;
+                        case TOKEN:
+                            token = true;
+                            break;
+                        case SCHEMA:
+                            schema = true;
+                            break;
+                        case SYSTEM:
+                            admin = true;
+                            break;
+                        case PROCEDURE:
+                            break;
+                        default:
+                        }
+                        break;
+                    case EXECUTE:
+                        switch ( privilege.getResource() )
+                        {
+                        case GRAPH:
+                        case TOKEN:
+                        case SCHEMA:
+                        case SYSTEM:
+                            break;
+                        case PROCEDURE:
+                            // implement when porting procedure execute privileges to system graph
+                            break;
+                        default:
+                        }
+                        break;
+                    default:
+                    }
+                }
             }
         }
     }

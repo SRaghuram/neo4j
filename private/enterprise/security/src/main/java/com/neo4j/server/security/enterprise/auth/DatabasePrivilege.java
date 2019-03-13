@@ -24,6 +24,16 @@ public class DatabasePrivilege
         privileges.add( privilege );
     }
 
+    public void removePrivilege( ResourcePrivilege privilege )
+    {
+        privileges.remove( privilege );
+    }
+
+    public Set<ResourcePrivilege> getPrivileges()
+    {
+        return privileges;
+    }
+
     @Override
     public String toString()
     {
@@ -69,8 +79,13 @@ public class DatabasePrivilege
         return this.dbname;
     }
 
-    public void setAdmin()
+    public void setAdmin( boolean setToAdmin )
     {
-        isAdmin = true;
+        isAdmin = setToAdmin;
+    }
+
+    public boolean isAdmin()
+    {
+        return isAdmin;
     }
 }

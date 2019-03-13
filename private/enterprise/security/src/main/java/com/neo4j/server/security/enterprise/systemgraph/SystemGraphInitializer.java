@@ -119,6 +119,7 @@ public class SystemGraphInitializer
     {
         newDb( DEFAULT_DATABASE_NAME );
         newDb( SYSTEM_DATABASE_NAME );
+        newDb( "*" );
     }
 
     /* Adds neo4j user if no users exist */
@@ -248,23 +249,23 @@ public class SystemGraphInitializer
             SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
             if ( isPermitted( simpleRole, StandardCommercialLoginContext.ADMIN ) )
             {
-                systemGraphOperations.setAdmin( roleName, true );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ), "*" );
             }
             if ( isPermitted( simpleRole, StandardCommercialLoginContext.SCHEMA_WRITE ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ), "*" );
             }
             if ( isPermitted( simpleRole, StandardCommercialLoginContext.TOKEN_CREATE ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.TOKEN ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.TOKEN ), "*" );
             }
             if ( isPermitted( simpleRole, StandardCommercialLoginContext.WRITE ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ), "*" );
             }
             if ( isPermitted( simpleRole, StandardCommercialLoginContext.READ ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, Resource.GRAPH ), "*" );
             }
         }
     }
