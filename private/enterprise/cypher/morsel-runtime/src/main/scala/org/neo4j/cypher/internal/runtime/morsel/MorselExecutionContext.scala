@@ -47,20 +47,6 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   private var firstRow: Int = 0
 
-  // BOOK KEEPING FOR REFERENCE COUNTING
-
-  private val counters = new mutable.HashSet[Id]()
-
-  def setCounters(ids: Seq[Id]): Unit = {
-    counters ++= ids
-  }
-  def removeCounter(id: Id): Unit = counters -= id
-  def getAndClearCounters(): Seq[Id] = {
-    val x = counters.toSeq
-    counters.clear()
-    x
-  }
-
   // ARGUMENT COLUMNS
 
   def allArgumentRowIdsFor(offset: Int): Seq[Long] = {

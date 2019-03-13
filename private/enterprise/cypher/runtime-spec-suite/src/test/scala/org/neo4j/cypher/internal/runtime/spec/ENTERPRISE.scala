@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption.SingleThreaded
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.Kernel
@@ -35,9 +36,11 @@ object ENTERPRISE {
     GraphDatabaseSettings.cypher_hints_error -> "true",
     GraphDatabaseSettings.cypher_morsel_size -> "4")
 
-  val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1")
+  val SINGLE_THREADED = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "1",
+                                         GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "single_threaded")
 
-  val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0")
+  val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
+                                  GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
 
   val HasEvidenceOfParallelism: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](

@@ -24,60 +24,71 @@ object PipelineId {
   val NO_PIPELINE: PipelineId = PipelineId(-1)
 }
 
-class RowBufferDefinition(val id: BufferId,
-                          val producingPipelineId: PipelineId) {
-  // We need multiple counters because a buffer might need to
+/**
+  * A buffer between two pipelines.
+  */
+class BufferDefinition(val id: BufferId,
+                       val producingPipelineId: PipelineId) {
+  // We need multiple reducers because a buffer might need to
   // reference count for multiple downstream reduce operators,
   // at potentially different argument depths
-  val counters = new ArrayBuffer[CounterDefinition]
+  val reducers = new ArrayBuffer[Id]
 }
 
-class ArgumentBufferDefinition(id: BufferId,
-                               producingPipelineId: PipelineId,
-                               applyPlanId: Id,
-                               val argumentSlotOffset: Int) extends RowBufferDefinition(id, producingPipelineId) {
-  val countersForThisBuffer = new ArrayBuffer[CounterDefinition]
+/**
+  * A buffer between the LHS and RHS of an Apply.
+  */
+class ApplyBufferDefinition(id: BufferId,
+                            producingPipelineId: PipelineId,
+                            applyPlanId: Id,
+                            val argumentSlotOffset: Int) extends BufferDefinition(id, producingPipelineId) {
+  val reducersForThisApply = new ArrayBuffer[Id]
 }
 
-case class CounterDefinition(reducingPlanId: Id, argumentSlotOffset: Int)
+/**
+  * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
+  */
+class ArgumentStateBufferDefinition(id: BufferId,
+                                    producingPipelineId: PipelineId,
+                                    val reducingPlanId: Id) extends BufferDefinition(id, producingPipelineId)
 
 class Pipeline(val id: PipelineId,
                val headPlan: LogicalPlan) {
-  var output: RowBufferDefinition = _
+  var inputBuffer: BufferDefinition = _
+  var outputBuffer: BufferDefinition = _
   val middlePlans = new ArrayBuffer[LogicalPlan]
   var produceResults: Option[ProduceResult] = None
   var serial: Boolean = false
-  var lhsRowBuffer: RowBufferDefinition = _
 }
 
 class StateDefinition(val physicalPlan: PhysicalPlan) {
+  val buffers = new ArrayBuffer[BufferDefinition]
 
-  val counters = new ArrayBuffer[CounterDefinition]
-  val rowBuffers = new ArrayBuffer[RowBufferDefinition]
-
-  def newStreamingBuffer(producingPipelineId: PipelineId): RowBufferDefinition = {
-    val x = rowBuffers.size
-    val rows = new RowBufferDefinition(BufferId(x), producingPipelineId)
-    rowBuffers += rows
-    rows
+  def newBuffer(producingPipelineId: PipelineId): BufferDefinition = {
+    val x = buffers.size
+    val buffer = new BufferDefinition(BufferId(x), producingPipelineId)
+    buffers += buffer
+    buffer
   }
 
   def newArgumentBuffer(producingPipelineId: PipelineId,
                         applyPlanId: Id,
-                        argumentSlotOffset: Int): ArgumentBufferDefinition = {
-    val x = rowBuffers.size
-    val rows = new ArgumentBufferDefinition(BufferId(x), producingPipelineId, applyPlanId, argumentSlotOffset)
-    rowBuffers += rows
-    rows
+                        argumentSlotOffset: Int): ApplyBufferDefinition = {
+    val x = buffers.size
+    val buffer = new ApplyBufferDefinition(BufferId(x), producingPipelineId, applyPlanId, argumentSlotOffset)
+    buffers += buffer
+    buffer
   }
 
-  def newCounter(reducingPlanId: Id, argumentSlotOffset: Int): CounterDefinition = {
-    val x = CounterDefinition(reducingPlanId, argumentSlotOffset)
-    counters += x
-    x
+  def newArgumentStateBuffer(producingPipelineId: PipelineId,
+                             reducingPlanId: Id): ArgumentStateBufferDefinition = {
+    val x = buffers.size
+    val buffer = new ArgumentStateBufferDefinition(BufferId(x), producingPipelineId, reducingPlanId)
+    buffers += buffer
+    buffer
   }
 
-  var initBuffer: ArgumentBufferDefinition = _
+  var initBuffer: ApplyBufferDefinition = _
 }
 
 object PipelineBuilder {
@@ -87,7 +98,7 @@ object PipelineBuilder {
 class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
                       stateDefinition: StateDefinition,
                       slotConfigurations: SlotConfigurations)
-  extends TreeBuilder2[Pipeline, ArgumentBufferDefinition] {
+  extends TreeBuilder2[Pipeline, ApplyBufferDefinition] {
 
   val pipelines = new ArrayBuffer[Pipeline]
 
@@ -97,30 +108,36 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     pipeline
   }
 
-  private def outputToBuffer(pipeline: Pipeline): RowBufferDefinition = {
-    val output = stateDefinition.newStreamingBuffer(pipeline.id)
-    pipeline.output = output
+  private def outputToBuffer(pipeline: Pipeline): BufferDefinition = {
+    val output = stateDefinition.newBuffer(pipeline.id)
+    pipeline.outputBuffer = output
     output
   }
 
-  private def outputToArgumentBuffer(pipeline: Pipeline, applyPlanId: Id, argumentSlotOffset: Int): ArgumentBufferDefinition = {
+  private def outputToArgumentBuffer(pipeline: Pipeline, applyPlanId: Id, argumentSlotOffset: Int): ApplyBufferDefinition = {
     val output = stateDefinition.newArgumentBuffer(pipeline.id, applyPlanId, argumentSlotOffset)
-    pipeline.output = output
+    pipeline.outputBuffer = output
     output
   }
 
-  override protected def initialArgument(leftLeaf: LogicalPlan): ArgumentBufferDefinition = {
+  private def outputToArgumentStateBuffer(pipeline: Pipeline, reducingPlanId: Id): ArgumentStateBufferDefinition = {
+    val output = stateDefinition.newArgumentStateBuffer(pipeline.id, reducingPlanId)
+    pipeline.outputBuffer = output
+    output
+  }
+
+  override protected def initialArgument(leftLeaf: LogicalPlan): ApplyBufferDefinition = {
     val initialArgumentSlotOffset = slotConfigurations(leftLeaf.id).getArgumentLongOffsetFor(Id.INVALID_ID)
     stateDefinition.initBuffer = stateDefinition.newArgumentBuffer(NO_PIPELINE, Id.INVALID_ID, initialArgumentSlotOffset)
     stateDefinition.initBuffer
   }
 
   override protected def onLeaf(plan: LogicalPlan,
-                                argument: ArgumentBufferDefinition): Pipeline = {
+                                argument: ApplyBufferDefinition): Pipeline = {
 
     if (breakingPolicy.breakOn(plan)) {
       val pipeline = newPipeline(plan)
-      pipeline.lhsRowBuffer = argument
+      pipeline.inputBuffer = argument
       pipeline
     } else
       throw new UnsupportedOperationException("not implemented")
@@ -128,12 +145,12 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
 
   override protected def onOneChildPlan(plan: LogicalPlan,
                                         source: Pipeline,
-                                        argument: ArgumentBufferDefinition): Pipeline = {
+                                        argument: ApplyBufferDefinition): Pipeline = {
     plan match {
       case produceResult: ProduceResult =>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
-          pipeline.lhsRowBuffer = outputToBuffer(source)
+          pipeline.inputBuffer = outputToBuffer(source)
           pipeline.serial = true
           pipeline
         } else {
@@ -146,10 +163,10 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
         if (breakingPolicy.breakOn(plan)) {
           source.middlePlans += plan
 
-          val counter = stateDefinition.newCounter(plan.id, argument.argumentSlotOffset)
           val pipeline = newPipeline(plan)
-          pipeline.lhsRowBuffer = outputToBuffer(source)
-          addCounterToBuffers(pipeline.lhsRowBuffer, argument, counter)
+          val argumentStateBuffer = outputToArgumentStateBuffer(source, plan.id)
+          pipeline.inputBuffer = argumentStateBuffer
+          markReducerInUpstreamBuffers(argumentStateBuffer, argument, plan.id)
           pipeline
         } else throw new UnsupportedOperationException("not implemented")
 
@@ -162,7 +179,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
            _: VarExpand =>
         if (breakingPolicy.breakOn(plan)) {
           val pipeline = newPipeline(plan)
-          pipeline.lhsRowBuffer = outputToBuffer(source)
+          pipeline.inputBuffer = outputToBuffer(source)
           pipeline
         } else {
           source.middlePlans += plan
@@ -177,7 +194,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
 
   override protected def onTwoChildPlanComingFromLeft(plan: LogicalPlan,
                                                       lhs: Pipeline,
-                                                      argument: ArgumentBufferDefinition): ArgumentBufferDefinition =
+                                                      argument: ApplyBufferDefinition): ApplyBufferDefinition =
   {
     plan match {
       case _: plans.Apply =>
@@ -202,14 +219,38 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
 
   // HELPERS
 
-  private def addCounterToBuffers(startBuffer: RowBufferDefinition,
-                                  endBuffer: ArgumentBufferDefinition,
-                                  counter: CounterDefinition): Unit = {
-    var b = startBuffer
-    while (b != endBuffer) {
-      b.counters += counter
-      b = pipelines(b.producingPipelineId.x).lhsRowBuffer
+  /*
+    * Plan:
+    *             ProduceResults
+    *               |
+    *             Apply
+    *             /  \
+    *           LHS  Sort
+    *                |
+    *                Expand
+    *                |
+    *                ...
+    *                |
+    *                Scan
+    *
+    * Pipelines:
+    *  -LHS->  ApplyBuffer  -Scan->  Buffer -...->  Buffer  -Presort->  ArgumentStateMapBuffer  -Sort,ProduceResults->
+    *             ^                  |--------------------|
+    *             |                                  ^
+    *   reducersForThisApply += reducePlanId        reducers += reducePlanId
+    *
+    * Mark `reducePlanId` as a reducer in all buffers between `argumentStateBuffer` and `applyBuffer`. This has
+    * to done so that reference counting of inflight work will work correctly, so that `argumentStateBuffer` knows
+    * when each argument is complete.
+    */
+  private def markReducerInUpstreamBuffers(argumentStateBuffer: ArgumentStateBufferDefinition,
+                                           applyBuffer: ApplyBufferDefinition,
+                                           reducePlanId: Id): Unit = {
+    var b = pipelines(argumentStateBuffer.producingPipelineId.x).inputBuffer
+    while (b != applyBuffer) {
+      b.reducers += reducePlanId
+      b = pipelines(b.producingPipelineId.x).inputBuffer
     }
-    endBuffer.countersForThisBuffer += counter
+    applyBuffer.reducersForThisApply += reducePlanId
   }
 }

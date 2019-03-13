@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.morsel._
   * Operator task which takes an input morsel and produces one or many output rows
   * for each input row, and might require several operate calls to be fully executed.
   */
-abstract class InputLoopTask extends ContinuableInputOperatorTask {
+abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 
   /**
     * Initialize the inner loop for the current input row.

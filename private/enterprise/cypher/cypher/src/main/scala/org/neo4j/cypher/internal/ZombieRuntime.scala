@@ -72,8 +72,8 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
                            produceResultOperator,
                            p.serial,
                            physicalPlan.slotConfigurations(p.headPlan.id),
-                           p.lhsRowBuffer,
-                           p.output)
+                           p.inputBuffer,
+                           p.outputBuffer)
       }
 
     val executor = context.runtimeEnvironment.getQueryExecutor(context.debugOptions)

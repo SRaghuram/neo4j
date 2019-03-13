@@ -16,13 +16,13 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "Argument"
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselParallelizer,
-                    resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableInputOperatorTask {
+  class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
     override def toString: String = "ArgumentTask"
 

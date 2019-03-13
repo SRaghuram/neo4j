@@ -26,10 +26,10 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "ExpandAll"
 
-  override def init(queryContext: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselParallelizer,
-                    resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
+  override def nextTasks(queryContext: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
   class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {

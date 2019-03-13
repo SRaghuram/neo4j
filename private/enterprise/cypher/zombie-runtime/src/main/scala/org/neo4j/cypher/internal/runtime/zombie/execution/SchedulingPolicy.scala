@@ -16,38 +16,16 @@ trait SchedulingPolicy {
                queryResources: QueryResources): PipelineTask
 }
 
-object TaskMaker {
-  def taskOrNull(pipeline: ExecutablePipeline,
-                 executingQuery: ExecutingQuery,
-                 queryResources: QueryResources): PipelineTask = {
-
-    val state = executingQuery.executionState
-
-    val task = state.continue(pipeline)
-    if (task != null) {
-      return task
-    }
-
-    val input = state.consumeMorsel(pipeline.inputRowBuffer.id, pipeline)
-    if (input != null) {
-      val pipelineState = state.pipelineState(pipeline.id)
-      val tasks = pipelineState.init(input, executingQuery.queryContext, executingQuery.queryState, queryResources)
-      for (task <- tasks.tail)
-        state.addContinuation(task)
-      return tasks.head
-    }
-
-    null
-  }
-}
-
 object LazyScheduling extends SchedulingPolicy {
 
   def nextTask(executingQuery: ExecutingQuery,
                queryResources: QueryResources): PipelineTask = {
 
     for (p <- executingQuery.executablePipelines.reverseIterator) {
-      val task = TaskMaker.taskOrNull(p, executingQuery, queryResources)
+      val pipelineState = executingQuery.executionState.pipelineState(p.id)
+      val task = pipelineState.nextTask(executingQuery.queryContext,
+                                        executingQuery.queryState,
+                                        queryResources)
       if (task != null) {
         return task
       }

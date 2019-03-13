@@ -16,16 +16,16 @@ import org.neo4j.util.Preconditions
   */
 object TheExecutionState {
   def build(stateDefinition: StateDefinition, executablePipelines: Seq[ExecutablePipeline], stateFactory: StateFactory): ExecutionState =
-    new TheExecutionState(stateDefinition.rowBuffers, executablePipelines, stateDefinition.physicalPlan, stateFactory)
+    new TheExecutionState(stateDefinition.buffers, executablePipelines, stateDefinition.physicalPlan, stateFactory)
 }
 
-class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
+class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
                         pipelines: Seq[ExecutablePipeline],
                         physicalPlan: PhysicalPlan,
                         stateFactory: StateFactory) extends ExecutionState {
 
   private val tracker = stateFactory.newTracker()
-  private val asms = new ArgumentStateMaps
+  private val argumentStateMaps = new ArgumentStateMaps
 
   // Verify that IDs and offsets match
 
@@ -47,83 +47,75 @@ class TheExecutionState(bufferDefinitions: Seq[RowBufferDefinition],
       stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
     }
 
-  private val buffers: Array[MorselBuffer] =
-    for (bufferDefinition <- bufferDefinitions.toArray) yield {
-      val counters = bufferDefinition.counters.map(_.reducingPlanId)
-      bufferDefinition match {
-        case x: ArgumentBufferDefinition =>
-          new MorselArgumentBuffer(x.argumentSlotOffset,
-                                   tracker,
-                                   x.countersForThisBuffer.map(_.reducingPlanId),
-                                   counters,
-                                   asms,
-                                   stateFactory.newBuffer(),
-                                   stateFactory.newIdAllocator())
-
-        case _: RowBufferDefinition =>
-          new MorselBuffer(tracker, counters, asms, stateFactory.newBuffer())
-      }
-    }
+  private val buffers = new Buffers(bufferDefinitions, tracker, argumentStateMaps, stateFactory)
 
   private val continuations =
-    new Array[Buffer[PipelineTask]](pipelines.size).map(i => stateFactory.newBuffer[PipelineTask]())
+    new Array[Buffer[PipelineTask]](pipelines.size).map(_ => stateFactory.newBuffer[PipelineTask]())
 
   // Methods
 
-  override def produceMorsel(bufferId: BufferId,
-                             output: MorselExecutionContext): Unit = buffers(bufferId.x).produce(output)
+  override def putMorsel(bufferId: BufferId,
+                         output: MorselExecutionContext): Unit = buffers.sink(bufferId).put(output)
 
-  override def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
-    consumeUnderPotentialLock(pipeline, buffers(bufferId.x))
+  override def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
+    takeUnderPotentialLock(pipeline, buffers.morselBuffer(bufferId))
   }
 
-  def closeWorkUnit(task: PipelineTask): Unit = {
-    val pipeline = task.pipeline
+  override def takeAccumulators[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): Iterable[ACC] = {
+    takeUnderPotentialLock(pipeline, buffers.argumentStateMapBuffer(bufferId))
+  }
+
+  private def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
     if (pipeline.serial)
       pipelineLocks(pipeline.id.x).unlock()
   }
 
-  override def closeTask(task: PipelineTask): Unit = {
-    closeWorkUnit(task)
-    buffers(task.pipeline.inputRowBuffer.id.x).close(task.start.inputMorsel)
+  override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit = {
+    closeWorkUnit(pipeline)
+    buffers.morselBuffer(pipeline.inputBuffer.id).close(inputMorsel)
   }
 
-  override def addContinuation(task: PipelineTask): Unit = {
-    closeWorkUnit(task)
-    continuations(task.pipeline.id.x).produce(task)
+  override def closeAccumulatorsTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulators: Iterable[ACC]): Unit = {
+    closeWorkUnit(pipeline)
+    buffers.argumentStateMapBuffer(pipeline.inputBuffer.id).close(accumulators)
+  }
+
+  override def putContinuation(task: PipelineTask): Unit = {
+    closeWorkUnit(task.pipelineState.pipeline)
+    continuations(task.pipelineState.pipeline.id.x).put(task)
   }
 
   override def continue(pipeline: ExecutablePipeline): PipelineTask = {
-    consumeUnderPotentialLock(pipeline, continuations(pipeline.id.x))
+    takeUnderPotentialLock(pipeline, continuations(pipeline.id.x))
   }
 
-  private def consumeUnderPotentialLock[T <: AnyRef](pipeline: ExecutablePipeline, consumable: Consumable[T]): T = {
+  private def takeUnderPotentialLock[T <: AnyRef](pipeline: ExecutablePipeline, source: Source[T]): T = {
     if (pipeline.serial) {
-      if (consumable.hasData && pipelineLocks(pipeline.id.x).tryLock()) {
-        val t = consumable.consume() // the data might have been consumed while we took the lock
-        if (t == null)
+      if (source.hasData && pipelineLocks(pipeline.id.x).tryLock()) {
+        val t = source.take()
+        if (t == null) // the data might have been taken while we took the lock
           pipelineLocks(pipeline.id.x).unlock()
         t
       } else null.asInstanceOf[T]
     } else
-      consumable.consume()
+      source.take()
   }
 
   override def initialize(): Unit = {
-    buffers.head.produce(MorselExecutionContext.createInitialRow())
+    buffers.sink(BufferId(0)).put(MorselExecutionContext.createInitialRow())
   }
 
   override def pipelineState(pipelineId: PipelineId): PipelineState = pipelineStates(pipelineId.x)
 
   override final def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                                    constructor: () => T): ArgumentStateMap[T] = {
+                                                                    factory: MorselAccumulatorFactory[T]): ArgumentStateMap[T] = {
     val argumentSlotOffset =
       physicalPlan
         .slotConfigurations(reducePlanId)
         .getArgumentLongOffsetFor(physicalPlan.applyPlans(reducePlanId))
 
-    val asm = stateFactory.newArgumentStateMap(reducePlanId, argumentSlotOffset, constructor)
-    asms.set(reducePlanId, asm)
+    val asm = stateFactory.newArgumentStateMap(reducePlanId, argumentSlotOffset, factory)
+    argumentStateMaps.set(reducePlanId, asm)
     asm
   }
 

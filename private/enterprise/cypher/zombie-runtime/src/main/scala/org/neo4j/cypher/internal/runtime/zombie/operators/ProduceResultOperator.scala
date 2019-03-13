@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -28,10 +28,10 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   override def toString: String = "ProduceResult"
 
-  override def init(context: QueryContext,
-                    state: QueryState,
-                    inputMorsel: MorselParallelizer,
-                    resources: QueryResources): IndexedSeq[ContinuableInputOperatorTask] =
+  override def nextTasks(context: QueryContext,
+                         state: QueryState,
+                         inputMorsel: MorselParallelizer,
+                         resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     Array(new InputOTask(inputMorsel.nextCopy))
 
   override def init(context: QueryContext,
@@ -39,7 +39,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                     resources: QueryResources): ContinuableOperatorTask =
     new OutputOTask()
 
-  class InputOTask(val inputMorsel: MorselExecutionContext) extends OTask() with ContinuableInputOperatorTask {
+  class InputOTask(val inputMorsel: MorselExecutionContext) extends OTask() with ContinuableOperatorTaskWithMorsel {
 
     override def canContinue: Boolean = false // will be true sometimes for reactive results
 
@@ -54,6 +54,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
   class OutputOTask() extends OTask() {
 
     override def canContinue: Boolean = false // will be true sometimes for reactive results
+    override def close(operatorCloser: OperatorCloser): Unit = {}
+    override def producingWorkUnitEvent: WorkUnitEvent = null
 
     override def operate(output: MorselExecutionContext,
                          context: QueryContext,

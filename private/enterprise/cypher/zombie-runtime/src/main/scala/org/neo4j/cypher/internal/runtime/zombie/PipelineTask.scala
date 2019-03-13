@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableInputOperatorTask, ContinuableOperatorTask, StatelessOperator}
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, StatelessOperator}
 
 /**
   * The [[Task]] of executing a [[ExecutablePipeline]] once.
@@ -15,12 +15,12 @@ import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryRe
   * @param start  task for executing the start operator
   * @param state  the current QueryState
   */
-case class PipelineTask(start: ContinuableInputOperatorTask,
+case class PipelineTask(start: ContinuableOperatorTask,
                         middleOperators: Seq[StatelessOperator],
                         produceResult: ContinuableOperatorTask,
                         queryContext: QueryContext,
                         state: QueryState,
-                        pipeline: ExecutablePipeline)
+                        pipelineState: PipelineState)
   extends Task[QueryResources] {
 
   override final def executeWorkUnit(resources: QueryResources, output: MorselExecutionContext): Unit = {
@@ -45,9 +45,13 @@ case class PipelineTask(start: ContinuableInputOperatorTask,
     }
   }
 
-  override def workId: Int = pipeline.workId
+  def close(): Unit = {
+    start.close(pipelineState)
+  }
 
-  override def workDescription: String = pipeline.workDescription
+  override def workId: Int = pipelineState.pipeline.workId
+
+  override def workDescription: String = pipelineState.pipeline.workDescription
 
   override def canContinue: Boolean = start.canContinue || (produceResult != null && produceResult.canContinue)
 }

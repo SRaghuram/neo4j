@@ -9,10 +9,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicLong
 
 /**
-  * A [[Tracker]] tracks the progress of some process. This is done by keeping an internal
-  * count of events. When the count is zero the process has completed.
+  * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
+  * count of events. When the count is zero the query has completed.
   */
-trait Tracker {
+trait QueryCompletionTracker {
   /**
     * Increment the tracker count.
     */
@@ -24,22 +24,22 @@ trait Tracker {
   def decrement(): Long
 
   /**
-    * Await process completion. Blocks until the process has completed.
+    * Await query completion. Blocks until the query has completed.
     */
   def await()
 
   /**
-    * Query process completion state. Non-blocking.
+    * Query completion state. Non-blocking.
     *
-    * @return true iff the process has completed
+    * @return true iff the query has completed
     */
   def isCompleted: Boolean
 }
 
 /**
-  * Not thread-safe implementation of [[Tracker]].
+  * Not thread-safe implementation of [[QueryCompletionTracker]].
   */
-class StandardTracker extends Tracker {
+class StandardQueryCompletionTracker extends QueryCompletionTracker {
   private var count = 0L
 
   override def increment(): Long = {
@@ -52,17 +52,18 @@ class StandardTracker extends Tracker {
     count
   }
 
-  override def await(): Unit =
+  override def await(): Unit = {
     if (count != 0)
       throw new IllegalStateException("Should not reach await until tracking is complete!")
+  }
 
   override def isCompleted: Boolean = count == 0
 }
 
 /**
-  * Concurrent implementation of [[Tracker]].
+  * Concurrent implementation of [[QueryCompletionTracker]].
   */
-class ConcurrentTracker extends Tracker {
+class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
   private var count = new AtomicLong(0)
   private var latch = new CountDownLatch(1)
 

@@ -5,11 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.{PipelineId, RowBufferDefinition, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.{PipelineId, BufferDefinition, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, StatelessOperator}
 import org.neo4j.cypher.internal.runtime.morsel.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
+import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 
 case class ExecutablePipeline(id: PipelineId,
@@ -18,14 +20,14 @@ case class ExecutablePipeline(id: PipelineId,
                               produceResult: Option[ProduceResultOperator],
                               serial: Boolean,
                               slots: SlotConfiguration,
-                              inputRowBuffer: RowBufferDefinition,
-                              output: RowBufferDefinition) extends WorkIdentity {
+                              inputBuffer: BufferDefinition,
+                              outputBuffer: BufferDefinition) extends WorkIdentity {
 
-  def createState(argumentStateCreator: ArgumentStateCreator): PipelineState =
-    new PipelineState(this, start.createState(argumentStateCreator))
+  def createState(executionState: ExecutionState): PipelineState =
+    new PipelineState(this, start.createState(executionState), executionState)
 
-  override val workId = start.workIdentity.workId
-  override val workDescription = composeWorkDescriptions(start, middleOperators ++ produceResult)
+  override val workId: Int = start.workIdentity.workId
+  override val workDescription: String = composeWorkDescriptions(start, middleOperators ++ produceResult)
 
   private def composeWorkDescriptions(first: HasWorkIdentity, others: Seq[HasWorkIdentity]): String = {
     val workIdentities = Seq(first) ++ others
@@ -35,15 +37,65 @@ case class ExecutablePipeline(id: PipelineId,
   override def toString: String = workDescription
 }
 
-class PipelineState(val pipeline: ExecutablePipeline, startState: OperatorState) {
+class PipelineState(val pipeline: ExecutablePipeline,
+                    startState: OperatorState,
+                    executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
-  def init(inputMorsel: MorselParallelizer,
-           context: QueryContext,
-           state: QueryState,
-           resources: QueryResources): IndexedSeq[PipelineTask] = {
+  /**
+    * Returns the next task for this pipeline, or `null` if no task is available.
+    *
+    * If a continuation of a previous task is available, that will be returned.
+    * Otherwise, the start operator of the pipeline will look for new input from
+    * which to generate tasks. If the start operator find input and generates tasks,
+    * one of these will be returned, and the rest stored as continuations.
+    */
+  def nextTask(context: QueryContext,
+               state: QueryState,
+               resources: QueryResources): PipelineTask = {
+    val task = executionState.continue(pipeline)
+    if (task != null) {
+      return task
+    }
 
-    val streamTasks = startState.init(context, state, inputMorsel, resources)
-    val produceResultsTask = pipeline.produceResult.map(_.init(context, state, resources)).orNull
-    streamTasks.map(startTask => PipelineTask(startTask, pipeline.middleOperators, produceResultsTask, context, state, pipeline))
+    val streamTasks = startState.nextTasks(context, state, this, resources)
+    if (streamTasks != null) {
+      val produceResultsTask = pipeline.produceResult.map(_.init(context, state, resources)).orNull
+      val tasks = streamTasks.map(startTask => PipelineTask(startTask, pipeline.middleOperators, produceResultsTask, context, state, this))
+      for (task <- tasks.tail)
+        putContinuation(task)
+      tasks.head
+    } else {
+      null
+    }
+  }
+
+  def produce(morsel: MorselExecutionContext): Unit = {
+    if (pipeline.outputBuffer != null) {
+      executionState.putMorsel(pipeline.outputBuffer.id, morsel)
+    }
+  }
+
+  def putContinuation(task: PipelineTask): Unit = {
+    executionState.putContinuation(task)
+  }
+
+  /* OperatorInput */
+
+  override def takeMorsel(): MorselParallelizer = {
+    executionState.takeMorsel(pipeline.inputBuffer.id, pipeline)
+  }
+
+  override def takeAccumulators[ACC <: MorselAccumulator](argumentStateMap: ArgumentStateMap[ACC]): Iterable[ACC] = {
+    executionState.takeAccumulators(pipeline.inputBuffer.id, pipeline)
+  }
+
+  /* OperatorCloser */
+
+  override def closeMorsel(morsel: MorselExecutionContext): Unit = {
+    executionState.closeMorselTask(pipeline, morsel)
+  }
+
+  override def closeAccumulators[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Unit = {
+    executionState.closeAccumulatorsTask(pipeline, accumulators)
   }
 }

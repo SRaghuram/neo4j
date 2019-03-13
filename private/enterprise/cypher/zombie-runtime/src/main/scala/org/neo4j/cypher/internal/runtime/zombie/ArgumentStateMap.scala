@@ -16,7 +16,16 @@ trait MorselAccumulator {
   /**
     * Update internal state using the provided morsel.
     */
-  def update(morsel: MorselExecutionContext)
+  def update(morsel: MorselExecutionContext): Unit
+
+  /**
+    * The ID of the argument row for this accumulator.
+    */
+  def argumentRowId: Long
+}
+
+trait MorselAccumulatorFactory[T <: MorselAccumulator] {
+  def newAccumulator(argumentRowId: Long): T
 }
 
 /**
@@ -32,10 +41,16 @@ trait ArgumentStateMap[T <: MorselAccumulator] {
   def update(morsel: MorselExecutionContext): Unit
 
   /**
-    * Consume the MorselAccumulators of all complete arguments. The MorselAccumulators will
-    * be removed from the ArgumentStateMap and cannot be consumed or modified after this call.
+    * Take the MorselAccumulators of all complete arguments. The MorselAccumulators will
+    * be removed from the ArgumentStateMap and cannot be taken again or modified after this call.
     */
-  def consumeCompleted(): Iterator[T]
+  def takeCompleted(): Iterable[T]
+
+  /**
+    * Returns `true` iff there is a completed argument.
+    * @return
+    */
+  def hasCompleted: Boolean
 
   /**
     * Initiate state and counting for a new argument.
@@ -76,7 +91,7 @@ object ArgumentStateMap {
                       f: (Long, MorselExecutionContext) => Unit): Unit = {
 
     while (morsel.isValidRow) {
-      var arg = morsel.getLongAt(argumentSlotOffset)
+      val arg = morsel.getLongAt(argumentSlotOffset)
       val start: Int = morsel.getCurrentRow
       while (morsel.isValidRow && morsel.getLongAt(argumentSlotOffset) == arg) {
         morsel.moveToNextRow()

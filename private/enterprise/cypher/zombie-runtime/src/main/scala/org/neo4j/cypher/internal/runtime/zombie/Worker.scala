@@ -56,21 +56,18 @@ class Worker(val workerId: Int,
     try {
       val task = schedulingPolicy.nextTask(executingQuery, resources)
       if (task != null) {
-        val pipeline = task.pipeline
-        val state = executingQuery.executionState
+        val state = task.pipelineState
         val workUnitEvent = executingQuery.queryExecutionTracer.scheduleWorkUnit(task, upstreamWorkUnitEvents(task)).start()
-        val output = allocateMorsel(pipeline, executingQuery.queryState.morselSize, workUnitEvent)
+        val output = allocateMorsel(state.pipeline, executingQuery.queryState.morselSize, workUnitEvent)
         task.executeWorkUnit(resources, output)
         workUnitEvent.stop()
 
-        if (pipeline.output != null) {
-          state.produceMorsel(pipeline.output.id, output)
-        }
+        state.produce(output)
 
         if (task.canContinue) {
-          state.addContinuation(task)
+          state.putContinuation(task)
         } else {
-          state.closeTask(task)
+          task.close()
         }
         true
       } else
@@ -83,7 +80,7 @@ class Worker(val workerId: Int,
   }
 
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {
-    val upstreamWorkUnitEvent = task.start.inputMorsel.producingWorkUnitEvent
+    val upstreamWorkUnitEvent = task.start.producingWorkUnitEvent
     if (upstreamWorkUnitEvent != null) Seq(upstreamWorkUnitEvent) else Seq.empty
   }
 

@@ -13,12 +13,13 @@ import scala.collection.mutable.ArrayBuffer
 class StandardBuffer[T <: AnyRef] extends Buffer[T] {
   private val data = new ArrayBuffer[T]
 
-  override def hasData: Boolean = data.nonEmpty
-
-  override def produce(t: T): Unit = {
+  override def put(t: T): Unit = {
     data.append(t)
   }
-  override def consume(): T = {
+
+  override def hasData: Boolean = data.nonEmpty
+
+  override def take(): T = {
     if (data.isEmpty) null.asInstanceOf[T]
     else data.remove(0)
   }

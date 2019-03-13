@@ -13,10 +13,10 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
 
   override def hasData: Boolean = !data.isEmpty
 
-  override def produce(t: T): Unit = {
+  override def put(t: T): Unit = {
     data.add(t)
   }
-  override def consume(): T = {
+  override def take(): T = {
     data.poll()
   }
 }

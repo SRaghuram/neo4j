@@ -6,13 +6,33 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 /**
-  * Basic buffer.
+  * Basic buffer (put things and then take the in FIFO order).
   */
-trait Buffer[T <: AnyRef] extends Consumable[T] {
-  def produce(t: T): Unit
+trait Buffer[T <: AnyRef] extends Sink[T] with Source[T]
+
+/**
+  * Place where you put things of type `T`.
+  */
+trait Sink[T <: AnyRef] {
+
+  /**
+    * Put an element in this sink
+    */
+  def put(t: T): Unit
 }
 
-trait Consumable[T <: AnyRef] {
+/**
+  * Place where you take things of type `T`.
+  */
+trait Source[T <: AnyRef] {
+
+  /**
+    * True if this source has data
+    */
   def hasData: Boolean
-  def consume(): T
+
+  /**
+    * Return the T to take, or `null` is available
+    */
+  def take(): T
 }

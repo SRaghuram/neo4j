@@ -6,11 +6,10 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.BiConsumer
 
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator, Zombie}
+import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator, MorselAccumulatorFactory, Zombie}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
@@ -18,11 +17,11 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
   */
-class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
-                                                         val argumentSlotOffset: Int,
-                                                         constructor: () => T) extends ArgumentStateMap[T] {
+class ConcurrentArgumentStateMap[ACC <: MorselAccumulator](val owningPlanId: Id,
+                                                           val argumentSlotOffset: Int,
+                                                           factory: MorselAccumulatorFactory[ACC]) extends ArgumentStateMap[ACC] {
 
-  private val accumulatorControllers = new java.util.concurrent.ConcurrentHashMap[Long, AccumulatorController[T]]()
+  private val accumulatorControllers = new java.util.concurrent.ConcurrentHashMap[Long, AccumulatorController[ACC]]()
 
   override def update(morsel: MorselExecutionContext): Unit = {
     ArgumentStateMap.foreachArgument(
@@ -31,33 +30,35 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
       (argumentRowId, morselView) => {
         val controller = accumulatorControllers.get(argumentRowId)
         controller.update(morselView)
-        val newCount = controller.decrement()
-        debug("decr %03d to %s".format(argumentRowId, newCount))
       }
     )
-    morsel.removeCounter(owningPlanId)
   }
 
-  override def consumeCompleted(): Iterator[T] = {
-    val completeAccumulators = new ArrayBuffer[T]
-    val completeArguments = new ArrayBuffer[Long]
-
-    accumulatorControllers.forEach(new BiConsumer[Long, AccumulatorController[T]] {
-      override def accept(argument: Long, controller: AccumulatorController[T]): Unit = {
-        if (controller.isZero) {
-          completeArguments += argument
-          completeAccumulators += controller.result
-        }
+  override def takeCompleted(): Iterable[ACC] = {
+    val completeAccumulators = new ArrayBuffer[ACC]
+    accumulatorControllers.forEach((argument: Long, controller: AccumulatorController[ACC]) => {
+      if (controller.take) {
+        completeAccumulators += controller.result
       }
     })
+    completeAccumulators.foreach(acc => accumulatorControllers.remove(acc.argumentRowId))
+    completeAccumulators
+  }
 
-    completeArguments.foreach(arg => accumulatorControllers.remove(arg))
-    completeAccumulators.toIterator
+  override def hasCompleted: Boolean = {
+    val iterator = accumulatorControllers.values().iterator()
+
+    while(iterator.hasNext) {
+      val controller: AccumulatorController[ACC] = iterator.next()
+      if (controller.isZero)
+        return true
+    }
+    false
   }
 
   override def initiate(argument: Long): Unit = {
     val id = if (Zombie.DEBUG) s"Accumulator[plan=$owningPlanId, rowId=$argument]" else "Accumulator[...]"
-    val newController = new AccumulatorController(id, constructor())
+    val newController = new AccumulatorController(id, factory.newAccumulator(argument))
     accumulatorControllers.put(argument, newController)
   }
 
@@ -77,13 +78,14 @@ class ConcurrentArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
   * Controller which knows when a [[MorselAccumulator]] has completed accumulation,
   * and protects it from concurrent access.
   */
-class AccumulatorController[T <: MorselAccumulator](id: String, accumulator: T) {
+class AccumulatorController[ACC <: MorselAccumulator](id: String, accumulator: ACC) {
   private val count = new AtomicLong(1)
   private val lock = new ConcurrentLock(id)
 
   def increment(): Long = count.incrementAndGet()
   def decrement(): Long = count.decrementAndGet()
-  def isZero: Boolean = count.compareAndSet(0, -1000000)
+  def take: Boolean = count.compareAndSet(0, -1000000)
+  def isZero: Boolean = count.get() == 0
 
   def update(morsel: MorselExecutionContext): Unit = {
     lock.lock()
@@ -91,5 +93,5 @@ class AccumulatorController[T <: MorselAccumulator](id: String, accumulator: T) 
     lock.unlock()
   }
 
-  def result: T = accumulator
+  def result: ACC = accumulator
 }

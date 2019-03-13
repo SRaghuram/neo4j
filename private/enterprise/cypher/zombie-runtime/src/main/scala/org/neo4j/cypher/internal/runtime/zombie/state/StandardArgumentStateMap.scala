@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.state
 
 import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator, MorselAccumulatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
@@ -17,48 +17,49 @@ import scala.collection.mutable
   */
 class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
                                                        val argumentSlotOffset: Int,
-                                                       constructor: () => T) extends ArgumentStateMap[T] {
-  private val arguments = mutable.Map[Long, T]()
-  private val counters = mutable.Map[Long, Long]().withDefaultValue(1)
+                                                       factory: MorselAccumulatorFactory[T]) extends ArgumentStateMap[T] {
+  private val controllers = mutable.Map[Long, Controller]()
 
   override def update(morsel: MorselExecutionContext): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,
       (argument, morselView) => {
-        val accumulator = arguments(argument)
-        accumulator.update(morselView)
-        decrement(argument)
+        val controller = controllers(argument)
+        controller.accumulator.update(morselView)
       }
     )
-    morsel.removeCounter(owningPlanId)
   }
 
-  override def consumeCompleted(): Iterator[T] = {
-    val complete =
-      for {
-        argument <- counters.keys
-        if counters(argument) == 0
-      } yield argument
+  override def takeCompleted(): Iterable[T] = {
+    val complete = controllers.values.filter(_.count == 0)
+    complete.foreach(controller => controllers -= controller.accumulator.argumentRowId)
+    complete.map(_.accumulator)
+  }
 
-    complete.foreach(argument => counters -= argument)
-    complete.map(arguments).toIterator
+  override def hasCompleted: Boolean = {
+    controllers.values.exists(_.count == 0)
   }
 
   override def initiate(argument: Long): Unit = {
-    arguments += argument -> constructor()
+    controllers += argument -> new Controller(factory.newAccumulator(argument))
   }
 
   override def increment(argument: Long): Unit = {
-    counters(argument) += 1
-    debug("incr %03d to %s".format(argument, counters(argument)))
+    val controller = controllers(argument)
+    controller.count += 1
+    debug("incr %03d to %s".format(argument, controller.count))
   }
 
   override def decrement(argument: Long): Unit = {
-    val curr = counters(argument)
-    if (curr == 0)
+    val controller = controllers(argument)
+    if (controller.count == 0)
       throw new IllegalStateException("Cannot have negative reference counts!")
-    counters(argument) = curr - 1
-    debug("decr %03d to %s".format(argument, counters(argument)))
+    controller.count -= 1
+    debug("decr %03d to %s".format(argument, controller.count))
+  }
+
+  private class Controller(val accumulator: T) {
+    var count: Long = 1
   }
 }

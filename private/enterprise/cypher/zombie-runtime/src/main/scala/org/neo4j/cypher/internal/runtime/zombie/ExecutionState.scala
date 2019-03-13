@@ -19,8 +19,7 @@ trait ArgumentStateCreator {
     * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `reducePlanId`.
     */
   def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                     constructor: () => T
-                                                    ): ArgumentStateMap[T]
+                                                     factory: MorselAccumulatorFactory[T]): ArgumentStateMap[T]
 }
 
 /**
@@ -34,24 +33,39 @@ trait ExecutionState extends ArgumentStateCreator {
   def pipelineState(pipelineId: PipelineId): PipelineState
 
   /**
-    * Produce a morsel into the row buffer with id `bufferId`. This call
-    * also resets the morsel current row to the first row.
+    * Put a morsel into the buffer with id `bufferId`.
     */
-  def produceMorsel(bufferId: BufferId, morsel: MorselExecutionContext): Unit
+  def putMorsel(bufferId: BufferId, morsel: MorselExecutionContext): Unit
 
   /**
-    * Consume a morsel from the row buffer with id `bufferId`.
+    * Take a morsel from the row buffer with id `bufferId`.
     *
-    * @return the morsel to consume, or `null` if no morsel was available
+    * @return the morsel to take, or `null` if no morsel was available
     */
-  def consumeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer
+  def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer
 
   /**
-    * Close this task, meaning that we are done executing it.
+    * Take all morsel accumulators that are ready from the argument state map buffer with id `bufferId`.
     *
-    * @param task the task to close
+    * @return the ready morsel accumulators, or `null` if no accumulators are ready
     */
-  def closeTask(task: PipelineTask): Unit
+  def takeAccumulators[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): Iterable[ACC]
+
+  /**
+    * Close a pipeline task which was executing over an input morsel.
+    *
+    * @param pipeline the executing pipeline
+    * @param inputMorsel the input morsel
+    */
+  def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit
+
+  /**
+    * Close a pipeline task which was executing over some input morsel accumulators.
+    *
+    * @param pipeline the executing pipeline
+    * @param accumulators the input morsel accumulators
+    */
+  def closeAccumulatorsTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulators: Iterable[ACC]): Unit
 
   /**
     * Continue executing pipeline `p`.
@@ -61,9 +75,9 @@ trait ExecutionState extends ArgumentStateCreator {
   def continue(p: ExecutablePipeline): PipelineTask
 
   /**
-    * Add `task` to the continuation queue for its pipeline, so we can continue executing it later.
+    * Put `task` to the continuation queue for its pipeline, so we can continue executing it later.
     */
-  def addContinuation(task: PipelineTask): Unit
+  def putContinuation(task: PipelineTask): Unit
 
   /**
     * Adds an empty row to the initBuffer.

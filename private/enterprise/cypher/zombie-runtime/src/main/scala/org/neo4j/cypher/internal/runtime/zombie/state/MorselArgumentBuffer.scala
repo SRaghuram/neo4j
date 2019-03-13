@@ -12,18 +12,22 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 /**
   * Extension of [[MorselBuffer]], which generates and writes argument row ids into given `argumentSlotOffset`.
   *
-  * @param argumentSlotOffset slot to which argument row ids are written.
+  * @param argumentSlotOffset                slot to which argument row ids are written.
+  * @param downstreamArgumentReducersForThis ids of downstream logical plans which reduce morsels
   */
-class MorselArgumentBuffer(argumentSlotOffset: Int,
-                           tracker: Tracker,
-                           countersForThisBuffer: Seq[Id],
-                           countersForOtherBuffers: Seq[Id],
+class MorselArgumentBuffer(tracker: QueryCompletionTracker,
+                           downstreamArgumentReducersForThis: Seq[Id],
+                           downstreamArgumentReducersForOthers: Seq[Id],
                            argumentStateMaps: ArgumentStateMaps,
                            inner: Buffer[MorselExecutionContext],
+                           argumentSlotOffset: Int,
                            idAllocator: IdAllocator
-                          ) extends MorselBuffer(tracker, countersForOtherBuffers, argumentStateMaps, inner) {
+                          ) extends MorselBuffer(tracker,
+                                                 downstreamArgumentReducersForOthers,
+                                                 argumentStateMaps,
+                                                 inner) {
 
-  override def produce(morsel: MorselExecutionContext): Unit = {
+  override def put(morsel: MorselExecutionContext): Unit = {
     var argumentRowId = idAllocator.allocateIdBatch(morsel.getValidRows)
 
     morsel.resetToFirstRow()
@@ -33,13 +37,8 @@ class MorselArgumentBuffer(argumentSlotOffset: Int,
       morsel.moveToNextRow()
     }
 
-    for {
-      reducePlanId <- countersForThisBuffer
-      asm = argumentStateMaps(reducePlanId)
-      argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
-    } asm.initiate(argumentId)
-    morsel.setCounters(countersForThisBuffer)
+    initiateArgumentCounts(downstreamArgumentReducersForThis, morsel)
 
-    super.produce(morsel)
+    super.put(morsel)
   }
 }
