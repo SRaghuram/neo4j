@@ -22,7 +22,7 @@ class Buffers(bufferDefinitions: Seq[BufferDefinition],
       val reducers = bufferDefinition.reducers
       bufferDefinition match {
         case x: ApplyBufferDefinition =>
-          new MorselArgumentBuffer(tracker, x.reducersForThisApply, reducers, argumentStateMaps, stateFactory.newBuffer(), x.argumentSlotOffset, stateFactory.newIdAllocator())
+          new MorselApplyBuffer(tracker, x.reducersForThisApply, reducers, argumentStateMaps, stateFactory.newBuffer(), x.argumentSlotOffset, stateFactory.newIdAllocator())
 
         case x: ArgumentStateBufferDefinition =>
           new MorselArgumentStateBuffer(tracker, reducers, argumentStateMaps, x.reducingPlanId)
