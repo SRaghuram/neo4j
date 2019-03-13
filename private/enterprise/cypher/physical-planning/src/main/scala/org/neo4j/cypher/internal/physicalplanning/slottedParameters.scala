@@ -18,9 +18,9 @@ import org.neo4j.cypher.internal.v4_0.util.{Rewriter, bottomUp}
 case object slottedParameters {
 
   def apply(input: LogicalPlan): (LogicalPlan, Map[String, Int]) = {
-    val mapping: Map[String, Int] = input.treeFold(List.empty[String]) {
-      case Parameter(name, _) => acc => (name :: acc, Some(identity))
-    }.sorted.toArray.zipWithIndex.toMap
+    val mapping: Map[String, Int] = input.treeFold(Set.empty[String]) {
+      case Parameter(name, _) => acc => (acc + name, Some(identity))
+    }.toArray.sorted.zipWithIndex.toMap
 
     val rewriter = bottomUp(Rewriter.lift {
       case Parameter(name, typ) => ParameterFromSlot(mapping(name), name, typ)

@@ -31,4 +31,20 @@ class SlottedParametersTest extends CypherFunSuite with AstConstructionTestSuppo
     newPlan should equal(ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
   }
 
+  test("should rewrite plan with multiple occurrences of same parameter") {
+    //given
+    val allNodes = AllNodesScan("x", Set.empty)
+    val predicate = greaterThan(add(parameter("a", symbols.CTAny), parameter("a", symbols.CTAny)), literalInt(42))
+    val produceResult = ProduceResult(Selection(Seq(predicate), allNodes), Seq("x"))
+
+
+    //when
+    val (newPlan, mapping) = slottedParameters(produceResult)
+
+    //then
+    val newPredicate = greaterThan(add(ParameterFromSlot(0, "a", symbols.CTAny), ParameterFromSlot( 0, "a", symbols.CTAny)), literalInt(42))
+    mapping should equal(Map("a" -> 0))
+    newPlan should equal(ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
+  }
+
 }
