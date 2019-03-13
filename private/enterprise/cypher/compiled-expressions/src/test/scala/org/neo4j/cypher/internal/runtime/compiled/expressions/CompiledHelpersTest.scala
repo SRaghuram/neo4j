@@ -8,11 +8,11 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions
 import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers._
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
+import org.neo4j.cypher.internal.v4_0.util.CypherTypeException
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.v4_0.util.{CypherTypeException, ParameterNotFoundException}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor}
 import org.neo4j.values.storable.Values._
-import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualValues}
+import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
 
 class CompiledHelpersTest extends CypherFunSuite {
   test("assertBooleanOrNoValue") {
@@ -152,14 +152,4 @@ class CompiledHelpersTest extends CypherFunSuite {
     relationshipOrNoValue(context, access, relOffset) should equal(relationship)
     relationshipOrNoValue(context, access, noRelOffset) should equal(NO_VALUE)
   }
-
-  test("loadParameter") {
-    val parameters = VirtualValues.map(Array("a", "b", "c"), Array(PI, ZERO_INT, E))
-
-    loadParameter("a", parameters) should equal(PI)
-    loadParameter("b", parameters) should equal(ZERO_INT)
-    loadParameter("c", parameters) should equal(E)
-    a[ParameterNotFoundException] should be thrownBy loadParameter("d", parameters)
-  }
-
 }
