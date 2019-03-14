@@ -77,7 +77,7 @@ trait ExecutionState extends ArgumentStateCreator {
   /**
     * Adds an empty row to the initBuffer.
     */
-  def initialize(): Unit
+  def initializeState(): Unit
 
   /**
     * Await the completion of this query execution.

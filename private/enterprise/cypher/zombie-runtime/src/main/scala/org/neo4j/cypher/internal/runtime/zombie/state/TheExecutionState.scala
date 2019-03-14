@@ -37,17 +37,23 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
   for (i <- bufferDefinitions.indices)
     Preconditions.checkState(i == bufferDefinitions(i).id.x, "Buffer definition id does not match offset!")
 
-  // Build state
+  // State
 
-  private val pipelineLocks =
-    for (pipeline <- pipelines.toArray) yield {
-      stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
-    }
+  private var pipelineLocks: Array[Lock] = _
+  private var buffers: Buffers = _
+  private var continuations: Array[Buffer[PipelineTask]] = _
 
-  private val buffers = new Buffers(bufferDefinitions, tracker, argumentStateMaps, stateFactory)
+  override def initializeState(): Unit = {
+    pipelineLocks =
+      for (pipeline <- pipelines.toArray) yield {
+        stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
+      }
 
-  private val continuations =
-    new Array[Buffer[PipelineTask]](pipelines.size).map(_ => stateFactory.newBuffer[PipelineTask]())
+    buffers = new Buffers(bufferDefinitions, tracker, argumentStateMaps, stateFactory)
+    continuations = new Array[Int](pipelines.size).map(_ => stateFactory.newBuffer[PipelineTask]())
+
+    putMorsel(BufferId(0), MorselExecutionContext.createInitialRow())
+  }
 
   // Methods
 
@@ -100,10 +106,6 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
       } else null.asInstanceOf[T]
     } else
       source.take()
-  }
-
-  override def initialize(): Unit = {
-    putMorsel(BufferId(0), MorselExecutionContext.createInitialRow())
   }
 
   override final def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,

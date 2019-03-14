@@ -80,7 +80,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                                     queryState,
                                                     initResources)
 
-    executionState.initialize()
+    executionState.initializeState()
 
     val executingQuery = new ExecutingQuery(pipelineExecutions,
                                             executionState,

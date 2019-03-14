@@ -29,17 +29,19 @@ class MorselApplyBuffer(tracker: QueryCompletionTracker,
                                                  inner) {
 
   override def put(morsel: MorselExecutionContext): Unit = {
-    var argumentRowId = idAllocator.allocateIdBatch(morsel.getValidRows)
+    if (morsel.hasData) {
+      var argumentRowId = idAllocator.allocateIdBatch(morsel.getValidRows)
 
-    morsel.resetToFirstRow()
-    while (morsel.isValidRow) {
-      morsel.setLongAt(argumentSlotOffset, argumentRowId)
-      argumentRowId += 1
-      morsel.moveToNextRow()
+      morsel.resetToFirstRow()
+      while (morsel.isValidRow) {
+        morsel.setLongAt(argumentSlotOffset, argumentRowId)
+        argumentRowId += 1
+        morsel.moveToNextRow()
+      }
+
+      initiateArgumentCounts(argumentStatesForThisApply, morsel)
+
+      super.put(morsel)
     }
-
-    initiateArgumentCounts(argumentStatesForThisApply, morsel)
-
-    super.put(morsel)
   }
 }

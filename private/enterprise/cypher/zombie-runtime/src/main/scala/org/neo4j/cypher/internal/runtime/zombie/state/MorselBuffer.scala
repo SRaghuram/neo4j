@@ -23,9 +23,11 @@ class MorselBuffer(tracker: QueryCompletionTracker,
                        with Source[MorselParallelizer] {
 
   override def put(morsel: MorselExecutionContext): Unit = {
-    morsel.resetToFirstRow()
-    incrementArgumentCounts(morsel)
-    inner.put(morsel)
+    if (morsel.hasData) {
+      morsel.resetToFirstRow()
+      incrementArgumentCounts(morsel)
+      inner.put(morsel)
+    }
   }
 
   override def hasData: Boolean = inner.hasData

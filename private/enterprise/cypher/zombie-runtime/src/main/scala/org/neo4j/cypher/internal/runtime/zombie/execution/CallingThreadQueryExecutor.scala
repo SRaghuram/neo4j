@@ -47,7 +47,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
     val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory, this)
     val pipelineExecutions = new PipelineExecutions(executablePipelines, executionState, queryContext, queryState, resources)
 
-    executionState.initialize()
+    executionState.initializeState()
 
     val worker = new Worker(1, null, LazyScheduling, resources)
     val executingQuery = new ExecutingQuery(pipelineExecutions, executionState, queryContext, queryState, schedulerTracer.traceQuery())

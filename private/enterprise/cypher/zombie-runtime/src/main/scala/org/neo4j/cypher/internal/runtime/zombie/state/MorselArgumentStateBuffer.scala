@@ -25,8 +25,10 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
   private val argumentStateMap = argumentStateMaps(reducePlanId).asInstanceOf[ArgumentStateMap[ACC]]
 
   override def put(morsel: MorselExecutionContext): Unit = {
-    morsel.resetToFirstRow()
-    argumentStateMap.update(morsel)
+    if (morsel.hasData) {
+      morsel.resetToFirstRow()
+      argumentStateMap.update(morsel)
+    }
   }
 
   override def hasData: Boolean = argumentStateMap.hasCompleted
