@@ -9,5 +9,5 @@ import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.v4_0.util.symbols.CypherType
 
 case class ParameterFromSlot(offset: Int, name: String, parameterType: CypherType) extends RuntimeExpression {
-  override def asCanonicalStringVal: String = s"{$name}"
+  override def asCanonicalStringVal: String = "$" + name
 }

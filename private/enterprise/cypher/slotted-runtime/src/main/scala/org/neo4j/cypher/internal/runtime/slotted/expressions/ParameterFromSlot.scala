@@ -12,10 +12,13 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.values.AnyValue
 
-case class ParameterFromSlot(offset: Int) extends Expression with SlottedExpression {
+case class ParameterFromSlot(offset: Int, parameterName: String) extends Expression with SlottedExpression {
 
   override def apply(ctx: ExecutionContext, state: QueryState): AnyValue = state match {
     case s: SlottedQueryState => s.parameterArray(offset)
     case _ => throw new InternalException(s"QueryState $state does not support accessing parameters by offset")
   }
+
+  override def toString: String = "$" + parameterName
+
 }

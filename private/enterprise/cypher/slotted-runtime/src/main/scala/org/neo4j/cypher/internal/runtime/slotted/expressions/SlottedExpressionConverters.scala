@@ -96,8 +96,8 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
                                                            self.toCommandExpression(id, e.projection),
                                                            physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
                                                            e.availableExpressionVariables.map(commands.ExpressionVariable.of).toArray))
-      case runtimeAst.ParameterFromSlot(offset, _, _) =>
-        Some(runtimeExpression.ParameterFromSlot(offset))
+      case runtimeAst.ParameterFromSlot(offset, name, _) =>
+        Some(runtimeExpression.ParameterFromSlot(offset, name))
 
       case _ =>
         None

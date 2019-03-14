@@ -141,7 +141,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
   //Not suitable for the TCK
   test("should fail at runtime when the expression is not a node or a relationship") {
     failWithError(Configs.InterpretedAndSlotted, "SET (CASE WHEN true THEN {node} END).name = 'neo4j' RETURN count(*)",
-      List("The expression GenericCase(Vector((true,{node})),None) should have been a node or a relationship",
+      List("The expression GenericCase(Vector((true,$node)),None) should have been a node or a relationship",
         "Developer: Stefan claims that: This should be a node or a relationship"), params = Map("node" -> 42))
   }
 
