@@ -39,11 +39,6 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
 
   // Build state
 
-  private val pipelineStates =
-    for (pipeline <- pipelines.toArray) yield {
-      pipeline.createState(this)
-    }
-
   private val pipelineLocks =
     for (pipeline <- pipelines.toArray) yield {
       stateFactory.newLock(s"Pipeline[${pipeline.id.x}]")
@@ -110,8 +105,6 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
   override def initialize(): Unit = {
     putMorsel(BufferId(0), MorselExecutionContext.createInitialRow())
   }
-
-  override def pipelineState(pipelineId: PipelineId): PipelineState = pipelineStates(pipelineId.x)
 
   override final def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
                                                                     factory: MorselAccumulatorFactory[T]): ArgumentStateMap[T] = {

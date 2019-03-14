@@ -31,6 +31,18 @@ class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
     )
   }
 
+  override def filter[U](readingRow: MorselExecutionContext,
+                         onArgument: (T, Long) => U,
+                         onRow: (U, MorselExecutionContext) => Boolean): Unit = {
+    ArgumentStateMap.filter(
+      argumentSlotOffset,
+      readingRow,
+      (argumentRowId, nRows) =>
+        onArgument(controllers(argumentRowId).accumulator, nRows),
+      onRow
+    )
+  }
+
   override def takeCompleted(): Iterable[T] = {
     val complete = controllers.values.filter(_.count == 0)
     complete.foreach(controller => controllers -= controller.accumulator.argumentRowId)

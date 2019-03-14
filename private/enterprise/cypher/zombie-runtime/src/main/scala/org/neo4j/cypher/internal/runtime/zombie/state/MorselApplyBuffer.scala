@@ -13,18 +13,18 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
   * Extension of [[MorselBuffer]] which connect the LHS and RHS of an Apply. To allow tracking the data from a
   * particular argument rows, this buffer generates and writes argument row ids into a given `argumentSlotOffset`.
   *
-  * @param argumentSlotOffset                slot to which argument row ids are written.
-  * @param downstreamArgumentReducersForThis ids of downstream logical plans which reduce morsels
+  * @param argumentSlotOffset         slot to which argument row ids are written.
+  * @param argumentStatesForThisApply ids of downstream logical plans which keep argument state for this apply
   */
 class MorselApplyBuffer(tracker: QueryCompletionTracker,
-                        downstreamArgumentReducersForThis: Seq[Id],
-                        downstreamArgumentReducersForOthers: Seq[Id],
+                        argumentStatesForThisApply: Seq[Id],
+                        argumentReducersForOtherApplies: Seq[Id],
                         argumentStateMaps: ArgumentStateMaps,
                         inner: Buffer[MorselExecutionContext],
                         argumentSlotOffset: Int,
                         idAllocator: IdAllocator
                           ) extends MorselBuffer(tracker,
-                                                 downstreamArgumentReducersForOthers,
+                                                 argumentReducersForOtherApplies,
                                                  argumentStateMaps,
                                                  inner) {
 
@@ -38,7 +38,7 @@ class MorselApplyBuffer(tracker: QueryCompletionTracker,
       morsel.moveToNextRow()
     }
 
-    initiateArgumentCounts(downstreamArgumentReducersForThis, morsel)
+    initiateArgumentCounts(argumentStatesForThisApply, morsel)
 
     super.put(morsel)
   }

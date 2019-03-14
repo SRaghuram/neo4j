@@ -42,7 +42,7 @@ class ApplyBufferDefinition(id: BufferId,
                             producingPipelineId: PipelineId,
                             applyPlanId: Id,
                             val argumentSlotOffset: Int) extends BufferDefinition(id, producingPipelineId) {
-  val reducersForThisApply = new ArrayBuffer[Id]
+  val argumentStatesForThisApply = new ArrayBuffer[Id]
 }
 
 /**
@@ -186,6 +186,11 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
           source
         }
 
+      case _: Limit =>
+        argument.argumentStatesForThisApply += plan.id
+        source.middlePlans += plan
+        source
+
       case _ =>
         source.middlePlans += plan
         source
@@ -251,6 +256,6 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
       b.reducers += reducePlanId
       b = pipelines(b.producingPipelineId.x).inputBuffer
     }
-    applyBuffer.reducersForThisApply += reducePlanId
+    applyBuffer.argumentStatesForThisApply += reducePlanId
   }
 }

@@ -7,25 +7,30 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, StatelessOperator}
-import org.neo4j.cypher.internal.runtime.morsel.{QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.zombie.operators._
+import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
+import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, _}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
-                              middleOperators: Seq[StatelessOperator],
+                              middleOperators: Seq[MiddleOperator],
                               produceResult: Option[ProduceResultOperator],
                               serial: Boolean,
                               slots: SlotConfiguration,
                               inputBuffer: BufferDefinition,
                               outputBuffer: BufferDefinition) extends WorkIdentity {
 
-  def createState(executionState: ExecutionState): PipelineState =
-    new PipelineState(this, start.createState(executionState), executionState)
+  def createState(executionState: ExecutionState,
+                  queryContext: QueryContext,
+                  queryState: QueryState,
+                  resources: QueryResources): PipelineState =
+
+    new PipelineState(this,
+                      start.createState(executionState),
+                      middleOperators.map(_.createState(executionState, queryContext, queryState, resources)),
+                      executionState)
 
   override val workId: Int = start.workIdentity.workId
   override val workDescription: String = composeWorkDescriptions(start, middleOperators ++ produceResult)
@@ -40,6 +45,7 @@ case class ExecutablePipeline(id: PipelineId,
 
 class PipelineState(val pipeline: ExecutablePipeline,
                     startState: OperatorState,
+                    middleTasks: Seq[OperatorTask],
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
   /**
@@ -62,7 +68,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     if (streamTasks != null) {
       Preconditions.checkArgument(streamTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
       val produceResultsTask = pipeline.produceResult.map(_.init(context, state, resources)).orNull
-      val tasks = streamTasks.map(startTask => PipelineTask(startTask, pipeline.middleOperators, produceResultsTask, context, state, this))
+      val tasks = streamTasks.map(startTask => PipelineTask(startTask, middleTasks, produceResultsTask, context, state, this))
       for (task <- tasks.tail)
         putContinuation(task)
       tasks.head

@@ -11,7 +11,7 @@ import java.util.concurrent.locks.LockSupport
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.zombie.state.{ConcurrentStateFactory, TheExecutionState}
+import org.neo4j.cypher.internal.runtime.zombie.state.{ConcurrentStateFactory, PipelineExecutions, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult
@@ -59,6 +59,8 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                        nExpressionSlots: Int,
                                        visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle = {
 
+    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory, this)
+
     val queryState = QueryState(params,
                                 visitor,
                                 morselSize,
@@ -68,10 +70,24 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 nExpressionSlots,
                                 inputDataStream)
 
-    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory, this)
+    // instead of creating new resources here only for initializing the query, we could
+    //    a) delegate initialization so some special init-pipeline/operator and use the regular worked resources
+    //    b) attempt some lazy resource creation here, because they will usually not be needed
+    val initResources = new QueryResources(queryContext.transactionalContext.cursors)
+    val pipelineExecutions = new PipelineExecutions(executablePipelines,
+                                                    executionState,
+                                                    queryContext,
+                                                    queryState,
+                                                    initResources)
+
     executionState.initialize()
 
-    val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState, schedulerTracer.traceQuery())
+    val executingQuery = new ExecutingQuery(pipelineExecutions,
+                                            executionState,
+                                            queryContext,
+                                            queryState,
+                                            schedulerTracer.traceQuery())
+
     queryManager.addQuery(executingQuery)
     executingQuery
   }

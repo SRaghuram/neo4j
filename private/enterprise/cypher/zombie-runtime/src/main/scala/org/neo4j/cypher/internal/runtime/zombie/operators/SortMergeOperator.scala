@@ -106,5 +106,4 @@ object SortMergeOperator {
       data += morsel
     }
   }
-
 }

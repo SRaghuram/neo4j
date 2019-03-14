@@ -28,11 +28,6 @@ trait ArgumentStateCreator {
 trait ExecutionState extends ArgumentStateCreator {
 
   /**
-    * Get the [[PipelineState]] of this query execution for the given `pipelineId`.
-    */
-  def pipelineState(pipelineId: PipelineId): PipelineState
-
-  /**
     * Put a morsel into the buffer with id `bufferId`.
     */
   def putMorsel(bufferId: BufferId, morsel: MorselExecutionContext): Unit

@@ -23,7 +23,8 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: Sort
       => true
 
-      case _: ProduceResult
+      case _: ProduceResult |
+           _: Limit
         => false
 
       // 2 child operators

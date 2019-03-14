@@ -132,6 +132,69 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
         result should beColumns("x").withRows(singleColumn(nodes))
       }
     }
+  }
 
+  test("should support limit") {
+    // given
+    val (nodes, rels) = circleGraph(1000)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x", "y")
+      .limit(100)
+      .expandAll("(x)--(y)")
+      .allNodeScan("x")
+      .build()
+
+    // then
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    runtimeResult should beColumns("x", "y").withRows(rowCount(100))
+  }
+
+  test("should support apply-limit") {
+    // given
+    val nodesPerLabel = 100
+    val (aNodes, _) = bipartiteGraph(nodesPerLabel, "A", "B", "R")
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .apply()
+      .|.limit(10)
+      .|.expandAll("(x)-->(y)")
+      .|.argument()
+      .allNodeScan("x")
+      .build()
+
+    // then
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    runtimeResult should beColumns("x").withRows(singleColumn(aNodes.flatMap(n => List().padTo(10, n))))
+  }
+
+  test("should support chained limits") {
+    // given
+    val nodesPerLabel = 100
+    val (aNodes, _) = bipartiteGraph(nodesPerLabel, "A", "B", "R")
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("a2")
+      .limit(10)
+      .expandAll("(b2)<--(a2)")
+      .limit(10)
+      .expandAll("(a1)-->(b2)")
+      .limit(10)
+      .expandAll("(b1)<--(a1)")
+      .limit(10)
+      .expandAll("(x)-->(b1)")
+      .allNodeScan("x")
+      .build()
+
+    // then
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    runtimeResult should beColumns("a2").withRows(rowCount(10))
   }
 }

@@ -142,11 +142,19 @@ trait ContinuableOperator extends HasWorkIdentity {
            resources: QueryResources): ContinuableOperatorTask
 }
 
-/**
-  * Physical immutable operator. Thread-safe. In contrast to [[StreamingOperator]], [[StatelessOperator]]
-  * has no init-method to generate a task, but performs it's logic directly in the [[OperatorTask#operate]] call.
-  */
-trait StatelessOperator extends OperatorTask with HasWorkIdentity
+trait MiddleOperator extends HasWorkIdentity {
+  def createState(argumentStateCreator: ArgumentStateCreator,
+                  queryContext: QueryContext,
+                  state: QueryState,
+                  resources: QueryResources): OperatorTask
+}
+
+trait StatelessOperator extends MiddleOperator with OperatorTask {
+  final override def createState(argumentStateCreator: ArgumentStateCreator,
+                                 queryContext: QueryContext,
+                                 state: QueryState,
+                                 resources: QueryResources): OperatorTask = this
+}
 
 /**
   * Operator related task.

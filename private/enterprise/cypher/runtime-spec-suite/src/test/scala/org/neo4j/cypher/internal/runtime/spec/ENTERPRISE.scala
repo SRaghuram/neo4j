@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.spec
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.CypherMorselRuntimeSchedulerOption.SingleThreaded
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.internal.kernel.api.Kernel

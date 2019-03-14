@@ -24,14 +24,14 @@ trait MorselAccumulator {
   def argumentRowId: Long
 }
 
-trait MorselAccumulatorFactory[T <: MorselAccumulator] {
-  def newAccumulator(argumentRowId: Long): T
+trait MorselAccumulatorFactory[ACC <: MorselAccumulator] {
+  def newAccumulator(argumentRowId: Long): ACC
 }
 
 /**
-  * Maps every argument to one `MorselAccumulator`/`T`.
+  * Maps every argument to one `MorselAccumulator`/`ACC`.
   */
-trait ArgumentStateMap[T <: MorselAccumulator] {
+trait ArgumentStateMap[ACC <: MorselAccumulator] {
 
   /**
     * Update the MorselAccumulator related to `argument` and decrement
@@ -40,11 +40,13 @@ trait ArgumentStateMap[T <: MorselAccumulator] {
     */
   def update(morsel: MorselExecutionContext): Unit
 
+  def filter[U](morsel: MorselExecutionContext, onArgument: (ACC, Long) => U, onRow: (U, MorselExecutionContext) => Boolean): Unit
+
   /**
     * Take the MorselAccumulators of all complete arguments. The MorselAccumulators will
     * be removed from the ArgumentStateMap and cannot be taken again or modified after this call.
     */
-  def takeCompleted(): Iterable[T]
+  def takeCompleted(): Iterable[ACC]
 
   /**
     * Returns `true` iff there is a completed argument.
@@ -100,5 +102,45 @@ object ArgumentStateMap {
       val view = morsel.view(start, end)
       f(arg, view)
     }
+  }
+
+  /**
+    * For each argument row id at `argumentSlotOffset`, create a filter state (`FILTER_STATE`). This
+    * filter state is then used to call `onRow` on each row with the argument row id. If `onRow`
+    * returns true, the row is retained, otherwise it's discarded.
+    *
+    * @param morsel the morsel to filter
+    * @param onArgument onArgument(argumentRowId, nRows): FilterState
+    * @param onRow onRow(FilterState, morselRow): Boolean
+    * @tparam FILTER_STATE state used for filtering
+    */
+  def filter[FILTER_STATE](argumentSlotOffset: Int,
+                morsel: MorselExecutionContext,
+                onArgument: (Long, Long) => FILTER_STATE,
+                onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+
+    val readingRow = morsel
+    val writingRow = readingRow.shallowCopy()
+
+    while (readingRow.isValidRow) {
+      val arg = readingRow.getLongAt(argumentSlotOffset)
+      val start: Int = readingRow.getCurrentRow
+      while (readingRow.isValidRow && readingRow.getLongAt(argumentSlotOffset) == arg) {
+        readingRow.moveToNextRow()
+      }
+      val end: Int = readingRow.getCurrentRow
+      readingRow.moveToRow(start)
+
+      val filterState = onArgument(arg, end - start)
+      while (readingRow.getCurrentRow < end) {
+        if (onRow(filterState, readingRow)) {
+          writingRow.copyFrom(readingRow)
+          writingRow.moveToNextRow()
+        }
+        readingRow.moveToNextRow()
+      }
+    }
+
+    readingRow.finishedWritingUsing(writingRow)
   }
 }

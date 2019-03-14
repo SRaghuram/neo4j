@@ -7,16 +7,16 @@ package org.neo4j.cypher.internal.runtime.zombie
 
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, StatelessOperator}
+import org.neo4j.cypher.internal.runtime.zombie.operators.{ContinuableOperatorTask, OperatorTask}
 
 /**
   * The [[Task]] of executing a [[ExecutablePipeline]] once.
   *
-  * @param start  task for executing the start operator
+  * @param startTask  task for executing the start operator
   * @param state  the current QueryState
   */
-case class PipelineTask(start: ContinuableOperatorTask,
-                        middleOperators: Seq[StatelessOperator],
+case class PipelineTask(startTask: ContinuableOperatorTask,
+                        middleTasks: Seq[OperatorTask],
                         produceResult: ContinuableOperatorTask,
                         queryContext: QueryContext,
                         state: QueryState,
@@ -34,8 +34,8 @@ case class PipelineTask(start: ContinuableOperatorTask,
 
   private def doExecuteWorkUnit(resources: QueryResources,
                                 output: MorselExecutionContext): Unit = {
-    start.operate(output, queryContext, state, resources)
-    for (op <- middleOperators) {
+    startTask.operate(output, queryContext, state, resources)
+    for (op <- middleTasks) {
       output.resetToFirstRow()
       op.operate(output, queryContext, state, resources)
     }
@@ -46,12 +46,12 @@ case class PipelineTask(start: ContinuableOperatorTask,
   }
 
   def close(): Unit = {
-    start.close(pipelineState)
+    startTask.close(pipelineState)
   }
 
   override def workId: Int = pipelineState.pipeline.workId
 
   override def workDescription: String = pipelineState.pipeline.workDescription
 
-  override def canContinue: Boolean = start.canContinue || (produceResult != null && produceResult.canContinue)
+  override def canContinue: Boolean = startTask.canContinue || (produceResult != null && produceResult.canContinue)
 }

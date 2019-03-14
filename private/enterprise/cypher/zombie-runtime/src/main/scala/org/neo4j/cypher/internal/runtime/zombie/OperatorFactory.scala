@@ -65,7 +65,7 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
     }
   }
 
-  def createMiddle(plan: LogicalPlan): Option[StatelessOperator] = {
+  def createMiddle(plan: LogicalPlan): Option[MiddleOperator] = {
     val id = plan.id
     val slots = physicalPlan.slotConfigurations(id)
     generateSlotAccessorFunctions(slots)
@@ -78,6 +78,9 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
         val ordering = argumentOrdering +: sortItems.map(translateColumnOrder(slots, _))
         Some(new SortPreOperator(WorkIdentity.fromPlan(plan),
                                  ordering))
+
+      case plans.Limit(_, count, ties) =>
+        Some(new LimitOperator(plan.id, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
       case _: plans.Argument => None
     }

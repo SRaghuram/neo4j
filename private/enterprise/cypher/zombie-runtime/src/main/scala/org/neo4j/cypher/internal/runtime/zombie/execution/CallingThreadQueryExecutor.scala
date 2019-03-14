@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.execution
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.zombie.state.{StandardStateFactory, TheExecutionState}
+import org.neo4j.cypher.internal.runtime.zombie.state.{PipelineExecutions, StandardStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, Worker}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext}
 import org.neo4j.cypher.result.QueryResult
@@ -45,10 +45,12 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                 inputDataStream)
 
     val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory, this)
+    val pipelineExecutions = new PipelineExecutions(executablePipelines, executionState, queryContext, queryState, resources)
+
     executionState.initialize()
 
     val worker = new Worker(1, null, LazyScheduling, resources)
-    val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState, schedulerTracer.traceQuery())
+    val executingQuery = new ExecutingQuery(pipelineExecutions, executionState, queryContext, queryState, schedulerTracer.traceQuery())
     // TODO: currently busy looping until all work is done... this is a bad
     //       way to handle back-pressure with reactive results
     while (worker.workOnQuery(executingQuery)) {}
