@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.logical.plans.{AllNodesScan, ProduceResult, Selection}
 import org.neo4j.cypher.internal.physicalplanning.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.v4_0.logical.plans.{AllNodesScan, ProduceResult, Selection}
 import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
