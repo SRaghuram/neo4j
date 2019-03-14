@@ -436,7 +436,7 @@ public class ImportAuthCommandIT
     private void assertSuccessfulOutputMessage( int numberOfTimes )
     {
         verify( out, times( numberOfTimes ) ).stdOutLine( "Users and roles files copied to import files. " +
-                "Please restart the database with configuration setting dbms.security.auth_provider=system-graph to complete the import." );
+                "Please restart the database with configuration setting dbms.security.auth_provider=native to complete the import." );
     }
 
     private void assertSuccessfulOutputMessageForOfflineMode()

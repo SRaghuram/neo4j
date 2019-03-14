@@ -10,24 +10,19 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.time.Clock;
 import java.util.Map;
 
 import org.neo4j.bolt.security.auth.AuthenticationException;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
-import org.neo4j.configuration.Config;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
 import static org.neo4j.helpers.collection.MapUtil.map;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.test.assertion.Assert.assertException;
 
 public class BoltInitChangePasswordTest
 {
     @Rule
-    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule( new InMemoryUserRepository(),
-            new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ) );
+    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
     private BasicAuthentication authentication;
 
     @Before

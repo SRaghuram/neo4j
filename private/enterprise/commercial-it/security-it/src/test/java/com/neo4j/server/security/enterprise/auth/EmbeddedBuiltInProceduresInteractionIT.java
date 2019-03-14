@@ -50,7 +50,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
     @Override
     protected NeoInteractionLevel<CommercialLoginContext> setUpNeoServer( Map<String, String> config ) throws Throwable
     {
-        return new EmbeddedInteraction( config );
+        return new EmbeddedInteraction( config, testDirectory );
     }
 
     @Test

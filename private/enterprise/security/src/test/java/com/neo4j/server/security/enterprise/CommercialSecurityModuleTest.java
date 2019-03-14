@@ -77,7 +77,7 @@ class CommercialSecurityModuleTest
         nativeAuth( false, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
-        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: All authentication providers are disabled." );
@@ -90,7 +90,7 @@ class CommercialSecurityModuleTest
         nativeAuth( true, false );
         ldapAuth( false, false );
         pluginAuth( false, false );
-        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME );
 
         // Then
         assertIllegalArgumentException( "Illegal configuration: All authorization providers are disabled." );
@@ -103,11 +103,11 @@ class CommercialSecurityModuleTest
         nativeAuth( false, false );
         ldapAuth( false, false );
         pluginAuth( true, true );
-        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // Then
         assertIllegalArgumentException(
-                "Illegal configuration: System graph auth provider configured, but both authentication and authorization are disabled." );
+                "Illegal configuration: Native auth provider configured, but both authentication and authorization are disabled." );
     }
 
     @Test
@@ -125,42 +125,44 @@ class CommercialSecurityModuleTest
     }
 
     @Test
-    void shouldNotFailWithOnlySystemGraphProvider()
+    void shouldTranslateFromSystemGraphProviderToNative()
     {
-        // Given
         nativeAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
-
         authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
 
-        // Then
-        assertSuccess();
+        CommercialSecurityModule.SecurityConfig securityConfig = new CommercialSecurityModule.SecurityConfig( config );
+        securityConfig.validate();
+
+        assertThat( securityConfig.hasNativeProvider, equalTo( true ) );
     }
 
     @Test
-    void shouldFailWithNativeProviderAndSystemGraphProviderTogether()
+    void shouldTranslateWithNativeProviderAndSystemGraphProviderTogether()
     {
         // Given
-        nativeAuth( false, true );
+        nativeAuth( true, true );
         ldapAuth( false, false );
         pluginAuth( false, false );
 
         authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.NATIVE_REALM_NAME );
 
+        CommercialSecurityModule.SecurityConfig securityConfig = new CommercialSecurityModule.SecurityConfig( config );
+        securityConfig.validate();
+
         // Then
-        assertIllegalArgumentException( "Illegal configuration: Both system graph auth provider and native auth provider configured," +
-                " but they cannot be used together. Please remove one of them from the configuration." );
+        assertThat( securityConfig.hasNativeProvider, equalTo( true ) );
     }
 
     @Test
-    void shouldNotFailSystemGraphProviderhWithLdapAuthorizationProvider()
+    void shouldNotFailNativeProviderhWithLdapAuthorizationProvider()
     {
         // Given
         nativeAuth( true, true );
         ldapAuth( true, true );
         pluginAuth( false, false );
-        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
+        authProviders( SecuritySettings.NATIVE_REALM_NAME, SecuritySettings.LDAP_REALM_NAME );
 
         // When
         when( config.get( SecuritySettings.ldap_connection_timeout ) ).thenReturn( Duration.ofSeconds( 5 ) );
@@ -168,19 +170,6 @@ class CommercialSecurityModuleTest
         when( config.get( SecuritySettings.ldap_authorization_connection_pooling ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_authentication_use_samaccountname ) ).thenReturn( false );
         when( config.get( SecuritySettings.ldap_authentication_cache_enabled ) ).thenReturn( false );
-
-        // Then
-        assertSuccess();
-    }
-
-    @Test
-    void shouldNotFailSystemGraphProviderWithPluginAuthorizationProvider()
-    {
-        // Given
-        nativeAuth( true, true );
-        ldapAuth( false, false );
-        pluginAuth( true, true );
-        authProviders( SecuritySettings.SYSTEM_GRAPH_REALM_NAME, SecuritySettings.PLUGIN_REALM_NAME_PREFIX + "TestAuthorizationPlugin" );
 
         // Then
         assertSuccess();
@@ -271,13 +260,13 @@ class CommercialSecurityModuleTest
 
     private void assertSuccess()
     {
-        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null, mockAccessCapability );
+        new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, mockAccessCapability );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
-                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem, null,
+                () -> new CommercialSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem,
                         mockAccessCapability ) );
         assertEquals( e.getMessage(), errorMsg );
     }

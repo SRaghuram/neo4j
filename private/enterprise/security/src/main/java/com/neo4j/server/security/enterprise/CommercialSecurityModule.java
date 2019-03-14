@@ -12,7 +12,6 @@ import com.neo4j.kernel.impl.enterprise.configuration.CommercialEditionSettings;
 import com.neo4j.server.security.enterprise.auth.CommercialAuthAndUserManager;
 import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.FileRoleRepository;
-import com.neo4j.server.security.enterprise.auth.InternalFlatFileRealm;
 import com.neo4j.server.security.enterprise.auth.LdapRealm;
 import com.neo4j.server.security.enterprise.auth.MultiRealmAuthManager;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
@@ -142,7 +141,7 @@ public class CommercialSecurityModule extends SecurityModule
             );
         life.add( securityLog );
 
-        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, jobScheduler, accessCapability );
+        authManager = newAuthManager( config, logProvider, securityLog, fileSystem, accessCapability );
         life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
 
         // Register procedures
@@ -186,7 +185,7 @@ public class CommercialSecurityModule extends SecurityModule
 
     public Optional<DatabaseInitializer> getDatabaseInitializer()
     {
-        if ( !((CommercialSecurityConfig) securityConfig).hasSystemGraphProvider )
+        if ( !securityConfig.hasNativeProvider )
         {
             return Optional.empty();
         }
@@ -242,14 +241,14 @@ public class CommercialSecurityModule extends SecurityModule
     }
 
     CommercialAuthAndUserManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem,
-            JobScheduler jobScheduler, AccessCapability accessCapability )
+            AccessCapability accessCapability )
     {
         securityConfig = getValidatedSecurityConfig( config );
 
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        EnterpriseUserManager internalRealm = createInternalRealm( config, logProvider, fileSystem, jobScheduler, securityLog, accessCapability );
+        EnterpriseUserManager internalRealm = createInternalRealm( config, logProvider, fileSystem, securityLog, accessCapability );
         if ( internalRealm != null )
         {
             realms.add( (Realm) internalRealm );
@@ -280,7 +279,7 @@ public class CommercialSecurityModule extends SecurityModule
 
     private SecurityConfig getValidatedSecurityConfig( Config config )
     {
-        SecurityConfig securityConfig = new CommercialSecurityConfig( config );
+        SecurityConfig securityConfig = new SecurityConfig( config );
         securityConfig.validate();
         return securityConfig;
     }
@@ -302,35 +301,15 @@ public class CommercialSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, JobScheduler jobScheduler,
+    private EnterpriseUserManager createInternalRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
             SecurityLog securityLog, AccessCapability accessCapability )
     {
         EnterpriseUserManager internalRealm = null;
         if ( securityConfig.hasNativeProvider )
         {
-            internalRealm = createInternalFlatFileRealm( config, logProvider, fileSystem, jobScheduler );
-        }
-        else if ( ( (CommercialSecurityConfig) securityConfig ).hasSystemGraphProvider )
-        {
             internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog, accessCapability );
         }
         return internalRealm;
-    }
-
-    private static InternalFlatFileRealm createInternalFlatFileRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem,
-            JobScheduler jobScheduler )
-    {
-        return new InternalFlatFileRealm(
-                CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem ),
-                getRoleRepository( config, logProvider, fileSystem ),
-                new BasicPasswordPolicy(),
-                createAuthenticationStrategy( config ),
-                config.get( SecuritySettings.native_authentication_enabled ),
-                config.get( SecuritySettings.native_authorization_enabled ),
-                jobScheduler,
-                CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem ),
-                getDefaultAdminRepository( config, logProvider, fileSystem )
-            );
     }
 
     private static AuthenticationStrategy createAuthenticationStrategy( Config config )
@@ -563,24 +542,36 @@ public class CommercialSecurityModule extends SecurityModule
 
     protected static class SecurityConfig
     {
-        protected final List<String> authProviders;
-        public final boolean hasNativeProvider;
-        protected final boolean hasLdapProvider;
-        protected final List<String> pluginAuthProviders;
-        protected final boolean nativeAuthentication;
-        protected final boolean nativeAuthorization;
-        protected final boolean ldapAuthentication;
-        protected final boolean ldapAuthorization;
-        protected final boolean pluginAuthentication;
-        protected final boolean pluginAuthorization;
-        protected final boolean propertyAuthorization;
+        final List<String> authProviders;
+        boolean hasNativeProvider;
+        boolean hasLdapProvider;
+        final List<String> pluginAuthProviders;
+        final boolean nativeAuthentication;
+        final boolean nativeAuthorization;
+        final boolean ldapAuthentication;
+        final boolean ldapAuthorization;
+        final boolean pluginAuthentication;
+        final boolean pluginAuthorization;
+        final boolean propertyAuthorization;
         private final String propertyAuthMapping;
         final Map<String,List<String>> propertyBlacklist = new HashMap<>();
-        protected boolean nativeAuthEnabled;
+        final boolean nativeAuthEnabled;
 
-        protected SecurityConfig( Config config )
+        SecurityConfig( Config config )
         {
-            authProviders = config.get( SecuritySettings.auth_providers );
+            authProviders = new ArrayList<>();
+            for ( String authProvider : config.get( SecuritySettings.auth_providers ) )
+            {
+                if ( authProvider.equals( SecuritySettings.SYSTEM_GRAPH_REALM_NAME ) )
+                {
+                    // Translate from old system graph name
+                    authProviders.add( SecuritySettings.NATIVE_REALM_NAME );
+                }
+                else
+                {
+                    authProviders.add( authProvider );
+                }
+            }
             hasNativeProvider = authProviders.contains( SecuritySettings.NATIVE_REALM_NAME );
             hasLdapProvider = authProviders.contains( SecuritySettings.LDAP_REALM_NAME );
             pluginAuthProviders = authProviders.stream()
@@ -634,7 +625,7 @@ public class CommercialSecurityModule extends SecurityModule
             }
         }
 
-        protected boolean parsePropertyPermissions()
+        boolean parsePropertyPermissions()
         {
             if ( propertyAuthMapping != null && !propertyAuthMapping.isEmpty() )
             {
@@ -671,43 +662,14 @@ public class CommercialSecurityModule extends SecurityModule
             return true;
         }
 
-        protected boolean onlyPluginAuthentication()
+        boolean onlyPluginAuthentication()
         {
             return !nativeAuthentication && !ldapAuthentication && pluginAuthentication;
         }
 
-        protected boolean onlyPluginAuthorization()
+        boolean onlyPluginAuthorization()
         {
             return !nativeAuthorization && !ldapAuthorization && pluginAuthorization;
-        }
-    }
-
-    static class CommercialSecurityConfig extends SecurityConfig
-    {
-        final boolean hasSystemGraphProvider;
-
-        CommercialSecurityConfig( Config config )
-        {
-            super( config );
-            hasSystemGraphProvider = authProviders.contains( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
-        }
-
-        @Override
-        protected void validate()
-        {
-            if ( hasSystemGraphProvider && !nativeAuthentication && !nativeAuthorization )
-            {
-                throw illegalConfiguration(
-                        "System graph auth provider configured, but both authentication and authorization are disabled." );
-            }
-
-            if ( hasNativeProvider && hasSystemGraphProvider )
-            {
-                throw illegalConfiguration(
-                        "Both system graph auth provider and native auth provider configured," +
-                                " but they cannot be used together. Please remove one of them from the configuration." );
-            }
-            super.validate();
         }
     }
 

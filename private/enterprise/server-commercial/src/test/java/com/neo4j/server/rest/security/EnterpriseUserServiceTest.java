@@ -10,8 +10,9 @@ import com.neo4j.server.security.enterprise.auth.ShiroSubject;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.server.rest.dbms.UserServiceTest;
-import org.neo4j.server.security.auth.AuthenticationStrategy;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -19,19 +20,20 @@ import static org.mockito.Mockito.when;
 public class EnterpriseUserServiceTest extends UserServiceTest
 {
     @Rule
-    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule(
-            userRepository,
-            mock( AuthenticationStrategy.class )
-    );
+    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
 
     @Override
-    protected void setupAuthManagerAndSubject()
+    protected UserManagerSupplier setupUserManagerSupplier()
     {
-        userManagerSupplier = authManagerRule.getManager();
+        return authManagerRule.getManager();
+    }
 
+    @Override
+    protected LoginContext setupSubject()
+    {
         ShiroSubject shiroSubject = mock( ShiroSubject.class );
-        when( shiroSubject.getPrincipal() ).thenReturn( "neo4j" );
-        neo4jContext = authManagerRule.makeLoginContext( shiroSubject );
+        when( shiroSubject.getPrincipal() ).thenReturn( USERNAME );
+        return authManagerRule.makeLoginContext( shiroSubject );
     }
 
     @Test
@@ -40,7 +42,7 @@ public class EnterpriseUserServiceTest extends UserServiceTest
         shouldChangePasswordAndReturnSuccess();
 
         MultiRealmAuthManagerRule.FullSecurityLog fullLog = authManagerRule.getFullSecurityLog();
-        fullLog.assertHasLine( "neo4j", "changed password" );
+        fullLog.assertHasLine( USERNAME, "changed password" );
     }
 
     @Test
@@ -49,6 +51,6 @@ public class EnterpriseUserServiceTest extends UserServiceTest
         shouldReturn422IfPasswordIdentical();
 
         MultiRealmAuthManagerRule.FullSecurityLog fullLog = authManagerRule.getFullSecurityLog();
-        fullLog.assertHasLine( "neo4j", "tried to change password: Old password and new password cannot be the same." );
+        fullLog.assertHasLine( USERNAME, "tried to change password: Old password and new password cannot be the same." );
     }
 }

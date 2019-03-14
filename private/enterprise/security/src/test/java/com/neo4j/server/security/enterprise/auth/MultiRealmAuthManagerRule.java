@@ -6,6 +6,8 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.junit.After;
 import org.junit.rules.TestRule;
@@ -13,39 +15,33 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import java.io.StringWriter;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
-import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
-import org.neo4j.server.security.auth.UserRepository;
+import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
 
 public class MultiRealmAuthManagerRule implements TestRule
 {
-    private UserRepository users;
     private AuthenticationStrategy authStrategy;
     private MultiRealmAuthManager manager;
-    private SecurityLog securityLog;
     private StringWriter securityLogWriter;
 
-    public MultiRealmAuthManagerRule(
-            UserRepository users,
-            AuthenticationStrategy authStrategy )
+    public MultiRealmAuthManagerRule()
     {
-        this.users = users;
-        this.authStrategy = authStrategy;
+        this.authStrategy = new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() );
     }
 
     private void setupAuthManager( AuthenticationStrategy authStrategy ) throws Throwable
@@ -54,19 +50,13 @@ public class MultiRealmAuthManagerRule implements TestRule
         securityLogWriter = new StringWriter();
         Log log = builder.toWriter( securityLogWriter );
 
-        securityLog = new SecurityLog( log );
-        InternalFlatFileRealm internalFlatFileRealm =
-                new InternalFlatFileRealm(
-                        users,
-                        new InMemoryRoleRepository(),
-                        new BasicPasswordPolicy(),
-                        authStrategy,
-                        mock( JobScheduler.class ),
-                        new InMemoryUserRepository(),
-                        new InMemoryUserRepository()
-                    );
+        SecurityLog securityLog = new SecurityLog( log );
+        SecureHasher secureHasher = new SecureHasher();
+        SystemGraphRealm realm = new SystemGraphRealm(
+                new InMemorySystemGraphOperations( secureHasher ),
+                null, false, secureHasher, new BasicPasswordPolicy(), authStrategy, true, true );
 
-        manager = new MultiRealmAuthManager( internalFlatFileRealm, Collections.singleton( internalFlatFileRealm ),
+        manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ),
                 new MemoryConstrainedCacheManager(), securityLog, true, false, Collections.emptyMap() );
         manager.init();
     }

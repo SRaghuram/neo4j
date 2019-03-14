@@ -46,8 +46,8 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.internal.kernel.api.Transaction.Type.explicit;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 @ExtendWith( TestDirectoryExtension.class )
 class PropertyLevelSecurityIT

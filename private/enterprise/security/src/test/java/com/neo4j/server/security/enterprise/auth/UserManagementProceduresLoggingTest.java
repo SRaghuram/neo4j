@@ -7,12 +7,16 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
+import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Collections;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
@@ -21,42 +25,41 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
-import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.auth.BasicPasswordPolicy;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
+import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.test.assertion.Assert.assertException;
 
-public class UserManagementProceduresLoggingTest
+class UserManagementProceduresLoggingTest
 {
-    protected TestUserManagementProcedures authProcedures;
+    private TestUserManagementProcedures authProcedures;
     private AssertableLogProvider log;
     private CommercialSecurityContext matsContext;
-    private EnterpriseUserManager generalUserManager;
+    private EnterpriseUserManager userManager;
 
     @BeforeEach
-    public void setUp() throws Throwable
+    void setUp() throws Throwable
     {
-        init();
-    }
-
-    protected void init() throws Throwable
-    {
+        SecureHasher secureHasher = new SecureHasher();
         log = new AssertableLogProvider();
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
+
+        userManager = new SystemGraphRealm(
+                new InMemorySystemGraphOperations( secureHasher ), null, false, secureHasher, new BasicPasswordPolicy(),
+                new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true );
+        userManager.newUser( "neo4j", password( "neo4j" ), true );
 
         authProcedures = new TestUserManagementProcedures();
         authProcedures.graph = mock( GraphDatabaseAPI.class );
         authProcedures.securityLog = securityLog;
 
-        generalUserManager = getUserManager();
         CommercialSecurityContext adminContext =
                 new CommercialSecurityContext( new MockAuthSubject( "admin" ), AccessMode.Static.FULL, Collections.emptySet(), true );
         matsContext =
@@ -69,23 +72,8 @@ public class UserManagementProceduresLoggingTest
     private void setSubject( CommercialSecurityContext securityContext )
     {
         authProcedures.securityContext = securityContext;
-        authProcedures.userManager = new PersonalUserManager( generalUserManager, securityContext.subject(),
+        authProcedures.userManager = new PersonalUserManager( userManager, securityContext.subject(),
                 authProcedures.securityLog, securityContext.isAdmin() );
-    }
-
-    protected EnterpriseUserManager getUserManager() throws Throwable
-    {
-        InternalFlatFileRealm realm = new InternalFlatFileRealm(
-                                            new InMemoryUserRepository(),
-                                            new InMemoryRoleRepository(),
-                                            new BasicPasswordPolicy(),
-                                            mock( AuthenticationStrategy.class ),
-                                            mock( JobScheduler.class ),
-                                            new InMemoryUserRepository(),
-                                            new InMemoryUserRepository()
-                                        );
-        realm.start(); // creates default user and roles
-        return realm;
     }
 
     @Test

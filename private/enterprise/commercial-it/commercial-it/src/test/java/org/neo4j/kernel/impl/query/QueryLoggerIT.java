@@ -67,13 +67,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo.EMBEDDED_CONNECTION;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 public class QueryLoggerIT
 {
@@ -147,7 +148,7 @@ public class QueryLoggerIT
         db.shutdown();
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
+        List<String> logLines = readAllUserQueryLines( logFilename );
 
         assertThat( logLines, hasSize( 3 ) );
         assertThat( logLines.get( 0 ), containsString( "mats" ) );
@@ -191,7 +192,7 @@ public class QueryLoggerIT
         db.shutdown();
 
         // THEN
-        List<String> logLines = readAllLines( logFilename );
+        List<String> logLines = readAllUserQueryLines( logFilename );
 
         assertThat( logLines, hasSize( 7 ) );
         assertThat( logLines.get( 0 ), not( containsString( "User: 'Johan'" ) ) );
@@ -402,7 +403,7 @@ public class QueryLoggerIT
             facade.shutdown();
         }
 
-        List<String> logLines = readAllLines( logFilename );
+        List<String> logLines = readAllUserQueryLines( logFilename );
         assertEquals( 1, logLines.size() );
         assertThat( logLines.get( 0 ),
                 containsString(  "CALL dbms.security.changePassword('******')") ) ;
@@ -500,7 +501,12 @@ public class QueryLoggerIT
 
     private static String connectionAndUserDetails()
     {
-        return EMBEDDED_CONNECTION.asConnectionDetails() + "\t" + DEFAULT_DATABASE_NAME + " - ";
+        return connectionAndUserDetails( DEFAULT_DATABASE_NAME );
+    }
+
+    private static String connectionAndUserDetails( String databaseName )
+    {
+        return EMBEDDED_CONNECTION.asConnectionDetails() + "\t" + databaseName + " - ";
     }
 
     private List<String> readAllLinesSilent( File logFilename )
@@ -513,6 +519,13 @@ public class QueryLoggerIT
         {
             throw new UncheckedIOException( e );
         }
+    }
+
+    private List<String> readAllUserQueryLines( File logFilename ) throws IOException
+    {
+        return readAllLines( logFilename ).stream()
+                .filter( l -> !l.contains( connectionAndUserDetails( SYSTEM_DATABASE_NAME ) ) )
+                .collect( Collectors.toList() );
     }
 
     private List<String> readAllLines( File logFilename ) throws IOException

@@ -14,37 +14,28 @@ import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.Permission;
-import org.apache.shiro.realm.Realm;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.shiro.subject.SimplePrincipalCollection;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToIntFunction;
+import javax.naming.NamingException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
-import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.server.security.auth.BasicPasswordPolicy;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
-import static com.neo4j.server.security.enterprise.auth.AuthTestUtil.listOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
-public class LdapCachingTest
+class LdapCachingTest
 {
     private MultiRealmAuthManager authManager;
     private TestRealm testRealm;
@@ -52,33 +43,18 @@ public class LdapCachingTest
 
     private final ToIntFunction<String> token = s -> -1;
 
-    @Before
-    public void setup() throws Throwable
+    @BeforeEach
+    void setup() throws Throwable
     {
         SecurityLog securityLog = mock( SecurityLog.class );
-        InternalFlatFileRealm internalFlatFileRealm =
-            new InternalFlatFileRealm(
-                new InMemoryUserRepository(),
-                new InMemoryRoleRepository(),
-                new BasicPasswordPolicy(),
-                new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ),
-                mock( JobScheduler.class ),
-                new InMemoryUserRepository(),
-                new InMemoryUserRepository()
-            );
 
         testRealm = new TestRealm( getLdapConfig(), securityLog, new SecureHasher() );
 
-        List<Realm> realms = listOf( internalFlatFileRealm, testRealm );
-
         fakeTicker = new FakeTicker();
-        authManager = new MultiRealmAuthManager( internalFlatFileRealm, realms,
+        authManager = new MultiRealmAuthManager( mock( EnterpriseUserManager.class ), Collections.singletonList( testRealm ),
                 new ShiroCaffeineCache.Manager( fakeTicker::read, 100, 10, true ), securityLog, false, false, Collections.emptyMap() );
         authManager.init();
         authManager.start();
-
-        authManager.getUserManager().newUser( "mike", password( "123" ), false );
-        authManager.getUserManager().newUser( "mats", password( "456" ), false );
     }
 
     private static Config getLdapConfig()
@@ -89,12 +65,13 @@ public class LdapCachingTest
                 SecuritySettings.ldap_authentication_enabled.name(), "true",
                 SecuritySettings.ldap_authorization_enabled.name(), "true",
                 SecuritySettings.ldap_authorization_user_search_base.name(), "dc=example,dc=com",
-                SecuritySettings.ldap_authorization_group_membership_attribute_names.name(), "gidnumber"
+                SecuritySettings.ldap_authorization_group_membership_attribute_names.name(), "gidnumber",
+                SecuritySettings.ldap_authorization_use_system_account.name(), "true"
             ) );
     }
 
     @Test
-    public void shouldCacheAuthenticationInfo() throws InvalidAuthTokenException
+    void shouldCacheAuthenticationInfo() throws InvalidAuthTokenException
     {
         // Given
         authManager.login( authToken( "mike", "123" ) );
@@ -108,7 +85,7 @@ public class LdapCachingTest
     }
 
     @Test
-    public void shouldCacheAuthorizationInfo() throws InvalidAuthTokenException
+    void shouldCacheAuthorizationInfo() throws InvalidAuthTokenException
     {
         // Given
         CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );
@@ -123,7 +100,7 @@ public class LdapCachingTest
     }
 
     @Test
-    public void shouldInvalidateAuthorizationCacheAfterTTL() throws InvalidAuthTokenException
+    void shouldInvalidateAuthorizationCacheAfterTTL() throws InvalidAuthTokenException
     {
         // Given
         CommercialLoginContext mike = authManager.login( authToken( "mike", "123" ) );
@@ -146,7 +123,7 @@ public class LdapCachingTest
     }
 
     @Test
-    public void shouldInvalidateAuthenticationCacheAfterTTL() throws InvalidAuthTokenException
+    void shouldInvalidateAuthenticationCacheAfterTTL() throws InvalidAuthTokenException
     {
         // Given
         Map<String,Object> mike = authToken( "mike", "123" );
@@ -169,7 +146,7 @@ public class LdapCachingTest
     }
 
     @Test
-    public void shouldInvalidateAuthenticationCacheOnDemand() throws InvalidAuthTokenException
+    void shouldInvalidateAuthenticationCacheOnDemand() throws InvalidAuthTokenException
     {
         // Given
         Map<String,Object> mike = authToken( "mike", "123" );
@@ -233,20 +210,14 @@ public class LdapCachingTest
         protected AuthenticationInfo doGetAuthenticationInfo( AuthenticationToken token ) throws AuthenticationException
         {
             authenticationFlag = true;
-            return new AuthenticationInfo()
+            try
             {
-                @Override
-                public PrincipalCollection getPrincipals()
-                {
-                    return new SimplePrincipalCollection();
-                }
-
-                @Override
-                public Object getCredentials()
-                {
-                    return "123";
-                }
-            };
+                return createAuthenticationInfo( token, token.getPrincipal(), token.getCredentials(), null );
+            }
+            catch ( NamingException e )
+            {
+                throw new AuthenticationException( e.getMessage() );
+            }
         }
 
         @Override

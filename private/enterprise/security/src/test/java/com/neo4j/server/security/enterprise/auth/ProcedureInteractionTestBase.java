@@ -91,7 +91,7 @@ import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
 import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;

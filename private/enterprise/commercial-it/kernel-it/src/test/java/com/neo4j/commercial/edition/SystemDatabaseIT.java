@@ -36,7 +36,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.SYSTEM_GRAPH_REALM_NAME;
+import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.NATIVE_REALM_NAME;
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.auth_provider;
 import static java.lang.String.valueOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,7 +64,7 @@ class SystemDatabaseIT
     {
         database = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
-                .setConfig( auth_provider, SYSTEM_GRAPH_REALM_NAME )
+                .setConfig( auth_provider, NATIVE_REALM_NAME )
                 .newGraphDatabase();
         databaseManager = getDatabaseManager( database );
         defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );

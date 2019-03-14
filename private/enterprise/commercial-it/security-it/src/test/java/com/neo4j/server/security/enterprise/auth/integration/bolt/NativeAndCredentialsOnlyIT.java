@@ -18,7 +18,7 @@ public class NativeAndCredentialsOnlyIT extends EnterpriseAuthenticationTestBase
     @Override
     protected Map<Setting<?>, String> getSettings()
     {
-        return Collections.singletonMap( SecuritySettings.auth_providers, "native,plugin-TestCredentialsOnlyPlugin" );
+        return Collections.singletonMap( SecuritySettings.auth_providers, SecuritySettings.NATIVE_REALM_NAME + ",plugin-TestCredentialsOnlyPlugin" );
     }
 
     @Test

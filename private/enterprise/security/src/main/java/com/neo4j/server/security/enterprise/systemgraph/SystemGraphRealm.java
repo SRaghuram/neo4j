@@ -63,14 +63,14 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
      * This flag is used in the same way as User.PASSWORD_CHANGE_REQUIRED, but it's
      * placed here because of user suspension not being a part of community edition
      */
-    static final String IS_SUSPENDED = "is_suspended";
+    public static final String IS_SUSPENDED = "is_suspended";
 
     public SystemGraphRealm( SystemGraphOperations systemGraphOperations, SystemGraphInitializer systemGraphInitializer, boolean initOnStart,
             SecureHasher secureHasher, PasswordPolicy passwordPolicy, AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
             boolean authorizationEnabled )
     {
         super();
-        setName( SecuritySettings.SYSTEM_GRAPH_REALM_NAME );
+        setName( SecuritySettings.NATIVE_REALM_NAME );
 
         this.systemGraphOperations = systemGraphOperations;
         this.systemGraphInitializer = systemGraphInitializer;
@@ -148,6 +148,8 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         try
         {
             username = AuthToken.safeCast( AuthToken.PRINCIPAL, shiroAuthToken.getAuthTokenMap() );
+            // This is only checked here to check for InvalidAuthToken
+            AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
         }
         catch ( InvalidAuthTokenException e )
         {
@@ -238,6 +240,18 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
         }
 
         return systemGraphOperations.doGetAuthorizationInfo( username );
+    }
+
+    protected Object getAuthenticationCacheKey( AuthenticationToken token )
+    {
+        Object principal = token != null ? token.getPrincipal() : null;
+        return principal != null ? principal : "";
+    }
+
+    protected Object getAuthenticationCacheKey( PrincipalCollection principals )
+    {
+        Object principal = getAvailablePrincipal( principals );
+        return principal == null ? "" : principal;
     }
 
     @Override

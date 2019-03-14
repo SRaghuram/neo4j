@@ -10,29 +10,24 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.time.Clock;
 import java.util.function.ToIntFunction;
 
-import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.api.security.OverriddenAccessMode;
 import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
-import org.neo4j.server.security.auth.InMemoryUserRepository;
-import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 
 public class CommercialSecurityContextDescriptionTest
 {
     @Rule
-    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule( new InMemoryUserRepository(),
-            new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ) );
+    public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
 
     private EnterpriseUserManager manager;
     private final ToIntFunction<String> token = s -> -1;

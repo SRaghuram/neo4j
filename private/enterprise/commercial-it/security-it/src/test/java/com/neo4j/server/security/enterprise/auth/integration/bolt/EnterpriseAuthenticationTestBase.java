@@ -57,7 +57,7 @@ import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.O
 import static org.neo4j.driver.internal.logging.DevNullLogging.DEV_NULL_LOGGING;
 import static org.neo4j.driver.v1.AuthTokens.basic;
 import static org.neo4j.driver.v1.AuthTokens.custom;
-import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
+import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestUnit
 {
@@ -65,7 +65,7 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
 
     private final TestDirectory testDirectory = TestDirectory.testDirectory();
 
-    protected DbmsRule dbRule = getDatabaseTestRule( testDirectory );
+    DbmsRule dbRule = new CommercialDbmsRule( testDirectory ).startLazily();
 
     @Rule
     public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
@@ -85,11 +85,6 @@ public abstract class EnterpriseAuthenticationTestBase extends AbstractLdapTestU
     }
 
     protected abstract Map<Setting<?>,String> getSettings();
-
-    protected DbmsRule getDatabaseTestRule( TestDirectory testDirectory )
-    {
-        return new CommercialDbmsRule( testDirectory ).startLazily();
-    }
 
     void restartServerWithOverriddenSettings( String... configChanges ) throws IOException
     {
