@@ -67,6 +67,10 @@ public class BenchmarkConfigFile
 
     static BenchmarkConfigFile fromMap( Map<String,String> confMap, Validation validation )
     {
+
+        // TODO remove printout
+        System.out.println( "BENCHMARKS is " + BENCHMARKS );
+
         Map<String,BenchmarkConfigFileEntry> benchmarkConfigFileEntries = benchmarks( confMap );
         for ( String key : confMap.keySet() )
         {
@@ -74,17 +78,23 @@ public class BenchmarkConfigFile
             if ( separator == -1 )
             {
                 validation.unrecognizedConfigFileEntry( key );
+                // TODO remove printout
+                System.out.println( "BENCHMARKS has unrecognized config file entry " + key );
                 continue;
             }
 
             if ( BENCHMARKS.contains( key ) )
             {
+                // TODO remove printout
+                System.out.println( "BENCHMARKS contain duplicate config file entry " + key );
                 continue;
             }
 
             String benchmarkNamePrefix = key.substring( 0, separator );
             if ( !BENCHMARKS.contains( benchmarkNamePrefix ) )
             {
+                // TODO remove printout
+                System.out.println( "BENCHMARKS doesnt exist " + key );
                 validation.configuredBenchmarkDoesNotExist( key );
                 continue;
             }
@@ -95,6 +105,8 @@ public class BenchmarkConfigFile
             if ( !benchmarkConfigFileEntries.containsKey( benchmarkNamePrefix ) )
             {
                 validation.paramConfiguredWithoutEnablingDisablingBenchmark( benchmarkNamePrefix, paramNameSuffix );
+                // TODO remove printout
+                System.out.println( "BENCHMARKS configured without enabling/disabling benchmark " + key );
                 continue;
             }
 
@@ -104,6 +116,8 @@ public class BenchmarkConfigFile
             if ( configFileEntry.isEnabled() && value.isEmpty() )
             {
                 validation.paramOfEnabledBenchmarkConfiguredWithNoValues( benchmarkNamePrefix, paramNameSuffix );
+                // TODO remove printout
+                System.out.println( "BENCHMARKS param has no values " + key );
                 continue;
             }
 
