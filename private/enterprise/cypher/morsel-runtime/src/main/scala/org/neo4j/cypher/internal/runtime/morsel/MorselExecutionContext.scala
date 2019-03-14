@@ -50,15 +50,13 @@ class MorselExecutionContext(private val morsel: Morsel,
   // ARGUMENT COLUMNS
 
   def allArgumentRowIdsFor(offset: Int): Seq[Long] = {
-    var i = firstRow
-    val res = new mutable.ArrayBuffer[Long]()
-    var previousId = -1L
-    while (i < validRows) {
-      val currentId = getLongAt(i, offset)
-      if (currentId != previousId) {
-        res += currentId
-        previousId = currentId
-      }
+    val firstArgument = getLongAt(firstRow, offset)
+    val lastArgument = getLongAt(validRows - 1, offset)
+
+    val res = new Array[Long]((lastArgument - firstArgument + 1).toInt)
+    var i = 0
+    while (i < res.length) {
+      res(i) = firstArgument + i
       i += 1
     }
     res
