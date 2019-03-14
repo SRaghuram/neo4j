@@ -81,17 +81,23 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 
   override def toGroupingExpression(id: Id,
                                     projections: Map[String, ast.Expression],
+                                    orderToLeverage: Seq[ast.Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = {
     try {
-      val slots = physicalPlan.slotConfigurations(id)
-      val compiler = new IntermediateCodeGeneration(slots)
-      val compiled = for {(k, v) <- projections
-                          c <- compiler.compileExpression(v)} yield slots(k) -> c
-      if (compiled.size < projections.size) None
-      else {
-        log.debug(s" Compiling grouping expressions: $projections")
-        Some(CompileWrappingDistinctGroupingExpression(
-          compileGroupingExpression(compiler.compileGroupingExpression(compiled)), projections.isEmpty))
+      if(orderToLeverage.nonEmpty) {
+        // TODO Support compiled ordered GroupingExpression
+        None
+      } else {
+        val slots = physicalPlan.slotConfigurations(id)
+        val compiler = new IntermediateCodeGeneration(slots)
+        val compiled = for {(k, v) <- projections
+                            c <- compiler.compileExpression(v)} yield slots(k) -> c
+        if (compiled.size < projections.size) None
+        else {
+          log.debug(s" Compiling grouping expressions: $projections")
+          Some(CompileWrappingDistinctGroupingExpression(
+            compileGroupingExpression(compiler.compileGroupingExpression(compiled)), projections.isEmpty))
+        }
       }
     }
     catch {
@@ -115,21 +121,22 @@ object CompiledExpressionConverter {
   }
 }
 
-case class CompileWrappingDistinctGroupingExpression(projection: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
+case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingExpression, isEmpty: Boolean) extends GroupingExpression {
 
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
   override type KeyType = AnyValue
 
-  override def computeGroupingKey(context: ExecutionContext,
-                                  state: QueryState): AnyValue =
-    projection.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
+  override def computeGroupingKey(context: ExecutionContext, state: QueryState): AnyValue =
+    grouping.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
+  override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue =
+    throw new IllegalStateException("Compiled expressions do not support this yet.")
 
-  override def getGroupingKey(context: ExecutionContext): AnyValue = projection.getGroupingKey(context)
+  override def getGroupingKey(context: ExecutionContext): AnyValue = grouping.getGroupingKey(context)
 
   override def project(context: ExecutionContext, groupingKey: AnyValue): Unit =
-    projection.projectGroupingKey(context, groupingKey)
+    grouping.projectGroupingKey(context, groupingKey)
 }
 
 case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Boolean) extends CommandProjection {

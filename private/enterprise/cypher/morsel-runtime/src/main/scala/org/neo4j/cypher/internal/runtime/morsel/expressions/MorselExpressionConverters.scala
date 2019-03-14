@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.logical.plans.{NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
@@ -16,7 +17,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, Groupin
 import org.neo4j.cypher.internal.runtime.slotted.expressions.NestedPipeSlottedExpression
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.v4_0.expressions.{functions, _}
-import org.neo4j.cypher.internal.logical.plans.{NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
@@ -86,6 +86,7 @@ case class MorselExpressionConverters(physicalPlan: PhysicalPlan) extends Expres
 
   override def toGroupingExpression(id: Id,
                                     groupings: Map[String, ast.Expression],
+                                    orderToLeverage: Seq[ast.Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = None
 
   private class NoPipe() extends Pipe {

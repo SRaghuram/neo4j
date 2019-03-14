@@ -6,23 +6,25 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.{makeGetValueFromSlotFunctionFor, makeSetValueInSlotFunctionFor}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.{makeGetValueFromSlotFunctionFor, makeSetValueInSlotFunctionFor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.VirtualValues.list
 
-case class SlotExpression(slot: Slot, expression: Expression)
+case class SlotExpression(slot: Slot, expression: Expression, ordered: Boolean = false)
 
 case object EmptyGroupingExpression extends GroupingExpression {
   override type KeyType = AnyValue
+
   override def registerOwningPipe(pipe: Pipe): Unit = {}
   override def computeGroupingKey(context: ExecutionContext,
                                   state: QueryState): AnyValue = Values.NO_VALUE
+  override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue = Values.NO_VALUE
 
   override def getGroupingKey(context: ExecutionContext): AnyValue = Values.NO_VALUE
   override def isEmpty: Boolean = true
@@ -30,14 +32,18 @@ case object EmptyGroupingExpression extends GroupingExpression {
                        groupingKey: AnyValue): Unit = {}
 }
 
-case class SlottedGroupingExpression1(slot: Slot, expression: Expression) extends GroupingExpression {
+case class SlottedGroupingExpression1(groupingExpression: SlotExpression) extends GroupingExpression {
   override type KeyType = AnyValue
-  private val setter = makeSetValueInSlotFunctionFor(slot)
-  private val getter = makeGetValueFromSlotFunctionFor(slot)
 
-  override def registerOwningPipe(pipe: Pipe): Unit = expression.registerOwningPipe(pipe)
-  override def computeGroupingKey(context: ExecutionContext,
-                                  state: QueryState): AnyValue = expression(context, state)
+  private val setter = makeSetValueInSlotFunctionFor(groupingExpression.slot)
+  private val getter = makeGetValueFromSlotFunctionFor(groupingExpression.slot)
+
+  private val ordered: AnyValue => AnyValue =
+    if (groupingExpression.ordered) identity else _ => Values.NO_VALUE
+
+  override def registerOwningPipe(pipe: Pipe): Unit = groupingExpression.expression.registerOwningPipe(pipe)
+  override def computeGroupingKey(context: ExecutionContext, state: QueryState): AnyValue = groupingExpression.expression(context, state)
+  override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue = ordered(groupingKey)
 
   override def getGroupingKey(context: ExecutionContext): AnyValue = getter(context)
 
@@ -46,23 +52,37 @@ case class SlottedGroupingExpression1(slot: Slot, expression: Expression) extend
                        groupingKey: AnyValue): Unit = setter(context, groupingKey)
 }
 
-case class SlottedGroupingExpression2( slot1: Slot, e1: Expression,
-                                       slot2: Slot, e2: Expression) extends GroupingExpression {
-  private val setter1 = makeSetValueInSlotFunctionFor(slot1)
-  private val setter2 = makeSetValueInSlotFunctionFor(slot2)
-  private val getter1 = makeGetValueFromSlotFunctionFor(slot1)
-  private val getter2 = makeGetValueFromSlotFunctionFor(slot2)
-
-
+case class SlottedGroupingExpression2(groupingExpression1: SlotExpression,
+                                      groupingExpression2: SlotExpression) extends GroupingExpression {
   override type KeyType = ListValue
 
-  override def registerOwningPipe(pipe: Pipe): Unit = {
-    e1.registerOwningPipe(pipe)
-    e2.registerOwningPipe(pipe)
-  }
-  override def computeGroupingKey(context: ExecutionContext,
-                                  state: QueryState): ListValue = list(e1(context, state), e2(context, state))
+  private val setter1 = makeSetValueInSlotFunctionFor(groupingExpression1.slot)
+  private val setter2 = makeSetValueInSlotFunctionFor(groupingExpression2.slot)
+  private val getter1 = makeGetValueFromSlotFunctionFor(groupingExpression1.slot)
+  private val getter2 = makeGetValueFromSlotFunctionFor(groupingExpression2.slot)
 
+  private val ordered: ListValue => AnyValue =
+    if (groupingExpression1.ordered) {
+      if (groupingExpression2.ordered) {
+        identity
+      } else {
+        l => l.head()
+      }
+    } else if (groupingExpression2.ordered) {
+      l => l.last()
+    } else {
+      _ => Values.NO_VALUE
+    }
+
+  override def registerOwningPipe(pipe: Pipe): Unit = {
+    groupingExpression1.expression.registerOwningPipe(pipe)
+    groupingExpression2.expression.registerOwningPipe(pipe)
+  }
+  override def computeGroupingKey(context: ExecutionContext, state: QueryState): ListValue = list(
+    groupingExpression1.expression(context, state),
+    groupingExpression2.expression(context, state))
+
+  override def computeOrderedGroupingKey(groupingKey: ListValue): AnyValue = ordered(groupingKey)
 
   override def getGroupingKey(context: ExecutionContext): ListValue = list(getter1(context), getter2(context))
 
@@ -74,27 +94,56 @@ case class SlottedGroupingExpression2( slot1: Slot, e1: Expression,
   }
 }
 
-case class SlottedGroupingExpression3( slot1: Slot, e1: Expression,
-                                       slot2: Slot, e2: Expression,
-                                       slot3: Slot, e3: Expression ) extends GroupingExpression {
-  private val setter1 = makeSetValueInSlotFunctionFor(slot1)
-  private val setter2 = makeSetValueInSlotFunctionFor(slot2)
-  private val setter3 = makeSetValueInSlotFunctionFor(slot3)
-  private val getter1 = makeGetValueFromSlotFunctionFor(slot1)
-  private val getter2 = makeGetValueFromSlotFunctionFor(slot2)
-  private val getter3 = makeGetValueFromSlotFunctionFor(slot3)
-
+case class SlottedGroupingExpression3(groupingExpression1: SlotExpression,
+                                      groupingExpression2: SlotExpression,
+                                      groupingExpression3: SlotExpression) extends GroupingExpression {
   override type KeyType = ListValue
 
+  private val setter1 = makeSetValueInSlotFunctionFor(groupingExpression1.slot)
+  private val setter2 = makeSetValueInSlotFunctionFor(groupingExpression2.slot)
+  private val setter3 = makeSetValueInSlotFunctionFor(groupingExpression3.slot)
+  private val getter1 = makeGetValueFromSlotFunctionFor(groupingExpression1.slot)
+  private val getter2 = makeGetValueFromSlotFunctionFor(groupingExpression2.slot)
+  private val getter3 = makeGetValueFromSlotFunctionFor(groupingExpression3.slot)
+
+  private val ordered: ListValue => AnyValue =
+    if (groupingExpression1.ordered) {
+      if (groupingExpression2.ordered) {
+        if (groupingExpression3.ordered) {
+          identity
+        } else {
+          l => l.take(2)
+        }
+      } else if (groupingExpression3.ordered) {
+        l => list(l.head(), l.last())
+      } else {
+        l => l.head()
+      }
+    } else if (groupingExpression2.ordered) {
+      if (groupingExpression3.ordered) {
+        l => l.drop(1)
+      } else {
+        l => l.value(1)
+      }
+    } else if (groupingExpression3.ordered) {
+      l => l.last()
+    } else {
+      _ => Values.NO_VALUE
+    }
+
   override def registerOwningPipe(pipe: Pipe): Unit = {
-    e1.registerOwningPipe(pipe)
-    e2.registerOwningPipe(pipe)
-    e3.registerOwningPipe(pipe)
+    groupingExpression1.expression.registerOwningPipe(pipe)
+    groupingExpression2.expression.registerOwningPipe(pipe)
+    groupingExpression3.expression.registerOwningPipe(pipe)
   }
-  override def computeGroupingKey(context: ExecutionContext,
-                                  state: QueryState): ListValue = list(e1(context, state), e2(context, state), e3(context, state))
+  override def computeGroupingKey(context: ExecutionContext, state: QueryState): ListValue = list(
+    groupingExpression1.expression(context, state),
+    groupingExpression2.expression(context, state),
+    groupingExpression3.expression(context, state))
 
   override def getGroupingKey(context: ExecutionContext): ListValue = list(getter1(context), getter2(context), getter3(context))
+
+  override def computeOrderedGroupingKey(groupingKey: ListValue): AnyValue = ordered(groupingKey)
 
   override def isEmpty: Boolean = false
 
@@ -108,17 +157,19 @@ case class SlottedGroupingExpression3( slot1: Slot, e1: Expression,
 
 case class SlottedGroupingExpression(groupingExpressions: Array[SlotExpression]) extends GroupingExpression {
 
-  private val setters = groupingExpressions.map(e => makeSetValueInSlotFunctionFor(e.slot))
-  private val getters = groupingExpressions.map(e => makeGetValueFromSlotFunctionFor(e.slot))
-  private val expressions = groupingExpressions.map(_.expression)
-
   override type KeyType = ListValue
+
+  private val sortedGroupingExpression = groupingExpressions.sortBy(!_.ordered)
+  private val setters = sortedGroupingExpression.map(e => makeSetValueInSlotFunctionFor(e.slot))
+  private val getters = sortedGroupingExpression.map(e => makeGetValueFromSlotFunctionFor(e.slot))
+  // First the ordered columns, then the unordered ones
+  private val expressions = sortedGroupingExpression.map(_.expression)
+  private val numberOfSortedColumns = sortedGroupingExpression.count(_.ordered)
 
   override def registerOwningPipe(pipe: Pipe): Unit = {
     groupingExpressions.foreach(e => e.expression.registerOwningPipe(pipe))
   }
-  override def computeGroupingKey(context: ExecutionContext,
-                                  state: QueryState): ListValue = {
+  override def computeGroupingKey(context: ExecutionContext, state: QueryState): ListValue = {
     val values = new Array[AnyValue](expressions.length)
     var i = 0
     while (i < values.length) {
@@ -126,6 +177,10 @@ case class SlottedGroupingExpression(groupingExpressions: Array[SlotExpression])
       i += 1
     }
     list(values:_*)
+  }
+
+  override def computeOrderedGroupingKey(groupingKey: ListValue): AnyValue = {
+    groupingKey.take(numberOfSortedColumns)
   }
 
   override def getGroupingKey(context: ExecutionContext): ListValue = {

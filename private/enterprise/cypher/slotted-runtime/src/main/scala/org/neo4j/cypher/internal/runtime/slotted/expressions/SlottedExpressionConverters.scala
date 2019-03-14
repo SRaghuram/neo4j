@@ -27,16 +27,18 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
     Some(SlottedCommandProjection(projected))
   }
 
-  override def toGroupingExpression(id: Id, projections: Map[String, Expression],
+  override def toGroupingExpression(id: Id,
+                                    projections: Map[String, Expression],
+                                    orderToLeverage: Seq[Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = {
     val slots = physicalPlan.slotConfigurations(id)
-    val projected = for {(k, v) <- projections} yield slots.get(k).get -> self.toCommandExpression(id, v)
+    val projected = for {(k, v) <- projections} yield (slots.get(k).get, self.toCommandExpression(id, v), orderToLeverage.contains(v))
     projected.toList match {
       case Nil => Some(EmptyGroupingExpression)
-      case (slot, e)::Nil => Some(SlottedGroupingExpression1(slot, e))
-      case (s1, e1)::(s2, e2)::Nil => Some(SlottedGroupingExpression2(s1, e1, s2, e2))
-      case (s1, e1)::(s2, e2)::(s3, e3)::Nil => Some(SlottedGroupingExpression3(s1, e1, s2, e2, s3, e3))
-      case _ => Some(SlottedGroupingExpression(projected.map(t => SlotExpression(t._1, t._2)).toArray))
+      case (slot, e, ordered)::Nil => Some(SlottedGroupingExpression1(SlotExpression(slot, e, ordered)))
+      case (s1, e1, o1)::(s2, e2, o2)::Nil => Some(SlottedGroupingExpression2(SlotExpression(s1, e1, o1), SlotExpression(s2, e2, o2)))
+      case (s1, e1, o1)::(s2, e2, o2)::(s3, e3, o3)::Nil => Some(SlottedGroupingExpression3(SlotExpression(s1, e1, o1), SlotExpression(s2, e2, o2), SlotExpression(s3, e3, o3)))
+      case _ => Some(SlottedGroupingExpression(projected.map(t => SlotExpression(t._1, t._2, t._3)).toArray))
     }
   }
 

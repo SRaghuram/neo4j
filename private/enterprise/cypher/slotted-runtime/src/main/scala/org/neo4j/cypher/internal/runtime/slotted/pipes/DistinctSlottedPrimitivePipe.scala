@@ -7,11 +7,11 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.PrefetchingIterator
-import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe.buildGroupingValue
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.values.storable.{LongArray, Values}
 
@@ -36,8 +36,8 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
         while (input.nonEmpty) {
           val next: ExecutionContext = input.next()
 
-          val array = buildKey(next)
-          if (seen.add(array)) {
+          val groupingValue = buildGroupingValue(next, primitiveSlots)
+          if (seen.add(groupingValue)) {
             // Found unseen key! Set it as the next element to yield, and exit
             val outgoing = SlottedExecutionContext(slots)
             outgoing.copyCachedFrom(next)
@@ -50,12 +50,14 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
       }
     }
   }
+}
 
-  private def buildKey(next: ExecutionContext): LongArray = {
-    val keys = new Array[Long](primitiveSlots.length)
+object DistinctSlottedPrimitivePipe {
+  def buildGroupingValue(next: ExecutionContext, slots: Array[Int]): LongArray = {
+    val keys = new Array[Long](slots.length)
     var i = 0
-    while (i < primitiveSlots.length) {
-      keys(i) = next.getLongAt(primitiveSlots(i))
+    while (i < slots.length) {
+      keys(i) = next.getLongAt(slots(i))
       i += 1
     }
     Values.longArray(keys)

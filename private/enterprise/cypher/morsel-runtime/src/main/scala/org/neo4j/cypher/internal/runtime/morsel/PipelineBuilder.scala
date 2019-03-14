@@ -6,6 +6,8 @@
 package org.neo4j.cypher.internal.runtime.morsel
 
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, RefSlot, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.runtime.QueryIndexes
@@ -17,8 +19,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.ReferenceFromSlot
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.internal.kernel.api
 import org.neo4j.internal.kernel.api.{IndexOrder => KernelIndexOrder}
@@ -109,7 +109,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
       case plans.Argument(_) =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan), argumentSize)
 
-      case plans.Input(nodes, variables) =>
+      case plans.Input(nodes, variables, _) =>
         new InputOperator(WorkIdentity.fromPlan(plan), nodes.map(v => slots.getLongOffsetFor(v)), variables.map(v => slots.getReferenceOffsetFor(v)))
 
       case _: plans.LazyLogicalPlan =>
@@ -226,7 +226,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           }.toArray
 
           //add mapper to source
-          val groupings = converters.toGroupingExpression(id, groupingExpressions)
+          val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
           source.addOperator(new AggregationMapperOperator(WorkIdentity.fromPlan(plan), aggregations, groupings))
           new AggregationReduceOperator(WorkIdentity.fromPlan(plan), aggregations, groupings)
 
@@ -248,6 +248,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
              _: plans.PartialTop | // same as above
              _: plans.EmptyResult | // Eagerly exhausts the source iterator
              _: plans.Distinct | // Even though the Distinct pipe is not really eager it still keeps state
+             _: plans.OrderedDistinct | // same as above
              _: plans.LoadCSV | // Not verified to be thread safe
              _: plans.ProcedureCall => // Even READ_ONLY Procedures are not allowed because they will/might access the
                                        // transaction via Core API reads, which is not thread safe because of the transaction

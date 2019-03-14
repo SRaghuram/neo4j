@@ -3615,7 +3615,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
 
   override  def compileGroupingExpression(projections: Map[String, Expression],
                                                   slots: SlotConfiguration): CompiledGroupingExpression = {
-    val grouping = converter(slots, (converter, id) => converter.toGroupingExpression(id, projections))
+    val grouping = converter(slots, (converter, id) => converter.toGroupingExpression(id, projections, Seq.empty))
     new CompiledGroupingExpression {
 
       override def projectGroupingKey(context: ExecutionContext,

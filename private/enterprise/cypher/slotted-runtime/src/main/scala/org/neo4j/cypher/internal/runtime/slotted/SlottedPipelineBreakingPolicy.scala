@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 
 object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
@@ -18,8 +18,7 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
         => true
 
         // 1 child operators
-      case _: Distinct |
-           _: Aggregation |
+      case _: AggregatingPlan |
            _: Expand |
            _: OptionalExpand |
            _: VarExpand |
