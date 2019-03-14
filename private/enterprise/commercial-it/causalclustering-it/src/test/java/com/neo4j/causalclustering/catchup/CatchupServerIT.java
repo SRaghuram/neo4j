@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
-import org.eclipse.collections.api.iterator.LongIterator;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.io.fs.FileUtils.relativePath;
@@ -149,10 +147,6 @@ class CatchupServerIT
 
         // and
         assertTransactionIdMatches( prepareStoreCopyResponse.lastCheckPointedTransactionId() );
-
-        //and
-        assertTrue( prepareStoreCopyResponse.getIndexIds().isEmpty(),
-                "Expected an empty set of ids. Found size " + prepareStoreCopyResponse.getIndexIds().size() );
     }
 
     @Test
@@ -197,35 +191,6 @@ class CatchupServerIT
     }
 
     @Test
-    void individualIndexSnapshotCopyWorks() throws Exception
-    {
-
-        // given
-        Database database = getDatabase( db );
-        List<File> expectingFiles = database.getDatabaseFileListing().builder().excludeAll().includeSchemaIndexStoreFiles().build().stream().map(
-                StoreFileMetadata::file ).collect( toList() );
-        // this test only tests the indexes, not the statistics store
-        File indexStatisticsStoreFile = database.getDatabaseLayout().indexStatisticsStore();
-        expectingFiles.removeIf( file -> file.equals( indexStatisticsStoreFile ) );
-        SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient();
-
-        // and
-        LongIterator indexIds = getExpectedIndexIds( database ).longIterator();
-
-        // when
-        while ( indexIds.hasNext() )
-        {
-            long indexId = indexIds.next();
-            StoreCopyFinishedResponse response = simpleCatchupClient.requestIndexSnapshot( indexId );
-            simpleCatchupClient.close();
-            assertEquals( StoreCopyFinishedResponse.Status.SUCCESS, response.status() );
-        }
-
-        // then
-        fileContentEquals( expectingFiles );
-    }
-
-    @Test
     void individualFileCopyFailsIfStoreIdMismatch() throws Exception
     {
         // given a file exists on the server
@@ -261,17 +226,6 @@ class CatchupServerIT
         {
             // individual file request does not throw when error response is received, it returns a status instead
             StoreCopyFinishedResponse response = simpleCatchupClient.requestIndividualFile( new File( EXISTING_FILE_NAME ) );
-            assertEquals( E_DATABASE_UNKNOWN, response.status() );
-        }
-    }
-
-    @Test
-    void shouldReturnCorrectStatusWhenRequestingIndexSnapshotForDatabaseThatDoesNotExist() throws Exception
-    {
-        try ( SimpleCatchupClient simpleCatchupClient = newSimpleCatchupClient( UNKNOWN_DB_NAME ) )
-        {
-            // index snapshot request does not throw when error response is received, it returns a status instead
-            StoreCopyFinishedResponse response = simpleCatchupClient.requestIndexSnapshot( 42 );
             assertEquals( E_DATABASE_UNKNOWN, response.status() );
         }
     }

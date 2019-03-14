@@ -73,8 +73,6 @@ class SimpleCatchupClient implements AutoCloseable
         CatchupResponseAdaptor<PrepareStoreCopyResponse> responseHandler =
                 StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( streamToDiskProvider, logProvider.getLog( SimpleCatchupClient.class ) );
         return catchUpClientFactory.getClient( from, log )
-                .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
-                .v2( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
                 .v3( c -> c.prepareStoreCopy( expectedStoreId, expectedDatabaseName ) )
                 .withResponseHandler( responseHandler )
                 .request();
@@ -90,23 +88,7 @@ class SimpleCatchupClient implements AutoCloseable
         long lastTransactionId = getCheckPointer( graphDb ).lastCheckPointedTransactionId();
         CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );
         return catchUpClientFactory.getClient( from, log )
-                .v1( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId ) )
-                .v2( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseName ) )
                 .v3( c -> c.getStoreFile( expectedStoreId, file, lastTransactionId, expectedDatabaseName ) )
-                .withResponseHandler( responseHandler )
-                .request();
-    }
-
-    public StoreCopyFinishedResponse requestIndexSnapshot( long indexId ) throws Exception
-    {
-        long lastCheckPointedTransactionId = getCheckPointer( graphDb ).lastCheckPointedTransactionId();
-        StoreId storeId = graphDb.storeId();
-        CatchupResponseAdaptor<StoreCopyFinishedResponse> responseHandler = StoreCopyResponseAdaptors.filesCopyAdaptor( streamToDiskProvider, log );
-
-        return catchUpClientFactory.getClient( from, log )
-                .v1( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId ) )
-                .v2( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, databaseName ) )
-                .v3( c -> c.getIndexFiles( storeId, indexId, lastCheckPointedTransactionId, databaseName ) )
                 .withResponseHandler( responseHandler )
                 .request();
     }

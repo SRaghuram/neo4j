@@ -7,12 +7,12 @@ package com.neo4j.causalclustering.core.server;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
-import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.IdentityModule;
+import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.core.consensus.ConsensusModule;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;

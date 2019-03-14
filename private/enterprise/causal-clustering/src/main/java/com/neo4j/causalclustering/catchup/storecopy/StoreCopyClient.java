@@ -10,11 +10,8 @@ import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedRequest;
 import com.neo4j.causalclustering.helper.TimeoutStrategy;
-import org.eclipse.collections.api.iterator.LongIterator;
 
 import java.io.File;
 import java.net.ConnectException;
@@ -64,8 +61,6 @@ public class StoreCopyClient
             TransactionIdHandler txIdHandler = new TransactionIdHandler( prepareStoreCopyResponse );
             copyFilesIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider, requestWiseTerminationCondition,
                     destDir, txIdHandler );
-            copyIndexSnapshotIndividually( prepareStoreCopyResponse, expectedStoreId, catchupAddressProvider, storeFileStreamProvider,
-                    requestWiseTerminationCondition, txIdHandler );
             return txIdHandler.requiredTransactionRange();
         }
         catch ( StoreCopyFailedException e )
@@ -92,8 +87,6 @@ public class StoreCopyClient
             storeCopyClientMonitor.startReceivingStoreFile( Paths.get( destDir.toString(), file.getName() ).toString() );
 
             persistentCallToSecondary( addressProvider,
-                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId ),
-                    c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ),
                     c -> c.getStoreFile( expectedStoreId, file, lastCheckPointedTxId, databaseName ),
                     storeFileStream, terminationConditions.get(), txIdHandler );
 
@@ -102,36 +95,9 @@ public class StoreCopyClient
         storeCopyClientMonitor.finishReceivingStoreFiles();
     }
 
-    private void copyIndexSnapshotIndividually( PrepareStoreCopyResponse prepareStoreCopyResponse, StoreId expectedStoreId,
-            CatchupAddressProvider addressProvider, StoreFileStreamProvider storeFileStream, Supplier<TerminationCondition> terminationConditions,
-            TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
-    {
-        StoreCopyClientMonitor
-                storeCopyClientMonitor = monitors.get().newMonitor( StoreCopyClientMonitor.class );
-        long lastCheckPointedTxId = prepareStoreCopyResponse.lastCheckPointedTransactionId();
-        LongIterator indexIds = prepareStoreCopyResponse.getIndexIds().longIterator();
-        storeCopyClientMonitor.startReceivingIndexSnapshots();
-
-        while ( indexIds.hasNext() )
-        {
-            long indexId = indexIds.next();
-            storeCopyClientMonitor.startReceivingIndexSnapshot( indexId );
-
-            persistentCallToSecondary( addressProvider,
-                    c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId ),
-                    c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId, databaseName ),
-                    c -> c.getIndexFiles( expectedStoreId, indexId, lastCheckPointedTxId, databaseName ), storeFileStream, terminationConditions.get(),
-                    txIdHandler );
-
-            storeCopyClientMonitor.finishReceivingIndexSnapshot( indexId );
-        }
-        storeCopyClientMonitor.finishReceivingIndexSnapshots();
-    }
-
     private void persistentCallToSecondary( CatchupAddressProvider addressProvider,
-            Function<CatchupClientV1,PreparedRequest<StoreCopyFinishedResponse>> v1Request,
-            Function<CatchupClientV2,PreparedRequest<StoreCopyFinishedResponse>> v2Request,
-            Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request, StoreFileStreamProvider storeFileStream,
+            Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request,
+            StoreFileStreamProvider storeFileStream,
             TerminationCondition terminationCondition, TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
     {
         TimeoutStrategy.Timeout timeout = backOffStrategy.newTimeout();
@@ -143,8 +109,6 @@ public class StoreCopyClient
                 log.info( format( "Sending request StoreCopyRequest to '%s'", address ) );
 
                 StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address, log )
-                        .v1( v1Request )
-                        .v2( v2Request )
                         .v3( v3Request )
                         .withResponseHandler( StoreCopyResponseAdaptors.filesCopyAdaptor( storeFileStream, log ) )
                         .request();
@@ -195,8 +159,6 @@ public class StoreCopyClient
         {
             log.info( "Requesting store listing from: " + from );
             prepareStoreCopyResponse = catchUpClientFactory.getClient( from, log )
-                    .v1( c -> c.prepareStoreCopy( expectedStoreId ) )
-                    .v2( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
                     .v3( c -> c.prepareStoreCopy( expectedStoreId, databaseName ) )
                     .withResponseHandler( StoreCopyResponseAdaptors.prepareStoreCopyAdaptor( storeFileStream, log ) )
                     .request();
@@ -226,8 +188,6 @@ public class StoreCopyClient
                 }
             };
             return catchUpClientFactory.getClient( fromAddress, log )
-                    .v1( CatchupClientV1::getStoreId )
-                    .v2( c -> c.getStoreId( databaseName ) )
                     .v3( c -> c.getStoreId( databaseName ) )
                     .withResponseHandler( responseHandler )
                     .request();

@@ -55,7 +55,6 @@ public final class CausalClusteringTestHelpers
     public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler )
     {
         return CatchupClientBuilder.builder()
-                .defaultDatabaseName( GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
                 .catchupProtocols( new ApplicationSupportedProtocols( CATCHUP, emptyList() ) )
                 .modifierProtocols( emptyList() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( VOID_WRAPPER ) )

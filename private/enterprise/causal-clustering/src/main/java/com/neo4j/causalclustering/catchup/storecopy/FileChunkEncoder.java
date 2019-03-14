@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup.storecopy;
 
-import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -13,8 +12,9 @@ import io.netty.handler.codec.MessageToByteEncoder;
 public class FileChunkEncoder extends MessageToByteEncoder<FileChunk>
 {
     @Override
-    protected void encode( ChannelHandlerContext ctx, FileChunk chunk, ByteBuf out ) throws Exception
+    protected void encode( ChannelHandlerContext ctx, FileChunk chunk, ByteBuf out )
     {
-        FileChunk.marshal().marshal( chunk, new NetworkWritableChannel( out ) );
+        out.writeInt( chunk.length() );
+        out.writeBytes( chunk.bytes() );
     }
 }

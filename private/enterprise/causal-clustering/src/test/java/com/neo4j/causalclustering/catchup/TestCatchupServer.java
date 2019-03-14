@@ -5,9 +5,7 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
-import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
-import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.ChildInitializer;
@@ -41,7 +39,6 @@ import static com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocolCa
 import static com.neo4j.causalclustering.protocol.Protocol.ModifierProtocolCategory.COMPRESSION;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class TestCatchupServer extends Server
 {
@@ -63,8 +60,6 @@ class TestCatchupServer extends Server
         NettyPipelineBuilderFactory pipelineBuilder = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
 
         List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Server,?>> protocolInstallers = Arrays.asList(
-                new CatchupProtocolServerInstallerV1.Factory( pipelineBuilder, logProvider, catchupServerHandler, DEFAULT_DATABASE_NAME ),
-                new CatchupProtocolServerInstallerV2.Factory( pipelineBuilder, logProvider, catchupServerHandler, DEFAULT_DATABASE_NAME ),
                 new CatchupProtocolServerInstallerV3.Factory( pipelineBuilder, logProvider, catchupServerHandler )
         );
 

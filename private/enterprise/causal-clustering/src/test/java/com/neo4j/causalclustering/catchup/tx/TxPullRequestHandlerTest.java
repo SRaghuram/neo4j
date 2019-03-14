@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.catchup.tx;
 
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
-import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;

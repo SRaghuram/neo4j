@@ -7,10 +7,9 @@ package com.neo4j.causalclustering.catchup.storecopy;
 
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
-import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.eclipse.collections.api.set.primitive.LongSet;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,10 +79,9 @@ public class PrepareStoreCopyRequestHandler extends SimpleChannelInboundHandler<
 
     private PrepareStoreCopyResponse createSuccessfulResponse( CheckPointer checkPointer, PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException
     {
-        LongSet indexIds = prepareStoreCopyFiles.getNonAtomicIndexIds();
         File[] files = prepareStoreCopyFiles.listReplayableFiles();
         long lastCheckPointedTransactionId = checkPointer.lastCheckPointedTransactionId();
-        return PrepareStoreCopyResponse.success( files, indexIds, lastCheckPointedTransactionId );
+        return PrepareStoreCopyResponse.success( files, lastCheckPointedTransactionId );
     }
 
     private Resource tryCheckpointAndAcquireMutex( CheckPointer checkPointer ) throws IOException

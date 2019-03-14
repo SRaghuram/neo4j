@@ -9,7 +9,7 @@ import com.neo4j.causalclustering.catchup.CatchupResult;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol.State;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
-import com.neo4j.causalclustering.catchup.v1.tx.TxPullRequest;
+import com.neo4j.causalclustering.catchup.v3.tx.TxPullRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 

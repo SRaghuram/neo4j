@@ -5,10 +5,8 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import com.neo4j.causalclustering.catchup.v1.CatchupProtocolClientInstallerV1;
-import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
-import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol.ApplicationProtocols;
@@ -20,12 +18,10 @@ import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtoco
 import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
-
 import io.netty.channel.socket.SocketChannel;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
@@ -42,15 +38,14 @@ public final class CatchupClientBuilder
     {
     }
 
-    public static NeedsDefaultDatabaseName builder()
+    public static NeedsCatchupProtocols builder()
     {
         return new StepBuilder();
     }
 
-    private static class StepBuilder implements NeedsDefaultDatabaseName, NeedsCatchupProtocols, NeedsModifierProtocols, NeedsPipelineBuilder,
+    private static class StepBuilder implements NeedsCatchupProtocols, NeedsModifierProtocols, NeedsPipelineBuilder,
             NeedsInactivityTimeout, NeedsScheduler, NeedBootstrapConfig, AcceptsOptionalParams
     {
-        private String defaultDatabaseName;
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;
         private Collection<ModifierSupportedProtocols> modifierProtocols;
@@ -64,13 +59,6 @@ public final class CatchupClientBuilder
 
         private StepBuilder()
         {
-        }
-
-        @Override
-        public NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName )
-        {
-            this.defaultDatabaseName = defaultDatabaseName;
-            return this;
         }
 
         @Override
@@ -150,11 +138,8 @@ public final class CatchupClientBuilder
             ModifierProtocolRepository modifierProtocolRepository = new ModifierProtocolRepository( ModifierProtocols.values(), modifierProtocols );
 
             Function<CatchupResponseHandler,HandshakeClientInitializer> channelInitializerFactory = handler -> {
-                List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> installers = Arrays.asList(
-                        new CatchupProtocolClientInstallerV1.Factory( pipelineBuilder, debugLogProvider, handler ),
-                        new CatchupProtocolClientInstallerV2.Factory( pipelineBuilder, debugLogProvider, handler ),
-                        new CatchupProtocolClientInstallerV3.Factory( pipelineBuilder, debugLogProvider, handler )
-                );
+                List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> installers = List.of(
+                        new CatchupProtocolClientInstallerV3.Factory( pipelineBuilder, debugLogProvider, handler ) );
 
                 ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository = new ProtocolInstallerRepository<>( installers,
                         ModifierProtocolInstaller.allClientInstallers );
@@ -166,13 +151,8 @@ public final class CatchupClientBuilder
             CatchupChannelPoolService
                     catchupChannelPoolService = new CatchupChannelPoolService( bootstrapConfiguration, scheduler, clock, channelInitializerFactory );
 
-            return new CatchupClientFactory( defaultDatabaseName, inactivityTimeout, catchupChannelPoolService );
+            return new CatchupClientFactory( inactivityTimeout, catchupChannelPoolService );
         }
-    }
-
-    public interface NeedsDefaultDatabaseName
-    {
-        NeedsCatchupProtocols defaultDatabaseName( String defaultDatabaseName );
     }
 
     public interface NeedsCatchupProtocols

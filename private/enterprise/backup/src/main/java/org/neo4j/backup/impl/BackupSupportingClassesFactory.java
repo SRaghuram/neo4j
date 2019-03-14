@@ -112,7 +112,6 @@ public class BackupSupportingClassesFactory
         ApplicationSupportedProtocols supportedCatchupProtocols = getSupportedCatchupProtocols( supportedProtocolCreator );
 
         return CatchupClientBuilder.builder()
-                .defaultDatabaseName( onlineBackupContext.getDatabaseName() )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedProtocolCreator.createSupportedModifierProtocols() )
                 .pipelineBuilder( new NettyPipelineBuilderFactory( createPipelineWrapper( config ) ) )

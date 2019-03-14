@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.state.snapshot;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupResponseAdaptor;
 import com.neo4j.causalclustering.catchup.VersionedCatchupClients;
-import com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV2;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -16,8 +15,6 @@ import java.util.concurrent.CompletableFuture;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-import static com.neo4j.causalclustering.catchup.VersionedCatchupClients.CatchupClientV1;
 
 public class SnapshotDownloader
 {
@@ -48,8 +45,6 @@ public class SnapshotDownloader
             };
 
             coreSnapshot = client
-                    .v1( CatchupClientV1::getCoreSnapshot )
-                    .v2( CatchupClientV2::getCoreSnapshot )
                     .v3( c -> c.getCoreSnapshot( databaseName ) )
                     .withResponseHandler( responseHandler )
                     .request();

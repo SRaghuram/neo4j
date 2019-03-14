@@ -10,9 +10,8 @@ import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupServerProtocol;
 import com.neo4j.causalclustering.catchup.ResponseMessageType;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetIndexFilesRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreFileRequest;
-import com.neo4j.causalclustering.catchup.v1.storecopy.PrepareStoreCopyRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreFileRequest;
+import com.neo4j.causalclustering.catchup.v3.storecopy.PrepareStoreCopyRequest;
 import com.neo4j.causalclustering.helper.ConstantTimeTimeoutStrategy;
 import com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -20,7 +19,6 @@ import com.neo4j.causalclustering.net.Server;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -77,7 +75,6 @@ public class StoreCopyClientIT
     private final TerminationCondition defaultTerminationCondition = TerminationCondition.CONTINUE_INDEFINITELY;
     private final FakeFile fileA = new FakeFile( "fileA", "This is file a content" );
     private final FakeFile fileB = new FakeFile( "another-file-b", "Totally different content 123" );
-    private final FakeFile indexFileA = new FakeFile( "lucene", "Lucene 123" );
     private final File targetLocation = new File( "copyTargetLocation" );
     private JobScheduler scheduler;
     private LogProvider logProvider;
@@ -106,10 +103,8 @@ public class StoreCopyClientIT
         serverHandler = new FakeCatchupServer( logProvider, testDirectory, fsa );
         serverHandler.addFile( fileA );
         serverHandler.addFile( fileB );
-        serverHandler.addIndexFile( indexFileA );
         writeContents( fsa, relative( fileA.getFilename() ), fileA.getContent() );
         writeContents( fsa, relative( fileB.getFilename() ), fileB.getContent() );
-        writeContents( fsa, relative( indexFileA.getFilename() ), indexFileA.getContent() );
 
         ListenSocketAddress listenAddress = new ListenSocketAddress( "localhost", PortAuthority.allocatePort() );
         catchupServer = CausalClusteringTestHelpers.getCatchupServer( serverHandler, listenAddress, scheduler );
@@ -141,7 +136,7 @@ public class StoreCopyClientIT
         subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, () -> defaultTerminationCondition, targetLocation );
 
         // then the catchup is successful
-        Set<String> expectedFiles = new HashSet<>( Arrays.asList( fileA.getFilename(), fileB.getFilename(), indexFileA.getFilename() ) );
+        Set<String> expectedFiles = new HashSet<>( Arrays.asList( fileA.getFilename(), fileB.getFilename() ) );
         assertEquals( expectedFiles, storeFileStream.fileStreams().keySet() );
         assertEquals( fileContent( relative( fileA.getFilename() ) ), clientFileContents( storeFileStream, fileA.getFilename() ) );
         assertEquals( fileContent( relative( fileB.getFilename() ) ), clientFileContents( storeFileStream, fileB.getFilename() ) );
@@ -175,7 +170,7 @@ public class StoreCopyClientIT
         subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), clientStoreFileStream, () -> defaultTerminationCondition, targetLocation );
 
         // then the catchup is successful
-        Set<String> expectedFiles = new HashSet<>( Arrays.asList( fileA.getFilename(), fileB.getFilename(), indexFileA.getFilename() ) );
+        Set<String> expectedFiles = new HashSet<>( Arrays.asList( fileA.getFilename(), fileB.getFilename() ) );
         assertEquals( expectedFiles, clientStoreFileStream.fileStreams().keySet() );
 
         // and
@@ -244,21 +239,8 @@ public class StoreCopyClientIT
                     protected void channelRead0( ChannelHandlerContext ctx, PrepareStoreCopyRequest msg )
                     {
                         ctx.write( ResponseMessageType.PREPARE_STORE_COPY_RESPONSE );
-                        ctx.writeAndFlush( PrepareStoreCopyResponse.success( new File[]{new File( fileName )}, LongSets.immutable.empty(), 1 ) );
+                        ctx.writeAndFlush( PrepareStoreCopyResponse.success( new File[]{new File( fileName )}, 1 ) );
                         catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
-                    }
-                };
-            }
-
-            @Override
-            public ChannelHandler getIndexSnapshotRequestHandler( CatchupServerProtocol catchupServerProtocol )
-            {
-                return new SimpleChannelInboundHandler<GetIndexFilesRequest>()
-                {
-                    @Override
-                    protected void channelRead0( ChannelHandlerContext ctx, GetIndexFilesRequest msg )
-                    {
-                        throw new IllegalStateException( "There should not be any index requests" );
                     }
                 };
             }

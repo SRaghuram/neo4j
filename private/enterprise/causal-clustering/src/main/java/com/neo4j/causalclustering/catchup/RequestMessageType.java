@@ -17,7 +17,6 @@ public enum RequestMessageType implements Message
     STORE_ID( (byte) 4 ),
     PREPARE_STORE_COPY( (byte) 5 ),
     STORE_FILE( (byte) 6 ),
-    INDEX_SNAPSHOT( (byte) 7 ),
     UNKNOWN( (byte) 404 );
 
     private byte messageType;

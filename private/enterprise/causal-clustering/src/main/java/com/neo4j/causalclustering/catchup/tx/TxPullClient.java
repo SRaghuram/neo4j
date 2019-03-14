@@ -56,8 +56,6 @@ public class TxPullClient
 
         Log log = logProvider.getLog( getClass() );
         return catchUpClient.getClient( fromAddress, log )
-                .v1( c -> c.pullTransactions( storeId, previousTxId ) )
-                .v2( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
                 .v3( c -> c.pullTransactions( storeId, previousTxId, databaseName ) )
                 .withResponseHandler( responseHandler )
                 .request();

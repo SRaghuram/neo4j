@@ -12,7 +12,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 
 class CommercialCatchupV3Test extends CommercialCatchupTest

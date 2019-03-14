@@ -12,13 +12,9 @@ import com.neo4j.causalclustering.catchup.storecopy.PrepareStoreCopyResponse;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.catchup.v1.CatchupProtocolClientInstallerV1;
-import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
-import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
-import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
-import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
-import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolClientInstallerV3;
-import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolClientInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.catchup.v3.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
@@ -177,17 +173,7 @@ abstract class CommercialCatchupTest
     private void installChannels( NettyPipelineBuilderFactory pipelineBuilderFactory, CatchupResponseHandler catchupResponseHandler,
             MultiDatabaseCatchupServerHandler responseHandler ) throws Exception
     {
-        if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_1 )
-        {
-            new CatchupProtocolClientInstallerV1( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV1( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler, DEFAULT_DB ).install( server );
-        }
-        else if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_2 )
-        {
-            new CatchupProtocolClientInstallerV2( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
-            new CatchupProtocolServerInstallerV2( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler, DEFAULT_DB ).install( server );
-        }
-        else if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_3 )
+        if ( applicationProtocols == Protocol.ApplicationProtocols.CATCHUP_3 )
         {
             new CatchupProtocolClientInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
             new CatchupProtocolServerInstallerV3( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, responseHandler ).install( server );

@@ -211,8 +211,6 @@ class OnlineBackupCommandCcIT
 
         assertThat( output, containsString( "Start receiving transactions from" ) );
         assertThat( output, containsString( "Finish receiving transactions at" ) );
-        assertThat( output, containsString( "Start receiving index snapshots" ) );
-        assertThat( output, containsString( "Finished receiving index snapshots" ) );
     }
 
     @TestWithRecordFormats

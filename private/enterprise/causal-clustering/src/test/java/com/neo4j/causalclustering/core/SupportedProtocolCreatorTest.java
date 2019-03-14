@@ -133,10 +133,10 @@ public class SupportedProtocolCreatorTest
     public void shouldRespectMinimumVersionOfCatchupProtocol()
     {
         // when
-        ApplicationSupportedProtocols supportedCatchupProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getMinimumCatchupProtocols( 2 );
+        ApplicationSupportedProtocols supportedCatchupProtocols = new SupportedProtocolCreator( Config.defaults(), log ).getMinimumCatchupProtocols( 3 );
 
         // then
-        assertThat( supportedCatchupProtocols.versions(), contains( 2, 3 ) );
+        assertThat( supportedCatchupProtocols.versions(), contains( 3 ) );
     }
 
     @Test

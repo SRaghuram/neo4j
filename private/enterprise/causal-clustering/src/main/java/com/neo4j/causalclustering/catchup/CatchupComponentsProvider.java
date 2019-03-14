@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -57,7 +56,6 @@ public final class CatchupComponentsProvider
     private final LogProvider userLogProvider;
     private final JobScheduler scheduler;
     private final LifeSupport globalLife;
-    private final String defaultDatabaseName;
     private final CatchupClientFactory catchupClient;
     private final ConnectorPortRegister portRegister;
     private final CopiedStoreRecovery copiedStoreRecovery;
@@ -80,7 +78,6 @@ public final class CatchupComponentsProvider
         this.pageCache = globalModule.getPageCache();
         this.globalLife = globalModule.getGlobalLife();
         this.fileSystem = globalModule.getFileSystem();
-        this.defaultDatabaseName = config.get( GraphDatabaseSettings.default_database );
         this.catchupClient = createCatchupClient();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.storageEngineFactory = globalModule.getStorageEngineFactory();
@@ -96,7 +93,6 @@ public final class CatchupComponentsProvider
     public CatchupClientFactory createCatchupClient()
     {
         CatchupClientFactory catchupClient = CatchupClientBuilder.builder()
-                .defaultDatabaseName( defaultDatabaseName )
                 .catchupProtocols( supportedCatchupProtocols )
                 .modifierProtocols( supportedModifierProtocols )
                 .pipelineBuilder( pipelineBuilders.client() )
