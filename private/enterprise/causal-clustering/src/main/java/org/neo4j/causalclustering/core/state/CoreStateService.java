@@ -7,6 +7,7 @@ package org.neo4j.causalclustering.core.state;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -19,7 +20,6 @@ import org.neo4j.causalclustering.SessionTracker;
 import org.neo4j.causalclustering.common.DatabaseService;
 import org.neo4j.causalclustering.core.CoreLocalDatabase;
 import org.neo4j.causalclustering.core.consensus.LeaderLocator;
-import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.replication.Replicator;
 import org.neo4j.causalclustering.core.state.machines.CoreStateMachines;
@@ -42,6 +42,7 @@ import org.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionSt
 import org.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import org.neo4j.causalclustering.core.state.storage.StateStorage;
 import org.neo4j.causalclustering.identity.MemberId;
+import org.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import org.neo4j.graphdb.factory.EditionLocksFactories;
 import org.neo4j.graphdb.factory.module.PlatformModule;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
@@ -69,6 +70,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.storageengine.api.StorageEngine;
 
 import static java.lang.Long.max;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.array_block_id_allocation_size;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.label_token_id_allocation_size;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.label_token_name_id_allocation_size;
@@ -84,6 +86,7 @@ import static org.neo4j.causalclustering.core.CausalClusteringSettings.relations
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.relationship_type_token_name_id_allocation_size;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.schema_id_allocation_size;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_apply_max_batch_size;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.causalclustering.core.CausalClusteringSettings.string_block_id_allocation_size;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 
@@ -252,10 +255,11 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
 
     private void initialiseStatusDescriptionEndpoint( PlatformModule platformModule, CommandIndexTracker commandIndexTracker )
     {
-        PollingThroughputMonitor pollingThroughputMonitor = new PollingThroughputMonitor( platformModule.logging.getInternalLogProvider(), platformModule.clock,
-                PollingThroughputMonitor.DEFAULT_NUMBER_OF_MEASUREMENTS, PollingThroughputMonitor.DEFAULT_REPORTED_PERIOD, platformModule.jobScheduler,
+        Duration samplingWindow = config.get( status_throughput_window );
+        ThroughputMonitor throughputMonitor = new ThroughputMonitor( logProvider, platformModule.clock, platformModule.jobScheduler, samplingWindow,
                 commandIndexTracker::getAppliedCommandIndex );
-        platformModule.dependencies.satisfyDependency( pollingThroughputMonitor );
+        platformModule.life.add( throughputMonitor );
+        platformModule.dependencies.satisfyDependency( throughputMonitor );
     }
 
     @Override

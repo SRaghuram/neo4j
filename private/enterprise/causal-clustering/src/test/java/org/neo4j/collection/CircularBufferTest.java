@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.causalclustering.core.consensus.log.cache;
+package org.neo4j.collection;
 
 import org.junit.Test;
 
@@ -76,7 +76,6 @@ public class CircularBufferTest
     {
         // given
         CircularBuffer<Integer> buffer = new CircularBuffer<>( 3 );
-        Integer[] evictions = new Integer[3];
         buffer.append( 1 );
         buffer.append( 2 );
         buffer.append( 3 );

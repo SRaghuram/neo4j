@@ -574,6 +574,10 @@ public class CausalClusteringSettings implements LoadableConfig
     public static final Setting<Boolean> status_auth_enabled =
             setting( "dbms.security.causal_clustering_status_auth_enabled", BOOLEAN, TRUE );
 
+    @Description( "Sampling window for throughput estimate reported in the status endpoint." )
+    public static final Setting<Duration> status_throughput_window =
+            setting( "causal_clustering.status_throughput_window", DURATION, "5s" );
+
     @Description( "Enable multi-data center features. Requires appropriate licensing." )
     public static final Setting<Boolean> multi_dc_license =
             setting( "causal_clustering.multi_dc_license", BOOLEAN, FALSE );

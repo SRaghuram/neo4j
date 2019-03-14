@@ -20,7 +20,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,7 +28,7 @@ import javax.ws.rs.core.Response;
 import org.neo4j.causalclustering.core.CoreGraphDatabase;
 import org.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
 import org.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
-import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
+import org.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import org.neo4j.causalclustering.core.consensus.RaftMachine;
 import org.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import org.neo4j.causalclustering.core.consensus.roles.Role;
@@ -44,15 +43,14 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
-import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
-import org.neo4j.time.SystemNanoClock;
 
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -74,7 +72,7 @@ public class CoreStatusTest
     private DurationSinceLastMessageMonitor raftMessageTimerResetMonitor;
     private RaftMachine raftMachine;
     private CommandIndexTracker commandIndexTracker;
-    private PollingThroughputMonitor pollingThroughputMonitor;
+    private ThroughputMonitor throughputMonitor;
 
     private final MemberId myself = new MemberId( new UUID( 0x1234, 0x5678 ) );
     private final MemberId core2 = new MemberId( UUID.randomUUID() );
@@ -100,7 +98,7 @@ public class CoreStatusTest
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         dependencyResolver.satisfyDependency( JobSchedulerFactory.createInitialisedScheduler() );
-        pollingThroughputMonitor = dependencyResolver.satisfyDependency( mock( PollingThroughputMonitor.class ) );
+        throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }
@@ -172,13 +170,13 @@ public class CoreStatusTest
     }
 
     @Test
-    public void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException, InterruptedException
+    public void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException
     {
         // given ideal normal conditions
         commandIndexTracker.registerAppliedCommandIndex( 123 );
         when( raftMachine.getLeader() ).thenReturn( core2 );
         raftMessageTimerResetMonitor.timerReset();
-        when( pollingThroughputMonitor.throughput() ).thenReturn( OptionalDouble.of( 423.0 ) );
+        when( throughputMonitor.throughput() ).thenReturn( Optional.of( 423.0 ) );
         clock.forward( Duration.ofSeconds( 1 ) );
 
         // and helpers
@@ -245,7 +243,7 @@ public class CoreStatusTest
     }
 
     @Test
-    public void leaderNotIncludedIfUnknown() throws IOException
+    public void leaderNullWhenUnknown() throws IOException
     {
         // given no leader
         topologyService.replaceWithRole( null, RoleInfo.LEADER );
@@ -255,21 +253,21 @@ public class CoreStatusTest
 
         // then
         Map<String,Object> response = responseAsMap( description );
-        assertFalse( description.getEntity().toString(), response.containsKey( "leader" ) );
+        assertNull( response.get( "leader" ) );
     }
 
     @Test
-    public void throughputNegativeInUnknown() throws IOException
+    public void throughputNullWhenUnknown() throws IOException
     {
-        when( pollingThroughputMonitor.throughput() ).thenReturn( OptionalDouble.empty() );
+        when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
 
         Response description = status.description();
 
         Map<String,Object> response = responseAsMap( description );
-        assertEquals( -1.0, response.get( "raftIndexThroughputPerSecond" ) );
+        assertNull( response.get( "raftIndexThroughputPerSecond" ) );
     }
 
-    static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
+    private static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
     {
         RaftMembershipManager raftMembershipManager = mock( RaftMembershipManager.class );
         when( raftMembershipManager.votingMembers() ).thenReturn( votingMembers );

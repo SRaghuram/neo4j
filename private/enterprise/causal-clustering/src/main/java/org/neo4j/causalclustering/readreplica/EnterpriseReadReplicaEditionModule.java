@@ -6,6 +6,7 @@
 package org.neo4j.causalclustering.readreplica;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -17,7 +18,7 @@ import org.neo4j.causalclustering.common.DefaultDatabaseService;
 import org.neo4j.causalclustering.common.LocalDatabase;
 import org.neo4j.causalclustering.common.PipelineBuilders;
 import org.neo4j.causalclustering.core.CausalClusteringSettings;
-import org.neo4j.causalclustering.core.consensus.PollingThroughputMonitor;
+import org.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import org.neo4j.causalclustering.core.consensus.schedule.TimerService;
 import org.neo4j.causalclustering.core.server.CatchupHandlerFactory;
 import org.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
@@ -72,6 +73,8 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.Group;
 import org.neo4j.udc.UsageData;
 
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static org.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.causalclustering.discovery.ResolutionResolverFactory.chooseResolver;
 import static org.neo4j.graphdb.DependencyResolver.SelectionStrategy.ONLY;
 
@@ -214,10 +217,11 @@ public class EnterpriseReadReplicaEditionModule extends AbstractEditionModule
 
     private void initialiseStatusDescriptionEndpoint( PlatformModule platformModule, CommandIndexTracker commandIndexTracker )
     {
-        PollingThroughputMonitor pollingThroughputMonitor = new PollingThroughputMonitor( platformModule.logging.getInternalLogProvider(), platformModule.clock,
-                PollingThroughputMonitor.DEFAULT_NUMBER_OF_MEASUREMENTS, PollingThroughputMonitor.DEFAULT_REPORTED_PERIOD, platformModule.jobScheduler,
-                commandIndexTracker::getAppliedCommandIndex );
-        platformModule.dependencies.satisfyDependency( pollingThroughputMonitor );
+        Duration samplingWindow = config.get( status_throughput_window );
+        ThroughputMonitor throughputMonitor = new ThroughputMonitor( platformModule.logging.getInternalLogProvider(), platformModule.clock,
+                platformModule.jobScheduler, samplingWindow, commandIndexTracker::getAppliedCommandIndex );
+        platformModule.life.add( throughputMonitor );
+        platformModule.dependencies.satisfyDependency( throughputMonitor );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

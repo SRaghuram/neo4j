@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.causalclustering.identity.MemberId;
 
-@JsonSerialize( include = JsonSerialize.Inclusion.NON_NULL )
+@JsonSerialize
 public class ClusterStatusResponse
 {
     private final boolean isCore;

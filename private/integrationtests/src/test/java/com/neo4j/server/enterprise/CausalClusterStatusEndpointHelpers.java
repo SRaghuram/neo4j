@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2018 "Neo4j,"
+ * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
@@ -23,6 +23,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.CausalClusterInProcessBuilder;
 import org.neo4j.harness.PortAuthorityPortPickingStrategy;
 import org.neo4j.harness.ServerControls;
+import org.neo4j.harness.internal.EnterpriseInProcessServerBuilder;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
@@ -49,6 +50,7 @@ class CausalClusterStatusEndpointHelpers
     {
         File clusterDirectory = testDirectory.directory( "CLUSTER" );
         CausalClusterInProcessBuilder.CausalCluster cluster = CausalClusterInProcessBuilder.init()
+                .withBuilder( EnterpriseInProcessServerBuilder::new )
                 .withCores( 3 )
                 .withReplicas( 2 )
                 .withLogger( LOG_PROVIDER )
