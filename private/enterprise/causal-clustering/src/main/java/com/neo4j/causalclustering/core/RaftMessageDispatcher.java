@@ -9,20 +9,22 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClu
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 
+import java.time.Clock;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
-import org.neo4j.logging.Log;
+import org.neo4j.common.CopyOnWriteHashMap;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.CappedLogger;
 
 public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>
 {
-    private final Map<ClusterId,MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>> handlersById = new ConcurrentHashMap<>();
-    private final Log log;
+    private final Map<ClusterId,MessageHandler<ReceivedInstantClusterIdAwareMessage<?>>> handlersById = new CopyOnWriteHashMap<>();
+    private final CappedLogger log;
 
-    public RaftMessageDispatcher( LogProvider logProvider )
+    public RaftMessageDispatcher( LogProvider logProvider, Clock clock )
     {
-        this.log = logProvider.getLog( getClass() );
+        this.log = createCappedLogger( logProvider, clock );
     }
 
     @Override
@@ -32,7 +34,7 @@ public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantClus
         MessageHandler<ReceivedInstantClusterIdAwareMessage<?>> head = handlersById.get( id );
         if ( head == null )
         {
-            log.debug( "Message handling has been stopped, dropping the message: %s", message );
+            log.warn( "Unable to process message " + message + " because handler for Raft ID " + id + " is not installed" );
         }
         else
         {
@@ -52,5 +54,12 @@ public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantClus
     void deregisterHandlerChain( ClusterId id )
     {
         handlersById.remove( id );
+    }
+
+    private CappedLogger createCappedLogger( LogProvider logProvider, Clock clock )
+    {
+        CappedLogger logger = new CappedLogger( logProvider.getLog( getClass() ) );
+        logger.setTimeLimit( 5, TimeUnit.SECONDS, clock );
+        return logger;
     }
 }

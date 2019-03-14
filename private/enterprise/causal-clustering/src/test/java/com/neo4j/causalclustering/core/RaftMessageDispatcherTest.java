@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.messaging.Inbound.MessageHandler;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.verify;
 
 class RaftMessageDispatcherTest
 {
-    private final RaftMessageDispatcher dispatcher = new RaftMessageDispatcher( NullLogProvider.getInstance() );
+    private final RaftMessageDispatcher dispatcher = new RaftMessageDispatcher( NullLogProvider.getInstance(), Clock.systemUTC() );
     private final MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler = newHandlerMock();
     private final MessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> otherHandler = newHandlerMock();
 

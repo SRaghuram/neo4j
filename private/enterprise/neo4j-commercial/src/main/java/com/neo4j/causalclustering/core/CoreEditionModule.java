@@ -225,7 +225,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         final MessageLogger<MemberId> messageLogger = createMessageLogger( globalConfig, globalLife, identityModule.myself() );
 
-        RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider );
+        RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
         RaftSender raftSender = new RaftSender( logProvider, raftChannelPoolService );
         RaftOutbound raftOutbound = new RaftOutbound( topologyService, raftSender, raftMessageDispatcher,
                 clusteringModule.clusterIdentity(), logProvider, logThresholdMillis, identityModule.myself(), globalModule.getGlobalClock() );
