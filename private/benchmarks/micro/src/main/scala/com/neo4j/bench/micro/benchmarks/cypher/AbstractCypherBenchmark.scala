@@ -142,7 +142,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     new TransactionBoundPlanContext(
       transactionalContextWrapper(tx),
       devNullLogger,
-      new DummyGraphStatistics())
+      InstrumentedGraphStatistics(new DummyGraphStatistics(), new MutableGraphStatisticsSnapshot()))
 
   private def newQueryContext(tx: InternalTransaction): QueryContext = {
     val searchMonitor: IndexSearchMonitor = kernelMonitors.newMonitor(classOf[IndexSearchMonitor])
