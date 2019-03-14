@@ -6,14 +6,14 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.compiler.planner.CantCompileQueryException
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.{RuntimeProperty, RuntimeVariable}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, functions => frontendFunctions, _}
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.util.AssertionUtils.ifAssertionsEnabled
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
@@ -31,7 +31,7 @@ import org.neo4j.cypher.internal.v4_0.util.{InternalException, Rewriter, topDown
 class SlottedRewriter(tokenContext: TokenContext) {
 
   private def rewriteUsingIncoming(oldPlan: LogicalPlan): Boolean = oldPlan match {
-    case _: Aggregation | _: Distinct => true
+    case _: AggregatingPlan => true
     case _ => false
   }
 
@@ -172,7 +172,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => throw new CantCompileQueryException(s"Invalid slot for GetDegree: $n")
         }
 
-      case _ @ Variable(k) =>
+      case Variable(k) =>
         slotConfiguration.get(k) match {
           case Some(slot) => slot match {
             case LongSlot(offset, false, CTNode) => NodeFromSlot(offset, k)

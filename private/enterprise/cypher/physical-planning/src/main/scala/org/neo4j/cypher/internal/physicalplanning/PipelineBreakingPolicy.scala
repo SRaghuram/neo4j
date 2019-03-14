@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.plans.{Aggregation, Distinct, LogicalLeafPlan, LogicalPlan}
+import org.neo4j.cypher.internal.logical.plans.{AggregatingPlan, LogicalLeafPlan, LogicalPlan}
 
 /**
   * Policy that determines what parts of an operator tree belong together.
@@ -30,8 +30,7 @@ trait PipelineBreakingPolicy {
   def invoke(lp: LogicalPlan, slots: SlotConfiguration, argumentSlots: SlotConfiguration): SlotConfiguration =
     if (breakOn(lp)) {
       lp match {
-        case _: Distinct => argumentSlots.copy()
-        case _: Aggregation => argumentSlots.copy()
+        case _: AggregatingPlan => argumentSlots.copy()
         case _ => slots.copy()
       }
     } else slots
