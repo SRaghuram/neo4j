@@ -161,7 +161,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
 
       result.executionPlanDescription() should (
         not(includeSomewhere.aPlan("Sort")) and
-          includeSomewhere.aPlan("Distinct")
+          includeSomewhere.aPlan("OrderedDistinct")
             .onTopOf(
               aPlan("Expand(All)")
                 .withOrder(providedOrder(prop("a", "prop2")))

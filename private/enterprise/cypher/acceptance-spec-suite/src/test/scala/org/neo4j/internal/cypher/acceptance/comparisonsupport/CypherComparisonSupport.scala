@@ -164,6 +164,17 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   /**
     * Execute a query with different pre-parser options and
     * assert which configurations should success and which ones should fail.
+    *
+    * @param expectSucceed the scenarios that are expected to support this query
+    * @param query the query
+    * @param expectedDifferentResults Scenarios which are expected to work, but return different results. This is often the case for bugfixes that have not been
+    *                                 backported to older versions.
+    * @param planComparisonStrategy a strategy how to compare the execution plans. Disabled by default.
+    * @param resultAssertionInTx if `Some(...)` this will execute the given assertions inside of the transaction. That can be helpful is the assertions rely on
+    *                            being executed in the same transaction as the query.
+    * @param executeBefore This will be executed before each scenario.
+    * @param executeExpectedFailures if you set this to `false`, queries that expect an error won't even be run.
+    * @param params query parameters
     */
   protected def executeWith(expectSucceed: TestConfiguration,
                             query: String,
@@ -172,13 +183,7 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
                             resultAssertionInTx: Option[RewindableExecutionResult => Unit] = None,
                             executeBefore: () => Unit = () => {},
                             executeExpectedFailures: Boolean = true,
-                            params: Map[String, Any] = Map.empty,
-                            printExecutionPlan: Boolean = false): RewindableExecutionResult = {
-    if (printExecutionPlan) {
-      val planResult = innerExecute(s"EXPLAIN $query", params)
-      println(planResult.executionPlanDescription())
-    }
-
+                            params: Map[String, Any] = Map.empty): RewindableExecutionResult = {
     if (expectSucceed.scenarios.nonEmpty) {
       val compareResults = expectSucceed - expectedDifferentResults
       val baseScenario = extractBaseScenario(expectSucceed, compareResults)
