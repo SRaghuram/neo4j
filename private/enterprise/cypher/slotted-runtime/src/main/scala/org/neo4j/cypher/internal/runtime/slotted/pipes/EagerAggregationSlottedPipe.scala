@@ -6,16 +6,13 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
-import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{AggregationExpression, Expression}
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
-import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.values.virtual.MapValue
 
 import scala.collection.mutable
 
@@ -43,7 +40,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
     val result = mutable.LinkedHashMap[groupingExpression.KeyType, Seq[AggregationFunction]]()
 
     // Used when we have no input and no grouping expressions. In this case, we'll return a single row
-    def createEmptyResult(params: MapValue): Iterator[ExecutionContext] = {
+    def createEmptyResult(): Iterator[ExecutionContext] = {
       val context = SlottedExecutionContext(slots)
       val aggregationOffsetsAndFunctions = aggregationOffsets zip aggregations
         .map(_._2.createAggregationFunction.result(state))
@@ -72,7 +69,7 @@ case class EagerAggregationSlottedPipe(source: Pipe,
 
     // Write the produced aggregation map to the output pipeline
     if (result.isEmpty && groupingExpression.isEmpty) {
-      createEmptyResult(state.params)
+      createEmptyResult()
     } else {
       result.map {
         case (key, aggregator) => writeAggregationResultToContext(key, aggregator)

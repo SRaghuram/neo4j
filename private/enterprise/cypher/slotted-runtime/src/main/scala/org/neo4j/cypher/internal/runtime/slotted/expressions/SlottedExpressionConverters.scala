@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, ast => runtimeAst}
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
@@ -97,9 +96,6 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
                                                            self.toCommandExpression(id, e.projection),
                                                            physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
                                                            e.availableExpressionVariables.map(commands.ExpressionVariable.of).toArray))
-      case runtimeAst.ParameterFromSlot(offset, name, _) =>
-        Some(ParameterFromSlot(offset, name))
-
       case _ =>
         None
     }
