@@ -6,7 +6,6 @@
 package com.neo4j.bench.client.model;
 
 import com.neo4j.bench.client.Units;
-import com.neo4j.bench.client.model.Benchmark.Mode;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -75,7 +74,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
 
     private static final DecimalFormat INT_FORMAT = new DecimalFormat( "###,###,###,##0" );
     private static final DecimalFormat FLT_FORMAT = new DecimalFormat( "###,###,###,##0.00" );
-    private static final String ERROR = "<error>";
+    private static final String ERROR = "---";
 
     private abstract static class RowWriter
     {
@@ -93,7 +92,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
          *
          * @return data row
          */
-        abstract String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics );
+        abstract String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit originalUnit, TimeUnit saneUnit );
 
         String[] registerErrorRow( String group, String benchmark )
         {
@@ -109,7 +108,13 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
 
         String[] registerDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
         {
-            String[] row = createDataRow( group, benchmark, metrics );
+            TimeUnit unit = Units.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
+
+            // compute unit at which mean is in range [1,1000]
+            double mean = (double) metrics.toMap().get( Metrics.MEAN );
+            TimeUnit saneUnit = Units.findSaneUnit( mean, unit, benchmark.mode(), 1, 1000 );
+
+            String[] row = createDataRow( group, benchmark, metrics, unit, saneUnit );
             return updateWidths( row );
         }
 
@@ -158,24 +163,6 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         {
             return format( format, (Object[]) row );
         }
-
-        /**
-         * Find unit where value is larger than zero.
-         *
-         * @param value value, at original unit
-         * @param unit original unit
-         * @param mode mode, throughput or latency
-         * @return new unit, where value will be larger than zero
-         */
-        TimeUnit findSaneUnit( double value, TimeUnit unit, Mode mode )
-        {
-            while ( value < 1 )
-            {
-                value *= 1_000;
-                unit = Units.toLargerValueUnit( unit, mode );
-            }
-            return unit;
-        }
     }
 
     private static class ConciseRowWriter extends RowWriter
@@ -187,17 +174,13 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         }
 
         @Override
-        public String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
+        public String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
         {
-            double mean = (double) metrics.toMap().get( Metrics.MEAN );
-            TimeUnit unit = Units.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
-            TimeUnit saneUnit = findSaneUnit( mean, unit, benchmark.mode() );
-
             return new String[]{
                     group.name(),
                     benchmark.name(),
                     INT_FORMAT.format( metrics.toMap().get( Metrics.SAMPLE_SIZE ) ),
-                    FLT_FORMAT.format( Units.convertValueTo( mean, unit, saneUnit, benchmark.mode() ) ),
+                    FLT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
                     Units.toAbbreviation( saneUnit, benchmark.mode() )};
         }
     }
@@ -211,17 +194,13 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         }
 
         @Override
-        String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
+        String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
         {
-            double mean = (double) metrics.toMap().get( Metrics.MEAN );
-            TimeUnit unit = Units.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
-            TimeUnit saneUnit = findSaneUnit( mean, unit, benchmark.mode() );
-
             return new String[]{
                     group.name(),
                     benchmark.name(),
                     INT_FORMAT.format( metrics.toMap().get( Metrics.SAMPLE_SIZE ) ),
-                    FLT_FORMAT.format( Units.convertValueTo( mean, unit, saneUnit, benchmark.mode() ) ),
+                    FLT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
                     INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MIN ), unit, saneUnit, benchmark.mode() ) ),
                     INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.PERCENTILE_50 ), unit, saneUnit, benchmark.mode() ) ),
                     INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.PERCENTILE_90 ), unit, saneUnit, benchmark.mode() ) ),
@@ -243,10 +222,6 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             if ( offset >= o1.length )
             {
                 return 0;
-            }
-            if ( o1[0].equals( ERROR ) )
-            {
-                return -1;
             }
             int columnCompare = o1[offset].compareTo( o2[offset] );
             return (0 != columnCompare)

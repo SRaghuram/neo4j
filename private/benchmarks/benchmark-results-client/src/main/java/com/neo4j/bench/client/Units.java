@@ -45,6 +45,44 @@ public class Units
         }
     }
 
+    /*
+     * Return unit that results in lowest value, given the provide mode
+     */
+    public static TimeUnit minValueUnit( TimeUnit a, TimeUnit b, Mode mode )
+    {
+        switch ( mode )
+        {
+        // 1000000 us/op == 1000 ms/op == 1 s/op
+        case SINGLE_SHOT:
+        case LATENCY:
+            return TimeUnit.values()[Math.max( a.ordinal(), b.ordinal() )];
+        // 1 op/us == 1000 op/ms == 1000000 op/s
+        case THROUGHPUT:
+            return TimeUnit.values()[Math.min( a.ordinal(), b.ordinal() )];
+        default:
+            throw new IllegalArgumentException( format( "Unsupported mode: %s", mode.name() ) );
+        }
+    }
+
+    /*
+     * Return unit that results in highest value, given the provide mode
+     */
+    public static TimeUnit maxValueUnit( TimeUnit a, TimeUnit b, Mode mode )
+    {
+        switch ( mode )
+        {
+        // 1000000 us/op == 1000 ms/op == 1 s/op
+        case SINGLE_SHOT:
+        case LATENCY:
+            return TimeUnit.values()[Math.min( a.ordinal(), b.ordinal() )];
+        // 1 op/us == 1000 op/ms == 1000000 op/s
+        case THROUGHPUT:
+            return TimeUnit.values()[Math.max( a.ordinal(), b.ordinal() )];
+        default:
+            throw new IllegalArgumentException( format( "Unsupported mode: %s", mode.name() ) );
+        }
+    }
+
     public static TimeUnit toTimeUnit( String timeUnit )
     {
         switch ( timeUnit )
@@ -62,7 +100,7 @@ public class Units
         }
     }
 
-    public static TimeUnit smallerValueUnit( TimeUnit unit, Mode mode )
+    public static TimeUnit toSmallerValueUnit( TimeUnit unit, Mode mode )
     {
         switch ( mode )
         {
@@ -130,5 +168,28 @@ public class Units
                         ? to.convert( 1, from )
                         : 1D / from.convert( 1, to );
         return (mode.equals( Mode.THROUGHPUT )) ? 1D / factor : factor;
+    }
+
+    /**
+     * Find unit where value is in the range [min,max]
+     *
+     * @param value value, at original unit
+     * @param unit original unit
+     * @param mode mode, throughput or latency
+     * @return new unit, where value will be larger than zero
+     */
+    public static TimeUnit findSaneUnit( double value, TimeUnit unit, Mode mode, double min, double max )
+    {
+        while ( value < min )
+        {
+            value = value * 1000;
+            unit = Units.toLargerValueUnit( unit, mode );
+        }
+        while ( value > max )
+        {
+            value = value / 1000;
+            unit = Units.toSmallerValueUnit( unit, mode );
+        }
+        return unit;
     }
 }
