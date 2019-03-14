@@ -28,6 +28,11 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.config.Setting;
+import org.neo4j.kernel.configuration.BoltConnector;
+import org.neo4j.kernel.configuration.Connector;
+import org.neo4j.kernel.configuration.HttpConnector;
+import org.neo4j.kernel.configuration.Settings;
 
 /**
  * Benchmark classes that extend this class will operate with the following life-cycle:
