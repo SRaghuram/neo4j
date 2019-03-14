@@ -37,7 +37,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
 
       val queryState = new InterpretedQueryState(context,
                                                  resources = null,
-                                                 parameterArray = state.params,
+                                                 params = state.params,
                                                  resources.expressionCursors,
                                                  Array.empty[IndexReadSession],
                                                  resources.expressionVariables(state.nExpressionSlots))

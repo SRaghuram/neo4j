@@ -110,7 +110,7 @@ class CompiledExpressionConverter(log: Log, physicalPlan: PhysicalPlan, tokenCon
 
 object CompiledExpressionConverter {
   def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
-    case s: SlottedQueryState => s.parameterArray
+    case s: SlottedQueryState => s.params
     case _ => throw new InternalException(s"Expected a slotted query state")
   }
 }
