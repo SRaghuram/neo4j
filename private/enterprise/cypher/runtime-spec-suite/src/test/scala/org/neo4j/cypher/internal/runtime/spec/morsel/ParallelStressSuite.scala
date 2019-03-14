@@ -6,9 +6,9 @@
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.runtime.spec.morsel.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
-import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.MorselRuntime
+import org.neo4j.cypher.internal.runtime.spec._
+import org.neo4j.cypher.internal.runtime.spec.morsel.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
 import org.neo4j.graphdb.Node
 
 object ParallelStressSuite {
@@ -63,7 +63,7 @@ abstract class ParallelStressSuite()
   }
 
   def allNodesNTimes(n: Int): InputValues = {
-    inputSingleColumn(morselsPerGraph * n, MORSEL_SIZE, i => nodes(i % nodes.size))
+    inputColumns(morselsPerGraph * n, MORSEL_SIZE, i => nodes(i % nodes.size))
   }
 
   def singleNodeInput(input: InputValues): Iterable[Array[Node]] = input.flatten.map(_.map(_.asInstanceOf[Node]))

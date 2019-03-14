@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
+import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, MorselRuntime}
 
 object MorselSpecSuite {
@@ -362,7 +362,7 @@ class MorselInputTest extends InputTestBase(ENTERPRISE.PARALLEL, MorselRuntime, 
       .input(variables = Seq("x"))
       .build()
 
-    val input = inputSingleColumn(nBatches = SIZE_HINT, batchSize = 2, rowNumber => rowNumber)
+    val input = inputColumns(nBatches = SIZE_HINT, batchSize = 2, rowNumber => rowNumber)
 
     // then
     val result = execute(logicalQuery, runtime, input)
