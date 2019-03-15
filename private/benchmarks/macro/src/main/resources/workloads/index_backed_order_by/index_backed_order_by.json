@@ -141,6 +141,16 @@
       "name": "Q28",
       "description": "Wanted Improvement: Partial top should improve over normal Top. Many distinct values in already sorted column, limit quarter of rows.",
       "queryFile": "queries/Q28.cypher"
+    },
+    {
+      "name": "Q29",
+      "description": "Wanted Improvement: Ordered Distinct should improve over normal Distinct. One sorted column.",
+      "queryFile": "queries/Q29.cypher"
+    },
+    {
+      "name": "Q30",
+      "description": "Wanted Improvement: Ordered Distinct should improve over normal Distinct. One sorted column, one unsorted column.",
+      "queryFile": "queries/Q30.cypher"
     }
   ]
 }
