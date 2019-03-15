@@ -16,7 +16,6 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <uberjar.name>import-benchmarks</uberjar.name>
-        <scala.version>2.12.7</scala.version>
         <license-text.header>../build/license-header.txt</license-text.header>
     </properties>
 
