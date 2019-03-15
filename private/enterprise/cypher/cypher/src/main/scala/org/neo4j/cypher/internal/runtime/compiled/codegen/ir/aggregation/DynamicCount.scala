@@ -17,8 +17,8 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Varia
 class DynamicCount(val opName: String, variable: Variable, expression: CodeGenExpression,
                    groupingKey: Iterable[(String,CodeGenExpression)], distinct: Boolean) extends BaseAggregateExpression(expression, distinct) {
 
-  private var mapName: String = null
-  private var keyVar: String = null
+  private var mapName: String = _
+  private var keyVar: String = _
 
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {
     expression.init(generator)

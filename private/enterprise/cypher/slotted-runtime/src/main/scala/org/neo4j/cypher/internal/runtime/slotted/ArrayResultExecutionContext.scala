@@ -19,7 +19,7 @@ import scala.collection.mutable
 
 case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]) {
   private val columnExpressionArray = columns.map(_._2).toArray
-  private val columnArraySize = columnExpressionArray.size
+  private val columnArraySize = columnExpressionArray.length
   private val columnIndexMap = {
     val m = new mutable.OpenHashMap[String, Int](columns.length)
     var index = 0
@@ -54,7 +54,7 @@ case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]
 
   //---------------------------------------------------------------------------
   // Instance cache of size 1. Reuses the last created ArrayResultExecutionContext
-  private var freeExecutionContextInstance: ArrayResultExecutionContext = null
+  private var freeExecutionContextInstance: ArrayResultExecutionContext = _
 
   private def allocateExecutionContext: ArrayResultExecutionContext = {
     if (freeExecutionContextInstance != null) {

@@ -145,7 +145,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
   }
 
   private def createRhs(data: Any*) = {
-    val rhsData = data.map { case v => Map("y" -> v) }
+    val rhsData = data.map(v => Map("y" -> v))
     val rhsPipeline = slots.copy()
       .newReference("y", nullable = false, CTNumber)
     FakeSlottedPipe(rhsData, rhsPipeline)
@@ -159,7 +159,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
   }
 
   private def createLhs(data: Any*) = {
-    val lhsData = data.map { case v => Map("a" -> v) }
+    val lhsData = data.map(v => Map("a" -> v))
     FakeSlottedPipe(lhsData, slots)
   }
 }

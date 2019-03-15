@@ -64,8 +64,8 @@ class StandardQueryCompletionTracker extends QueryCompletionTracker {
   * Concurrent implementation of [[QueryCompletionTracker]].
   */
 class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
-  private var count = new AtomicLong(0)
-  private var latch = new CountDownLatch(1)
+  private val count = new AtomicLong(0)
+  private val latch = new CountDownLatch(1)
 
   override def increment(): Long = {
     val newCount = count.incrementAndGet()

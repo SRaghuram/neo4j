@@ -63,5 +63,5 @@ trait BinaryOperator {
 }
 
 object Number {
-  def unapply(x: CypherType): Option[CypherType] = if (CTNumber.isAssignableFrom(x)) Some(x) else None
+  def unapply(x: CypherType): Option[CypherType] = Some(x).filter(CTNumber.isAssignableFrom)
 }
