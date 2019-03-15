@@ -223,7 +223,8 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         t.start();
 
-        assertTrue( latch.await( 1000, TimeUnit.MILLISECONDS ) );
+        assertTrue( "Timed out after waiting for the server to come online for one minute.",
+                latch.await( 1, TimeUnit.MINUTES ) );
 
         t.join();
     }
