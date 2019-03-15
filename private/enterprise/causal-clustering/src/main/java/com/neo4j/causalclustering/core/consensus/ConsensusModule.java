@@ -27,7 +27,6 @@ import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.core.replication.SendToMyself;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
-import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
@@ -88,15 +87,10 @@ public class ConsensusModule
 
         raftLog = new MonitoredRaftLog( underlyingLog, globalMonitors );
 
-        RotatingStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( defaultDatabaseName );
-        globalLife.add( durableTermState );
+        StateStorage<TermState> durableTermState = storageFactory.createRaftTermStorage( defaultDatabaseName, globalLife );
         StateStorage<TermState> termState = new MonitoredTermStateStorage( durableTermState, globalMonitors );
-
-        RotatingStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( defaultDatabaseName );
-        globalLife.add( voteState );
-
-        RotatingStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( defaultDatabaseName );
-        globalLife.add( raftMembershipStorage );
+        StateStorage<VoteState> voteState = storageFactory.createRaftVoteStorage( defaultDatabaseName, globalLife );
+        StateStorage<RaftMembershipState> raftMembershipStorage = storageFactory.createRaftMembershipStorage( defaultDatabaseName, globalLife );
 
         TimerService timerService = new TimerService( jobScheduler, logProvider );
 

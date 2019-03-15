@@ -27,7 +27,7 @@ import com.neo4j.causalclustering.core.state.ClusteringModule;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.CoreStateService;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
-import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
+import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.diagnostics.CoreMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -238,8 +238,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         replicationModule = new ReplicationModule( consensusModule.raftMachine(), identityModule.myself(), globalModule, globalConfig,
                 loggingOutbound, storageFactory, logProvider, globalGuard, databaseService, defaultDatabaseName );
 
-        RotatingStorage<Long> lastFlushedStorage = storageFactory.createLastFlushedStorage( defaultDatabaseName );
-        globalLife.add( lastFlushedStorage );
+        StateStorage<Long> lastFlushedStorage = storageFactory.createLastFlushedStorage( defaultDatabaseName, globalLife );
 
         consensusModule.raftMembershipManager().setRecoverFromIndexSupplier( lastFlushedStorage::getInitialState );
 

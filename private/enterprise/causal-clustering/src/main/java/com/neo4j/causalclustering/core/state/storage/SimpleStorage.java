@@ -11,8 +11,6 @@ import org.neo4j.function.ThrowingConsumer;
 
 public interface SimpleStorage<T> extends StateStorage<T>
 {
-    boolean exists();
-
     T readState() throws IOException;
 
     void writeState( T state ) throws IOException;

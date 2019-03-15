@@ -14,7 +14,7 @@ import org.neo4j.kernel.monitoring.Monitors;
 
 public class MonitoredTermStateStorage implements StateStorage<TermState>
 {
-    private String TERM_TAG = "term";
+    private static final String TERM_TAG = "term";
 
     private final StateStorage<TermState> delegate;
     private final RaftTermMonitor termMonitor;
@@ -36,5 +36,11 @@ public class MonitoredTermStateStorage implements StateStorage<TermState>
     {
         delegate.persistStoreData( state );
         termMonitor.term( state.currentTerm() );
+    }
+
+    @Override
+    public boolean exists()
+    {
+        return delegate.exists();
     }
 }

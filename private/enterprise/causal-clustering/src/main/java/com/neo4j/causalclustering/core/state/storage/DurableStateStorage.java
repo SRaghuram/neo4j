@@ -19,7 +19,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-public class DurableStateStorage<STATE> extends LifecycleAdapter implements RotatingStorage<STATE>
+public class DurableStateStorage<STATE> extends LifecycleAdapter implements StateStorage<STATE>
 {
     private final StateRecoveryManager<STATE> recoveryManager;
     private final Log log;

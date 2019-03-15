@@ -25,7 +25,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     private final FileSystemAbstraction fileSystem;
     private final ChannelMarshal<T> marshal;
     private final File file;
-    private Log log;
+    private final Log log;
 
     public SimpleFileStorage( FileSystemAbstraction fileSystem, File file, ChannelMarshal<T> marshal, LogProvider logProvider )
     {

@@ -32,7 +32,6 @@ import com.neo4j.causalclustering.core.state.machines.tx.RecoverConsensusLogInde
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionCommitProcess;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionStateMachine;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
-import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -209,15 +208,13 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
 
     private ReplicatedIdAllocationStateMachine createIdAllocationStateMachine( String databaseName )
     {
-        RotatingStorage<IdAllocationState> idAllocationStorage = storageFactory.createIdAllocationStorage( databaseName );
-        globalModule.getGlobalLife().add( idAllocationStorage );
+        StateStorage<IdAllocationState> idAllocationStorage = storageFactory.createIdAllocationStorage( databaseName, globalModule.getGlobalLife() );
         return new ReplicatedIdAllocationStateMachine( idAllocationStorage );
     }
 
     private ReplicatedLockTokenStateMachine createLockTokenStateMachine( String databaseName )
     {
-        RotatingStorage<ReplicatedLockTokenState> lockTokenStorage = storageFactory.createLockTokenStorage( databaseName );
-        globalModule.getGlobalLife().add( lockTokenStorage );
+        StateStorage<ReplicatedLockTokenState> lockTokenStorage = storageFactory.createLockTokenStorage( databaseName, globalModule.getGlobalLife() );
         return new ReplicatedLockTokenStateMachine( lockTokenStorage );
     }
 

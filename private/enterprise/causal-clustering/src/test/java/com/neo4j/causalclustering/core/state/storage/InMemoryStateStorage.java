@@ -25,4 +25,10 @@ public class InMemoryStateStorage<STATE> implements StateStorage<STATE>
     {
         this.state = state;
     }
+
+    @Override
+    public boolean exists()
+    {
+        return true;
+    }
 }

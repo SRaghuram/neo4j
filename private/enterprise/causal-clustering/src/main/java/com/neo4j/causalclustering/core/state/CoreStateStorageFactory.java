@@ -12,9 +12,9 @@ import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerS
 import com.neo4j.causalclustering.core.state.machines.id.IdAllocationState;
 import com.neo4j.causalclustering.core.state.machines.locks.ReplicatedLockTokenState;
 import com.neo4j.causalclustering.core.state.storage.DurableStateStorage;
-import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleFileStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
+import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.identity.ClusterId;
 import com.neo4j.causalclustering.identity.DatabaseName;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -23,6 +23,7 @@ import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 
 public class CoreStateStorageFactory
@@ -55,39 +56,39 @@ public class CoreStateStorageFactory
         return createSimpleStorage( layout.multiClusteringDbNameStateFile(), CoreStateFiles.DB_NAME );
     }
 
-    public RotatingStorage<IdAllocationState> createIdAllocationStorage( String databaseName )
+    public StateStorage<IdAllocationState> createIdAllocationStorage( String databaseName, LifeSupport life )
     {
-        return createRotatingStorage( layout.idAllocationStateDirectory( databaseName ), CoreStateFiles.ID_ALLOCATION );
+        return createDurableStorage( layout.idAllocationStateDirectory( databaseName ), CoreStateFiles.ID_ALLOCATION, life );
     }
 
-    public RotatingStorage<ReplicatedLockTokenState> createLockTokenStorage( String databaseName )
+    public StateStorage<ReplicatedLockTokenState> createLockTokenStorage( String databaseName, LifeSupport life )
     {
-        return createRotatingStorage( layout.lockTokenStateDirectory( databaseName ), CoreStateFiles.LOCK_TOKEN );
+        return createDurableStorage( layout.lockTokenStateDirectory( databaseName ), CoreStateFiles.LOCK_TOKEN, life );
     }
 
-    public RotatingStorage<Long> createLastFlushedStorage( String databaseName )
+    public StateStorage<Long> createLastFlushedStorage( String databaseName, LifeSupport life )
     {
-        return createRotatingStorage( layout.lastFlushedStateDirectory( databaseName ), CoreStateFiles.LAST_FLUSHED );
+        return createDurableStorage( layout.lastFlushedStateDirectory( databaseName ), CoreStateFiles.LAST_FLUSHED, life );
     }
 
-    public RotatingStorage<RaftMembershipState> createRaftMembershipStorage( String databaseName )
+    public StateStorage<RaftMembershipState> createRaftMembershipStorage( String databaseName, LifeSupport life )
     {
-        return createRotatingStorage( layout.raftMembershipStateDirectory( databaseName ), CoreStateFiles.RAFT_MEMBERSHIP );
+        return createDurableStorage( layout.raftMembershipStateDirectory( databaseName ), CoreStateFiles.RAFT_MEMBERSHIP, life );
     }
 
-    public RotatingStorage<GlobalSessionTrackerState> createSessionTrackerStorage( String databaseName )
+    public StateStorage<GlobalSessionTrackerState> createSessionTrackerStorage( String databaseName, LifeSupport life )
     {
-        return createRotatingStorage( layout.sessionTrackerDirectory( databaseName ), CoreStateFiles.SESSION_TRACKER );
+        return createDurableStorage( layout.sessionTrackerDirectory( databaseName ), CoreStateFiles.SESSION_TRACKER, life );
     }
 
-    public RotatingStorage<TermState> createRaftTermStorage( String databaseName )
+    public StateStorage<TermState> createRaftTermStorage( String databaseName, LifeSupport life )
     {
-        return createRotatingStorage( layout.raftTermStateDirectory( databaseName ), CoreStateFiles.RAFT_TERM );
+        return createDurableStorage( layout.raftTermStateDirectory( databaseName ), CoreStateFiles.RAFT_TERM, life );
     }
 
-    public RotatingStorage<VoteState> createRaftVoteStorage( String databaseName )
+    public StateStorage<VoteState> createRaftVoteStorage( String databaseName, LifeSupport life )
     {
-        return createRotatingStorage( layout.raftVoteStateDirectory( databaseName ), CoreStateFiles.RAFT_VOTE );
+        return createDurableStorage( layout.raftVoteStateDirectory( databaseName ), CoreStateFiles.RAFT_VOTE, life );
     }
 
     private <T> SimpleStorage<T> createSimpleStorage( File file, CoreStateFiles<T> type )
@@ -95,8 +96,10 @@ public class CoreStateStorageFactory
         return new SimpleFileStorage<>( fs, file, type.marshal(), logProvider );
     }
 
-    private <T> RotatingStorage<T> createRotatingStorage( File directory, CoreStateFiles<T> type )
+    private <T> StateStorage<T> createDurableStorage( File directory, CoreStateFiles<T> type, LifeSupport life )
     {
-        return new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider );
+        DurableStateStorage<T> storage = new DurableStateStorage<>( fs, directory, type, type.rotationSize( config ), logProvider );
+        life.add( storage );
+        return storage;
     }
 }

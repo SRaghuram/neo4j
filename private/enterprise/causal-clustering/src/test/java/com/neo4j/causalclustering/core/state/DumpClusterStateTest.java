@@ -92,15 +92,15 @@ class DumpClusterStateTest
         SimpleStorage<DatabaseName> clusterNameStorage = storageFactory.createMultiClusteringDbNameStorage();
         SimpleStorage<ClusterId> clusterIdStorage = storageFactory.createClusterIdStorage();
 
-        StateStorage<TermState> termStateStateStorage = life.add( storageFactory.createRaftTermStorage( DB_NAME ) );
+        StateStorage<TermState> termStateStateStorage = storageFactory.createRaftTermStorage( DB_NAME, life );
 
         // But still need to create all the other state, otherwise the read only DumpClusterState tool will throw
-        life.add( storageFactory.createLockTokenStorage( DB_NAME ) );
-        life.add( storageFactory.createIdAllocationStorage( DB_NAME ) );
-        life.add( storageFactory.createSessionTrackerStorage( DB_NAME ) );
-        life.add( storageFactory.createLastFlushedStorage( DB_NAME ) );
-        life.add( storageFactory.createRaftMembershipStorage( DB_NAME ) );
-        life.add( storageFactory.createRaftVoteStorage( DB_NAME ) );
+        storageFactory.createLockTokenStorage( DB_NAME, life );
+        storageFactory.createIdAllocationStorage( DB_NAME, life );
+        storageFactory.createSessionTrackerStorage( DB_NAME, life );
+        storageFactory.createLastFlushedStorage( DB_NAME, life );
+        storageFactory.createRaftMembershipStorage( DB_NAME, life );
+        storageFactory.createRaftVoteStorage( DB_NAME, life );
 
         memberIdStorage.writeState( nonDefaultMember );
         clusterNameStorage.writeState( nonDefaultClusterName );

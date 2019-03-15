@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
+import com.neo4j.causalclustering.core.state.storage.StateStorage;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +17,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
 
 public class DumpClusterState
@@ -83,25 +83,31 @@ public class DumpClusterState
 
     void dump()
     {
-        try ( Lifespan lifespan = new Lifespan() )
+        LifeSupport life = new LifeSupport();
+        life.start();
+        try
         {
             dumpSimpleState( CoreStateFiles.CORE_MEMBER_ID, storageFactory.createMemberIdStorage() );
             dumpSimpleState( CoreStateFiles.DB_NAME, storageFactory.createMultiClusteringDbNameStorage() );
             dumpSimpleState( CoreStateFiles.CLUSTER_ID, storageFactory.createClusterIdStorage() );
 
-            dumpState( CoreStateFiles.LAST_FLUSHED, lifespan.add( storageFactory.createLastFlushedStorage( databaseToDump ) ) );
-            dumpState( CoreStateFiles.LOCK_TOKEN, lifespan.add( storageFactory.createLockTokenStorage( databaseToDump ) ) );
-            dumpState( CoreStateFiles.ID_ALLOCATION, lifespan.add( storageFactory.createIdAllocationStorage( databaseToDump ) ) );
-            dumpState( CoreStateFiles.SESSION_TRACKER, lifespan.add( storageFactory.createSessionTrackerStorage( databaseToDump ) ) );
+            dumpState( CoreStateFiles.LAST_FLUSHED, storageFactory.createLastFlushedStorage( databaseToDump, life ) );
+            dumpState( CoreStateFiles.LOCK_TOKEN, storageFactory.createLockTokenStorage( databaseToDump, life ) );
+            dumpState( CoreStateFiles.ID_ALLOCATION, storageFactory.createIdAllocationStorage( databaseToDump, life ) );
+            dumpState( CoreStateFiles.SESSION_TRACKER, storageFactory.createSessionTrackerStorage( databaseToDump, life ) );
 
             /* raft state */
-            dumpState( CoreStateFiles.RAFT_MEMBERSHIP, lifespan.add( storageFactory.createRaftMembershipStorage( databaseToDump ) ) );
-            dumpState( CoreStateFiles.RAFT_TERM, lifespan.add( storageFactory.createRaftTermStorage( databaseToDump ) ) );
-            dumpState( CoreStateFiles.RAFT_VOTE, lifespan.add( storageFactory.createRaftVoteStorage( databaseToDump ) ) );
+            dumpState( CoreStateFiles.RAFT_MEMBERSHIP, storageFactory.createRaftMembershipStorage( databaseToDump, life ) );
+            dumpState( CoreStateFiles.RAFT_TERM, storageFactory.createRaftTermStorage( databaseToDump, life ) );
+            dumpState( CoreStateFiles.RAFT_VOTE, storageFactory.createRaftVoteStorage( databaseToDump, life ) );
+        }
+        finally
+        {
+            life.shutdown();
         }
     }
 
-    private <E> void dumpState( CoreStateFiles<E> fileType, RotatingStorage<E> storage )
+    private <E> void dumpState( CoreStateFiles<E> fileType, StateStorage<E> storage )
     {
         if ( storage.exists() )
         {
