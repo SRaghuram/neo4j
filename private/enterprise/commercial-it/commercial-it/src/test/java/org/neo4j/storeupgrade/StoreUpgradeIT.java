@@ -79,7 +79,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
+import static org.neo4j.configuration.GraphDatabaseSettings.data_directory;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
+import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.helpers.collection.Iterables.count;
@@ -159,7 +162,7 @@ public class StoreUpgradeIT
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
             builder.setConfig( allow_upgrade, "true" );
-            builder.setConfig( GraphDatabaseSettings.logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
+            builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
             GraphDatabaseService db = builder.newGraphDatabase();
             try
             {
@@ -178,18 +181,19 @@ public class StoreUpgradeIT
         public void serverDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
         {
             File rootDir = testDir.directory();
-            Config config = Config.defaults( GraphDatabaseSettings.data_directory, rootDir.toString() );
-            DatabaseLayout databaseLayout = DatabaseLayout.of( config.get( databases_root_path ), DEFAULT_DATABASE_NAME );
+            DatabaseLayout databaseLayout = DatabaseLayout.of( rootDir, DEFAULT_DATABASE_NAME );
 
             store.prepareDirectory( databaseLayout.databaseDirectory() );
 
             File configFile = new File( rootDir, Config.DEFAULT_CONFIG_FILE_NAME );
             Properties props = new Properties();
             props.putAll( ServerTestUtils.getDefaultRelativeProperties() );
-            props.setProperty( GraphDatabaseSettings.data_directory.name(), rootDir.getAbsolutePath() );
-            props.setProperty( GraphDatabaseSettings.logs_directory.name(), rootDir.getAbsolutePath() );
+            props.setProperty( data_directory.name(), rootDir.getAbsolutePath() );
+            props.setProperty( logs_directory.name(), rootDir.getAbsolutePath() );
+            props.setProperty( databases_root_path.name(), rootDir.getAbsolutePath() );
+            props.setProperty( transaction_logs_root_path.name(), rootDir.getAbsolutePath() );
             props.setProperty( allow_upgrade.name(), "true" );
-            props.setProperty( GraphDatabaseSettings.pagecache_memory.name(), "8m" );
+            props.setProperty( pagecache_memory.name(), "8m" );
             props.setProperty( new HttpConnector( "http" ).type.name(), "HTTP" );
             props.setProperty( new HttpConnector( "http" ).enabled.name(), "true" );
             props.setProperty( new HttpConnector( "http" ).listen_address.name(), "localhost:0" );
@@ -323,7 +327,7 @@ public class StoreUpgradeIT
             GraphDatabaseFactory factory = new TestGraphDatabaseFactory();
             GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( testDir.databaseDir() );
             builder.setConfig( allow_upgrade, "true" );
-            builder.setConfig( GraphDatabaseSettings.pagecache_memory, "8m" );
+            builder.setConfig( pagecache_memory, "8m" );
             try
             {
                 builder.newGraphDatabase();

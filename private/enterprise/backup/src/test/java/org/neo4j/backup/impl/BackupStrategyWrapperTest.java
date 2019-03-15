@@ -33,10 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Answers.RETURNS_MOCKS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -86,8 +86,7 @@ class BackupStrategyWrapperTest
         when( backupCopyService.findNewBackupLocationForBrokenExisting( any() ) ).thenReturn( availableOldBackupLocation );
         when( logProvider.getLog( (Class<?>) any() ) ).thenReturn( log );
 
-        backupWrapper = spy( new BackupStrategyWrapper( backupStrategyImplementation, backupCopyService, fileSystemAbstraction, pageCache,
-                NullLogProvider.getInstance(), logProvider ) );
+        backupWrapper = spy( new TestBackupStrategyWrapper() );
     }
 
     @Test
@@ -541,5 +540,21 @@ class BackupStrategyWrapperTest
                 .withConsistencyCheck( true )
                 .withReportsDirectory( reportDir )
                 .build();
+    }
+
+    private class TestBackupStrategyWrapper extends BackupStrategyWrapper
+    {
+        TestBackupStrategyWrapper()
+        {
+            super( BackupStrategyWrapperTest.this.backupStrategyImplementation, BackupStrategyWrapperTest.this.backupCopyService,
+                    BackupStrategyWrapperTest.this.fileSystemAbstraction, BackupStrategyWrapperTest.this.pageCache, NullLogProvider.getInstance(),
+                    BackupStrategyWrapperTest.this.logProvider );
+        }
+
+        @Override
+        void performRecovery( Config config, DatabaseLayout backupLayout )
+        {
+            // empty recovery for mock tests
+        }
     }
 }

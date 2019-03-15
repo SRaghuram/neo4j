@@ -149,8 +149,11 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     @Test
     public void cacheProfilesMustBeIncludedInOfflineBackups() throws Exception
     {
+        File data = testDirectory.cleanDirectory( "data" );
+        File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+          .withSetting( GraphDatabaseSettings.transaction_logs_root_path, logs.getAbsolutePath() )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" );
         db.ensureStarted();
         createTestData( db );
@@ -170,9 +173,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
                 },
                 true );
         File databaseDir = db.databaseLayout().databaseDirectory();
-        File data = testDirectory.cleanDirectory( "data" );
         File databases = new File( data, "databases" );
-        File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         File graphdb = testDirectory.databaseDir( databases );
         FileUtils.copyRecursively( databaseDir, graphdb );
         deleteRecursively( databaseDir );
