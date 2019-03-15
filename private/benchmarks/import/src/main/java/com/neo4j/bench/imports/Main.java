@@ -151,23 +151,23 @@ public class Main
 
     private void run() throws IOException, InterruptedException
     {
-        BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
         BenchmarkGroup importGroup = new BenchmarkGroup( "Import" );
         BenchmarkGroup indexGroup = new BenchmarkGroup( "Index" );
         Neo4jConfig neo4jConfig = (null == neo4jConfigFile) ? Neo4jConfig.empty() : Neo4jConfig.fromFile( neo4jConfigFile );
-        long startTime = System.currentTimeMillis();
 
         String[] sizes = {"100m", "1bn", "10bn", "100bn"};
         for ( String size : sizes )
         {
+            long startTime = System.currentTimeMillis();
+            BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
             int exitCode = runImport( size, benchmarkGroupBenchmarkMetrics, importGroup, neo4jConfig );
             if ( exitCode == 0 )
             {
                 createIndexes( size, benchmarkGroupBenchmarkMetrics, indexGroup, neo4jConfig );
             }
+            report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
         }
 
-        report( startTime, System.currentTimeMillis() - startTime, neo4jConfig, benchmarkGroupBenchmarkMetrics );
     }
 
     // nodes.csv header - :ID,:LABEL,name:string,nr:int,date:long,rank:string,other:int
