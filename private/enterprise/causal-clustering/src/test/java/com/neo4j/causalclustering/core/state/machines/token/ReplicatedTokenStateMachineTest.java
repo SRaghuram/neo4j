@@ -7,11 +7,13 @@ package com.neo4j.causalclustering.core.state.machines.token;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.kernel.api.NamedToken;
 import org.neo4j.internal.recordstorage.CacheAccessBackDoor;
@@ -19,6 +21,8 @@ import org.neo4j.internal.recordstorage.CacheInvalidationTransactionApplier;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.HighIdTransactionApplier;
 import org.neo4j.internal.recordstorage.NeoStoreTransactionApplier;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
@@ -27,17 +31,23 @@ import org.neo4j.kernel.impl.core.TokenRegistry;
 import org.neo4j.kernel.impl.locking.LockGroup;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyType;
+import org.neo4j.kernel.impl.store.StoreFactory;
+import org.neo4j.kernel.impl.store.id.DefaultIdGeneratorFactory;
+import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
 import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.SchemaRule;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
-import org.neo4j.test.rule.NeoStoresRule;
+import org.neo4j.test.rule.PageCacheRule;
+import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static com.neo4j.causalclustering.core.state.machines.token.StorageCommandMarshal.commandsToBytes;
 import static com.neo4j.causalclustering.core.state.machines.token.TokenType.LABEL;
@@ -60,8 +70,12 @@ public class ReplicatedTokenStateMachineTest
     private final int UNEXPECTED_TOKEN_ID = 1024;
     private final String databaseName = DEFAULT_DATABASE_NAME;
 
+    private TestDirectory testDirectory = TestDirectory.testDirectory();
+    private EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
+    private AssertableLogProvider logProvider = new AssertableLogProvider( true );
+    private PageCacheRule pageCacheRule = new PageCacheRule();
     @Rule
-    public NeoStoresRule neoStoresRule = new NeoStoresRule( ReplicatedTokenStateMachineTest.class );
+    public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( logProvider ).around( pageCacheRule );
 
     @Test
     public void shouldCreateTokenId() throws Exception
@@ -179,7 +193,12 @@ public class ReplicatedTokenStateMachineTest
 
     private TransactionCommitProcess labelRegistryUpdatingCommitProcess( TokenRegistry registry ) throws Exception
     {
-        NeoStores stores = neoStoresRule.builder().build();
+        DatabaseLayout layout = testDirectory.databaseLayout();
+        Config config = Config.defaults();
+        IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs );
+        PageCache pageCache = pageCacheRule.getPageCache( fs );
+        StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider );
+        NeoStores stores = storeFactory.openAllNeoStores( true );
         TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
         when( commitProcess.commit( any( TransactionToApply.class ), any( CommitEvent.class ), eq( EXTERNAL ) ) ).then( inv ->
         {
