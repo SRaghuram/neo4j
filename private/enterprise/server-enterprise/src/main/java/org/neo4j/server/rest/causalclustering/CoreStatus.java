@@ -55,7 +55,7 @@ class CoreStatus extends BaseStatus
         this.raftMachine = dependencyResolver.resolveDependency( RaftMachine.class );
         this.raftMessageTimerResetMonitor = dependencyResolver.resolveDependency( DurationSinceLastMessageMonitor.class );
         commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
-        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class, DependencyResolver.SelectionStrategy.FIRST );
+        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class, DependencyResolver.SelectionStrategy.ONLY );
     }
 
     @Override

@@ -42,7 +42,7 @@ class ReadReplicaStatus extends BaseStatus
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.dbHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
 
-        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class, DependencyResolver.SelectionStrategy.FIRST );
+        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class, DependencyResolver.SelectionStrategy.ONLY );
     }
 
     @Override

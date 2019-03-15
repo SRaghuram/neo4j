@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import static java.time.temporal.ChronoUnit.NANOS;
+import static org.neo4j.util.Preconditions.requirePositive;
 
 /**
  * A helper class for sampling a value and associating a trustworthy timestamp with it.
@@ -37,10 +37,8 @@ class QualitySampler<T>
 
     QualitySampler( Clock clock, Duration samplingTolerance, int maximumAttempts, Supplier<T> sampler )
     {
-        if ( maximumAttempts <= 0 )
-        {
-            throw new IllegalArgumentException();
-        }
+        requirePositive( maximumAttempts );
+
         this.clock = clock;
         this.samplingTolerance = samplingTolerance;
         this.maximumAttempts = maximumAttempts;
@@ -72,7 +70,7 @@ class QualitySampler<T>
             return null;
         }
 
-        Instant sampleTime = before.plus( samplingDuration.toNanos() / 2, NANOS );
+        Instant sampleTime = before.plus( samplingDuration.dividedBy( 2 ) );
         return new Sample<>( sampleTime, sample );
     }
 }

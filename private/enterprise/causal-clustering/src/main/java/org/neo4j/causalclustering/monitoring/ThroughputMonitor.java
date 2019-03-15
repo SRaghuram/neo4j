@@ -95,6 +95,18 @@ public class ThroughputMonitor extends LifecycleAdapter
 
     private synchronized void samplingTask()
     {
+        try
+        {
+            samplingTask0();
+        }
+        catch ( Throwable e )
+        {
+            log.error( "Sampling task failed exceptionally", e );
+        }
+    }
+
+    private void samplingTask0()
+    {
         if ( tooEarly() )
         {
             return;

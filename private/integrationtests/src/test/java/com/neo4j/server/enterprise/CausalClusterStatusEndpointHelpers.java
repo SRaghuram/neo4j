@@ -73,9 +73,9 @@ class CausalClusterStatusEndpointHelpers
 
     static Boolean[] availabilityStatuses( URI server )
     {
-        Boolean writable = Boolean.parseBoolean( getStatusRaw( getWritableEndpoint( server ) ) );
-        Boolean readonly = Boolean.parseBoolean( getStatusRaw( getReadOnlyEndpoint( server ) ) );
-        Boolean availability = Boolean.parseBoolean( getStatusRaw( getAvailability( server ) ) );
+        boolean writable = Boolean.parseBoolean( getStatusRaw( getWritableEndpoint( server ) ) );
+        boolean readonly = Boolean.parseBoolean( getStatusRaw( getReadOnlyEndpoint( server ) ) );
+        boolean availability = Boolean.parseBoolean( getStatusRaw( getAvailability( server ) ) );
         return new Boolean[]{writable, readonly, availability};
     }
 

@@ -186,7 +186,7 @@ class CausalClusterStatusEndpointMatchers
         long count;
         try ( Transaction tx = db.beginTx() )
         {
-            count = db.getAllNodes().stream().collect( Collectors.toList() ).size();
+            count = db.getAllNodes().stream().count();
         }
         return count;
     }
