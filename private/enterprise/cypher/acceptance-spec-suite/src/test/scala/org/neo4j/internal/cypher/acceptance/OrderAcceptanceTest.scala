@@ -264,7 +264,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort")
       .onTopOf(aPlan("Projection")
-        .containingArgumentRegex("\\{b\\.foo : b\\.foo, age \\+ \\{  AUTOINT\\d+\\} : age \\+ \\$`  AUTOINT\\d+`\\}".r)
+        .containingArgumentRegex("\\{b\\.foo : b\\.foo, age \\+ \\$  AUTOINT\\d+ : age \\+ \\$`  AUTOINT\\d+`\\}".r)
         .onTopOf(aPlan("Projection")
           .containingArgument("{b : a, age : a.age}")
         )
@@ -294,7 +294,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .containingArgument("{age : a.age}")
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
-          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\{  AUTOINT\\d+\\} : b\\.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("\\{b\\.foo : b\\.foo, b\\.age \\+ \\$  AUTOINT\\d+ : b\\.age \\+ \\$`  AUTOINT\\d+`\\}".r)
           .onTopOf(aPlan("Projection")
             .containingArgument("{b : a}")
           )
@@ -477,7 +477,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .onTopOf(aPlan("Sort")
         .onTopOf(aPlan("Projection")
           .containingVariables("a")
-          .containingArgumentRegex("\\{a.age \\+ \\{  AUTOINT\\d+\\} : a.age \\+ \\$`  AUTOINT\\d+`\\}".r)
+          .containingArgumentRegex("\\{a.age \\+ \\$  AUTOINT\\d+ : a.age \\+ \\$`  AUTOINT\\d+`\\}".r)
         ))
 
     result.toList should equal(List(
