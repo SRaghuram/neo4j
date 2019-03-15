@@ -10,11 +10,13 @@ import java.util.concurrent.{Callable, Executors, TimeUnit}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
+import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
 import org.neo4j.cypher.result.RuntimeResult
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
 class ZombieSchedulerTracerTest extends SchedulerTracerTestBase(ZombieRuntime)
+class ZombieInputTest extends InputTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 10000)
 
 abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, ZombieRuntime) {
 

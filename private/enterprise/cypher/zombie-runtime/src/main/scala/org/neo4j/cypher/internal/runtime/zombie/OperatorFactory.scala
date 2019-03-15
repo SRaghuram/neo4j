@@ -30,6 +30,11 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
     generateSlotAccessorFunctions(slots)
 
     plan match {
+      case plans.Input(nodes, variables) =>
+        new InputOperator(WorkIdentity.fromPlan(plan),
+                          nodes.map(v => slots.getLongOffsetFor(v)),
+                          variables.map(v => slots.getReferenceOffsetFor(v)))
+
       case plans.AllNodesScan(column, _) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         new AllNodeScanOperator(WorkIdentity.fromPlan(plan),

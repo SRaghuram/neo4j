@@ -15,6 +15,7 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
     lp match {
       // leaf operators
       case _: AllNodesScan |
+           _: Input |
            _: Argument // TODO: breaking on argument is often silly. Let's not do that when avoidable.
       => true
 
