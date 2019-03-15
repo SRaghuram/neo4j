@@ -23,6 +23,8 @@ import org.neo4j.kernel.diagnostics.DiagnosticsReportSource;
 import org.neo4j.kernel.diagnostics.DiagnosticsReportSources;
 import org.neo4j.logging.NullLog;
 
+import static com.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_LOG;
+
 @ServiceProvider
 public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineReportProvider
 {
@@ -73,18 +75,11 @@ public class ClusterDiagnosticsOfflineReportProvider extends DiagnosticsOfflineR
 
     private void getClusterState( List<DiagnosticsReportSource> sources )
     {
-        for ( File directory : clusterStateLayout.allGlobalStateEntries() )
+        Set<File> directories = clusterStateLayout.listGlobalAndDatabaseDirectories( defaultDatabaseName, type -> type != RAFT_LOG );
+
+        for ( File directory : directories )
         {
             addDirectory( "ccstate", directory, sources );
-        }
-
-        File raftLogDirectory = clusterStateLayout.raftLogDirectory( defaultDatabaseName );
-        for ( File directory : clusterStateLayout.allDatabaseStateEntries( defaultDatabaseName ) )
-        {
-            if ( !directory.equals( raftLogDirectory ) )
-            {
-                addDirectory( "ccstate", directory, sources );
-            }
         }
     }
 

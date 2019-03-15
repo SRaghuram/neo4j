@@ -17,10 +17,10 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.DATABASE;
 import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.helpers.collection.Iterators.set;
 
 @ExtendWith( TestDirectoryExtension.class )
 class ClusterStateLayoutTest
@@ -108,32 +108,30 @@ class ClusterStateLayoutTest
     }
 
     @Test
-    void shouldExposeAllGlobalStateEntries()
+    void shouldListGlobalAndDatabaseEntriesEntries()
     {
-        Set<File> expected = CoreStateFiles.values()
-                .stream()
-                .filter( type -> type.scope() == GLOBAL )
-                .map( this::globalStateFile )
+        Set<CoreStateFiles<?>> types = set( CoreStateFiles.LOCK_TOKEN,
+                CoreStateFiles.CORE_MEMBER_ID,
+                CoreStateFiles.SESSION_TRACKER,
+                CoreStateFiles.RAFT_TERM );
+
+        Set<File> expected = types.stream()
+                .map( type -> type.scope() == GLOBAL ? globalStateDirectory( type ) : databaseStateDirectory( type ) )
                 .collect( toSet() );
 
-        assertEquals( expected, layout.allGlobalStateEntries() );
-    }
+        Set<File> actual = layout.listGlobalAndDatabaseDirectories( DATABASE_NAME, types::contains );
 
-    @Test
-    void shouldExposeAllDatabaseStateEntries()
-    {
-        Set<File> expected = CoreStateFiles.values()
-                .stream()
-                .filter( type -> type.scope() == DATABASE )
-                .map( this::databaseStateDirectory )
-                .collect( toSet() );
-
-        assertEquals( expected, layout.allDatabaseStateEntries( DATABASE_NAME ) );
+        assertEquals( expected, actual );
     }
 
     private File globalStateFile( CoreStateFiles<?> type )
     {
-        return FileUtils.path( dataDirectory, "cluster-state", type.name() + "-state", type.name() );
+        return new File( globalStateDirectory( type ), type.name() );
+    }
+
+    private File globalStateDirectory( CoreStateFiles<?> type )
+    {
+        return FileUtils.path( dataDirectory, "cluster-state", type.name() + "-state" );
     }
 
     private File databaseStateDirectory( CoreStateFiles<?> type )

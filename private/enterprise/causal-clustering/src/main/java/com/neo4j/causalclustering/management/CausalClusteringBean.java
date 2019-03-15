@@ -21,6 +21,8 @@ import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.OperationalMode;
 import org.neo4j.management.CausalClustering;
 
+import static com.neo4j.causalclustering.core.state.CoreStateFiles.RAFT_LOG;
+
 @ServiceProvider
 public class CausalClusteringBean extends ManagementBeanProvider
 {
@@ -90,23 +92,10 @@ public class CausalClusteringBean extends ManagementBeanProvider
         @Override
         public long getReplicatedStateSize()
         {
-            long size = 0;
-
-            for ( File directory : clusterStateLayout.allGlobalStateEntries() )
-            {
-                size += FileSystemUtils.size( fs, directory );
-            }
-
-            File raftLogDirectory = clusterStateLayout.raftLogDirectory( databaseName );
-            for ( File directory : clusterStateLayout.allDatabaseStateEntries( databaseName ) )
-            {
-                if ( !directory.equals( raftLogDirectory ) )
-                {
-                    size += FileSystemUtils.size( fs, directory );
-                }
-            }
-
-            return size;
+            return clusterStateLayout.listGlobalAndDatabaseDirectories( databaseName, type -> type != RAFT_LOG )
+                    .stream()
+                    .mapToLong( dir -> FileSystemUtils.size( fs, dir ) )
+                    .sum();
         }
     }
 }
