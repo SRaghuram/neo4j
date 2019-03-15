@@ -15,6 +15,7 @@ import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
 
+//noinspection TypeAnnotation
 object ENTERPRISE {
   private val edition = new Edition[EnterpriseRuntimeContext](
     new TestCommercialGraphDatabaseFactory(),
@@ -42,7 +43,7 @@ object ENTERPRISE {
   val PARALLEL = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> "0",
                                   GraphDatabaseSettings.cypher_morsel_runtime_scheduler -> "lock_free")
 
-  val HasEvidenceOfParallelism: ContextCondition[EnterpriseRuntimeContext] =
+  val HAS_EVIDENCE_OF_PARALLELISM: ContextCondition[EnterpriseRuntimeContext] =
     ContextCondition[EnterpriseRuntimeContext](
       context =>
         if (System.getenv().containsKey("RUN_EXPERIMENTAL")) {

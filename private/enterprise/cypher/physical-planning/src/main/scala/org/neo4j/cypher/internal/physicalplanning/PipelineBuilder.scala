@@ -240,7 +240,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     *   reducersForThisApply += reducePlanId        reducers += reducePlanId
     *
     * Mark `reducePlanId` as a reducer in all buffers between `argumentStateBuffer` and `applyBuffer`. This has
-    * to done so that reference counting of inflight work will work correctly, so that `argumentStateBuffer` knows
+    * to be done so that reference counting of inflight work will work correctly, so that `argumentStateBuffer` knows
     * when each argument is complete.
     */
   private def markReducerInUpstreamBuffers(argumentStateBuffer: ArgumentStateBufferDefinition,

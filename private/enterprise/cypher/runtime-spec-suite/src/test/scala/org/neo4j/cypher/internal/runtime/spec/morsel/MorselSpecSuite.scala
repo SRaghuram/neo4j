@@ -369,7 +369,7 @@ class MorselInputTest extends InputTestBase(ENTERPRISE.PARALLEL, MorselRuntime, 
     result should beColumns("x").withRows(input.flatten)
 
     // and
-    executeAndAssertCondition(logicalQuery, input, ENTERPRISE.HasEvidenceOfParallelism)
+    executeAndAssertCondition(logicalQuery, input, ENTERPRISE.HAS_EVIDENCE_OF_PARALLELISM)
   }
 }
 
