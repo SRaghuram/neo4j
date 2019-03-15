@@ -123,7 +123,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
     GeneratedQueryStructureResult(query, sourceSaver.sourceCode, sourceSaver.bytecode)
   }
 
-  private def addAccept(methodStructure: (MethodStructure[_]) => Unit,
+  private def addAccept(methodStructure: MethodStructure[_] => Unit,
                         generator: CodeGenerator,
                         clazz: ClassGenerator,
                         fields: Fields,
@@ -132,7 +132,7 @@ object GeneratedQueryStructure extends CodeStructure[GeneratedQuery] {
       Parameter.param(parameterizedType(classOf[QueryResultVisitor[_]],
         typeParameter("E")), "visitor")).
       parameterizedWith("E", extending(typeRef[Exception])).
-      throwsException(typeParameter("E")))) { (codeBlock: CodeBlock) =>
+      throwsException(typeParameter("E")))) { codeBlock: CodeBlock =>
       val structure = new GeneratedMethodStructure(fields, codeBlock, new AuxGenerator(conf.packageName, generator), onClose =
         Seq((success: Boolean) => (block: CodeBlock) => {
           block.expression(invoke(block.self(), methodReference(block.owner(), TypeReference.VOID, "closeCursors")))

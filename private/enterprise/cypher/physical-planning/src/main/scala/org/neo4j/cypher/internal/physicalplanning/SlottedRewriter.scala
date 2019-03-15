@@ -319,7 +319,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
     }
   }
 
-  private def stopAtOtherLogicalPlans(thisPlan: LogicalPlan): (AnyRef) => Boolean = {
+  private def stopAtOtherLogicalPlans(thisPlan: LogicalPlan): AnyRef => Boolean = {
     case lp@(_: LogicalPlan) =>
       lp.id != thisPlan.id
 

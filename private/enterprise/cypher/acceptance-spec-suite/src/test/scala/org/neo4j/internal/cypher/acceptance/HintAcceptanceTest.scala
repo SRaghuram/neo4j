@@ -95,7 +95,7 @@ class HintAcceptanceTest
                 """.stripMargin
 
     executeWith(Configs.InterpretedAndSlotted, query,
-      planComparisonStrategy = ComparePlansWithAssertion((p) => {
+      planComparisonStrategy = ComparePlansWithAssertion(p => {
         p should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
       }))
   }

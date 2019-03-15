@@ -123,7 +123,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
   override def allNodesScan(cursorName: String) = {
     generator.assign(typeRef[NodeCursor], cursorName, invoke(cursors, method[CursorFactory, NodeCursor]("allocateNodeCursor")))
-    _finalizers.append((_: Boolean) => (block) =>
+    _finalizers.append((_: Boolean) => block =>
       block.expression(
         invoke(block.load(cursorName), method[NodeCursor, Unit]("close"))))
     generator.expression(invoke(dataRead, method[Read, Unit]("allNodesScan", typeRef[NodeCursor]), generator.load(cursorName) ))
@@ -131,7 +131,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
   override def labelScan(cursorName: String, labelIdVar: String) = {
     generator.assign(typeRef[NodeLabelIndexCursor], cursorName, invoke(cursors, method[CursorFactory, NodeLabelIndexCursor]("allocateNodeLabelIndexCursor")))
-    _finalizers.append((_: Boolean) => (block) =>
+    _finalizers.append((_: Boolean) => block =>
       block.expression(
         invoke(block.load(cursorName), method[NodeLabelIndexCursor, Unit]("close"))))
     generator.expression(invoke(dataRead, method[Read, Unit]("nodeLabelScan", typeRef[Int], typeRef[NodeLabelIndexCursor]),
@@ -189,19 +189,19 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       block(copy(generator = body))
     }
 
-  override def ifStatement(test: Expression)(block: (MethodStructure[Expression]) => Unit) = {
+  override def ifStatement(test: Expression)(block: MethodStructure[Expression] => Unit) = {
     using(generator.ifStatement(test)) { body =>
       block(copy(generator = body))
     }
   }
 
-  override def ifNotStatement(test: Expression)(block: (MethodStructure[Expression]) => Unit) = {
+  override def ifNotStatement(test: Expression)(block: MethodStructure[Expression] => Unit) = {
     using(generator.ifStatement(not(test))) { body =>
       block(copy(generator = body))
     }
   }
 
-  override def ifNonNullStatement(test: Expression, codeGenType: CodeGenType)(block: (MethodStructure[Expression]) => Unit) = {
+  override def ifNonNullStatement(test: Expression, codeGenType: CodeGenType)(block: MethodStructure[Expression] => Unit) = {
     val notNullExpression: Expression =
       codeGenType match {
         case CodeGenType.primitiveNode | CodeGenType.primitiveRel | CypherCodeGenType(_, _: AnyValueType) =>
@@ -412,7 +412,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def trace[V](planStepId: String, maybeSuffix: Option[String] = None)(block: MethodStructure[Expression] => V) = if (!tracing) block(this)
   else {
     val suffix = maybeSuffix.map("_" +_ ).getOrElse("")
-    val eventName = s"event_$planStepId${suffix}"
+    val eventName = s"event_$planStepId$suffix"
     generator.assign(typeRef[QueryExecutionEvent], eventName, traceEvent(planStepId))
     val result = block(copy(events = eventName :: events, generator = generator))
     generator.expression(invoke(generator.load(eventName), method[QueryExecutionEvent, Unit]("close")))
@@ -551,7 +551,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                        typeRef[NodeCursor], typeRef[Long], typeRef[Direction]),
                        dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction))
                      )
-    _finalizers.append((_: Boolean) => (block) =>
+    _finalizers.append((_: Boolean) => block =>
       block.expression(
         invoke(block.load(iterVar), method[RelationshipSelectionCursor, Unit]("close"))))
   }
@@ -567,7 +567,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                        typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[Array[Int]]),
                        dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction),
                        newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*)) )
-    _finalizers.append((_: Boolean) => (block) =>
+    _finalizers.append((_: Boolean) => block =>
       block.expression(
         invoke(block.load(iterVar), method[RelationshipSelectionCursor, Unit]("close"))))
   }
@@ -578,7 +578,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                                                            dataRead, cursors, nodeCursor,
                                                                            forceLong(fromNode, fromNodeType),
                                                                            dir(direction),  forceLong(toNode, toNodeType)))
-    _finalizers.append((_: Boolean) => (block) =>
+    _finalizers.append((_: Boolean) => block =>
       block.expression(
         invoke(block.load(iterVar), method[RelationshipSelectionCursor, Unit]("close"))))
   }
@@ -591,7 +591,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                                                              forceLong(fromNode, fromNodeType),
                                                                              dir(direction), forceLong(toNode, toNodeType),
                                                                              newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*)))
-    _finalizers.append((_: Boolean) => (block) =>
+    _finalizers.append((_: Boolean) => block =>
       block.expression(
         invoke(block.load(iterVar), method[RelationshipSelectionCursor, Unit]("close"))))
   }
@@ -807,7 +807,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     }
   }
   override def distinctSetIterate(name: String, keyTupleDescriptor: HashableTupleDescriptor)
-                                    (block: (MethodStructure[Expression]) => Unit) = {
+                                    (block: MethodStructure[Expression] => Unit) = {
     val key = keyTupleDescriptor.structure
     if (key.size == 1 && key.head._2.repr == LongType) {
       val (keyName, keyType) = key.head
@@ -918,7 +918,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
 
   override def sortTableIterate(tableName: String, tableDescriptor: SortTableDescriptor,
                                 varNameToField: Map[String, String])
-                               (block: (MethodStructure[Expression]) => Unit): Unit = {
+                               (block: MethodStructure[Expression] => Unit): Unit = {
     val tupleDescriptor = tableDescriptor.tupleDescriptor
     val tupleType = aux.typeReference(tupleDescriptor)
     val elementName = context.namer.newVarName()
@@ -1070,7 +1070,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   }
 
   override def aggregationMapIterate(name: String, keyTupleDescriptor: HashableTupleDescriptor, valueVar: String)
-                                    (block: (MethodStructure[Expression]) => Unit) = {
+                                    (block: MethodStructure[Expression] => Unit) = {
     val key = keyTupleDescriptor.structure
     val localName = context.namer.newVarName()
     val next = context.namer.newVarName()
@@ -1510,7 +1510,7 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def indexSeek(cursorName: String, indexReference: String, value: Expression, codeGenType: CodeGenType) = {
     val local = generator.declare(typeRef[NodeValueIndexCursor], cursorName)
     generator.assign(local, constant(null))
-    _finalizers.append((_: Boolean) => (block) =>
+    _finalizers.append((_: Boolean) => block =>
       using(block.ifStatement(Expression.notNull(block.load(cursorName)))) { inner =>
         inner.expression(
           invoke(inner.load(cursorName), method[NodeValueIndexCursor, Unit]("close")))

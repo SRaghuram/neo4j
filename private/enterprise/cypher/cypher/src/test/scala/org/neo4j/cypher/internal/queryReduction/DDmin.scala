@@ -17,7 +17,7 @@ case object Reproduced extends OracleResult
 case object NotReproduced extends OracleResult
 
 object DDmin {
-  type Oracle[I] = (I => OracleResult)
+  type Oracle[I] = I => OracleResult
 
   private val cache = mutable.Map[Seq[Int], OracleResult]()
 

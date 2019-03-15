@@ -107,7 +107,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
           }}
         }),
         Operation("look up rel type", _.lookupRelationshipTypeId("foo", "bar")),
-        Operation("all relationships for node", (m) => {
+        Operation("all relationships for node", m => {
           m.declareAndInitialize("node", CodeGenType.primitiveNode)
           m.nodeGetRelationshipsWithDirection("foo", "node", CodeGenType.primitiveInt, SemanticDirection.OUTGOING)
         }),
@@ -145,18 +145,18 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
           m.nodeGetRelationshipsWithDirection("barIter", "node", CodeGenType.primitiveInt, SemanticDirection.OUTGOING)
           m.relType("bar", "foo")
         }),
-        Operation("all relationships for node and types", (m) => {
+        Operation("all relationships for node and types", m => {
           m.declareAndInitialize("node", CodeGenType.primitiveNode)
           m.lookupRelationshipTypeId("a", "A")
           m.lookupRelationshipTypeId("b", "B")
           m.nodeGetRelationshipsWithDirectionAndTypes("foo", "node", CodeGenType.primitiveInt, SemanticDirection.OUTGOING, Seq("a", "b"))
         }),
-        Operation("next relationship", (m) => {
+        Operation("next relationship", m => {
           m.declareAndInitialize("node", CodeGenType.primitiveNode)
           m.nodeGetRelationshipsWithDirection("fooIter", "node", CodeGenType.primitiveInt, SemanticDirection.OUTGOING)
           m.nextRelationshipAndNode("nextNode", "fooIter", SemanticDirection.OUTGOING, "node", "foo")
         }),
-    Operation("expand into", (m) => {
+    Operation("expand into", m => {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
       val local = m.generator.declare(typeRef[RelationshipSelectionCursor], "iter")
@@ -168,7 +168,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
                                              Templates.outgoing,
                                              m.generator.load("to")))
     }),
-    Operation("expand into with types", (m) => {
+    Operation("expand into with types", m => {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
       val local = m.generator.declare(typeRef[RelationshipSelectionCursor], "iter")
@@ -181,7 +181,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
                                                   m.generator.load("to"),
                                              Expression.newInitializedArray(typeRef[Int], Expression.constant(1))))
     }),
-    Operation("expand from all node", (m) => {
+    Operation("expand from all node", m => {
       m.allNodesScan("nodeIter")
       m.whileLoop(m.advanceNodeCursor("nodeIter")) { b1 =>
         b1.nodeFromNodeCursor("node", "nodeIter")

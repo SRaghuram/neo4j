@@ -53,7 +53,7 @@ abstract class BaseAggregateExpression(expression: CodeGenExpression, distinct: 
       case expr =>
         val tmpName = context.namer.newVarName()
         structure.assign(tmpName, expression.codeGenType, expression.generateExpression(structure))
-        val perhapsCheckForNotNullStatement: ((MethodStructure[E]) => Unit) => Unit = if (expr.nullable)
+        val perhapsCheckForNotNullStatement: (MethodStructure[E] => Unit) => Unit = if (expr.nullable)
           structure.ifNonNullStatement(structure.loadVariable(tmpName), expression.codeGenType)
         else
           _(structure)

@@ -219,7 +219,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     self: Given =>
     protected var output = Counts(0, 0, 0)
 
-    def withOutput(setters: (Counts => Counts)*): this.type = {
+    def withOutput(setters: Counts => Counts*): this.type = {
       output = setters.foldLeft(output)((o, setter) => setter(o))
       this
     }

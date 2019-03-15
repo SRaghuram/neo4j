@@ -102,7 +102,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
 
   case class Pattern(startNode:NodePattern, tail:Option[(RelPattern, Pattern)]) {
 
-    def identifiers: Set[Identifier] = startNode.name.map(Identifier(_, isSingleEntity = true)).toSet ++ tail.map((kv) => {
+    def identifiers: Set[Identifier] = startNode.name.map(Identifier(_, isSingleEntity = true)).toSet ++ tail.map(kv => {
       val (r, p) = kv
       r.identifier ++ p.identifiers
     }).getOrElse(Set.empty)

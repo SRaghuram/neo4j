@@ -37,7 +37,7 @@ case class Distinct(opName: String, setName: String, vars: Iterable[(String, Cod
     }
     generator.distinctSetIfNotContains(setName,
                                        vars.map(v => v._1 -> (v._2.codeGenType ->
-                                         generator.loadVariable(v._1))).toMap)((_) => {})
+                                         generator.loadVariable(v._1))).toMap)(_ => {})
   }
 
   override def continuation(instruction: Instruction): Instruction = new Instruction {

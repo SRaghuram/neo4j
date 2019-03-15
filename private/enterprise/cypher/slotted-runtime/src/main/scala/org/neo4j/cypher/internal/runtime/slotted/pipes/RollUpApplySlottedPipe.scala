@@ -23,16 +23,16 @@ case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
 
   private val getValueToCollectFunction = {
     val expression: Expression = identifierToCollect._2
-    (state: QueryState) => (ctx: ExecutionContext) => expression(ctx, state)
+    state: QueryState => (ctx: ExecutionContext) => expression(ctx, state)
   }
 
-  private val hasNullValuePredicates: Seq[(ExecutionContext) => Boolean] =
+  private val hasNullValuePredicates: Seq[ExecutionContext => Boolean] =
     nullableIdentifiers.toSeq.map { elem =>
       val elemSlot = slots.get(elem)
       elemSlot match {
-        case Some(LongSlot(offset, true, _)) => { (ctx: ExecutionContext) => ctx.getLongAt(offset) == -1 }
-        case Some(RefSlot(offset, true, _)) => { (ctx: ExecutionContext) => ctx.getRefAt(offset) == NO_VALUE }
-        case _ => { (ctx: ExecutionContext) => false }
+        case Some(LongSlot(offset, true, _)) => (ctx: ExecutionContext) => ctx.getLongAt(offset) == -1
+        case Some(RefSlot(offset, true, _)) => (ctx: ExecutionContext) => ctx.getRefAt(offset) == NO_VALUE
+        case _ => (ctx: ExecutionContext) => false
       }
     }
 

@@ -1157,7 +1157,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     // When
     val query = "MATCH (a)-->(b:Label) WHERE b.prop <= a.prop RETURN count(a) as c"
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-                             planComparisonStrategy = ComparePlansWithAssertion((plan) => {
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan shouldNot includeSomewhere.aPlan(IndexSeekByRange.name)
                              }))

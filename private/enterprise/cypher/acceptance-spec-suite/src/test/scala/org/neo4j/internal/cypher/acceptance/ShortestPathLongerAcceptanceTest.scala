@@ -607,9 +607,9 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   val dim = 4
   val dMax = dim - 1
   val topLeft = "CELL00"
-  val topRight = s"CELL0${dMax}"
+  val topRight = s"CELL0$dMax"
   val bottomLeft = s"CELL${dMax}0"
-  val bottomRight = s"CELL${dMax}${dMax}"
+  val bottomRight = s"CELL$dMax$dMax"
   val middle = s"CELL${dMax/2}${dMax/2}"
   val nodesByName: mutable.Map[String, Node] = mutable.Map[String, Node]()
 
@@ -624,7 +624,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
           relate(nodesByName(s"${row - 1}$col"), nodesByName(name), "DOWN", s"r${row - 1}-${row}c$col")
         }
         if (col > 0) {
-          relate(nodesByName(s"$row${col - 1}"), nodesByName(name), "RIGHT", s"r${row}c${col - 1}${col}")
+          relate(nodesByName(s"$row${col - 1}"), nodesByName(name), "RIGHT", s"r${row}c${col - 1}$col")
         }
       }
     }
@@ -637,9 +637,9 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   private def addDiagonal(): Unit = {
     1 to dMax foreach { cell =>
-      val name = s"${cell}${cell}"
+      val name = s"$cell$cell"
       val prev = s"${cell-1}${cell-1}"
-      relate(nodesByName(prev), nodesByName(name), "DIAG", s"c${prev}-c${name}")
+      relate(nodesByName(prev), nodesByName(name), "DIAG", s"c$prev-c$name")
     }
   }
 

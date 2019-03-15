@@ -35,7 +35,7 @@ case class ExpandAllSlottedPipe(source: Pipe,
   //===========================================================================
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     input.flatMap {
-      (inputRow: ExecutionContext) =>
+      inputRow: ExecutionContext =>
         val fromNode = getFromNodeFunction(inputRow)
 
         if (NullChecker.entityIsNull(fromNode))
