@@ -27,18 +27,19 @@ import org.neo4j.cypher.internal.runtime.zombie.execution.{ExecutingQuery, Query
 class Worker(val workerId: Int,
              queryManager: QueryManager,
              schedulingPolicy: SchedulingPolicy,
-             resources: QueryResources) extends Runnable {
-  private val sleeper = new Sleeper
+             resources: QueryResources,
+             sleeper: Sleeper = new Sleeper) extends Runnable {
 
   override def run(): Unit = {
     while (!Thread.interrupted()) {
       try {
         val executingQuery = queryManager.nextQueryToWorkOn(workerId)
         if (executingQuery != null) {
-          sleeper.reset()
           val worked = workOnQuery(executingQuery)
           if (!worked) {
             sleeper.reportIdle()
+          } else {
+            sleeper.reset()
           }
         } else {
           sleeper.reportIdle()
