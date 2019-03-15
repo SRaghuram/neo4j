@@ -114,11 +114,6 @@ class NodeHashJoinSlottedPrimitivePipeTest extends CypherFunSuite {
   }
 
   private val node0 = 0
-  private val node1 = 1
-  private val node2 = 2
-  private val node3 = 3
-  private val node4 = 4
-  private val node5 = 5
   private val NULL = -1
 
 }

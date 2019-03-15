@@ -770,7 +770,4 @@ class LoadCsvAcceptanceTest
   private def acceptanceDbFolder = {
     new File("target/test-data/acceptance-db")
   }
-
-  private def createFile(filename: String = "cypher", dir: String = null)(f: PrintWriter => Unit): String =
-    createTempFileURL(filename, ".csv")(f)
 }

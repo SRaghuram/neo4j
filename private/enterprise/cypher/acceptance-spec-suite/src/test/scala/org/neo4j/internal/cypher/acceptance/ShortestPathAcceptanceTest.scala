@@ -231,7 +231,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
         |RETURN p
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    executeWith(Configs.InterpretedAndSlotted, query)
   }
 
   test("should still be able to return shortest path expression") {

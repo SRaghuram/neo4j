@@ -69,12 +69,6 @@ class SlottedRewriter(tokenContext: TokenContext) {
           relationshipPredicate = newRelationshipPredicate
         )(SameId(oldPlan.id))
 
-        /*
-        Since the logical plan SlotConfiguration is about the output rows we still need to remember the
-        outgoing slot configuration here
-         */
-        val outgoingSlotConfiguration = slotConfigurations(oldPlan.id)
-
         newPlan
 
       case plan@ValueHashJoin(lhs, rhs, e@Equals(lhsExp, rhsExp)) =>
@@ -90,11 +84,6 @@ class SlottedRewriter(tokenContext: TokenContext) {
         val rewriter = rewriteCreator(incomingSlotConfiguration, oldPlan, slotConfigurations)
         val newPlan = oldPlan.endoRewrite(rewriter)
 
-        /*
-        Since the logical plan SlotConfiguration is about the output rows we still need to remember the
-        outgoing slot configuration here
-         */
-        val outgoingSlotConfiguration = slotConfigurations(oldPlan.id)
         newPlan
 
       case oldPlan: LogicalPlan =>

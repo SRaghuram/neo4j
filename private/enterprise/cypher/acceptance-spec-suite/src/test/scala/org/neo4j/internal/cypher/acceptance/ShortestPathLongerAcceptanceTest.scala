@@ -433,7 +433,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   //---------------------------------------------------------------------------
   // Negative tests
   test("Shortest path from first to last node without predicate") {
-    val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       s"""MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |RETURN nodes(p) AS nodes""".stripMargin)
@@ -446,7 +445,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node with ALL predicate") {
     addDiagonal()
-    val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       s"""MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ALL(r in rels(p) WHERE type(r) = 'DIAG')
@@ -459,7 +457,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   }
 
   test("Shortest path from first to last node with NONE predicate") {
-    val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE NONE(r in rels(p) WHERE exists(r.blocked))
@@ -472,7 +469,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
   }
 
   test("Shortest path from first to last node with NONE predicate with a composite predicate") {
-    val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE NONE(r in rels(p) WHERE exists(r.blocked) AND src:$bottomLeft) AND src:$topLeft
@@ -486,7 +482,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node with path length predicate") {
     addDiagonal()
-    val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       // This predicate dictates that we cannot use the entire diagonal, we need to make one side-step
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
@@ -501,7 +496,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node with ALL node predicate") {
     addDiagonal()
-    val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE ALL(n in nodes(p) WHERE n.row = 0 OR n.col = $dMax)
@@ -515,7 +509,6 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   test("Shortest path from first to last node with NONE node predicate") {
     addDiagonal()
-    val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$bottomRight))
          |WHERE NONE(n in nodes(p) WHERE n.row > 0 AND n.col < $dMax)

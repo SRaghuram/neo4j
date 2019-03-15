@@ -727,8 +727,4 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   def legacyProfile(q: String, params: (String, Any)*): RewindableExecutionResult = profileWithPlanner(executeSingle, q, params.toMap)
-
-  private def getArgument[A <: Argument](plan: InternalPlanDescription)(implicit manifest: ClassTag[A]): A = plan.arguments.collectFirst {
-    case x: A => x
-  }.getOrElse(fail(s"Failed to find plan description argument where expected. Wanted ${manifest.toString()} but only found ${plan.arguments}"))
 }

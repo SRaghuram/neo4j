@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.executionplan;
 
 import org.neo4j.cypher.internal.codegen.QueryExecutionTracer;
-import org.neo4j.cypher.internal.runtime.ExecutionMode;
 import org.neo4j.cypher.internal.runtime.QueryContext;
 import org.neo4j.values.virtual.MapValue;
 
