@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 
@@ -18,9 +19,11 @@ public class IdentityModule
 {
     private MemberId myself;
 
-    IdentityModule( GlobalModule globalModule, SimpleStorage<MemberId> memberIdStorage )
+    IdentityModule( GlobalModule globalModule, CoreStateStorageFactory storageFactory )
     {
         Log log = globalModule.getLogService().getInternalLogProvider().getLog( getClass() );
+
+        SimpleStorage<MemberId> memberIdStorage = storageFactory.createMemberIdStorage();
 
         try
         {

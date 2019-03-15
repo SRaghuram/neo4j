@@ -28,7 +28,6 @@ import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.CoreStateService;
 import com.neo4j.causalclustering.core.state.CoreStateStorageFactory;
 import com.neo4j.causalclustering.core.state.storage.RotatingStorage;
-import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.diagnostics.CoreMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -176,8 +175,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         watcherServiceFactory = layout ->
                 createDatabaseFileSystemWatcher( globalModule.getFileWatcher(), layout, logService, fileWatcherFileNameFilter() );
 
-        SimpleStorage<MemberId> memberIdStorage = storageFactory.createMemberIdStorage();
-        IdentityModule identityModule = new IdentityModule( globalModule, memberIdStorage );
+        IdentityModule identityModule = new IdentityModule( globalModule, storageFactory );
 
         //Build local databases object
         final Supplier<DatabaseManager> databaseManagerSupplier = () -> globalDependencies.resolveDependency( DatabaseManager.class );
