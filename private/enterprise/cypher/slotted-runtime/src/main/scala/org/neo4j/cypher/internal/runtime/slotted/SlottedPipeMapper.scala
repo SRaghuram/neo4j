@@ -427,8 +427,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case ConditionalApply(_, _, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
-          case Some(s: LongSlot) => true
-          case Some(s: RefSlot) => false
+          case Some(_: LongSlot) => true
+          case Some(_: RefSlot) => false
           case _ => throw new InternalException("We expect only an existing LongSlot or RefSlot here")
         })
         val longOffsets = longIds.map(e => slots.getLongOffsetFor(e))
@@ -437,8 +437,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case AntiConditionalApply(_, _, items) =>
         val (longIds , refIds) = items.partition(idName => slots.get(idName) match {
-          case Some(s: LongSlot) => true
-          case Some(s: RefSlot) => false
+          case Some(_: LongSlot) => true
+          case Some(_: RefSlot) => false
           case _ => throw new InternalException("We expect only an existing LongSlot or RefSlot here")
         })
         val longOffsets = longIds.map(e => slots.getLongOffsetFor(e))

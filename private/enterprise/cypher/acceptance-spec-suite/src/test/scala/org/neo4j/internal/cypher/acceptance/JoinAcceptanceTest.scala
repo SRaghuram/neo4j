@@ -106,7 +106,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
                   |RETURN a.name, b.name""".stripMargin
 
     val expectSucceed = Configs.InterpretedAndSlotted
-    val result = executeWith(expectSucceed, query,
+    executeWith(expectSucceed, query,
       planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeRightOuterHashJoin")))
   }
 

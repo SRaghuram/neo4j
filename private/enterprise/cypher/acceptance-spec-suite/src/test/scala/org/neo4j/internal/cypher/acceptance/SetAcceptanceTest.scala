@@ -173,7 +173,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     val c = createNode("c"->"C")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n) WITH collect(n) AS nodes FOREACH(x IN nodes | SET x += {x:'X'})")
+    executeWith(Configs.InterpretedAndSlotted, "MATCH (n) WITH collect(n) AS nodes FOREACH(x IN nodes | SET x += {x:'X'})")
 
     // then
     a should haveProperty("a").withValue("A")

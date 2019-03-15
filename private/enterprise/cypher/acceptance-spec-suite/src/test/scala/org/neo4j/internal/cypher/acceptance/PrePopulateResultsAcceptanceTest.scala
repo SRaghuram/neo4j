@@ -45,7 +45,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   test("should populate node if asked to") {
-    val n1 = createNode()
+    createNode()
 
     val query = "MATCH (n) RETURN n"
 
@@ -77,7 +77,7 @@ class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   test("should populate inside maps and lists if asked to") {
-    val n1 = createNode()
+    createNode()
 
     val query = "MATCH (n) RETURN {prop: [{prop: [n]}]}"
 

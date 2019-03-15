@@ -397,7 +397,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
     setupBigModel(label2 = "Admin")
 
     val resultAssertionInTx: Option[RewindableExecutionResult => Unit] = Some({ result: RewindableExecutionResult => result.toList should equal(List(Map("userKnows" -> 2, "otherKnows" -> 1))) })
-    val result = executeWith(
+    executeWith(
       expectSucceed,
       query,
       executeBefore = executeBefore,

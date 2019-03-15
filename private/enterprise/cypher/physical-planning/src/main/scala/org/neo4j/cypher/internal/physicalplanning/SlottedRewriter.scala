@@ -172,7 +172,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => throw new CantCompileQueryException(s"Invalid slot for GetDegree: $n")
         }
 
-      case v @ Variable(k) =>
+      case _ @ Variable(k) =>
         slotConfiguration.get(k) match {
           case Some(slot) => slot match {
             case LongSlot(offset, false, CTNode) => NodeFromSlot(offset, k)

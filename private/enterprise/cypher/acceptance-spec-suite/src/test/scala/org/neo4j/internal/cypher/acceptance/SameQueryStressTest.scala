@@ -31,10 +31,10 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
       val nThreads = 10
       val executor = Executors.newFixedThreadPool(nThreads)
       val futureResultsAsExpected: Seq[Future[Array[String]]] =
-        for (i <- 1 to nThreads) yield
+        for (_ <- 1 to nThreads) yield
           executor.submit(new Callable[Array[String]] {
             override def call(): Array[String] = {
-              (for (j <- 1 to 1000) yield {
+              (for (_ <- 1 to 1000) yield {
                 graph.execute(lookup).resultAsString()
               }).toArray
             }

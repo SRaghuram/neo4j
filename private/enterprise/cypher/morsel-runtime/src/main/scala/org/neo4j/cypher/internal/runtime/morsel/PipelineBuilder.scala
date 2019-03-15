@@ -112,7 +112,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
       case plans.Input(nodes, variables) =>
         new InputOperator(WorkIdentity.fromPlan(plan), nodes.map(v => slots.getLongOffsetFor(v)), variables.map(v => slots.getReferenceOffsetFor(v)))
 
-      case p: plans.LazyLogicalPlan =>
+      case _: plans.LazyLogicalPlan =>
         val pipe = fallbackPipeMapper.onLeaf(plan)
         new LazySlottedPipeLeafOperator(WorkIdentity.fromPlan(plan), pipe, argumentSize)
 
@@ -255,7 +255,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
 
         // Fallback to use a lazy slotted pipe
-        case p =>
+        case _ =>
           source match {
             case s: StreamingComposablePipeline[_] if s.start.isInstanceOf[LazySlottedPipeStreamingOperator] && !s.hasAdditionalOperators =>
               val pipeConstructor: Pipe => Pipe =
@@ -312,7 +312,7 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
         val operator = new CartesianProductOperator(WorkIdentity.fromPlan(plan), argumentSize)
         new StreamingMergePipeline(operator, slots, lhs, rhs)
 
-      case p =>
+      case _ =>
         throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
     }
   }

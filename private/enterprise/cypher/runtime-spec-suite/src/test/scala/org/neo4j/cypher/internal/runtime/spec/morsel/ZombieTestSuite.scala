@@ -118,7 +118,7 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
     val futureResultSets = (0 until 8).map(_ =>
       executor.submit(new Callable[Seq[RuntimeResult]] {
         override def call(): Seq[RuntimeResult] = {
-          for (i <- 0 until QUERIES_PER_THREAD) yield execute(logicalQuery, runtime)
+          for (_ <- 0 until QUERIES_PER_THREAD) yield execute(logicalQuery, runtime)
         }
       })
     )

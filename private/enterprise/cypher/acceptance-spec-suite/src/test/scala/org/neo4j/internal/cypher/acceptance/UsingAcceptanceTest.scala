@@ -528,11 +528,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
-      1 until 20 foreach { i =>
+      1 until 20 foreach { _ =>
         createLabeledNode("Movie")
       }
 
@@ -558,11 +558,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
-      1 until 20 foreach { i =>
+      1 until 20 foreach { _ =>
         createLabeledNode("Movie")
       }
 
@@ -594,11 +594,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
-      1 until 20 foreach { i =>
+      1 until 20 foreach { _ =>
         createLabeledNode("Movie")
       }
 
@@ -632,7 +632,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         createLabeledNode(Map("name" -> s"Person $i"), "Person")
       }
 
-      1 until 90 foreach { i =>
+      1 until 90 foreach { _ =>
         createLabeledNode("Person")
       }
 
@@ -668,11 +668,11 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       createLabeledNode(Map("name" -> s"Person $i"), "Person")
     }
 
-    1 until 90 foreach { i =>
+    1 until 90 foreach { _ =>
       createLabeledNode("Person")
     }
 
-    1 until 20 foreach { i =>
+    1 until 20 foreach { _ =>
       createLabeledNode("Movie")
     }
 

@@ -301,7 +301,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
   // FAIL: <default version> <default planner> runtime=slotted returned different results than <default version> <default planner> runtime=interpreted List() did not contain the same elements as List(Map("r" -> (20000)-[T,0]->(20001)))
   test("should not use a label scan as starting point when statistics are bad") {
     graph.inTx {
-      (1 to 10000).foreach { i =>
+      (1 to 10000).foreach { _ =>
         createLabeledNode("A")
         createNode()
       }
@@ -332,7 +332,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     createLabeledNode("A")
     createLabeledNode("A")
     val endNode = createNode()
-    val rel = relate(node, endNode, "HAS")
+    relate(node, endNode, "HAS")
 
     executeWith(Configs.InterpretedAndSlotted, "MATCH (n:A) RETURN (n)-[:HAS]->() as p",
       planComparisonStrategy = ComparePlansWithAssertion( planDescription => {

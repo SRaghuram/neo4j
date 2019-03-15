@@ -96,7 +96,7 @@ class UniqueIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
       graph should haveConstraints(s"${constraintCreator.typeName}:Person(name)")
 
       //WHEN
-      val result = executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN {coll} RETURN n",
+      executeWith(Configs.All, "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name IN {coll} RETURN n",
         planComparisonStrategy = ComparePlansWithAssertion((plan) => {
           //THEN
           plan should includeSomewhere.aPlan("NodeUniqueIndexSeek")

@@ -13,7 +13,7 @@ case class NodeCountFromCountStoreInstruction(opName: String, variable: Variable
   override def body[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
     val ops: List[(MethodStructure[E]) => E] = labels.map(findOps[E])
     generator.trace(opName) { body =>
-      ops.foreach( b => {
+      ops.foreach( _ => {
         body.incrementDbHits()
       })
       body.assign(variable, multiplyAll[E](ops, body))

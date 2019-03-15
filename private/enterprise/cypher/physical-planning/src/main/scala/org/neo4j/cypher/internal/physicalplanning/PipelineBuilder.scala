@@ -212,7 +212,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
       case _: plans.Apply =>
         rhs
 
-      case p =>
+      case _ =>
         throw new CantCompileQueryException(s"$plan not supported in morsel runtime")
     }
   }

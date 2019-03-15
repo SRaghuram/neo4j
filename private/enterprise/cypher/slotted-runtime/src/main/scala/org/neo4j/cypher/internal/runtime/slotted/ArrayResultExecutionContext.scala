@@ -24,7 +24,7 @@ case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]
     val m = new mutable.OpenHashMap[String, Int](columns.length)
     var index = 0
     columns.foreach {
-      case (name, exp) => m.put(name, index)
+      case (name, _) => m.put(name, index)
       index += 1
     }
     m
