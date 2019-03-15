@@ -162,6 +162,11 @@ public class ConsensusModule
             CoreLogPruningStrategy pruningStrategy =
                     new CoreLogPruningStrategyFactory( config.get( CausalClusteringSettings.raft_log_pruning_strategy ),
                             logProvider ).newInstance();
+
+            // Default database name is used here temporarily because both system and default database
+            // live in a single Raft group and append to the same Raft log under `cluster-state/db/neo4j/raft-log` directory.
+            // This will change once we have multiple Raft logs, then the correct database name will be used here.
+            // E.g. system will use "system" to append to a Raft log located under `cluster-state/db/system/raft-log`
             File directory = layout.raftLogDirectory( defaultDatabaseName );
 
             return life.add( new SegmentedRaftLog( fileSystem, directory, rotateAtSize, marshalSelector::get, logProvider,
