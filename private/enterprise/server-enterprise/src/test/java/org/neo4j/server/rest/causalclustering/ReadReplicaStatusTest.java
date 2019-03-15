@@ -188,7 +188,7 @@ public class ReadReplicaStatusTest
         Response description = status.description();
 
         Map<String,Object> response = responseAsMap( description );
-        assertNull( response.get( "raftIndexThroughputPerSecond" ) );
+        assertNull( response.get( "raftCommandsPerSecond" ) );
     }
 
     static Collection<MemberId> randomMembers( int size )

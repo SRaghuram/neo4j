@@ -29,7 +29,7 @@ import static java.lang.String.format;
 
 class CausalClusterStatusEndpointMatchers
 {
-    private static final String FIELD_THROUGHPUT = "raftIndexThroughputPerSecond";
+    private static final String FIELD_THROUGHPUT = "raftCommandsPerSecond";
     private static final String FIELD_CORE = "core";
     private static final String FIELD_MEMBER = "memberId";
     private static final String FIELD_LAST_INDEX = "lastAppliedRaftIndex";

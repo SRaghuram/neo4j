@@ -195,7 +195,7 @@ public class CoreStatusTest
         assertThat( response, containsAndEquals( "healthy", true ) );
         assertThat( response, containsAndEquals( "memberId", myself.getUuid().toString() ) );
         assertThat( response, containsAndEquals( "leader", core2.getUuid().toString() ) );
-        assertThat( response, containsAndEquals( "raftIndexThroughputPerSecond", 423.0 ) );
+        assertThat( response, containsAndEquals( "raftCommandsPerSecond", 423.0 ) );
         assertThat( response.toString(), Long.parseLong( response.get( "millisSinceLastLeaderMessage" ).toString() ), greaterThan( 0L ) );
     }
 
@@ -264,7 +264,7 @@ public class CoreStatusTest
         Response description = status.description();
 
         Map<String,Object> response = responseAsMap( description );
-        assertNull( response.get( "raftIndexThroughputPerSecond" ) );
+        assertNull( response.get( "raftCommandsPerSecond" ) );
     }
 
     private static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
