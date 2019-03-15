@@ -37,7 +37,6 @@ import org.neo4j.bolt.security.auth.Authentication;
 import org.neo4j.bolt.security.auth.BasicAuthentication;
 import org.neo4j.bolt.v1.messaging.BoltResponseMessageWriterV1;
 import org.neo4j.bolt.v1.messaging.Neo4jPackV1;
-import org.neo4j.bolt.v1.messaging.response.RecordMessage;
 import org.neo4j.bolt.v1.packstream.PackOutput;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
@@ -96,7 +95,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
 
         @Override
-        public void messageSucceeded() throws IOException
+        public void messageSucceeded()
         {
             // do nothing
         }
@@ -206,7 +205,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
 
         @Override
-        public boolean onDiscardRecords( BoltResult result, long size ) throws Throwable
+        public boolean onDiscardRecords( BoltResult result, long size )
         {
             throw new RuntimeException( "Did not expect this to happen in benchmarks" );
         }
@@ -217,9 +216,21 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
                     new BoltResult.RecordConsumer()
                     {
                         @Override
-                        public void accept( AnyValue[] fields ) throws IOException
+                        public void beginRecord( int numberOfFields ) throws IOException
                         {
-                            writer.write( new RecordMessage( fields ) );
+                            writer.beginRecord( numberOfFields );
+                        }
+
+                        @Override
+                        public void consumeField( int offset, AnyValue value ) throws IOException
+                        {
+                            writer.consumeField( offset, value );
+                        }
+
+                        @Override
+                        public void endRecord() throws IOException
+                        {
+                            writer.endRecord();
                         }
 
                         @Override
