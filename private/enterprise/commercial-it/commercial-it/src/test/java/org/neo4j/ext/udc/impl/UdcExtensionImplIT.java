@@ -37,6 +37,7 @@ import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.mockito.matcher.RegexMatcher;
 import org.neo4j.test.rule.TestDirectory;
@@ -76,6 +77,8 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
     @Rule
     public final TestDirectory path = TestDirectory.testDirectory();
+    @Rule
+    public final AssertableLogProvider logProvider = new AssertableLogProvider( true );
 
     private PingerHandler handler;
     private Map<String,String> config;
@@ -473,6 +476,8 @@ public class UdcExtensionImplIT extends LocalServerTestBase
     private GraphDatabaseService createDatabase( File storeDir, Map<String,String> config )
     {
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
+        factory.setInternalLogProvider( logProvider );
+        factory.setUserLogProvider( logProvider );
         GraphDatabaseBuilder graphDatabaseBuilder =
                 (storeDir != null) ? factory.newImpermanentDatabaseBuilder( storeDir )
                                    : factory.newImpermanentDatabaseBuilder();
