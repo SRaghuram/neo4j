@@ -142,16 +142,19 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
 
     // when
     val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("x", "y")
+      .produceResults("x")
       .limit(100)
-      .expandAll("(x)--(y)")
-      .allNodeScan("x")
+      .input(variables = Seq("x"))
       .build()
 
-    // then
-    val runtimeResult = execute(logicalQuery, runtime)
+    val input = inputSingleColumn(1000, 10, identity).stream()
 
-    runtimeResult should beColumns("x", "y").withRows(rowCount(100))
+    // then
+    val runtimeResult = execute(logicalQuery, runtime, input)
+    runtimeResult should beColumns("x").withRows(rowCount(100))
+
+    // TODO: cancel continuations
+    //input.hasMore should be(true)
   }
 
   test("should support apply-limit") {

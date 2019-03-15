@@ -49,6 +49,7 @@ class MorselExecutionContext(private val morsel: Morsel,
 
   // ARGUMENT COLUMNS
 
+  // TODO: mind the gaps
   def allArgumentRowIdsFor(offset: Int): Seq[Long] = {
     val firstArgument = getLongAt(firstRow, offset)
     val lastArgument = getLongAt(validRows - 1, offset)

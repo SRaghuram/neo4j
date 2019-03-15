@@ -19,12 +19,14 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 class MorselApplyBuffer(tracker: QueryCompletionTracker,
                         argumentStatesForThisApply: Seq[Id],
                         argumentReducersForOtherApplies: Seq[Id],
+                        workCancellers: Seq[Id],
                         argumentStateMaps: ArgumentStateMaps,
                         inner: Buffer[MorselExecutionContext],
                         argumentSlotOffset: Int,
                         idAllocator: IdAllocator
                           ) extends MorselBuffer(tracker,
                                                  argumentReducersForOtherApplies,
+                                                 workCancellers,
                                                  argumentStateMaps,
                                                  inner) {
 

@@ -108,8 +108,8 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
       source.take()
   }
 
-  override final def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                                    factory: MorselAccumulatorFactory[T]): ArgumentStateMap[T] = {
+  override final def createArgumentStateMap[S <: ArgumentState](reducePlanId: Id,
+                                                                factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
     val argumentSlotOffset =
       physicalPlan
         .slotConfigurations(reducePlanId)

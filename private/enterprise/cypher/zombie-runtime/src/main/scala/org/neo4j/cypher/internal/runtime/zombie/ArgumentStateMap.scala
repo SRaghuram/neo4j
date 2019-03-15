@@ -8,45 +8,58 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Attribute, Id}
 
-/**
-  * Accumulator of morsels. Has internal state which it updates using provided morsel.
-  */
-trait MorselAccumulator {
-
-  /**
-    * Update internal state using the provided morsel.
-    */
-  def update(morsel: MorselExecutionContext): Unit
-
+trait ArgumentState {
   /**
     * The ID of the argument row for this accumulator.
     */
   def argumentRowId: Long
 }
 
-trait MorselAccumulatorFactory[ACC <: MorselAccumulator] {
-  def newAccumulator(argumentRowId: Long): ACC
+trait WorkCanceller extends ArgumentState {
+  def isCancelled: Boolean
 }
 
 /**
-  * Maps every argument to one `MorselAccumulator`/`ACC`.
+  * Accumulator of morsels. Has internal state which it updates using provided morsel.
   */
-trait ArgumentStateMap[ACC <: MorselAccumulator] {
+trait MorselAccumulator extends ArgumentState {
 
   /**
-    * Update the MorselAccumulator related to `argument` and decrement
-    * the argument counter. Also remove the [[owningPlanId]] counter
-    * from `morsel`.
+    * Update internal state using the provided morsel.
     */
   def update(morsel: MorselExecutionContext): Unit
+}
 
-  def filter[U](morsel: MorselExecutionContext, onArgument: (ACC, Long) => U, onRow: (U, MorselExecutionContext) => Boolean): Unit
+trait ArgumentStateFactory[S <: ArgumentState] {
+  def newArgumentState(argumentRowId: Long): S
+}
+
+/**
+  * Maps every argument to one `ArgumentState`/`S`.
+  */
+trait ArgumentStateMap[S <: ArgumentState] {
 
   /**
-    * Take the MorselAccumulators of all complete arguments. The MorselAccumulators will
+    * Update the [[ArgumentState]] related to `argument` and decrement
+    * the argument counter.
+    */
+  def update(morsel: MorselExecutionContext, onState: (S, MorselExecutionContext) => Unit): Unit
+
+  /**
+    * Filter the input morsel using the [[ArgumentState]] related to `argument`.
+    *
+    * @param onArgument is called once per argumentRowId, to generate a filter state.
+    * @param onRow      is called one each row, and given the filter state of the current argumentRowId
+    */
+  def filter[FILTER_STATE](morsel: MorselExecutionContext,
+                           onArgument: (S, Long) => FILTER_STATE,
+                           onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit
+
+  /**
+    * Take the [[ArgumentState]]s of all complete arguments. The [[ArgumentState]]s will
     * be removed from the ArgumentStateMap and cannot be taken again or modified after this call.
     */
-  def takeCompleted(): Iterable[ACC]
+  def takeCompleted(): Iterable[S]
 
   /**
     * Returns `true` iff there is a completed argument.
@@ -80,7 +93,7 @@ trait ArgumentStateMap[ACC <: MorselAccumulator] {
   def argumentSlotOffset: Int
 }
 
-class ArgumentStateMaps() extends Attribute[ArgumentStateMap[_ <: MorselAccumulator]]
+class ArgumentStateMaps() extends Attribute[ArgumentStateMap[_ <: ArgumentState]]
 
 object ArgumentStateMap {
 
@@ -115,9 +128,9 @@ object ArgumentStateMap {
     * @tparam FILTER_STATE state used for filtering
     */
   def filter[FILTER_STATE](argumentSlotOffset: Int,
-                morsel: MorselExecutionContext,
-                onArgument: (Long, Long) => FILTER_STATE,
-                onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+                           morsel: MorselExecutionContext,
+                           onArgument: (Long, Long) => FILTER_STATE,
+                           onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
 
     val readingRow = morsel
     val writingRow = readingRow.shallowCopy()

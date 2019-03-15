@@ -33,6 +33,7 @@ class BufferDefinition(val id: BufferId,
   // reference count for multiple downstream reduce operators,
   // at potentially different argument depths
   val reducers = new ArrayBuffer[Id]
+  val workCancellers = new ArrayBuffer[Id]
 }
 
 /**
@@ -187,7 +188,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
         }
 
       case _: Limit =>
-        argument.argumentStatesForThisApply += plan.id
+        markCancellerInUpstreamBuffers(source.inputBuffer, argument, plan.id)
         source.middlePlans += plan
         source
 
@@ -257,5 +258,16 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
       b = pipelines(b.producingPipelineId.x).inputBuffer
     }
     applyBuffer.argumentStatesForThisApply += reducePlanId
+  }
+
+  private def markCancellerInUpstreamBuffers(buffer: BufferDefinition,
+                                             applyBuffer: ApplyBufferDefinition,
+                                             cancellerPlanId: Id): Unit = {
+    var b = buffer
+    while (b != applyBuffer) {
+      b.workCancellers += cancellerPlanId
+      b = pipelines(b.producingPipelineId.x).inputBuffer
+    }
+    applyBuffer.argumentStatesForThisApply += cancellerPlanId
   }
 }

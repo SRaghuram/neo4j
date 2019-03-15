@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator, MorselAccumulatorFactory}
+import org.neo4j.cypher.internal.runtime.zombie.{ArgumentState, ArgumentStateFactory, ArgumentStateMap, MorselAccumulator}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 /**
@@ -20,9 +20,9 @@ object StandardStateFactory extends StateFactory {
 
   override def newLock(id: String): Lock = new NoLock(id)
 
-  override def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                           argumentSlotOffset: Int,
-                                                           factory: MorselAccumulatorFactory[T]): ArgumentStateMap[T] = {
-    new StandardArgumentStateMap[T](reducePlanId, argumentSlotOffset, factory)
+  override def newArgumentStateMap[S <: ArgumentState](reducePlanId: Id,
+                                                       argumentSlotOffset: Int,
+                                                       factory: ArgumentStateFactory[S]): ArgumentStateMap[S] = {
+    new StandardArgumentStateMap[S](reducePlanId, argumentSlotOffset, factory)
   }
 }

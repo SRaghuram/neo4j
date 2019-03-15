@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.storable.NumberValue
@@ -70,7 +70,7 @@ class LimitOperator(val planId: Id,
   /**
     * Query-write row count for the rows from one argumentRowId.
     */
-  class RowCount(override val argumentRowId: Long, countTotal: Long) extends MorselAccumulator {
+  class RowCount(override val argumentRowId: Long, countTotal: Long) extends WorkCanceller {
     private var countLeft = countTotal
 
     def reserve(wanted: Long): Long = {
@@ -79,9 +79,6 @@ class LimitOperator(val planId: Id,
       got
     }
 
-    // TODO: this was not nice...
-    override def update(morsel: MorselExecutionContext): Unit = {
-      throw new IllegalStateException("Limit counter should not be updated")
-    }
+    override def isCancelled: Boolean = countLeft == 0
   }
 }

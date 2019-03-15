@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, MorselAccumulator, MorselAccumulatorFactory}
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.zombie.Zombie.debug
+import org.neo4j.cypher.internal.runtime.zombie.{ArgumentState, ArgumentStateFactory, ArgumentStateMap}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 import scala.collection.mutable
@@ -15,38 +15,39 @@ import scala.collection.mutable
 /**
   * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
   */
-class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
+class StandardArgumentStateMap[STATE <: ArgumentState](val owningPlanId: Id,
                                                        val argumentSlotOffset: Int,
-                                                       factory: MorselAccumulatorFactory[T]) extends ArgumentStateMap[T] {
+                                                       factory: ArgumentStateFactory[STATE]) extends ArgumentStateMap[STATE] {
   private val controllers = mutable.Map[Long, Controller]()
 
-  override def update(morsel: MorselExecutionContext): Unit = {
+  override def update(morsel: MorselExecutionContext,
+                      onState: (STATE, MorselExecutionContext) => Unit): Unit = {
     ArgumentStateMap.foreachArgument(
       argumentSlotOffset,
       morsel,
       (argument, morselView) => {
         val controller = controllers(argument)
-        controller.accumulator.update(morselView)
+        onState(controller.state, morselView)
       }
     )
   }
 
   override def filter[U](readingRow: MorselExecutionContext,
-                         onArgument: (T, Long) => U,
+                         onArgument: (STATE, Long) => U,
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {
     ArgumentStateMap.filter(
       argumentSlotOffset,
       readingRow,
       (argumentRowId, nRows) =>
-        onArgument(controllers(argumentRowId).accumulator, nRows),
+        onArgument(controllers(argumentRowId).state, nRows),
       onRow
     )
   }
 
-  override def takeCompleted(): Iterable[T] = {
+  override def takeCompleted(): Iterable[STATE] = {
     val complete = controllers.values.filter(_.count == 0)
-    complete.foreach(controller => controllers -= controller.accumulator.argumentRowId)
-    complete.map(_.accumulator)
+    complete.foreach(controller => controllers -= controller.state.argumentRowId)
+    complete.map(_.state)
   }
 
   override def hasCompleted: Boolean = {
@@ -54,7 +55,7 @@ class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
   }
 
   override def initiate(argument: Long): Unit = {
-    controllers += argument -> new Controller(factory.newAccumulator(argument))
+    controllers += argument -> new Controller(factory.newArgumentState(argument))
   }
 
   override def increment(argument: Long): Unit = {
@@ -71,7 +72,7 @@ class StandardArgumentStateMap[T <: MorselAccumulator](val owningPlanId: Id,
     debug("decr %03d to %s".format(argument, controller.count))
   }
 
-  private class Controller(val accumulator: T) {
+  private class Controller(val state: STATE) {
     var count: Long = 1
   }
 }

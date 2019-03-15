@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
   */
 class MorselBuffer(tracker: QueryCompletionTracker,
                    downstreamArgumentReducers: Seq[Id],
+                   workCancellers: Seq[Id],
                    argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[MorselExecutionContext]
                   ) extends ArgumentCountUpdater(tracker, downstreamArgumentReducers, argumentStateMaps)
@@ -36,7 +37,21 @@ class MorselBuffer(tracker: QueryCompletionTracker,
     val morsel = inner.take()
     if (morsel == null)
       null
-    else new Parallelizer(morsel)
+    else {
+      for (cancellerPlanId <- workCancellers) {
+        val argumentStateMap = argumentStateMaps(cancellerPlanId).asInstanceOf[ArgumentStateMap[WorkCanceller]]
+        argumentStateMap.filter[Boolean](morsel,
+                                         (canceller, _) => !canceller.isCancelled,
+                                         (canContinue, _) => canContinue)
+        morsel.resetToFirstRow()
+      }
+      if (morsel.hasData)
+        new Parallelizer(morsel)
+      else {
+        tracker.decrement()
+        null
+      }
+    }
   }
 
   /**

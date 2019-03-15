@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.state
 
-import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateMap, ExecutionState, MorselAccumulator, MorselAccumulatorFactory}
+import org.neo4j.cypher.internal.runtime.zombie._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 /**
@@ -16,7 +16,7 @@ trait StateFactory {
   def newTracker(): QueryCompletionTracker
   def newIdAllocator(): IdAllocator
   def newLock(id: String): Lock
-  def newArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                  argumentSlotOffset: Int,
-                                                  factory: MorselAccumulatorFactory[T]): ArgumentStateMap[T]
+  def newArgumentStateMap[S <: ArgumentState](reducePlanId: Id,
+                                              argumentSlotOffset: Int,
+                                              factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
 }

@@ -18,8 +18,8 @@ trait ArgumentStateCreator {
   /**
     * Create new [[ArgumentStateMap]]. Only a single [[ArgumentStateMap]] can be created for each `reducePlanId`.
     */
-  def createArgumentStateMap[T <: MorselAccumulator](reducePlanId: Id,
-                                                     factory: MorselAccumulatorFactory[T]): ArgumentStateMap[T]
+  def createArgumentStateMap[S <: ArgumentState](reducePlanId: Id,
+                                                 factory: ArgumentStateFactory[S]): ArgumentStateMap[S]
 }
 
 /**

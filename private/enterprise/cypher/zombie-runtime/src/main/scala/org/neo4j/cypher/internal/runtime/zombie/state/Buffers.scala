@@ -20,15 +20,16 @@ class Buffers(bufferDefinitions: Seq[BufferDefinition],
   private val buffers: Array[Sink[MorselExecutionContext]] =
     for (bufferDefinition <- bufferDefinitions.toArray) yield {
       val reducers = bufferDefinition.reducers
+      val workCancellers = bufferDefinition.workCancellers
       bufferDefinition match {
         case x: ApplyBufferDefinition =>
-          new MorselApplyBuffer(tracker, x.argumentStatesForThisApply, reducers, argumentStateMaps, stateFactory.newBuffer(), x.argumentSlotOffset, stateFactory.newIdAllocator())
+          new MorselApplyBuffer(tracker, x.argumentStatesForThisApply, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer(), x.argumentSlotOffset, stateFactory.newIdAllocator())
 
         case x: ArgumentStateBufferDefinition =>
-          new MorselArgumentStateBuffer(tracker, reducers, argumentStateMaps, x.reducingPlanId)
+          new MorselArgumentStateBuffer(tracker, reducers, workCancellers, argumentStateMaps, x.reducingPlanId)
 
         case _: BufferDefinition =>
-          new MorselBuffer(tracker, reducers, argumentStateMaps, stateFactory.newBuffer())
+          new MorselBuffer(tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer())
       }
     }
 

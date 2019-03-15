@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
   */
 class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompletionTracker,
                                                           downstreamArgumentReducers: Seq[Id],
+                                                          workCancellers: Seq[Id],
                                                           argumentStateMaps: ArgumentStateMaps,
                                                           reducePlanId: Id
                                   ) extends ArgumentCountUpdater(tracker, downstreamArgumentReducers, argumentStateMaps)
@@ -27,7 +28,7 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
   override def put(morsel: MorselExecutionContext): Unit = {
     if (morsel.hasData) {
       morsel.resetToFirstRow()
-      argumentStateMap.update(morsel)
+      argumentStateMap.update(morsel, (acc, morselView) => acc.update(morselView))
     }
   }
 
