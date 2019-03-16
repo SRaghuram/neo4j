@@ -147,6 +147,11 @@ public class ClusterStateLayout
 
     private static String stateDirectoryName( CoreStateFiles<?> coreStateFiles )
     {
+        if ( coreStateFiles == CoreStateFiles.RAFT_LOG )
+        {
+            // raft log is special and lives in a directory without the "-state" suffix
+            return coreStateFiles.name();
+        }
         return coreStateFiles.name() + STATE_DIRECTORY_SUFFIX;
     }
 

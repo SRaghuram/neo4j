@@ -12,15 +12,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.util.Set;
 
-import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.causalclustering.core.state.CoreStateFiles.Scope.GLOBAL;
-import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.helpers.collection.Iterators.set;
+import static org.neo4j.io.fs.FileUtils.path;
 
 @ExtendWith( TestDirectoryExtension.class )
 class ClusterStateLayoutTest
@@ -30,112 +28,104 @@ class ClusterStateLayoutTest
     @Inject
     private TestDirectory testDirectory;
 
-    private File dataDirectory;
+    private File dataDir;
     private ClusterStateLayout layout;
 
     @BeforeEach
     void setUp()
     {
-        dataDirectory = testDirectory.directory( "data" );
-        layout = ClusterStateLayout.of( dataDirectory );
+        dataDir = testDirectory.directory( "data" );
+        layout = ClusterStateLayout.of( dataDir );
     }
 
     @Test
     void shouldExposeClusterIdStateFile()
     {
-        assertEquals( globalStateFile( CoreStateFiles.CLUSTER_ID ), layout.clusterIdStateFile() );
+        assertEquals( path( dataDir, "cluster-state", "cluster-id-state", "cluster-id" ), layout.clusterIdStateFile() );
     }
 
     @Test
     void shouldExposeMemberIdStateFile()
     {
-        assertEquals( globalStateFile( CoreStateFiles.CORE_MEMBER_ID ), layout.memberIdStateFile() );
+        assertEquals( path( dataDir, "cluster-state", "core-member-id-state", "core-member-id" ), layout.memberIdStateFile() );
     }
 
     @Test
     void shouldExposeMultiClusteringDbNameStateFile()
     {
-        assertEquals( globalStateFile( CoreStateFiles.DB_NAME ), layout.multiClusteringDbNameStateFile() );
+        assertEquals( path( dataDir, "cluster-state", "db-name-state", "db-name" ), layout.multiClusteringDbNameStateFile() );
     }
 
     @Test
     void shouldExposeIdAllocationStateDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.ID_ALLOCATION ), layout.idAllocationStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "id-allocation-state" ), layout.idAllocationStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeLockTokenStateDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.LOCK_TOKEN ), layout.lockTokenStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "lock-token-state" ), layout.lockTokenStateDirectory( DATABASE_NAME ) );
 
     }
 
     @Test
     void shouldExposeLastFlushedStateDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.LAST_FLUSHED ), layout.lastFlushedStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "last-flushed-state" ), layout.lastFlushedStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftMembershipStateDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.RAFT_MEMBERSHIP ), layout.raftMembershipStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "membership-state" ), layout.raftMembershipStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftLogDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.RAFT_LOG ), layout.raftLogDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "raft-log" ), layout.raftLogDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeSessionTrackerDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.SESSION_TRACKER ), layout.sessionTrackerDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "session-tracker-state" ), layout.sessionTrackerDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftTermStateDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.RAFT_TERM ), layout.raftTermStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "term-state" ), layout.raftTermStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldExposeRaftVoteStateDirectory()
     {
-        assertEquals( databaseStateDirectory( CoreStateFiles.RAFT_VOTE ), layout.raftVoteStateDirectory( DATABASE_NAME ) );
+        assertEquals( path( dataDir, "cluster-state", "db", DATABASE_NAME, "vote-state" ), layout.raftVoteStateDirectory( DATABASE_NAME ) );
     }
 
     @Test
     void shouldListGlobalAndDatabaseEntriesEntries()
     {
-        Set<CoreStateFiles<?>> types = set( CoreStateFiles.LOCK_TOKEN,
+        Set<CoreStateFiles<?>> types = set(
+                CoreStateFiles.CLUSTER_ID,
                 CoreStateFiles.CORE_MEMBER_ID,
                 CoreStateFiles.SESSION_TRACKER,
-                CoreStateFiles.RAFT_TERM );
+                CoreStateFiles.RAFT_TERM,
+                CoreStateFiles.RAFT_LOG );
 
-        Set<File> expected = types.stream()
-                .map( type -> type.scope() == GLOBAL ? globalStateDirectory( type ) : databaseStateDirectory( type ) )
-                .collect( toSet() );
+        Set<File> expected = set(
+                path( dataDir, "cluster-state", "cluster-id-state" ),
+                path( dataDir, "cluster-state", "core-member-id-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_NAME, "session-tracker-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_NAME, "session-tracker-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_NAME, "term-state" ),
+                path( dataDir, "cluster-state", "db", DATABASE_NAME, "raft-log" )
+        );
 
         Set<File> actual = layout.listGlobalAndDatabaseDirectories( DATABASE_NAME, types::contains );
 
         assertEquals( expected, actual );
-    }
-
-    private File globalStateFile( CoreStateFiles<?> type )
-    {
-        return new File( globalStateDirectory( type ), type.name() );
-    }
-
-    private File globalStateDirectory( CoreStateFiles<?> type )
-    {
-        return FileUtils.path( dataDirectory, "cluster-state", type.name() + "-state" );
-    }
-
-    private File databaseStateDirectory( CoreStateFiles<?> type )
-    {
-        return FileUtils.path( dataDirectory, "cluster-state", "db", DATABASE_NAME, type.name() + "-state" );
     }
 }

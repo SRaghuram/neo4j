@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.core.state.storage;
 
 import com.neo4j.causalclustering.core.state.CoreStateFiles;
 import com.neo4j.causalclustering.core.state.LongIndexMarshal;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,34 +25,42 @@ import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class DurableStateStorageIT
+@ExtendWith( {EphemeralFileSystemExtension.class, TestDirectoryExtension.class} )
+class DurableStateStorageIT
 {
+    @Inject
+    private EphemeralFileSystemAbstraction fs;
+    @Inject
+    private TestDirectory testDirectory;
 
-    private final TestDirectory testDir = TestDirectory.testDirectory();
-    private final EphemeralFileSystemRule fileSystemRule = new EphemeralFileSystemRule();
+    private File dir;
 
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( fileSystemRule ).around( testDir );
+    @BeforeEach
+    void setUp()
+    {
+        dir = testDirectory.directory();
+    }
 
     @Test
-    public void shouldRecoverAfterCrashUnderLoad() throws Exception
+    void shouldRecoverAfterCrashUnderLoad() throws Exception
     {
-        EphemeralFileSystemAbstraction delegate = fileSystemRule.get();
-        AdversarialFileSystemAbstraction fsa = new AdversarialFileSystemAbstraction(
-                new MethodGuardedAdversary( new CountingAdversary( 100, true ),
-                        StoreChannel.class.getMethod( "writeAll", ByteBuffer.class ) ),
-                delegate );
+        MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 100, true ),
+                StoreChannel.class.getMethod( "writeAll", ByteBuffer.class ) );
+        AdversarialFileSystemAbstraction adversarialFs = new AdversarialFileSystemAbstraction( adversary, fs );
 
         long lastValue = 0;
-        try ( LongState persistedState = new LongState( fsa, testDir.directory(), 14 ) )
+        try ( LongState persistedState = new LongState( adversarialFs, dir, 14 ) )
         {
             while ( true ) // it will break from the Exception that AFS will throw
             {
@@ -66,31 +74,27 @@ public class DurableStateStorageIT
             ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "writeAll" );
         }
 
-        try ( LongState restoredState = new LongState( delegate, testDir.directory(), 4 ) )
+        try ( LongState restoredState = new LongState( fs, dir, 4 ) )
         {
             assertEquals( lastValue, restoredState.getTheState() );
         }
     }
 
     @Test
-    public void shouldProperlyRecoveryAfterCrashOnFileCreationDuringRotation() throws Exception
+    void shouldProperlyRecoveryAfterCrashOnFileCreationDuringRotation() throws Exception
     {
-        EphemeralFileSystemAbstraction normalFSA = fileSystemRule.get();
         /*
          * Magic number warning. For a rotation threshold of 14, 998 operations on file A falls on truncation of the
          * file during rotation. This has been discovered via experimentation. The end result is that there is a
          * failure to create the file to rotate to. This should be recoverable.
          */
-        AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction(
-                new MethodGuardedAdversary(
-                        new CountingAdversary( 20, true ),
-                        FileSystemAbstraction.class.getMethod( "truncate", File.class, long.class ) ),
-                normalFSA );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction(
-                new File( new File( testDir.directory(), "dummy-state" ), "dummy.a" ), breakingFSA, normalFSA );
+        MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 20, true ),
+                FileSystemAbstraction.class.getMethod( "truncate", File.class, long.class ) );
+        AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( new File( dir, "dummy.a" ), breakingFSA, fs );
 
         long lastValue = 0;
-        try ( LongState persistedState = new LongState( combinedFSA, testDir.directory(), 14 ) )
+        try ( LongState persistedState = new LongState( combinedFSA, dir, 14 ) )
         {
             while ( true ) // it will break from the Exception that AFS will throw
             {
@@ -105,16 +109,15 @@ public class DurableStateStorageIT
             ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "truncate" );
         }
 
-        try ( LongState restoredState = new LongState( normalFSA, testDir.directory(), 14 ) )
+        try ( LongState restoredState = new LongState( fs, dir, 14 ) )
         {
             assertEquals( lastValue, restoredState.getTheState() );
         }
     }
 
     @Test
-    public void shouldProperlyRecoveryAfterCrashOnFileForceDuringWrite() throws Exception
+    void shouldProperlyRecoveryAfterCrashOnFileForceDuringWrite() throws Exception
     {
-        EphemeralFileSystemAbstraction normalFSA = fileSystemRule.get();
         /*
          * Magic number warning. For a rotation threshold of 14, 990 operations on file A falls on a force() of the
          * current active file. This has been discovered via experimentation. The end result is that there is a
@@ -123,17 +126,14 @@ public class DurableStateStorageIT
          * to discover if the last argument made it to disk or not. Since we use an EFSA, force is not necessary and
          * the value that caused the failure is actually "persisted" and recovered.
          */
-        AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction(
-                new MethodGuardedAdversary(
-                        new CountingAdversary( 40, true ),
-                        StoreChannel.class.getMethod( "force", boolean.class ) ),
-                normalFSA );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction(
-                new File( new File( testDir.directory(), "dummy-state" ), "dummy.a" ), breakingFSA, normalFSA );
+        MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 40, true ),
+                StoreChannel.class.getMethod( "force", boolean.class ) );
+        AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( new File( dir, "dummy.a" ), breakingFSA, fs );
 
         long lastValue = 0;
 
-        try ( LongState persistedState = new LongState( combinedFSA, testDir.directory(), 14 ) )
+        try ( LongState persistedState = new LongState( combinedFSA, dir, 14 ) )
         {
             while ( true ) // it will break from the Exception that AFS will throw
             {
@@ -148,20 +148,18 @@ public class DurableStateStorageIT
             ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "force" );
         }
 
-        try ( LongState restoredState = new LongState( normalFSA, testDir.directory(), 14 ) )
+        try ( LongState restoredState = new LongState( fs, dir, 14 ) )
         {
             assertThat( restoredState.getTheState(), greaterThanOrEqualTo( lastValue ) );
         }
     }
 
     @Test
-    public void shouldProperlyRecoveryAfterCrashingDuringRecovery() throws Exception
+    void shouldProperlyRecoveryAfterCrashingDuringRecovery() throws Exception
     {
-        EphemeralFileSystemAbstraction normalFSA = fileSystemRule.get();
-
         long lastValue = 0;
 
-        try ( LongState persistedState = new LongState( normalFSA, testDir.directory(), 14 ) )
+        try ( LongState persistedState = new LongState( fs, dir, 14 ) )
         {
             for ( int i = 0; i < 100; i++ )
             {
@@ -171,43 +169,33 @@ public class DurableStateStorageIT
             }
         }
 
-        try
-        {
-            // We create a new state that will attempt recovery. The AFS will make it fail on open() of one of the files
-            new LongState( new AdversarialFileSystemAbstraction(
-                    new MethodGuardedAdversary(
-                            new CountingAdversary( 1, true ),
-                            FileSystemAbstraction.class.getMethod( "open", File.class, OpenMode.class ) ),
-                    normalFSA ), testDir.directory(), 14 );
-            fail( "Should have failed recovery" );
-        }
-        catch ( Exception expected )
-        {
-            // this stack trace should contain open()
-            ensureStackTraceContainsExpectedMethod( expected.getCause().getStackTrace(), "open" );
-        }
+        // We create a new state that will attempt recovery. The AFS will make it fail on open() of one of the files
+        MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 1, true ),
+                FileSystemAbstraction.class.getMethod( "open", File.class, OpenMode.class ) );
+        AdversarialFileSystemAbstraction adversarialFs = new AdversarialFileSystemAbstraction( adversary, fs );
+
+        Exception error = assertThrows( Exception.class, () -> new LongState( adversarialFs, dir, 14 ) );
+
+        // stack trace should contain open()
+        ensureStackTraceContainsExpectedMethod( error.getCause().getStackTrace(), "open" );
 
         // Recovery over the normal filesystem after a failed recovery should proceed correctly
-        try ( LongState recoveredState = new LongState( normalFSA, testDir.directory(), 14 ) )
+        try ( LongState recoveredState = new LongState( fs, dir, 14 ) )
         {
             assertThat( recoveredState.getTheState(), greaterThanOrEqualTo( lastValue ) );
         }
     }
 
     @Test
-    public void shouldProperlyRecoveryAfterCloseOnActiveFileDuringRotation() throws Exception
+    void shouldProperlyRecoveryAfterCloseOnActiveFileDuringRotation() throws Exception
     {
-        EphemeralFileSystemAbstraction normalFSA = fileSystemRule.get();
-        AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction(
-                new MethodGuardedAdversary(
-                        new CountingAdversary( 5, true ),
-                        StoreChannel.class.getMethod( "close" ) ),
-                normalFSA );
-        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction(
-                new File( new File( testDir.directory(), "dummy-state" ), "dummy.a" ), breakingFSA, normalFSA );
+        MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 5, true ),
+                StoreChannel.class.getMethod( "close" ) );
+        AdversarialFileSystemAbstraction breakingFSA = new AdversarialFileSystemAbstraction( adversary, fs );
+        SelectiveFileSystemAbstraction combinedFSA = new SelectiveFileSystemAbstraction( new File( dir, "dummy.a" ), breakingFSA, fs );
 
         long lastValue = 0;
-        try ( LongState persistedState = new LongState( combinedFSA, testDir.directory(), 14 ) )
+        try ( LongState persistedState = new LongState( combinedFSA, dir, 14 ) )
         {
             while ( true ) // it will break from the Exception that AFS will throw
             {
@@ -222,13 +210,13 @@ public class DurableStateStorageIT
             ensureStackTraceContainsExpectedMethod( expected.getStackTrace(), "close" );
         }
 
-        try ( LongState restoredState = new LongState( normalFSA, testDir.directory(), 14 ) )
+        try ( LongState restoredState = new LongState( fs, dir, 14 ) )
         {
             assertThat( restoredState.getTheState(), greaterThanOrEqualTo( lastValue ) );
         }
     }
 
-    private void ensureStackTraceContainsExpectedMethod( StackTraceElement[] stackTrace, String expectedMethodName )
+    private static void ensureStackTraceContainsExpectedMethod( StackTraceElement[] stackTrace, String expectedMethodName )
     {
         for ( StackTraceElement stackTraceElement : stackTrace )
         {
@@ -247,7 +235,7 @@ public class DurableStateStorageIT
         private LifeSupport lifeSupport = new LifeSupport();
 
         LongState( FileSystemAbstraction fileSystemAbstraction, File stateDir,
-                   int numberOfEntriesBeforeRotation )
+                int numberOfEntriesBeforeRotation )
         {
             lifeSupport.start();
 
