@@ -6,29 +6,18 @@
 package org.neo4j.ext.udc.impl;
 
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.localserver.LocalServerTestBase;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URL;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
+import java.util.function.Predicate;
 
 import org.neo4j.common.Edition;
 import org.neo4j.configuration.Config;
@@ -36,23 +25,27 @@ import org.neo4j.ext.udc.UdcConstants;
 import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.helpers.SocketAddress;
+import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.test.TestGraphDatabaseFactory;
-import org.neo4j.test.mockito.matcher.RegexMatcher;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.udc.UsageData;
 import org.neo4j.udc.UsageDataKeys;
 import org.neo4j.util.concurrent.RecentK;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static java.util.Collections.emptyMap;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.matchesRegex;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.ext.udc.UdcConstants.DATABASE_MODE;
 import static org.neo4j.ext.udc.UdcConstants.EDITION;
 import static org.neo4j.ext.udc.UdcConstants.MAC;
@@ -65,58 +58,41 @@ import static org.neo4j.ext.udc.UdcConstants.VERSION;
 /**
  * Unit testing for the UDC kernel extension.
  * <p>
- * The UdcExtensionImpl is loaded when a new
- * GraphDatabase is instantiated, as part of
- * {@link Service#loadOrFail}.
+ * The {@link UdcExtension} is loaded when a new graph database is instantiated.
  */
-public class UdcExtensionImplIT extends LocalServerTestBase
+@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class} )
+class UdcExtensionImplIT
 {
     private static final String VersionPattern = "(\\d\\.\\d+(([.-]).*)?)|(dev)";
-    private static final Condition<Integer> IS_ZERO = value -> value == 0;
-    private static final Condition<Integer> IS_GREATER_THAN_ZERO = value -> value > 0;
+    private static final Predicate<Integer> IS_ZERO = value -> value == 0;
+    private static final Predicate<Integer> IS_GREATER_THAN_ZERO = value -> value > 0;
 
-    @Rule
-    public final TestDirectory path = TestDirectory.testDirectory();
-    @Rule
-    public final AssertableLogProvider logProvider = new AssertableLogProvider( true );
+    @Inject
+    private TestDirectory testDirectory;
 
-    private PingerHandler handler;
+    private PingerServer server;
     private Map<String,String> config;
-    private GraphDatabaseService graphdb;
+    private GraphDatabaseService db;
 
-    @Override
-    @Before
-    public void setUp() throws Exception
+    @BeforeEach
+    void beforeEach() throws Exception
     {
-        super.setUp();
         UdcTimerTask.successCounts.clear();
         UdcTimerTask.failureCounts.clear();
-        handler = new PingerHandler();
-        serverBootstrap.registerHandler( "/*", handler );
-        HttpHost target = start();
-
-        int servicePort = target.getPort();
-        String serviceHostName = target.getHostName();
-        String serverAddress = serviceHostName + ":" + servicePort;
+        server = new PingerServer();
 
         config = new HashMap<>();
         config.put( UdcSettings.first_delay.name(), "100" );
-        config.put( UdcSettings.udc_host.name(), serverAddress );
-
-        blockUntilServerAvailable( new URL( "http", serviceHostName, servicePort, "/" ) );
+        config.put( UdcSettings.udc_host.name(), SocketAddress.format( server.getHost(), server.getPort() ) );
     }
 
-    @After
-    public void cleanup() throws IOException
+    @AfterEach
+    void afterEach()
     {
-        cleanup( graphdb );
-        if ( httpclient != null )
+        IOUtils.closeAllSilently( server );
+        if ( db != null )
         {
-            httpclient.close();
-        }
-        if ( server != null )
-        {
-            server.shutdown( 0, TimeUnit.MILLISECONDS );
+            db.shutdown();
         }
     }
 
@@ -124,50 +100,54 @@ public class UdcExtensionImplIT extends LocalServerTestBase
      * Expect the counts to be initialized.
      */
     @Test
-    public void shouldLoadWhenNormalGraphdbIsCreated() throws Exception
+    void shouldLoadWhenNormalGraphdbIsCreated() throws Exception
     {
         // When
-        graphdb = createDatabase( Collections.emptyMap() );
+        db = createDatabase( emptyMap() );
 
         // Then, when the UDC extension successfully loads, it initializes the attempts count to 0
         assertGotSuccessWithRetry( IS_ZERO );
     }
 
     /**
-     * Expect separate counts for each graphdb.
+     * Expect separate counts for each db.
      */
     @Test
-    public void shouldLoadForEachCreatedGraphdb() throws IOException
+    void shouldLoadForEachCreatedGraphdb()
     {
-        Map<String, String> config = Collections.emptyMap();
-        GraphDatabaseService graphdb1 = createDatabase( path.directory( "first-db" ), config );
-        GraphDatabaseService graphdb2 = createDatabase( path.directory( "second-db" ), config );
-        Set<String> successCountValues = UdcTimerTask.successCounts.keySet();
-        assertThat( successCountValues.size(), equalTo( 2 ) );
-        assertThat( "this", is( not( "that" ) ) );
-        cleanup( graphdb1 );
-        cleanup( graphdb2 );
+        var db1 = createDatabase( testDirectory.directory( "first-db" ), emptyMap() );
+        var db2 = createDatabase( testDirectory.directory( "second-db" ), emptyMap() );
+
+        try
+        {
+            assertThat( UdcTimerTask.successCounts.keySet(), hasSize( 2 ) );
+        }
+        finally
+        {
+            db1.shutdown();
+            db2.shutdown();
+        }
     }
 
     @Test
-    public void shouldRecordFailuresWhenThereIsNoServer() throws Exception
+    void shouldRecordFailuresWhenThereIsNoServer() throws Exception
     {
         // When
-        graphdb = new TestGraphDatabaseFactory().
-                newEmbeddedDatabaseBuilder( path.directory( "should-record-failures" ) ).
-                setConfig( UdcSettings.first_delay, "100" ).
-                setConfig( UdcSettings.udc_host, "127.0.0.1:1" ).
-                newGraphDatabase();
+        db = new TestGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( testDirectory.directory( "should-record-failures" ) )
+                .setConfig( UdcSettings.first_delay, "100" )
+                .setConfig( UdcSettings.udc_host, "127.0.0.1:1" )
+                .newGraphDatabase();
 
         // Then
         assertGotFailureWithRetry( IS_GREATER_THAN_ZERO );
     }
 
     @Test
-    public void shouldRecordSuccessesWhenThereIsAServer() throws Exception
+    void shouldRecordSuccessesWhenThereIsAServer() throws Exception
     {
         // When
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
@@ -175,115 +155,80 @@ public class UdcExtensionImplIT extends LocalServerTestBase
     }
 
     @Test
-    public void shouldBeAbleToSpecifySourceWithConfig() throws Exception
+    void shouldBeAbleToSpecifySourceWithConfig() throws Exception
     {
         // When
         config.put( UdcSettings.udc_source.name(), "unit-testing" );
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        assertEquals( "unit-testing", handler.getQueryMap().get( SOURCE ) );
+        assertEquals( "unit-testing", server.getQueryMap().get( SOURCE ) );
     }
 
     @Test
-    public void shouldRecordDatabaseMode() throws Exception
+    void shouldRecordDatabaseMode() throws Exception
     {
         // When
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        assertEquals( "single", handler.getQueryMap().get( DATABASE_MODE ) );
-    }
-
-    private void blockUntilServerAvailable( final URL url ) throws Exception
-    {
-        final CountDownLatch latch = new CountDownLatch( 1 );
-        final PointerTo<Boolean> flag = new PointerTo<>( false );
-
-        Thread t = new Thread( () ->
-        {
-            while ( !flag.getValue() )
-            {
-                try
-                {
-                    HttpGet httpget = new HttpGet( url.toURI() );
-                    httpget.addHeader( "Accept", "application/json" );
-                    DefaultHttpClient client = new DefaultHttpClient();
-                    client.execute( httpget );
-
-                    // If we get here, the server's ready
-                    flag.setValue( true );
-                    latch.countDown();
-                }
-                catch ( Exception e )
-                {
-                    throw new RuntimeException( e );
-                }
-            }
-        } );
-
-        t.start();
-
-        assertTrue( "Timed out after waiting for the server to come online for one minute.",
-                latch.await( 1, TimeUnit.MINUTES ) );
-
-        t.join();
+        assertEquals( "single", server.getQueryMap().get( DATABASE_MODE ) );
     }
 
     @Test
-    public void shouldBeAbleToReadDefaultRegistration() throws Exception
+    void shouldBeAbleToReadDefaultRegistration() throws Exception
     {
         // When
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        assertEquals( "unreg", handler.getQueryMap().get( REGISTRATION ) );
+        assertEquals( "unreg", server.getQueryMap().get( REGISTRATION ) );
     }
 
     @Test
-    public void shouldBeAbleToDetermineTestTagFromClasspath() throws Exception
+    void shouldBeAbleToDetermineTestTagFromClasspath() throws Exception
     {
         // When
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        assertEquals( "test,appserver,web", handler.getQueryMap().get( TAGS ) );
+        assertEquals( "test,appserver,web", server.getQueryMap().get( TAGS ) );
     }
 
     @Test
-    public void shouldBeAbleToDetermineEditionFromClasspath() throws Exception
+    void shouldBeAbleToDetermineEditionFromClasspath() throws Exception
     {
         // When
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        assertEquals( Edition.COMMERCIAL.toString(), handler.getQueryMap().get( EDITION ) );
+        assertEquals( Edition.COMMERCIAL.toString(), server.getQueryMap().get( EDITION ) );
     }
 
     @Test
-    public void shouldBeAbleToDetermineUserAgent() throws Exception
+    void shouldBeAbleToDetermineUserAgent() throws Exception
     {
         // Given
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // When
         makeRequestWithAgent( "test/1.0" );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        assertEquals( "test/1.0", handler.getQueryMap().get( USER_AGENTS ) );
+        assertEquals( "test/1.0", server.getQueryMap().get( USER_AGENTS ) );
     }
 
     @Test
-    public void shouldBeAbleToDetermineUserAgents() throws Exception
+    void shouldBeAbleToDetermineUserAgents() throws Exception
     {
         // Given
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // When
         makeRequestWithAgent( "test/1.0" );
@@ -291,34 +236,33 @@ public class UdcExtensionImplIT extends LocalServerTestBase
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        Map<String,String> queryMap = handler.getQueryMap();
-        String userAgents = queryMap.get( USER_AGENTS );
-        assertTrue( "Query map is: " + queryMap, userAgents.contains( "test/1.0" ) );
-        assertTrue( "Query map is: " + queryMap, userAgents.contains( "foo/bar" ) );
+        var userAgents = server.getQueryMap().get( USER_AGENTS );
+        assertThat( userAgents, containsString( "test/1.0" ) );
+        assertThat( userAgents, containsString( "foo/bar" ) );
     }
 
     @Test
-    public void shouldIncludeMacAddressInConfig() throws Exception
+    void shouldIncludeMacAddressInConfig() throws Exception
     {
         // When
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        assertNotNull( handler.getQueryMap().get( MAC ) );
+        assertNotNull( server.getQueryMap().get( MAC ) );
     }
 
     @Test
-    public void shouldIncludePrefixedSystemProperties() throws Exception
+    void shouldIncludePrefixedSystemProperties() throws Exception
     {
         withSystemProperty( UdcConstants.UDC_PROPERTY_PREFIX + ".test", "udc-property", () ->
         {
             withSystemProperty( "os.test", "os-property", () ->
             {
-                graphdb = createDatabase( config );
+                db = createDatabase( config );
                 assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-                assertEquals( "udc-property", handler.getQueryMap().get( "test" ) );
-                assertEquals( "os-property", handler.getQueryMap().get( "os.test" ) );
+                assertEquals( "udc-property", server.getQueryMap().get( "test" ) );
+                assertEquals( "os-property", server.getQueryMap().get( "os.test" ) );
                 return null;
             } );
             return null;
@@ -326,140 +270,133 @@ public class UdcExtensionImplIT extends LocalServerTestBase
     }
 
     @Test
-    public void shouldNotIncludeDistributionForWindows() throws Exception
+    void shouldNotIncludeDistributionForWindows() throws Exception
     {
         withSystemProperty( "os.name", "Windows", () ->
         {
-            graphdb = createDatabase( config );
+            db = createDatabase( config );
             assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-            assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
+            assertEquals( UdcConstants.UNKNOWN_DIST, server.getQueryMap().get( "dist" ) );
             return null;
         } );
     }
 
     @Test
-    public void shouldIncludeDistributionForLinux() throws Exception
+    void shouldIncludeDistributionForLinux() throws Exception
     {
         if ( !SystemUtils.IS_OS_LINUX )
         {
             return;
         }
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
 
-        assertEquals( DefaultUdcInformationCollector.searchForPackageSystems(), handler.getQueryMap().get( "dist" ) );
+        assertEquals( DefaultUdcInformationCollector.searchForPackageSystems(), server.getQueryMap().get( "dist" ) );
     }
 
     @Test
-    public void shouldNotIncludeDistributionForMacOS() throws Exception
+    void shouldNotIncludeDistributionForMacOS() throws Exception
     {
         withSystemProperty( "os.name", "Mac OS X", () ->
         {
-            graphdb = createDatabase( config );
+            db = createDatabase( config );
             assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-            assertEquals( UdcConstants.UNKNOWN_DIST, handler.getQueryMap().get( "dist" ) );
+            assertEquals( UdcConstants.UNKNOWN_DIST, server.getQueryMap().get( "dist" ) );
             return null;
         } );
     }
 
     @Test
-    public void shouldIncludeVersionInConfig() throws Exception
+    void shouldIncludeVersionInConfig() throws Exception
     {
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
         assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-        String version = handler.getQueryMap().get( VERSION );
-        assertThat( version, new RegexMatcher( Pattern.compile( VersionPattern ) ) );
+        var version = server.getQueryMap().get( VERSION );
+        assertThat( version, matchesRegex( VersionPattern ) );
     }
 
     @Test
-    public void shouldOverrideSourceWithSystemProperty() throws Exception
+    void shouldOverrideSourceWithSystemProperty() throws Exception
     {
         withSystemProperty( UdcSettings.udc_source.name(), "overridden", () ->
         {
-            graphdb = createDatabase( path.directory( "db-with-property" ), config );
+            db = createDatabase( testDirectory.directory( "db-with-property" ), config );
             assertGotSuccessWithRetry( IS_GREATER_THAN_ZERO );
-            String source = handler.getQueryMap().get( SOURCE );
+            var source = server.getQueryMap().get( SOURCE );
             assertEquals( "overridden", source );
             return null;
         } );
     }
 
     @Test
-    public void shouldMatchAllValidVersions()
+    void shouldMatchAllValidVersions()
     {
-        assertTrue( "1.8.M07".matches( VersionPattern ) );
-        assertTrue( "1.8.RC1".matches( VersionPattern ) );
-        assertTrue( "1.8.GA".matches( VersionPattern ) );
-        assertTrue( "1.8".matches( VersionPattern ) );
-        assertTrue( "1.9".matches( VersionPattern ) );
-        assertTrue( "1.9-SNAPSHOT".matches( VersionPattern ) );
-        assertTrue( "2.0-SNAPSHOT".matches( VersionPattern ) );
-        assertTrue( "1.9.M01".matches( VersionPattern ) );
-        assertTrue( "1.10".matches( VersionPattern ) );
-        assertTrue( "1.10-SNAPSHOT".matches( VersionPattern ) );
-        assertTrue( "1.10.M01".matches( VersionPattern ) );
+        assertThat( "1.8.M07", matchesRegex( VersionPattern ) );
+        assertThat( "1.8.RC1", matchesRegex( VersionPattern ) );
+        assertThat( "1.8.GA", matchesRegex( VersionPattern ) );
+        assertThat( "1.8", matchesRegex( VersionPattern ) );
+        assertThat( "1.9", matchesRegex( VersionPattern ) );
+        assertThat( "1.9-SNAPSHOT", matchesRegex( VersionPattern ) );
+        assertThat( "2.0-SNAPSHOT", matchesRegex( VersionPattern ) );
+        assertThat( "1.9.M01", matchesRegex( VersionPattern ) );
+        assertThat( "1.10", matchesRegex( VersionPattern ) );
+        assertThat( "1.10-SNAPSHOT", matchesRegex( VersionPattern ) );
+        assertThat( "1.10.M01", matchesRegex( VersionPattern ) );
     }
 
     @Test
-    public void shouldFilterPlusBuildNumbers()
+    void shouldFilterPlusBuildNumbers()
     {
-        assertThat( DefaultUdcInformationCollector.filterVersionForUDC( "1.9.0-M01+00001" ),
-                is( equalTo( "1.9.0-M01" ) ) );
+        assertEquals( "1.9.0-M01", DefaultUdcInformationCollector.filterVersionForUDC( "1.9.0-M01+00001" ) );
     }
 
     @Test
-    public void shouldNotFilterSnapshotBuildNumbers()
+    void shouldNotFilterSnapshotBuildNumbers()
     {
-        assertThat( DefaultUdcInformationCollector.filterVersionForUDC( "2.0-SNAPSHOT" ),
-                is( equalTo( "2.0-SNAPSHOT" ) ) );
+        assertEquals( "2.0-SNAPSHOT", DefaultUdcInformationCollector.filterVersionForUDC( "2.0-SNAPSHOT" ) );
 
     }
 
     @Test
-    public void shouldNotFilterReleaseBuildNumbers()
+    void shouldNotFilterReleaseBuildNumbers()
     {
-        assertThat( DefaultUdcInformationCollector.filterVersionForUDC( "1.9" ), is( equalTo( "1.9" ) ) );
+        assertEquals( "1.9", DefaultUdcInformationCollector.filterVersionForUDC( "1.9" ) );
     }
 
     @Test
-    public void shouldUseTheCustomConfiguration()
+    void shouldUseTheCustomConfiguration()
     {
         // Given
         config.put( UdcSettings.udc_source.name(), "my_source" );
         config.put( UdcSettings.udc_registration_key.name(), "my_key" );
 
         // When
-        graphdb = createDatabase( config );
+        db = createDatabase( config );
 
         // Then
-        Config config = ((GraphDatabaseAPI) graphdb).getDependencyResolver().resolveDependency( Config.class );
+        var config = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( Config.class );
 
         assertEquals( "my_source", config.get( UdcSettings.udc_source ) );
         assertEquals( "my_key", config.get( UdcSettings.udc_registration_key ) );
     }
 
-    private interface Condition<T>
+    private static void assertGotSuccessWithRetry( Predicate<Integer> predicate ) throws Exception
     {
-        boolean isTrue( T value );
+        assertGotPingWithRetry( UdcTimerTask.successCounts, predicate );
     }
 
-    private static void assertGotSuccessWithRetry( Condition<Integer> condition ) throws Exception
+    private static void assertGotFailureWithRetry( Predicate<Integer> predicate ) throws Exception
     {
-        assertGotPingWithRetry( UdcTimerTask.successCounts, condition );
+        assertGotPingWithRetry( UdcTimerTask.failureCounts, predicate );
     }
 
-    private static void assertGotFailureWithRetry( Condition<Integer> condition ) throws Exception
-    {
-        assertGotPingWithRetry( UdcTimerTask.failureCounts, condition );
-    }
-
-    private static void assertGotPingWithRetry( Map<String,Integer> counts, Condition<Integer> condition ) throws Exception
+    private static void assertGotPingWithRetry( Map<String,Integer> counts, Predicate<Integer> predicate ) throws Exception
     {
         for ( int i = 0; i < 100; i++ )
         {
             Collection<Integer> countValues = counts.values();
             Integer count = countValues.iterator().next();
-            if ( condition.isTrue( count ) )
+            if ( predicate.test( count ) )
             {
                 return;
             }
@@ -468,14 +405,15 @@ public class UdcExtensionImplIT extends LocalServerTestBase
         fail();
     }
 
-    private GraphDatabaseService createDatabase( Map<String,String> config )
+    private static GraphDatabaseService createDatabase( Map<String,String> config )
     {
         return createDatabase( null, config );
     }
 
-    private GraphDatabaseService createDatabase( File storeDir, Map<String,String> config )
+    private static GraphDatabaseService createDatabase( File storeDir, Map<String,String> config )
     {
         TestCommercialGraphDatabaseFactory factory = new TestCommercialGraphDatabaseFactory();
+        FormattedLogProvider logProvider = FormattedLogProvider.toOutputStream( System.out );
         factory.setInternalLogProvider( logProvider );
         factory.setUserLogProvider( logProvider );
         GraphDatabaseBuilder graphDatabaseBuilder =
@@ -489,45 +427,15 @@ public class UdcExtensionImplIT extends LocalServerTestBase
         return graphDatabaseBuilder.newGraphDatabase();
     }
 
-    private void cleanup( GraphDatabaseService gdb ) throws IOException
-    {
-        if ( gdb != null )
-        {
-            GraphDatabaseAPI db = (GraphDatabaseAPI) gdb;
-            gdb.shutdown();
-            FileUtils.deleteDirectory( db.databaseLayout().databaseDirectory() );
-        }
-    }
-
-    private static class PointerTo<T>
-    {
-        private T value;
-
-        PointerTo( T value )
-        {
-            this.value = value;
-        }
-
-        public T getValue()
-        {
-            return value;
-        }
-
-        public void setValue( T value )
-        {
-            this.value = value;
-        }
-    }
-
     private void makeRequestWithAgent( String agent )
     {
         RecentK<String> clients =
-                ((GraphDatabaseAPI) graphdb).getDependencyResolver().resolveDependency( UsageData.class )
+                ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( UsageData.class )
                         .get( UsageDataKeys.clientNames );
         clients.add( agent );
     }
 
-    private void withSystemProperty( String name, String value, Callable<Void> block ) throws Exception
+    private static void withSystemProperty( String name, String value, Callable<Void> block ) throws Exception
     {
         String original = System.getProperty( name );
         System.setProperty( name, value );
