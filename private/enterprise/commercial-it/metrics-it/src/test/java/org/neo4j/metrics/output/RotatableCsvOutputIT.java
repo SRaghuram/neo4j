@@ -26,10 +26,12 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.time.Duration.ofMinutes;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.neo4j.metrics.MetricsSettings.csvInterval;
 import static org.neo4j.metrics.MetricsSettings.csvMaxArchives;
 import static org.neo4j.metrics.MetricsSettings.csvPath;
 import static org.neo4j.metrics.MetricsSettings.csvRotationThreshold;
@@ -53,7 +55,8 @@ class RotatableCsvOutputIT
         outputPath = testDirectory.directory( "metrics" );
         database = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
                 .setConfig( csvPath, outputPath.getAbsolutePath() )
-                .setConfig( csvRotationThreshold, "21" )
+                .setConfig( csvRotationThreshold, "" + ("t,count,mean_rate,m1_rate,m5_rate,m15_rate,rate_unit".length() + 1) )
+                .setConfig( csvInterval, "100ms" )
                 .setConfig( csvMaxArchives, String.valueOf( MAX_ARCHIVES ) )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
                 .newGraphDatabase();
@@ -118,7 +121,7 @@ class RotatableCsvOutputIT
 
     private static Optional<File> findLatestMetricsFile( File metricsPath, String metric )
     {
-        String[] metricFiles = metricsPath.list( ( dir, name ) -> name.equals( metric ) );
+        String[] metricFiles = requireNonNull( metricsPath.list( ( dir, name ) -> name.equals( metric ) ) );
         if ( isNotEmpty( metricFiles ) )
         {
             return Optional.of( new File( metricsPath, metricFiles[0] ) );

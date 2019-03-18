@@ -15,6 +15,7 @@ import java.util.function.Function;
 
 import org.neo4j.function.ThrowingSupplier;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -138,7 +139,7 @@ public class MetricsTestHelper
             Function<String,T> parser, BiPredicate<T,T> assumption ) throws IOException, InterruptedException
     {
         // let's wait until the file is in place (since the reporting is async that might take a while)
-        assertEventually( "Metrics file should exist", fileExistAndHasDataLines( metricFile ), is( true ), 40, SECONDS );
+        assertEventually( "Metrics file should exist", fileExistAndHasDataLines( metricFile ), is( true ), 2, MINUTES );
 
         try ( BufferedReader reader = new BufferedReader( new FileReader( metricFile ) ) )
         {
@@ -168,7 +169,7 @@ public class MetricsTestHelper
     public static File metricsCsv( File dbDir, String metric ) throws InterruptedException
     {
         File csvFile = new File( dbDir, metric + ".csv" );
-        assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), is( true ), 40, SECONDS );
+        assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), is( true ), 2, MINUTES );
         return csvFile;
     }
 
