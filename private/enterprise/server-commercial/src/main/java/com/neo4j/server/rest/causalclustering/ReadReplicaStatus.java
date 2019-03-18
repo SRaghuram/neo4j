@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 
 import java.time.Duration;
@@ -25,6 +26,8 @@ class ReadReplicaStatus extends BaseStatus
 {
     private final OutputFormat output;
 
+    private final ThroughputMonitor throughputMonitor;
+
     // Dependency resolved
     private final TopologyService topologyService;
     private final DatabaseHealth dbHealth;
@@ -39,6 +42,8 @@ class ReadReplicaStatus extends BaseStatus
         this.commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.dbHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
+
+        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
     }
 
     @Override
@@ -80,6 +85,8 @@ class ReadReplicaStatus extends BaseStatus
         long lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();
         // leader message duration is meaningless for replicas since communication is not guaranteed with leader and transactions are streamed periodically
         Duration millisSinceLastLeaderMessage = null;
-        return statusResponse( lastAppliedRaftIndex, false, votingMembers, isHealthy, memberId, leader, millisSinceLastLeaderMessage, false );
+        Double raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
+        return statusResponse( lastAppliedRaftIndex, false, votingMembers, isHealthy, memberId, leader, millisSinceLastLeaderMessage,
+                raftCommandsPerSecond, false );
     }
 }

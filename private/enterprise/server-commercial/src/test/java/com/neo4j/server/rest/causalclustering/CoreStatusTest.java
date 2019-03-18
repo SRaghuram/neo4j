@@ -5,24 +5,6 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.ws.rs.core.Response;
-
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
 import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
@@ -32,20 +14,43 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.net.URI;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import javax.ws.rs.core.Response;
+
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
+import org.neo4j.time.FakeClock;
 
 import static com.neo4j.server.rest.causalclustering.ReadReplicaStatusTest.responseAsMap;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -57,6 +62,7 @@ public class CoreStatusTest
     private CoreGraphDatabase db;
     private Dependencies dependencyResolver = new Dependencies();
     private final LogProvider logProvider = NullLogProvider.getInstance();
+    private final FakeClock clock = new FakeClock();
 
     // Dependency resolved
     private RaftMembershipManager raftMembershipManager;
@@ -65,6 +71,7 @@ public class CoreStatusTest
     private DurationSinceLastMessageMonitor raftMessageTimerResetMonitor;
     private RaftMachine raftMachine;
     private CommandIndexTracker commandIndexTracker;
+    private ThroughputMonitor throughputMonitor;
 
     private final MemberId myself = new MemberId( new UUID( 0x1234, 0x5678 ) );
     private final MemberId core2 = new MemberId( UUID.randomUUID() );
@@ -86,9 +93,11 @@ public class CoreStatusTest
         topologyService = dependencyResolver.satisfyDependency(
                 new FakeTopologyService( Arrays.asList( core2, core3 ), Collections.singleton( replica ), myself, RoleInfo.FOLLOWER ) );
 
-        raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor() );
+        raftMessageTimerResetMonitor = dependencyResolver.satisfyDependency( new DurationSinceLastMessageMonitor( clock ) );
         raftMachine = dependencyResolver.satisfyDependency( mock( RaftMachine.class ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
+        dependencyResolver.satisfyDependency( JobSchedulerFactory.createInitialisedScheduler() );
+        throughputMonitor = dependencyResolver.satisfyDependency( mock( ThroughputMonitor.class ) );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }
@@ -160,13 +169,14 @@ public class CoreStatusTest
     }
 
     @Test
-    public void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException, InterruptedException
+    public void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );
         when( raftMachine.getLeader() ).thenReturn( core2 );
         raftMessageTimerResetMonitor.timerReset();
-        Thread.sleep( 1 ); // Sometimes the test can be fast. This guarantees at least 1 ms since message received
+        when( throughputMonitor.throughput() ).thenReturn( Optional.of( 423.0 ) );
+        clock.forward( Duration.ofSeconds( 1 ) );
 
         // and helpers
         List<String> votingMembers =
@@ -184,6 +194,7 @@ public class CoreStatusTest
         assertThat( response, containsAndEquals( "healthy", true ) );
         assertThat( response, containsAndEquals( "memberId", myself.getUuid().toString() ) );
         assertThat( response, containsAndEquals( "leader", core2.getUuid().toString() ) );
+        assertThat( response, containsAndEquals( "raftCommandsPerSecond", 423.0 ) );
         assertThat( response.toString(), Long.parseLong( response.get( "millisSinceLastLeaderMessage" ).toString() ), greaterThan( 0L ) );
     }
 
@@ -231,7 +242,7 @@ public class CoreStatusTest
     }
 
     @Test
-    public void leaderNotIncludedIfUnknown() throws IOException
+    public void leaderNullWhenUnknown() throws IOException
     {
         // given no leader
         topologyService.replaceWithRole( null, RoleInfo.LEADER );
@@ -241,10 +252,21 @@ public class CoreStatusTest
 
         // then
         Map<String,Object> response = responseAsMap( description );
-        assertFalse( description.getEntity().toString(), response.containsKey( "leader" ) );
+        assertNull( response.get( "leader" ) );
     }
 
-    static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
+    @Test
+    public void throughputNullWhenUnknown() throws IOException
+    {
+        when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
+
+        Response description = status.description();
+
+        Map<String,Object> response = responseAsMap( description );
+        assertNull( response.get( "raftCommandsPerSecond" ) );
+    }
+
+    private static RaftMembershipManager fakeRaftMembershipManager( Set<MemberId> votingMembers )
     {
         RaftMembershipManager raftMembershipManager = mock( RaftMembershipManager.class );
         when( raftMembershipManager.votingMembers() ).thenReturn( votingMembers );
@@ -253,7 +275,7 @@ public class CoreStatusTest
 
     private static Matcher<Map<String,Object>> containsAndEquals( String key, Object target )
     {
-        return new BaseMatcher<Map<String,Object>>()
+        return new BaseMatcher<>()
         {
             private boolean containsKey;
             private boolean areEqual;

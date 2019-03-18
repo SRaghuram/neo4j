@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.cache;
 
+import com.neo4j.collection.CircularBuffer;
+
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;

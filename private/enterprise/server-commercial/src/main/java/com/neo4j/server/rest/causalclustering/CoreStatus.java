@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ class CoreStatus extends BaseStatus
     private final DurationSinceLastMessageMonitor raftMessageTimerResetMonitor;
     private final RaftMachine raftMachine;
     private final CommandIndexTracker commandIndexTracker;
+    private final ThroughputMonitor throughputMonitor;
 
     CoreStatus( OutputFormat output, CoreGraphDatabase db )
     {
@@ -54,6 +56,7 @@ class CoreStatus extends BaseStatus
         this.raftMachine = dependencyResolver.resolveDependency( RaftMachine.class );
         this.raftMessageTimerResetMonitor = dependencyResolver.resolveDependency( DurationSinceLastMessageMonitor.class );
         commandIndexTracker = dependencyResolver.resolveDependency( CommandIndexTracker.class );
+        throughputMonitor = dependencyResolver.resolveDependency( ThroughputMonitor.class );
     }
 
     @Override
@@ -100,8 +103,10 @@ class CoreStatus extends BaseStatus
             millisSinceLastLeaderMessage = raftMessageTimerResetMonitor.durationSinceLastMessage();
         }
 
+        Double raftCommandsPerSecond = throughputMonitor.throughput().orElse( null );
+
         return statusResponse( lastAppliedRaftIndex, participatingInRaftGroup, votingMembers, databaseHealth.isHealthy(), myself, leader,
-                millisSinceLastLeaderMessage, true );
+                millisSinceLastLeaderMessage, raftCommandsPerSecond, true );
     }
 
     private MemberId getLeader()

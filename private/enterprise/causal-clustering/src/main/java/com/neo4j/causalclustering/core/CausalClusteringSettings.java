@@ -53,6 +53,7 @@ import static org.neo4j.configuration.Settings.buildSetting;
 import static org.neo4j.configuration.Settings.derivedSetting;
 import static org.neo4j.configuration.Settings.list;
 import static org.neo4j.configuration.Settings.listenAddress;
+import static org.neo4j.configuration.Settings.max;
 import static org.neo4j.configuration.Settings.min;
 import static org.neo4j.configuration.Settings.optionsIgnoreCase;
 import static org.neo4j.configuration.Settings.prefixSetting;
@@ -581,6 +582,13 @@ public class CausalClusteringSettings implements LoadableConfig
     @Description( "Require authorization for access to the Causal Clustering status endpoints." )
     public static final Setting<Boolean> status_auth_enabled =
             setting( "dbms.security.causal_clustering_status_auth_enabled", BOOLEAN, TRUE );
+
+    @Description( "Sampling window for throughput estimate reported in the status endpoint." )
+    public static final Setting<Duration> status_throughput_window =
+            buildSetting( "causal_clustering.status_throughput_window", DURATION, "5s" )
+                    .constraint( min( Duration.ofSeconds( 1 ) ) )
+                    .constraint( max( Duration.ofMinutes( 5 ) ) )
+                    .build();
 
     @Description( "Enable multi-data center features. Requires appropriate licensing." )
     public static final Setting<Boolean> multi_dc_license =

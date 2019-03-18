@@ -35,10 +35,12 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.StateStorage;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.kernel.impl.enterprise.id.CommercialIdTypeConfigurationProvider;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -86,6 +88,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.relations
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.relationship_type_token_name_id_allocation_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.schema_id_allocation_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_apply_max_batch_size;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.string_block_id_allocation_size;
 import static java.lang.Long.max;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
@@ -133,6 +136,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         sessionTracker = replicationModule.getSessionTracker();
         allocationSizes = getIdTypeAllocationSizeFromConfig( config );
         commandIndexTracker = globalModule.getGlobalDependencies().satisfyDependency( new CommandIndexTracker() );
+        initialiseStatusDescriptionEndpoint( globalModule, commandIndexTracker );
 
         versionContextSupplier = globalModule.getVersionContextSupplier();
         cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
@@ -264,6 +268,15 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory<C
         LocksFactory lockFactory = createLockFactory( config, logging );
         Locks localLocks = EditionLocksFactories.createLockManager( lockFactory, config, clock );
         return new LeaderOnlyLockManager( myself, replicator, leaderLocator, localLocks, lockTokenStateMachine, databaseName );
+    }
+
+    private void initialiseStatusDescriptionEndpoint( GlobalModule globalModule, CommandIndexTracker commandIndexTracker )
+    {
+        Duration samplingWindow = config.get( status_throughput_window );
+        ThroughputMonitor throughputMonitor = new ThroughputMonitor( logProvider, globalModule.getGlobalClock(), globalModule.getJobScheduler(), samplingWindow,
+                commandIndexTracker::getAppliedCommandIndex );
+        globalModule.getGlobalLife().add( throughputMonitor );
+        globalModule.getGlobalDependencies().satisfyDependency( throughputMonitor );
     }
 
     @Override

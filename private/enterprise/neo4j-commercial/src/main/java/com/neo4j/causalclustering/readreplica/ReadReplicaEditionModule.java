@@ -27,6 +27,7 @@ import com.neo4j.causalclustering.handlers.DuplexPipelineWrapperFactory;
 import com.neo4j.causalclustering.handlers.SecurePipelineFactory;
 import com.neo4j.causalclustering.helper.CompositeSuspendable;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
@@ -37,6 +38,7 @@ import com.neo4j.kernel.enterprise.api.security.provider.CommercialNoAuthSecurit
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
@@ -73,6 +75,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.SystemNanoClock;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 /**
@@ -149,6 +152,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
                 new ReadReplicaServerModule( databaseService, pipelineBuilders, handlerFactory, globalModule, defaultDatabaseName );
 
         CommandIndexTracker commandIndexTracker = globalDependencies.satisfyDependency( new CommandIndexTracker() );
+        initialiseStatusDescriptionEndpoint( globalModule, commandIndexTracker );
 
         CompositeSuspendable servicesToStopOnStoreCopy = new CompositeSuspendable();
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
@@ -266,6 +270,15 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     {
         Supplier<DatabaseManager> databaseManagerSupplier = globalModule.getGlobalDependencies().provideDependency( DatabaseManager.class );
         return new MultiDatabaseCatchupServerHandler( databaseManagerSupplier, logProvider, fileSystem );
+    }
+
+    private void initialiseStatusDescriptionEndpoint( GlobalModule globalModule, CommandIndexTracker commandIndexTracker )
+    {
+        Duration samplingWindow = globaConfig.get( status_throughput_window );
+        ThroughputMonitor throughputMonitor = new ThroughputMonitor( logProvider, globalModule.getGlobalClock(),
+                globalModule.getJobScheduler(), samplingWindow, commandIndexTracker::getAppliedCommandIndex );
+        globalModule.getGlobalLife().add( throughputMonitor );
+        globalModule.getGlobalDependencies().satisfyDependency( throughputMonitor );
     }
 
     @Override

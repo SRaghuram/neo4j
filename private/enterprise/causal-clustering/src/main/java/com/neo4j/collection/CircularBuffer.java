@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.causalclustering.core.consensus.log.cache;
+package com.neo4j.collection;
 
 import static java.lang.Math.floorMod;
 import static java.util.Arrays.fill;
@@ -59,7 +59,7 @@ public class CircularBuffer<V>
     private int S;
     private int E;
 
-    CircularBuffer( int capacity )
+    public CircularBuffer( int capacity )
     {
         if ( capacity <= 0 )
         {

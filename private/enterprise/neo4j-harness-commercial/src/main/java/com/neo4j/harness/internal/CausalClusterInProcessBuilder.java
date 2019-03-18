@@ -30,7 +30,6 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.Neo4jBuilder;
-import org.neo4j.harness.junit.Neo4j;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.configuration.ServerSettings;
@@ -441,12 +440,12 @@ public class CausalClusterInProcessBuilder
             builder.withConfig( new HttpConnector( "https", HttpConnector.Encryption.TLS ).advertised_address.name(), specifyPortOnly( httpsPort ) );
         }
 
-        public List<? extends Neo4j> getCoreNeo4j()
+        public List<InProcessNeo4j> getCoreNeo4j()
         {
             return coreNeo4j;
         }
 
-        public List<? extends Neo4j> getReplicaControls()
+        public List<InProcessNeo4j> getReplicaControls()
         {
             return replicaControls;
         }

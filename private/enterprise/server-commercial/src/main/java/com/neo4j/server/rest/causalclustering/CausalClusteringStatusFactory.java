@@ -7,6 +7,7 @@ package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.CoreGraphDatabase;
 import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 

@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.function.LongSupplier;
 
+import org.neo4j.time.Clocks;
+
 import static org.mockito.Mockito.verify;
 
 public class LeaderAvailabilityHandlerTest
@@ -24,7 +26,7 @@ public class LeaderAvailabilityHandlerTest
     private LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> delegate = Mockito.mock( LifecycleMessageHandler.class );
     private LeaderAvailabilityTimers leaderAvailabilityTimers = Mockito.mock( LeaderAvailabilityTimers.class );
     private ClusterId clusterId = new ClusterId( UUID.randomUUID() );
-    private RaftMessageTimerResetMonitor raftMessageTimerResetMonitor = new DurationSinceLastMessageMonitor();
+    private RaftMessageTimerResetMonitor raftMessageTimerResetMonitor = new DurationSinceLastMessageMonitor( Clocks.nanoClock() );
     private LongSupplier term = () -> 3;
 
     private LeaderAvailabilityHandler handler = new LeaderAvailabilityHandler( delegate, leaderAvailabilityTimers, raftMessageTimerResetMonitor, term );

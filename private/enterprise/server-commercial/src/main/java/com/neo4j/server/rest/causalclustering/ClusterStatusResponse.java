@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 import com.neo4j.causalclustering.identity.MemberId;
 
-@JsonSerialize( include = JsonSerialize.Inclusion.NON_NULL )
+@JsonSerialize
 public class ClusterStatusResponse
 {
     private final boolean isCore;
@@ -26,9 +26,10 @@ public class ClusterStatusResponse
     private final String memberId;
     private final String leader;
     private final Long millisSinceLastLeaderMessage;
+    private final Double raftCommandsPerSecond;
 
     ClusterStatusResponse( long lastAppliedRaftIndex, boolean isParticipatingInRaftGroup, Collection<MemberId> votingMembers, boolean isHealthy,
-            MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, boolean isCore )
+            MemberId memberId, MemberId leader, Duration millisSinceLastLeaderMessage, Double raftCommandsPerSecond, boolean isCore )
     {
         this.lastAppliedRaftIndex = lastAppliedRaftIndex;
         this.isParticipatingInRaftGroup = isParticipatingInRaftGroup;
@@ -37,6 +38,7 @@ public class ClusterStatusResponse
         this.memberId = memberId.getUuid().toString();
         this.leader = Optional.ofNullable( leader ).map( MemberId::getUuid ).map( UUID::toString ).orElse( null );
         this.millisSinceLastLeaderMessage = Optional.ofNullable( millisSinceLastLeaderMessage ).map( Duration::toMillis ).orElse( null );
+        this.raftCommandsPerSecond = raftCommandsPerSecond;
         this.isCore = isCore;
     }
 
@@ -92,6 +94,11 @@ public class ClusterStatusResponse
     public Long getMillisSinceLastLeaderMessage()
     {
         return millisSinceLastLeaderMessage;
+    }
+
+    public Double getRaftCommandsPerSecond()
+    {
+        return raftCommandsPerSecond;
     }
 
     public boolean isCore()

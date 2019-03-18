@@ -123,7 +123,7 @@ public class ConsensusModule
                 globalConfig.get( refuse_to_be_leader ),
                 supportsPreVoting, globalMonitors );
 
-        DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor();
+        DurationSinceLastMessageMonitor durationSinceLastMessageMonitor = new DurationSinceLastMessageMonitor( globalModule.getGlobalClock() );
         globalMonitors.addMonitorListener( durationSinceLastMessageMonitor );
         globalDependencies.satisfyDependency( durationSinceLastMessageMonitor );
 

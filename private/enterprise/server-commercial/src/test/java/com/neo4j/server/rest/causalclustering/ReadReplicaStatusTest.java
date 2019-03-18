@@ -5,6 +5,11 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
+import com.neo4j.causalclustering.discovery.RoleInfo;
+import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
+import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.junit.Before;
@@ -12,32 +17,35 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.ws.rs.core.Response;
 
-import com.neo4j.causalclustering.core.state.machines.id.CommandIndexTracker;
-import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.readreplica.ReadReplicaGraphDatabase;
 import org.neo4j.kernel.impl.core.DatabasePanicEventGenerator;
+import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.util.Dependencies;
 import org.neo4j.kernel.internal.DatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
+import org.neo4j.time.FakeClock;
+import org.neo4j.time.SystemNanoClock;
 
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -53,6 +61,7 @@ public class ReadReplicaStatusTest
 
     private final MemberId myself = new MemberId( UUID.randomUUID() );
     private final LogProvider logProvider = NullLogProvider.getInstance();
+    private final SystemNanoClock clock = new FakeClock();
 
     @Before
     public void setup() throws Exception
@@ -61,11 +70,15 @@ public class ReadReplicaStatusTest
         ReadReplicaGraphDatabase db = mock( ReadReplicaGraphDatabase.class );
         topologyService = new FakeTopologyService( randomMembers( 3 ), randomMembers( 2 ), myself, RoleInfo.READ_REPLICA );
         dependencyResolver.satisfyDependencies( topologyService );
+        JobScheduler jobScheduler = JobSchedulerFactory.createInitialisedScheduler();
+        dependencyResolver.satisfyDependency( jobScheduler );
 
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         databaseHealth = dependencyResolver.satisfyDependency(
                 new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
+        dependencyResolver.satisfyDependency(
+                new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );
 
         status = CausalClusteringStatusFactory.build( output, db );
     }
@@ -104,7 +117,7 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void responseIncludesAllCoresAndReplicas() throws IOException
+    public void responseIncludesAllCores() throws IOException
     {
         Response description = status.description();
 
@@ -141,10 +154,10 @@ public class ReadReplicaStatusTest
     }
 
     @Test
-    public void leaderIsOptional() throws IOException
+    public void leaderIsNullWhenUnknown() throws IOException
     {
         Response description = status.description();
-        assertFalse( responseAsMap( description ).containsKey( "leader" ) );
+        assertNull( responseAsMap( description ).get( "leader" ) );
 
         MemberId selectedLead = topologyService.allCoreServers()
                 .members()
@@ -163,6 +176,19 @@ public class ReadReplicaStatusTest
         Response description = status.description();
         assertTrue( responseAsMap( description ).containsKey( "core" ) );
         assertEquals( false, responseAsMap( status.description() ).get( "core" ) );
+    }
+
+    @Test
+    public void throughputNullWhenUnknown() throws IOException
+    {
+        ThroughputMonitor throughputMonitor = mock( ThroughputMonitor.class );
+        when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
+        dependencyResolver.satisfyDependency( throughputMonitor );
+
+        Response description = status.description();
+
+        Map<String,Object> response = responseAsMap( description );
+        assertNull( response.get( "raftCommandsPerSecond" ) );
     }
 
     static Collection<MemberId> randomMembers( int size )
