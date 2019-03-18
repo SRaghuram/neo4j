@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.collection;
+package com.neo4j.collection;
 
 import static java.lang.Math.floorMod;
 import static java.util.Arrays.fill;

@@ -5,6 +5,8 @@
  */
 package org.neo4j.causalclustering.monitoring;
 
+import com.neo4j.collection.CircularBuffer;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,7 +15,6 @@ import java.util.OptionalDouble;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import org.neo4j.collection.CircularBuffer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
