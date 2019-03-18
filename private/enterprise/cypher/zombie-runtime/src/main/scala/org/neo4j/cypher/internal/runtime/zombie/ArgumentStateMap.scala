@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Attribute, Id}
 
@@ -104,7 +105,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def argumentSlotOffset: Int
 }
 
-class ArgumentStateMaps() extends Attribute[ArgumentStateMap[_ <: ArgumentState]]
+class ArgumentStateMaps() extends Attribute[LogicalPlan, ArgumentStateMap[_ <: ArgumentState]]
 
 object ArgumentStateMap {
 
