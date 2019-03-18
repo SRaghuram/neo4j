@@ -38,7 +38,7 @@ public class GcLogTest
     @Test
     public void shouldSerializeGcLogEvent() throws IOException
     {
-        LocalDateTime wallClockTime = LocalDateTime.now();
+        LocalDateTime wallClockTime = LocalDateTime.of(2017,1,1,1,1);
         Duration processTime = Duration.ofMillis( 1 );
         GcLog.EventType eventTime = GcLog.EventType.APPLICATION_TIME;
         Duration value = Duration.ofNanos( 40 );

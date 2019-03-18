@@ -49,6 +49,11 @@
             <artifactId>commons-math3</artifactId>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>27.0.1-jre</version>
+        </dependency>
         <!--TODO note: this is only used by IntelliJ build, not Maven+Terminal -->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
