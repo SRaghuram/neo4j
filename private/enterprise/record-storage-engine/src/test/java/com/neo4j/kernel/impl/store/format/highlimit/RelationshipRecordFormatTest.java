@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.ByteUnit;
-import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.StubPageCursor;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
@@ -25,8 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.store.NoStoreHeader.NO_STORE_HEADER;
 import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.offsetForId;
 import static org.neo4j.kernel.impl.store.format.BaseRecordFormat.IN_USE_BIT;
@@ -81,8 +78,6 @@ public class RelationshipRecordFormatTest
     public void shouldMarkBothUnitsAsUnusedWhenDeletingRecordWhichHasSecondaryUnit() throws Exception
     {
         // GIVEN a record which requires two units
-        PagedFile storeFile = mock( PagedFile.class );
-        when( storeFile.pageSize() ).thenReturn( cursor.getCurrentPageSize() );
         long hugeValue = 1L << 48;
         RelationshipRecord record = new RelationshipRecord( 5 ).initialize( true,
                 hugeValue + 1, hugeValue + 2, hugeValue + 3, 4,
