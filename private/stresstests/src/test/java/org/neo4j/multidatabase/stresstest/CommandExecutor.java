@@ -11,6 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.graphdb.TransientTransactionFailureException;
 import org.neo4j.multidatabase.stresstest.commands.CreateManagerCommand;
@@ -90,7 +91,7 @@ class CommandExecutor implements Runnable
                 command.execute();
                 commandCounter.incrementAndGet();
             }
-            catch ( TransientTransactionFailureException | TransactionFailureException | IllegalStateException e )
+            catch ( TransientTransactionFailureException | TransactionFailureException | IllegalStateException | DatabaseShutdownException e )
             {
                 // ignore
             }
