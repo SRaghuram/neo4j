@@ -105,7 +105,7 @@ import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
+import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
@@ -117,7 +117,7 @@ import org.neo4j.time.Clocks;
 
 import static java.util.Arrays.asList;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.kernel.recovery.Recovery.recoveryRequiredChecker;
+import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
 /**
  * This implementation of {@link AbstractEditionModule} creates the implementations of services
@@ -289,10 +289,10 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     private void addCoreServerComponentsToLifecycle( CoreServerModule coreServerModule,
             LifecycleMessageHandler<ReceivedInstantClusterIdAwareMessage<?>> raftMessageHandlerChain, LifeSupport lifeSupport )
     {
-        RecoveryRequiredChecker recoveryChecker = recoveryRequiredChecker( globalModule.getFileSystem(), globalModule.getPageCache(), globalConfig,
+        RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalConfig,
                 globalModule.getStorageEngineFactory() );
 
-        lifeSupport.add( coreServerModule.createCoreLife( raftMessageHandlerChain, logProvider, recoveryChecker ) );
+        lifeSupport.add( coreServerModule.createCoreLife( raftMessageHandlerChain, logProvider, recoveryFacade ) );
         lifeSupport.add( coreServerModule.catchupServer() ); // must start last and stop first, since it handles external requests
         coreServerModule.backupServer().ifPresent( lifeSupport::add );
         lifeSupport.add( coreServerModule.downloadService() );

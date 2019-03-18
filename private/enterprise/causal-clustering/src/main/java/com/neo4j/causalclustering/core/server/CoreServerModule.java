@@ -39,7 +39,7 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
+import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Monitors;
@@ -137,10 +137,10 @@ public class CoreServerModule extends CatchupServersModule
     }
 
     public CoreLife createCoreLife( LifecycleMessageHandler<RaftMessages.ReceivedInstantClusterIdAwareMessage<?>> handler, LogProvider logProvider,
-            RecoveryRequiredChecker recoveryChecker )
+            RecoveryFacade recoveryFacade )
     {
         return new CoreLife( consensusModule.raftMachine(), databaseService, clusteringModule.clusterBinder(),
-                commandApplicationProcess, handler, snapshotService, downloadService, logProvider, recoveryChecker );
+                commandApplicationProcess, handler, snapshotService, downloadService, logProvider, recoveryFacade );
     }
 
     public CommandApplicationProcess commandApplicationProcess()

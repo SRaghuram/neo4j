@@ -18,8 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
-import org.neo4j.kernel.recovery.RecoveryRequiredChecker;
-import org.neo4j.logging.Log;
+import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobHandle;
 
@@ -33,13 +32,12 @@ public class CoreLife extends SafeLifecycle
     private final LifecycleMessageHandler<?> raftMessageHandler;
     private final CoreSnapshotService snapshotService;
     private final CoreDownloaderService downloadService;
-    private final Log log;
-    private final RecoveryRequiredChecker recoveryChecker;
+    private final RecoveryFacade recoveryFacade;
 
     public CoreLife( RaftMachine raftMachine, DatabaseService databaseService, ClusterBinder clusterBinder,
             CommandApplicationProcess commandApplicationProcess, LifecycleMessageHandler<?> raftMessageHandler,
             CoreSnapshotService snapshotService, CoreDownloaderService downloadService, LogProvider logProvider,
-            RecoveryRequiredChecker recoveryChecker )
+            RecoveryFacade recoveryFacade )
     {
         this.raftMachine = raftMachine;
         this.databaseService = databaseService;
@@ -48,8 +46,7 @@ public class CoreLife extends SafeLifecycle
         this.raftMessageHandler = raftMessageHandler;
         this.snapshotService = snapshotService;
         this.downloadService = downloadService;
-        this.log = logProvider.getLog( getClass() );
-        this.recoveryChecker = recoveryChecker;
+        this.recoveryFacade = recoveryFacade;
     }
 
     @Override
@@ -98,23 +95,7 @@ public class CoreLife extends SafeLifecycle
     {
         for ( LocalDatabase db : databaseService.registeredDatabases().values() )
         {
-            /*  There is no reason to try to recover if there are no transaction logs and in fact it is
-             *  also problematic for the initial transaction pull during the snapshot download because the
-             *  kernel will create a transaction log with a header where previous index points to the same
-             *  index as that written down into the metadata store. This is problematic because we have no
-             *  guarantee that there are later transactions and we need at least one transaction in
-             *  the log to figure out the Raft log index (see {@link RecoverConsensusLogIndex}). */
-
-            if ( recoveryChecker.isRecoveryRequiredAt( db.databaseLayout() ) )
-            {
-                log.info( "Recovering " + db.databaseName() );
-                databaseService.start();
-                databaseService.stop();
-            }
-            else
-            {
-                log.info( "No recovery required for " + db.databaseName() );
-            }
+            recoveryFacade.recovery( db.databaseLayout() );
         }
     }
 
