@@ -62,7 +62,6 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
   def compileProjection(projections: Map[Int, IntermediateExpression]): IntermediateExpression = {
     val all = projections.toSeq.map {
       case (slot, value) => setRefAt(slot,
-                                     None,
                                      if (value.nullCheck.isEmpty) value.ir
                                      else ternary(value.nullCheck.reduceLeft((acc,current) => or(acc, current)),
                                                                               noValue, value.ir))
@@ -89,11 +88,11 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     val projectKeyOps = groupingsOrdered.map(_._1).zipWithIndex.map {
       case (LongSlot(offset, nullable, CTNode), index) =>
-        setLongAt(offset, None, id[VirtualNodeValue](accessValue(index), nullable))
+        setLongAt(offset, id[VirtualNodeValue](accessValue(index), nullable))
       case (LongSlot(offset, nullable, CTRelationship), index) =>
-        setLongAt(offset, None, id[VirtualRelationshipValue](accessValue(index), nullable))
+        setLongAt(offset, id[VirtualRelationshipValue](accessValue(index), nullable))
       case (RefSlot(offset, _, _), index) =>
-          setRefAt(offset, None, accessValue(index))
+          setRefAt(offset, accessValue(index))
       case slot =>
         throw new InternalException(s"Do not know how to make setter for slot $slot")
     }
@@ -103,14 +102,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     val getKeyOps = groupingsOrdered.map(_._1).map {
       case LongSlot(offset, nullable, CTNode) =>
-        val getter = invokeStatic(method[VirtualValues, NodeReference, Long]("node"), getLongAt(offset, None))
-        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1L)), noValue, getter)
+        val getter = invokeStatic(method[VirtualValues, NodeReference, Long]("node"), getLongAt(offset))
+        if (nullable) ternary(equal(getLongAt(offset), constant(-1L)), noValue, getter)
         else getter
       case LongSlot(offset, nullable, CTRelationship) =>
-        val getter = invokeStatic(method[VirtualValues, RelationshipReference, Long]("relationship"), getLongAt(offset, None))
-        if (nullable) ternary(equal(getLongAt(offset, None), constant(-1L)), noValue, getter)
+        val getter = invokeStatic(method[VirtualValues, RelationshipReference, Long]("relationship"), getLongAt(offset))
+        if (nullable) ternary(equal(getLongAt(offset), constant(-1L)), noValue, getter)
         else getter
-      case RefSlot(offset, _, _) => getRefAt(offset, None)
+      case RefSlot(offset, _, _) => getRefAt(offset)
       case slot =>
         throw new InternalException(s"Do not know how to make getter for slot $slot")
     }
@@ -130,18 +129,16 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       IntermediateExpression(getKey, Seq.empty, Seq.empty, Set.empty))
   }
 
-  def compileExpression(expression: Expression): Option[IntermediateExpression] = internalCompileExpression(expression, None)
-
-  private def internalCompileExpression(expression: Expression, currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = expression match {
+  def compileExpression(expression: Expression): Option[IntermediateExpression] = expression match {
 
     //functions
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
-    case c: FunctionInvocation => compileFunction(c, currentContext)
+    case c: FunctionInvocation => compileFunction(c)
 
     //math
     case Multiply(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("multiply"), l.ir, r.ir),
@@ -149,19 +146,19 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case expressions.Add(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("add"), l.ir, r.ir),
           l.fields ++ r.fields, l.variables ++ r.variables, l.nullCheck ++ r.nullCheck)
       }
 
-    case UnaryAdd(source) => internalCompileExpression(source, currentContext)
+    case UnaryAdd(source) => compileExpression(source)
 
     case expressions.Subtract(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"), l.ir, r.ir),
@@ -169,7 +166,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case UnarySubtract(source) =>
-      for {arg <- internalCompileExpression(source, currentContext)
+      for {arg <- compileExpression(source)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("subtract"),
@@ -177,8 +174,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Divide(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("divide"), l.ir, r.ir),
@@ -188,8 +185,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Modulo(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("modulo"), l.ir, r.ir),
@@ -197,8 +194,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Pow(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherMath, AnyValue, AnyValue, AnyValue]("pow"), l.ir, r.ir),
@@ -219,7 +216,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case _: True => Some(IntermediateExpression(truthValue, Seq.empty, Seq.empty, Set.empty))
     case _: False => Some(IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty))
     case ListLiteral(args) =>
-      val in = args.flatMap(internalCompileExpression(_, currentContext))
+      val in = args.flatMap(compileExpression(_))
       if (in.size < args.size) None
       else {
         val fields: Seq[Field] = in.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields)
@@ -231,7 +228,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case MapExpression(items) =>
       val compiled = (for {(k, v) <- items
-                           c <- internalCompileExpression(v, currentContext)} yield k -> c).toMap
+                           c <- compileExpression(v)} yield k -> c).toMap
       if (compiled.size < items.size) None
       else {
         val tempVariable = namer.nextVariableName()
@@ -252,7 +249,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
 
     case DesugaredMapProjection(name, items, includeAllProps) =>
-      val expressions = items.flatMap(i => internalCompileExpression(i.exp, currentContext))
+      val expressions = items.flatMap(i => compileExpression(i.exp))
 
       if (expressions.size < items.size) None
       else {
@@ -270,12 +267,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             }
         } else Seq.empty
 
-        val (accessName, maybeNullCheck, maybeVariable) = accessVariable(name.name, currentContext)
+        val (accessName, maybeNullCheck) = accessVariable(name.name)
 
         if (!includeAllProps) {
           Some(IntermediateExpression(
             block(buildMapValue :+ invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ maybeVariable, maybeNullCheck.toSet))
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables), maybeNullCheck.toSet))
 
         } else if (buildMapValue.isEmpty) {
           Some(IntermediateExpression(
@@ -284,7 +281,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                 method[CypherCoercions, MapValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor](
                   "asMapValue"),
                 accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable,
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS,
             maybeNullCheck.toSet))
         } else {
           Some(IntermediateExpression(
@@ -296,16 +293,16 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                   accessName, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
                 method[MapValue, MapValue, MapValue]("updatedWith"),
                 invoke(load(builderVar), method[MapValueBuilder, MapValue]("build")))): _*),
-            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS ++ maybeVariable,
+            expressions.flatMap(_.fields), expressions.flatMap(_.variables) ++ vCURSORS,
             maybeNullCheck.toSet))
         }
       }
 
-    case ListSlice(collection, None, None) => internalCompileExpression(collection, currentContext)
+    case ListSlice(collection, None, None) => compileExpression(collection)
 
     case ListSlice(collection, Some(from), None) =>
-      for {c <- internalCompileExpression(collection, currentContext)
-           f <- internalCompileExpression(from, currentContext)
+      for {c <- compileExpression(collection)
+           f <- compileExpression(from)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("fromSlice"), c.ir, f.ir),
@@ -314,8 +311,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case ListSlice(collection, None, Some(to)) =>
-      for {c <- internalCompileExpression(collection, currentContext)
-           t <- internalCompileExpression(to, currentContext)
+      for {c <- compileExpression(collection)
+           t <- compileExpression(to)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("toSlice"), c.ir, t.ir),
@@ -323,9 +320,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case ListSlice(collection, Some(from), Some(to)) =>
-      for {c <- internalCompileExpression(collection, currentContext)
-           f <- internalCompileExpression(from, currentContext)
-           t <- internalCompileExpression(to, currentContext)
+      for {c <- compileExpression(collection)
+           f <- compileExpression(from)
+           t <- compileExpression(to)
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue, AnyValue]("fullSlice"), c.ir, f.ir, t.ir),
@@ -334,8 +331,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Variable(name) =>
-      val (variableAccess, nullCheck, maybeVariable) = accessVariable(name, currentContext)
-      Some(IntermediateExpression(variableAccess, Seq.empty, maybeVariable.toSeq, nullCheck.toSet))
+      val (variableAccess, nullCheck) = accessVariable(name)
+      Some(IntermediateExpression(variableAccess, Seq.empty, Seq.empty, nullCheck.toSet))
 
     case e: ExpressionVariable =>
       val varLoad = loadExpressionVariable(e)
@@ -365,8 +362,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
+      for {collection <- compileExpression(collectionExpression)
+           inner <- compileExpression(scope.innerPredicate.get)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -448,8 +445,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
+      for {collection <- compileExpression(collectionExpression)
+           inner <- compileExpression(scope.innerPredicate.get)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -524,8 +521,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
+      for {collection <- compileExpression(collectionExpression)
+           inner <- compileExpression(scope.innerPredicate.get)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -592,8 +589,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
        */
       val innerVariable = ExpressionVariable.cast(scope.variable)
       val iterVariable = namer.nextVariableName()
-      for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           inner <- internalCompileExpression(scope.innerPredicate.get, currentContext)
+      for {collection <- compileExpression(collectionExpression)
+           inner <- compileExpression(scope.innerPredicate.get)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -633,24 +630,24 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case FilterExpression(scope, collectionExpression) =>
-      filterExpression(internalCompileExpression(collectionExpression, currentContext),
-                      scope.innerPredicate.get, ExpressionVariable.cast(scope.variable), currentContext)
+      filterExpression(compileExpression(collectionExpression),
+                       scope.innerPredicate.get, ExpressionVariable.cast(scope.variable))
 
     case ListComprehension(scope, list) =>
       val filter = scope.innerPredicate match {
-        case Some(_: True) | None => internalCompileExpression(list, currentContext)
-        case Some(inner) => filterExpression(internalCompileExpression(list, currentContext),
-                                             inner, ExpressionVariable.cast(scope.variable), currentContext)
+        case Some(_: True) | None => compileExpression(list)
+        case Some(inner) => filterExpression(compileExpression(list),
+                                             inner, ExpressionVariable.cast(scope.variable))
       }
       scope.extractExpression match {
         case None => filter
         case Some(extract) =>
-          extractExpression(filter, extract, ExpressionVariable.cast(scope.variable), currentContext)
+          extractExpression(filter, extract, ExpressionVariable.cast(scope.variable))
       }
 
     case ExtractExpression(scope, collectionExpression) =>
-      extractExpression(internalCompileExpression(collectionExpression, currentContext),
-                        scope.extractExpression.get, ExpressionVariable.cast(scope.variable), currentContext)
+      extractExpression(compileExpression(collectionExpression),
+                        scope.extractExpression.get, ExpressionVariable.cast(scope.variable))
 
     case ReduceExpression(scope, initExpression, collectionExpression) =>
       /*
@@ -668,9 +665,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val innerVar = ExpressionVariable.cast(scope.variable)
 
       val iterVariable = namer.nextVariableName()
-      for {collection <- internalCompileExpression(collectionExpression, currentContext)
-           init <- internalCompileExpression(initExpression, currentContext)
-           inner <- internalCompileExpression(scope.expression, currentContext) //Note we update the context here
+      for {collection <- compileExpression(collectionExpression)
+           init <- compileExpression(initExpression)
+           inner <- compileExpression(scope.expression)
       } yield {
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
@@ -705,8 +702,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     //boolean operators
     case Or(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         val left = if (isPredicate(lhs)) l else coerceToPredicate(l)
         val right = if (isPredicate(rhs)) r else coerceToPredicate(r)
@@ -717,7 +714,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val compiled = expressions.foldLeft[Option[List[(IntermediateExpression, Boolean)]]](Some(List.empty))
         { (acc, current) =>
           for {l <- acc
-               e <- internalCompileExpression(current, currentContext)} yield l :+ (e -> isPredicate(current))
+               e <- compileExpression(current)} yield l :+ (e -> isPredicate(current))
         }
 
       for (e <- compiled) yield e match {
@@ -733,8 +730,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Xor(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         val left = if (isPredicate(lhs)) l else coerceToPredicate(l)
         val right = if (isPredicate(rhs)) r else coerceToPredicate(r)
@@ -744,8 +741,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case And(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         val left = if (isPredicate(lhs)) l else coerceToPredicate(l)
         val right = if (isPredicate(rhs)) r else coerceToPredicate(r)
@@ -756,7 +753,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val compiled = expressions.foldLeft[Option[List[(IntermediateExpression, Boolean)]]](Some(List.empty))
         { (acc, current) =>
           for {l <- acc
-               e <- internalCompileExpression(current, currentContext)} yield l :+ (e -> isPredicate(current))
+               e <- compileExpression(current)} yield l :+ (e -> isPredicate(current))
         }
 
       for (e <- compiled) yield e match {
@@ -772,20 +769,20 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case AndedPropertyInequalities(_, _, inequalities) =>
-      val compiledInequalities = inequalities.toIndexedSeq.flatMap(i => internalCompileExpression(i, currentContext))
+      val compiledInequalities = inequalities.toIndexedSeq.flatMap(i => compileExpression(i))
       if (compiledInequalities.size < inequalities.size) None
       else Some(generateAnds(compiledInequalities.toList))
 
     case expressions.Not(arg) =>
-      internalCompileExpression(arg, currentContext).map(a => {
+      compileExpression(arg).map(a => {
         val in = if (isPredicate(arg)) a else coerceToPredicate(a)
         IntermediateExpression(
           invokeStatic(method[CypherBoolean, Value, AnyValue]("not"), in.ir), in.fields, in.variables, in.nullCheck)
       })
 
     case Equals(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
@@ -797,8 +794,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case NotEquals(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
@@ -810,11 +807,11 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         IntermediateExpression(ops, l.fields ++ r.fields, l.variables ++ r.variables :+ local, Set(nullChecks))
       }
 
-    case CoerceToPredicate(inner) => internalCompileExpression(inner, currentContext).map(coerceToPredicate)
+    case CoerceToPredicate(inner) => compileExpression(inner).map(coerceToPredicate)
 
     case RegexMatch(lhs, rhs) => rhs match {
       case expressions.StringLiteral(name) =>
-        for (e <- internalCompileExpression(lhs, currentContext)) yield {
+        for (e <- compileExpression(lhs)) yield {
           val f = field[regex.Pattern](namer.nextVariableName())
           val ops = block(
             //if (f == null) { f = Pattern.compile(...) }
@@ -827,8 +824,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         }
 
       case _ =>
-        for {l <- internalCompileExpression(lhs, currentContext)
-             r <- internalCompileExpression(rhs, currentContext)
+        for {l <- compileExpression(lhs)
+             r <- compileExpression(rhs)
         } yield {
           IntermediateExpression(
             invokeStatic(method[CypherBoolean, BooleanValue, TextValue, TextValue]("regex"),
@@ -839,8 +836,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     }
 
     case StartsWith(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
                        invoke(cast[TextValue](l.ir), method[TextValue, Boolean, TextValue]("startsWith"),
@@ -850,8 +847,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case EndsWith(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
                        invoke(cast[TextValue](l.ir), method[TextValue, Boolean, TextValue]("endsWith"),
@@ -861,8 +858,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Contains(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
         IntermediateExpression(
           invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
                        invoke(cast[TextValue](l.ir), method[TextValue, Boolean, TextValue]("contains"),
@@ -872,20 +869,20 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case expressions.IsNull(test) =>
-      for (e <- internalCompileExpression(test, currentContext)) yield {
+      for (e <- compileExpression(test)) yield {
         IntermediateExpression(
           ternary(equal(nullCheck(e)(e.ir), noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
       }
 
     case expressions.IsNotNull(test) =>
-      for (e <- internalCompileExpression(test, currentContext)) yield {
+      for (e <- compileExpression(test)) yield {
         IntermediateExpression(
           ternary(notEqual(nullCheck(e)(e.ir), noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
       }
 
     case LessThan(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
 
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
@@ -900,8 +897,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case LessThanOrEqual(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
         val lazySet = oneTime(assign(variableName,
@@ -915,8 +912,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case GreaterThan(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
         val lazySet = oneTime(assign(variableName,
@@ -930,8 +927,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case GreaterThanOrEqual(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
         val lazySet = oneTime(assign(variableName,
@@ -957,7 +954,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         case _ => false
       }
       val onNotFound = if (containsNull) noValue else falseValue
-      for (l <- internalCompileExpression(lhs, currentContext)) yield {
+      for (l <- compileExpression(lhs)) yield {
         val setField = staticConstant[util.HashSet[AnyValue]](namer.nextVariableName(), set)
         IntermediateExpression(
           ternary(invoke(getStatic[util.HashSet[AnyValue]](setField.name), method[util.Set[AnyValue], Boolean, Object]("contains"), l.ir),
@@ -965,8 +962,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case In(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)} yield {
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)} yield {
 
         val variableName = namer.nextVariableName()
         val local = variable[Value](variableName, noValue)
@@ -983,7 +980,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     // misc
     case CoerceTo(expr, typ) =>
-      for (e <- internalCompileExpression(expr, currentContext)) yield {
+      for (e <- compileExpression(expr)) yield {
         typ match {
           case CTAny => e
           case CTString =>
@@ -1072,8 +1069,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     //data access
     case ContainerIndex(container, index) =>
-      for {c <- internalCompileExpression(container, currentContext)
-           idx <- internalCompileExpression(index, currentContext)
+      for {c <- compileExpression(container)
+           idx <- compileExpression(index)
       } yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
@@ -1097,16 +1094,16 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case CaseExpression(Some(innerExpression), alternativeExpressions, defaultExpression) =>
 
       val maybeDefault = defaultExpression match {
-        case Some(e) => internalCompileExpression(e, currentContext)
+        case Some(e) => compileExpression(e)
         case None => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
       }
       val (checkExpressions, loadExpressions) = alternativeExpressions.unzip
 
-      val checks = checkExpressions.flatMap(internalCompileExpression(_, currentContext))
-      val loads = loadExpressions.flatMap(internalCompileExpression(_, currentContext))
+      val checks = checkExpressions.flatMap(compileExpression(_))
+      val loads = loadExpressions.flatMap(compileExpression(_))
       if (checks.size != loads.size || checks.isEmpty || maybeDefault.isEmpty) None
       else {
-        for {inner: IntermediateExpression <- internalCompileExpression(innerExpression, currentContext)
+        for {inner: IntermediateExpression <- compileExpression(innerExpression)
         } yield {
 
           //AnyValue compare = inner;
@@ -1135,16 +1132,16 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case CaseExpression(None, alternativeExpressions, defaultExpression) =>
       val maybeDefault = defaultExpression match {
-        case Some(e) => internalCompileExpression(e, currentContext)
+        case Some(e) => compileExpression(e)
         case None => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
       }
       val (checkExpressions, loadExpressions) = alternativeExpressions.unzip
       val checks = checkExpressions.flatMap { e =>
-        if (isPredicate(e)) internalCompileExpression(e, currentContext)
-        else internalCompileExpression(e, currentContext).map(coerceToPredicate)
+        if (isPredicate(e)) compileExpression(e)
+        else compileExpression(e).map(coerceToPredicate)
       }
 
-      val loads = loadExpressions.flatMap(internalCompileExpression(_, currentContext))
+      val loads = loadExpressions.flatMap(compileExpression(_))
       if (checks.size != loads.size || maybeDefault.isEmpty) None
       else {
 
@@ -1172,7 +1169,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case Property(targetExpression, PropertyKeyName(key)) =>
-      for (map <- internalCompileExpression(targetExpression, currentContext)) yield {
+      for (map <- compileExpression(targetExpression)) yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
         val propertyGet = invokeStatic(method[CypherFunctions, AnyValue, String, AnyValue, DbAccess,
@@ -1193,7 +1190,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val local = variable[Value](variableName, noValue)
       val lazySet = oneTime(assign(variableName,
         invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-               getLongAt(offset, currentContext), constant(token), NODE_CURSOR, PROPERTY_CURSOR)))
+               getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1204,7 +1201,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val local = variable[Value](variableName, noValue)
       val lazySet = oneTime(assign(variableName, invokeStatic(
         method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedProperty"),
-        loadContext(currentContext), DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset),
+        LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(token), constant(cachedPropertyOffset),
         NODE_CURSOR, PROPERTY_CURSOR)))
 
       val ops = block(lazySet, load(variableName))
@@ -1219,7 +1216,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
           invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, NodeCursor, PropertyCursor]("nodeProperty"),
-                 getLongAt(offset, currentContext), loadField(f), NODE_CURSOR, PROPERTY_CURSOR))))
+                 getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1233,7 +1230,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         condition(equal(loadField(f), constant(-1)))(
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(propKey)))),
                                    invokeStatic(method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int, Int, NodeCursor, PropertyCursor]("cachedProperty"),
-        loadContext(currentContext), DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR))))
+                                                LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f), constant(cachedPropertyOffset), NODE_CURSOR, PROPERTY_CURSOR))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1244,7 +1241,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         IntermediateExpression(
           ternary(
           invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
-                 getLongAt(offset, currentContext), constant(token), NODE_CURSOR, PROPERTY_CURSOR),
+                 getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR),
             truthValue, falseValue), Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case NodePropertyExistsLate(offset, key, _) =>
@@ -1255,7 +1252,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
         ternary(
         invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
-               getLongAt(offset, currentContext), loadField(f), NODE_CURSOR, PROPERTY_CURSOR),
+               getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR),
           truthValue, falseValue)), Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipProperty(offset, token, _) =>
@@ -1263,7 +1260,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val local = variable[Value](variableName, noValue)
       val lazySet = oneTime(assign(variableName,
         invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-          getLongAt(offset, currentContext), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))
+          getLongAt(offset), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR)))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1277,7 +1274,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
           invoke(DB_ACCESS, method[DbAccess, Value, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipProperty"),
-                 getLongAt(offset, currentContext), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
+                 getLongAt(offset), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -1288,7 +1285,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       Some(IntermediateExpression(
         ternary(
           invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
-                 getLongAt(offset, currentContext), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+                 getLongAt(offset), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
           truthValue,
           falseValue), Seq.empty, Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty)
       )
@@ -1301,12 +1298,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
         ternary(
         invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
-               getLongAt(offset, currentContext), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
+               getLongAt(offset), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
         truthValue,
         falseValue)), Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case HasLabels(nodeExpression, labels)  if labels.nonEmpty =>
-      for (node <- internalCompileExpression(nodeExpression, currentContext)) yield {
+      for (node <- compileExpression(nodeExpression)) yield {
         val tokensAndNames = labels.map(l => field[Int](s"label${l.name}", constant(-1)) -> l.name)
 
         val init = tokensAndNames.map {
@@ -1326,13 +1323,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
     case NodeFromSlot(offset, name) =>
       Some(IntermediateExpression(
-        invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset, currentContext)),
+        invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset)),
         Seq.empty, Seq.empty, Set.empty))
 
     case RelationshipFromSlot(offset, name) =>
       Some(IntermediateExpression(
         invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"),
-               getLongAt(offset, currentContext)), Seq.empty, Seq.empty, Set.empty))
+               getLongAt(offset)), Seq.empty, Seq.empty, Set.empty))
 
     case GetDegreePrimitive(offset, typ, dir) =>
       val methodName = dir match {
@@ -1345,7 +1342,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           Some(
             IntermediateExpression(
               invokeStatic(method[Values, IntValue, Int]("intValue"),
-                           invoke(DB_ACCESS, method[DbAccess, Int, Long, NodeCursor](methodName), getLongAt(offset, currentContext), NODE_CURSOR)),
+                           invoke(DB_ACCESS, method[DbAccess, Int, Long, NodeCursor](methodName), getLongAt(offset), NODE_CURSOR)),
               Seq.empty, Seq(vNODE_CURSOR), Set.empty))
 
         case Some(t) =>
@@ -1357,14 +1354,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
                   setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("relationshipType"), constant(t)))),
                 invokeStatic(method[Values, IntValue, Int]("intValue"),
                            invoke(DB_ACCESS, method[DbAccess, Int, Long, Int, NodeCursor](methodName),
-                                  getLongAt(offset, currentContext), loadField(f), NODE_CURSOR))
+                                  getLongAt(offset), loadField(f), NODE_CURSOR))
               ), Seq(f), Seq(vNODE_CURSOR), Set.empty))
       }
 
     case f@ResolvedFunctionInvocation(name, Some(signature), args) if !f.isAggregate =>
       val inputArgs = args.map(Some(_))
         .zipAll(signature.inputSignature.map(_.default.map(_.value)), None, None).flatMap {
-        case (Some(given), _) => internalCompileExpression(given, currentContext)
+        case (Some(given), _) => compileExpression(given)
         case (_, Some(default)) =>
           val constant = staticConstant[AnyValue](namer.nextVariableName().toUpperCase(), asAnyValue(default))
           Some(IntermediateExpression(getStatic[AnyValue](constant.name), Seq(constant), Seq.empty, Set.empty))
@@ -1398,128 +1395,128 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         case NilPathStep => true
       }
 
-      if (isStaticallyKnown(steps)) compileStaticPath(currentContext, steps)
-      else compileDynamicPath(currentContext, steps)
+      if (isStaticallyKnown(steps)) compileStaticPath(steps)
+      else compileDynamicPath(steps)
 
     //slotted operations
     case ReferenceFromSlot(offset, name) =>
-      val nullCheck = slots.get(name).filter(_.nullable).map(_ => equal(getRefAt(offset, currentContext), noValue)).toSet
-      val loadRef =  getRefAt(offset, currentContext)
+      val nullCheck = slots.get(name).filter(_.nullable).map(_ => equal(getRefAt(offset), noValue)).toSet
+      val loadRef =  getRefAt(offset)
       Some(IntermediateExpression(loadRef, Seq.empty, Seq.empty, nullCheck))
 
     case IdFromSlot(offset) =>
       val nameOfSlot = slots.nameOfLongSlot(offset)
-      val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset, currentContext), constant(-1L))).toSet
-      val value = invokeStatic(method[Values, LongValue, Long]("longValue"), getLongAt(offset, currentContext))
+      val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset), constant(-1L))).toSet
+      val value = invokeStatic(method[Values, LongValue, Long]("longValue"), getLongAt(offset))
 
       Some(IntermediateExpression(value, Seq.empty, Seq.empty, nullCheck))
 
     case PrimitiveEquals(lhs, rhs) =>
-      for {l <- internalCompileExpression(lhs, currentContext)
-           r <- internalCompileExpression(rhs, currentContext)
+      for {l <- compileExpression(lhs)
+           r <- compileExpression(rhs)
       } yield
         IntermediateExpression(
           ternary(invoke(l.ir, method[AnyValue, Boolean, AnyRef]("equals"), r.ir), truthValue, falseValue),
           l.fields ++ r.fields, l.variables ++ r.variables, Set.empty)
 
     case NullCheck(offset, inner) =>
-      internalCompileExpression(inner, currentContext).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset, currentContext), constant(-1L))))
+      compileExpression(inner).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset), constant(-1L))))
 
     case NullCheckVariable(offset, inner) =>
-      internalCompileExpression(inner, currentContext).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset, currentContext), constant(-1L))))
+      compileExpression(inner).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset), constant(-1L))))
 
     case NullCheckProperty(offset, inner) =>
-      internalCompileExpression(inner, currentContext).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset, currentContext), constant(-1L))))
+      compileExpression(inner).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset), constant(-1L))))
 
     case IsPrimitiveNull(offset) =>
-      Some(IntermediateExpression(ternary(equal(getLongAt(offset, currentContext), constant(-1L)), truthValue, falseValue),
+      Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), truthValue, falseValue),
                                   Seq.empty, Seq.empty, Set.empty))
 
     case _ => None
   }
 
-  def compileFunction(c: FunctionInvocation, currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = c.function match {
+  def compileFunction(c: FunctionInvocation): Option[IntermediateExpression] = c.function match {
     case functions.Acos =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
        invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("acos"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Cos =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cos"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Cot =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
        invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("cot"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Asin =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
        invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("asin"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Haversin =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
        invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("haversin"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Sin =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sin"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Atan =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
        invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("atan"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Atan2 =>
-      for {y <- internalCompileExpression(c.args(0), currentContext)
-           x <- internalCompileExpression(c.args(1), currentContext)
+      for {y <- compileExpression(c.args(0))
+           x <- compileExpression(c.args(1))
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, DoubleValue, AnyValue, AnyValue]("atan2"), y.ir, x.ir),
           y.fields ++ x.fields, y.variables ++ x.variables, y.nullCheck ++ x.nullCheck)
       }
     case functions.Tan =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("tan"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Round =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("round"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Rand =>
       Some(IntermediateExpression(invokeStatic(method[CypherFunctions, DoubleValue]("rand")),
                                   Seq.empty, Seq.empty, Set.empty))
     case functions.Abs =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, NumberValue, AnyValue]("abs"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Ceil =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("ceil"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Floor =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("floor"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Degrees =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("toDegrees"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Exp =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("exp"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Log =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("log"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Log10 =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("log10"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Radians =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("toRadians"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Sign =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, LongValue, AnyValue]("signum"), in.ir), in.fields, in.variables, in.nullCheck))
     case functions.Sqrt =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, DoubleValue, AnyValue]("sqrt"), in.ir), in.fields, in.variables, in.nullCheck))
 
     case functions.Range  if c.args.length == 2 =>
-      for {start <- internalCompileExpression(c.args(0), currentContext)
-           end <- internalCompileExpression(c.args(1), currentContext)
+      for {start <- compileExpression(c.args(0))
+           end <- compileExpression(c.args(1))
       } yield IntermediateExpression(invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("range"),
                                                   nullCheck(start)(start.ir), nullCheck(end)(end.ir)),
                                      start.fields ++ end.fields,
                                      start.variables ++ end.variables, Set.empty)
 
     case functions.Range  if c.args.length == 3 =>
-      for {start <- internalCompileExpression(c.args(0), currentContext)
-           end <- internalCompileExpression(c.args(1), currentContext)
-           step <- internalCompileExpression(c.args(2), currentContext)
+      for {start <- compileExpression(c.args(0))
+           end <- compileExpression(c.args(1))
+           step <- compileExpression(c.args(2))
       } yield IntermediateExpression(invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue, AnyValue]("range"),
                                                   nullCheck(start)(start.ir), nullCheck(end)(end.ir), nullCheck(step)(step.ir)),
                                      start.fields ++ end.fields ++ step.fields,
@@ -1529,7 +1526,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case functions.E => Some(IntermediateExpression(getStatic[Values, DoubleValue]("E"), Seq.empty, Seq.empty, Set.empty))
 
     case functions.Coalesce =>
-      val args = c.args.flatMap(internalCompileExpression(_, currentContext))
+      val args = c.args.flatMap(compileExpression(_))
       if (args.size < c.args.size) None
       else {
         val tempVariable = namer.nextVariableName()
@@ -1561,8 +1558,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Distance =>
-      for {p1 <- internalCompileExpression(c.args(0), currentContext)
-           p2 <- internalCompileExpression(c.args(1), currentContext)
+      for {p1 <- compileExpression(c.args(0))
+           p2 <- compileExpression(c.args(1))
       } yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName,
@@ -1573,34 +1570,34 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.StartNode =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess, RelationshipScanCursor]("startNode"),
                      in.ir, DB_ACCESS, RELATIONSHIP_CURSOR), in.fields, in.variables :+ vRELATIONSHIP_CURSOR, in.nullCheck))
 
     case functions.EndNode =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, NodeValue, AnyValue, DbAccess, RelationshipScanCursor]("endNode"), in.ir,
                                       DB_ACCESS, RELATIONSHIP_CURSOR), in.fields, in.variables :+ vRELATIONSHIP_CURSOR, in.nullCheck))
 
     case functions.Nodes =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, ListValue, AnyValue]("nodes"), in.ir), in.fields, in.variables, in.nullCheck))
 
     case functions.Relationships =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
        invokeStatic(method[CypherFunctions, ListValue, AnyValue]("relationships"), in.ir), in.fields, in.variables, in.nullCheck))
 
     case functions.Exists =>
       c.arguments.head match {
         case property: Property =>
-          internalCompileExpression(property.map, currentContext).map(in => IntermediateExpression(
+          compileExpression(property.map).map(in => IntermediateExpression(
               invokeStatic(method[CypherFunctions, BooleanValue, String, AnyValue, DbAccess,
                                   NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyExists"),
                            constant(property.propertyKey.name),
                            in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR ),
             in.fields, in.variables ++ vCURSORS, in.nullCheck))
 
-        case property: ASTCachedNodeProperty => cachedNodeExists(property, currentContext)
+        case property: ASTCachedNodeProperty => cachedNodeExists(property)
         case _: PatternExpression => None//TODO
         case _: NestedPipeExpression => None//TODO?
         case _: NestedPlanExpression => throw new InternalException("should have been rewritten away")
@@ -1608,7 +1605,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Head =>
-      internalCompileExpression(c.args.head, currentContext).map(in => {
+      compileExpression(c.args.head).map(in => {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
         val lazySet = oneTime(assign(variableName,  nullCheck(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("head"), in.ir))))
@@ -1620,22 +1617,22 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       })
 
     case functions.Id =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, LongValue, AnyValue]("id"), in.ir),
         in.fields, in.variables, in.nullCheck))
 
     case functions.Labels =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
        invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess, NodeCursor]("labels"), in.ir, DB_ACCESS, NODE_CURSOR),
        in.fields, in.variables :+ vNODE_CURSOR, in.nullCheck))
 
     case functions.Type =>
-      internalCompileExpression(c.args.head, currentContext).map(in => IntermediateExpression(
+      compileExpression(c.args.head).map(in => IntermediateExpression(
         invokeStatic(method[CypherFunctions, TextValue, AnyValue]("type"), in.ir),
          in.fields, in.variables, in.nullCheck))
 
     case functions.Last =>
-      internalCompileExpression(c.args.head, currentContext).map(in => {
+      compileExpression(c.args.head).map(in => {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
         val lazySet = oneTime(assign(variableName, nullCheck(in)(invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("last"), in.ir))))
@@ -1647,8 +1644,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       })
 
     case functions.Left =>
-      for {in <- internalCompileExpression(c.args(0), currentContext)
-           endPos <- internalCompileExpression(c.args(1), currentContext)
+      for {in <- compileExpression(c.args(0))
+           endPos <- compileExpression(c.args(1))
       } yield {
         IntermediateExpression(
          invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue]("left"), in.ir, endPos.ir),
@@ -1656,30 +1653,30 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.LTrim =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("ltrim"), in.ir),
           in.fields, in.variables, in.nullCheck)
       }
 
     case functions.RTrim =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
          invokeStatic(method[CypherFunctions, TextValue, AnyValue]("rtrim"), in.ir),
          in.fields, in.variables, in.nullCheck)
       }
 
     case functions.Trim =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
          invokeStatic(method[CypherFunctions, TextValue, AnyValue]("trim"), in.ir),
          in.fields, in.variables, in.nullCheck)
       }
 
     case functions.Replace =>
-      for {original <- internalCompileExpression(c.args(0), currentContext)
-           search <- internalCompileExpression(c.args(1), currentContext)
-           replaceWith <- internalCompileExpression(c.args(2), currentContext)
+      for {original <- compileExpression(c.args(0))
+           search <- compileExpression(c.args(1))
+           replaceWith <- compileExpression(c.args(2))
       } yield {
         IntermediateExpression(
             invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue, AnyValue]("replace"),
@@ -1689,14 +1686,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Reverse =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, AnyValue, AnyValue]("reverse"), in.ir), in.fields, in.variables, in.nullCheck)
       }
 
     case functions.Right =>
-      for {in <- internalCompileExpression(c.args(0), currentContext)
-           len <- internalCompileExpression(c.args(1), currentContext)
+      for {in <- compileExpression(c.args(0))
+           len <- compileExpression(c.args(1))
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue]("right"), in.ir, len.ir),
@@ -1704,8 +1701,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Split =>
-      for {original <- internalCompileExpression(c.args(0), currentContext)
-           sep <- internalCompileExpression(c.args(1), currentContext)
+      for {original <- compileExpression(c.args(0))
+           sep <- compileExpression(c.args(1))
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, AnyValue]("split"), original.ir, sep.ir),
@@ -1714,8 +1711,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Substring if c.args.size == 2 =>
-      for {original <- internalCompileExpression(c.args(0), currentContext)
-           start <- internalCompileExpression(c.args(1), currentContext)
+      for {original <- compileExpression(c.args(0))
+           start <- compileExpression(c.args(1))
       } yield {
         IntermediateExpression(
          invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue]("substring"), original.ir, start.ir),
@@ -1723,9 +1720,9 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Substring  =>
-      for {original <- internalCompileExpression(c.args(0), currentContext)
-           start <- internalCompileExpression(c.args(1), currentContext)
-           len <- internalCompileExpression(c.args(2), currentContext)
+      for {original <- compileExpression(c.args(0))
+           start <- compileExpression(c.args(1))
+           len <- compileExpression(c.args(2))
       } yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue, AnyValue, AnyValue]("substring"),
@@ -1735,21 +1732,21 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.ToLower =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("toLower"), in.ir),
           in.fields, in.variables, in.nullCheck)
       }
 
     case functions.ToUpper =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, TextValue, AnyValue]("toUpper"), in.ir),
           in.fields, in.variables, in.nullCheck)
       }
 
     case functions.Point =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, Value, AnyValue, DbAccess, ExpressionCursors]("point"),
             in.ir, DB_ACCESS, CURSORS),
@@ -1757,7 +1754,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Keys =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("keys"),
             in.ir, DB_ACCESS, NODE_CURSOR, RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
@@ -1765,28 +1762,28 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.Size =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, IntegralValue, AnyValue]("size"), in.ir),
           in.fields, in.variables, in.nullCheck)
       }
 
     case functions.Length =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, IntegralValue, AnyValue]("length"), in.ir),
           in.fields, in.variables, in.nullCheck)
       }
 
     case functions.Tail =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(
           invokeStatic(method[CypherFunctions, ListValue, AnyValue]("tail"), in.ir),
           in.fields, in.variables, in.nullCheck)
       }
 
     case functions.ToBoolean =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
         val lazySet = oneTime(assign(variableName,  nullCheck(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toBoolean"), in.ir))))
@@ -1798,7 +1795,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.ToFloat =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
         val lazySet = oneTime(assign(variableName, nullCheck(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toFloat"), in.ir))))
@@ -1810,7 +1807,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.ToInteger =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
         val lazySet = oneTime(assign(variableName, nullCheck(in)(invokeStatic(method[CypherFunctions, Value, AnyValue]("toInteger"), in.ir))))
@@ -1822,12 +1819,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
     case functions.ToString =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         IntermediateExpression(invokeStatic(method[CypherFunctions, TextValue, AnyValue]("toString"), in.ir), in.fields, in.variables, in.nullCheck)
       }
 
     case functions.Properties =>
-      for (in <- internalCompileExpression(c.args.head, currentContext)) yield {
+      for (in <- compileExpression(c.args.head)) yield {
         val variableName = namer.nextVariableName()
         val local = variable[AnyValue](variableName, noValue)
         val lazySet = oneTime(assign(variableName, nullCheck(in)(invokeStatic(
@@ -1844,34 +1841,21 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       None
   }
 
-  private def contextSet(key: String, context: IntermediateRepresentation, value: IntermediateRepresentation): IntermediateRepresentation = {
-    slots.get(key) match {
-      case Some(LongSlot(offset, _, _)) =>
-        setLongAt(offset, Some(context), value)
-      case Some(RefSlot(offset, _, _)) =>
-        setRefAt(offset, Some(context), value)
-      case None =>
-        invokeSideEffect(context, method[ExecutionContext, Unit, String, AnyValue]("set"), constant(key), value)
-    }
-  }
+  private def getLongAt(offset: Int): IntermediateRepresentation =
+    invoke(LOAD_CONTEXT, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
 
-  private def getLongAt(offset: Int, currentContext: Option[IntermediateRepresentation]): IntermediateRepresentation =
-    invoke(loadContext(currentContext), method[ExecutionContext, Long, Int]("getLongAt"),
+  private def getRefAt(offset: Int): IntermediateRepresentation =
+    invoke(LOAD_CONTEXT, method[ExecutionContext, AnyValue, Int]("getRefAt"),
            constant(offset))
 
-  private def getRefAt(offset: Int, currentContext: Option[IntermediateRepresentation]): IntermediateRepresentation =
-    invoke(loadContext(currentContext), method[ExecutionContext, AnyValue, Int]("getRefAt"),
-           constant(offset))
-
-  private def setRefAt(offset: Int, currentContext: Option[IntermediateRepresentation], value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(loadContext(currentContext), method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
+  private def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+    invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
-  private def setLongAt(offset: Int, currentContext: Option[IntermediateRepresentation], value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(loadContext(currentContext), method[ExecutionContext, Unit, Int, Long]("setLongAt"),
+  private def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+    invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
-  private def loadContext(currentContext: Option[IntermediateRepresentation]) = currentContext.getOrElse(load("context"))
   private def nullCheck(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
     val checks = expressions.foldLeft(Set.empty[IntermediateRepresentation])((acc, current) => acc ++ current.nullCheck)
     if (checks.nonEmpty) ternary(checks.reduceLeft(or), noValue, onNotNull)
@@ -2137,49 +2121,33 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     )), load(returnVariable))
   }
 
-  private def accessVariable(name: String, currentContext: Option[IntermediateRepresentation]): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) = {
+  private def accessVariable(name: String): (IntermediateRepresentation, Option[IntermediateRepresentation]) = {
 
-    def computeRepresentation(ir: IntermediateRepresentation, nullCheck: Option[IntermediateRepresentation], nullable: Boolean): (IntermediateRepresentation, Option[IntermediateRepresentation], Option[LocalVariable]) = {
-      /*
-       * In the general case currentContext is None which means that we use context provided as parameter to the evaluate
-       * method. However in some cases, like for example `all`, `extract`, `reduce` we are using a local copy of the
-       * execution context, in that case we must make sure to not have the null check depend on the local ExecutionContext
-       * since the null check can be checked before it has been declared.
-       *
-       * This inconvenience should go away once we rewrite `reduce` et. al not to use a local copy of the ExecutionContext.
-       */
-      currentContext match {
-        case None => (ir, if (nullable) nullCheck else None, None)
-        case Some(_) =>
-          val local = variable[AnyValue](namer.nextVariableName(), constant(null))
-          val assignExpression = nullCheck.map(n => ternary(n, noValue, ir)).getOrElse(ir)
-          val newNullCheck = if (nullable) Some(equal(load(local.name), noValue)) else None
-          (block(oneTime(
-            assign(local.name, assignExpression)), load(local.name)), newNullCheck, Some(local))
+    def computeRepresentation(ir: IntermediateRepresentation, nullCheck: Option[IntermediateRepresentation], nullable: Boolean): (IntermediateRepresentation, Option[IntermediateRepresentation]) = {
+        (ir, if (nullable) nullCheck else None)
       }
-    }
 
     slots.get(name) match {
       case Some(LongSlot(offset, nullable, CTNode)) =>
         computeRepresentation(ir =
                                 invokeStatic(
                                   method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("nodeOrNoValue"),
-                                  loadContext(currentContext), DB_ACCESS, constant(offset)),
-                              nullCheck = Some(equal(getLongAt(offset, currentContext), constant(-1L))),
+                                  LOAD_CONTEXT, DB_ACCESS, constant(offset)),
+                              nullCheck = Some(equal(getLongAt(offset), constant(-1L))),
                               nullable = nullable)
       case Some(LongSlot(offset, nullable, CTRelationship)) =>
         computeRepresentation(ir = invokeStatic(
                                   method[CompiledHelpers, AnyValue, ExecutionContext, DbAccess, Int]("relationshipOrNoValue"),
-                                  loadContext(currentContext), DB_ACCESS, constant(offset)),
-                              nullCheck = Some(equal(getLongAt(offset, currentContext), constant(-1L))),
+                                  LOAD_CONTEXT, DB_ACCESS, constant(offset)),
+                              nullCheck = Some(equal(getLongAt(offset), constant(-1L))),
                               nullable = nullable)
 
       case Some(RefSlot(offset, nullable, _)) =>
-        computeRepresentation(ir = getRefAt(offset, currentContext), nullCheck = None, nullable = nullable)
+        computeRepresentation(ir = getRefAt(offset), nullCheck = None, nullable = nullable)
 
       case _ =>
         computeRepresentation(ir =
-                                invoke(loadContext(currentContext),
+                                invoke(LOAD_CONTEXT,
                                           method[ExecutionContext, AnyValue, String]("getByName"), constant(name)),
                               nullCheck = None, nullable = true)
     }
@@ -2187,8 +2155,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
   private def filterExpression(collectionExpression: Option[IntermediateExpression],
                                innerPredicate: Expression,
-                               innerVariable: ExpressionVariable,
-                               currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = {
+                               innerVariable: ExpressionVariable): Option[IntermediateExpression] = {
     /*
        ListValue list = [evaluate collection expression];
        ArrayList<AnyValue> filtered = new ArrayList<>();
@@ -2207,7 +2174,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       */
     val iterVariable = namer.nextVariableName()
     for {collection <- collectionExpression
-         inner <- internalCompileExpression(innerPredicate, currentContext)
+         inner <- compileExpression(innerPredicate)
     } yield {
       val listVar = namer.nextVariableName()
       val filteredVars = namer.nextVariableName()
@@ -2257,8 +2224,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
   private def extractExpression(collectionExpression: Option[IntermediateExpression],
                                 extractExpression: Expression,
-                                innerVariable: ExpressionVariable,
-                                currentContext: Option[IntermediateRepresentation]): Option[IntermediateExpression] = {
+                                innerVariable: ExpressionVariable): Option[IntermediateExpression] = {
     /*
         The generated code will be something along the line of:
 
@@ -2272,7 +2238,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
        */
     val iterVariable = namer.nextVariableName()
     for {collection <- collectionExpression
-         inner <- internalCompileExpression(extractExpression, currentContext)
+         inner <- compileExpression(extractExpression)
     } yield {
       val listVar = namer.nextVariableName()
       val extractedVars = namer.nextVariableName()
@@ -2318,22 +2284,21 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     *
     * return VirtualValues.path( new NodeValue[]{a, b, c, d), new RelationshipValue[]{r1, r2, r3};
     */
-  private def compileStaticPath(currentContext: Option[IntermediateRepresentation], steps: PathStep) = {
+  private def compileStaticPath(steps: PathStep) = {
 
     @tailrec
     def compileSteps(step: PathStep,
                      nodeOps: Seq[IntermediateExpression] = ArrayBuffer.empty,
                      relOps: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[(Seq[IntermediateExpression], Seq[IntermediateExpression])] = step match {
-      case NodePathStep(node, next) => compileSteps(next, nodeOps ++ internalCompileExpression(node, currentContext), relOps)
+      case NodePathStep(node, next) => compileSteps(next, nodeOps ++ compileExpression(node), relOps)
 
       case SingleRelationshipPathStep(relExpression, _, Some(targetExpression), next) =>
-        (internalCompileExpression(relExpression, currentContext), internalCompileExpression(targetExpression, currentContext)) match {
+        (compileExpression(relExpression), compileExpression(targetExpression)) match {
         case (Some(rel), Some(target)) => compileSteps(next, nodeOps :+ target, relOps :+ rel)
         case _ => None
       }
 
-      case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, _, next) => internalCompileExpression(rel,
-                                                                                                      currentContext) match {
+      case SingleRelationshipPathStep(rel, SemanticDirection.BOTH, _, next) => compileExpression(rel) match {
         case Some(compiled) =>
           val relVar = variable[RelationshipValue](namer.nextVariableName(), constant(null))
           val lazyRel = oneTime(assign(relVar.name, cast[RelationshipValue](compiled.ir)))
@@ -2350,7 +2315,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         case None => None
       }
 
-      case SingleRelationshipPathStep(rel, direction, _, next) => internalCompileExpression(rel, currentContext) match {
+      case SingleRelationshipPathStep(rel, direction, _, next) => compileExpression(rel) match {
         case Some(compiled) =>
           val methodName = if (direction == SemanticDirection.INCOMING) "startNode" else "endNode"
           val relVar = variable[RelationshipValue](namer.nextVariableName(), constant(null))
@@ -2397,12 +2362,12 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     }
   }
 
-  private def compileDynamicPath(currentContext: Option[IntermediateRepresentation], steps: PathStep) = {
+  private def compileDynamicPath(steps: PathStep) = {
 
     val builderVar = namer.nextVariableName()
     @tailrec
     def compileSteps(step: PathStep, acc: Seq[IntermediateExpression] = ArrayBuffer.empty): Option[Seq[IntermediateExpression]] = step match {
-      case NodePathStep(node, next) => internalCompileExpression(node, currentContext) match {
+      case NodePathStep(node, next) => compileExpression(node) match {
         case Some(nodeOps) =>
           val addNode =
             if (nodeOps.nullCheck.isEmpty) invokeSideEffect(load(builderVar),
@@ -2416,7 +2381,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
       //For this case end node is known
       case SingleRelationshipPathStep(rel, direction, Some(targetExpression), next) =>
-        (internalCompileExpression(rel, currentContext), internalCompileExpression(targetExpression, currentContext)) match {
+        (compileExpression(rel), compileExpression(targetExpression)) match {
         case (Some(relOps), Some(target)) =>
           //this will generate something like
           //builder.addNode(n);
@@ -2441,7 +2406,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
 
       //Here end node is not known and will require lookup
-      case SingleRelationshipPathStep(rel, direction, _, next) =>  internalCompileExpression(rel, currentContext) match {
+      case SingleRelationshipPathStep(rel, direction, _, next) =>  compileExpression(rel) match {
         case Some(relOps) =>
           val methodName = direction match {
             case SemanticDirection.INCOMING => "addIncoming"
@@ -2458,7 +2423,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           compileSteps(next, acc :+ relOps.copy(ir = addRel))
         case None => None
       }
-      case MultiRelationshipPathStep(rel, direction, maybeTarget, next) => internalCompileExpression(rel, currentContext) match {
+      case MultiRelationshipPathStep(rel, direction, maybeTarget, next) => compileExpression(rel) match {
         case Some(relOps) =>
           val methodName = direction match {
             case SemanticDirection.INCOMING => "addMultipleIncoming"
@@ -2466,7 +2431,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             case _ => "addMultipleUndirected"
           }
 
-          val addRels = maybeTarget.flatMap(t => internalCompileExpression(t, currentContext)) match {
+          val addRels = maybeTarget.flatMap(t => compileExpression(t)) match {
             case Some(target) =>
               if (relOps.nullCheck.isEmpty && target.nullCheck.isEmpty) {
                 invokeSideEffect(load(builderVar),
@@ -2520,20 +2485,20 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     set
   }
 
-  private def cachedNodeExists(property: ASTCachedNodeProperty, currentContext: Option[IntermediateRepresentation]) = property match {
+  private def cachedNodeExists(property: ASTCachedNodeProperty) = property match {
     case CachedNodeProperty(offset, prop, _) =>
 
       Some(IntermediateExpression(
         invokeStatic(
           method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
-          loadContext(currentContext), DB_ACCESS, constant(offset), constant(prop)), Seq.empty,
+          LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(prop)), Seq.empty,
         Seq.empty, Set.empty))
 
       val variableName = namer.nextVariableName()
       val local = variable[Value](variableName, noValue)
       val lazySet = oneTime(assign(variableName, invokeStatic(
         method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
-        loadContext(currentContext), DB_ACCESS, constant(offset), constant(prop))))
+        LOAD_CONTEXT, DB_ACCESS, constant(offset), constant(prop))))
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(local), Set(nullChecks)))
@@ -2547,7 +2512,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(prop)))),
         invokeStatic(
           method[CompiledHelpers, Value, ExecutionContext, DbAccess, Int, Int]("cachedPropertyExists"),
-          loadContext(currentContext), DB_ACCESS, constant(offset), loadField(f)))))
+          LOAD_CONTEXT, DB_ACCESS, constant(offset), loadField(f)))))
 
       val ops = block(lazySet, load(variableName))
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
@@ -2581,6 +2546,8 @@ object IntermediateCodeGeneration {
   private val vPROPERTY_CURSOR = cursorVariable[PropertyCursor]("propertyCursor")
 
   private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
+
+  private val LOAD_CONTEXT = load("ctx")
 
   private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
     variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
