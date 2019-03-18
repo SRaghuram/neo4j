@@ -200,7 +200,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("should plan index seek with GetValue when the property is part of a distinct column") {
     val result = executeWith(Configs.InterpretedAndSlotted, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 AND n.prop1 < 44 RETURN DISTINCT n.prop1", executeBefore = createSomeNodes)
 
-    result.executionPlanDescription() should includeSomewhere.aPlan("Distinct")
+    result.executionPlanDescription() should includeSomewhere.aPlan("OrderedDistinct")
       .withDBHits(0)
       .onTopOf(aPlan("NodeIndexSeekByRange")
         .withExactVariables("n", "cached[n.prop1]"))
