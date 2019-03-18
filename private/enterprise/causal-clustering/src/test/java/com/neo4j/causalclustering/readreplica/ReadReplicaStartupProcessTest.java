@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
@@ -68,7 +68,7 @@ public class ReadReplicaStartupProcessTest
 
     private List<String> databaseNames = asList( "db1", "db2" );
     private Map<String,ClusteredDatabaseContext> registeredDbs = new HashMap<>();
-    private ClusteredDatabaseManager<ClusteredDatabaseContext> clusteredDatabaseManager = Mockito.spy( new StubClusteredDatabaseManager( registeredDbs ) );
+    private StubClusteredDatabaseManager clusteredDatabaseManager = Mockito.spy( new StubClusteredDatabaseManager() );
     private Map<String,DatabaseCatchupComponents> dbCatchupComponents = new HashMap<>();
     private MemberId memberId = new MemberId( UUID.randomUUID() );
     private AdvertisedSocketAddress fromAddress = new AdvertisedSocketAddress( "127.0.0.1", 123 );
@@ -87,10 +87,9 @@ public class ReadReplicaStartupProcessTest
                 .then( arg -> Optional.ofNullable( dbCatchupComponents.get( arg.<String>getArgument( 0 ) ) ) );
     }
 
-    private void mockCatchupComponents( String databaseName, ClusteredDatabaseContext clusteredDatabaseContext, RemoteStore remoteStore,
+    private void mockCatchupComponents( String databaseName, RemoteStore remoteStore,
             StoreCopyProcess storeCopyProcess )
     {
-        registeredDbs.put( databaseName, clusteredDatabaseContext );
         dbCatchupComponents.put( databaseName, new DatabaseCatchupComponents( remoteStore, storeCopyProcess ) );
     }
 
@@ -102,34 +101,35 @@ public class ReadReplicaStartupProcessTest
     private <E extends Exception> void failToGetFirstStoreId( String databaseName, Class<E> eClass ) throws StoreIdDownloadFailedException
     {
         RemoteStore remoteStore = mock( RemoteStore.class );
-        ClusteredDatabaseContext clusteredDatabaseContext = mockDatabase( databaseName );
+        ClusteredDatabaseContext clusteredDatabaseContext = stubDatabase( databaseName );
         when( remoteStore.getStoreId( any() ) ).thenThrow( eClass ).thenReturn( clusteredDatabaseContext.storeId() );
-        mockCatchupComponents( databaseName, clusteredDatabaseContext, remoteStore, mock( StoreCopyProcess.class ) );
+        mockCatchupComponents( databaseName, remoteStore, mock( StoreCopyProcess.class ) );
     }
 
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
     private void mockDatabaseResponses( String databaseName, boolean isEmpty, Optional<StoreId> storeIdResponse ) throws Throwable
     {
-        ClusteredDatabaseContext mockDb = mockDatabase( databaseName );
-        when( mockDb.isEmpty() ).thenReturn( isEmpty );
+        StubClusteredDatabaseContext stubDb = stubDatabase( databaseName );
+        stubDb.setEmpty( isEmpty );
         RemoteStore mockRemoteStore = mock( RemoteStore.class );
-        StoreId mockStoreId = mockDb.storeId();
+        StoreId mockStoreId = stubDb.storeId();
         when( mockRemoteStore.getStoreId( any() ) ).thenReturn( storeIdResponse.orElse( mockStoreId ) );
 
-        mockCatchupComponents( databaseName, mockDb, mockRemoteStore, mock( StoreCopyProcess.class ) );
+        mockCatchupComponents( databaseName, mockRemoteStore, mock( StoreCopyProcess.class ) );
     }
 
-    private ClusteredDatabaseContext mockDatabase( String databaseName )
+    private StubClusteredDatabaseContext stubDatabase( String databaseName )
     {
         Random rng = new Random( databaseName.hashCode() );
-        ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
-        //Common per database mocking
-        StoreId storeId = new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
+
+        org.neo4j.storageengine.api.StoreId kernelStoreId = new org.neo4j.storageengine.api.StoreId( rng.nextLong(), rng.nextLong(),
+                rng.nextLong(), rng.nextLong(), rng.nextLong() );
         DatabaseLayout databaseLayout = DatabaseLayout.of( new File( databaseName + "-store-dir" ) );
-        when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
-        when( clusteredDatabaseContext.databaseLayout() ).thenReturn( databaseLayout );
-        when( clusteredDatabaseContext.databaseName() ).thenReturn( databaseName );
-        return clusteredDatabaseContext;
+        return clusteredDatabaseManager.givenDatabaseWithConfig()
+                .withDatabaseName( databaseName )
+                .withKernelStoreId( kernelStoreId )
+                .withDatabaseLayout( databaseLayout )
+                .register();
     }
 
     private UpstreamDatabaseStrategySelector chooseFirstMember()
@@ -224,8 +224,8 @@ public class ReadReplicaStartupProcessTest
         boolean emptyStoreToggle = false;
         for ( String name : databaseNames )
         {
-            ClusteredDatabaseContext mockDb = mockDatabase( name );
-            when( mockDb.isEmpty() ).thenReturn( emptyStoreToggle );
+            StubClusteredDatabaseContext stubDb = stubDatabase( name );
+            stubDb.setEmpty( emptyStoreToggle );
 
             StoreCopyProcess storeCopyProcess = mock( StoreCopyProcess.class );
 
@@ -239,10 +239,10 @@ public class ReadReplicaStartupProcessTest
             }
             emptyStoreToggle = !emptyStoreToggle;
             RemoteStore mockRemoteStore = mock( RemoteStore.class );
-            StoreId mockStoreId = mockDb.storeId();
+            StoreId mockStoreId = stubDb.storeId();
             when( mockRemoteStore.getStoreId( any() ) ).thenReturn( mockStoreId );
 
-            mockCatchupComponents( name, mockDb, mockRemoteStore, storeCopyProcess );
+            mockCatchupComponents( name, mockRemoteStore, storeCopyProcess );
         }
 
         when( topologyService.findCatchupAddress( any() )).thenReturn( fromAddress );

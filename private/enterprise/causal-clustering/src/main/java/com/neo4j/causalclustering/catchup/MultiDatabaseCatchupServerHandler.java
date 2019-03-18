@@ -35,17 +35,17 @@ import org.neo4j.logging.LogProvider;
  */
 public class MultiDatabaseCatchupServerHandler implements CatchupServerHandler
 {
-    private final DatabaseManager<? extends DatabaseContext> databaseManager;
+    private final DatabaseManager<?> databaseManager;
     private final LogProvider logProvider;
     private final FileSystemAbstraction fs;
     private final CoreSnapshotService snapshotService;
 
-    public MultiDatabaseCatchupServerHandler( DatabaseManager<? extends DatabaseContext> databaseManager, LogProvider logProvider, FileSystemAbstraction fs )
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, LogProvider logProvider, FileSystemAbstraction fs )
     {
         this( databaseManager, logProvider, fs, null );
     }
 
-    public MultiDatabaseCatchupServerHandler( DatabaseManager<? extends DatabaseContext> databaseManager, LogProvider logProvider, FileSystemAbstraction fs,
+    public MultiDatabaseCatchupServerHandler( DatabaseManager<?> databaseManager, LogProvider logProvider, FileSystemAbstraction fs,
             CoreSnapshotService snapshotService )
     {
         this.databaseManager = databaseManager;

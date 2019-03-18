@@ -34,9 +34,9 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
-import org.neo4j.monitoring.SingleDatabaseHealth;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.FakeClockJobScheduler;
 
@@ -58,7 +58,7 @@ public class CatchupProcessManagerTest
     private final TopologyService topologyService = mock( TopologyService.class );
     private final Suspendable startStopOnStoreCopy = mock( Suspendable.class );
     private final CatchupComponentsRepository catchupComponents = mock( CatchupComponentsRepository.class );
-    private final DatabaseHealth databaseHealth = mock( SingleDatabaseHealth.class );
+    private final Health databaseHealth = mock( DatabaseHealth.class );
     private final VersionContextSupplier versionContextSupplier = mock( VersionContextSupplier.class );
     private final PageCursorTracerSupplier pageCursorTracerSupplier = mock( PageCursorTracerSupplier.class );
 
@@ -87,12 +87,11 @@ public class CatchupProcessManagerTest
 
     private ClusteredDatabaseContext getMockDatabase( String databaseName )
     {
-        databaseService.givenDatabaseWithConfig()
+        return databaseService.givenDatabaseWithConfig()
                 .withDatabaseName( databaseName )
                 .withMonitors( new Monitors() )
                 .withDependencies( mock( Dependencies.class ) )
                 .register();
-        return databaseService.getDatabaseContext( databaseName ).get();
     }
 
     @Test

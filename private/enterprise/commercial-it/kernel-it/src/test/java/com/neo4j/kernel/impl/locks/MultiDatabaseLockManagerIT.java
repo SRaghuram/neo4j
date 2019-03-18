@@ -94,7 +94,7 @@ class MultiDatabaseLockManagerIT
     private GraphDatabaseFacade startSecondDatabase() throws DatabaseExistsException
     {
         String secondDb = "second";
-        DatabaseManager databaseManager = getDatabaseManager();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         return databaseManager.createDatabase( secondDb ).databaseFacade();
     }
 
@@ -110,8 +110,7 @@ class MultiDatabaseLockManagerIT
         } );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

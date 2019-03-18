@@ -12,13 +12,13 @@ import org.neo4j.dbms.database.StandaloneDatabaseContext;
 
 public class StopStartManagerCommand extends DatabaseManagerCommand
 {
-    public StopStartManagerCommand( DatabaseManager<StandaloneDatabaseContext> manager, String databaseName )
+    public StopStartManagerCommand( DatabaseManager<?> manager, String databaseName )
     {
         super( manager, databaseName );
     }
 
     @Override
-    void execute( DatabaseManager<StandaloneDatabaseContext> manager, String databaseName ) throws DatabaseExistsException, DatabaseNotFoundException
+    void execute( DatabaseManager<?> manager, String databaseName ) throws DatabaseExistsException, DatabaseNotFoundException
     {
         manager.stopDatabase( databaseName );
         manager.startDatabase( databaseName );

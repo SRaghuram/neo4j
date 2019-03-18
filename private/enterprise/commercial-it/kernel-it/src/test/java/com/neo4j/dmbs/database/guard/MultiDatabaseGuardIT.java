@@ -48,7 +48,7 @@ class MultiDatabaseGuardIT
     void databaseGuardDynamicRegistration()
     {
         DependencyResolver dependencyResolver = ((GraphDatabaseAPI) database).getDependencyResolver();
-        DatabaseManager databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = dependencyResolver.resolveDependency( DatabaseManager.class );
         CompositeDatabaseAvailabilityGuard compositeGuard =
                 dependencyResolver.resolveDependency( CompositeDatabaseAvailabilityGuard.class );
 

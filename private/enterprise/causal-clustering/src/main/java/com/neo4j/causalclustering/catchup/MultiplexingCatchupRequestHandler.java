@@ -24,17 +24,17 @@ import org.neo4j.logging.LogProvider;
 class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extends SimpleChannelInboundHandler<T>
 {
     private final Class<T> messageType;
-    private final DatabaseManager<? extends DatabaseContext> databaseManagerSupplier;
+    private final DatabaseManager<?> databaseManager;
     private final Function<Database,SimpleChannelInboundHandler<T>> handlerFactory;
     private final CatchupServerProtocol protocol;
     private final LogProvider logProvider;
 
-    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, DatabaseManager<? extends DatabaseContext> databaseManagerSupplier,
+    MultiplexingCatchupRequestHandler( CatchupServerProtocol protocol, DatabaseManager<?> databaseManager,
             Function<Database,SimpleChannelInboundHandler<T>> handlerFactory, Class<T> messageType, LogProvider logProvider )
     {
         super( messageType );
         this.messageType = messageType;
-        this.databaseManagerSupplier = databaseManagerSupplier;
+        this.databaseManager = databaseManager;
         this.handlerFactory = handlerFactory;
         this.protocol = protocol;
         this.logProvider = logProvider;
@@ -45,7 +45,7 @@ class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extend
     {
         String databaseName = request.databaseName();
 
-        SimpleChannelInboundHandler<T> handler = databaseManagerSupplier
+        SimpleChannelInboundHandler<T> handler = databaseManager
                 .getDatabaseContext( databaseName )
                 .map( DatabaseContext::database )
                 .map( handlerFactory )

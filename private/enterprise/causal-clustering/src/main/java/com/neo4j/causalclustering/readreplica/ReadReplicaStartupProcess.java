@@ -57,9 +57,9 @@ class ReadReplicaStartupProcess implements Lifecycle
     private String lastIssue;
 
     private final CatchupComponentsRepository catchupComponents;
-    private final ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager;
+    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
 
-    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager,
+    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager<?> clusteredDatabaseManager,
             Lifecycle catchupProcessManager, UpstreamDatabaseStrategySelector selectionStrategyPipeline, LogProvider debugLogProvider,
             LogProvider userLogProvider, TopologyService topologyService, CatchupComponentsRepository catchupComponents )
     {
@@ -67,7 +67,7 @@ class ReadReplicaStartupProcess implements Lifecycle
                 catchupComponents, new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS ) );
     }
 
-    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager,
+    ReadReplicaStartupProcess( Executor executor, ClusteredDatabaseManager<?> clusteredDatabaseManager,
             Lifecycle catchupProcessManager, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider, LogProvider userLogProvider,
             TopologyService topologyService, CatchupComponentsRepository catchupComponents, TimeoutStrategy syncRetryStrategy )
     {
@@ -98,7 +98,7 @@ class ReadReplicaStartupProcess implements Lifecycle
     public void start() throws Exception
     {
         TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
-        Map<String,? extends ClusteredDatabaseContext> dbsToSync =  new HashMap<>( clusteredDatabaseManager.registeredDatabases() );
+        var dbsToSync =  new HashMap<>( clusteredDatabaseManager.registeredDatabases() );
         int attempt = 0;
         Set<String> syncedDbs = new HashSet<>();
         while ( !syncedDbs.equals( dbsToSync.keySet() ) )
@@ -158,7 +158,7 @@ class ReadReplicaStartupProcess implements Lifecycle
     private CompletableFuture<Map<String,AsyncResult>> syncStoresWithUpstream( MemberId source, Map<String,? extends ClusteredDatabaseContext> dbsToSync )
     {
         CompletableFuture<Map<String,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
-        for ( Map.Entry<String,? extends ClusteredDatabaseContext> nameDbEntry : dbsToSync.entrySet() )
+        for ( var nameDbEntry : dbsToSync.entrySet() )
         {
             String dbName = nameDbEntry.getKey();
             CompletableFuture<AsyncResult> stage =

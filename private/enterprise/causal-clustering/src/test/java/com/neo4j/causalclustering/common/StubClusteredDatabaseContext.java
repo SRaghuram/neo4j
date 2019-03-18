@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.identity.StoreId;
 
@@ -29,18 +31,20 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     private final GraphDatabaseFacade facade;
     private final LogProvider logProvider;
     private final BooleanSupplier isAvailable;
+    private final CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents;
     private boolean isEmpty;
     private StoreId storeId;
     private final Monitors monitors;
 
     /* This constructor is provided so that StubClusteredDatabaseContext can still conform to the ClusteredDatabaseContextFactory interface */
     StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles ignoredTxLogs,
-            StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable )
+            StoreFiles ignoredStoreFiles, LogProvider logProvider, BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory )
     {
-        this( database, facade, logProvider, isAvailable, null );
+        this( database, facade, logProvider, isAvailable, null, catchupComponentsFactory );
     }
 
-    StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogProvider logProvider, BooleanSupplier isAvailable, Monitors monitors )
+    StubClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogProvider logProvider, BooleanSupplier isAvailable,
+            Monitors monitors, CatchupComponentsFactory catchupComponentsFactory )
     {
         this.database = database;
         this.facade = facade;
@@ -49,6 +53,7 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         storeId = new StoreId( rng.nextInt(), rng.nextInt(), rng.nextInt(), rng.nextInt() );
         this.monitors = monitors;
+        this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
     }
 
     @Override
@@ -111,5 +116,11 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     public GraphDatabaseFacade databaseFacade()
     {
         return facade;
+    }
+
+    @Override
+    public CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents()
+    {
+        return catchupComponents;
     }
 }

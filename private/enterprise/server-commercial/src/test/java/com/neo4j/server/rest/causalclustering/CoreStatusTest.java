@@ -37,10 +37,10 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.monitoring.SingleDatabaseHealth;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
@@ -67,7 +67,7 @@ public class CoreStatusTest
 
     // Dependency resolved
     private RaftMembershipManager raftMembershipManager;
-    private DatabaseHealth databaseHealth;
+    private Health databaseHealth;
     private FakeTopologyService topologyService;
     private DurationSinceLastMessageMonitor raftMessageTimerResetMonitor;
     private RaftMachine raftMachine;
@@ -89,7 +89,7 @@ public class CoreStatusTest
         raftMembershipManager = dependencyResolver.satisfyDependency( fakeRaftMembershipManager( new HashSet<>( Arrays.asList( myself, core2, core3 ) ) ) );
 
         databaseHealth = dependencyResolver.satisfyDependency(
-                new SingleDatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( SingleDatabaseHealth.class ) ) );
+                new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
 
         topologyService = dependencyResolver.satisfyDependency(
                 new FakeTopologyService( Arrays.asList( core2, core3 ), Collections.singleton( replica ), myself, RoleInfo.FOLLOWER ) );

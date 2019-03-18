@@ -9,7 +9,7 @@ import com.neo4j.kernel.impl.enterprise.CommercialConstraintSemantics;
 import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableIOLimiter;
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
-import com.neo4j.kernel.internal.CompositeDatabaseHealth;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
 
 import java.io.File;
 import java.util.function.Predicate;
@@ -25,7 +25,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
-import org.neo4j.monitoring.SingleDatabaseHealth;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.kernel.internal.KernelData;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -34,8 +34,6 @@ import org.neo4j.monitoring.DatabasePanicEventGenerator;
 
 public abstract class ClusteringEditionModule extends AbstractEditionModule
 {
-    private final CompositeDatabaseHealth globalDatabaseHealth = new CompositeDatabaseHealth();
-
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies, Config config, LifeSupport life )
     {
         KernelData kernelData = createKernelData( globalModule.getFileSystem(), globalModule.getPageCache(),
@@ -74,15 +72,5 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
     {
         return Predicates.any( fileName -> fileName.startsWith( TransactionLogFilesHelper.DEFAULT_NAME ),
                 filename -> filename.endsWith( PageCacheWarmer.SUFFIX_CACHEPROF ) );
-    }
-
-    protected CompositeDatabaseHealth getGlobalDatabaseHealth()
-    {
-        return globalDatabaseHealth;
-    }
-
-    public SingleDatabaseHealth createDatabaseHealth( String databaseName, DatabasePanicEventGenerator dbpe, Log log )
-    {
-        return globalDatabaseHealth.createDatabaseHealth( databaseName, dbpe, log );
     }
 }

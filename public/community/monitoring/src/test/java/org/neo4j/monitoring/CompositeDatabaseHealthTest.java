@@ -1,20 +1,34 @@
 /*
  * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.kernel.internal;
+package org.neo4j.monitoring;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
-import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -33,7 +47,7 @@ class CompositeDatabaseHealthTest
     void shouldPanicAllDatabasesTogether()
     {
         // given
-        Map<String,SingleDatabaseHealth> dbHealths = Stream.generate( this::mockDBHealth ).limit( 5 ).collect( CollectorsUtil.pairsToMap() );
+        List<DatabaseHealth> dbHealths = Stream.generate( this::mockDBHealth ).limit( 5 ).collect( Collectors.toList() );
         CompositeDatabaseHealth compositeDatabaseHealth = new CompositeDatabaseHealth( dbHealths );
 
         // when
@@ -41,7 +55,7 @@ class CompositeDatabaseHealthTest
         compositeDatabaseHealth.panic( expectedCause );
 
         // then
-        for ( SingleDatabaseHealth dbHealth : dbHealths.values() )
+        for ( DatabaseHealth dbHealth : dbHealths )
         {
             assertFalse( dbHealth.isHealthy() );
             assertEquals( expectedCause, dbHealth.cause() );
@@ -52,14 +66,14 @@ class CompositeDatabaseHealthTest
     void shouldAssertHealthyOnAllDatabasesTogether()
     {
         // given
-        Map<String,SingleDatabaseHealth> dbHealths = Stream.generate( this::mockDBHealth ).limit( 5 ).collect( CollectorsUtil.pairsToMap() );
+        List<DatabaseHealth> dbHealths = Stream.generate( this::mockDBHealth ).limit( 5 ).collect( Collectors.toList() );
         CompositeDatabaseHealth compositeDatabaseHealth = new CompositeDatabaseHealth( dbHealths );
 
         // when
         compositeDatabaseHealth.assertHealthy( IllegalStateException.class );
 
         // then
-        for ( SingleDatabaseHealth dbHealth : dbHealths.values() )
+        for ( DatabaseHealth dbHealth : dbHealths )
         {
             verify( dbHealth ).assertHealthy( eq( IllegalStateException.class ) );
         }
@@ -70,11 +84,11 @@ class CompositeDatabaseHealthTest
     {
         // given
         int numUnhealthyDBs = 5;
-        Map<String,SingleDatabaseHealth> unhealthyDBs = Stream.generate( this::mockDBHealth )
-                .peek( dbHealth -> dbHealth.other().panic( new Exception( "Error" ) ) )
-                .limit( numUnhealthyDBs ).collect( CollectorsUtil.pairsToMap() );
-        Pair<String,SingleDatabaseHealth> healthyDB = mockDBHealth();
-        unhealthyDBs.put( healthyDB.first(), healthyDB.other() );
+        List<DatabaseHealth> unhealthyDBs = Stream.generate( this::mockDBHealth )
+                .peek( dbHealth -> dbHealth.panic( new Exception( "Error" ) ) )
+                .limit( numUnhealthyDBs ).collect( Collectors.toList() );
+        DatabaseHealth healthyDB = mockDBHealth();
+        unhealthyDBs.add( healthyDB );
         CompositeDatabaseHealth compositeDatabaseHealth = new CompositeDatabaseHealth( unhealthyDBs );
 
         // then
@@ -82,15 +96,15 @@ class CompositeDatabaseHealthTest
         Throwable compositeCause = compositeDatabaseHealth.cause();
         assertThat( compositeCause.getMessage(), containsString( "Some of the databases have panicked" ) );
         Throwable[] suppressed = compositeCause.getSuppressed();
-        assertEquals( suppressed.length, numUnhealthyDBs );
+        assertEquals( numUnhealthyDBs, suppressed.length );
     }
 
-    private Pair<String,SingleDatabaseHealth> mockDBHealth()
-    {
+    //TODO: Test that a databaseHealth removes itself when stopped.
 
+    private DatabaseHealth mockDBHealth()
+    {
         DatabasePanicEventGenerator generator = mock( DatabasePanicEventGenerator.class );
-        return Pair.of( UUID.randomUUID().toString(),
-                spy( new SingleDatabaseHealth( generator, NullLogProvider.getInstance().getLog( SingleDatabaseHealth.class ) ) ) );
+        return spy( new DatabaseHealth( generator, NullLogProvider.getInstance().getLog( DatabaseHealth.class ) ) );
     }
 
 }

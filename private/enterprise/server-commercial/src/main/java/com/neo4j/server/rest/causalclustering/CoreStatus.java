@@ -24,8 +24,8 @@ import java.util.Objects;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 import static com.neo4j.server.rest.causalclustering.CausalClusteringService.BASE_PATH;
@@ -37,7 +37,7 @@ class CoreStatus extends BaseStatus
 
     // Dependency resolved
     private final RaftMembershipManager raftMembershipManager;
-    private final DatabaseHealth databaseHealth;
+    private final Health databaseHealth;
     private final TopologyService topologyService;
     private final DurationSinceLastMessageMonitor raftMessageTimerResetMonitor;
     private final RaftMachine raftMachine;
@@ -52,7 +52,7 @@ class CoreStatus extends BaseStatus
 
         DependencyResolver dependencyResolver = db.getDependencyResolver();
         this.raftMembershipManager = dependencyResolver.resolveDependency( RaftMembershipManager.class );
-        this.databaseHealth = dependencyResolver.resolveDependency( SingleDatabaseHealth.class );
+        this.databaseHealth = dependencyResolver.resolveDependency( DatabaseHealth.class );
         this.topologyService = dependencyResolver.resolveDependency( TopologyService.class );
         this.raftMachine = dependencyResolver.resolveDependency( RaftMachine.class );
         this.raftMessageTimerResetMonitor = dependencyResolver.resolveDependency( DurationSinceLastMessageMonitor.class );

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.identity.StoreId;
 
 import java.io.File;
@@ -68,4 +69,9 @@ public interface ClusteredDatabaseContext extends Lifecycle, DatabaseContext
      * @return the name of this database
      */
     String databaseName();
+
+    /**
+     * @return the {@link CatchupComponentsRepository.DatabaseCatchupComponents} for this clustered database
+     */
+    CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents();
 }

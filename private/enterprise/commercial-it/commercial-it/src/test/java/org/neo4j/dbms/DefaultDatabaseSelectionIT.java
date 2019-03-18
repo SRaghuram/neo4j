@@ -15,6 +15,7 @@ import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -133,7 +134,7 @@ class DefaultDatabaseSelectionIT
 
     private void checkDatabaseNames( GraphDatabaseService database, String defaultDatabaseName )
     {
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager( database );
+        DatabaseManager<?> databaseManager = getDatabaseManager( database );
         Set<String> databases = databaseManager.registeredDatabases().keySet();
         assertThat( databases, containsInAnyOrder( defaultDatabaseName, "system" ) );
     }
@@ -169,8 +170,7 @@ class DefaultDatabaseSelectionIT
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager( GraphDatabaseService database )
+    private DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

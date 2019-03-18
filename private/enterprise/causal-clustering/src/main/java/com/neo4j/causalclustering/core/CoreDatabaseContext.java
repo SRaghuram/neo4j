@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.AbstractClusteredDatabaseContext;
 import com.neo4j.causalclustering.core.state.CoreStateService;
@@ -29,9 +30,9 @@ public final class CoreDatabaseContext extends AbstractClusteredDatabaseContext
     private DatabaseCoreStateComponents databaseState;
 
     public CoreDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
-            BooleanSupplier isAvailable, CoreStateService coreStateService )
+            BooleanSupplier isAvailable, CoreStateService coreStateService, CatchupComponentsFactory catchupComponentsFactory )
     {
-        super( database, facade, txLogs, storeFiles, logProvider, isAvailable );
+        super( database, facade, txLogs, storeFiles, logProvider, isAvailable, catchupComponentsFactory );
         this.coreStateService = coreStateService;
         this.databaseState = coreStateService.getDatabaseState( databaseName() ).orElseThrow( IllegalStateException::new );
     }
@@ -39,11 +40,6 @@ public final class CoreDatabaseContext extends AbstractClusteredDatabaseContext
     void setCommitProcess( TransactionRepresentationCommitProcess commitProcess )
     {
         this.commitProcess = commitProcess;
-    }
-
-    public TransactionRepresentationCommitProcess commitProcess()
-    {
-        return commitProcess;
     }
 
     @Override

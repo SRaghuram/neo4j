@@ -57,7 +57,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private final ClusteredDatabaseContext clusteredDatabaseContext;
     //TODO: It makes no sense to take both clusteredDatabaseContext and clusteredDatabaseManager here.
     // When clusteredDatabaseContext objects can stop and start it won't be needed
-    private final ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager;
+    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
     private final CatchupAddressProvider catchupAddressProvider;
     private final Log log;
     private final Suspendable enableDisableOnStoreCopy;
@@ -72,7 +72,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
     private volatile long latestTxIdOfUpStream;
 
-    public CatchupPollingProcess( Executor executor, String databaseName, ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager,
+    public CatchupPollingProcess( Executor executor, String databaseName, ClusteredDatabaseManager<?> clusteredDatabaseManager,
             Suspendable enableDisableOnSoreCopy, CatchupClientFactory catchUpClient, BatchingTxApplier applier, Monitors monitors,
             StoreCopyProcess storeCopyProcess, LogProvider logProvider, Panicker panicker, CatchupAddressProvider catchupAddressProvider )
 

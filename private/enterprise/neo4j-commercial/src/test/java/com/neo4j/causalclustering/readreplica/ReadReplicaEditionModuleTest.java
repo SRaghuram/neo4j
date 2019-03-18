@@ -50,7 +50,7 @@ class ReadReplicaEditionModuleTest
     @Test
     void editionDatabaseCreationOrder() throws DatabaseExistsException
     {
-        DatabaseManager<StandaloneDatabaseContext> manager = mock( DatabaseManager.class );
+        DatabaseManager<?> manager = mock( DatabaseManager.class );
         Config config = Config.defaults( new BoltConnector( "bolt" ).enabled, Settings.TRUE );
         GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, READ_REPLICA, newDependencies() )
         {

@@ -209,7 +209,7 @@ public class ImportAuthCommand implements AdminCommand
 
         SecurityLog securityLog = new SecurityLog( config, outsideWorld.fileSystem(), Runnable::run );
 
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager( db );
+        DatabaseManager<?> databaseManager = getDatabaseManager( db );
         return CommercialSecurityModule.createSystemGraphRealmForOfflineImport(
                 config,
                 securityLog,
@@ -218,8 +218,7 @@ public class ImportAuthCommand implements AdminCommand
                 shouldResetSystemGraphAuthBeforeImport );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager( GraphDatabaseService db )
+    private DatabaseManager<?> getDatabaseManager( GraphDatabaseService db )
     {
         return ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

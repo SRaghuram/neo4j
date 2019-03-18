@@ -50,7 +50,7 @@ class MultiDatabaseFileWatchIT
     {
         logProvider = new AssertableLogProvider( true );
         database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( testDirectory.storeDir() );
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         firstContext = databaseManager.createDatabase( "first" );
         secondContext = databaseManager.createDatabase( "second" );
         thirdContext = databaseManager.createDatabase( "third" );
@@ -114,8 +114,7 @@ class MultiDatabaseFileWatchIT
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( FileSystemWatcherService.class );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

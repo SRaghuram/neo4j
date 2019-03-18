@@ -62,9 +62,8 @@ class MultiDatabaseDiagnosticsLoggingIT
         provider.clear();
         provider.assertNoLoggingOccurred();
 
-        @SuppressWarnings( "unchecked" )
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = resolver.resolveDependency( DatabaseManager.class );
-        DatabaseContext databaseContext = databaseManager.createDatabase( "NewDatabase" );
+        DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
+        databaseManager.createDatabase( "NewDatabase" );
         provider.assertContainsMessageContaining( "Database: NewDatabase" );
         provider.assertContainsMessageContaining( "Version" );
         provider.assertContainsMessageContaining( "Store files" );

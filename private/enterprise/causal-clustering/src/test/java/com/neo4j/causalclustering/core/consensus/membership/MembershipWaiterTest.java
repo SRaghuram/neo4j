@@ -17,9 +17,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.neo4j.monitoring.SingleDatabaseHealth;
-import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.OnDemandJobScheduler;
 
@@ -33,7 +33,7 @@ import static org.mockito.Mockito.when;
 
 public class MembershipWaiterTest
 {
-    private DatabaseHealth dbHealth = mock( SingleDatabaseHealth.class );
+    private Health dbHealth = mock( DatabaseHealth.class );
 
     @Before
     public void mocking()

@@ -40,7 +40,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     @RegisterExtension
     static final SessionExtension env = new SessionExtension( new TestCommercialGraphDatabaseFactory() );
 
-    protected DatabaseManager databaseManager()
+    protected DatabaseManager<?> databaseManager()
     {
         return env.databaseManager();
     }
@@ -106,7 +106,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     void shouldErrorIfDatabaseNotExists() throws Throwable
     {
         BoltStateMachineV1 machine = newStateMachineInReadyState();
-        DatabaseManager databaseManager = databaseManager();
+        DatabaseManager<?> databaseManager = databaseManager();
         databaseManager.dropDatabase( defaultDatabaseName() );
         runWithFailure( "RETURN 1", machine, Status.Database.DatabaseNotFound );
     }
@@ -114,7 +114,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     @Test
     void shouldErrorIfDatabaseStopped() throws Throwable
     {
-        DatabaseManager databaseManager = databaseManager();
+        DatabaseManager<?> databaseManager = databaseManager();
         databaseManager.stopDatabase( defaultDatabaseName() );
 
         BoltStateMachineV1 machine = newStateMachineInReadyState();

@@ -29,6 +29,7 @@ import java.util.function.Function;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
@@ -102,7 +103,7 @@ public class CoreBootstrapper
     private static final long FIRST_INDEX = 0L;
     private static final long FIRST_TERM = 0L;
 
-    private final ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager;
+    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
     private final TemporaryDatabaseFactory tempDatabaseFactory;
     private final Function<String,DatabaseInitializer> databaseInitializers;
     private final PageCache pageCache;
@@ -111,7 +112,7 @@ public class CoreBootstrapper
     private final StorageEngineFactory storageEngineFactory;
     private final Config config;
 
-    CoreBootstrapper( ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager, TemporaryDatabaseFactory tempDatabaseFactory,
+    CoreBootstrapper( ClusteredDatabaseManager<?> clusteredDatabaseManager, TemporaryDatabaseFactory tempDatabaseFactory,
             Function<String,DatabaseInitializer> databaseInitializers, FileSystemAbstraction fs, Config config, LogProvider logProvider, PageCache pageCache,
             StorageEngineFactory storageEngineFactory )
     {
@@ -182,12 +183,9 @@ public class CoreBootstrapper
             {
                 DatabaseInitializer systemDatabaseInitializer = databaseInitializers.apply( SYSTEM_DATABASE_NAME );
                 //TODO This all needs to be overhauled
-                @SuppressWarnings( "unchecked" )
-                //StandaloneDatabaseContext because this database manager belongs to a standalone temporary instance
-                DatabaseManager<StandaloneDatabaseContext> databaseManager =
+                DatabaseManager<?> databaseManager =
                         ((GraphDatabaseAPI) temporaryDatabase.graphDatabaseService()).getDependencyResolver().resolveDependency( DatabaseManager.class );
-                Optional<StandaloneDatabaseContext> systemContext = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME );
-                GraphDatabaseFacade systemDatabaseFacade = systemContext
+                GraphDatabaseFacade systemDatabaseFacade = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME )
                         .orElseThrow( () -> new IllegalStateException( SYSTEM_DATABASE_NAME + " database should exist." ) )
                         .databaseFacade();
                 systemDatabaseInitializer.initialize( systemDatabaseFacade );

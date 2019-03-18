@@ -38,7 +38,7 @@ class CommercialEditionModuleTest
     @Test
     void editionDatabaseCreationOrder() throws DatabaseExistsException
     {
-        DatabaseManager<StandaloneDatabaseContext> manager = mock( DatabaseManager.class );
+        DatabaseManager<?> manager = mock( DatabaseManager.class );
         Config config = Config.defaults();
         GlobalModule globalModule = new GlobalModule( testDirectory.storeDir(), config, COMMERCIAL, newDependencies() )
         {

@@ -31,10 +31,10 @@ import javax.ws.rs.core.Response;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
-import org.neo4j.monitoring.SingleDatabaseHealth;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -57,7 +57,7 @@ public class ReadReplicaStatusTest
 
     private FakeTopologyService topologyService;
     private Dependencies dependencyResolver = new Dependencies();
-    private DatabaseHealth databaseHealth;
+    private Health databaseHealth;
     private CommandIndexTracker commandIndexTracker;
 
     private final MemberId myself = new MemberId( UUID.randomUUID() );
@@ -76,7 +76,7 @@ public class ReadReplicaStatusTest
 
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
         databaseHealth = dependencyResolver.satisfyDependency(
-                new SingleDatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( SingleDatabaseHealth.class ) ) );
+                new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
         dependencyResolver.satisfyDependency(
                 new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );

@@ -56,8 +56,7 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
     static BoltStateMachineFactory boltFactory( GraphDatabaseAPI db )
     {
         DependencyResolver resolver = db.getDependencyResolver();
-        @SuppressWarnings( "unchecked" )
-        DatabaseManager<? extends DatabaseContext> databaseManager = resolver.resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = resolver.resolveDependency( DatabaseManager.class );
         Config config = resolver.resolveDependency( Config.class );
         Authentication authentication = new BasicAuthentication( resolver.resolveDependency( AuthManager.class ),
                                                                  resolver.resolveDependency( UserManagerSupplier.class ) );

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
@@ -46,13 +47,12 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.graphdb.factory.module.edition.context.DatabaseComponents;
+import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
@@ -65,13 +65,13 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
-import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 
@@ -85,17 +85,20 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     protected final LogProvider logProvider;
     private final String defaultDatabaseName;
     private final Config globaConfig;
+    private final CompositeDatabaseHealth globalHealth;
     private final GlobalModule globalModule;
 
     private final MemberId myself;
     private final PipelineBuilders pipelineBuilders;
     private final JobScheduler jobScheduler;
     private final PanicService panicService;
+    private final CatchupComponentsProvider catchupComponentsProvider;
 
     private CatchupHandlerFactory handlerFactory;
     public ReadReplicaEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory, MemberId myself )
     {
         this.globalModule = globalModule;
+        this.globalHealth = globalModule.getGlobalHealthService();
         this.myself = myself;
         LogService logService = globalModule.getLogService();
         this.globaConfig = globalModule.getGlobalConfig();
@@ -115,7 +118,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         LifeSupport globalLife = globalModule.getGlobalLife();
 
-        SystemNanoClock globalClock = globalModule.getGlobalClock();
         threadToTransactionBridge = globalDependencies.satisfyDependency( new ThreadToStatementContextBridge() );
         this.accessCapability = new ReadOnly();
 
@@ -133,6 +135,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalLife.add( globalDependencies.satisfyDependency( topologyService ) );
 
         pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globaConfig, sslPolicyLoader );
+        catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
 
         editionInvariants( globalModule, globalDependencies, globaConfig, globalLife );
     }
@@ -150,7 +153,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
     }
 
-    private void addPanicEventHandlers( PanicService panicService, LifeSupport life, DatabaseHealth allHealths, Server catchupServer,
+    private void addPanicEventHandlers( PanicService panicService, LifeSupport life, Health allHealths, Server catchupServer,
             Optional<Server> backupServer )
     {
         // order matters
@@ -168,7 +171,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public DatabaseComponents createDatabaseComponents( String databaseName )
+    public EditionDatabaseComponents createDatabaseComponents( String databaseName )
     {
         return new ReadReplicaDatabaseComponents( globalModule, this, databaseName );
     }
@@ -177,8 +180,8 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     public DatabaseManager<ReadReplicaDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Logger log )
     {
          ClusteredMultiDatabaseManager<ReadReplicaDatabaseContext> databaseManager = new ClusteredMultiDatabaseManager<>( platform, this, log, facade,
-                ReadReplicaDatabaseContext::new, platform.getFileSystem(), platform.getPageCache(), logProvider,
-                 globaConfig, getGlobalDatabaseHealth(), globalModule.getGlobalAvailabilityGuard() );
+                 ReadReplicaDatabaseContext::new, catchupComponentsProvider::createDatabaseComponents, platform.getFileSystem(), platform.getPageCache(),
+                 logProvider, globaConfig, globalHealth, globalModule.getGlobalAvailabilityGuard() );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
@@ -190,8 +193,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         LogProvider userLogProvider = globalModule.getLogService().getUserLogProvider();
 
         handlerFactory = ignored -> getHandlerFactory( globalModule.getFileSystem(), databaseManager );
-        ReadReplicaServerModule serverModule =
-                new ReadReplicaServerModule( databaseManager, pipelineBuilders, handlerFactory, globalModule, defaultDatabaseName );
+        ReadReplicaServerModule serverModule = new ReadReplicaServerModule( databaseManager, catchupComponentsProvider, handlerFactory, defaultDatabaseName );
 
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
         CommandIndexTracker commandIndexTracker = globalModule.getGlobalDependencies().satisfyDependency( new CommandIndexTracker() );
@@ -206,11 +208,11 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
         CatchupProcessManager catchupProcessManager =
                 new CatchupProcessManager( catchupExecutor, serverModule.catchupComponents(), databaseManager, servicesToStopOnStoreCopy,
-                        getGlobalDatabaseHealth(), topologyService, serverModule.catchupClient(), upstreamDatabaseStrategySelector, timerService,
+                        globalHealth, topologyService, serverModule.catchupClient(), upstreamDatabaseStrategySelector, timerService,
                         commandIndexTracker, internalLogProvider, globalModule.getVersionContextSupplier(),
                         globalModule.getTracers().getPageCursorTracerSupplier(), globaConfig );
 
-        addPanicEventHandlers( panicService, globalModule.getGlobalLife(), getGlobalDatabaseHealth(),
+        addPanicEventHandlers( panicService, globalModule.getGlobalLife(), globalHealth,
                 serverModule.catchupServer(), serverModule.backupServer() );
 
         globalModule.getGlobalLife().add( new ReadReplicaStartupProcess( catchupExecutor, databaseManager, catchupProcessManager,
@@ -224,23 +226,23 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public void createDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         createCommercialEditionDatabases( databaseManager, config );
     }
 
-    private void createCommercialEditionDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         createDatabase( databaseManager, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 
-    private void createConfiguredDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    private void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         createDatabase( databaseManager, config.get( GraphDatabaseSettings.default_database ) );
     }
 
-    protected void createDatabase( DatabaseManager<? extends DatabaseContext> databaseManager, String databaseName ) throws DatabaseExistsException
+    protected void createDatabase( DatabaseManager<?> databaseManager, String databaseName ) throws DatabaseExistsException
     {
         databaseManager.createDatabase( databaseName );
     }

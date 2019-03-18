@@ -24,12 +24,12 @@ class CommercialCatchupV2Test extends CommercialCatchupTest
 
     @ParameterizedTest
     @MethodSource( "v2Tests" )
-    void runTests( Function<DatabaseManager<? extends DatabaseContext>,RequestResponse> scenario ) throws Exception
+    void runTests( Function<DatabaseManager<?>,RequestResponse> scenario ) throws Exception
     {
         executeTestScenario( scenario );
     }
 
-    static Stream<Function<DatabaseManager<? extends DatabaseContext>,RequestResponse>> v2Tests()
+    static Stream<Function<DatabaseManager<?>,RequestResponse>> v2Tests()
     {
         return Stream.of( storeId(), wrongDb() );
     }

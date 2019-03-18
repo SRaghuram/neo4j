@@ -11,14 +11,12 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyFailedException;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.identity.StoreId;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -42,48 +40,24 @@ public class StoreDownloaderTest
     private final AdvertisedSocketAddress secondaryAddress = new AdvertisedSocketAddress( "secondary", 2 );
 
     private final String databaseName = "target";
-    private final StoreId storeId = randomStoreId();
+    private final org.neo4j.storageengine.api.StoreId storeId = randomKernelStoreId();
 
-    private final StubCatchupComponentsRepository components = new StubCatchupComponentsRepository();
+    private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
+    private final CatchupComponentsRepository components = new CatchupComponentsRepository( databaseManager );
     private final StoreDownloader downloader = new StoreDownloader( components, NullLogProvider.getInstance() );
-
-    private ClusteredDatabaseContext mockLocalDatabase( String databaseName, boolean isEmpty, StoreId storeId ) throws IOException
-    {
-        ClusteredDatabaseContext clusteredDatabaseContext = mock( ClusteredDatabaseContext.class );
-        when( clusteredDatabaseContext.isEmpty() ).thenReturn( isEmpty );
-        when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
-        when( clusteredDatabaseContext.databaseName() ).thenReturn( databaseName );
-        return clusteredDatabaseContext;
-    }
-
-    @Before
-    public void setup() throws StoreIdDownloadFailedException, IOException, StoreCopyFailedException
-    {
-        components.getOrCreate( databaseName );
-
-        // create some more components just to test that they're not mixed up
-        mockRemoteUnsuccessfulStore( "other.db ", randomStoreId() );
-        mockRemoteUnsuccessfulStore( "other.db ", randomStoreId() );
-    }
-
-    private StoreId randomStoreId()
-    {
-        ThreadLocalRandom rng = ThreadLocalRandom.current();
-        return new StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
-    }
 
     @Test
     public void shouldReplaceMismatchedStoreIfEmpty() throws Exception
     {
         // given
-        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, true, storeId );
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, true, storeId );
 
-        RemoteStore remoteStore = components.getOrCreate( "target" ).remoteStore();
-        StoreId mismatchedStoreId = randomStoreId();
+        RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
+        StoreId mismatchedStoreId = new StoreId( randomKernelStoreId() );
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( database, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
 
         verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -96,14 +70,14 @@ public class StoreDownloaderTest
     public void shouldNotReplaceMismatchedNonEmptyStore() throws Exception
     {
         // given
-        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, false, storeId );
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, false, storeId );
 
-        RemoteStore remoteStore = components.getOrCreate( databaseName ).remoteStore();
-        StoreId mismatchedStoreId = randomStoreId();
+        RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
+        StoreId mismatchedStoreId = new StoreId( randomKernelStoreId() );
         when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( mismatchedStoreId );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( database, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
 
         verify( remoteStore, never() ).copy( any(), any(), any(), anyBoolean() );
         verify( remoteStore, never() ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -116,11 +90,11 @@ public class StoreDownloaderTest
     public void shouldOnlyCatchupIfPossible() throws Exception
     {
         // given
-        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, false, storeId );
-        RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseName, storeId );
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, false, storeId );
+        RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseContext );
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( database, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -133,12 +107,12 @@ public class StoreDownloaderTest
     public void shouldDownloadWholeStoreIfCannotCatchup() throws Exception
     {
         // given
-        ClusteredDatabaseContext database = mockLocalDatabase( databaseName, false, storeId );
-        RemoteStore remoteStore = mockRemoteUnsuccessfulStore( databaseName, storeId );
-        StoreCopyProcess storeCopyProcess = components.getOrCreate( databaseName ).storeCopyProcess();
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, false, storeId );
+        RemoteStore remoteStore = mockRemoteUnsuccessfulStore( databaseContext );
+        StoreCopyProcess storeCopyProcess = databaseContext.catchupComponents().storeCopyProcess();
 
         // when
-        boolean downloadOk = downloader.bringUpToDate( database, primaryAddress, fromSingleAddress( secondaryAddress ) );
+        boolean downloadOk = downloader.bringUpToDate( databaseContext, primaryAddress, fromSingleAddress( secondaryAddress ) );
 
         // then
         verify( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
@@ -151,12 +125,13 @@ public class StoreDownloaderTest
     public void shouldThrowIfComponentsDoNotExist() throws Exception
     {
         // given
-        ClusteredDatabaseContext database = mockLocalDatabase( "wrong", true, storeId );
+        ClusteredDatabaseContext wrongDb = mock( ClusteredDatabaseContext.class );
+        when( wrongDb.databaseName() ).thenReturn( "wrong" );
 
         // when
         try
         {
-            downloader.bringUpToDate( database, primaryAddress, fromSingleAddress( secondaryAddress ) );
+            downloader.bringUpToDate( wrongDb, primaryAddress, fromSingleAddress( secondaryAddress ) );
             fail();
         }
         catch ( IllegalStateException ignored )
@@ -165,37 +140,41 @@ public class StoreDownloaderTest
         }
     }
 
-    private RemoteStore mockRemoteSuccessfulStore( String databaseName, StoreId storeId )
+    private ClusteredDatabaseContext mockLocalDatabase( String databaseName, boolean isEmpty, org.neo4j.storageengine.api.StoreId storeId )
+    {
+        StubClusteredDatabaseContext db = databaseManager.givenDatabaseWithConfig()
+                .withDatabaseName( databaseName )
+                .withCatchupComponentsFactory( ignored ->
+                        new CatchupComponentsRepository.DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) )
+                .withKernelStoreId( storeId )
+                .register();
+
+        db.setEmpty( isEmpty );
+
+        return db;
+    }
+
+    private RemoteStore mockRemoteSuccessfulStore( ClusteredDatabaseContext databaseContext )
             throws StoreIdDownloadFailedException
     {
-        RemoteStore remoteStore = components.getOrCreate( databaseName ).remoteStore();
-        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
+        RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
+        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( new StoreId( storeId ) );
         return remoteStore;
     }
 
-    private RemoteStore mockRemoteUnsuccessfulStore( String databaseName, StoreId storeId )
+    private RemoteStore mockRemoteUnsuccessfulStore( ClusteredDatabaseContext databaseContext )
             throws StoreIdDownloadFailedException, StoreCopyFailedException, IOException
     {
-        RemoteStore remoteStore = components.getOrCreate( databaseName ).remoteStore();
-        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( storeId );
+        RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
+        when( remoteStore.getStoreId( primaryAddress ) ).thenReturn( new StoreId( storeId ) );
         doThrow( StoreCopyFailedException.class ).when( remoteStore ).tryCatchingUp( any(), any(), any(), anyBoolean(), anyBoolean() );
         return remoteStore;
     }
 
-    private static class StubCatchupComponentsRepository implements CatchupComponentsRepository
+    private org.neo4j.storageengine.api.StoreId randomKernelStoreId()
     {
-        private final Map<String,DatabaseCatchupComponents> componentsMap = new HashMap<>();
-
-        private DatabaseCatchupComponents getOrCreate( String databaseName )
-        {
-            return componentsMap.computeIfAbsent( databaseName,
-                    ignored -> new DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) );
-        }
-
-        @Override
-        public Optional<DatabaseCatchupComponents> componentsFor( String databaseName )
-        {
-            return Optional.ofNullable( componentsMap.get( databaseName ) );
-        }
+        ThreadLocalRandom rng = ThreadLocalRandom.current();
+        return new org.neo4j.storageengine.api.StoreId( rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong() );
     }
+
 }

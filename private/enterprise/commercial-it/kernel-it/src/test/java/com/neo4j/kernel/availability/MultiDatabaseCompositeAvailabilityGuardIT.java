@@ -48,7 +48,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
     void globalCompositeGuardUsedInTransactionBridge() throws DatabaseExistsException
     {
         ThreadToStatementContextBridge bridge = getTransactionBridge();
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" ).databaseFacade();
         secondDatabase.shutdown();
 
@@ -60,8 +60,7 @@ class MultiDatabaseCompositeAvailabilityGuardIT
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( ThreadToStatementContextBridge.class );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

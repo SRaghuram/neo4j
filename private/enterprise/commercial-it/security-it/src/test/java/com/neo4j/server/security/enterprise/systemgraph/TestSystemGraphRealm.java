@@ -27,7 +27,7 @@ public class TestSystemGraphRealm
         return testRealm( new ImportOptionsBuilder().build(), securityLog, newRateLimitedAuthStrategy(), queryExecutor );
     }
 
-    static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager dbManager )
+    static SystemGraphRealm testRealm( SystemGraphImportOptions importOptions, SecurityLog securityLog, DatabaseManager<?> dbManager )
             throws Throwable
     {
         ContextSwitchingSystemGraphQueryExecutor executor = new TestContextSwitchingSystemGraphQueryExecutor( dbManager );
@@ -68,7 +68,7 @@ public class TestSystemGraphRealm
     {
         private TestThreadToStatementContextBridge bridge;
 
-        TestContextSwitchingSystemGraphQueryExecutor( DatabaseManager databaseManager )
+        TestContextSwitchingSystemGraphQueryExecutor( DatabaseManager<?> databaseManager )
         {
             super( databaseManager, DEFAULT_DATABASE_NAME );
             bridge = new TestThreadToStatementContextBridge();

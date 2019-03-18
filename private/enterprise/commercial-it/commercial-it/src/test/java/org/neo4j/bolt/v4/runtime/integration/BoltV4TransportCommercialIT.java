@@ -330,7 +330,7 @@ public class BoltV4TransportCommercialIT
     {
         negotiateBoltV4();
 
-        DatabaseManager databaseManager = server.getDatabaseManager();
+        DatabaseManager<?> databaseManager = server.getDatabaseManager();
         databaseManager.createDatabase( "first" );
         databaseManager.createDatabase( "second" );
 
@@ -348,7 +348,7 @@ public class BoltV4TransportCommercialIT
     {
         negotiateBoltV4();
 
-        DatabaseManager databaseManager = server.getDatabaseManager();
+        DatabaseManager<?> databaseManager = server.getDatabaseManager();
         databaseManager.createDatabase( "first" );
         databaseManager.createDatabase( "second" );
 

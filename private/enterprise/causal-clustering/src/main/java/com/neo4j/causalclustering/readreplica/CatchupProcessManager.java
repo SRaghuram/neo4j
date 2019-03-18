@@ -38,7 +38,7 @@ import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.SafeLifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.scheduler.Group;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -78,17 +78,17 @@ public class CatchupProcessManager extends SafeLifecycle
     private final Log log;
     private final Config config;
     private final CatchupComponentsRepository catchupComponents;
-    private final ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager;
+    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
     private final CatchupProcessFactory catchupProcessFactory;
-    private final DatabaseHealth databaseHealth;
+    private final Health databaseHealth;
 
     private Map<String,CatchupPollingProcess> catchupProcesses;
     private volatile boolean isPanicked;
     private Timer timer;
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
-            DatabaseHealth databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
+            ClusteredDatabaseManager<?> clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
+            Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
             LogProvider logProvider, VersionContextSupplier versionContextSupplier, PageCursorTracerSupplier pageCursorTracerSupplier, Config config )
     {
@@ -98,8 +98,8 @@ public class CatchupProcessManager extends SafeLifecycle
     }
 
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents,
-            ClusteredDatabaseManager<? extends ClusteredDatabaseContext> clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
-            DatabaseHealth databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
+            ClusteredDatabaseManager<?> clusteredDatabaseManager, Suspendable servicesToStopOnStoreCopy,
+            Health databaseHealth, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
             CatchupProcessFactory catchupProcessFactory, LogProvider logProvider, VersionContextSupplier versionContextSupplier,
             PageCursorTracerSupplier pageCursorTracerSupplier, Config config )

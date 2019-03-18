@@ -11,7 +11,7 @@ import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityRequirement;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 
 import static com.neo4j.causalclustering.error_handling.PanicException.EXCEPTION;
 
@@ -21,7 +21,7 @@ public final class PanicEventHandlers
     {
     }
 
-    public static DbHealthPanicEventHandler dbHealthEventHandler( DatabaseHealth internalDatabasesHealth )
+    public static DbHealthPanicEventHandler dbHealthEventHandler( Health internalDatabasesHealth )
     {
         return new DbHealthPanicEventHandler( internalDatabasesHealth );
     }
@@ -43,9 +43,9 @@ public final class PanicEventHandlers
 
     private static class DbHealthPanicEventHandler implements PanicEventHandler
     {
-        private final DatabaseHealth internalDatabasesHealth;
+        private final Health internalDatabasesHealth;
 
-        private DbHealthPanicEventHandler( DatabaseHealth internalDatabasesHealth )
+        private DbHealthPanicEventHandler( Health internalDatabasesHealth )
         {
             this.internalDatabasesHealth = internalDatabasesHealth;
         }

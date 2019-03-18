@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
+import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
@@ -88,14 +89,13 @@ import java.util.stream.Stream;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
-import org.neo4j.graphdb.factory.module.edition.context.DatabaseComponents;
+import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.helpers.SocketAddress;
 import org.neo4j.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -109,7 +109,7 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -131,6 +131,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     private final RaftChannelPoolService raftChannelPoolService;
     private final CoreStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
+    private final CatchupComponentsProvider catchupComponentsProvider;
     private ConsensusModule consensusModule;
     private ReplicationModule replicationModule;
     private CoreServerModule coreServerModule;
@@ -150,6 +151,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     private final Map<String,DatabaseInitializer> databaseInitializerMap = new HashMap<>();
     private final CompositeDatabaseAvailabilityGuard globalGuard;
+    private final CompositeDatabaseHealth globalHealth;
     private final LogProvider logProvider;
     private final Config globalConfig;
     //TODO: remove as soon as independent lifecycle is in place
@@ -165,6 +167,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         this.globalModule = globalModule;
         this.globalConfig = globalModule.getGlobalConfig();
         this.globalGuard = globalModule.getGlobalAvailabilityGuard();
+        this.globalHealth = globalModule.getGlobalHealthService();
         this.logProvider = logService.getInternalLogProvider();
 
         CoreMonitor.register( logProvider, logService.getUserLogProvider(), globalModule.getGlobalMonitors() );
@@ -195,6 +198,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
         pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globalConfig, sslPolicyLoader );
 
+        catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
         SupportedProtocolCreator supportedProtocolCreator = new SupportedProtocolCreator( globalConfig, logProvider );
         supportedRaftProtocols = supportedProtocolCreator.getSupportedRaftProtocolsFromConfiguration();
         supportedModifierProtocols = supportedProtocolCreator.createSupportedModifierProtocols();
@@ -259,7 +263,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     {
         // order matters
         panicService.addPanicEventHandler( PanicEventHandlers.raiseAvailabilityGuardEventHandler( globalModule.getGlobalAvailabilityGuard() ) );
-        panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( getGlobalDatabaseHealth() ) );
+        panicService.addPanicEventHandler( PanicEventHandlers.dbHealthEventHandler( globalHealth ) );
         panicService.addPanicEventHandler( coreServerModule.commandApplicationProcess() );
         panicService.addPanicEventHandler( consensusModule.raftMachine() );
         panicService.addPanicEventHandler( PanicEventHandlers.disableServerEventHandler( coreServerModule.catchupServer() ) );
@@ -304,7 +308,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     /* Component Factories */
     @Override
-    public DatabaseComponents createDatabaseComponents( String databaseName )
+    public EditionDatabaseComponents createDatabaseComponents( String databaseName )
     {
         return new CoreDatabaseComponents( globalModule, this, databaseName );
     }
@@ -409,8 +413,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         //  - Implement start stop etc... for databases and make sure storecopy catchup machinery uses it
         //  - plan how to test independent lifecycle
         coreServerModule = new CoreServerModule( identityModule, globalModule, consensusModule, coreStateService, clusteringModule,
-                replicationModule, databaseManager, getGlobalDatabaseHealth(), pipelineBuilders, serverInstalledProtocolHandler, handlerFactory,
-                defaultDatabaseName, panicService );
+                replicationModule, databaseManager, globalHealth, catchupComponentsProvider, serverInstalledProtocolHandler,
+                handlerFactory, defaultDatabaseName, panicService );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
         defaultStrategy.inject( topologyService, globalConfig, logProvider, identityModule.myself() );
@@ -442,36 +446,36 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         addCoreServerComponentsToLifecycle( coreServerModule, raftMessageHandlerChain, globalLife );
 
         addPanicEventHandlers( globalLife, panicService );
-        globalLife.add( coreServerModule.membershipWaiterLifecycle );
+        globalLife.add( coreServerModule.membershipWaiterLifecycle() );
     }
 
     public DatabaseManager<CoreDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Logger log )
     {
         ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager = new CoreDatabaseManager( platform, this, log, facade,
-                this::coreStateComponents, globalModule.getGlobalAvailabilityGuard(), platform.getFileSystem(), platform.getPageCache(),
-                logProvider, platform.getGlobalConfig(), getGlobalDatabaseHealth() );
+                this::coreStateComponents, catchupComponentsProvider::createDatabaseComponents, globalModule.getGlobalAvailabilityGuard(),
+                platform.getFileSystem(), platform.getPageCache(), logProvider, platform.getGlobalConfig(), globalHealth );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
     }
 
     @Override
-    public void createDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         createCommercialEditionDatabases( databaseManager, config );
     }
 
-    private void createCommercialEditionDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    private void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         createDatabase( databaseManager, SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 
-    private void createConfiguredDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    private void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         createDatabase( databaseManager, config.get( GraphDatabaseSettings.default_database ) );
     }
 
-    private void createDatabase( DatabaseManager<? extends DatabaseContext> databaseManager, String databaseName ) throws DatabaseExistsException
+    private void createDatabase( DatabaseManager<?> databaseManager, String databaseName ) throws DatabaseExistsException
     {
         databaseManager.createDatabase( databaseName );
     }

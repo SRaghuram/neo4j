@@ -5,7 +5,8 @@
  */
 package com.neo4j.causalclustering.common;
 
-import org.junit.Test;
+import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
+import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 
@@ -17,8 +18,9 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.monitoring.SingleDatabaseHealth;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
@@ -144,14 +146,15 @@ class ClusteredDatabaseManagerTest
 
     private DatabaseAvailabilityGuard newAvailabilityGuard()
     {
-        return new DatabaseAvailabilityGuard( DEFAULT_DATABASE_NAME, Clock.systemUTC(), NullLog.getInstance(),
+        return new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clock.systemUTC(), NullLog.getInstance(),
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
     }
 
     private ClusteredDatabaseManager<StubClusteredDatabaseContext> newDatabaseManager( AvailabilityGuard availabilityGuard )
     {
         return new ClusteredMultiDatabaseManager<>( mock( GlobalModule.class ), mock( AbstractEditionModule.class ), mock( Logger.class ),
-                mock( GraphDatabaseFacade.class ), StubClusteredDatabaseContext::new, mock( FileSystemAbstraction.class ), mock( PageCache.class ),
-                NullLogProvider.getInstance(), Config.defaults(), mock( SingleDatabaseHealth.class ), availabilityGuard );
+                mock( GraphDatabaseFacade.class ), StubClusteredDatabaseContext::new, mock( CatchupComponentsFactory.class ),
+                mock( FileSystemAbstraction.class ), mock( PageCache.class ), NullLogProvider.getInstance(), Config.defaults(),
+                mock( DatabaseHealth.class ), availabilityGuard );
     }
 }

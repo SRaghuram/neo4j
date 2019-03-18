@@ -13,14 +13,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.DatabaseEventHandlerAdapter;
 import org.neo4j.graphdb.event.ErrorState;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.monitoring.SingleDatabaseHealth;
 import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -50,7 +49,7 @@ class MultiDatabasePanicIT
     @Test
     void databasesPanicSeparately() throws DatabaseExistsException
     {
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( "first" ).databaseFacade();
         GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" ).databaseFacade();
         PanicDatabaseEventListener firstPanicListener = new PanicDatabaseEventListener();
@@ -70,13 +69,12 @@ class MultiDatabasePanicIT
         assertTrue( secondPanicListener.isPanic() );
     }
 
-    private DatabaseHealth getDatabaseHealth( GraphDatabaseFacade facade )
+    private Health getDatabaseHealth( GraphDatabaseFacade facade )
     {
-        return facade.getDependencyResolver().resolveDependency( SingleDatabaseHealth.class );
+        return facade.getDependencyResolver().resolveDependency( DatabaseHealth.class );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.identity.StoreId;
 
@@ -13,7 +15,6 @@ import java.io.IOException;
 import java.util.function.BooleanSupplier;
 
 import org.neo4j.collection.Dependencies;
-import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -31,7 +32,7 @@ import org.neo4j.monitoring.Monitors;
  *
  * Collections of these instances should be managed by a {@link ClusteredDatabaseManager}
  */
-public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter implements ClusteredDatabaseContext, Lifecycle
+public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter implements ClusteredDatabaseContext
 {
     private final DatabaseLayout databaseLayout;
     private final StoreFiles storeFiles;
@@ -41,12 +42,12 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
     private final LogFiles txLogs;
     private final Database database;
     private final GraphDatabaseFacade facade;
+    private final CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents;
 
-    private volatile boolean initialized;
     private volatile StoreId storeId;
 
     public AbstractClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
-            BooleanSupplier isAvailable )
+            BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory )
     {
         this.database = database;
         this.facade = facade;
@@ -56,7 +57,7 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
         this.databaseName = database.getDatabaseName();
         this.isAvailable = isAvailable;
         this.log = logProvider.getLog( getClass() );
-        this.initialized = false;
+        this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
     }
 
     @Override
@@ -67,7 +68,7 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
             return;
         }
         storeId = storeId();
-        log.info( "Initialising ClusteredDatabaseContext with storeId: " + storeId );
+        log.info( "Initialising with storeId: " + storeId );
         start0();
     }
 
@@ -187,5 +188,11 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
     public String databaseName()
     {
         return databaseName;
+    }
+
+    @Override
+    public CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents()
+    {
+        return catchupComponents;
     }
 }

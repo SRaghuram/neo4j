@@ -94,7 +94,7 @@ public class CommercialSecurityModule extends SecurityModule
     public static final String ROLE_IMPORT_FILENAME = ".roles.import";
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
-    private DatabaseManager<? extends DatabaseContext> databaseManager;
+    private DatabaseManager<?> databaseManager;
     private boolean initSystemGraphOnStart;
     private Config config;
     private LogProvider logProvider;
@@ -665,7 +665,7 @@ public class CommercialSecurityModule extends SecurityModule
     // This is used by ImportAuthCommand for offline import of auth information
     public static SystemGraphRealm createSystemGraphRealmForOfflineImport( Config config,
             SecurityLog securityLog,
-            DatabaseManager<StandaloneDatabaseContext> databaseManager,
+            DatabaseManager<?> databaseManager,
             UserRepository importUserRepository, RoleRepository importRoleRepository,
             boolean shouldResetSystemGraphAuthBeforeImport )
     {

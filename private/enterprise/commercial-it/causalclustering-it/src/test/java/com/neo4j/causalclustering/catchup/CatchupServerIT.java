@@ -97,8 +97,7 @@ class CatchupServerIT
         createPropertyIndex();
         addData( db );
 
-        @SuppressWarnings( "unchecked" )
-        DatabaseManager<? extends DatabaseContext> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MultiDatabaseCatchupServerHandler catchupServerHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fs );
 
         executor = Executors.newCachedThreadPool();

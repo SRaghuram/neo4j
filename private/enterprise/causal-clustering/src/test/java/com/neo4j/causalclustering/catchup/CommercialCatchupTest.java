@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.function.Function;
 
 import com.neo4j.causalclustering.catchup.storecopy.FileChunk;
@@ -75,11 +74,13 @@ abstract class CommercialCatchupTest
     {
         pipelineBuilderFactory = new NettyPipelineBuilderFactory( VoidPipelineWrapperFactory.VOID_WRAPPER );
         databaseManager = new StubClusteredDatabaseManager();
-        databaseManager.givenDatabaseWithConfig().withDatabaseName( DEFAULT_DB ).withStoreId( StoreId.DEFAULT ).register();
+        databaseManager.givenDatabaseWithConfig().withDatabaseName( DEFAULT_DB )
+                .withKernelStoreId( org.neo4j.storageengine.api.StoreId.DEFAULT )
+                .register();
         serverResponseHandler = new MultiDatabaseCatchupServerHandler( databaseManager, LOG_PROVIDER, fsa );
     }
 
-    void executeTestScenario( Function<DatabaseManager<? extends DatabaseContext>,RequestResponse> responseFunction ) throws Exception
+    void executeTestScenario( Function<DatabaseManager<?>,RequestResponse> responseFunction ) throws Exception
     {
         RequestResponse requestResponse = responseFunction.apply( databaseManager );
 
@@ -100,12 +101,12 @@ abstract class CommercialCatchupTest
         requestResponse.responseHandler.verifyHandled();
     }
 
-    static Function<DatabaseManager<? extends DatabaseContext>,RequestResponse> storeId()
+    static Function<DatabaseManager<?>,RequestResponse> storeId()
     {
-        return new Function<DatabaseManager<? extends DatabaseContext>,RequestResponse>()
+        return new Function<DatabaseManager<?>,RequestResponse>()
         {
             @Override
-            public RequestResponse apply( DatabaseManager<? extends DatabaseContext> databaseManager )
+            public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
                 return new RequestResponse( new GetStoreIdRequest( DEFAULT_DB ), new ResponseAdaptor()
                 {
@@ -129,12 +130,12 @@ abstract class CommercialCatchupTest
         };
     }
 
-    static Function<DatabaseManager<? extends DatabaseContext>,RequestResponse> wrongDb()
+    static Function<DatabaseManager<?>,RequestResponse> wrongDb()
     {
-        return new Function<DatabaseManager<? extends DatabaseContext>,RequestResponse>()
+        return new Function<DatabaseManager<?>,RequestResponse>()
         {
             @Override
-            public RequestResponse apply( DatabaseManager<? extends DatabaseContext> databaseManager )
+            public RequestResponse apply( DatabaseManager<?> databaseManager )
             {
                 return new RequestResponse( new GetStoreIdRequest( "WRONG_DB_NAME" ), new ResponseAdaptor()
                 {

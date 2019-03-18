@@ -74,7 +74,7 @@ class MultiplexingCatchupRequestHandlerTest
         assertEquals( SUCCESS_RESPONSE, channel.readOutbound() );
     }
 
-    private static DatabaseManager<? extends DatabaseContext> newDbManager()
+    private static DatabaseManager<?> newDbManager()
     {
         StubClusteredDatabaseManager dbManager = new StubClusteredDatabaseManager();
         dbManager.givenDatabaseWithConfig()

@@ -26,7 +26,7 @@ public class DatabaseCoreStateComponents
     private final ReplicatedIdRangeAcquirer rangeAcquirer;
     private final DatabaseIdContext idContext;
 
-    public DatabaseCoreStateComponents( CommitProcessFactory commitProcessFactory, CoreStateMachines stateMachines, TokenHolders tokenHolders,
+    DatabaseCoreStateComponents( CommitProcessFactory commitProcessFactory, CoreStateMachines stateMachines, TokenHolders tokenHolders,
             ReplicatedIdRangeAcquirer rangeAcquirer, Locks lockManager, DatabaseIdContext idContext )
     {
         this.commitProcessFactory = commitProcessFactory;
@@ -62,7 +62,7 @@ public class DatabaseCoreStateComponents
         return lockManager;
     }
 
-    public ReplicatedIdRangeAcquirer rangeAcquirer()
+    ReplicatedIdRangeAcquirer rangeAcquirer()
     {
         return rangeAcquirer;
     }

@@ -180,8 +180,7 @@ public class DatabaseMetricsExtensionIT
     @Test
     public void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
     {
-        @SuppressWarnings( "unchecked" )
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
@@ -194,8 +193,7 @@ public class DatabaseMetricsExtensionIT
     @Test
     public void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        @SuppressWarnings( "unchecked" )
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
+        DatabaseManager<?> databaseManager = db.getDependencyResolver().resolveDependency( DatabaseManager.class );
         MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
 
         String testDbName = "testdb";

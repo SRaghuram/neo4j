@@ -89,7 +89,7 @@ public class StoreDownloader
             log.error( "Store copy failed due to store ID mismatch" );
             return Optional.empty();
         }
-        return Optional.of( remoteStoreId );
+        return Optional.ofNullable( remoteStoreId );
     }
 
     /**

@@ -8,7 +8,8 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.DatabaseCatchupComponents;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 
+@FunctionalInterface
 public interface CatchupComponentsFactory
 {
-    DatabaseCatchupComponents createPerDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext );
+    DatabaseCatchupComponents createDatabaseComponents( ClusteredDatabaseContext clusteredDatabaseContext );
 }

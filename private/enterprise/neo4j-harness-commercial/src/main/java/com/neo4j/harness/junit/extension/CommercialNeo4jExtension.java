@@ -34,7 +34,7 @@ import static com.neo4j.harness.internal.CommercialTestNeo4jBuilders.newInProces
  *    {@literal @}ExtendWith( CommercialNeo4jExtension.class )
  *     class TestExample {
  *            {@literal @}Test
- *             void testExample( Neo4j neo4j, GraphDatabaseService clusteredDatabaseManager )
+ *             void testExample( Neo4j neo4j, GraphDatabaseService databaseService )
  *             {
  *                 // test code
  *             }

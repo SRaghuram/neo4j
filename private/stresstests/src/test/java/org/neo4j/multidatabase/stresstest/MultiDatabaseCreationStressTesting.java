@@ -49,7 +49,7 @@ class MultiDatabaseCreationStressTesting
         ensureExistsAndEmpty( storeDirectory );
 
         GraphDatabaseService databaseService = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( storeDirectory );
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
+        DatabaseManager<?> databaseManager = getDatabaseManager( (GraphDatabaseAPI) databaseService );
         assertThat( databaseManager, instanceOf( MultiDatabaseManager.class ) );
 
         ExecutorService executorPool = Executors.newFixedThreadPool( threads );
@@ -64,7 +64,7 @@ class MultiDatabaseCreationStressTesting
         }
     }
 
-    private void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManager<StandaloneDatabaseContext> databaseManager,
+    private void executeMultiDatabaseCommands( int durationInMinutes, int threads, DatabaseManager<?> databaseManager,
             ExecutorService executorPool ) throws InterruptedException
     {
         long finishTimeMillis = System.currentTimeMillis() + MINUTES.toMillis( durationInMinutes );
@@ -83,8 +83,7 @@ class MultiDatabaseCreationStressTesting
         }
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager( GraphDatabaseAPI databaseService )
+    private DatabaseManager<?> getDatabaseManager( GraphDatabaseAPI databaseService )
     {
         return databaseService.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

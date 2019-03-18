@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContextFactory;
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
@@ -25,27 +26,28 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 
 public class CoreDatabaseManager extends ClusteredMultiDatabaseManager<CoreDatabaseContext>
 {
 
     private final Supplier<CoreStateService> coreStateService;
 
-    //TODO: We can do better at untangling this than a coreState supplier here right?
     CoreDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade facade,
-            Supplier<CoreStateService> coreStateService, AvailabilityGuard availabilityGuard, FileSystemAbstraction fs,
-            PageCache pageCache, LogProvider logProvider, Config config, DatabaseHealth globalHealths )
+            Supplier<CoreStateService> coreStateService, CatchupComponentsFactory catchupComponentsFactory,
+            AvailabilityGuard availabilityGuard, FileSystemAbstraction fs, PageCache pageCache,
+            LogProvider logProvider, Config config, Health globalHealths )
     {
-        super( globalModule, edition, log, facade, contextFactory( coreStateService ), fs, pageCache, logProvider, config, globalHealths, availabilityGuard );
+        super( globalModule, edition, log, facade, contextFactory( coreStateService ), catchupComponentsFactory,
+                fs, pageCache, logProvider, config, globalHealths, availabilityGuard );
         this.coreStateService = coreStateService;
     }
 
     private static ClusteredDatabaseContextFactory<CoreDatabaseContext> contextFactory( Supplier<CoreStateService> coreStateService )
     {
         return ( Database database, GraphDatabaseFacade facade, LogFiles txLogs,
-                StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable ) ->
-                new CoreDatabaseContext( database, facade, txLogs, storeFiles, logProvider, isAvailable, coreStateService.get() );
+                StoreFiles storeFiles, LogProvider logProvider, BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory ) ->
+                new CoreDatabaseContext( database, facade, txLogs, storeFiles, logProvider, isAvailable, coreStateService.get(), catchupComponentsFactory );
     }
 
     @Override

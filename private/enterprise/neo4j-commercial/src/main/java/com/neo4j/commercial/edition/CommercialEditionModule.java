@@ -122,8 +122,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     {
         Config globalConfig = platform.getGlobalConfig();
         return databaseName -> {
-            @SuppressWarnings( "unchecked" )
-            DatabaseManager<StandaloneDatabaseContext> databaseManager = platform.getGlobalDependencies().resolveDependency( DatabaseManager.class );
+            DatabaseManager<?> databaseManager = platform.getGlobalDependencies().resolveDependency( DatabaseManager.class );
             Supplier<Kernel> kernelSupplier = () ->
             {
                 DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseName )
@@ -138,7 +137,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public DatabaseManager<? extends DatabaseContext> createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule globalModule, Logger msgLog )
+    public DatabaseManager<?> createDatabaseManager( GraphDatabaseFacade graphDatabaseFacade, GlobalModule globalModule, Logger msgLog )
     {
         CommercialMultiDatabaseManager databaseManager = new CommercialMultiDatabaseManager( globalModule, this, msgLog, graphDatabaseFacade );
         createDatabaseManagerDependentModules( databaseManager );
@@ -151,19 +150,19 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    public void createDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    public void createDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         createCommercialEditionDatabases( databaseManager, config );
     }
 
-    private static void createCommercialEditionDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config )
+    private static void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config )
             throws DatabaseExistsException
     {
         databaseManager.createDatabase( SYSTEM_DATABASE_NAME );
         createConfiguredDatabases( databaseManager, config );
     }
 
-    private static void createConfiguredDatabases( DatabaseManager<? extends DatabaseContext> databaseManager, Config config ) throws DatabaseExistsException
+    private static void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
         databaseManager.createDatabase( config.get( GraphDatabaseSettings.default_database ) );
     }
@@ -193,7 +192,6 @@ public class CommercialEditionModule extends CommunityEditionModule
 
     private void initBackupIfNeeded( GlobalModule globalModule, Config config, DatabaseManager<StandaloneDatabaseContext> databaseManager )
     {
-        Dependencies globalDependencies = globalModule.getGlobalDependencies();
         FileSystemAbstraction fs = globalModule.getFileSystem();
         JobScheduler jobScheduler = globalModule.getJobScheduler();
         ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();

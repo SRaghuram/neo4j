@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.catchup;
 import com.neo4j.causalclustering.catchup.storecopy.RemoteStore;
 import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 
 import java.util.Optional;
 
@@ -16,19 +17,27 @@ import org.neo4j.io.layout.DatabaseLayout;
 /**
  * The components needed to perform store copy and catchup operations for databases in Neo4j.
  *
- * For each database on this machine, there is a {@link ClusteredDatabaseContext}, a {@link RemoteStore}
- * and a {@link StoreCopyProcess}.
+ * For each database on this machine there is a {@link RemoteStore} and a {@link StoreCopyProcess}.
  *
- * The {@link ClusteredDatabaseContext} instance may be used to start/stop a database, as well as perform file system operations via {@link DatabaseLayout}.
  * The {@link RemoteStore} instance may be used to catchup, via transaction pulling, to a remote machine.
  * The {@link StoreCopyProcess} instance may be used to catchup, via store copying, to a remote machine.
  */
-public interface CatchupComponentsRepository
+public class CatchupComponentsRepository
 {
-    Optional<DatabaseCatchupComponents> componentsFor( String databaseName );
+    private final ClusteredDatabaseManager<?> clusteredDatabaseManager;
+
+    public CatchupComponentsRepository( ClusteredDatabaseManager<?> clusteredDatabaseManager )
+    {
+        this.clusteredDatabaseManager = clusteredDatabaseManager;
+    }
+
+    public Optional<DatabaseCatchupComponents> componentsFor( String databaseName )
+    {
+        return clusteredDatabaseManager.getDatabaseContext( databaseName ).map( ClusteredDatabaseContext::catchupComponents );
+    }
 
     /** Simple struct to make working with various per database catchup components a bit easier */
-    class DatabaseCatchupComponents
+    public static class DatabaseCatchupComponents
     {
         final RemoteStore remoteStore;
         final StoreCopyProcess storeCopy;

@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
-import org.neo4j.graphdb.factory.module.edition.context.DatabaseComponents;
+import org.neo4j.graphdb.factory.module.edition.context.EditionDatabaseComponents;
 import org.neo4j.graphdb.factory.module.id.DatabaseIdContext;
 import org.neo4j.graphdb.factory.module.id.IdContextFactory;
 import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
@@ -32,12 +32,11 @@ import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.ReadOnlyTokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
-import org.neo4j.monitoring.SingleDatabaseHealth;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.logging.Log;
 
-public class ReadReplicaDatabaseComponents implements DatabaseComponents
+public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
 {
-    private final String databaseName;
     private final Locks locksManager;
     private final StatementLocksFactory statementLocksFactory;
     private final DatabaseIdContext idContext;
@@ -49,7 +48,6 @@ public class ReadReplicaDatabaseComponents implements DatabaseComponents
     public ReadReplicaDatabaseComponents( GlobalModule globalModule, ReadReplicaEditionModule editionModule, String databaseName )
     {
         this.editionModule = editionModule;
-        this.databaseName = databaseName;
         this.locksManager = new ReadReplicaLockManager();
         Config globalConfig = globalModule.getGlobalConfig();
         this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, globalModule.getLogService() ).select();
@@ -138,11 +136,5 @@ public class ReadReplicaDatabaseComponents implements DatabaseComponents
     public DatabaseTransactionStats getTransactionMonitor()
     {
         return transactionMonitor;
-    }
-
-    @Override
-    public SingleDatabaseHealth createDatabaseHealth( DatabasePanicEventGenerator dbpe, Log log )
-    {
-        return editionModule.createDatabaseHealth( databaseName, dbpe, log );
     }
 }

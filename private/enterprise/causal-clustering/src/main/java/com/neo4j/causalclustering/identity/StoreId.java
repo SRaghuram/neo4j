@@ -11,11 +11,7 @@ import static java.lang.String.format;
 
 public final class StoreId
 {
-    public static final StoreId DEFAULT = new StoreId(
-            org.neo4j.storageengine.api.StoreId.DEFAULT.getCreationTime(),
-            org.neo4j.storageengine.api.StoreId.DEFAULT.getRandomId(),
-            org.neo4j.storageengine.api.StoreId.DEFAULT.getUpgradeTime(),
-            org.neo4j.storageengine.api.StoreId.DEFAULT.getUpgradeId() );
+    public static final StoreId DEFAULT = new StoreId( org.neo4j.storageengine.api.StoreId.DEFAULT );
 
     public static boolean isDefault( StoreId storeId )
     {

@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
@@ -45,7 +46,7 @@ public class RaftReplicator implements Replicator, LeaderListener
     private final TimeoutStrategy progressTimeoutStrategy;
     private final AvailabilityGuard globalAvailabilityGuard;
     private final Log log;
-    private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
+    private final ClusteredDatabaseManager<?> databaseManager;
     private final ReplicationMonitor replicationMonitor;
     private final long availabilityTimeoutMillis;
     private final LeaderProvider leaderProvider;
@@ -53,7 +54,7 @@ public class RaftReplicator implements Replicator, LeaderListener
     public RaftReplicator( LeaderLocator leaderLocator, MemberId me, Outbound<MemberId,RaftMessages.RaftMessage> outbound,
             LocalSessionPool sessionPool, ProgressTracker progressTracker, TimeoutStrategy progressTimeoutStrategy,
             long availabilityTimeoutMillis, AvailabilityGuard globalAvailabilityGuard, LogProvider logProvider,
-            ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, Monitors monitors )
+            ClusteredDatabaseManager<?> databaseManager, Monitors monitors )
     {
         this.me = me;
         this.outbound = outbound;

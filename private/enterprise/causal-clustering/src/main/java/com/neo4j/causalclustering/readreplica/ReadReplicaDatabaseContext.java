@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.readreplica;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.AbstractClusteredDatabaseContext;
 
@@ -18,9 +19,9 @@ import org.neo4j.logging.LogProvider;
 public class ReadReplicaDatabaseContext extends AbstractClusteredDatabaseContext
 {
     ReadReplicaDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles,
-            LogProvider logProvider, BooleanSupplier isAvailable )
+            LogProvider logProvider, BooleanSupplier isAvailable, CatchupComponentsFactory catchupComponentsFactory )
     {
-        super( database, facade, txLogs, storeFiles, logProvider, isAvailable );
+        super( database, facade, txLogs, storeFiles, logProvider, isAvailable, catchupComponentsFactory );
     }
 
     @Override

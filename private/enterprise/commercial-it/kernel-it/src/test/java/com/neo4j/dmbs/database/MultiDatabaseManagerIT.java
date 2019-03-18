@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.dbms.database.DatabaseManagerException;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -49,7 +50,7 @@ class MultiDatabaseManagerIT
     private TestDirectory testDirectory;
     private GraphDatabaseService database;
     private AssertableLogProvider logProvider;
-    private DatabaseManager<StandaloneDatabaseContext> databaseManager;
+    private DatabaseManager<?> databaseManager;
 
     @BeforeEach
     void setUp()
@@ -82,17 +83,17 @@ class MultiDatabaseManagerIT
         String uniqueDatabaseName = "uniqueDatabaseName";
         databaseManager.createDatabase( uniqueDatabaseName );
 
-        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
-        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
-        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
-        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
+        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
     }
 
     @Test
     void failToStartUnknownDatabase()
     {
         String unknownDatabase = "unknownDatabase";
-        assertThrows( IllegalStateException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
+        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
     }
 
     @Test
@@ -102,7 +103,7 @@ class MultiDatabaseManagerIT
         databaseManager.createDatabase( databaseToDrop );
         databaseManager.dropDatabase( databaseToDrop );
 
-        assertThrows( IllegalStateException.class, () -> databaseManager.startDatabase( databaseToDrop ) );
+        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.startDatabase( databaseToDrop ) );
     }
 
     @Test
@@ -138,7 +139,7 @@ class MultiDatabaseManagerIT
 
         databaseManager.stopDatabase( stoppedDatabase );
 
-        assertThrows( IllegalStateException.class, () -> databaseManager.createDatabase( stoppedDatabase ) );
+        assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( stoppedDatabase ) );
     }
 
     @Test
@@ -223,14 +224,14 @@ class MultiDatabaseManagerIT
     void failToDropUnknownDatabase()
     {
         String unknownDatabase = "unknownDatabase";
-        assertThrows( IllegalStateException.class, () -> databaseManager.dropDatabase( unknownDatabase ) );
+        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.dropDatabase( unknownDatabase ) );
     }
 
     @Test
     void failToStopUnknownDatabase()
     {
         String unknownDatabase = "unknownDatabase";
-        assertThrows( IllegalStateException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
+        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
     }
 
     @Test
@@ -239,20 +240,20 @@ class MultiDatabaseManagerIT
         String testDatabase = "testDatabase";
         databaseManager.createDatabase( testDatabase );
         databaseManager.dropDatabase( testDatabase );
-        assertThrows( IllegalStateException.class, () -> databaseManager.stopDatabase( testDatabase ) );
+        assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( testDatabase ) );
     }
 
     @Test
     void lookupNotExistingDatabase()
     {
-        Optional<StandaloneDatabaseContext> database = databaseManager.getDatabaseContext( "testDatabase" );
+        var database = databaseManager.getDatabaseContext( "testDatabase" );
         assertFalse( database.isPresent() );
     }
 
     @Test
     void lookupExistingDatabase()
     {
-        Optional<StandaloneDatabaseContext> database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_NAME );
+        var database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_NAME );
         assertTrue( database.isPresent() );
     }
 
@@ -262,7 +263,7 @@ class MultiDatabaseManagerIT
         String databaseName = "databaseToShutdown";
         DatabaseContext context = databaseManager.createDatabase( databaseName );
 
-        Optional<StandaloneDatabaseContext> databaseLookup = databaseManager.getDatabaseContext( databaseName );
+        var databaseLookup = databaseManager.getDatabaseContext( databaseName );
         assertTrue( databaseLookup.isPresent() );
         assertEquals( context, databaseLookup.get() );
 
@@ -283,14 +284,14 @@ class MultiDatabaseManagerIT
     @Test
     void listAvailableDatabases() throws DatabaseExistsException
     {
-        Map<String,StandaloneDatabaseContext> initialDatabases = databaseManager.registeredDatabases();
+        var initialDatabases = databaseManager.registeredDatabases();
         assertEquals( 2, initialDatabases.size() );
         assertTrue( initialDatabases.containsKey( CUSTOM_DATABASE_NAME ) );
         String myAnotherDatabase = "myAnotherDatabase";
         String aMyAnotherDatabase = "aMyAnotherDatabase";
         databaseManager.createDatabase( myAnotherDatabase );
         databaseManager.createDatabase( aMyAnotherDatabase );
-        Map<String,StandaloneDatabaseContext> postCreationDatabases = databaseManager.registeredDatabases();
+        var postCreationDatabases = databaseManager.registeredDatabases();
         assertEquals( 4, postCreationDatabases.size() );
 
         ArrayList<String> postCreationDatabasesNames = new ArrayList<>( postCreationDatabases.keySet() );
@@ -305,12 +306,11 @@ class MultiDatabaseManagerIT
     {
         databaseManager.stop();
         databaseManager.shutdown();
-        Map<String,StandaloneDatabaseContext> databases = databaseManager.registeredDatabases();
+        var databases = databaseManager.registeredDatabases();
         assertTrue( databases.isEmpty() );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

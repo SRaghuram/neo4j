@@ -18,7 +18,6 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -51,7 +50,7 @@ class MultiDatabaseProcedureIT
     private TestDirectory testDirectory;
 
     private GraphDatabaseAPI database;
-    private DatabaseManager<StandaloneDatabaseContext> databaseManager;
+    private DatabaseManager<?> databaseManager;
 
     @BeforeEach
     void setUp()
@@ -148,8 +147,7 @@ class MultiDatabaseProcedureIT
         }
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return database.getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

@@ -5,23 +5,26 @@
  */
 package com.neo4j.causalclustering.common;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.helpers.FakeJobScheduler;
 import com.neo4j.causalclustering.identity.StoreId;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BooleanSupplier;
 
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -32,14 +35,11 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
 {
     private SortedMap<String,ClusteredDatabaseContext> databases = new TreeMap<>();
     private boolean isStoppedForSomeReason;
+    private CompositeDatabaseHealth globalDatabaseHealth;
 
     public StubClusteredDatabaseManager()
     {
-    }
-
-    public StubClusteredDatabaseManager( Map<String,? extends ClusteredDatabaseContext> registeredDbs )
-    {
-        this.databases = new TreeMap<>( registeredDbs );
+        this.globalDatabaseHealth = new CompositeDatabaseHealth();
     }
 
     @Override
@@ -87,9 +87,14 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
     }
 
     @Override
-    public DatabaseHealth getAllHealthServices()
+    public Health getAllHealthServices()
     {
-        return null;
+        return globalDatabaseHealth;
+    }
+
+    public void setAllHealthServices( CompositeDatabaseHealth globalDatabaseHealth )
+    {
+        this.globalDatabaseHealth = globalDatabaseHealth;
     }
 
     //TODO: change lifecycle management to be per database
@@ -131,17 +136,23 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
 
     }
 
-    private ClusteredDatabaseContext stubDatabaseFromConfig( DatabaseContextConfig config )
+    private StubClusteredDatabaseContext stubDatabaseFromConfig( DatabaseContextConfig config )
     {
         Database db = mock( Database.class );
         when( db.getDatabaseName() ).thenReturn( config.databaseName );
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logProvider,
-                config.isAvailable, config.monitors );
+                config.isAvailable, config.monitors, config.catchupComponentsFactory );
+
         if ( config.storeId != null )
         {
-            dbContext.setStoreId( config.storeId );
+            when( db.getStoreId() ).thenReturn( config.storeId );
+            dbContext.setStoreId( new StoreId( config.storeId ) );
+        }
+        else
+        {
+            when( db.getStoreId() ).thenReturn( org.neo4j.storageengine.api.StoreId.DEFAULT );
         }
         return dbContext;
     }
@@ -149,12 +160,12 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
     public class DatabaseContextConfig
     {
         private String databaseName;
-        private ClusteredDatabaseContext database = mock( ClusteredDatabaseContext.class );
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
         private BooleanSupplier isAvailable = StubClusteredDatabaseManager.this::globalAvailability;
+        private CatchupComponentsFactory catchupComponentsFactory = dbContext -> mock( CatchupComponentsRepository.DatabaseCatchupComponents.class );
         private Monitors monitors;
-        private StoreId storeId;
+        private org.neo4j.storageengine.api.StoreId storeId;
         private Dependencies dependencies;
         private JobScheduler jobScheduler = new FakeJobScheduler();
 
@@ -168,7 +179,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
             return this;
         }
 
-        public DatabaseContextConfig withStoreId( StoreId storeId )
+        public DatabaseContextConfig withKernelStoreId( org.neo4j.storageengine.api.StoreId storeId )
         {
             this.storeId = storeId;
             return this;
@@ -183,6 +194,12 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         public DatabaseContextConfig withMonitors( Monitors monitors )
         {
             this.monitors = monitors;
+            return this;
+        }
+
+        public DatabaseContextConfig withCatchupComponentsFactory( CatchupComponentsFactory catchupComponentsFactory )
+        {
+            this.catchupComponentsFactory = catchupComponentsFactory;
             return this;
         }
 
@@ -210,13 +227,15 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
             return this;
         }
 
-        public void register()
+        public StubClusteredDatabaseContext register()
         {
-            ClusteredDatabaseContext previous = databases.putIfAbsent( databaseName, stubDatabaseFromConfig( this ) );
+            StubClusteredDatabaseContext dbContext = stubDatabaseFromConfig( this );
+            ClusteredDatabaseContext previous = databases.putIfAbsent( databaseName, dbContext );
             if ( previous != null )
             {
-                throw new IllegalStateException( "Already had database with name " + databaseName );
+                throw new DatabaseExistsException( "Already had database with name " + databaseName );
             }
+            return dbContext;
         }
     }
 }

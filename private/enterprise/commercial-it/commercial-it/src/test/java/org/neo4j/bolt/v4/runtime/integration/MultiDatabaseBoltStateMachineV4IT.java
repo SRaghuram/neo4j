@@ -51,7 +51,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     void shouldAllowSessionRunOnDifferentDatabase() throws Throwable
     {
         // Given
-        DatabaseManager databaseManager = databaseManager();
+        DatabaseManager<?> databaseManager = databaseManager();
         databaseManager.createDatabase( "first" );
         databaseManager.createDatabase( "second" );
         BoltStateMachineV1 machine = newStateMachineInReadyState();
@@ -71,7 +71,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     void shouldAllowTransactionRunOnDifferentDatabase() throws Throwable
     {
         // Given
-        DatabaseManager databaseManager = databaseManager();
+        DatabaseManager<?> databaseManager = databaseManager();
         databaseManager.createDatabase( "first" );
         databaseManager.createDatabase( "second" );
         BoltStateMachineV1 machine = newStateMachineInReadyState();

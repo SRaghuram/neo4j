@@ -5,8 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
@@ -20,6 +19,7 @@ import com.neo4j.causalclustering.helper.TimeoutStrategy;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Message;
 import com.neo4j.causalclustering.messaging.Outbound;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,12 +44,12 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -65,14 +65,14 @@ class RaftReplicatorTest
     private LocalSessionPool sessionPool = new LocalSessionPool( session );
     private TimeoutStrategy noWaitTimeoutStrategy = new ConstantTimeTimeoutStrategy( 0, MILLISECONDS );
     private DatabaseAvailabilityGuard availabilityGuard;
-    private ClusteredDatabaseManager<CoreDatabaseContext> clusteredDatabaseManager;
+    private StubClusteredDatabaseManager clusteredDatabaseManager;
 
     @BeforeEach
     void setUp()
     {
         availabilityGuard = new DatabaseAvailabilityGuard( new DatabaseId( DEFAULT_DATABASE_NAME ), Clocks.systemClock(), NullLog.getInstance(),
                 mock( CompositeDatabaseAvailabilityGuard.class ) );
-        clusteredDatabaseManager = mock( ClusteredDatabaseManager.class );
+        clusteredDatabaseManager = spy( new StubClusteredDatabaseManager() );
     }
 
     @Test
@@ -224,7 +224,9 @@ class RaftReplicatorTest
     {
         CapturingProgressTracker capturedProgress = new CapturingProgressTracker();
         CapturingOutbound<RaftMessages.RaftMessage> outbound = new CapturingOutbound<>();
-        doThrow( new ReplicationFailureException( "" ) ).when( clusteredDatabaseManager ).assertHealthy( anyString(), eq( IllegalStateException.class ) );
+        CompositeDatabaseHealth mockHealth = mock( CompositeDatabaseHealth.class );
+        doThrow( new ReplicationFailureException( "" ) ).when( mockHealth ).assertHealthy( eq( IllegalStateException.class ) );
+        clusteredDatabaseManager.setAllHealthServices( mockHealth );
 
         RaftReplicator replicator = getReplicator( outbound, capturedProgress, new Monitors() );
         replicator.onLeaderSwitch( leaderInfo );

@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 
 /**
  * A ClusteredDatabaseManager allows for the creation and retrieval of new clustered Neo4j databases, as well as some limited lifecycle management.
@@ -22,10 +22,8 @@ public interface ClusteredDatabaseManager<DB extends ClusteredDatabaseContext> e
      */
     void stopForStoreCopy() throws Throwable;
 
-    @Override
     Optional<DB> getDatabaseContext( String databaseName );
 
-    @Override
     DB createDatabase( String databaseName ) throws DatabaseExistsException;
 
     /**
@@ -37,5 +35,5 @@ public interface ClusteredDatabaseManager<DB extends ClusteredDatabaseContext> e
      */
     <E extends Throwable> void assertHealthy( String databaseName, Class<E> cause ) throws E;
 
-    DatabaseHealth getAllHealthServices();
+    Health getAllHealthServices();
 }

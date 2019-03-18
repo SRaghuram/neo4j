@@ -48,7 +48,7 @@ class MultiDatabaseIdGeneratorIT
     void setUp() throws DatabaseExistsException
     {
         database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( testDirectory.databaseDir() );
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         firstDatabase = getDefaultDatabase( databaseManager );
         secondDatabase = startSecondDatabase( databaseManager );
         firstIdGeneratorFactory = getIdGeneratorFactory( firstDatabase );
@@ -113,12 +113,12 @@ class MultiDatabaseIdGeneratorIT
         return firstDatabase.getDependencyResolver().resolveDependency( IdController.class );
     }
 
-    private static GraphDatabaseFacade startSecondDatabase( DatabaseManager<StandaloneDatabaseContext> databaseManager ) throws DatabaseExistsException
+    private static GraphDatabaseFacade startSecondDatabase( DatabaseManager<?> databaseManager ) throws DatabaseExistsException
     {
         return databaseManager.createDatabase( "second" ).databaseFacade();
     }
 
-    private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager<StandaloneDatabaseContext> databaseManager )
+    private static GraphDatabaseFacade getDefaultDatabase( DatabaseManager<?> databaseManager )
     {
         return databaseManager.getDatabaseContext( Config.defaults().get( GraphDatabaseSettings.default_database ) )
                 .orElseThrow( () -> new IllegalStateException( "Default database not found." ) )
@@ -130,8 +130,7 @@ class MultiDatabaseIdGeneratorIT
         return database.getDependencyResolver().resolveDependency( IdGeneratorFactory.class );
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

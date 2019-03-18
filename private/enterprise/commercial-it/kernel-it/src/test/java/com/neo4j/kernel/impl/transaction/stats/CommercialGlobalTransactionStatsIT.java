@@ -54,8 +54,8 @@ class CommercialGlobalTransactionStatsIT
     void useAggregatedTransactionMonitorForMultidatabase() throws InterruptedException, DatabaseExistsException
     {
         ExecutorService transactionExecutor = Executors.newSingleThreadExecutor();
-        String secondDb = "second.db";
-        DatabaseManager<StandaloneDatabaseContext> databaseManager = getDatabaseManager();
+        String secondDb = "second";
+        DatabaseManager<?> databaseManager = getDatabaseManager();
         GraphDatabaseFacade secondFacade = databaseManager.createDatabase( secondDb ).databaseFacade();
 
         GlobalTransactionStats globalTransactionStats = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( GlobalTransactionStats.class );
@@ -84,8 +84,7 @@ class CommercialGlobalTransactionStatsIT
         }
     }
 
-    @SuppressWarnings( "unchecked" )
-    private DatabaseManager<StandaloneDatabaseContext> getDatabaseManager()
+    private DatabaseManager<?> getDatabaseManager()
     {
         return ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
     }

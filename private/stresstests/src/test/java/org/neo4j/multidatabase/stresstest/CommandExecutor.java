@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class CommandExecutor implements Runnable
 {
     private static final AtomicInteger dbCounter = new AtomicInteger();
-    private final DatabaseManager<StandaloneDatabaseContext> databaseManager;
+    private final DatabaseManager<?> databaseManager;
     private final CountDownLatch executionLatch;
     private final long finishTimeMillis;
     private final ThreadLocalRandom random;
@@ -42,7 +42,7 @@ class CommandExecutor implements Runnable
     private int stopStartCommands;
     private int dropCommands;
 
-    CommandExecutor( DatabaseManager<StandaloneDatabaseContext> databaseManager, CountDownLatch executionLatch, long finishTimeMillis )
+    CommandExecutor( DatabaseManager<?> databaseManager, CountDownLatch executionLatch, long finishTimeMillis )
     {
         this.databaseManager = databaseManager;
         this.executionLatch = executionLatch;

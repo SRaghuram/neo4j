@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core.server;
 
+import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
+import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
-import com.neo4j.causalclustering.catchup.CatchupServersModule;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.IdentityModule;
@@ -38,42 +38,52 @@ import com.neo4j.causalclustering.net.Server;
 import java.util.Optional;
 
 import org.neo4j.collection.Dependencies;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.factory.module.GlobalModule;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-public class CoreServerModule extends CatchupServersModule
+public class CoreServerModule
 {
-    public final MembershipWaiterLifecycle membershipWaiterLifecycle;
+    private final MembershipWaiterLifecycle membershipWaiterLifecycle;
     private final IdentityModule identityModule;
     private final ConsensusModule consensusModule;
     private final ClusteringModule clusteringModule;
     private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
-    private final DatabaseHealth kernelDatabaseHealth;
+    private final Health kernelDatabaseHealth;
     private final CommandApplicationProcess commandApplicationProcess;
     private final CoreSnapshotService snapshotService;
     private final CoreDownloaderService downloadService;
     private final JobScheduler jobScheduler;
     private final GlobalModule globalModule;
+    private final CatchupComponentsRepository catchupComponentsRepository;
+    private final LogProvider logProvider;
+    private final Config globalConfig;
+    private final Server catchupServer;
+    @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
+    private final Optional<Server> backupServer;
 
     public CoreServerModule( IdentityModule identityModule, final GlobalModule globalModule, ConsensusModule consensusModule,
             CoreStateService coreStateService, ClusteringModule clusteringModule, ReplicationModule replicationModule,
-            ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, DatabaseHealth kernelDatabaseHealth, PipelineBuilders pipelineBuilders,
-            InstalledProtocolHandler installedProtocolsHandler, CatchupHandlerFactory handlerFactory, String databaseName, Panicker panicker )
+            ClusteredDatabaseManager<CoreDatabaseContext> databaseManager, Health kernelDatabaseHealth,
+            CatchupComponentsProvider catchupComponentsProvider, InstalledProtocolHandler installedProtocolsHandler,
+            CatchupHandlerFactory handlerFactory, String databaseName, Panicker panicker )
     {
-        super( databaseManager, pipelineBuilders, globalModule, databaseName );
+        this.logProvider = globalModule.getLogService().getInternalLogProvider();
+        this.globalConfig = globalModule.getGlobalConfig();
+        LifeSupport globalLife = globalModule.getGlobalLife();
         this.databaseManager = databaseManager;
         this.identityModule = identityModule;
         this.consensusModule = consensusModule;
         this.clusteringModule = clusteringModule;
         this.kernelDatabaseHealth = kernelDatabaseHealth;
         this.globalModule = globalModule;
-
         this.jobScheduler = globalModule.getJobScheduler();
 
         final Dependencies globalDependencies = globalModule.getGlobalDependencies();
@@ -95,8 +105,9 @@ public class CoreServerModule extends CatchupServersModule
         this.snapshotService = new CoreSnapshotService( commandApplicationProcess, coreStateService,
                 consensusModule.raftLog(), consensusModule.raftMachine() );
 
-        SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupClientFactory );
-        StoreDownloader storeDownloader = new StoreDownloader( catchupComponents(), logProvider );
+        this.catchupComponentsRepository = new CatchupComponentsRepository( databaseManager );
+        SnapshotDownloader snapshotDownloader = new SnapshotDownloader( logProvider, catchupComponentsProvider.createCatchupClient() );
+        StoreDownloader storeDownloader = new StoreDownloader( catchupComponentsRepository, logProvider );
         CoreDownloader downloader = new CoreDownloader( snapshotDownloader, storeDownloader, logProvider );
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
@@ -106,8 +117,8 @@ public class CoreServerModule extends CatchupServersModule
         this.membershipWaiterLifecycle = createMembershipWaiterLifecycle();
 
         CatchupServerHandler catchupServerHandler = handlerFactory.create( snapshotService );
-        catchupServer = createCatchupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
-        backupServer = createBackupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
+        this.catchupServer = catchupComponentsProvider.createCatchupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
+        this.backupServer = catchupComponentsProvider.createBackupServer( installedProtocolsHandler, catchupServerHandler, databaseName );
 
         RaftLogPruner raftLogPruner = new RaftLogPruner( consensusModule.raftMachine(), commandApplicationProcess );
         globalDependencies.satisfyDependency( raftLogPruner );
@@ -126,6 +137,11 @@ public class CoreServerModule extends CatchupServersModule
                 electionTimeout * 4, logProvider, globalModule.getGlobalMonitors() );
         long joinCatchupTimeout = globalConfig.get( CausalClusteringSettings.join_catch_up_timeout ).toMillis();
         return new MembershipWaiterLifecycle( membershipWaiter, joinCatchupTimeout, consensusModule.raftMachine(), logProvider );
+    }
+
+    public CatchupComponentsRepository catchupComponents()
+    {
+        return catchupComponentsRepository;
     }
 
     public Server catchupServer()
@@ -155,4 +171,8 @@ public class CoreServerModule extends CatchupServersModule
         return downloadService;
     }
 
+    public MembershipWaiterLifecycle membershipWaiterLifecycle()
+    {
+        return membershipWaiterLifecycle;
+    }
 }
