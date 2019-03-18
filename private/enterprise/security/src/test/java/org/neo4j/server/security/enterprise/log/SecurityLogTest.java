@@ -22,6 +22,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Level;
 import org.neo4j.logging.LogTimeZone;
@@ -35,9 +36,10 @@ import static org.hamcrest.Matchers.array;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.isA;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.configuration.Settings.TRUE;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class SecurityLogTest
 {
@@ -93,9 +95,9 @@ public class SecurityLogTest
         // Then
         assertThat( runtimeException.getMessage(), equalTo( "Failed to load security module.") );
         assertThat( runtimeException.getCause(), instanceOf( IOException.class ) );
-        assertThat( runtimeException.getCause().getMessage(), equalTo( "Unable to create security log." ) );
 
-        logProvider.assertContainsMessageMatching( is( "Failed to load security module. Caused by: Unable to create security log." ) );
+        logProvider.assertAtLeastOnce( inLog( EnterpriseEditionModule.class )
+                .error( containsString( "Failed to load security module." ), isA( IOException.class )  ) );
     }
 
     @Test
