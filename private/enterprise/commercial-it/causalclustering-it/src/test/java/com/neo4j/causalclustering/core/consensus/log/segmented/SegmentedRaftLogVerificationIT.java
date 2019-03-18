@@ -8,21 +8,29 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
 import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogVerificationIT;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
+@ExtendWith( LifeExtension.class )
 public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
 {
+    @Inject
+    private LifeSupport life;
+
     @Override
-    protected RaftLog createRaftLog( TestDirectory testDirectory ) throws Throwable
+    protected RaftLog createRaftLog( TestDirectory testDirectory )
     {
         File directory = testDirectory.directory();
 
@@ -38,8 +46,7 @@ public class SegmentedRaftLogVerificationIT extends RaftLogVerificationIT
                 new OnDemandJobScheduler(),
                 pruningStrategy );
 
-        newRaftLog.init();
-        newRaftLog.start();
+        life.add( newRaftLog );
 
         return newRaftLog;
     }
