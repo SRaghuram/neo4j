@@ -71,7 +71,8 @@ public class CommitStateHelper
         ReadOnlyTransactionStore txStore = new ReadOnlyTransactionStore( pageCache, fs, databaseLayout, config, new Monitors() );
 
         long lastTxId = BASE_TX_ID;
-        try ( Lifespan ignored = new Lifespan( txStore ); TransactionCursor cursor = txStore.getTransactions( startTxId ) )
+        try ( Lifespan ignored = new Lifespan( txStore );
+              TransactionCursor cursor = txStore.getTransactions( startTxId ) )
         {
             while ( cursor.next() )
             {

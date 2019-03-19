@@ -73,7 +73,7 @@ public class ClusterCustomLogLocationIT
     private static void logFileInStoreDirectoryDoesNotExist( DatabaseLayout databaseLayout, DependencyResolver dependencyResolver ) throws IOException
     {
         FileSystemAbstraction fileSystem = dependencyResolver.resolveDependency( FileSystemAbstraction.class );
-        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem ).build();
+        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem ).build();
         assertFalse( storeLogFiles.versionExists( 0 ) );
     }
 }
