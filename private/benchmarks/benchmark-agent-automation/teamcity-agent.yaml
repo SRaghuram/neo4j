@@ -29,6 +29,12 @@
           state: present
           update_cache: yes
         become: yes
+      - name: Create symbolic link for Java 11
+        become: yes
+        file:
+          src: "/usr/lib/jvm/java-11-oracle"
+          dest: "/usr/lib/jvm/oracle-jdk-11"
+          state: link
       - name: install teamcity agent as a service
         template:
           src: templates/etc/systemd/system/teamcity-agent.service
