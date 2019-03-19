@@ -56,7 +56,7 @@ public class CoreToCoreCopySnapshotIT
         // shutdown the follower, remove the store, restart
         follower.shutdown();
         FileSystemAbstraction fs = clusterRule.testDirectory().getFileSystem();
-        fs.deleteRecursively( follower.databaseDirectory() );
+        fs.deleteRecursively( follower.databaseLayout().databaseDirectory() );
         fs.deleteRecursively( follower.clusterStateDirectory() );
         follower.start();
 

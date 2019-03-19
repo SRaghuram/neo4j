@@ -11,6 +11,7 @@ import java.io.File;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.config.Setting;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.Monitors;
 
@@ -46,7 +47,7 @@ public interface ClusterMember<T extends GraphDatabaseAPI>
 
     Monitors monitors();
 
-    File databaseDirectory();
+    DatabaseLayout databaseLayout();
 
     File homeDir();
 

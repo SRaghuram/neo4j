@@ -11,7 +11,6 @@ import com.neo4j.test.causalclustering.ClusterRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -44,7 +43,7 @@ public class RecoveryIT
 
         fireSomeLoadAtTheCluster( cluster );
 
-        Set<File> storeDirs = cluster.coreMembers().stream().map( CoreClusterMember::databaseDirectory ).collect( toSet() );
+        Set<DatabaseLayout> databaseLayouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         assertEventually( "All cores have the same data",
                 () -> cluster.coreMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
@@ -54,7 +53,7 @@ public class RecoveryIT
         cluster.shutdown();
 
         // then
-        storeDirs.forEach( RecoveryIT::assertConsistent );
+        databaseLayouts.forEach( RecoveryIT::assertConsistent );
     }
 
     @Test
@@ -66,7 +65,7 @@ public class RecoveryIT
 
         fireSomeLoadAtTheCluster( cluster );
 
-        Set<File> storeDirs = cluster.coreMembers().stream().map( CoreClusterMember::databaseDirectory ).collect( toSet() );
+        Set<DatabaseLayout> layouts = cluster.coreMembers().stream().map( CoreClusterMember::databaseLayout ).collect( toSet() );
 
         // when
         for ( int i = 0; i < clusterSize; i++ )
@@ -83,7 +82,7 @@ public class RecoveryIT
 
         cluster.shutdown();
 
-        storeDirs.forEach( RecoveryIT::assertConsistent );
+        layouts.forEach( RecoveryIT::assertConsistent );
     }
 
     private static DbRepresentation dbRepresentation( CoreClusterMember member )
@@ -91,12 +90,12 @@ public class RecoveryIT
         return  DbRepresentation.of( member.database() );
     }
 
-    private static void assertConsistent( File storeDir )
+    private static void assertConsistent( DatabaseLayout databaseLayout )
     {
         ConsistencyCheckService.Result result;
         try
         {
-            result = new ConsistencyCheckService().runFullConsistencyCheck( DatabaseLayout.of( storeDir ), Config.defaults(),
+            result = new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(),
                     ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), true );
         }
         catch ( Exception e )

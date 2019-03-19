@@ -34,6 +34,8 @@ import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -111,7 +113,7 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
         this.monitors = monitors;
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), DEFAULT_DATABASE_NAME );
     }
 
     @Override
@@ -199,9 +201,9 @@ public class ReadReplica implements ClusterMember<ReadReplicaGraphDatabase>
     }
 
     @Override
-    public File databaseDirectory()
+    public DatabaseLayout databaseLayout()
     {
-        return defaultDatabaseLayout.databaseDirectory();
+        return defaultDatabaseLayout;
     }
 
     public String toString()

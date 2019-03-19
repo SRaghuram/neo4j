@@ -33,30 +33,30 @@ public class TestStoreId
     {
     }
 
-    public static void assertAllStoresHaveTheSameStoreId( List<File> coreStoreDirs, FileSystemAbstraction fs ) throws Exception
+    public static void assertAllStoresHaveTheSameStoreId( List<DatabaseLayout> databaseLayouts, FileSystemAbstraction fs ) throws Exception
     {
-        Set<StoreId> storeIds = getStoreIds( coreStoreDirs, fs );
+        Set<StoreId> storeIds = getStoreIds( databaseLayouts, fs );
         assertEquals( "Store Ids " + storeIds, 1, storeIds.size() );
     }
 
-    public static Set<StoreId> getStoreIds( List<File> coreStoreDirs, FileSystemAbstraction fs ) throws Exception
+    public static Set<StoreId> getStoreIds( List<DatabaseLayout> databaseLayouts, FileSystemAbstraction fs ) throws Exception
     {
         Set<StoreId> storeIds = new HashSet<>();
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, jobScheduler ) )
         {
-            for ( File coreStoreDir : coreStoreDirs )
+            for ( DatabaseLayout databaseLayout : databaseLayouts )
             {
-                storeIds.add( doReadStoreId( coreStoreDir, pageCache ) );
+                storeIds.add( doReadStoreId( databaseLayout, pageCache ) );
             }
         }
 
         return storeIds;
     }
 
-    private static StoreId doReadStoreId( File databaseDirectory, PageCache pageCache ) throws IOException
+    private static StoreId doReadStoreId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        File metadataStore = DatabaseLayout.of( databaseDirectory ).metadataStore();
+        File metadataStore = databaseLayout.metadataStore();
 
         long creationTime = MetaDataStore.getRecord( pageCache, metadataStore, TIME );
         long randomNumber = MetaDataStore.getRecord( pageCache, metadataStore, RANDOM_NUMBER );

@@ -53,7 +53,6 @@ import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.api.txtracking.TransactionIdTracker;
@@ -430,7 +429,7 @@ public class ReadReplicaReplicationIT
 
     private static void changeStoreId( ReadReplica replica ) throws IOException
     {
-        File neoStoreFile = DatabaseLayout.of( replica.databaseDirectory() ).metadataStore();
+        File neoStoreFile = replica.databaseLayout().metadataStore();
         PageCache pageCache = replica.database().getDependencyResolver().resolveDependency( PageCache.class );
         MetaDataStore.setRecord( pageCache, neoStoreFile, TIME, System.currentTimeMillis() );
     }

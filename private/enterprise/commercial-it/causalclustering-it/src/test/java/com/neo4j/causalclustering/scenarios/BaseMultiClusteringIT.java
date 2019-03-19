@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +30,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 
@@ -133,13 +133,13 @@ public abstract class BaseMultiClusteringIT
             } );
         }
 
-        List<File> storeDirs = cluster.coreMembers().stream()
-                .map( CoreClusterMember::databaseDirectory )
+        List<DatabaseLayout> databaseLayouts = cluster.coreMembers().stream()
+                .map( CoreClusterMember::databaseLayout )
                 .collect( Collectors.toList() );
 
         cluster.shutdown();
 
-        Set<StoreId> storeIds = getStoreIds( storeDirs, fs );
+        Set<StoreId> storeIds = getStoreIds( databaseLayouts, fs );
         int expectedNumStoreIds = dbNames.size();
         assertEquals( expectedNumStoreIds, storeIds.size(), "Expected distinct store ids for distinct sub clusters." );
     }
@@ -179,14 +179,14 @@ public abstract class BaseMultiClusteringIT
 
         dataMatchesEventually( dbLeader, Collections.singleton(follower) );
 
-        List<File> storeDirs = cluster.coreMembers().stream()
+        List<DatabaseLayout> databaseLayouts = cluster.coreMembers().stream()
                 .filter( m -> dbName.equals( m.dbName() ) )
-                .map( CoreClusterMember::databaseDirectory )
+                .map( CoreClusterMember::databaseLayout )
                 .collect( Collectors.toList() );
 
         cluster.shutdown();
 
-        Set<StoreId> storeIds = getStoreIds( storeDirs, fs );
+        Set<StoreId> storeIds = getStoreIds( databaseLayouts, fs );
         String message = "All members of a sub-cluster should have the same store Id after downloading a snapshot.";
         assertEquals( 1, storeIds.size(), message );
     }

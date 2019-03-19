@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -73,7 +72,7 @@ class TransactionLogRecoveryIT
         CoreClusterMember lastWrites = DataCreator.createEmptyNodes( cluster, 10 );
 
         // and writing a partial tx
-        writePartialTx( core.databaseDirectory() );
+        writePartialTx( core.databaseLayout() );
 
         // then: we should still be able to start
         core.start();
@@ -96,7 +95,7 @@ class TransactionLogRecoveryIT
         CoreClusterMember lastWrites = DataCreator.createEmptyNodes( cluster, 10 );
 
         // and writing a partial tx
-        writePartialTx( core.databaseDirectory() );
+        writePartialTx( core.databaseLayout() );
 
         // and deleting the cluster state, making sure a snapshot is required during startup
         // effectively a seeding scenario -- representing the use of the unbind command on a crashed store
@@ -124,7 +123,7 @@ class TransactionLogRecoveryIT
         dataMatchesEventually( lastWrites, cluster.coreMembers() );
 
         // and writing a partial tx
-        writePartialTx( readReplica.databaseDirectory() );
+        writePartialTx( readReplica.databaseLayout() );
 
         // then: we should still be able to start
         readReplica.start();
@@ -133,9 +132,9 @@ class TransactionLogRecoveryIT
         dataMatchesEventually( lastWrites, singletonList( readReplica ) );
     }
 
-    private void writePartialTx( File storeDir ) throws IOException
+    private void writePartialTx( DatabaseLayout databaseLayout ) throws IOException
     {
-        LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( DatabaseLayout.of( storeDir ), fs, pageCache ).build();
+        LogFiles logFiles = LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache ).build();
         try ( Lifespan ignored = new Lifespan( logFiles ) )
         {
             LogEntryWriter writer = new LogEntryWriter( logFiles.getLogFile().getWriter() );

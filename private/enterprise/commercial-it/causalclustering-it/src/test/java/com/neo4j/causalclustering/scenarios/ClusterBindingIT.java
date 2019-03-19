@@ -74,12 +74,12 @@ public class ClusterBindingIT
         // WHEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        List<File> coreStoreDirs = databaseDirs( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
 
         cluster.shutdown();
 
         // THEN
-        assertAllStoresHaveTheSameStoreId( coreStoreDirs, fs );
+        assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
 
     @Test
@@ -92,14 +92,14 @@ public class ClusterBindingIT
         // WHEN
         cluster.start();
 
-        List<File> coreStoreDirs = databaseDirs( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
 
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
         cluster.shutdown();
 
         // THEN
-        assertAllStoresHaveTheSameStoreId( coreStoreDirs, fs );
+        assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
 
     @Test
@@ -109,10 +109,10 @@ public class ClusterBindingIT
         // GIVEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        File databaseDirectory = cluster.getCoreMemberById( 0 ).databaseDirectory();
+        DatabaseLayout databaseLayout = cluster.getCoreMemberById( 0 ).databaseLayout();
 
         cluster.removeCoreMemberWithServerId( 0 );
-        changeStoreId( DatabaseLayout.of( databaseDirectory ) );
+        changeStoreId( databaseLayout );
 
         // WHEN
         try
@@ -150,9 +150,9 @@ public class ClusterBindingIT
         // THEN
         assertEquals( 3, cluster.healthyCoreMembers().size() );
 
-        List<File> coreStoreDirs = databaseDirs( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
         cluster.shutdown();
-        assertAllStoresHaveTheSameStoreId( coreStoreDirs, fs );
+        assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
 
     @Test
@@ -203,14 +203,14 @@ public class ClusterBindingIT
         // THEN
         assertEquals( 4, cluster.healthyCoreMembers().size() );
 
-        List<File> coreStoreDirs = databaseDirs( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
         cluster.shutdown();
-        assertAllStoresHaveTheSameStoreId( coreStoreDirs, fs );
+        assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
 
-    private static List<File> databaseDirs( Collection<CoreClusterMember> dbs )
+    private static List<DatabaseLayout> databaseLAyouts( Collection<CoreClusterMember> dbs )
     {
-        return dbs.stream().map( CoreClusterMember::databaseDirectory ).collect( Collectors.toList() );
+        return dbs.stream().map( CoreClusterMember::databaseLayout ).collect( Collectors.toList() );
     }
 
     private void changeClusterId( CoreClusterMember coreMember ) throws IOException

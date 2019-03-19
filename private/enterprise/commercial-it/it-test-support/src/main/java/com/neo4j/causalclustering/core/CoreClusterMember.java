@@ -39,6 +39,7 @@ import org.neo4j.monitoring.Monitors;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.helpers.AdvertisedSocketAddress.advertisedAddress;
 import static org.neo4j.helpers.ListenSocketAddress.listenAddress;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -143,7 +144,7 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
         this.dbName = memberConfig.get( CausalClusteringSettings.database );
         threadGroup = new ThreadGroup( toString() );
         this.dbFactory = dbFactory;
-        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        this.defaultDatabaseLayout = DatabaseLayout.of( databasesDirectory, of( memberConfig ), GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
     }
 
     @Override
@@ -212,14 +213,9 @@ public class CoreClusterMember implements ClusterMember<CoreGraphDatabase>
     }
 
     @Override
-    public File databaseDirectory()
+    public DatabaseLayout databaseLayout()
     {
-        return defaultDatabaseLayout.databaseDirectory();
-    }
-
-    protected File storeLayout()
-    {
-        return databasesDirectory;
+        return defaultDatabaseLayout;
     }
 
     public RaftLogPruner raftLogPruner()

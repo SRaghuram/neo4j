@@ -64,7 +64,7 @@ class BackupCoreIT
             File coreBackupDir = testDirectory.directory( "backups", "core-" + db.serverId() + "-backup" );
             File coreDefaultDbBackupDir = new File( coreBackupDir, DEFAULT_DATABASE_NAME );
             String[] args = backupArguments( backupAddress( db.database() ), coreBackupDir, DEFAULT_DATABASE_NAME );
-            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseDirectory(), args ) );
+            assertEquals( 0, runBackupToolFromOtherJvmToGetExitCode( db.databaseLayout().databaseDirectory(), args ) );
 
             // Add some new data
             DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );

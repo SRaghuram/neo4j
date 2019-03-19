@@ -8,10 +8,12 @@ package com.neo4j.causalclustering.stresstests;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.helpers.collection.Iterables;
-
-import static org.neo4j.consistency.ConsistencyCheckTool.runConsistencyCheckTool;
+import org.neo4j.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.logging.NullLogProvider;
 
 /**
  * Check the consistency of all the cluster members' stores.
@@ -33,11 +35,12 @@ public class ConsistencyCheck extends Validation
 
         for ( ClusterMember member : members )
         {
-            String databasePath = member.databaseDirectory().getAbsolutePath();
-            ConsistencyCheckService.Result result = runConsistencyCheckTool( new String[]{databasePath}, System.out, System.err );
+            DatabaseLayout databaseLayout = member.databaseLayout();
+            ConsistencyCheckService.Result result = new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(),
+                    ProgressMonitorFactory.NONE, NullLogProvider.getInstance(), true );
             if ( !result.isSuccessful() )
             {
-                throw new RuntimeException( "Not consistent database in " + databasePath );
+                throw new RuntimeException( "Not consistent database in " + databaseLayout );
             }
         }
     }
