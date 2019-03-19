@@ -122,7 +122,7 @@ public class EndToEndIT
                 "macro.jar not found, make sure you have assembly in place, by running mvn package" );
 
         // assert if environment is setup
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+        List<ProfilerType> profilers = asList( ProfilerType.ASYNC, ProfilerType.GC );
         for ( ProfilerType profiler : profilers )
         {
             profiler.assertEnvironmentVariablesPresent( true );
@@ -161,7 +161,8 @@ public class EndToEndIT
         TestSupport.createEmptyStore( dbPath );
 
         Path resultsPath = absoluteTempPath.resolve( "results.json" );
-        Path workPath = absoluteTempPath.resolve( "work" );
+
+        Path workPath = temporaryFolder.directory("work" ).toPath();
 
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                 // workload
