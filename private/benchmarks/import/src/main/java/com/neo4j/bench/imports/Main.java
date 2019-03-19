@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -176,7 +177,16 @@ public class Main
     {
         String name = "indexCreate" + size;
         Benchmark benchmark = Benchmark.benchmarkFor( "Index population on large store", name, name, Benchmark.Mode.SINGLE_SHOT, new HashMap<>() );
-        String[] indexCreateArgs = (String.format( "--storeDir %s %s", size, "Label1:name" )).split( " " );
+        StringJoiner indexPatterns = new StringJoiner( " " );
+        indexPatterns.add( "Label1:name" );
+        indexPatterns.add( "Label1:name,other" );
+        indexPatterns.add( "Label2:nr" );
+        indexPatterns.add( "Label2:nr,other" );
+        indexPatterns.add( "Label3:date" );
+        indexPatterns.add( "Label3:date,other" );
+        indexPatterns.add( "Label4:rank" );
+        indexPatterns.add( "Label4:rank,other" );
+        String[] indexCreateArgs = (String.format( "--storeDir %s %s", size, indexPatterns.toString() )).split( " " );
         Class<CreateIndex> targetClass = CreateIndex.class;
         return runProcess( metrics, group, neo4jConfig, benchmark, indexCreateArgs, targetClass );
     }
