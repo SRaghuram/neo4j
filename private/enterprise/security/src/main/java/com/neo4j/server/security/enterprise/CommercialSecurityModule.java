@@ -32,6 +32,7 @@ import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -107,7 +108,7 @@ public class CommercialSecurityModule extends SecurityModule
     }
 
     @Override
-    public void setup( Dependencies dependencies ) throws KernelException
+    public void setup( Dependencies dependencies ) throws KernelException, IOException
     {
         // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
@@ -124,12 +125,7 @@ public class CommercialSecurityModule extends SecurityModule
         GlobalProcedures globalProcedures = dependencies.procedures();
         JobScheduler jobScheduler = dependencies.scheduler();
 
-        SecurityLog securityLog = SecurityLog.create(
-                config,
-                dependencies.logService().getInternalLog( GraphDatabaseFacade.class ),
-                fileSystem,
-                jobScheduler
-            );
+        SecurityLog securityLog = SecurityLog.create( config, fileSystem, jobScheduler );
         life.add( securityLog );
 
         authManager = newAuthManager( config, logProvider, securityLog, fileSystem, accessCapability );

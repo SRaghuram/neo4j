@@ -194,18 +194,17 @@ public class SecurityLog extends LifecycleAdapter implements Log
         inner.bulk( consumer );
     }
 
-    public static SecurityLog create( Config config, Log log, FileSystemAbstraction fileSystem,
-            JobScheduler jobScheduler )
+    public static SecurityLog create( Config config, FileSystemAbstraction fileSystem,
+            JobScheduler jobScheduler ) throws IOException
     {
         try
         {
             return new SecurityLog( config, fileSystem,
                     jobScheduler.executor( Group.LOG_ROTATION ) );
         }
-        catch ( IOException ioe )
+        catch ( SecurityException e )
         {
-            log.warn( "Unable to create log for auth-manager. Auth logging turned off." );
-            return null;
+            throw new IOException( "Unable to create security log.", e );
         }
     }
 
