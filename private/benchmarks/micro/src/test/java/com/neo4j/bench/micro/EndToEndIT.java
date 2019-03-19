@@ -10,14 +10,20 @@ import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.google.common.collect.ImmutableSet;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.ProfilerType;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.TestSupport;
+import com.neo4j.bench.micro.config.BenchmarkConfigFile;
+import com.neo4j.bench.micro.config.SuiteDescription;
+import com.neo4j.bench.micro.config.Validation;
 import io.findify.s3mock.S3Mock;
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.jupiter.api.Tag;
@@ -25,14 +31,15 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
 import java.net.ServerSocket;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -95,10 +102,10 @@ public class EndToEndIT
 
         // assert if environment is setup
         List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
-//        for ( ProfilerType profiler : profilers )
-//        {
-//            profiler.assertEnvironmentVariablesPresent( true );
-//        }
+        for ( ProfilerType profiler : profilers )
+        {
+            profiler.assertEnvironmentVariablesPresent( true );
+        }
 
         assertSysctlParameter( 1, "kernel.perf_event_paranoid" );
         assertSysctlParameter( 0, "kernel.kptr_restrict");
@@ -128,6 +135,33 @@ public class EndToEndIT
         Neo4jConfig.withDefaults().writeAsProperties( neo4jConfig );
 
         File benchmarkConfig = temporaryFolder.newFile( "benchmarkConfig" );
+
+        BenchmarkConfigFile.write(
+                SuiteDescription.byReflection( new Validation() ),
+                ImmutableSet.of( "com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark" ),
+                false,
+                false,
+                benchmarkConfig.toPath());
+
+        File neo4jConfigPath = temporaryFolder.newFile( "neo4jConfig" );
+
+        File neo4jConfigArchive = temporaryFolder.newFile();
+        Files.write( neo4jConfigArchive.toPath(), Arrays.asList( "dbms.jvm.additional=-Xmx1g\n" ));
+
+        File tarball = temporaryFolder.newFile( "neo4jArchive.tgz" );
+
+        Files.write( neo4jConfigArchive.toPath(), java.util.Arrays.asList( "dbms.jvm.additional=-Xmx1g\n" ));
+
+        try ( FileOutputStream output = new FileOutputStream( tarball );
+              GzipCompressorOutputStream compressorStream = new GzipCompressorOutputStream( output );
+              TarArchiveOutputStream archiveStream = new TarArchiveOutputStream( compressorStream ) )
+        {
+            ArchiveEntry archiveEntry = archiveStream.createArchiveEntry( neo4jConfigArchive, "neo4j.conf" );
+            archiveStream.putArchiveEntry( archiveEntry );
+            Files.copy( neo4jConfigArchive.toPath(), archiveStream );
+            archiveStream.closeArchiveEntry();
+        }
+
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                 // neo4j_version
                 "3.3.0",
@@ -156,13 +190,13 @@ public class EndToEndIT
                 // parent_teamcity_build_id
                 "1",
                 // tarball
-                "tarball",
+                tarball.getAbsolutePath(),
                 // jvm_args
                 "",
                 // jmh_args
                 "",
                 // neo4j_config_path
-                "neo4j_config_path",
+                neo4jConfigPath.getAbsolutePath(),
                 // jvm_path
                 Jvm.defaultJvmOrFail().launchJava(),
                 // with_jfr
