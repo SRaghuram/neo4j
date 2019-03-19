@@ -23,7 +23,7 @@ import static java.lang.String.format;
 
 public class StoreClient implements AutoCloseable
 {
-    public static final long VERSION = 9;
+    public static final long VERSION = 10;
     private final Supplier<Driver> driverSupplier;
     private final int retries;
     private Driver driver;
