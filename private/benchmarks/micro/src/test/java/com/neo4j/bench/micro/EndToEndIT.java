@@ -31,6 +31,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -134,33 +135,9 @@ public class EndToEndIT
         Path neo4jConfig = temporaryFolder.newFile( "neo4j.config" ).toPath();
         Neo4jConfig.withDefaults().writeAsProperties( neo4jConfig );
 
-        File benchmarkConfig = temporaryFolder.newFile( "benchmarkConfig" );
+        File benchmarkConfig = createBenchmarkConfig();
 
-        BenchmarkConfigFile.write(
-                SuiteDescription.byReflection( new Validation() ),
-                ImmutableSet.of( "com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark" ),
-                false,
-                false,
-                benchmarkConfig.toPath());
-
-        File neo4jConfigPath = temporaryFolder.newFile( "neo4jConfig" );
-
-        File neo4jConfigArchive = temporaryFolder.newFile();
-        Files.write( neo4jConfigArchive.toPath(), Arrays.asList( "dbms.jvm.additional=-Xmx1g\n" ));
-
-        File tarball = temporaryFolder.newFile( "neo4jArchive.tgz" );
-
-        Files.write( neo4jConfigArchive.toPath(), java.util.Arrays.asList( "dbms.jvm.additional=-Xmx1g\n" ));
-
-        try ( FileOutputStream output = new FileOutputStream( tarball );
-              GzipCompressorOutputStream compressorStream = new GzipCompressorOutputStream( output );
-              TarArchiveOutputStream archiveStream = new TarArchiveOutputStream( compressorStream ) )
-        {
-            ArchiveEntry archiveEntry = archiveStream.createArchiveEntry( neo4jConfigArchive, "neo4j.conf" );
-            archiveStream.putArchiveEntry( archiveEntry );
-            Files.copy( neo4jConfigArchive.toPath(), archiveStream );
-            archiveStream.closeArchiveEntry();
-        }
+        File tarball = createNeo4jArchive();
 
         ProcessBuilder processBuilder = new ProcessBuilder( asList( "./run-report-benchmarks.sh",
                 // neo4j_version
@@ -196,7 +173,7 @@ public class EndToEndIT
                 // jmh_args
                 "",
                 // neo4j_config_path
-                neo4jConfigPath.getAbsolutePath(),
+                neo4jConfig.toString(),
                 // jvm_path
                 Jvm.defaultJvmOrFail().launchJava(),
                 // with_jfr
@@ -220,6 +197,37 @@ public class EndToEndIT
         assertEquals( 0, process.waitFor(), "run-report-benchmarks.sh finished with non-zero code" );
         assertStoreSchema();
         assertRecordingFilesExist( s3Path, profilers );
+    }
+
+    private File createBenchmarkConfig() throws IOException
+    {
+        File benchmarkConfig = temporaryFolder.newFile( "benchmarkConfig" );
+
+        BenchmarkConfigFile.write(
+                SuiteDescription.byReflection( new Validation() ),
+                ImmutableSet.of( "com.neo4j.bench.micro.benchmarks.test.NoOpBenchmark" ),
+                false,
+                false,
+                benchmarkConfig.toPath());
+        return benchmarkConfig;
+    }
+
+    private File createNeo4jArchive( ) throws IOException, FileNotFoundException
+    {
+        Path neo4jConfigArchive = Files.write( temporaryFolder.newFile().toPath(), Arrays.asList( "dbms.jvm.additional=-Xmx1g\n" ));
+        File tarball = temporaryFolder.newFile( "neo4jArchive.tgz" );
+
+        try ( FileOutputStream fileOutput = new FileOutputStream( tarball );
+              GzipCompressorOutputStream gzOutput = new GzipCompressorOutputStream( fileOutput );
+              TarArchiveOutputStream tarOutput = new TarArchiveOutputStream( gzOutput ) )
+        {
+            ArchiveEntry archiveEntry = tarOutput.createArchiveEntry( neo4jConfigArchive.toFile(), "neo4j.conf" );
+            tarOutput.putArchiveEntry( archiveEntry );
+            Files.copy( neo4jConfigArchive, tarOutput );
+            tarOutput.closeArchiveEntry();
+        }
+
+        return tarball;
     }
 
     private void assertStoreSchema()
@@ -260,22 +268,6 @@ public class EndToEndIT
         assertEquals( 1, recordingDirs.size() );
         Path recordingDir = recordingDirs.get( 0 );
         assertThat( recordingsBasePath.resolve( recordingDir.getFileName() + ".tar.gz" ).toFile(),anExistingFile() );
-
-//        Workload workload = Workload.fromName( "zero", new Resources() );
-//        for ( Query query : workload.queries() )
-//        {
-//            for ( ProfilerType profilerType : profilers )
-//            {
-//                ProfilerRecordingDescriptor recordingDescriptor = new ProfilerRecordingDescriptor(
-//                        query.benchmarkGroup(), query.benchmark(), RunPhase.MEASUREMENT, profilerType );
-//                for ( RecordingType recordingType : profilerType.allRecordingTypes() )
-//                {
-//                    String profilerArtifactFilename = recordingDescriptor.filename( recordingType );
-//                    File file = recordingDir.resolve( profilerArtifactFilename ).toFile();
-//                    assertThat( file, anExistingFile() );
-//                }
-//            }
-//        }
     }
 
     private static int randomLocalPort() throws IOException
