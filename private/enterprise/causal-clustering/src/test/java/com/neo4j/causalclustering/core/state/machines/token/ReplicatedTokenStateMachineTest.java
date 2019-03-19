@@ -45,6 +45,7 @@ import org.neo4j.storageengine.api.SchemaRule;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
+import org.neo4j.test.rule.CleanupRule;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
@@ -74,8 +75,9 @@ public class ReplicatedTokenStateMachineTest
     private EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     private AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private PageCacheRule pageCacheRule = new PageCacheRule();
+    private CleanupRule cleanupRule = new CleanupRule();
     @Rule
-    public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( logProvider ).around( pageCacheRule );
+    public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( logProvider ).around( pageCacheRule ).around( cleanupRule );
 
     @Test
     public void shouldCreateTokenId() throws Exception
@@ -198,7 +200,7 @@ public class ReplicatedTokenStateMachineTest
         IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs );
         PageCache pageCache = pageCacheRule.getPageCache( fs );
         StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider );
-        NeoStores stores = storeFactory.openAllNeoStores( true );
+        NeoStores stores = cleanupRule.add( storeFactory.openAllNeoStores( true ) );
         TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
         when( commitProcess.commit( any( TransactionToApply.class ), any( CommitEvent.class ), eq( EXTERNAL ) ) ).then( inv ->
         {
