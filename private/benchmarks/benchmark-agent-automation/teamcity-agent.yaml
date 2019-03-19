@@ -14,11 +14,21 @@
         apt_repository:
           repo: ppa:linuxuprising/java
           state: present
-          update_cache: true
+          update_cache: yes
+        become: yes
+      - name: accept oracle license
+        debconf:
+          name: oracle-java11-installer
+          question: 'shared/accepted-oracle-license-v1-2'
+          value: 'true'
+          vtype: 'select'
+        become: yes
       - name: install JDK 11
         apt:
           name: oracle-java11-installer
           state: present
+          update_cache: yes
+        become: yes
       - name: install teamcity agent as a service
         template:
           src: templates/etc/systemd/system/teamcity-agent.service
