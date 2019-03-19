@@ -24,7 +24,6 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
-import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
@@ -46,8 +45,6 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
 
         headerInformationFactory = createHeaderInformationFactory();
 
-        schemaWriteGuard = createSchemaWriteGuard();
-
         transactionStartTimeout = config.get( GraphDatabaseSettings.transaction_start_timeout ).toMillis();
 
         constraintSemantics = new CommercialConstraintSemantics();
@@ -56,8 +53,6 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
 
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
     }
-
-    protected abstract SchemaWriteGuard createSchemaWriteGuard();
 
     private static KernelData createKernelData( FileSystemAbstraction fileSystem, PageCache pageCache, File storeDir, Config config )
     {

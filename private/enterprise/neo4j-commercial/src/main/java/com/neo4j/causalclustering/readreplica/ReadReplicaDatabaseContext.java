@@ -20,7 +20,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
-import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.AccessCapability;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
@@ -112,12 +111,6 @@ public class ReadReplicaDatabaseContext implements EditionDatabaseContext
     public TransactionHeaderInformationFactory getHeaderInformationFactory()
     {
         return editionModule.getHeaderInformationFactory();
-    }
-
-    @Override
-    public SchemaWriteGuard getSchemaWriteGuard()
-    {
-        return editionModule.getSchemaWriteGuard();
     }
 
     @Override

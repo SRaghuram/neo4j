@@ -58,7 +58,6 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.AvailabilityGuard;
-import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
@@ -207,14 +206,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     public TransactionHeaderInformationFactory getHeaderInformationFactory()
     {
         return TransactionHeaderInformationFactory.DEFAULT;
-    }
-
-    @Override
-    protected SchemaWriteGuard createSchemaWriteGuard()
-    {
-        return () ->
-        {
-        };
     }
 
     @Override

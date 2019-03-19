@@ -32,7 +32,6 @@ import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
-import org.neo4j.kernel.impl.api.SchemaWriteGuard;
 import org.neo4j.kernel.impl.api.StatementOperationParts;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -250,7 +249,7 @@ class TransactionStatusResultTest
             Dependencies dependencies = new Dependencies();
             dependencies.satisfyDependency( mock( DefaultValueMapper.class ) );
             KernelTransactionImplementation transaction = new KernelTransactionImplementation( Config.defaults(),
-                        mock( StatementOperationParts.class ), mock( SchemaWriteGuard.class ), new TransactionHooks(),
+                        mock( StatementOperationParts.class ), new TransactionHooks(),
                         mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ), TransactionHeaderInformationFactory.DEFAULT,
                         mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
                         mock( Pool.class ), Clocks.fakeClock(),
