@@ -14,6 +14,7 @@ import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactoryState;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.PlatformModule;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.impl.enterprise.EnterpriseEditionModule;
@@ -75,6 +76,20 @@ public class TestEnterpriseGraphDatabaseFactory extends TestGraphDatabaseFactory
                                     }
                                 }
                                 return super.createLogService( userLogProvider );
+                            }
+
+                            @Override
+                            protected FileSystemAbstraction createFileSystemAbstraction()
+                            {
+                                if ( state instanceof TestGraphDatabaseFactoryState )
+                                {
+                                    FileSystemAbstraction fs = ((TestGraphDatabaseFactoryState) state).getFileSystem();
+                                    if ( fs != null )
+                                    {
+                                        return fs;
+                                    }
+                                }
+                                return super.createFileSystemAbstraction();
                             }
                         };
                     }

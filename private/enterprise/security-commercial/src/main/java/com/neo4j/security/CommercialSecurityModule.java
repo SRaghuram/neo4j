@@ -8,6 +8,7 @@ package com.neo4j.security;
 import java.io.File;
 import java.util.Map;
 import java.util.Optional;
+import java.io.IOException;
 import java.util.function.Supplier;
 
 import org.neo4j.cypher.internal.javacompat.QueryResultProvider;
@@ -63,7 +64,7 @@ public class CommercialSecurityModule extends EnterpriseSecurityModule
     }
 
     @Override
-    public void setup( Dependencies dependencies ) throws KernelException
+    public void setup( Dependencies dependencies ) throws KernelException, IOException
     {
         // This will be need as an input to the SystemGraphRealm later to be able to handle transactions
         org.neo4j.kernel.impl.util.Dependencies platformDependencies = (org.neo4j.kernel.impl.util.Dependencies) dependencies.dependencySatisfier();
