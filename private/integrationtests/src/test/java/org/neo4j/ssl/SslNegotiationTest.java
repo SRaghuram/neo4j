@@ -5,15 +5,19 @@
  */
 package org.neo4j.ssl;
 
+import org.hamcrest.collection.IsArrayContaining;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutionException;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
-import org.neo4j.ssl.SslContextFactory.SslParameters;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
@@ -21,7 +25,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.ssl.SslContextFactory.SslParameters.protocols;
+import static org.neo4j.ssl.SslNegotiationTest.SslParametersSetup.protocols;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
 @RunWith( Parameterized.class )
@@ -155,13 +159,23 @@ public class SslNegotiationTest
     @Test
     public void shouldNegotiateCorrectly() throws Exception
     {
+        for ( String cipher : setup.serverParams.ciphers )
+        {
+            assumeCipherSupported( cipher );
+        }
+
+        for ( String cipher : setup.clientParams.ciphers )
+        {
+            assumeCipherSupported( cipher );
+        }
+
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
 
-        server = new SecureServer( SslContextFactory.makeSslPolicy( sslServerResource, setup.serverParams ) );
+        server = new SecureServer( SslContextFactory.makeSslPolicy( sslServerResource, setup.serverParams.toSslParameters() ) );
 
         server.start();
-        client = new SecureClient( SslContextFactory.makeSslPolicy( sslClientResource, setup.clientParams ) );
+        client = new SecureClient( SslContextFactory.makeSslPolicy( sslClientResource, setup.clientParams.toSslParameters() ) );
         client.connect( server.port() );
 
         try
@@ -176,21 +190,32 @@ public class SslNegotiationTest
         }
     }
 
+    private void assumeCipherSupported( String cipher ) throws IOException
+    {
+        SSLSocketFactory factory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+        SSLSocket socket = (SSLSocket)factory.createSocket();
+        String[] enabled = socket.getEnabledCipherSuites();
+        socket.close();
+
+        Assume.assumeThat( enabled, IsArrayContaining.hasItemInArray( cipher ) );
+    }
+
     private static class TestSetup
     {
-        private final SslParameters serverParams;
-        private final SslParameters clientParams;
+        private final SslParametersSetup serverParams;
+        private final SslParametersSetup clientParams;
 
         private final boolean expectedSuccess;
         private final String expectedProtocol;
         private final String expectedCipher;
 
-        private TestSetup( SslParameters serverParams, SslParameters clientParams, boolean expectedSuccess )
+        private TestSetup( SslParametersSetup serverParams, SslParametersSetup clientParams, boolean expectedSuccess )
         {
             this( serverParams, clientParams, expectedSuccess, null, null );
         }
 
-        private TestSetup( SslParameters serverParams, SslParameters clientParams, boolean expectedSuccess, String expectedProtocol, String expectedCipher )
+        private TestSetup( SslParametersSetup serverParams, SslParametersSetup clientParams, boolean expectedSuccess, String expectedProtocol,
+                String expectedCipher )
         {
             this.serverParams = serverParams;
             this.clientParams = clientParams;
@@ -204,6 +229,40 @@ public class SslNegotiationTest
         {
             return "TestSetup{" + "serverParams=" + serverParams + ", clientParams=" + clientParams + ", expectedSuccess=" + expectedSuccess +
                     ", expectedProtocol='" + expectedProtocol + '\'' + ", expectedCipher='" + expectedCipher + '\'' + '}';
+        }
+    }
+
+    static class SslParametersSetup
+    {
+        private String[] protocols;
+        private String[] ciphers;
+
+        private SslParametersSetup( String[] protocols, String[] ciphers )
+        {
+            this.protocols = protocols;
+            this.ciphers = ciphers;
+        }
+
+        public static SslParametersSetup protocols( String... protocols )
+        {
+            return new SslParametersSetup( protocols, null );
+        }
+
+        public SslParametersSetup ciphers( String... ciphers )
+        {
+            this.ciphers = ciphers;
+            return this;
+        }
+
+        public SslContextFactory.SslParameters toSslParameters()
+        {
+            return SslContextFactory.SslParameters.protocols( protocols ).ciphers( ciphers );
+        }
+
+        @Override
+        public String toString()
+        {
+            return "SslParametersSetup{" + "protocols='" + protocols + '\'' + ", ciphers='" + ciphers + '\'' + '}';
         }
     }
 }
