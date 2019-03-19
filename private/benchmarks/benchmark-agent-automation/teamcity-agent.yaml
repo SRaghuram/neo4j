@@ -10,6 +10,15 @@
     environment:
       JAVA_HOME: /usr/lib/jvm/oracle-jdk-8
     tasks:
+      - name: add apt repo
+        apt_repository:
+          repo: ppa:linuxuprising/java
+          state: present
+          update_cache: true
+      - name: install JDK 11
+        apt:
+          name: oracle-java11-installer
+          state: present
       - name: install teamcity agent as a service
         template:
           src: templates/etc/systemd/system/teamcity-agent.service
