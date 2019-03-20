@@ -6,6 +6,10 @@ set -u
 old_neo4j_version="32"
 new_neo4j_version="33"
 
+if [[ -z "$JAVA_HOME" ]]; then
+    echo "JAVA_HOME not set, bye, bye"
+fi
+
 dbs=(
  "db_sf001_p006_regular_utc_${old_neo4j_version}ce;db_sf001_p006_regular_utc_${new_neo4j_version}ce;neo4j_sf001.conf"
  "db_sf001_p064_regular_utc_${old_neo4j_version}ce;db_sf001_p064_regular_utc_${new_neo4j_version}ce;neo4j_sf001.conf"
@@ -44,7 +48,7 @@ for i in "${dbs[@]}"; do
 	mkdir "${temp_old_db_path}"/graph.db
 	mv "${old_db_path}"/* "${temp_old_db_path}"/graph.db
 	
-    java -jar neo4j-connectors/target/ldbc.jar upgrade-store \
+    ${JAVA_HOME}/bin/java -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \
         --upgraded-db "${temp_new_db_path}" \
         --recreate-indexes  \
