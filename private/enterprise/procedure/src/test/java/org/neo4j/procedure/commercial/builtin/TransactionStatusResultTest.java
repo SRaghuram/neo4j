@@ -31,6 +31,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.availability.AvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
 import org.neo4j.kernel.impl.api.StatementOperationParts;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
@@ -200,7 +201,7 @@ class TransactionStatusResultTest
 
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
-        return new ExecutingQuery( queryId, getTestConnectionInfo(), DEFAULT_DATABASE_NAME, "testUser", "testQuery", EMPTY_MAP,
+        return new ExecutingQuery( queryId, getTestConnectionInfo(), new DatabaseId( DEFAULT_DATABASE_NAME ), "testUser", "testQuery", EMPTY_MAP,
                 stringObjectEmptyMap(), () -> 1L, PageCursorTracer.NULL,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 new CountingNanoClock(), new CountingCpuClock(), new CountingHeapAllocation() );

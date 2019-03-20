@@ -11,6 +11,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -56,7 +57,7 @@ class ConfiguredQueryLogger implements QueryLogger
     {
         String sourceString = query.clientConnection().asConnectionDetails();
         String username = query.username();
-        String databaseName = query.databaseName();
+        DatabaseId databaseId = query.databaseId();
         String queryText = query.queryText();
 
         StringBuilder result = new StringBuilder();
@@ -73,7 +74,7 @@ class ConfiguredQueryLogger implements QueryLogger
         {
             QueryLogFormatter.formatPageDetails( result, query );
         }
-        result.append( sourceString ).append( "\t" ).append( databaseName ).append( " - " ).append( username ).append( " - " ).append( queryText );
+        result.append( sourceString ).append( "\t" ).append( databaseId.name() ).append( " - " ).append( username ).append( " - " ).append( queryText );
         if ( logQueryParameters )
         {
             QueryLogFormatter.formatMapValue( result.append(" - "), query.queryParameters() );
