@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.{PipelineId, BufferDefinition, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.zombie.operators.{Operator, OperatorState, ProduceResultOperator, StatelessOperator}
 import org.neo4j.cypher.internal.runtime.morsel.{QueryResources, QueryState}
@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdenti
 import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
+import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
                               start: Operator,
@@ -59,6 +60,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
     val streamTasks = startState.nextTasks(context, state, this, resources)
     if (streamTasks != null) {
+      Preconditions.checkArgument(streamTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
       val produceResultsTask = pipeline.produceResult.map(_.init(context, state, resources)).orNull
       val tasks = streamTasks.map(startTask => PipelineTask(startTask, pipeline.middleOperators, produceResultsTask, context, state, this))
       for (task <- tasks.tail)

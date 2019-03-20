@@ -71,9 +71,9 @@ class StateDefinition(val physicalPlan: PhysicalPlan) {
     buffer
   }
 
-  def newArgumentBuffer(producingPipelineId: PipelineId,
-                        applyPlanId: Id,
-                        argumentSlotOffset: Int): ApplyBufferDefinition = {
+  def newApplyBuffer(producingPipelineId: PipelineId,
+                     applyPlanId: Id,
+                     argumentSlotOffset: Int): ApplyBufferDefinition = {
     val x = buffers.size
     val buffer = new ApplyBufferDefinition(BufferId(x), producingPipelineId, applyPlanId, argumentSlotOffset)
     buffers += buffer
@@ -114,8 +114,8 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     output
   }
 
-  private def outputToArgumentBuffer(pipeline: Pipeline, applyPlanId: Id, argumentSlotOffset: Int): ApplyBufferDefinition = {
-    val output = stateDefinition.newArgumentBuffer(pipeline.id, applyPlanId, argumentSlotOffset)
+  private def outputToApplyBuffer(pipeline: Pipeline, applyPlanId: Id, argumentSlotOffset: Int): ApplyBufferDefinition = {
+    val output = stateDefinition.newApplyBuffer(pipeline.id, applyPlanId, argumentSlotOffset)
     pipeline.outputBuffer = output
     output
   }
@@ -128,7 +128,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
 
   override protected def initialArgument(leftLeaf: LogicalPlan): ApplyBufferDefinition = {
     val initialArgumentSlotOffset = slotConfigurations(leftLeaf.id).getArgumentLongOffsetFor(Id.INVALID_ID)
-    stateDefinition.initBuffer = stateDefinition.newArgumentBuffer(NO_PIPELINE, Id.INVALID_ID, initialArgumentSlotOffset)
+    stateDefinition.initBuffer = stateDefinition.newApplyBuffer(NO_PIPELINE, Id.INVALID_ID, initialArgumentSlotOffset)
     stateDefinition.initBuffer
   }
 
@@ -199,7 +199,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
     plan match {
       case _: plans.Apply =>
         val argumentSlotOffset = slotConfigurations(plan.id).getArgumentLongOffsetFor(plan.id)
-        outputToArgumentBuffer(lhs, plan.id, argumentSlotOffset)
+        outputToApplyBuffer(lhs, plan.id, argumentSlotOffset)
 
       case _ =>
         argument

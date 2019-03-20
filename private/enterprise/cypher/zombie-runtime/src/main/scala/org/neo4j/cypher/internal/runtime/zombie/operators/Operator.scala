@@ -105,7 +105,7 @@ trait ReduceOperatorState[ACC <: MorselAccumulator] extends OperatorState {
 }
 
 /**
-  * A streaming operator is initialized with an input morsel, to produce 0-n [[ContinuableOperatorTaskWithMorsel]].
+  * A streaming operator is initialized with an input, to produce 0-n [[ContinuableOperatorTask]].
   */
 trait StreamingOperator extends Operator with OperatorState {
 
