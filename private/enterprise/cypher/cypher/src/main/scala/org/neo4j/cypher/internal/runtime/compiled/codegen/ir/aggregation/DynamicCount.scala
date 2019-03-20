@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Varia
  * Dynamic count is used when a grouping key is defined. such as
  * `MATCH (n) RETURN n.prop1 count(n.prop2)`
  */
-class DynamicCount(opName: String, variable: Variable, expression: CodeGenExpression,
+class DynamicCount(val opName: String, variable: Variable, expression: CodeGenExpression,
                    groupingKey: Iterable[(String,CodeGenExpression)], distinct: Boolean) extends BaseAggregateExpression(expression, distinct) {
 
   private var mapName: String = null
