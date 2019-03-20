@@ -40,6 +40,9 @@ if [[ $# -eq 22 ]]; then
 	AWS_EXTRAS="--endpoint-url=${22}"
 fi
 
+if [[ -z "$JAVA_HOME" ]]; then
+ echo "JAVA_HOME not set, bye, bye"
+fi
 
 uuid=$(uuidgen)
 profiler_recording_output_dir="${micro_benchmarks_dir}"/"${uuid}"

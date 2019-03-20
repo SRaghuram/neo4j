@@ -48,6 +48,9 @@ AWS_EXTRAS=
 if [[ $# -eq 32 ]]; then
 	AWS_EXTRAS="--endpoint-url=${32}"
 fi
+if [[ -z "$JAVA_HOME" ]]; then
+    echo "JAVA_HOME not set, bye, bye"
+fi
 
 macro_benchmark_dir=$(pwd)
 

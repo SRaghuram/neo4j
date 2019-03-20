@@ -47,6 +47,10 @@ triggered_by="${34}"
 ldbc_benchmarks_dir=$(pwd)
 json_path=${ldbc_benchmarks_dir}/results.json
 
+if [[ -z "$JAVA_HOME" ]]; then
+ echo "JAVA_HOME not set, bye, bye"
+fi
+
 echo "------------------------------------------------"
 echo "------------------------------------------------"
 echo "Neo4j version:       ${neo4j_version}"
