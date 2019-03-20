@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableSet;
 import com.neo4j.bench.client.StoreClient;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.client.profiling.ProfilerType;
+import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.queries.CreateSchema;
 import com.neo4j.bench.client.queries.VerifyStoreSchema;
 import com.neo4j.bench.client.util.Jvm;
@@ -43,6 +44,9 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.harness.junit.EnterpriseNeo4jRule;
@@ -268,6 +272,25 @@ public class EndToEndIT
         assertEquals( 1, recordingDirs.size() );
         Path recordingDir = recordingDirs.get( 0 );
         assertThat( recordingsBasePath.resolve( recordingDir.getFileName() + ".tar.gz" ).toFile(),anExistingFile() );
+
+        // all recordings
+        List<Path> recordings = Files.list( recordingDir ).collect( Collectors.toList() );
+
+        // all expected recordings
+        long expectedRecordingsCount = profilers.stream()
+            .flatMap( profiler -> profiler.allRecordingTypes().stream() )
+            .count();
+
+        long existingRecordingsCount = profilers.stream()
+            .flatMap( profiler -> profiler.allRecordingTypes().stream() )
+            .filter( recording ->
+            {
+                return recordings.stream().anyMatch( file -> file.getFileName().toString().endsWith( recording.extension() ) );
+            })
+            .count();
+
+        assertEquals( expectedRecordingsCount, existingRecordingsCount, "number of existing recordings differs from expected numner of recordings" );
+
     }
 
     private static int randomLocalPort() throws IOException

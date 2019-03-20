@@ -14,14 +14,12 @@
     <properties>
         <jmh.version>1.21</jmh.version>
         <uberjar.name>micro-benchmarks</uberjar.name>
-        <hamcrest.version>2.0.0.0</hamcrest.version>
+        <java-hamcrest.version>2.0.0.0</java-hamcrest.version>
         <airline.version>0.7</airline.version>
         <metrics.version>3.1.2</metrics.version>
-        <commons.compress.version>1.12</commons.compress.version>
         <scala.version>2.11.8</scala.version>
         <scalatest.version>2.2.5</scalatest.version>
         <mockito.version>1.10.19</mockito.version>
-        
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
         <scala-maven-plugin.version>3.4.4</scala-maven-plugin.version>
@@ -42,7 +40,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>${commons.compress.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j.driver</groupId>
@@ -103,12 +100,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>java-hamcrest</artifactId>
-            <version>${hamcrest.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>airline</artifactId>
             <version>${airline.version}</version>
@@ -166,7 +157,8 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>java-hamcrest</artifactId>
-            <version>${hamcrest.version}</version>
+            <version>${java-hamcrest.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
