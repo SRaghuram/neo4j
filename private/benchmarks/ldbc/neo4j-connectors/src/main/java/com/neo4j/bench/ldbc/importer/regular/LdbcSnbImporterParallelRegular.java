@@ -60,6 +60,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.tooling.TransactionLogsInitializer;
 import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;
@@ -750,7 +751,8 @@ public class LdbcSnbImporterParallelRegular extends LdbcSnbImporter
                 StandardV4_0.RECORD_FORMATS,
                 NO_MONITOR,
                 jobScheduler,
-                badCollector
+                badCollector,
+                TransactionLogsInitializer.INSTANCE
         );
 
         System.out.println( "Loading CSV files" );

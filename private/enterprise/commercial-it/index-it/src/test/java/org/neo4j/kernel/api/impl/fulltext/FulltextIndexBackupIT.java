@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.Label;
@@ -188,7 +189,10 @@ class FulltextIndexBackupIT
 
     private GraphDatabaseAPI startBackupDatabase( File backupDatabaseDir )
     {
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( backupDatabaseDir ).newGraphDatabase();
+        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( backupDatabaseDir )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, backupDatabaseDir.getParentFile().getAbsolutePath() )
+                .newGraphDatabase();
     }
 
     private void verifyData( GraphDatabaseAPI db )

@@ -33,6 +33,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -62,7 +63,7 @@ public class BatchInsertEnterpriseIT
     public void shouldInsertDifferentTypesOfThings() throws Exception
     {
         // GIVEN
-        BatchInserter inserter = BatchInserters.inserter( directory.databaseDir(), fileSystemRule.get(),
+        BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get(),
                 stringMap( GraphDatabaseSettings.log_queries.name(), "true",
                         GraphDatabaseSettings.record_format.name(), recordFormat,
                         GraphDatabaseSettings.log_queries_filename.name(),
@@ -88,6 +89,7 @@ public class BatchInsertEnterpriseIT
         // THEN
         GraphDatabaseService db = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( directory.databaseDir() )
+                .setConfig( transaction_logs_root_path, directory.storeDir().getAbsolutePath() )
                 .newGraphDatabase();
 
         try ( Transaction tx = db.beginTx() )
@@ -122,7 +124,7 @@ public class BatchInsertEnterpriseIT
             db.shutdown();
         }
 
-        BatchInserter inserter = BatchInserters.inserter( directory.databaseDir(), fileSystemRule.get() );
+        BatchInserter inserter = BatchInserters.inserter( directory.databaseLayout(), fileSystemRule.get() );
         try
         {
             long start = inserter.createNode( someProperties( 5 ), Labels.One );

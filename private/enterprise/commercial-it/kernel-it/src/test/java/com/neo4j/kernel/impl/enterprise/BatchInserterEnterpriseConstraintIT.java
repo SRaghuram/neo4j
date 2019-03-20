@@ -9,11 +9,11 @@ import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -29,8 +29,8 @@ class BatchInserterEnterpriseConstraintIT
     @Test
     void startBatchInserterOnTopOfEnterpriseDatabase() throws IOException
     {
-        File databaseDir = testDirectory.databaseDir();
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDir );
+        DatabaseLayout databaseLayout = testDirectory.databaseLayout();
+        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseLayout.databaseDirectory() );
         try ( Transaction transaction = database.beginTx() )
         {
             database.execute( "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname, n.surname) IS NODE KEY" );
@@ -38,7 +38,7 @@ class BatchInserterEnterpriseConstraintIT
         }
         database.shutdown();
 
-        BatchInserter inserter = BatchInserters.inserter( databaseDir );
+        BatchInserter inserter = BatchInserters.inserter( databaseLayout );
         inserter.shutdown();
     }
 }

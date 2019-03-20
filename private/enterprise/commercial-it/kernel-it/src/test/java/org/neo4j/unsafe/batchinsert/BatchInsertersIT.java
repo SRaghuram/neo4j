@@ -33,7 +33,7 @@ class BatchInsertersIT
     @Test
     void shouldStartBatchInserterWithRealIndexProvider() throws Exception
     {
-        BatchInserter inserter = inserter( testDirectory.databaseDir(), getConfig(), getExtensions() );
+        BatchInserter inserter = inserter( testDirectory.databaseLayout(), getConfig(), getExtensions() );
         inserter.shutdown();
     }
 

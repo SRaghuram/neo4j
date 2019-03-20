@@ -20,6 +20,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.consistency.checking.InconsistentStoreException;
 import org.neo4j.consistency.report.ConsistencySummaryStatistics;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -39,18 +40,19 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @RunWith( Parameterized.class )
 public class RebuildFromLogsTest
 {
-    private final TestDirectory dir = TestDirectory.testDirectory();
+    private final TestDirectory testDirectory = TestDirectory.testDirectory();
     private final SuppressOutput suppressOutput = SuppressOutput.suppressAll();
     private final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
     private final ExpectedException expectedException = ExpectedException.none();
 
     @Rule
-    public RuleChain ruleChain = RuleChain.outerRule( dir )
+    public RuleChain ruleChain = RuleChain.outerRule( testDirectory )
             .around( suppressOutput ).around( fileSystemRule ).around( expectedException );
 
     private final Transaction[] work;
@@ -96,7 +98,7 @@ public class RebuildFromLogsTest
         File prototypePath = getPrototypePath();
         long txId = populatePrototype( prototypePath );
 
-        File copy = new File( dir.databaseDir(), "copy" );
+        File copy = new File( testDirectory.databaseDir(), "copy" );
         FileUtils.copyRecursively( prototypePath, copy );
         GraphDatabaseAPI db = db( copy );
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
@@ -119,12 +121,12 @@ public class RebuildFromLogsTest
 
     private File getRebuilPath()
     {
-        return new File( dir.directory(), "rebuild" );
+        return testDirectory.directory( "rebuild", "database" );
     }
 
     private File getPrototypePath()
     {
-        return new File( dir.directory(), "prototype" );
+        return testDirectory.directory( "prototype", "database" );
     }
 
     private long populatePrototype( File prototypePath )
@@ -148,12 +150,12 @@ public class RebuildFromLogsTest
 
     private static DbRepresentation getDbRepresentation( File path )
     {
-        return DbRepresentation.of( path );
+        return DbRepresentation.of( path, Config.defaults( transaction_logs_root_path, path.getParentFile().getAbsolutePath() ) );
     }
 
-    private static GraphDatabaseAPI db( File storeDir )
+    private static GraphDatabaseAPI db( File databaseDirectory )
     {
-        return (GraphDatabaseAPI) new TestGraphDatabaseFactory().newEmbeddedDatabase( storeDir );
+        return (GraphDatabaseAPI) new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
     }
 
     enum Transaction

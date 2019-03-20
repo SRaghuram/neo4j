@@ -27,6 +27,7 @@ import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.tooling.TransactionLogsInitializer;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
@@ -71,7 +72,8 @@ public class CheckPointingLogRotationStressTesting
             Config dbConfig = Config.defaults();
             new ParallelBatchImporter( DatabaseLayout.of( ensureExistsAndEmpty( storeDir ) ), fileSystem, null, DEFAULT,
                     NullLogService.getInstance(), ExecutionMonitors.defaultVisible( jobScheduler ), EMPTY, dbConfig,
-                    RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY )
+                    RecordFormatSelector.selectForConfig( dbConfig, NullLogProvider.getInstance() ), NO_MONITOR, jobScheduler, Collector.EMPTY,
+                    TransactionLogsInitializer.INSTANCE )
                     .doImport( new NodeCountInputs( nodeCount ) );
         }
 

@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 
@@ -60,7 +61,7 @@ public class LdbcSnbImporterBatchRegular extends LdbcSnbImporter
 
         LOGGER.info( "Instantiating Neo4j BatchInserter" );
         Map<String,String> importerConfig = MapUtils.loadPropertiesToMap( importerPropertiesFile );
-        BatchInserter batchInserter = BatchInserters.inserter( dbDir, importerConfig );
+        BatchInserter batchInserter = BatchInserters.inserter( DatabaseLayout.of( dbDir ), importerConfig );
 
         GraphMetadataTracker metadataTracker = new GraphMetadataTracker(
                 toNeo4JFormat,

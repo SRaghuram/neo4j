@@ -5,23 +5,27 @@
  */
 package com.neo4j.unsafe.impl.batchimport;
 
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
+import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.tooling.TransactionLogsInitializer;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
 import org.neo4j.unsafe.impl.batchimport.DataImporter;
@@ -30,32 +34,33 @@ import org.neo4j.unsafe.impl.batchimport.RelationshipLinkbackStage;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.unsafe.impl.batchimport.Configuration.DEFAULT;
 import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
 
-public class RestartImportFromSpecificStatesTest
+@ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class, RandomExtension.class} )
+class RestartImportFromSpecificStatesTest
 {
     private static final long NODE_COUNT = 100;
     private static final long RELATIONSHIP_COUNT = 1_000;
 
-    private final DefaultFileSystemRule fs = new DefaultFileSystemRule();
-    private final RandomRule random = new RandomRule();
-    private final TestDirectory directory = TestDirectory.testDirectory( fs );
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private RandomRule random;
+    @Inject
+    private TestDirectory directory;
     private static final JobScheduler jobScheduler = new ThreadPoolJobScheduler();
 
-    @Rule
-    public final RuleChain rules = RuleChain.outerRule( random ).around( fs ).around( directory );
-
-    @AfterClass
-    public static void tearDown() throws Exception
+    @AfterAll
+    static void tearDown() throws Exception
     {
         jobScheduler.close();
     }
 
     @Test
-    public void shouldContinueFromLinkingState() throws Exception
+    void shouldContinueFromLinkingState() throws Exception
     {
         // given
         crashImportAt( RelationshipLinkbackStage.NAME );
@@ -69,7 +74,7 @@ public class RestartImportFromSpecificStatesTest
     }
 
     @Test
-    public void shouldContinueFromCountsState() throws Exception
+    void shouldContinueFromCountsState() throws Exception
     {
         // given
         crashImportAt( RelationshipCountsStage.NAME );
@@ -84,15 +89,7 @@ public class RestartImportFromSpecificStatesTest
 
     private void crashImportAt( String stageName )
     {
-        try
-        {
-            importer( new PanicSpreadingExecutionMonitor( stageName, false ) ).doImport( input() );
-            fail( "Should fail, due to the execution monitor spreading panic" );
-        }
-        catch ( Exception e )
-        {
-            // good
-        }
+        assertThrows( Exception.class, () -> importer( new PanicSpreadingExecutionMonitor( stageName, false ) ).doImport( input() ) );
     }
 
     private SimpleRandomizedInput input()
@@ -104,12 +101,12 @@ public class RestartImportFromSpecificStatesTest
     {
         return BatchImporterFactory.withHighestPriority().instantiate(
               directory.databaseLayout(), fs, null, DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY );
+              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException
     {
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( directory.databaseDir() );
+        GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( directory.databaseDir() );
         try
         {
             input.verify( db );

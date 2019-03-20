@@ -29,6 +29,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
+import org.neo4j.unsafe.impl.batchimport.EmptyLogFilesInitializer;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
@@ -130,7 +131,8 @@ class RestartableImportIT
         {
             BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.of( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
                     null, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
-                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY ).doImport( input( Long.parseLong( args[1] ) ) );
+                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, EmptyLogFilesInitializer.INSTANCE )
+                    .doImport( input( Long.parseLong( args[1] ) ) );
         }
         catch ( IllegalStateException e )
         {

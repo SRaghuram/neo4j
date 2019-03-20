@@ -16,6 +16,7 @@ import java.util.List;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.InconsistentStoreException;
@@ -276,6 +277,7 @@ class RebuildFromLogs
                 .setExternalDependencies( dependencies )
                 .newEmbeddedDatabaseBuilder( targetDirectory )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, targetDirectory.getParentFile().getAbsolutePath() )
                 .newGraphDatabase();
     }
 }

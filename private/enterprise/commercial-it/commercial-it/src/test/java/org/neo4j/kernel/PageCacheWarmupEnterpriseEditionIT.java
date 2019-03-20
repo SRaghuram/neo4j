@@ -192,6 +192,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         db.withSetting( MetricsSettings.neoPageCacheEnabled, Settings.TRUE )
           .withSetting( MetricsSettings.csvEnabled, Settings.TRUE )
           .withSetting( MetricsSettings.csvInterval, "100ms" )
+          .withSetting( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE )
           .withSetting( MetricsSettings.csvPath, metricsDirectory.getAbsolutePath() );
         db.ensureStarted();
 

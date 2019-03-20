@@ -31,6 +31,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.tools.console.input.ArgsCommand;
 import org.neo4j.tools.console.input.ConsoleInput;
 
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onShutdown;
 import static org.neo4j.tools.console.input.ConsoleUtil.NO_PROMPT;
 import static org.neo4j.tools.console.input.ConsoleUtil.oneCommand;
@@ -145,6 +146,7 @@ public class DatabaseRebuildTool
                 builder = builder.setConfig( key, value );
             }
         }
+        builder.setConfig( transaction_logs_root_path, path.getParentFile().getAbsolutePath() );
         return builder;
     }
 

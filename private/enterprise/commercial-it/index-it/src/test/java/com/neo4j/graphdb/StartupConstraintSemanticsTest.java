@@ -21,6 +21,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 
 @ExtendWith( TestDirectoryExtension.class )
 class StartupConstraintSemanticsTest
@@ -51,7 +52,7 @@ class StartupConstraintSemanticsTest
     private void assertThatCommunityCanStartOnNormalConstraint( String constraintCreationQuery )
     {
         // given
-        GraphDatabaseService graphDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+        GraphDatabaseService graphDb = getCommercialDatabase();
         try
         {
             graphDb.execute( constraintCreationQuery );
@@ -65,7 +66,7 @@ class StartupConstraintSemanticsTest
         // when
         try
         {
-            graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+            graphDb = getCommunityDatabase();
             // Should not get exception
         }
         finally
@@ -77,10 +78,15 @@ class StartupConstraintSemanticsTest
         }
     }
 
+    private GraphDatabaseService getCommunityDatabase()
+    {
+        return new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.databaseDir() );
+    }
+
     private void assertThatCommunityCannotStartOnEnterpriseOnlyConstraint( String constraintCreationQuery, String errorMessage )
     {
         // given
-        GraphDatabaseService graphDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+        GraphDatabaseService graphDb = getCommercialDatabase();
         try
         {
             graphDb.execute( constraintCreationQuery );
@@ -94,7 +100,7 @@ class StartupConstraintSemanticsTest
         // when
         try
         {
-            graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase( dir.storeDir() );
+            graphDb = getCommunityDatabase();
             fail( "should have failed to start!" );
         }
         // then
@@ -111,5 +117,12 @@ class StartupConstraintSemanticsTest
                 graphDb.shutdown();
             }
         }
+    }
+
+    private GraphDatabaseService getCommercialDatabase()
+    {
+        return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.databaseDir() )
+                .setConfig( transaction_logs_root_path, dir.storeDir().getAbsolutePath() )
+                .newGraphDatabase();
     }
 }

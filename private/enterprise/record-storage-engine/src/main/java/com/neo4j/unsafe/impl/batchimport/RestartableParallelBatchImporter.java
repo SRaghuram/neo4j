@@ -30,6 +30,7 @@ import org.neo4j.unsafe.impl.batchimport.Configuration;
 import org.neo4j.unsafe.impl.batchimport.DataStatistics;
 import org.neo4j.unsafe.impl.batchimport.ImportLogic;
 import org.neo4j.unsafe.impl.batchimport.ImportLogic.Monitor;
+import org.neo4j.unsafe.impl.batchimport.LogFilesInitializer;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.input.Input;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitor;
@@ -68,7 +69,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private static final String STATE_DEFRAGMENT = "defragment";
 
     private final PageCache externalPageCache;
-    private final File databaseDirectory;
+    private final DatabaseLayout databaseLayout;
     private final FileSystemAbstraction fileSystem;
     private final Configuration config;
     private final LogService logService;
@@ -80,14 +81,15 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final Monitor monitor;
     private final JobScheduler jobScheduler;
     private final Collector badCollector;
+    private final LogFilesInitializer logFilesInitializer;
 
     public RestartableParallelBatchImporter( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
             AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, Monitor monitor, JobScheduler jobScheduler,
-            Collector badCollector )
+            Collector badCollector, LogFilesInitializer logFilesInitializer )
     {
         this.externalPageCache = externalPageCache;
-        this.databaseDirectory = databaseLayout.databaseDirectory();
+        this.databaseLayout = databaseLayout;
         this.fileSystem = fileSystem;
         this.config = config;
         this.logService = logService;
@@ -97,26 +99,28 @@ public class RestartableParallelBatchImporter implements BatchImporter
         this.additionalInitialIds = additionalInitialIds;
         this.monitor = monitor;
         this.dataStatisticsStorage = new RelationshipTypeDistributionStorage( fileSystem,
-                new File( databaseDirectory, FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
+                new File( this.databaseLayout.databaseDirectory(), FILE_NAME_RELATIONSHIP_DISTRIBUTION ) );
         this.jobScheduler = jobScheduler;
         this.badCollector = badCollector;
+        this.logFilesInitializer = logFilesInitializer;
     }
 
     @Override
     public void doImport( Input input ) throws IOException
     {
-        try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseDirectory, externalPageCache, recordFormats,
+        try ( BatchingNeoStores store = instantiateNeoStores( fileSystem, databaseLayout, externalPageCache, recordFormats,
                       config, logService, additionalInitialIds, dbConfig, jobScheduler );
-              ImportLogic logic = new ImportLogic( databaseDirectory, fileSystem, store, config, dbConfig, logService,
+              ImportLogic logic = new ImportLogic( databaseLayout, fileSystem, store, config, dbConfig, logService,
                       executionMonitor, recordFormats, badCollector, monitor ) )
         {
-            StateStorage stateStore = new StateStorage( fileSystem, new File( databaseDirectory, FILE_NAME_STATE ) );
+            StateStorage stateStore = new StateStorage( fileSystem, new File( databaseLayout.databaseDirectory(), FILE_NAME_STATE ) );
 
             PrefetchingIterator<State> states = initializeStates( logic );
             Pair<String,byte[]> previousState = stateStore.get();
             fastForwardToLastCompletedState( store, stateStore, previousState.first(), previousState.other(), states );
             logic.initialize( input );
             runRemainingStates( store, stateStore, previousState.other(), states );
+            logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store.getNeoStores(), fileSystem );
 
             logic.success();
         }

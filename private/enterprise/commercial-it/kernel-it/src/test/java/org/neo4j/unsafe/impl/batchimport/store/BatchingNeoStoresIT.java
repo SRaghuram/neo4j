@@ -10,12 +10,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.File;
-
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -43,14 +44,14 @@ class BatchingNeoStoresIT
     @Inject
     private DefaultFileSystemAbstraction fileSystem;
 
-    private File databaseDirectory;
+    private DatabaseLayout databaseLayout;
     private AssertableLogProvider provider;
     private SimpleLogService logService;
 
     @BeforeEach
     void setUp()
     {
-        databaseDirectory = testDirectory.databaseDir();
+        databaseLayout = testDirectory.databaseLayout();
         provider = new AssertableLogProvider();
         logService = new SimpleLogService( provider, provider );
     }
@@ -61,7 +62,7 @@ class BatchingNeoStoresIT
         Config config = Config.defaults( MetricsSettings.metricsEnabled, TRUE );
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
-                .batchingNeoStores( fileSystem, databaseDirectory, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
+                .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
                         logService, AdditionalInitialIds.EMPTY, config, jobScheduler ) )
         {
             batchingNeoStores.createNew();
@@ -74,13 +75,16 @@ class BatchingNeoStoresIT
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler();
                 BatchingNeoStores batchingNeoStores = BatchingNeoStores
-                .batchingNeoStores( fileSystem, databaseDirectory, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
+                .batchingNeoStores( fileSystem, databaseLayout, RecordFormatSelector.defaultFormat(), Configuration.DEFAULT,
                         logService, new TestAdditionalInitialIds(), Config.defaults(), jobScheduler ) )
         {
             batchingNeoStores.createNew();
         }
 
-        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
+        GraphDatabaseService database = new TestCommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() )
+                .setConfig( GraphDatabaseSettings.fail_on_missing_files, Settings.FALSE )
+                .newGraphDatabase();
         try
         {
             TransactionIdStore transactionIdStore = getTransactionIdStore( (GraphDatabaseAPI) database );
