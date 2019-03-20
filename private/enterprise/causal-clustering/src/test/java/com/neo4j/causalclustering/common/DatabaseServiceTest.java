@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.common;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import java.time.Clock;
