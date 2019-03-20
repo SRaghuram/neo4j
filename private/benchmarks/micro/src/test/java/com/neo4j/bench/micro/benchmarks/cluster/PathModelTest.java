@@ -22,10 +22,9 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import static java.lang.StrictMath.abs;
 import static java.lang.String.format;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
 public class PathModelTest
@@ -93,6 +92,7 @@ public class PathModelTest
         {
             verifyDiff( editionModuleBackedAbstractBenchmark, db, size, 0.6f );
         }
+        db.shutdown();
     }
 
     private void verifyDiff( EditionModuleBackedAbstractBenchmark editionModuleBackedAbstractBenchmark, GraphDatabaseService db, Long size, float maxDiff )
