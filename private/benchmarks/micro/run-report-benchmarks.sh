@@ -71,34 +71,30 @@ echo "JFR Enabled : ${with_jfr}"
 echo "ASYNC Enabled : ${with_async}"
 echo "Build triggered by : ${triggered_by}"
 
-function runExport {
-    #shellcheck disable=SC2068
-    java -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run-export  \
-            --jvm "${jvm_path}" \
-            --jvm_args "${jvm_args}" \
-            --jmh "${jmh_args}" \
-            --neo4j_config "${neo4j_config_path}" \
-            --json_path "${json_path}" \
-            --neo4j_commit "${neo4j_commit}" \
-            --neo4j_version "${neo4j_version}" \
-            --neo4j_branch "${neo4j_branch}" \
-            --branch_owner "${neo4j_branch_owner}" \
-            --teamcity_build "${teamcity_build_id}" \
-            --parent_teamcity_build "${parent_teamcity_build_id}" \
-            --tool_commit "${tool_commit}" \
-            --tool_branch "${tool_branch}" \
-            --tool_branch_owner "${tool_branch_owner}" \
-            --neo4j_package_for_jvm_args "${tarball}" \
-            --config "${benchmark_config}" \
-            --triggered-by "${triggered_by}" \
-            $@
-}
-profilers_input="--profiles-dir ${profiler_recording_output_dir}"
+declare -a profilers
+[ "${with_jfr}" = "true" ] && profilers+=('--profile-jfr') && echo "Profiling with JFR Enabled!"
+[ "${with_async}" = "true" ] && profilers+=('--profile-async') && echo "Profiling with Async Enabled!"
 
-[ "${with_jfr}" = "true" ] && profilers_input="$profilers_input --profile-jfr" && echo "Profiling with JFR Enabled!"
-[ "${with_async}" = "true" ] && profilers_input="$profilers_input --profile-async" && echo "Profiling with Async Enabled!"
-#shellcheck disable=SC2086
-runExport ${profilers_input}
+java -jar "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar run-export  \
+        --jvm "${jvm_path}" \
+        --jvm_args "${jvm_args}" \
+        --jmh "${jmh_args}" \
+        --neo4j_config "${neo4j_config_path}" \
+        --json_path "${json_path}" \
+        --neo4j_commit "${neo4j_commit}" \
+        --neo4j_version "${neo4j_version}" \
+        --neo4j_branch "${neo4j_branch}" \
+        --branch_owner "${neo4j_branch_owner}" \
+        --teamcity_build "${teamcity_build_id}" \
+        --parent_teamcity_build "${parent_teamcity_build_id}" \
+        --tool_commit "${tool_commit}" \
+        --tool_branch "${tool_branch}" \
+        --tool_branch_owner "${tool_branch_owner}" \
+        --neo4j_package_for_jvm_args "${tarball}" \
+        --config "${benchmark_config}" \
+        --triggered-by "${triggered_by}" \
+        --profiles-dir "${profiler_recording_output_dir}" \
+        "${profilers[@]}"
 
 # --- create archive of profiler recording artifacts---
 profiler_recording_dir_name=$(basename "${profiler_recording_output_dir}")
