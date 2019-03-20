@@ -29,7 +29,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws InvalidArgumentsException, IOException
     {
-        // TODO: Deprecate this and create a new procedure that takes password as a byte[]
         userManager.newUser( username, password != null ? UTF8.encode( password ) : null, requirePasswordChange );
     }
 
@@ -39,7 +38,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange )
             throws InvalidArgumentsException, IOException
     {
-        // TODO: Deprecate this and create a new procedure that takes password as a byte[]
         setUserPassword( securityContext.subject().username(), password, requirePasswordChange );
     }
 
@@ -49,7 +47,6 @@ public class UserManagementProcedures extends AuthProceduresBase
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws InvalidArgumentsException, IOException
     {
-        // TODO: Deprecate this and create a new procedure that takes password as a byte[]
         securityContext.assertCredentialsNotExpired();
         setUserPassword( username, newPassword, requirePasswordChange );
     }
