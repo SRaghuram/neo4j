@@ -216,7 +216,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case _: True => Some(IntermediateExpression(truthValue, Seq.empty, Seq.empty, Set.empty))
     case _: False => Some(IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty))
     case ListLiteral(args) =>
-      val in = args.flatMap(compileExpression(_))
+      val in = args.flatMap(compileExpression)
       if (in.size < args.size) None
       else {
         val fields: Seq[Field] = in.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields)
@@ -1099,8 +1099,8 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       }
       val (checkExpressions, loadExpressions) = alternativeExpressions.unzip
 
-      val checks = checkExpressions.flatMap(compileExpression(_))
-      val loads = loadExpressions.flatMap(compileExpression(_))
+      val checks = checkExpressions.flatMap(compileExpression)
+      val loads = loadExpressions.flatMap(compileExpression)
       if (checks.size != loads.size || checks.isEmpty || maybeDefault.isEmpty) None
       else {
         for {inner: IntermediateExpression <- compileExpression(innerExpression)
@@ -1141,7 +1141,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         else compileExpression(e).map(coerceToPredicate)
       }
 
-      val loads = loadExpressions.flatMap(compileExpression(_))
+      val loads = loadExpressions.flatMap(compileExpression)
       if (checks.size != loads.size || maybeDefault.isEmpty) None
       else {
 
@@ -1526,7 +1526,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case functions.E => Some(IntermediateExpression(getStatic[Values, DoubleValue]("E"), Seq.empty, Seq.empty, Set.empty))
 
     case functions.Coalesce =>
-      val args = c.args.flatMap(compileExpression(_))
+      val args = c.args.flatMap(compileExpression)
       if (args.size < c.args.size) None
       else {
         val tempVariable = namer.nextVariableName()
@@ -2547,7 +2547,7 @@ object IntermediateCodeGeneration {
 
   private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
 
-  private val LOAD_CONTEXT = load("ctx")
+  private val LOAD_CONTEXT = load("context")
 
   private def cursorVariable[T](name: String)(implicit m: Manifest[T]): LocalVariable =
     variable[T](name, invoke(load("cursors"), method[ExpressionCursors, T](name)))
