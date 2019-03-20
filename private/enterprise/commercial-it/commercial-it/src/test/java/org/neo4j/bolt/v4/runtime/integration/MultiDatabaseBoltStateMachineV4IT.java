@@ -19,7 +19,7 @@ import org.neo4j.bolt.v1.runtime.BoltStateMachineV1;
 import org.neo4j.bolt.v4.BoltProtocolV4;
 import org.neo4j.bolt.v4.BoltStateMachineV4;
 import org.neo4j.bolt.v4.messaging.BeginMessage;
-import org.neo4j.bolt.v4.messaging.PullNMessage;
+import org.neo4j.bolt.v4.messaging.PullMessage;
 import org.neo4j.bolt.v4.messaging.RunMessage;
 import org.neo4j.bolt.v4.runtime.AutoCommitState;
 import org.neo4j.bolt.v4.runtime.FailedState;
@@ -40,6 +40,7 @@ import static org.neo4j.bolt.testing.BoltMatchers.succeeded;
 import static org.neo4j.bolt.testing.BoltMatchers.wasIgnored;
 import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
+import static org.neo4j.bolt.v4.messaging.AbstractStreamingMessage.STREAM_LIMIT_UNLIMITED;
 import static org.neo4j.bolt.v4.messaging.MessageMetadataParser.ABSENT_DB_NAME;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.impl.util.ValueUtils.asMapValue;
@@ -151,7 +152,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
-        machine.process( new RunMessage( query, EMPTY_PARAMS, asMapValue( map( "db_name", databaseName ) ) ), recorder );
+        machine.process( new RunMessage( query, EMPTY_PARAMS, asMapValue( map( "db", databaseName ) ) ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( AutoCommitState.class ) );
         verifyStatementProcessorNotEmpty( machine, databaseName );
@@ -169,7 +170,7 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // BEGIN
-        machine.process( new BeginMessage( asMapValue( map( "db_name", databaseName ) ) ), recorder );
+        machine.process( new BeginMessage( asMapValue( map( "db", databaseName ) ) ), recorder );
         assertThat( recorder.nextResponse(), succeeded() );
         assertThat( machine.state(), instanceOf( InTransactionState.class ) );
         verifyStatementProcessorNotEmpty( machine, databaseName );
@@ -209,8 +210,8 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         }
     }
 
-    private static PullNMessage newPullAll() throws BoltIOException
+    private static PullMessage newPullAll() throws BoltIOException
     {
-        return new PullNMessage( ValueUtils.asMapValue( Collections.singletonMap( "n", Long.MAX_VALUE ) ) );
+        return new PullMessage( ValueUtils.asMapValue( Collections.singletonMap( "n", STREAM_LIMIT_UNLIMITED ) ) );
     }
 }

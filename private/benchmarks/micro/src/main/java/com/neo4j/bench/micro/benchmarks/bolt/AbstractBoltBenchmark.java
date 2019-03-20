@@ -198,7 +198,6 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         @Override
         public boolean onPullRecords( BoltResult result, long size ) throws Throwable
         {
-
             return doOnRecords( result, size );
         }
 
