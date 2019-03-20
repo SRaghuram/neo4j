@@ -58,6 +58,9 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.HttpConnector;
+
 import static com.neo4j.bench.client.util.Args.concatArgs;
 import static com.neo4j.bench.client.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.micro.config.Annotations.benchmarkClassForName;
@@ -168,6 +171,10 @@ class BenchmarksRunner
         Neo4jConfig neo4jConfigDef = (neo4jConfigFile == null)
                 ? Neo4jConfig.withDefaults()
                 : Neo4jConfig.withDefaults().mergeWith( Neo4jConfig.fromFile( neo4jConfigFile ) );
+
+        neo4jConfigDef
+            .withSetting( new BoltConnector( "bolt" ).enabled, "false" )
+            .withSetting( new HttpConnector( "http" ).enabled, "false" );
 
         String[] defaultJvmArgs = (null == neo4jPackageForJvmArgs)
                                   ? new String[0]
