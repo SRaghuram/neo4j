@@ -93,7 +93,7 @@ echo "Error policy                                                   : ${error_p
 
 function runExport {
     #shellcheck disable=SC2068
-    java -jar "${jar_path}" run-workload  \
+    ${jvm} -jar "${jar_path}" run-workload  \
             --workload "${workload}" \
             --db "${db}" \
             --warmup-count "${warmup_count}" \
@@ -145,14 +145,14 @@ aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 cp "${archive}" s3://ben
 aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
 
 # --- enrich results file with profiler recording information (locations in S3) ---
-java -cp "${jar_path}" com.neo4j.bench.client.Main add-profiles \
+${jvm} -cp "${jar_path}" com.neo4j.bench.client.Main add-profiles \
     --dir "${profiler_recording_output_dir}"  \
     --s3-bucket benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}" \
     --archive benchmarking.neo4j.com/recordings/"${archive}"  \
     --test_run_report "${results_path}" \
     --ignore_unrecognized_files
 
-java -cp "${jar_path}" com.neo4j.bench.client.Main report \
+${jvm} -cp "${jar_path}" com.neo4j.bench.client.Main report \
             --results_store_uri "${results_store_uri}"  \
             --results_store_user "${results_store_user}"  \
             --results_store_pass "${results_store_password}" \

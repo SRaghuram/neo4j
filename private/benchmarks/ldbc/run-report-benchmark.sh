@@ -97,7 +97,7 @@ echo "------------------------------------------------"
 
 function runReport {
     #shellcheck disable=SC2068
-    java -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
+    ${jvm_path} -jar "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar run-export \
         --jvm "${jvm_path}" \
         --jvm-args "${ldbc_jvm_args}" \
         --neo4j-package-for-jvm-args "${neo4j_tarball}" \
@@ -155,14 +155,14 @@ aws --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recording
 aws --region eu-north-1 s3 sync "${profiler_recording_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
 
 # --- enrich results file with profiler recording information (locations in S3) ---
-java -cp "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar com.neo4j.bench.client.Main add-profiles \
+${jvm_path} -cp "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar com.neo4j.bench.client.Main add-profiles \
         --dir "${profiler_recording_dir}"  \
         --s3-bucket benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}" \
         --archive benchmarking.neo4j.com/recordings/"${archive}"  \
         --test_run_report "${json_path}" \
         --ignore_unrecognized_files
 
-java -cp "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar com.neo4j.bench.client.Main report \
+${jvm_path} -cp "${ldbc_benchmarks_dir}"/neo4j-connectors/target/ldbc.jar com.neo4j.bench.client.Main report \
             --results_store_uri "${results_store_uri}" \
             --results_store_user "${results_store_user}" \
             --results_store_pass "${results_store_pass}" \
