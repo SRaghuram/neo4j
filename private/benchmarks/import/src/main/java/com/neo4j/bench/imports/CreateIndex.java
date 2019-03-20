@@ -18,6 +18,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.IndexPopulationProgress;
+import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.helpers.Args;
@@ -34,8 +35,14 @@ public class CreateIndex
             {
                 for ( String indexPattern : indexPatterns )
                 {
-                    String[] split = splitPattern( indexPattern );
-                    IndexDefinition index = db.schema().indexFor( Label.label( split[0] ) ).on( split[1] ).create();
+                    String[] labelAndProperties = splitLabel( indexPattern );
+                    String[] properties = splitProperties( labelAndProperties[1] );
+                    IndexCreator indexCreator = db.schema().indexFor( Label.label( labelAndProperties[0] ) );
+                    for ( String property : properties )
+                    {
+                        indexCreator = indexCreator.on( property );
+                    }
+                    IndexDefinition index = indexCreator.create();
                     indexes.put( index, 0 );
                 }
                 tx.success();
@@ -108,9 +115,14 @@ public class CreateIndex
         }
     }
 
-    private static String[] splitPattern( String indexPattern )
+    private static String[] splitLabel( String indexPattern )
     {
         return indexPattern.split( ":" );
+    }
+
+    private static String[] splitProperties( String properties )
+    {
+        return properties.split( "," );
     }
 
     public static void main( String[] args )
@@ -132,8 +144,12 @@ public class CreateIndex
         }
         for ( String indexPattern : indexPatterns )
         {
-            String[] split = splitPattern( indexPattern );
+            String[] split = splitLabel( indexPattern );
             if ( split.length != 2 )
+            {
+                return false;
+            }
+            if ( splitProperties( split[1] ).length < 1 )
             {
                 return false;
             }
@@ -143,6 +159,6 @@ public class CreateIndex
 
     private static IllegalArgumentException illegalArgsException( String[] args )
     {
-        return new IllegalArgumentException( "SYNTAX: --storeDir <dir> [<label>:<prop> ]+ provided arguments where " + Arrays.toString( args ) );
+        return new IllegalArgumentException( "SYNTAX: --storeDir <dir> [<label>:<prop1[,prop2]+> ]+ provided arguments where " + Arrays.toString( args ) );
     }
 }
