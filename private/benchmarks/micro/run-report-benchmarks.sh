@@ -39,6 +39,14 @@ triggered_by="${21}"
 micro_benchmarks_dir=$(pwd)
 json_path=${micro_benchmarks_dir}/results.json
 
+# here we are checking for optional AWS endpoint URL,
+# this is required for end to end testing, where we mock s3
+AWS_EXTRAS=
+if [[ $# -eq 22 ]]; then
+	AWS_EXTRAS="--endpoint-url=${22}"
+fi
+
+
 uuid=$(uuidgen)
 profiler_recording_output_dir="${micro_benchmarks_dir}"/"${uuid}"
 mkdir "${profiler_recording_output_dir}"
@@ -104,9 +112,11 @@ archive="${profiler_recording_dir_name}".tar.gz
 tar czvf "${archive}" "${profiler_recording_dir_name}"
 
 # --- upload archive of profiler recording artifacts to S3 ---
-aws --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recordings/"${archive}"
+# shellcheck disable=SC2086
+aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 cp "${archive}" s3://benchmarking.neo4j.com/recordings/"${archive}"
 # --- upload profiler recording artifacts to S3 ---
-aws --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
+# shellcheck disable=SC2086
+aws ${AWS_EXTRAS:+"$AWS_EXTRAS"} --region eu-north-1 s3 sync "${profiler_recording_output_dir}" s3://benchmarking.neo4j.com/recordings/"${profiler_recording_dir_name}"
 
 # --- enrich results file with profiler recording information (locations in S3) ---
 java -cp "${micro_benchmarks_dir}"/micro/target/micro-benchmarks.jar com.neo4j.bench.client.Main add-profiles \
