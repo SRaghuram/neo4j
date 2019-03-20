@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.zombie.state
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie._
+import org.neo4j.cypher.internal.runtime.zombie.execution.WorkerWaker
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.util.Preconditions
 
@@ -15,14 +16,15 @@ import org.neo4j.util.Preconditions
   * Implementation of [[ExecutionState]].
   */
 object TheExecutionState {
-  def build(stateDefinition: StateDefinition, executablePipelines: Seq[ExecutablePipeline], stateFactory: StateFactory): ExecutionState =
-    new TheExecutionState(stateDefinition.buffers, executablePipelines, stateDefinition.physicalPlan, stateFactory)
+  def build(stateDefinition: StateDefinition, executablePipelines: Seq[ExecutablePipeline], stateFactory: StateFactory, workerWaker: WorkerWaker): ExecutionState =
+    new TheExecutionState(stateDefinition.buffers, executablePipelines, stateDefinition.physicalPlan, stateFactory, workerWaker)
 }
 
 class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
                         pipelines: Seq[ExecutablePipeline],
                         physicalPlan: PhysicalPlan,
-                        stateFactory: StateFactory) extends ExecutionState {
+                        stateFactory: StateFactory,
+                        workerWaker: WorkerWaker) extends ExecutionState {
 
   private val tracker = stateFactory.newTracker()
   private val argumentStateMaps = new ArgumentStateMaps
@@ -55,7 +57,10 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
   // Methods
 
   override def putMorsel(bufferId: BufferId,
-                         output: MorselExecutionContext): Unit = buffers.sink(bufferId).put(output)
+                         output: MorselExecutionContext): Unit = {
+    buffers.sink(bufferId).put(output)
+    workerWaker.wakeAll()
+  }
 
   override def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
     takeUnderPotentialLock(pipeline, buffers.morselBuffer(bufferId))
@@ -83,6 +88,7 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
   override def putContinuation(task: PipelineTask): Unit = {
     closeWorkUnit(task.pipelineState.pipeline)
     continuations(task.pipelineState.pipeline.id.x).put(task)
+    workerWaker.wakeAll()
   }
 
   override def continue(pipeline: ExecutablePipeline): PipelineTask = {
@@ -102,7 +108,7 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
   }
 
   override def initialize(): Unit = {
-    buffers.sink(BufferId(0)).put(MorselExecutionContext.createInitialRow())
+    putMorsel(BufferId(0), MorselExecutionContext.createInitialRow())
   }
 
   override def pipelineState(pipelineId: PipelineId): PipelineState = pipelineStates(pipelineId.x)

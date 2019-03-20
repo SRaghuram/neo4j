@@ -99,7 +99,7 @@ class Worker(val workerId: Int,
 }
 
 class Sleeper(private val idleThreshold: Int = 10000,
-              private val sleepDuration: Duration = Duration(1, TimeUnit.MILLISECONDS)) {
+              private val sleepDuration: Duration = Duration(1, TimeUnit.SECONDS)) {
   private val sleepNs = sleepDuration.toNanos
   private var idleCounter = 0
 

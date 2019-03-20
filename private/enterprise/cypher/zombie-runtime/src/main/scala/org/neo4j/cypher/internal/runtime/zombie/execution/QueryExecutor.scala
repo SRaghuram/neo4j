@@ -27,3 +27,11 @@ trait QueryExecutor {
                               nExpressionSlots: Int,
                               visitor: QueryResult.QueryResultVisitor[E]): QueryExecutionHandle
 }
+
+trait WorkerWaker {
+
+  /**
+    * Wake up any idle workers.
+    */
+  def wakeAll(): Unit
+}

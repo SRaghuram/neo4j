@@ -20,7 +20,9 @@ import org.neo4j.values.AnyValue
   * the thread which calls execute, without any synchronization with other queries
   * or any parallel execution.
   */
-class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: TransactionBinder) extends QueryExecutor {
+class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: TransactionBinder) extends QueryExecutor with WorkerWaker {
+
+  override def wakeAll(): Unit = ()
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,
@@ -42,7 +44,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                 nExpressionSlots,
                                 inputDataStream)
 
-    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory)
+    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory, this)
     executionState.initialize()
 
     val worker = new Worker(1, null, LazyScheduling, resources)

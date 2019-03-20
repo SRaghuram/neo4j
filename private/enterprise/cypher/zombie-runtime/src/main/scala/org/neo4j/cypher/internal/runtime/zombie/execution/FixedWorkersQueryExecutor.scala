@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.zombie.execution
 
 import java.util.concurrent.ThreadFactory
+import java.util.concurrent.locks.LockSupport
 
 import org.neo4j.cypher.internal.physicalplanning.StateDefinition
 import org.neo4j.cypher.internal.runtime.morsel._
@@ -25,13 +26,13 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 threadFactory: ThreadFactory,
                                 val numberOfWorkers: Int,
                                 transactionBinder: TransactionBinder,
-                                queryResourceFactory: () => QueryResources) extends QueryExecutor {
+                                queryResourceFactory: () => QueryResources) extends QueryExecutor with WorkerWaker {
 
   private val queryManager = new QueryManager
   private val workers =
-    for (workerId <- 0 until numberOfWorkers) yield {
+    (for (workerId <- 0 until numberOfWorkers) yield {
       new Worker(workerId, queryManager, LazyScheduling, queryResourceFactory())
-    }
+    }).toArray
   private val workerThreads = workers.map(threadFactory.newThread(_))
 
   /**
@@ -39,6 +40,14 @@ class FixedWorkersQueryExecutor(morselSize: Int,
     */
   // TODO: shouldn't be done in constructor: integrate with lifecycle properly instead
   workerThreads.foreach(_.start())
+
+  override def wakeAll(): Unit = {
+      var i = 0
+    while (i < workers.length) {
+      LockSupport.unpark(workerThreads(i))
+      i += 1
+    }
+  }
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],
                                        stateDefinition: StateDefinition,
@@ -59,7 +68,7 @@ class FixedWorkersQueryExecutor(morselSize: Int,
                                 nExpressionSlots,
                                 inputDataStream)
 
-    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory)
+    val executionState = TheExecutionState.build(stateDefinition, executablePipelines, ConcurrentStateFactory, this)
     executionState.initialize()
 
     val executingQuery = new ExecutingQuery(executablePipelines, executionState, queryContext, queryState, schedulerTracer.traceQuery())
