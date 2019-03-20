@@ -38,7 +38,7 @@ import static java.util.stream.Collectors.toList;
  * key-value pairs to be supplied to and used by the concrete load
  * balancing strategies.
  */
-public class GetServersProcedureForSingleDC extends BaseGetRoutingTableProcedure
+public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProcedure
 {
     private static final String DESCRIPTION = "Returns cluster endpoints and their capabilities for single data center setup.";
 
@@ -47,7 +47,7 @@ public class GetServersProcedureForSingleDC extends BaseGetRoutingTableProcedure
     private final Config config;
     private final Log log;
 
-    public GetServersProcedureForSingleDC( List<String> namespace, TopologyService topologyService, LeaderLocator leaderLocator,
+    public GetRoutingTableProcedureForSingleDC( List<String> namespace, TopologyService topologyService, LeaderLocator leaderLocator,
             Config config, LogProvider logProvider )
     {
         super( namespace );

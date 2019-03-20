@@ -18,17 +18,17 @@ import org.neo4j.values.virtual.MapValue;
 /**
  * Returns endpoints and their capabilities.
  *
- * GetServersV2 extends upon V1 by allowing a client context consisting of
+ * V2 extends upon V1 by allowing a client context consisting of
  * key-value pairs to be supplied to and used by the concrete load
  * balancing strategies.
  */
-public class GetServersProcedureForMultiDC extends BaseGetRoutingTableProcedure
+public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProcedure
 {
     private static final String DESCRIPTION = "Returns cluster endpoints and their capabilities.";
 
     private final LoadBalancingProcessor loadBalancingProcessor;
 
-    public GetServersProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor )
+    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor )
     {
         super( namespace );
         this.loadBalancingProcessor = loadBalancingProcessor;

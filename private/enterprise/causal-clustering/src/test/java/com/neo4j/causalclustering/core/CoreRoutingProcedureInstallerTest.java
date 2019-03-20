@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForMultiDC;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForSingleDC;
+import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForMultiDC;
+import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForSingleDC;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -41,7 +41,7 @@ class CoreRoutingProcedureInstallerTest
         installRoutingProcedures( config, procedures );
 
         verifyRegisteredProcedureNames( procedures );
-        verify( procedures, times( 2 ) ).register( any( GetServersProcedureForSingleDC.class ) );
+        verify( procedures, times( 2 ) ).register( any( GetRoutingTableProcedureForSingleDC.class ) );
     }
 
     @Test
@@ -53,7 +53,7 @@ class CoreRoutingProcedureInstallerTest
         installRoutingProcedures( config, procedures );
 
         verifyRegisteredProcedureNames( procedures );
-        verify( procedures, times( 2 ) ).register( any( GetServersProcedureForMultiDC.class ) );
+        verify( procedures, times( 2 ) ).register( any( GetRoutingTableProcedureForMultiDC.class ) );
     }
 
     private static Config newConfig( boolean multiDC )

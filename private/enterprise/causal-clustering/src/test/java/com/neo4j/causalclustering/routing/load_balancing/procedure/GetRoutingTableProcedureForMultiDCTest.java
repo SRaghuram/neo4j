@@ -31,13 +31,13 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 
-class GetServersProcedureForMultiDCTest
+class GetRoutingTableProcedureForMultiDCTest
 {
     @Test
     void shouldHaveCorrectSignature()
     {
         // given
-        GetServersProcedureForMultiDC proc = newProcedure( null );
+        GetRoutingTableProcedureForMultiDC proc = newProcedure( null );
 
         // when
         ProcedureSignature signature = proc.signature();
@@ -58,7 +58,7 @@ class GetServersProcedureForMultiDCTest
         LoadBalancingPlugin plugin = mock( LoadBalancingPlugin.class );
         RoutingResult result = new RoutingResult( emptyList(), emptyList(), emptyList(), 100 );
         when( plugin.run( any( MapValue.class ) ) ).thenReturn( result );
-        GetServersProcedureForMultiDC getServers = newProcedure( plugin );
+        GetRoutingTableProcedureForMultiDC getServers = newProcedure( plugin );
         MapValue clientContext = ValueUtils.asMapValue( map( "key", "value", "key2", "value2" ) );
 
         // when
@@ -83,8 +83,8 @@ class GetServersProcedureForMultiDCTest
         assertEquals( new QualifiedName( new String[]{"dbms", "routing"}, "getRoutingTable" ), name );
     }
 
-    private static GetServersProcedureForMultiDC newProcedure( LoadBalancingPlugin loadBalancingPlugin )
+    private static GetRoutingTableProcedureForMultiDC newProcedure( LoadBalancingPlugin loadBalancingPlugin )
     {
-        return new GetServersProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin );
+        return new GetRoutingTableProcedureForMultiDC( DEFAULT_NAMESPACE, loadBalancingPlugin );
     }
 }

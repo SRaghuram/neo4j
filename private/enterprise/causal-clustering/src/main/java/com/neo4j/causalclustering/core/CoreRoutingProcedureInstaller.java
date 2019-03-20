@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForMultiDC;
-import com.neo4j.causalclustering.routing.load_balancing.procedure.GetServersProcedureForSingleDC;
+import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForMultiDC;
+import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForSingleDC;
 
 import java.util.List;
 
@@ -40,11 +40,11 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
         {
             LoadBalancingProcessor loadBalancingProcessor = loadLoadBalancingProcessor();
-            return new GetServersProcedureForMultiDC( namespace, loadBalancingProcessor );
+            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor );
         }
         else
         {
-            return new GetServersProcedureForSingleDC( namespace, topologyService, leaderLocator, config, logProvider );
+            return new GetRoutingTableProcedureForSingleDC( namespace, topologyService, leaderLocator, config, logProvider );
         }
     }
 

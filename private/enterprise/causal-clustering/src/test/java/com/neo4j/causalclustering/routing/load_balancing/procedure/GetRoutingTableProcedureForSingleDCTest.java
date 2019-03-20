@@ -71,7 +71,7 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 import static org.neo4j.values.storable.Values.longValue;
 
-class GetServersProcedureForSingleDCTest
+class GetRoutingTableProcedureForSingleDCTest
 {
     private final ClusterId clusterId = new ClusterId( UUID.randomUUID() );
 
@@ -447,7 +447,7 @@ class GetServersProcedureForSingleDCTest
 
     private CallableProcedure newProcedure( CoreTopologyService coreTopologyService, LeaderLocator leaderLocator, Config config )
     {
-        return new GetServersProcedureForSingleDC( DEFAULT_NAMESPACE, coreTopologyService, leaderLocator, config, NullLogProvider.getInstance() );
+        return new GetRoutingTableProcedureForSingleDC( DEFAULT_NAMESPACE, coreTopologyService, leaderLocator, config, NullLogProvider.getInstance() );
     }
 
     private static class ClusterView
