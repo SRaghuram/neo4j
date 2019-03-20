@@ -383,7 +383,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     description(1).toString should include("dog:Dog; dog.lastname = $`  AUTOSTRING0`; dog.name = $`  AUTOSTRING0`")
   }
 
-  test("simple node match in exists") {
+  test("simple node match in exists 1") {
 
     dogSetup()
 
@@ -401,6 +401,50 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
     println(result.executionPlanDescription())
     result.toList should equal(List(Map("person.name" -> "Chris")))
+
+  }
+
+  test("simple node match in exists 2") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |  MATCH (person{id:2})
+        |  WHERE person.name = 'Chris'
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeSingle(query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map("person.name" -> "Chris")))
+
+  }
+
+  test("simple node match in exists that will return false") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |  MATCH (person{id:3})
+        |  WHERE person.name = 'Chris'
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeSingle(query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map()))
 
   }
 
