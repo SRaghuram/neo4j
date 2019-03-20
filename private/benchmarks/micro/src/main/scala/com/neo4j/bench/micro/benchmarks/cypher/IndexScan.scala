@@ -59,7 +59,7 @@ class IndexScan extends AbstractCypherBenchmark {
     val indexSeek = plans.NodeIndexScan(
       node.name,
       astLabelToken(LABEL, planContext),
-      IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue),
+      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
       Set.empty,
       IndexOrderNone)(IdGen)
     val resultColumns = List(node.name)

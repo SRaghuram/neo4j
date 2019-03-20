@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 
 case class NodeIndexScanSlottedPipe(ident: String,
                                     label: LabelToken,
-                                    property: SlottedIndexedProperty,
+                                    properties: Seq[SlottedIndexedProperty],
                                     queryIndexId: Int,
                                     indexOrder: IndexOrder,
                                     slots: SlotConfiguration,
@@ -24,8 +24,8 @@ case class NodeIndexScanSlottedPipe(ident: String,
 
   override val offset: Int = slots.getLongOffsetFor(ident)
 
-  override val indexPropertySlotOffsets: Array[Int] = property.maybeCachedNodePropertySlot.toArray
-  override val indexPropertyIndices: Array[Int] = indexPropertySlotOffsets.map(_ => 0)
+  override val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot).toArray
+  override val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.maybeCachedNodePropertySlot.isDefined).map(_._2).toArray
   private val needsValues: Boolean = indexPropertyIndices.nonEmpty
 
   protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {

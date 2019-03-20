@@ -59,13 +59,15 @@ class PipelineBuilder(physicalPlan: PhysicalPlan,
           LazyLabel(label)(SemanticTable()),
           argumentSize)
 
-      case plans.NodeIndexScan(column, labelToken, property, _, indexOrder) =>
+      case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
         new NodeIndexScanOperator(
           WorkIdentity.fromPlan(plan),
           slots.getLongOffsetFor(column),
           labelToken.nameId.id,
-          SlottedIndexedProperty(column, property, slots),
-          queryIndexes.registerQueryIndex(labelToken, property),
+          SlottedIndexedProperty(column, properties.head, slots),
+          //TODO what should be done with morsel? right now just takes head to compile
+          //  seek does: properties.map(SlottedIndexedProperty(column, _, slots)).toArray
+          queryIndexes.registerQueryIndex(labelToken, properties),
           asKernelIndexOrder(indexOrder),
           argumentSize)
 

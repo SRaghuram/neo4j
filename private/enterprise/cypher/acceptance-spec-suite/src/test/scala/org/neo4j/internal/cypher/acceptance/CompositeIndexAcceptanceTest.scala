@@ -51,7 +51,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE n.lastname = 'Soap' AND n.firstname = 'Joe' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
       }))
 
     // Then
@@ -73,7 +73,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.All, "MATCH (n:User) WHERE n.firstname = 'Jake' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should not(includeSomewhere.aPlan("NodeIndexSeek"))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek(equality,equality)"))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek(equality,range)"))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek(equality,exists)"))
       }))
 
     // Then
@@ -99,7 +101,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE n.lastname = 'Soap' AND n.firstname = 'Joe' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(firstname,lastname)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":User(firstname,lastname)")
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(firstname)"))
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(lastname)"))
       }))
@@ -131,7 +133,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(firstname,lastname)"))
+        plan should not(includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":User(firstname,lastname)"))
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(firstname)"))
         plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(lastname)")
       }))
@@ -140,30 +142,44 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     result.toComparableResult should equal(List(Map("n" -> n1)))
   }
 
-  ignore("should use composite index with combined equality and existence predicates") { // Enable once we support index scan on composite indexes
+  test("should use composite index with combined equality and existence predicates") {
     // Given
     graph.createIndex("User", "firstname")
     graph.createIndex("User", "lastname")
     graph.createIndex("User", "firstname", "lastname")
-    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
-    createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
+    val n1 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Soap"), "User")
+    val n2 = createLabeledNode(Map("firstname" -> "Joe", "lastname" -> "Smoke"), "User")
     val n3 = createLabeledNode(Map("firstname" -> "Jake", "lastname" -> "Soap"), "User")
     for (_ <- 1 to 100) {
-      createLabeledNode("User")
+      createLabeledNode(Map("firstname" -> "Jake"), "User")
+      createLabeledNode(Map("lastname" -> "Soap"), "User")
       createLabeledNode("User")
     }
+    resampleIndexes()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlotted, "MATCH (n:User) WHERE exists(n.lastname) AND n.firstname = 'Jake' RETURN n",
+    val resultEquality = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.lastname) AND n.firstname = 'Jake' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(firstname,lastname)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,exists)").containingArgument(":User(firstname,lastname)")
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(firstname)"))
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(lastname)"))
       }))
 
     // Then
-    result.toComparableResult should equal(List(Map("n" -> n3)))
+    resultEquality.toComparableResult should equal(List(Map("n" -> n3)))
+
+    // When
+    val resultExists = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.lastname) AND exists(n.firstname) RETURN n",
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(firstname,lastname)")
+        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(firstname)"))
+        plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(lastname)"))
+      }))
+
+    // Then
+    resultExists.toComparableResult.toSet should equal(Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3)))
   }
 
   test("should be able to update composite index when only one property has changed") {
@@ -173,7 +189,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:Person) where n.firstname = 'Joe' and n.lastname = 'Bloggs' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
       }))
     result.toComparableResult should equal(List(Map("n" -> n)))
   }
@@ -186,7 +202,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:Person) WHERE n.firstname = 'Joe' AND n.lastname = 'Soap' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":Person(firstname,lastname)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":Person(firstname,lastname)")
       }))
   }
 
@@ -209,7 +225,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |ORDER BY x""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":Foo(bar,baz)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":Foo(bar,baz)")
       }))
 
     // Then
@@ -233,7 +249,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |ORDER BY x""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":Foo(bar,baz)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":Foo(bar,baz)")
       }))
 
     // Then
@@ -257,7 +273,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |ORDER BY x""".stripMargin,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":Foo(bar,baz)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":Foo(bar,baz)")
       }))
 
     // Then
@@ -277,7 +293,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":L(foo,bar,baz)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality,equality)").containingArgument(":L(foo,bar,baz)")
       }))
     result.toComparableResult should equal(Seq(Map("count(n)" -> 1)))
   }
@@ -295,7 +311,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":L(foo,bar,baz)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality,equality)").containingArgument(":L(foo,bar,baz)")
       }))
     result.toComparableResult should equal(Seq(Map("count(n)" -> 1)))
   }
@@ -306,7 +322,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     executeWith(Configs.All, "CREATE INDEX ON :Person(firstname, lastname)")
   }
 
-  test("should not use range queries against a composite index") {
+  test("should use range queries against a composite index") {
     // Given
     graph.createIndex("X", "p1", "p2")
     val n = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
@@ -315,48 +331,109 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan shouldNot includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":X(p1,p2)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)").containingArgument(":X(p1,p2)")
       }))
 
     // Then
     result.toComparableResult should equal(Seq(Map("n" -> n)))
   }
 
-  test("should not use composite index for range, prefix, contains and exists predicates") {
+  test("should use composite index for ranges") {
+    graph.createIndex("User", "name", "age")
+    graph.createIndex("User", "name", "active")
+    graph.createIndex("User", "age", "name")
+    graph.createIndex("User", "age", "active")
+    graph.createIndex("User", "active", "age")
+    val n1 = createLabeledNode(Map("name" -> "Joe", "age" -> 25, "active" -> true), "User")
+    val n2 = createLabeledNode(Map("name" -> "Bob", "age" -> 60, "active" -> false), "User")
+    val n3 = createLabeledNode(Map("name" -> "Alice", "age" -> 6, "active" -> false), "User")
+    val n4 = createLabeledNode(Map("name" -> "Joe", "age" -> 45, "active" -> false), "User")
+    val n5 = createLabeledNode(Map("name" -> "Jake", "age" -> 16, "active" -> true), "User")
+    for (i <- 1 to 100) {
+      createLabeledNode(Map("name" -> s"Charlie$i"), "User")
+      createLabeledNode(Map("age" -> i), "User")
+      createLabeledNode(Map("active" -> (i % 2 == 0)), "User")
+      createLabeledNode("User")
+    }
+
+    Seq(
+      ("n.name STARTS WITH 'B' AND exists(n.age)", ":User(name,age)", "(range,exists)", Set(Map("n" -> n2)), false, ""), // prefix
+      ("n.name <= 'C' AND exists(n.active)", ":User(name,active)", "(range,exists)", Set(Map("n" -> n2), Map("n" -> n3)), false, ""), // less than
+      ("n.age >= 18 AND exists(n.name)", ":User(age,name)", "(range,exists)", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n4)), false, ""), // greater than
+      ("n.name STARTS WITH 'B' AND n.age = 19", ":User(age,name)", "(equality,range)", Set.empty, false, ""), // prefix after equality
+      ("n.age > 18 AND n.age < 60 AND exists(n.active)", ":User(age,active)", "(range,exists)", Set(Map("n" -> n1), Map("n" -> n4)), false, ""), // range between
+      ("n.name = 'Jake' AND n.active > false", ":User(name,active)", "(equality,range)", Set(Map("n" -> n5)), false, ""), // greater than on boolean
+      ("n.active < true AND exists(n.age)", ":User(active,age)", "(range,exists)", Set(Map("n" -> n2), Map("n" -> n3), Map("n" -> n4)), false, ""), // less than on boolean
+      ("n.active < false AND exists(n.age)", ":User(active,age)", "(range,exists)", Set.empty, false, ""), // less than false
+      ("n.active >= false AND n.active <= true AND n.age < 10", ":User(active,age)", "(range,exists)", Set(Map("n" -> n3)), true, "cached[n.age] < $`  AUTOINT0`") // range between on boolean
+    ).foreach {
+      case (predicates, indexOn, seekString, resultSet, shouldFilter, filterArgument) =>
+        // When
+        val query = s"MATCH (n:User) WHERE $predicates RETURN n"
+        val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+          planComparisonStrategy = ComparePlansWithAssertion(plan => {
+            if (shouldFilter)
+              plan should includeSomewhere.aPlan("Filter").containingArgument(filterArgument)
+            else
+              plan shouldNot includeSomewhere.aPlan("Filter")
+
+            plan should includeSomewhere.aPlan(s"NodeIndexSeek$seekString").containingArgument(indexOn)
+          }))
+
+        // Then
+        result.toComparableResult.toSet should equal(resultSet)
+    }
+  }
+
+  test("should use composite index for range, prefix, contains and exists predicates") {
+    // TODO update when ends with and contains
     // Given
     graph.createIndex("User", "name", "surname", "age", "active")
     val n = createLabeledNode(Map("name" -> "joe", "surname" -> "soap", "age" -> 25, "active" -> true), "User")
 
     // For all combinations
     Seq(
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name = 'joe' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", true), // all equality
-      (Configs.InterpretedAndSlottedAndMorsel, "n.surname = 'soap' AND n.age = 25 AND n.active = true AND n.name = 'joe'", true), // different order
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name = 'joe' AND n.surname = 'soap' AND n.age = 25 AND exists(n.active)", false), // exists()
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name = 'joe' AND n.surname = 'soap' AND n.age >= 25 AND n.active = true", false), // inequality
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name = 'joe' AND n.surname STARTS WITH 's' AND n.age = 25 AND n.active = true", false), // prefix
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name = 'joe' AND n.surname ENDS WITH 'p' AND n.age = 25 AND n.active = true", false), // suffix
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name >= 'i' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false), // inequality first
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name STARTS WITH 'j' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false), // prefix first
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name CONTAINS 'j' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false), // contains first
-      (Configs.InterpretedAndSlottedAndMorsel, "n.name = 'joe' AND n.surname STARTS WITH 'soap' AND n.age <= 25 AND exists(n.active)", false) // combination: equality, prefix, inequality, exists()
+      ("n.name = 'joe' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false, false, "(equality,equality,equality,equality)", Seq.empty[String]), // all equality
+      ("n.surname = 'soap' AND n.age = 25 AND n.active = true AND n.name = 'joe'", false, false, "(equality,equality,equality,equality)", Seq.empty[String]), // different order
+      ("n.name = 'joe' AND n.surname = 'soap' AND n.age = 25 AND exists(n.active)", false, false, "(equality,equality,equality,exists)", Seq.empty[String]), // exists()
+      ("n.name = 'joe' AND n.surname = 'soap' AND n.age >= 25 AND n.active = true", false, true, "(equality,equality,range,exists)", Seq("cached[n.active] = true")), // inequality
+      ("n.name = 'joe' AND n.surname STARTS WITH 's' AND n.age = 25 AND n.active = true", false, true, "(equality,range,exists,exists)", Seq("cached[n.active] = true", "cached[n.age] = $`  AUTOINT2`")), // prefix
+//      ("n.name = 'joe' AND n.surname ENDS WITH 'p' AND n.age = 25 AND n.active = true", false, true, "(equality,?,exists,exists)", Seq("cached[n.active] = true", "cached[n.age] = $`  AUTOINT2`")), // suffix
+      ("n.name >= 'i' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false, true, "(range,exists,exists,exists)", Seq("cached[n.active] = true", "cached[n.surname] = $`  AUTOSTRING1`", "cached[n.age] = $`  AUTOINT2`")), // inequality first
+      ("n.name STARTS WITH 'j' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false, true, "(range,exists,exists,exists)", Seq("cached[n.active] = true", "cached[n.surname] = $`  AUTOSTRING1`", "cached[n.age] = $`  AUTOINT2`")), // prefix first
+//      ("n.name CONTAINS 'j' AND n.surname = 'soap' AND n.age = 25 AND n.active = true", false, true, "(?,exists,exists,exists)", Seq("cached[n.active] = true", "cached[n.surname] = $`  AUTOSTRING1`", "cached[n.age] = $`  AUTOINT2`")), // contains first
+      ("n.name = 'joe' AND n.surname STARTS WITH 'soap' AND n.age <= 25 AND exists(n.active)", false, true, "(equality,range,exists,exists)", Seq("cached[n.age] <= $`  AUTOINT2`")), // combination: equality, prefix, inequality, exists()
+
+      ("n.name = 'joe' AND n.surname = 'soap' AND n.age = 25 AND n.active >= true", false, false, "(equality,equality,equality,range)", Seq.empty[String]), // inequality last
+      ("n.name = 'joe' AND n.surname = 'soap' AND n.age >= 25 AND n.active >= true", false, true, "(equality,equality,range,exists)", Seq("cached[n.active] >= true")), // inequality last two
+      ("n.name = 'joe' AND n.surname = 'soap' AND n.age >= 25 AND exists(n.active)", false, false, "(equality,equality,range,exists)", Seq.empty[String]), // combination: equality, equality, inequality, exists()
+      ("n.name = 'joe' AND n.surname >= 'r' AND exists(n.age) AND exists(n.active)", false, false, "(equality,range,exists,exists)", Seq.empty[String]), // combination: equality, inequality, exists(), exists()
+      ("n.name = 'joe' AND exists(n.surname) AND exists(n.age) AND n.active = true", false, true, "(equality,exists,exists,exists)", Seq("cached[n.active] = true")), // combination: equality, exists(), exists(), equality
+      ("n.name = 'joe' AND exists(n.surname) AND exists(n.age) AND exists(n.active)", false, false, "(equality,exists,exists,exists)", Seq.empty[String]), // combination: equality, exists(), exists(), exists()
+      ("n.name >= 'i' AND exists(n.surname) AND n.age >= 25 AND exists(n.active)", false, true, "(range,exists,exists,exists)", Seq("cached[n.age] >= $`  AUTOINT1`")), // combination: inequality, exists(), inequality, exists()
+      ("n.name >= 'i' AND exists(n.surname) AND exists(n.age) AND exists(n.active)", false, false, "(range,exists,exists,exists)", Seq.empty[String]), // combination: inequality, exists(), exists(), exists()
+      ("exists(n.name) AND n.surname = 'soap' AND n.age >= 25 AND exists(n.active)", true, true, "", Seq("cached[n.age] >= $`  AUTOINT1`", "cached[n.surname] = $`  AUTOSTRING0`")), // exists() first
+      ("exists(n.name) AND exists(n.surname) AND exists(n.age) AND exists(n.active)", true, false, "", Seq.empty[String]) // all exists
     ).foreach {
-      case (testConfig, predicates, valid) =>
+      case (predicates, useScan, shouldFilter, seekString, filterStrings) =>
 
         // When
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
         val result = try {
-          if (valid)
-            executeWith(testConfig, query,
-              planComparisonStrategy = ComparePlansWithAssertion(plan => {
-                //THEN
-                plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(name,surname,age,active)")
-              }))
-          else
-            executeWith(testConfig, query,
-              planComparisonStrategy = ComparePlansWithAssertion(plan => {
-                //THEN
-                plan shouldNot includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(name,surname,age,active)")
-              }))
+          executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+            planComparisonStrategy = ComparePlansWithAssertion(plan => {
+              //THEN
+              if (shouldFilter) {
+                plan should includeSomewhere.aPlan("Filter").containingArgument(filterStrings: _*)
+                plan shouldNot includeSomewhere.aPlan("Filter").containingArgumentRegex(".*exists\\(cached\\[n\\..*\\]\\).*".r)
+              } else
+                plan shouldNot includeSomewhere.aPlan("Filter")
+
+              if (useScan)
+                plan should includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(name,surname,age,active)")
+              else
+                plan should includeSomewhere.aPlan(s"NodeIndexSeek$seekString").containingArgument(":User(name,surname,age,active)")
+            }))
         } catch {
           case e: Exception =>
             System.err.println(query)
@@ -384,11 +461,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val a = createNode("p1" -> 1, "p2" -> 1)
     val b = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
-    // 2.3 excluded because the params syntax was not supported in that version
     val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (a), (b:X) where id(a) = $id AND b.p1 = a.p1 AND b.p2 = 1 return b",
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":X(p1,p2)")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":X(p1,p2)")
       }), params = Map("id" -> a.getId))
 
     result.toComparableResult should equal(Seq(Map("b" -> b)))
@@ -411,7 +487,36 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val resultIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
+      }))
+
+    // Then
+    resultNoIndex.toComparableResult should equal(List(Map("n" -> n1)))
+    resultIndex.toComparableResult should equal(resultNoIndex.toComparableResult)
+  }
+
+  test("should use composite index with spatial and range") {
+    // Given
+    val n1 = createLabeledNode(Map("name" -> "Joe", "age" -> 36, "city" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.6).asObjectCopy()), "User")
+    createLabeledNode(Map("name" -> "Joe", "age" -> 36, "city" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 180, 5.5).asObjectCopy()), "User")
+
+    // When
+    val query =
+      """MATCH (n:User)
+        |WHERE n.name = 'Joe' AND distance(n.city, point({x: 180, y: 5.58, crs: 'WGS-84'})) <= 5000 AND n.age > 35
+        |RETURN n
+        |""".stripMargin
+
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+
+    graph.createIndex("User", "name", "city", "age")
+    resampleIndexes()
+
+    val resultIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        //THEN
+        plan should includeSomewhere.aPlan("Filter").containingArgumentRegex(".*distance\\(cached\\[n.city\\], point.*".r, ".*cached\\[n.age\\] >.*".r)
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range,exists)")
       }))
 
     // Then
@@ -422,9 +527,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   test("should use composite index with temporal") {
     // Given
     val n1 = createLabeledNode(Map("date" -> LocalDate.of(1991, 10, 18), "time" -> LocalTime.of(21, 22, 0)), "Label")
-    val n2 = createLabeledNode(Map("date" -> LocalDate.of(1991, 10, 18), "time" -> OffsetTime.of(21, 22, 0, 0, ZoneOffset.of("+00:00"))), "Label")
-    val n3 = createLabeledNode(Map("date" -> "1991-10-18", "time" -> LocalTime.of(21, 22, 0)), "Label")
-    val n4 = createLabeledNode(Map("date" -> LocalDate.of(1991, 10, 18).toEpochDay, "time" -> LocalTime.of(21, 22, 0)), "Label")
+    createLabeledNode(Map("date" -> LocalDate.of(1991, 10, 18), "time" -> OffsetTime.of(21, 22, 0, 0, ZoneOffset.of("+00:00"))), "Label")
+    createLabeledNode(Map("date" -> "1991-10-18", "time" -> LocalTime.of(21, 22, 0)), "Label")
+    createLabeledNode(Map("date" -> LocalDate.of(1991, 10, 18).toEpochDay, "time" -> LocalTime.of(21, 22, 0)), "Label")
 
     // When
     val query =
@@ -442,7 +547,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val resultIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
       }))
 
     // Then
@@ -472,7 +577,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val resultIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
-        plan should includeSomewhere.aPlan("NodeIndexSeek")
+        plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
       }))
 
     // Then

@@ -563,7 +563,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       NodeIndexScanSlottedPipe(
         "n",
         LabelToken("Awesome", LabelId(0)),
-        SlottedIndexedProperty(0, None),
+        Seq(SlottedIndexedProperty(0, None)),
         0,
         IndexOrderNone,
         SlotConfiguration.empty.newLong("n", false, CTNode), Size.zero)())
