@@ -8,6 +8,8 @@ package org.neo4j.cypher.internal.runtime.zombie
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.v4_0.util.attribution.{Attribute, Id}
 
+import scala.collection.mutable.ArrayBuffer
+
 trait ArgumentState {
   /**
     * The ID of the argument row for this accumulator.
@@ -54,6 +56,15 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def filter[FILTER_STATE](morsel: MorselExecutionContext,
                            onArgument: (S, Long) => FILTER_STATE,
                            onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit
+
+  /**
+    * Filter away cancelled argument rows using the [[ArgumentState]] related to `argument`.
+    *
+    * @param isCancelled is called once per argumentRowId.
+    *                    If true, rows for the argumentRowId will be retained, otherwise they will be discarded.
+    */
+  def filterCancelledArguments(morsel: MorselExecutionContext,
+                               isCancelled: S => Boolean): Seq[Long]
 
   /**
     * Take the [[ArgumentState]]s of all complete arguments. The [[ArgumentState]]s will
@@ -132,8 +143,11 @@ object ArgumentStateMap {
                            onArgument: (Long, Long) => FILTER_STATE,
                            onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
 
-    val readingRow = morsel
+    val readingRow = morsel.shallowCopy()
+    readingRow.resetToFirstRow()
+
     val writingRow = readingRow.shallowCopy()
+    var newCurrentRow = -1
 
     while (readingRow.isValidRow) {
       val arg = readingRow.getLongAt(argumentSlotOffset)
@@ -146,6 +160,9 @@ object ArgumentStateMap {
 
       val filterState = onArgument(arg, end - start)
       while (readingRow.getCurrentRow < end) {
+        if (readingRow.getCurrentRow == morsel.getCurrentRow)
+          newCurrentRow = writingRow.getCurrentRow
+
         if (onRow(filterState, readingRow)) {
           writingRow.copyFrom(readingRow)
           writingRow.moveToNextRow()
@@ -154,6 +171,40 @@ object ArgumentStateMap {
       }
     }
 
-    readingRow.finishedWritingUsing(writingRow)
+    morsel.moveToRow(newCurrentRow)
+    morsel.finishedWritingUsing(writingRow)
+  }
+
+  def filterCancelledArguments(argumentSlotOffset: Int,
+                               morsel: MorselExecutionContext,
+                               isCancelledCheck: Long => Boolean): Seq[Long] = {
+
+    val readingRow = morsel.shallowCopy()
+    readingRow.resetToFirstRow()
+    val writingRow = readingRow.shallowCopy()
+    val cancelled = new ArrayBuffer[Long]
+    var newCurrentRow = -1
+
+    while (readingRow.isValidRow) {
+      val arg = readingRow.getLongAt(argumentSlotOffset)
+      val isCancelled = isCancelledCheck(arg)
+      if (isCancelled)
+        cancelled += arg
+
+      while (readingRow.isValidRow && readingRow.getLongAt(argumentSlotOffset) == arg) {
+        if (readingRow.getCurrentRow == morsel.getCurrentRow)
+          newCurrentRow = writingRow.getCurrentRow
+
+        if (!isCancelled) {
+          writingRow.copyFrom(readingRow)
+          writingRow.moveToNextRow()
+        }
+        readingRow.moveToNextRow()
+      }
+    }
+
+    morsel.moveToRow(newCurrentRow)
+    morsel.finishedWritingUsing(writingRow)
+    cancelled
   }
 }

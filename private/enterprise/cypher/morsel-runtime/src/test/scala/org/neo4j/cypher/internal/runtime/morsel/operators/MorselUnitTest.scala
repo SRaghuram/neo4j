@@ -147,6 +147,12 @@ abstract class MorselUnitTest extends CypherFunSuite {
       _refs ++= refs.refs
       this
     }
+
+    def build : (Morsel, MorselExecutionContext) = {
+      val morsel = new Morsel(longs, refs)
+      val context = MorselExecutionContext(morsel, longSlots, refSlots, rows)
+      (morsel, context)
+    }
   }
 
   class Given {
@@ -239,8 +245,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   class StatelessOperatorGiven(operator: StatelessOperator) extends Given with HasOneInput {
 
     def whenOperate(): ThenOutput = {
-      val morsel = new Morsel(input.longs, input.refs)
-      val row = MorselExecutionContext(morsel, input.longSlots, input.refSlots, input.rows)
+      val (morsel, row) = input.build
       operator.operate(row, context, state, resources)
       new ThenOutput(morsel, row, input.longSlots, input.refSlots)
     }
