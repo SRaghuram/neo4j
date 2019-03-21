@@ -48,7 +48,7 @@ for i in "${db_and_workloads[@]}"; do
     tar xzvf "${zip_file}" -C old
     rm "${zip_file}"
 
-    ${JAVA_HOME}/bin/java  -jar target/macro.jar upgrade-store \
+    "${JAVA_HOME}/bin/java"  -jar target/macro.jar upgrade-store \
                                --original-db old/"${db_name}"/ \
                                --upgraded-db "${db_name}"/ \
                                --workload "${workload}" \

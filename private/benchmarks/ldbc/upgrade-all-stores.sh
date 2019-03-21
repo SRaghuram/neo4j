@@ -48,7 +48,7 @@ for i in "${dbs[@]}"; do
 	mkdir "${temp_old_db_path}"/graph.db
 	mv "${old_db_path}"/* "${temp_old_db_path}"/graph.db
 	
-    ${JAVA_HOME}/bin/java -jar neo4j-connectors/target/ldbc.jar upgrade-store \
+    "${JAVA_HOME}/bin/java" -jar neo4j-connectors/target/ldbc.jar upgrade-store \
         --original-db "${temp_old_db_path}" \
         --upgraded-db "${temp_new_db_path}" \
         --recreate-indexes  \
