@@ -8,7 +8,7 @@ License: ${LICENSE}
 URL: http://neo4j.org/
 #Source: https://github.com/neo4j/neo4j/archive/%{version}.tar.gz
 
-PreReq: dialog
+#PreReq: dialog
 Requires: cypher-shell, jre >= 1.8
 
 BuildArch: noarch
@@ -32,10 +32,17 @@ leverage not only data but also its relationships.
 
 %pre
 
+if [[ "$-" == *i* ]]; then  # if interactive
+    echo interactive shell
+else
+    echo non interactive shell
+fi
+
+
 # The user must accept the license agreement to install Enterprise.
 if [ "$PACKAGE_NAME" = "neo4j-enterprise" ]; then
     if [ "$NEO4J_ACCEPT_LICENSE_AGREEMENT" != "yes" ]; then
-        if ! DIALOG_TTY=1 dialog --title "Neo4j License Agreement" --defaultno --yesno "\
+        if ! whiptail --title "Neo4j License Agreement" --defaultno --yesno "\
 
 (c) Neo4j Sweden AB.  2018.  All Rights Reserved.
 Use of this Software without a proper commercial license with Neo4j,
@@ -46,11 +53,20 @@ Email inquiries can be directed to: licensing@neo4j.com
 More information is also available at: https://neo4j.com/licensing/
 
 
-Do you accept the terms of the license agreement?" 16 80; then
+Do you accept the terms of the license agreement?" 16 80 2>&1 >/dev/tty; then
+            echo "================================================="
+            echo ""
+            echo "Neo4j licence not accepted. Installation aborted."
+            echo "To non-interactively accept the license, set environment variable:"
+            echo " \"NEO4J_ACCEPT_LICENSE_AGREEMENT=yes\" "
+            echo ""
+            echo "================================================="
             exit 1
         fi
     fi
 fi
+
+
 
 # Create neo4j user if it doesn't exist.
 if ! id neo4j > /dev/null 2>&1 ; then
