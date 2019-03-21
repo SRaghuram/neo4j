@@ -105,5 +105,7 @@ object SortMergeOperator {
     override def update(morsel: MorselExecutionContext): Unit = {
       data += morsel
     }
+
+    override def toString: String = s"UnsortedBuffer($argumentRowId, count=${data.size})"
   }
 }

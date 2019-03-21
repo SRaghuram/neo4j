@@ -86,12 +86,22 @@ class ConcurrentArgumentStateMap[S <: ArgumentState](val owningPlanId: Id,
   override def increment(argument: Long): Unit = {
     val controller = controllers.get(argument)
     val newCount = controller.increment()
-    debug("incr %03d to %d".format(argument, newCount))
+    debug("plan %s incr %03d to %d".format(owningPlanId, argument, newCount))
   }
 
   override def decrement(argument: Long): Unit = {
     val newCount = controllers.get(argument).decrement()
-    debug("decr %03d to %d".format(argument, newCount))
+    debug("plan %s decr %03d to %d".format(owningPlanId, argument, newCount))
+  }
+
+  override def toString: String = {
+    val sb = new StringBuilder
+    sb ++= "ConcurrentArgumentStateMap(\n"
+    controllers.forEach((argumentRowId, controller) => {
+      sb ++= s"$argumentRowId -> $controller\n"
+    })
+    sb += ')'
+    sb.result()
   }
 }
 
@@ -119,5 +129,9 @@ class StateController[STATE <: ArgumentState](id: String, val state: STATE) {
     val u = onArgument(state)
     lock.unlock()
     u
+  }
+
+  override def toString: String = {
+    s"[count: ${count.get()}, lock: $lock, state: $state]"
   }
 }

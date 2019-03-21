@@ -54,10 +54,12 @@ class StandardQueryCompletionTracker extends QueryCompletionTracker {
 
   override def await(): Unit = {
     if (count != 0)
-      throw new IllegalStateException("Should not reach await until tracking is complete!")
+      throw new IllegalStateException(s"Should not reach await until tracking is complete! count: $count")
   }
 
   override def isCompleted: Boolean = count == 0
+
+  override def toString: String = s"StandardQueryCompletionTracker($count)"
 }
 
 /**
@@ -85,4 +87,6 @@ class ConcurrentQueryCompletionTracker extends QueryCompletionTracker {
     latch.await()
 
   override def isCompleted: Boolean = count.get() == 0
+
+  override def toString: String = s"ConcurrentQueryCompletionTracker(${count.get()})"
 }

@@ -65,5 +65,8 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
       tracker.decrement()
     })
   }
+
+  override def toString: String =
+    s"MorselArgumentStateBuffer(planId: $reducePlanId)$argumentStateMap"
 }
 

@@ -68,7 +68,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val owningPlanId: Id,
   override def increment(argument: Long): Unit = {
     val controller = controllers(argument)
     controller.count += 1
-    debug("incr %03d to %s".format(argument, controller.count))
+    debug("plan %s incr %03d to %s".format(owningPlanId, argument, controller.count))
   }
 
   override def decrement(argument: Long): Unit = {
@@ -76,7 +76,7 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val owningPlanId: Id,
     if (controller.count == 0)
       throw new IllegalStateException("Cannot have negative reference counts!")
     controller.count -= 1
-    debug("decr %03d to %s".format(argument, controller.count))
+    debug("plan %s decr %03d to %s".format(owningPlanId, argument, controller.count))
   }
 
   private class Controller(val state: STATE) {

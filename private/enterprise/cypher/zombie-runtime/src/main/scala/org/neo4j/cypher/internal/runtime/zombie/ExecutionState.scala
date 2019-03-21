@@ -126,4 +126,9 @@ trait ExecutionState extends ArgumentStateCreator {
     * Check whether this query has completed.
     */
   def isCompleted: Boolean
+
+  /**
+    * Return a string representation of the state related to the given pipeline. Meant for debuging.
+    */
+  def prettyState(pipeline: ExecutablePipeline): String
 }

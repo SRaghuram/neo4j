@@ -19,4 +19,15 @@ class ConcurrentBuffer[T <: AnyRef] extends Buffer[T] {
   override def take(): T = {
     data.poll()
   }
+
+  override def toString: String = {
+    val sb = new StringBuilder()
+    sb ++= "ConcurrentBuffer("
+    data.iterator().forEachRemaining(t => {
+      sb ++= t.toString
+      sb += ','
+    })
+    sb += ')'
+    sb.result()
+  }
 }

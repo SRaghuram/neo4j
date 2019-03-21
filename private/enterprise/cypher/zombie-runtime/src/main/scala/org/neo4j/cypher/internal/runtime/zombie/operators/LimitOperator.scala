@@ -80,5 +80,7 @@ class LimitOperator(val planId: Id,
     }
 
     override def isCancelled: Boolean = countLeft == 0
+
+    override def toString: String = s"LimitState($argumentRowId, countLeft=$countLeft)"
   }
 }
