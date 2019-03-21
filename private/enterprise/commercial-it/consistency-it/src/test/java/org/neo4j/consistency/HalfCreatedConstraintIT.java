@@ -60,7 +60,7 @@ public class HalfCreatedConstraintIT
 
         ConsistencyCheckService.Result checkResult = ConsistencyCheckTool.runConsistencyCheckTool( new String[]{databaseDir.getAbsolutePath()},
                 emptyPrintStream(), emptyPrintStream() );
-        assertTrue( String.join( System.lineSeparator(), Files.readAllLines( checkResult.reportFile().toPath() ) ), checkResult.isSuccessful() );
+        assertTrue( Files.readString( checkResult.reportFile().toPath() ), checkResult.isSuccessful() );
     }
 
     private static void waitForIndexPopulationFailure( GraphDatabaseService database )
