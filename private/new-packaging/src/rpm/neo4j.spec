@@ -32,13 +32,6 @@ leverage not only data but also its relationships.
 
 %pre
 
-if [[ "$-" == *i* ]]; then  # if interactive
-    echo interactive shell
-else
-    echo non interactive shell
-fi
-
-
 # The user must accept the license agreement to install Enterprise.
 if [ "$PACKAGE_NAME" = "neo4j-enterprise" ]; then
     if [ "$NEO4J_ACCEPT_LICENSE_AGREEMENT" != "yes" ]; then
@@ -53,7 +46,7 @@ Email inquiries can be directed to: licensing@neo4j.com
 More information is also available at: https://neo4j.com/licensing/
 
 
-Do you accept the terms of the license agreement?" 16 80 2>&1 >/dev/tty; then
+Do you accept the terms of the license agreement?" 20 80 2>&1 >/dev/tty; then
             echo "================================================="
             echo ""
             echo "Neo4j licence not accepted. Installation aborted."
