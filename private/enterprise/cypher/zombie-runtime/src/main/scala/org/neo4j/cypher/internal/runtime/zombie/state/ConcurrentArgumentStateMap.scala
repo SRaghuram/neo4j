@@ -42,10 +42,17 @@ class ConcurrentArgumentStateMap[S <: ArgumentState](val owningPlanId: Id,
       argumentSlotOffset,
       readingRow,
       (argumentRowId, nRows) => {
-        controllers.get(argumentRowId).compute(nRows, onArgument)
+        controllers.get(argumentRowId).compute(state => onArgument(state, nRows))
       },
       onRow
     )
+  }
+
+  override def filterCancelledArguments(morsel: MorselExecutionContext,
+                                        isCancelled: S => Boolean): Seq[Long] = {
+    ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
+                                              morsel,
+                                              argumentRowId => controllers.get(argumentRowId).compute(isCancelled))
   }
 
   override def takeCompleted(): Iterable[S] = {
@@ -107,9 +114,9 @@ class StateController[STATE <: ArgumentState](id: String, val state: STATE) {
     lock.unlock()
   }
 
-  def compute[U](nRows: Long, onArgument: (STATE, Long) => U): U = {
+  def compute[U](onArgument: STATE => U): U = {
     lock.lock()
-    val u = onArgument(state, nRows)
+    val u = onArgument(state)
     lock.unlock()
     u
   }

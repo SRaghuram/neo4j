@@ -37,11 +37,11 @@ class LimitOperator(val planId: Id,
     val count = countExpression(ExecutionContext.empty, queryState).asInstanceOf[NumberValue].longValue()
 
     new LimitOperatorState(argumentStateCreator.createArgumentStateMap(planId,
-                                                                       argumentRowId => new RowCount(argumentRowId,
-                                                                                                     count)))
+                                                                       argumentRowId => new LimitState(argumentRowId,
+                                                                                                       count)))
   }
 
-  class LimitOperatorState(argumentStateMap: ArgumentStateMap[RowCount]) extends OperatorTask {
+  class LimitOperatorState(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
 
     override def operate(output: MorselExecutionContext,
                          context: QueryContext,
@@ -70,7 +70,7 @@ class LimitOperator(val planId: Id,
   /**
     * Query-write row count for the rows from one argumentRowId.
     */
-  class RowCount(override val argumentRowId: Long, countTotal: Long) extends WorkCanceller {
+  class LimitState(override val argumentRowId: Long, countTotal: Long) extends WorkCanceller {
     private var countLeft = countTotal
 
     def reserve(wanted: Long): Long = {

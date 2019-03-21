@@ -19,14 +19,15 @@ class MorselBuffer(tracker: QueryCompletionTracker,
                    workCancellers: Seq[Id],
                    argumentStateMaps: ArgumentStateMaps,
                    inner: Buffer[MorselExecutionContext]
-                  ) extends ArgumentCountUpdater(tracker, downstreamArgumentReducers, argumentStateMaps)
+                  ) extends ArgumentCountUpdater(tracker, argumentStateMaps)
                        with Sink[MorselExecutionContext]
                        with Source[MorselParallelizer] {
 
   override def put(morsel: MorselExecutionContext): Unit = {
     if (morsel.hasData) {
       morsel.resetToFirstRow()
-      incrementArgumentCounts(morsel)
+      incrementArgumentCounts(downstreamArgumentReducers, morsel)
+      tracker.increment()
       inner.put(morsel)
     }
   }
@@ -37,27 +38,34 @@ class MorselBuffer(tracker: QueryCompletionTracker,
     val morsel = inner.take()
     if (morsel == null)
       null
-    else {
-      for (cancellerPlanId <- workCancellers) {
-        val argumentStateMap = argumentStateMaps(cancellerPlanId).asInstanceOf[ArgumentStateMap[WorkCanceller]]
-        argumentStateMap.filter[Boolean](morsel,
-                                         (canceller, _) => !canceller.isCancelled,
-                                         (canContinue, _) => canContinue)
-        morsel.resetToFirstRow()
-      }
-      if (morsel.hasData)
-        new Parallelizer(morsel)
-      else {
-        tracker.decrement()
-        null
-      }
+    else
+      new Parallelizer(morsel)
+  }
+
+  def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
+    for (cancellerPlanId <- workCancellers) {
+      val argumentStateMap = argumentStateMaps(cancellerPlanId).asInstanceOf[ArgumentStateMap[WorkCanceller]]
+      val cancelledArguments =
+        argumentStateMap.filterCancelledArguments(morsel,
+                                                  canceller => canceller.isCancelled)
+
+      decrementArgumentCounts(downstreamArgumentReducers, cancelledArguments)
+    }
+    if (morsel.isEmpty) {
+      tracker.decrement()
+      true
+    } else {
+      false
     }
   }
 
   /**
     * Decrement reference counters attached to `morsel`.
     */
-  final def close(morsel: MorselExecutionContext): Unit = decrementArgumentCounts(morsel)
+  def close(morsel: MorselExecutionContext): Unit = {
+    decrementArgumentCounts(downstreamArgumentReducers, morsel)
+    tracker.decrement()
+  }
 
   class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
     private var usedOriginal = false
@@ -67,7 +75,8 @@ class MorselBuffer(tracker: QueryCompletionTracker,
         original
       } else {
         val copy = original.shallowCopy()
-        incrementArgumentCounts(copy)
+        incrementArgumentCounts(downstreamArgumentReducers, copy)
+        tracker.increment()
         copy
       }
     }

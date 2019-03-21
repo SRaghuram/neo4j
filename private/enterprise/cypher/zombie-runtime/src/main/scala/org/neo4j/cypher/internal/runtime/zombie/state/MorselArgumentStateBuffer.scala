@@ -18,12 +18,25 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
                                                           downstreamArgumentReducers: Seq[Id],
                                                           workCancellers: Seq[Id],
                                                           argumentStateMaps: ArgumentStateMaps,
-                                                          reducePlanId: Id
-                                  ) extends ArgumentCountUpdater(tracker, downstreamArgumentReducers, argumentStateMaps)
+                                                          val reducePlanId: Id
+                                  ) extends ArgumentCountUpdater(tracker, argumentStateMaps)
                                        with Sink[MorselExecutionContext]
                                        with Source[Iterable[ACC]] {
 
   private val argumentStateMap = argumentStateMaps(reducePlanId).asInstanceOf[ArgumentStateMap[ACC]]
+
+  def initiate(morsel: MorselExecutionContext): Unit = {
+    for (argumentRowId <- morsel.allArgumentRowIdsFor(argumentStateMap.argumentSlotOffset)) {
+      argumentStateMap.initiate(argumentRowId)
+      tracker.increment()
+    }
+  }
+
+  def decrement(morsel: MorselExecutionContext): Unit = {
+    for (argumentRowId <- morsel.allArgumentRowIdsFor(argumentStateMap.argumentSlotOffset)) {
+      argumentStateMap.decrement(argumentRowId)
+    }
+  }
 
   override def put(morsel: MorselExecutionContext): Unit = {
     if (morsel.hasData) {
@@ -37,13 +50,20 @@ class MorselArgumentStateBuffer[ACC <: MorselAccumulator](tracker: QueryCompleti
   override def take(): Iterable[ACC] = {
     val accumulators = argumentStateMap.takeCompleted()
     if (accumulators.nonEmpty) {
-      incrementArgumentCounts(accumulators.map(_.argumentRowId))
+      incrementArgumentCounts(downstreamArgumentReducers, accumulators.map(_.argumentRowId))
       accumulators
     } else null
   }
 
+  def filterCancelledArguments(accumulators: Iterable[ACC]): Boolean = {
+    false
+  }
+
   def close(accumulators: Iterable[ACC]): Unit = {
-    decrementArgumentCounts(accumulators.map(_.argumentRowId))
+    decrementArgumentCounts(downstreamArgumentReducers, accumulators.map(_.argumentRowId))
+    accumulators.foreach(acc => {
+      tracker.decrement()
+    })
   }
 }
 

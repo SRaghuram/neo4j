@@ -44,6 +44,13 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val owningPlanId: Id,
     )
   }
 
+  override def filterCancelledArguments(morsel: MorselExecutionContext,
+                                        isCancelled: STATE => Boolean): Seq[Long] = {
+    ArgumentStateMap.filterCancelledArguments(argumentSlotOffset,
+                                              morsel,
+                                              argumentRowId => isCancelled(controllers(argumentRowId).state))
+  }
+
   override def takeCompleted(): Iterable[STATE] = {
     val complete = controllers.values.filter(_.count == 0)
     complete.foreach(controller => controllers -= controller.state.argumentRowId)

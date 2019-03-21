@@ -45,6 +45,10 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     }
   }
 
+  def filterCancelledArguments(): Boolean = {
+    startTask.filterCancelledArguments(pipelineState)
+  }
+
   def close(): Unit = {
     startTask.close(pipelineState)
   }

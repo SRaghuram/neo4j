@@ -30,7 +30,7 @@ class OperatorFactory(physicalPlan: PhysicalPlan,
     generateSlotAccessorFunctions(slots)
 
     plan match {
-      case plans.Input(nodes, variables) =>
+      case plans.Input(nodes, variables, _) =>
         new InputOperator(WorkIdentity.fromPlan(plan),
                           nodes.map(v => slots.getLongOffsetFor(v)),
                           variables.map(v => slots.getReferenceOffsetFor(v)))

@@ -22,9 +22,14 @@ object LazyScheduling extends SchedulingPolicy {
                queryResources: QueryResources): PipelineTask = {
 
     for (pipelineState <- executingQuery.pipelineExecutions.reverseIterator) {
-      val task = pipelineState.nextTask(executingQuery.queryContext,
-                                        executingQuery.queryState,
-                                        queryResources)
+      var task: PipelineTask = null
+
+      do {
+        task = pipelineState.nextTask(executingQuery.queryContext,
+                                      executingQuery.queryState,
+                                      queryResources)
+      } while (task != null && task.filterCancelledArguments())
+
       if (task != null) {
         return task
       }

@@ -20,7 +20,7 @@ object TheExecutionState {
     new TheExecutionState(stateDefinition.buffers, executablePipelines, stateDefinition.physicalPlan, stateFactory, workerWaker)
 }
 
-class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
+class TheExecutionState(bufferDefinitions: IndexedSeq[BufferDefinition],
                         pipelines: Seq[ExecutablePipeline],
                         physicalPlan: PhysicalPlan,
                         stateFactory: StateFactory,
@@ -64,11 +64,11 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
   }
 
   override def takeMorsel(bufferId: BufferId, pipeline: ExecutablePipeline): MorselParallelizer = {
-    takeUnderPotentialLock(pipeline, buffers.morselBuffer(bufferId))
+    buffers.morselBuffer(bufferId).take()
   }
 
   override def takeAccumulators[ACC <: MorselAccumulator](bufferId: BufferId, pipeline: ExecutablePipeline): Iterable[ACC] = {
-    takeUnderPotentialLock(pipeline, buffers.argumentStateMapBuffer(bufferId))
+    buffers.argumentStateBuffer(bufferId).take()
   }
 
   private def closeWorkUnit(pipeline: ExecutablePipeline): Unit = {
@@ -83,29 +83,43 @@ class TheExecutionState(bufferDefinitions: Seq[BufferDefinition],
 
   override def closeAccumulatorsTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulators: Iterable[ACC]): Unit = {
     closeWorkUnit(pipeline)
-    buffers.argumentStateMapBuffer(pipeline.inputBuffer.id).close(accumulators)
+    buffers.argumentStateBuffer(pipeline.inputBuffer.id).close(accumulators)
+  }
+
+  override def filterCancelledArguments(pipeline: ExecutablePipeline,
+                                        inputMorsel: MorselExecutionContext): Boolean = {
+    val isCancelled = buffers.morselBuffer(pipeline.inputBuffer.id).filterCancelledArguments(inputMorsel)
+    if (isCancelled)
+      closeWorkUnit(pipeline)
+    isCancelled
+  }
+
+  override def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                                  accumulators: Iterable[ACC]): Boolean = {
+    val isCancelled = buffers.argumentStateBuffer(pipeline.inputBuffer.id).filterCancelledArguments(accumulators)
+    if (isCancelled)
+      closeWorkUnit(pipeline)
+    isCancelled
   }
 
   override def putContinuation(task: PipelineTask): Unit = {
-    closeWorkUnit(task.pipelineState.pipeline)
+    // Put the continuation before unlocking, so that in serial pipelines we can guarantee that the continuation
+    // is the next thing which is picked up
     continuations(task.pipelineState.pipeline.id.x).put(task)
     workerWaker.wakeAll()
+    closeWorkUnit(task.pipelineState.pipeline)
   }
 
-  override def continue(pipeline: ExecutablePipeline): PipelineTask = {
-    takeUnderPotentialLock(pipeline, continuations(pipeline.id.x))
+  override def takeContinuation(pipeline: ExecutablePipeline): PipelineTask = {
+    continuations(pipeline.id.x).take()
   }
 
-  private def takeUnderPotentialLock[T <: AnyRef](pipeline: ExecutablePipeline, source: Source[T]): T = {
-    if (pipeline.serial) {
-      if (source.hasData && pipelineLocks(pipeline.id.x).tryLock()) {
-        val t = source.take()
-        if (t == null) // the data might have been taken while we took the lock
-          pipelineLocks(pipeline.id.x).unlock()
-        t
-      } else null.asInstanceOf[T]
-    } else
-      source.take()
+  override def tryLock(pipeline: ExecutablePipeline): Boolean = pipelineLocks(pipeline.id.x).tryLock()
+
+  override def unlock(pipeline: ExecutablePipeline): Unit = pipelineLocks(pipeline.id.x).unlock()
+
+  override def canContinueOrTake(pipeline: ExecutablePipeline): Boolean = {
+    continuations(pipeline.id.x).hasData || buffers.hasData(pipeline.inputBuffer.id)
   }
 
   override final def createArgumentStateMap[S <: ArgumentState](reducePlanId: Id,

@@ -24,6 +24,8 @@ object PipelineId {
   val NO_PIPELINE: PipelineId = PipelineId(-1)
 }
 
+case class ArgumentStateDefinition(id: Id, counts: Boolean)
+
 /**
   * A buffer between two pipelines.
   */
@@ -43,7 +45,7 @@ class ApplyBufferDefinition(id: BufferId,
                             producingPipelineId: PipelineId,
                             applyPlanId: Id,
                             val argumentSlotOffset: Int) extends BufferDefinition(id, producingPipelineId) {
-  val argumentStatesForThisApply = new ArrayBuffer[Id]
+  val argumentStatesForThisApply = new ArrayBuffer[ArgumentStateDefinition]
 }
 
 /**
@@ -257,7 +259,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
       b.reducers += reducePlanId
       b = pipelines(b.producingPipelineId.x).inputBuffer
     }
-    applyBuffer.argumentStatesForThisApply += reducePlanId
+    applyBuffer.argumentStatesForThisApply += ArgumentStateDefinition(reducePlanId, true)
   }
 
   private def markCancellerInUpstreamBuffers(buffer: BufferDefinition,
@@ -268,6 +270,7 @@ class PipelineBuilder(breakingPolicy: PipelineBreakingPolicy,
       b.workCancellers += cancellerPlanId
       b = pipelines(b.producingPipelineId.x).inputBuffer
     }
-    applyBuffer.argumentStatesForThisApply += cancellerPlanId
+    applyBuffer.workCancellers += cancellerPlanId
+    applyBuffer.argumentStatesForThisApply += ArgumentStateDefinition(cancellerPlanId, false)
   }
 }

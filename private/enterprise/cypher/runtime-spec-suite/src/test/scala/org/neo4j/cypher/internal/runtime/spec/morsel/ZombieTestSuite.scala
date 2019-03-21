@@ -10,13 +10,14 @@ import java.util.concurrent.{Callable, Executors, TimeUnit}
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, ZombieRuntime}
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.logical.plans.{Ascending, Descending}
-import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.{InputTestBase, LimitTestBase}
 import org.neo4j.cypher.result.RuntimeResult
 
 class ZombieSingleThreadedTest extends ZombieTestSuite(ENTERPRISE.SINGLE_THREADED)
 class ZombieParallelTest extends ZombieTestSuite(ENTERPRISE.PARALLEL)
 class ZombieSchedulerTracerTest extends SchedulerTracerTestBase(ZombieRuntime)
 class ZombieInputTest extends InputTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 10000)
+class ZombieLimitTest extends LimitTestBase(ENTERPRISE.PARALLEL, ZombieRuntime, 1000)
 
 abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) extends RuntimeTestSuite(edition, ZombieRuntime) {
 
@@ -134,72 +135,5 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
         result should beColumns("x").withRows(singleColumn(nodes))
       }
     }
-  }
-
-  test("should support limit") {
-    // given
-    val (nodes, rels) = circleGraph(1000)
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("x")
-      .limit(100)
-      .input(variables = Seq("x"))
-      .build()
-
-    val input = inputSingleColumn(1000, 10, identity).stream()
-
-    // then
-    val runtimeResult = execute(logicalQuery, runtime, input)
-    runtimeResult should beColumns("x").withRows(rowCount(100))
-
-    // TODO: cancel continuations
-    //input.hasMore should be(true)
-  }
-
-  test("should support apply-limit") {
-    // given
-    val nodesPerLabel = 100
-    val (aNodes, _) = bipartiteGraph(nodesPerLabel, "A", "B", "R")
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("x")
-      .apply()
-      .|.limit(10)
-      .|.expandAll("(x)-->(y)")
-      .|.argument()
-      .allNodeScan("x")
-      .build()
-
-    // then
-    val runtimeResult = execute(logicalQuery, runtime)
-
-    runtimeResult should beColumns("x").withRows(singleColumn(aNodes.flatMap(n => List().padTo(10, n))))
-  }
-
-  test("should support chained limits") {
-    // given
-    val nodesPerLabel = 100
-    val (aNodes, _) = bipartiteGraph(nodesPerLabel, "A", "B", "R")
-
-    // when
-    val logicalQuery = new LogicalQueryBuilder(this)
-      .produceResults("a2")
-      .limit(10)
-      .expandAll("(b2)<--(a2)")
-      .limit(10)
-      .expandAll("(a1)-->(b2)")
-      .limit(10)
-      .expandAll("(b1)<--(a1)")
-      .limit(10)
-      .expandAll("(x)-->(b1)")
-      .allNodeScan("x")
-      .build()
-
-    // then
-    val runtimeResult = execute(logicalQuery, runtime)
-
-    runtimeResult should beColumns("a2").withRows(rowCount(10))
   }
 }

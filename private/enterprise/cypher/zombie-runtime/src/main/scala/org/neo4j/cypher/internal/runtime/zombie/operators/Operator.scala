@@ -45,6 +45,20 @@ trait OperatorCloser {
     * Close input accumulators.
     */
   def closeAccumulators[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Unit
+
+  /**
+    * Remove all rows related to cancelled argumentRowIds from `morsel`.
+    *
+    * @return `true` if the morsel is completely empty after cancellations
+    */
+  def filterCancelledArguments(morsel: MorselExecutionContext): Boolean
+
+  /**
+    * Remove all accumulators related to cancelled argumentRowIds from `accumulators`.
+    *
+    * @return `true` if accumultors is completely empty after cancellations
+    */
+  def filterCancelledArguments[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Boolean
 }
 
 /**
@@ -173,6 +187,7 @@ trait ContinuableOperatorTask extends OperatorTask {
   def canContinue: Boolean
   def close(operatorCloser: OperatorCloser): Unit
   def producingWorkUnitEvent: WorkUnitEvent
+  def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean
 }
 
 /**
@@ -183,6 +198,10 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
 
   override final def close(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeMorsel(inputMorsel)
+  }
+
+  override final def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
+    operatorCloser.filterCancelledArguments(inputMorsel)
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = inputMorsel.producingWorkUnitEvent
@@ -196,6 +215,10 @@ trait ContinuableOperatorTaskWithAccumulators[ACC <: MorselAccumulator] extends 
 
   override final def close(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeAccumulators(accumulators)
+  }
+
+  override final def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = {
+    operatorCloser.filterCancelledArguments(accumulators)
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = null

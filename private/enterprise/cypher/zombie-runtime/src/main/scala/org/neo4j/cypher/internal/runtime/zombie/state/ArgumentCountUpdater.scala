@@ -13,55 +13,53 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
   * Helper class for updating argument counts.
   *
   * @param tracker tracker of the progress for this query
-  * @param downstreamArgumentReducers Ids of downstream logical plans that reduce morsels in this buffer
   * @param argumentStateMaps the ArgumentStateMap attribute for all logical plans
   */
 abstract class ArgumentCountUpdater(tracker: QueryCompletionTracker,
-                                    downstreamArgumentReducers: Seq[Id],
                                     argumentStateMaps: ArgumentStateMaps) {
 
-  protected def initiateArgumentCounts(downstreamArgumentReducersToInitiate: Seq[Id],
+  protected def initiateArgumentStates(argumentStatePlans: Seq[Id],
                                        morsel: MorselExecutionContext): Unit = {
     for {
-      reducePlanId <- downstreamArgumentReducersToInitiate
-      asm = argumentStateMaps(reducePlanId)
+      planId <- argumentStatePlans
+      asm = argumentStateMaps(planId)
       argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
     } asm.initiate(argumentId)
   }
 
-  protected def incrementArgumentCounts(argumentRowIds: Iterable[Long]): Unit = {
+  protected def incrementArgumentCounts(argumentStatePlans: Seq[Id],
+                                        argumentRowIds: Iterable[Long]): Unit = {
     for {
-      reducePlanId <- downstreamArgumentReducers
+      reducePlanId <- argumentStatePlans
       asm = argumentStateMaps(reducePlanId)
       argumentId <- argumentRowIds
     } asm.increment(argumentId)
-    tracker.increment()
   }
 
-  protected def decrementArgumentCounts(argumentRowIds: Iterable[Long]): Unit = {
+  protected def decrementArgumentCounts(argumentStatePlans: Seq[Id],
+                                        argumentRowIds: Iterable[Long]): Unit = {
     for {
-      reducePlanId <- downstreamArgumentReducers
+      reducePlanId <- argumentStatePlans
       asm = argumentStateMaps(reducePlanId)
       argumentId <- argumentRowIds
     } asm.decrement(argumentId)
-    tracker.decrement()
   }
 
-  protected def incrementArgumentCounts(morsel: MorselExecutionContext): Unit = {
+  protected def incrementArgumentCounts(argumentStatePlans: Seq[Id],
+                                        morsel: MorselExecutionContext): Unit = {
     for {
-      reducePlanId <- downstreamArgumentReducers
+      reducePlanId <- argumentStatePlans
       asm = argumentStateMaps(reducePlanId)
       argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
     } asm.increment(argumentId)
-    tracker.increment()
   }
 
-  protected def decrementArgumentCounts(morsel: MorselExecutionContext): Unit = {
+  protected def decrementArgumentCounts(argumentStatePlans: Seq[Id],
+                                        morsel: MorselExecutionContext): Unit = {
     for {
-      reducePlanId <- downstreamArgumentReducers
+      reducePlanId <- argumentStatePlans
       asm = argumentStateMaps(reducePlanId)
       argumentId <- morsel.allArgumentRowIdsFor(asm.argumentSlotOffset)
     } asm.decrement(argumentId)
-    tracker.decrement()
   }
 }

@@ -59,7 +59,25 @@ class PipelineState(val pipeline: ExecutablePipeline,
   def nextTask(context: QueryContext,
                state: QueryState,
                resources: QueryResources): PipelineTask = {
-    val task = executionState.continue(pipeline)
+
+    if (pipeline.serial) {
+      if (executionState.canContinueOrTake(pipeline) && executionState.tryLock(pipeline)) {
+        val t = innerNextTask(context, state, resources)
+        if (t == null) // the data might have been taken while we took the lock
+          executionState.unlock(pipeline)
+        t
+      } else {
+        null
+      }
+    } else {
+      innerNextTask(context, state, resources)
+    }
+  }
+
+  private def innerNextTask(context: QueryContext,
+                            state: QueryState,
+                            resources: QueryResources): PipelineTask = {
+    val task = executionState.takeContinuation(pipeline)
     if (task != null) {
       return task
     }
@@ -68,7 +86,12 @@ class PipelineState(val pipeline: ExecutablePipeline,
     if (streamTasks != null) {
       Preconditions.checkArgument(streamTasks.nonEmpty, "If no tasks are available, `null` is expected rather than empty collections")
       val produceResultsTask = pipeline.produceResult.map(_.init(context, state, resources)).orNull
-      val tasks = streamTasks.map(startTask => PipelineTask(startTask, middleTasks, produceResultsTask, context, state, this))
+      val tasks = streamTasks.map(startTask => PipelineTask(startTask,
+                                                            middleTasks,
+                                                            produceResultsTask,
+                                                            context,
+                                                            state,
+                                                            this))
       for (task <- tasks.tail)
         putContinuation(task)
       tasks.head
@@ -105,5 +128,13 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
   override def closeAccumulators[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Unit = {
     executionState.closeAccumulatorsTask(pipeline, accumulators)
+  }
+
+  override def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
+    executionState.filterCancelledArguments(pipeline, morsel)
+  }
+
+  override def filterCancelledArguments[ACC <: MorselAccumulator](accumulators: Iterable[ACC]): Boolean = {
+    executionState.filterCancelledArguments(pipeline, accumulators)
   }
 }

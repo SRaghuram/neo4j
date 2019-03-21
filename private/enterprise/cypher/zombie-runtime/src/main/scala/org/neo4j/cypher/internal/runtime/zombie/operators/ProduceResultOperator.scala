@@ -55,6 +55,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean = false // will be true sometimes for reactive results
     override def close(operatorCloser: OperatorCloser): Unit = {}
+    override def filterCancelledArguments(operatorCloser: OperatorCloser): Boolean = false
     override def producingWorkUnitEvent: WorkUnitEvent = null
 
     override def operate(output: MorselExecutionContext,

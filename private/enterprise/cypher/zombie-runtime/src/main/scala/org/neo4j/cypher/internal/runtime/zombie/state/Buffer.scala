@@ -13,7 +13,7 @@ trait Buffer[T <: AnyRef] extends Sink[T] with Source[T]
 /**
   * Place where you put things of type `T`.
   */
-trait Sink[T <: AnyRef] {
+trait Sink[-T <: AnyRef] {
 
   /**
     * Put an element in this sink
@@ -24,7 +24,7 @@ trait Sink[T <: AnyRef] {
 /**
   * Place where you take things of type `T`.
   */
-trait Source[T <: AnyRef] {
+trait Source[+T <: AnyRef] {
 
   /**
     * True if this source has data

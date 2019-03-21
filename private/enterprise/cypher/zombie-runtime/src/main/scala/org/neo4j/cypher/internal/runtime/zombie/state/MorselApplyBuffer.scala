@@ -17,7 +17,8 @@ import org.neo4j.cypher.internal.v4_0.util.attribution.Id
   * @param argumentStatesForThisApply ids of downstream logical plans which keep argument state for this apply
   */
 class MorselApplyBuffer(tracker: QueryCompletionTracker,
-                        argumentStatesForThisApply: Seq[Id],
+                        argumentStatesToInitiate: Seq[Id],
+                        argumentReducersForThis: Seq[MorselArgumentStateBuffer[_]],
                         argumentReducersForOtherApplies: Seq[Id],
                         workCancellers: Seq[Id],
                         argumentStateMaps: ArgumentStateMaps,
@@ -41,9 +42,17 @@ class MorselApplyBuffer(tracker: QueryCompletionTracker,
         morsel.moveToNextRow()
       }
 
-      initiateArgumentCounts(argumentStatesForThisApply, morsel)
+      initiateArgumentStates(argumentStatesToInitiate, morsel)
+      for (buffer <- argumentReducersForThis)
+        buffer.initiate(morsel)
 
       super.put(morsel)
     }
+  }
+
+  override def close(morsel: MorselExecutionContext): Unit = {
+    for (buffer <- argumentReducersForThis)
+      buffer.decrement(morsel)
+    super.close(morsel)
   }
 }

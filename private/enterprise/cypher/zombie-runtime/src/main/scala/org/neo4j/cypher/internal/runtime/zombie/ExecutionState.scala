@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie
 
-import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.runtime.morsel.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -63,16 +63,54 @@ trait ExecutionState extends ArgumentStateCreator {
   def closeAccumulatorsTask[ACC <: MorselAccumulator](pipeline: ExecutablePipeline, accumulators: Iterable[ACC]): Unit
 
   /**
+    * Remove all rows related to cancelled argumentRowIds from `morsel`.
+    *
+    * @param pipeline    the executing pipeline
+    * @param inputMorsel the input morsel
+    * @return `true` iff the morsel is cancelled
+    */
+  def filterCancelledArguments(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Boolean
+
+  /**
+    * Remove all accumulators related to cancelled argumentRowIds from `accumulators`.
+    *
+    * @param pipeline     the executing pipeline
+    * @param accumulators the input morsel accumulators
+    * @return `true` iff the morsel is cancelled
+    */
+  def filterCancelledArguments[ACC <: MorselAccumulator](pipeline: ExecutablePipeline,
+                                                         accumulators: Iterable[ACC]): Boolean
+
+  /**
     * Continue executing pipeline `p`.
     *
     * @return the task to continue executing, or `null` if no task was available
     */
-  def continue(p: ExecutablePipeline): PipelineTask
+  def takeContinuation(p: ExecutablePipeline): PipelineTask
 
   /**
     * Put `task` to the continuation queue for its pipeline, so we can continue executing it later.
     */
   def putContinuation(task: PipelineTask): Unit
+
+  /**
+    * Try to lock execution of the given pipeline.
+    *
+    * @return `true` iff the pipeline was locked
+    */
+  def tryLock(pipeline: ExecutablePipeline): Boolean
+
+  /**
+    * Unlock execution of the given pipeline.
+    */
+  def unlock(pipeline: ExecutablePipeline): Unit
+
+  /**
+    * Check if the pipeline can execution either a continuation or a new task.
+    *
+    * @return `true` if the pipeline can be executed
+    */
+  def canContinueOrTake(pipeline: ExecutablePipeline): Boolean
 
   /**
     * Adds an empty row to the initBuffer.
