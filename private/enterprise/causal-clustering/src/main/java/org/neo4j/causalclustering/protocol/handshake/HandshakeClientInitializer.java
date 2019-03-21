@@ -115,7 +115,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
 
     private void initiateHandshake( Channel channel, HandshakeClient handshakeClient )
     {
-        debugLog.info( "Initiating handshake local %s remote %s", channel.localAddress(), channel.remoteAddress() );
+        debugLog.info( "Initiating handshake on channel %s", channel );
 
         SimpleNettyChannel channelWrapper = new SimpleNettyChannel( channel, debugLog );
         handshakeClient.initiate( channelWrapper, applicationProtocolRepository, modifierProtocolRepository );
@@ -126,7 +126,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
     {
         if ( failure != null )
         {
-            debugLog.error( "Error when negotiating protocol stack", failure );
+            debugLog.error( String.format( "Error when negotiating protocol stack on channel %s", channel ), failure );
             channel.pipeline().fireUserEventTriggered( GateEvent.getFailure() );
             channel.close();
         }
@@ -134,9 +134,8 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
         {
             try
             {
-                userLog( protocolStack, channel );
+                debugLog.info( "Handshake completed on channel %s. Installing: %s", channel, protocolStack );
 
-                debugLog.info( "Installing " + protocolStack );
                 protocolInstaller.installerFor( protocolStack ).install( channel );
 
                 channel.pipeline().fireUserEventTriggered( GateEvent.getSuccess() );
@@ -144,7 +143,7 @@ public class HandshakeClientInitializer extends ChannelInitializer<SocketChannel
             }
             catch ( Exception e )
             {
-                debugLog.error( "Error installing pipeline", e );
+                debugLog.error( String.format( "Error installing protocol stack on channel %s", channel ), e );
                 channel.close();
             }
         }
