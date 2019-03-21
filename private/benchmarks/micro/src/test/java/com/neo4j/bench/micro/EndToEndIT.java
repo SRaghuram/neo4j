@@ -102,7 +102,6 @@ public class EndToEndIT
 
     @Test
     @Tag( "endtoend" )
-    @Disabled( "fails with weird bash/space in dir name comination" )
     public void runReportBenchmarks() throws Exception
     {
 
@@ -137,7 +136,7 @@ public class EndToEndIT
         Files.copy( microJar, workPath.resolve( "micro/target/micro-benchmarks.jar" ) );
 
         // assert if environment is setup
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+        List<ProfilerType> profilers = asList( ProfilerType.ASYNC );
         for ( ProfilerType profiler : profilers )
         {
             profiler.assertEnvironmentVariablesPresent( true );
