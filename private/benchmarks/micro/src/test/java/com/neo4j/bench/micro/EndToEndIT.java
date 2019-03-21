@@ -106,7 +106,7 @@ public class EndToEndIT
         Files.copy( microJar, workPath.resolve( "micro/target/micro-benchmarks.jar" ) );
 
         // assert if environment is setup
-        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC, ProfilerType.GC );
+        List<ProfilerType> profilers = asList( ProfilerType.JFR, ProfilerType.ASYNC );
         for ( ProfilerType profiler : profilers )
         {
             profiler.assertEnvironmentVariablesPresent( true );
