@@ -9,6 +9,8 @@ import com.neo4j.bench.client.model.Benchmark;
 import com.neo4j.bench.client.model.BenchmarkGroup;
 import com.neo4j.bench.client.model.Neo4jConfig;
 import com.neo4j.bench.micro.data.Stores;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -33,10 +35,19 @@ public class PathModelTest
     @Inject
     private TestDirectory testDirectory;
 
-    @Test
-    public void ensureDiffIsWithinExpectedBounds() throws Throwable
+    private GraphDatabaseService db;
+    private EditionModuleBackedAbstractBenchmark editionModuleBackedAbstractBenchmark;
+
+    @AfterEach
+    void cleanupDB()
     {
-        EditionModuleBackedAbstractBenchmark editionModuleBackedAbstractBenchmark = new EditionModuleBackedAbstractBenchmark()
+        db.shutdown();
+    }
+
+    @BeforeEach
+    void setupDB() throws Throwable
+    {
+        editionModuleBackedAbstractBenchmark = new EditionModuleBackedAbstractBenchmark()
         {
 
             @Override
@@ -76,11 +87,14 @@ public class PathModelTest
 
         editionModuleBackedAbstractBenchmark.benchmarkSetup( benchmarkGroup, benchmark, stores, Neo4jConfig.empty() );
 
-        GraphDatabaseService db = editionModuleBackedAbstractBenchmark.db();
+        db = editionModuleBackedAbstractBenchmark.db();
+    }
 
+    @Test
+    void ensureDiffIsWithinExpectedBounds()
+    {
         // model could be improved for small tx size currently they can't keep up with th within 5% diff
-        List<Long> larger = Arrays.asList( ByteUnit.kibiBytes( 100 ), ByteUnit.mebiBytes( 1 ), ByteUnit.mebiBytes( 10 ), ByteUnit.mebiBytes( 100 ),
-                                           ByteUnit.gibiBytes( 1 ) );
+        List<Long> larger = Arrays.asList( ByteUnit.kibiBytes( 100 ), ByteUnit.mebiBytes( 1 ), ByteUnit.mebiBytes( 10 ), ByteUnit.mebiBytes( 100 ) );
         // on the other and a diff of 50% is not really a problem in this size interval.
         List<Long> smaller = Arrays.asList( ByteUnit.kibiBytes( 1 ), ByteUnit.kibiBytes( 10 ) );
 
@@ -92,7 +106,6 @@ public class PathModelTest
         {
             verifyDiff( editionModuleBackedAbstractBenchmark, db, size, 0.6f );
         }
-        db.shutdown();
     }
 
     private void verifyDiff( EditionModuleBackedAbstractBenchmark editionModuleBackedAbstractBenchmark, GraphDatabaseService db, Long size, float maxDiff )
