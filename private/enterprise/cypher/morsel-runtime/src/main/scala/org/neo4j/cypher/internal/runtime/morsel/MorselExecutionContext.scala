@@ -86,12 +86,17 @@ class MorselExecutionContext(private val morsel: Morsel,
   def isValidRow: Boolean = currentRow < validRows && currentRow >= firstRow
   def hasNextRow: Boolean = currentRow + 1 < validRows
 
-  def numberOfRows: Int = validRows
+  def numberOfRows: Int = validRows - firstRow
 
   /**
-    * Check so that there is at least one valid row of data
+    * Check if there is at least one valid row of data
     */
   def hasData: Boolean = validRows > firstRow
+
+  /**
+    * Check if the morsel is empty
+    */
+  def isEmpty: Boolean = !hasData
 
   /**
     * Set the valid rows of the morsel to the current position, which usually
@@ -173,6 +178,10 @@ class MorselExecutionContext(private val morsel: Morsel,
   override def toString(): String = {
     s"MorselExecutionContext[0x${System.identityHashCode(this).toHexString}]($morsel, longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, validRows=$validRows, currentRow=$currentRow)"
   }
+
+  def prettyCurrentRow(): String =
+    s"longs: ${morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
+     s"refs: ${morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")}"
 
   /**
     * Copies the whole row from input to this.
