@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.config.Setting;
 
 import static java.util.Collections.emptyMap;
@@ -30,9 +29,7 @@ public class Neo4jConfig
 
     public static Neo4jConfig withDefaults()
     {
-        return empty()
-                .withSetting( UdcSettings.udc_enabled, "false" )
-                .withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
+        return empty().withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
     }
 
     public static Neo4jConfig empty()

@@ -147,7 +147,6 @@ function Get-Java
       $ShellArgs = @("-cp `"$($ClassPath)`"" `
           ,'-server' `
           ,'-Dlog4j.configuration=file:conf/log4j.properties' `
-          ,'-Dneo4j.ext.udc.source=zip-powershell' `
           ,'-Dorg.neo4j.cluster.logdirectory=data/log' `
         )
 

@@ -45,7 +45,6 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.UserManagerSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.internal.NullLogService;
-import org.neo4j.udc.UsageData;
 import org.neo4j.values.AnyValue;
 
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
@@ -63,7 +62,6 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 
         return new BoltStateMachineFactoryImpl(
                 databaseManager,
-                new UsageData( null ),
                 authentication,
                 Clock.systemUTC(),
                 config,

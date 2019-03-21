@@ -7,7 +7,6 @@ package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import com.neo4j.bench.client.model.BenchmarkTool;
 import com.neo4j.bench.client.model.Project;
 import com.neo4j.bench.client.model.Repository;
@@ -17,6 +16,7 @@ import com.neo4j.bench.client.profiling.RecordingType;
 import com.neo4j.bench.client.util.ErrorReporter;
 import com.neo4j.bench.client.util.JsonUtil;
 import com.neo4j.bench.client.util.Jvm;
+import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -166,8 +166,7 @@ public class RunExportCommandIT
         assertThat( report.java().jvmArgs(), equalTo(
                 "-Xms2g -Xmx2g -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+AlwaysPreTouch " +
                 "-XX:+UnlockExperimentalVMOptions " +
-                "-XX:+TrustFinalNonStaticFields -XX:+DisableExplicitGC -Djdk.tls.ephemeralDHKeySize=2048 " +
-                "-Dunsupported.dbms.udc.source=tarball" ) );
+                "-XX:+TrustFinalNonStaticFields -XX:+DisableExplicitGC -Djdk.tls.ephemeralDHKeySize=2048 ") );
         assertThat( report.testRun().build(), equalTo( 1L ) );
         HashMap<String,String> expectedBenchmarkConfig = new HashMap<>();
         expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById.format", "standard" );

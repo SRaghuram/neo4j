@@ -21,7 +21,6 @@ import org.neo4j.commandline.admin.RealOutsideWorld;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.ext.udc.UdcSettings;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
@@ -97,7 +96,6 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     public void cacheProfilesMustBeIncludedInOnlineBackups() throws Exception
     {
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
-          .withSetting( UdcSettings.udc_enabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.TRUE )
           .withSetting( OnlineBackupSettings.online_backup_listen_address, "localhost:0" )
           .withSetting( GraphDatabaseSettings.pagecache_warmup_profiling_interval, "100ms" );
