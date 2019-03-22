@@ -6,6 +6,11 @@
 package com.neo4j.bench.micro;
 
 import com.google.common.collect.Lists;
+import com.neo4j.bench.client.profiling.ProfilerType;
+import com.neo4j.bench.client.profiling.RecordingType;
+import com.neo4j.bench.client.util.BenchmarkUtil;
+import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
+import com.neo4j.bench.client.util.Jvm;
 import com.neo4j.bench.micro.benchmarks.core.ConcurrentReadWriteLabelsV2;
 import com.neo4j.bench.micro.benchmarks.core.ReadById;
 import com.neo4j.bench.micro.benchmarks.cypher.AllNodesScan;
@@ -13,18 +18,11 @@ import com.neo4j.bench.micro.benchmarks.test.AlwaysCrashes;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataConstantAugment;
 import com.neo4j.bench.micro.benchmarks.test.ConstantDataVariableAugment;
 import com.neo4j.bench.micro.benchmarks.test.DefaultDisabled;
-import com.neo4j.bench.client.profiling.ProfilerType;
-import com.neo4j.bench.client.profiling.RecordingType;
-import com.neo4j.bench.client.util.BenchmarkUtil;
-import com.neo4j.bench.client.util.Jvm;
-import com.neo4j.bench.client.util.TestDirectorySupport;
-import com.neo4j.bench.client.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.micro.config.BenchmarkDescription;
 import com.neo4j.bench.micro.config.Validation;
 import com.neo4j.bench.micro.data.Stores;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -42,7 +40,6 @@ import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirecto
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectoryPath;
 import static com.neo4j.bench.micro.config.BenchmarkDescription.of;
 import static com.neo4j.bench.micro.profile.ProfileDescriptor.profileTo;
-
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -173,9 +170,9 @@ public class InteractiveRunIT
         // (3) for each JFR recording file a FlameGraph should be created
         int jfrCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR );
         assertThat( jfrCount, equalTo( expectedBenchmarkCount ) );
-        //IN 4.0 we do NOT generate Flamegraphs
-        //int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
-        //assertThat( jfrFlameGraphCount, equalTo( expectedBenchmarkCount ) );
+//        IN 4.0 we do NOT generate Flamegraphs
+        int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
+        assertThat( jfrFlameGraphCount, equalTo( 0 ) );
 
         // expected number of stores are present
         try ( Stream<Path> paths = Files.list( storesDir.toPath() ) )
