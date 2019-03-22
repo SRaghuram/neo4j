@@ -81,7 +81,7 @@ public class RaftMachineBuilder
                 leaderAvailabilityTimers = new LeaderAvailabilityTimers( Duration.ofMillis( electionTimeout ), Duration.ofMillis( heartbeatInterval ), clock,
                 timerService, logProvider );
         SendToMyself leaderOnlyReplicator = new SendToMyself( member, outbound );
-        RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator,
+        RaftMembershipManager membershipManager = new RaftMembershipManager( leaderOnlyReplicator, member,
                 memberSetBuilder, raftLog, logProvider, expectedClusterSize, leaderAvailabilityTimers.getElectionTimeout(), clock, catchupTimeout,
                 raftMembership );
         membershipManager.setRecoverFromIndexSupplier( () -> 0 );

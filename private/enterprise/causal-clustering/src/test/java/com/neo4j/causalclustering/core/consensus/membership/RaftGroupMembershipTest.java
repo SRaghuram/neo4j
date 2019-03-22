@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -227,6 +228,7 @@ public class RaftGroupMembershipTest
     }
 
     @Test
+    @Ignore // rethink when we implement "safe shutdown"
     public void shouldRemoveLeaderFromExistingRaftGroupAndActivelyTransferLeadership() throws Exception
     {
         DirectNetworking net = new DirectNetworking();
