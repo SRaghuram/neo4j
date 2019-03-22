@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.List;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -61,9 +62,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         AdvertisedSocketAddress advertisedBoltAddress = new AdvertisedSocketAddress( "neo4j.com", 7687 );
         db = startDb( advertisedBoltAddress );
 
-        List<AdvertisedSocketAddress> addresses = singletonList( advertisedBoltAddress );
-        Duration ttl = Config.defaults().get( routing_ttl );
-        RoutingResult expectedResult = new RoutingResult( addresses, addresses, addresses, ttl.getSeconds() );
+        RoutingResult expectedResult = newRoutingResult( advertisedBoltAddress );
 
         assertRoutingProceduresAvailable( db, expectedResult );
     }
@@ -74,6 +73,27 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         db = startDb();
 
         assertPossibleToReadAndWriteUsingRoutingDriver( boltAddress() );
+    }
+
+    @Test
+    void shouldCallRoutingProcedureWithValidDatabaseName()
+    {
+        String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+        AdvertisedSocketAddress advertisedBoltAddress = new AdvertisedSocketAddress( "database.neo4j.com", 12345 );
+        db = startDb( advertisedBoltAddress );
+
+        RoutingResult expectedResult = newRoutingResult( advertisedBoltAddress );
+
+        assertRoutingProceduresAvailable( databaseName, db, expectedResult );
+    }
+
+    @Test
+    void shouldCallRoutingProcedureWithInvalidDatabaseName()
+    {
+        String unknownDatabaseName = "non_existing_database";
+        db = startDb();
+
+        assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, db );
     }
 
     protected GraphDatabaseFactory newGraphDatabaseFactory()
@@ -98,7 +118,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     {
         BoltConnector connector = new BoltConnector( CONNECTOR_NAME );
 
-        GraphDatabaseBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        GraphDatabaseBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.databaseDir() );
         builder.setConfig( auth_enabled, FALSE );
         builder.setConfig( connector.enabled, TRUE );
         builder.setConfig( connector.type, BOLT.toString() );
@@ -109,5 +129,12 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
             builder.setConfig( connector.advertised_address, advertisedBoltAddress.toString() );
         }
         return (GraphDatabaseAPI) builder.newGraphDatabase();
+    }
+
+    private static RoutingResult newRoutingResult( AdvertisedSocketAddress advertisedBoltAddress )
+    {
+        List<AdvertisedSocketAddress> addresses = singletonList( advertisedBoltAddress );
+        Duration ttl = Config.defaults().get( routing_ttl );
+        return new RoutingResult( addresses, addresses, addresses, ttl.getSeconds() );
     }
 }

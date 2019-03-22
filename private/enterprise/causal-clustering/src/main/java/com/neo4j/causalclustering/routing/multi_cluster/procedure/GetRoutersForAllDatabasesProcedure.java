@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.multi_cluster.procedure;
 
+import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -24,12 +25,11 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.procedure.Mode;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.procedure.Mode;
 import org.neo4j.values.AnyValue;
 
-import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.ROUTERS;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames.GET_ROUTERS_FOR_ALL_DATABASES;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
@@ -81,7 +81,7 @@ public class GetRoutersForAllDatabasesProcedure implements CallableProcedure
         Function<Map.Entry<String,List<CoreServerInfo>>,List<AdvertisedSocketAddress>> extractQualifiedBoltAddresses = entry ->
         {
             List<CoreServerInfo> cores = entry.getValue();
-            return cores.stream().map( extractBoltAddress() ).collect( Collectors.toList() );
+            return cores.stream().map( ClientConnector::boltAddress ).collect( Collectors.toList() );
         };
 
         return coresByDb.entrySet().stream().collect( Collectors.toMap( Map.Entry::getKey, extractQualifiedBoltAddresses ) );

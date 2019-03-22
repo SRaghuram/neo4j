@@ -15,8 +15,9 @@ public interface LoadBalancingProcessor
      * Runs the procedure using the supplied client context
      * and returns the result.
      *
-     * @param context The client supplied context.
-     * @return The result of invoking the procedure.
+     * @param databaseName the name of the database.
+     * @param context the client supplied context.
+     * @return the result of invoking the procedure.
      */
-    RoutingResult run( MapValue context ) throws ProcedureException;
+    RoutingResult run( String databaseName, MapValue context ) throws ProcedureException;
 }

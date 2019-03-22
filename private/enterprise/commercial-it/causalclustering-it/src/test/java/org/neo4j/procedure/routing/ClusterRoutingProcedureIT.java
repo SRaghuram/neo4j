@@ -13,6 +13,7 @@ import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.test.extension.Inject;
@@ -61,6 +63,41 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     }
 
     @Test
+    void shouldCallRoutingProcedureWithValidDatabaseNameOnCores()
+    {
+        String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
+        assertAll( cluster.coreMembers().stream().map( core -> assertRoutingProceduresAvailable( core, databaseName ) ) );
+    }
+
+    @Test
+    void shouldCallRoutingProcedureWithValidDatabaseNameOnReadReplicas()
+    {
+        String databaseName = GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+
+        assertAll( cluster.readReplicas().stream().map( readReplica -> assertRoutingProceduresAvailable( readReplica, databaseName ) ) );
+    }
+
+    @Test
+    @Disabled( "For now, cores do not filter the addresses received from discovery service by database name" )
+    void shouldCallRoutingProcedureWithInvalidDatabaseNameOnCores()
+    {
+        String unknownDatabaseName = "non_existing_core_database";
+
+        assertAll( cluster.coreMembers().stream().map( core ->
+                () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, core.database() ) ) );
+    }
+
+    @Test
+    void shouldCallRoutingProcedureWithInvalidDatabaseNameOnReadReplicas()
+    {
+        String unknownDatabaseName = "non_existing_replica_database";
+
+        assertAll( cluster.readReplicas().stream().map( readReplica ->
+                () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, readReplica.database() ) ) );
+    }
+
+    @Test
     void shouldAllowRoutingDriverToReadAndWriteWhenCreatedWithCoreAddress()
     {
         assertAll( cluster.coreMembers()
@@ -86,6 +123,11 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
 
     private Executable assertRoutingProceduresAvailable( CoreClusterMember coreMember )
     {
+        return assertRoutingProceduresAvailable( coreMember, null );
+    }
+
+    private Executable assertRoutingProceduresAvailable( CoreClusterMember coreMember, String databaseName )
+    {
         return () ->
         {
             CoreClusterMember leader = cluster.awaitLeader();
@@ -105,11 +147,23 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
             Duration ttl = Config.defaults().get( routing_ttl );
             RoutingResult expectedResult = new RoutingResult( routers, writers, readers, ttl.getSeconds() );
 
-            assertRoutingProceduresAvailable( coreMember.database(), expectedResult );
+            if ( databaseName != null )
+            {
+                assertRoutingProceduresAvailable( databaseName, coreMember.database(), expectedResult );
+            }
+            else
+            {
+                assertRoutingProceduresAvailable( coreMember.database(), expectedResult );
+            }
         };
     }
 
     private Executable assertRoutingProceduresAvailable( ReadReplica readReplica )
+    {
+        return assertRoutingProceduresAvailable( readReplica, null );
+    }
+
+    private Executable assertRoutingProceduresAvailable( ReadReplica readReplica, String databaseName )
     {
         return () ->
         {
@@ -118,7 +172,14 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
             Duration ttl = Config.defaults().get( routing_ttl );
             RoutingResult expectedResult = new RoutingResult( singletonList( address ), emptyList(), singletonList( address ), ttl.getSeconds() );
 
-            assertRoutingProceduresAvailable( readReplica.database(), expectedResult );
+            if ( databaseName != null )
+            {
+                assertRoutingProceduresAvailable( databaseName, readReplica.database(), expectedResult );
+            }
+            else
+            {
+                assertRoutingProceduresAvailable( readReplica.database(), expectedResult );
+            }
         };
     }
 

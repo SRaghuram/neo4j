@@ -65,6 +65,8 @@ import com.neo4j.causalclustering.protocol.handshake.HandshakeClientInitializer;
 import com.neo4j.causalclustering.protocol.handshake.ModifierProtocolRepository;
 import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.handshake.ProtocolStack;
+import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
+import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.GetRoutersForAllDatabasesProcedure;
 import com.neo4j.causalclustering.routing.multi_cluster.procedure.GetRoutersForDatabaseProcedure;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
@@ -111,6 +113,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
+import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.ssl.config.SslPolicyLoader;
@@ -225,6 +228,8 @@ public class CoreEditionModule extends AbstractCoreEditionModule
         serverInstalledProtocolHandler = new InstalledProtocolHandler();
         serverInstalledProtocols = serverInstalledProtocolHandler::installedProtocols;
 
+        routingProcedureInstaller = createRoutingProcedureInstaller( globalModule, consensusModule, topologyService );
+
         editionInvariants( globalModule, globalDependencies, globalConfig, globalLife );
     }
 
@@ -245,16 +250,10 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     {
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
-
-        RaftMachine raftMachine = consensusModule.raftMachine();
-
-        CoreRoutingProcedureInstaller routingProcedureInstaller = new CoreRoutingProcedureInstaller( topologyService, raftMachine, globalConfig, logProvider );
-        routingProcedureInstaller.install( globalProcedures );
-
         globalProcedures.register( new GetRoutersForAllDatabasesProcedure( topologyService, globalConfig ) );
         globalProcedures.register( new GetRoutersForDatabaseProcedure( topologyService, globalConfig ) );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, logProvider ) );
-        globalProcedures.register( new CoreRoleProcedure( raftMachine ) );
+        globalProcedures.register( new CoreRoleProcedure( consensusModule.raftMachine() ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );
         globalProcedures.registerComponent( Replicator.class, x -> replicationModule.getReplicator(), false );
         globalProcedures.registerProcedure( ReplicationBenchmarkProcedure.class );
@@ -503,5 +502,15 @@ public class CoreEditionModule extends AbstractCoreEditionModule
             securityProvider = CommercialNoAuthSecurityProvider.INSTANCE;
         }
         setSecurityProvider( securityProvider );
+    }
+
+    private static BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule, ConsensusModule consensusModule,
+            TopologyService topologyService )
+    {
+        RaftMachine raftMachine = consensusModule.raftMachine();
+        LeaderService leaderService = new DefaultLeaderService( raftMachine, topologyService );
+        Config config = globalModule.getGlobalConfig();
+        LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
+        return new CoreRoutingProcedureInstaller( topologyService, leaderService, config, logProvider );
     }
 }

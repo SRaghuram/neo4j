@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.routing.load_balancing;
 
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 
 import org.neo4j.annotations.service.Service;
@@ -23,7 +22,7 @@ public interface LoadBalancingPlugin extends LoadBalancingProcessor
 {
     void validate( Config config, Log log ) throws InvalidSettingException;
 
-    void init( TopologyService topologyService, LeaderLocator leaderLocator,
+    void init( TopologyService topologyService, LeaderService leaderService,
             LogProvider logProvider, Config config ) throws Throwable;
 
     String pluginName();

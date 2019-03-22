@@ -17,6 +17,7 @@ import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.exceptions.SessionExpiredException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -25,8 +26,6 @@ import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
 import static org.eclipse.collections.impl.bag.immutable.ImmutableHashBag.newBag;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -34,11 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.helpers.SocketAddressParser.socketAddress;
+import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 
 class BaseRoutingProcedureIT
 {
-    private static final String OLD_ROUTING_PROCEDURE = "dbms.cluster.routing.getRoutingTable";
-    private static final String NEW_ROUTING_PROCEDURE = "dbms.routing.getRoutingTable";
+    private static final String CALL_NEW_PROCEDURE_WITH_CONTEXT = "CALL dbms.routing.getRoutingTable($context)";
+    private static final String CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE = "CALL dbms.routing.getRoutingTable($context, $database)";
+
+    private static final String CALL_OLD_PROCEDURE_WITH_CONTEXT = "CALL dbms.cluster.routing.getRoutingTable($context)";
+    private static final String CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE = "CALL dbms.cluster.routing.getRoutingTable($context, $database)";
 
     static void assertPossibleToReadUsingRoutingDriver( String boltHostnamePort )
     {
@@ -70,9 +73,31 @@ class BaseRoutingProcedureIT
 
     static void assertRoutingProceduresAvailable( GraphDatabaseService db, RoutingResult expectedResult )
     {
+        Map<String,Object> params = paramsWithContext( Map.of() );
+
         assertAll(
-                () -> assertRoutingProcedureAvailable( OLD_ROUTING_PROCEDURE, db, expectedResult ),
-                () -> assertRoutingProcedureAvailable( NEW_ROUTING_PROCEDURE, db, expectedResult )
+                () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT, params, db, expectedResult ),
+                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT, params, db, expectedResult )
+        );
+    }
+
+    static void assertRoutingProceduresAvailable( String databaseName, GraphDatabaseService db, RoutingResult expectedResult )
+    {
+        Map<String,Object> params = paramsWithContextAndDatabase( Map.of(), databaseName );
+
+        assertAll(
+                () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult ),
+                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult )
+        );
+    }
+
+    static void assertRoutingProceduresFailForUnknownDatabase( String databaseName, GraphDatabaseService db )
+    {
+        Map<String,Object> params = paramsWithContextAndDatabase( Map.of(), databaseName );
+
+        assertAll(
+                () -> assertRoutingProcedureFailsForUnknownDatabase( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db ),
+                () -> assertRoutingProcedureFailsForUnknownDatabase( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db )
         );
     }
 
@@ -94,10 +119,10 @@ class BaseRoutingProcedureIT
         }
     }
 
-    private static void assertRoutingProcedureAvailable( String fullProcedureName, GraphDatabaseService db, RoutingResult expectedResult )
+    private static void assertRoutingProcedureAvailable( String query, Map<String,Object> params, GraphDatabaseService db, RoutingResult expectedResult )
     {
         try ( Transaction tx = db.beginTx();
-              Result result = db.execute( "CALL " + fullProcedureName + "($context)", singletonMap( "context", emptyMap() ) ) )
+              Result result = db.execute( query, params ) )
         {
             Map<String,Object> record = Iterators.single( result );
             RoutingResult actualResult = asRoutingResult( record );
@@ -107,6 +132,15 @@ class BaseRoutingProcedureIT
             assertEquals( newBag( expectedResult.routeEndpoints() ), newBag( actualResult.routeEndpoints() ), "Routers are different" );
             assertEquals( expectedResult.ttlMillis(), actualResult.ttlMillis() );
             tx.success();
+        }
+    }
+
+    private static void assertRoutingProcedureFailsForUnknownDatabase( String query, Map<String,Object> params, GraphDatabaseService db )
+    {
+        try ( Transaction ignore = db.beginTx() )
+        {
+            QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> db.execute( query, params ) );
+            assertEquals( DatabaseNotFound.code().serialize(), error.getStatusCode() );
         }
     }
 
@@ -151,5 +185,15 @@ class BaseRoutingProcedureIT
                 .build();
 
         return GraphDatabase.driver( "bolt+routing://" + boltHostnamePort, config );
+    }
+
+    private static Map<String,Object> paramsWithContext( Map<String,Object> context )
+    {
+        return Map.of( "context", context );
+    }
+
+    private static Map<String,Object> paramsWithContextAndDatabase( Map<String,Object> context, String database )
+    {
+        return Map.of( "context", context, "database", database );
     }
 }

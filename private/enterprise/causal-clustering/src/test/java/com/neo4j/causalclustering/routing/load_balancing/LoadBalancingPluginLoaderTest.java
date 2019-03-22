@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.routing.load_balancing;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.ServerPoliciesPlugin;
@@ -44,7 +43,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderLocator.class ),
+                mock( LeaderService.class ),
                 NullLogProvider.getInstance(),
                 config );
 
@@ -65,7 +64,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderLocator.class ),
+                mock( LeaderService.class ),
                 NullLogProvider.getInstance(),
                 config );
 
@@ -85,7 +84,7 @@ public class LoadBalancingPluginLoaderTest
         // when
         LoadBalancingProcessor plugin = LoadBalancingPluginLoader.load(
                 mock( TopologyService.class ),
-                mock( LeaderLocator.class ),
+                mock( LeaderService.class ),
                 NullLogProvider.getInstance(),
                 config );
 
@@ -158,8 +157,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public void init( TopologyService topologyService, LeaderLocator leaderLocator, LogProvider logProvider,
-                Config config )
+        public void init( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
         {
             wasInitialized = true;
         }
@@ -171,7 +169,7 @@ public class LoadBalancingPluginLoaderTest
         }
 
         @Override
-        public RoutingResult run( MapValue context )
+        public RoutingResult run( String databaseName, MapValue context )
         {
             return null;
         }

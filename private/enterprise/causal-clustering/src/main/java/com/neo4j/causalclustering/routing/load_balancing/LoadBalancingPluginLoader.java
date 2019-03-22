@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.routing.load_balancing;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.plugins.ServerShufflingProcessor;
 
@@ -35,11 +34,11 @@ public class LoadBalancingPluginLoader
         plugin.validate( config, log );
     }
 
-    public static LoadBalancingProcessor load( TopologyService topologyService, LeaderLocator leaderLocator,
+    public static LoadBalancingProcessor load( TopologyService topologyService, LeaderService leaderService,
             LogProvider logProvider, Config config ) throws Throwable
     {
         LoadBalancingPlugin plugin = findPlugin( config );
-        plugin.init( topologyService, leaderLocator, logProvider, config );
+        plugin.init( topologyService, leaderService, logProvider, config );
 
         if ( config.get( CausalClusteringSettings.load_balancing_shuffle ) )
         {

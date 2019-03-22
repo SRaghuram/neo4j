@@ -42,6 +42,7 @@ import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -68,6 +69,7 @@ import org.neo4j.logging.Logger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Health;
+import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInDbmsProcedures;
 import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.scheduler.Group;
@@ -138,16 +140,14 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
         pipelineBuilders = new PipelineBuilders( this::pipelineWrapperFactory, globaConfig, sslPolicyLoader );
         catchupComponentsProvider = new CatchupComponentsProvider( globalModule, pipelineBuilders );
 
+        routingProcedureInstaller = createRoutingProcedureInstaller( globalModule );
+
         editionInvariants( globalModule, globalDependencies, globaConfig, globalLife );
     }
 
     @Override
     public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
     {
-        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
-        ReadReplicaRoutingProcedureInstaller routingProcedureInstaller = new ReadReplicaRoutingProcedureInstaller( portRegister, globaConfig );
-        routingProcedureInstaller.install( globalProcedures );
-
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ReadReplicaRoleProcedure() );
@@ -327,5 +327,13 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     public boolean handlesDatabaseManagerLifecycle()
     {
         return true;
+    }
+
+    private static BaseRoutingProcedureInstaller createRoutingProcedureInstaller( GlobalModule globalModule )
+    {
+        Supplier<DatabaseManager> databaseManagerSupplier = globalModule.getGlobalDependencies().provideDependency( DatabaseManager.class );
+        ConnectorPortRegister portRegister = globalModule.getConnectorPortRegister();
+        Config config = globalModule.getGlobalConfig();
+        return new ReadReplicaRoutingProcedureInstaller( databaseManagerSupplier, portRegister, config );
     }
 }

@@ -6,13 +6,13 @@
 package com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
+import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPlugin;
 
 import java.util.List;
@@ -31,9 +31,6 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
-import static com.neo4j.causalclustering.routing.Util.asList;
-import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
-import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -48,7 +45,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     public static final String PLUGIN_NAME = "server_policies";
 
     private TopologyService topologyService;
-    private LeaderLocator leaderLocator;
+    private LeaderService leaderService;
     private Long timeToLive;
     private boolean allowReadsOnFollowers;
     private Policies policies;
@@ -67,11 +64,11 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public void init( TopologyService topologyService, LeaderLocator leaderLocator,
+    public void init( TopologyService topologyService, LeaderService leaderService,
             LogProvider logProvider, Config config ) throws InvalidFilterSpecification
     {
         this.topologyService = topologyService;
-        this.leaderLocator = leaderLocator;
+        this.leaderService = leaderService;
         this.timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
         this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
         this.policies = FilteringPolicyLoader.load( config, PLUGIN_NAME, logProvider.getLog( getClass() ) );
@@ -84,43 +81,32 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     }
 
     @Override
-    public RoutingResult run( MapValue context ) throws ProcedureException
+    public RoutingResult run( String databaseName, MapValue context ) throws ProcedureException
     {
         Policy policy = policies.selectFor( context );
 
-        CoreTopology coreTopology = topologyService.localCoreServers();
-        ReadReplicaTopology rrTopology = topologyService.localReadReplicas();
+        CoreTopology coreTopology = coreTopologyFor( databaseName );
+        ReadReplicaTopology rrTopology = readReplicaTopology( databaseName );
 
-        return new RoutingResult( routeEndpoints( coreTopology, rrTopology ), writeEndpoints( coreTopology ),
-                readEndpoints( coreTopology, rrTopology, policy ), timeToLive );
+        return new RoutingResult( routeEndpoints( coreTopology ), writeEndpoints( databaseName ),
+                readEndpoints( coreTopology, rrTopology, policy, databaseName ), timeToLive );
     }
 
-    private List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology, ReadReplicaTopology readReplicaTopology )
+    private static List<AdvertisedSocketAddress> routeEndpoints( CoreTopology coreTopology )
     {
         return coreTopology.members()
                 .values()
                 .stream()
-                .map( extractBoltAddress() )
+                .map( ClientConnector::boltAddress )
                 .collect( toList() );
     }
 
-    private List<AdvertisedSocketAddress> writeEndpoints( CoreTopology cores )
+    private List<AdvertisedSocketAddress> writeEndpoints( String databaseName )
     {
-
-        MemberId leader;
-        try
-        {
-            leader = leaderLocator.getLeader();
-        }
-        catch ( NoLeaderFoundException e )
-        {
-            return emptyList();
-        }
-
-        return asList( cores.find( leader ).map( extractBoltAddress() ) );
+        return leaderService.getLeaderAddress( databaseName ).stream().collect( toList() );
     }
 
-    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy )
+    private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy, String databaseName )
     {
 
         Set<ServerInfo> possibleReaders = rrTopology.members().entrySet().stream()
@@ -131,14 +117,12 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
         if ( allowReadsOnFollowers || possibleReaders.size() == 0 )
         {
             Set<MemberId> validCores = coreTopology.members().keySet();
-            try
+
+            Optional<MemberId> optionalLeaderId = leaderService.getLeaderId( databaseName );
+            if ( optionalLeaderId.isPresent() )
             {
-                MemberId leader = leaderLocator.getLeader();
-                validCores = validCores.stream().filter( memberId -> !memberId.equals( leader ) ).collect( Collectors.toSet() );
-            }
-            catch ( NoLeaderFoundException ignored )
-            {
-                // we might end up using the leader for reading during this ttl, should be fine in general
+                MemberId leaderId = optionalLeaderId.get();
+                validCores = validCores.stream().filter( memberId -> !memberId.equals( leaderId ) ).collect( Collectors.toSet() );
             }
 
             for ( MemberId validCore : validCores )
@@ -152,5 +136,20 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
         Set<ServerInfo> readers = policy.apply( possibleReaders );
         return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
+    }
+
+    private CoreTopology coreTopologyFor( String databaseName )
+    {
+        // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
+        //  also an exception needs to be thrown when topology for the specified database is empty
+        // return topologyService.allCoreServers().filterTopologyByDb( databaseName );
+        return topologyService.allCoreServers();
+    }
+
+    private ReadReplicaTopology readReplicaTopology( String databaseName )
+    {
+        // todo: filtering needs to be enabled once discovery contains multi-db and not multi-clustering database names
+        // return topologyService.allReadReplicas().filterTopologyByDb( databaseName );
+        return topologyService.allReadReplicas();
     }
 }

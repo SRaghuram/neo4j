@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.routing.multi_cluster.procedure;
 
+import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopology;
 import com.neo4j.causalclustering.discovery.TopologyService;
@@ -24,13 +25,12 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.procedure.Mode;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.api.procedure.Context;
+import org.neo4j.procedure.Mode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.TextValue;
 
-import static com.neo4j.causalclustering.routing.Util.extractBoltAddress;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.DATABASE;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ParameterNames.ROUTERS;
 import static com.neo4j.causalclustering.routing.multi_cluster.procedure.ProcedureNames.GET_ROUTERS_FOR_DATABASE;
@@ -83,6 +83,6 @@ public class GetRoutersForDatabaseProcedure implements CallableProcedure
         CoreTopology filtered = topologyService.allCoreServers().filterTopologyByDb( dbName );
         Stream<CoreServerInfo> filteredCoreMemberInfo = filtered.members().values().stream();
 
-        return filteredCoreMemberInfo.map( extractBoltAddress() ).collect( Collectors.toList() );
+        return filteredCoreMemberInfo.map( ClientConnector::boltAddress ).collect( Collectors.toList() );
     }
 }

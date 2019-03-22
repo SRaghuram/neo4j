@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -53,7 +54,7 @@ public class ServerShufflingProcessorTest
                 new ArrayList<>( readers ),
                 ttl );
 
-        when( delegate.run( any() ) ).thenReturn( result );
+        when( delegate.run( anyString(), any() ) ).thenReturn( result );
 
         ServerShufflingProcessor plugin = new ServerShufflingProcessor( delegate );
 
@@ -61,7 +62,7 @@ public class ServerShufflingProcessorTest
         for ( int i = 0; i < 1000; i++ ) // we try many times to make false negatives extremely unlikely
         {
             // when
-            RoutingResult shuffledResult = plugin.run( VirtualValues.EMPTY_MAP );
+            RoutingResult shuffledResult = plugin.run( "my_database", VirtualValues.EMPTY_MAP );
 
             // then: should still contain the same endpoints
             assertThat( shuffledResult.routeEndpoints(), containsInAnyOrder( routers.toArray() ) );

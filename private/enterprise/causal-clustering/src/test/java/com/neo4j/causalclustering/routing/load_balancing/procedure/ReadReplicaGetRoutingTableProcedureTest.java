@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedureTest;
@@ -19,9 +20,9 @@ import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.
 class ReadReplicaGetRoutingTableProcedureTest extends SingleInstanceGetRoutingTableProcedureTest
 {
     @Override
-    protected SingleInstanceGetRoutingTableProcedure newProcedure( ConnectorPortRegister portRegister, Config config )
+    protected SingleInstanceGetRoutingTableProcedure newProcedure( DatabaseManager databaseManager, ConnectorPortRegister portRegister, Config config )
     {
-        return new ReadReplicaGetRoutingTableProcedure( DEFAULT_NAMESPACE, portRegister, config );
+        return new ReadReplicaGetRoutingTableProcedure( DEFAULT_NAMESPACE, () -> databaseManager, portRegister, config );
     }
 
     @Override

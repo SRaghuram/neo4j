@@ -5,8 +5,8 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.discovery.TopologyService;
+import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingPluginLoader;
 import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 import com.neo4j.causalclustering.routing.load_balancing.procedure.GetRoutingTableProcedureForMultiDC;
@@ -22,14 +22,14 @@ import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
 public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
 {
     private final TopologyService topologyService;
-    private final LeaderLocator leaderLocator;
+    private final LeaderService leaderService;
     private final Config config;
     private final LogProvider logProvider;
 
-    public CoreRoutingProcedureInstaller( TopologyService topologyService, LeaderLocator leaderLocator, Config config, LogProvider logProvider )
+    public CoreRoutingProcedureInstaller( TopologyService topologyService, LeaderService leaderService, Config config, LogProvider logProvider )
     {
         this.topologyService = topologyService;
-        this.leaderLocator = leaderLocator;
+        this.leaderService = leaderService;
         this.config = config;
         this.logProvider = logProvider;
     }
@@ -40,11 +40,11 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
         if ( config.get( CausalClusteringSettings.multi_dc_license ) )
         {
             LoadBalancingProcessor loadBalancingProcessor = loadLoadBalancingProcessor();
-            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor );
+            return new GetRoutingTableProcedureForMultiDC( namespace, loadBalancingProcessor, config );
         }
         else
         {
-            return new GetRoutingTableProcedureForSingleDC( namespace, topologyService, leaderLocator, config, logProvider );
+            return new GetRoutingTableProcedureForSingleDC( namespace, topologyService, leaderService, config, logProvider );
         }
     }
 
@@ -52,7 +52,7 @@ public class CoreRoutingProcedureInstaller extends BaseRoutingProcedureInstaller
     {
         try
         {
-            return LoadBalancingPluginLoader.load( topologyService, leaderLocator, logProvider, config );
+            return LoadBalancingPluginLoader.load( topologyService, leaderService, logProvider, config );
         }
         catch ( Throwable e )
         {

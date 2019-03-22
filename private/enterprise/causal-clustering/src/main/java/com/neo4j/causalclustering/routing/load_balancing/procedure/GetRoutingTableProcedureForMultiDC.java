@@ -9,10 +9,10 @@ import com.neo4j.causalclustering.routing.load_balancing.LoadBalancingProcessor;
 
 import java.util.List;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.procedure.builtin.routing.BaseGetRoutingTableProcedure;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
-import org.neo4j.values.AnyValue;
 import org.neo4j.values.virtual.MapValue;
 
 /**
@@ -28,9 +28,9 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
 
     private final LoadBalancingProcessor loadBalancingProcessor;
 
-    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor )
+    public GetRoutingTableProcedureForMultiDC( List<String> namespace, LoadBalancingProcessor loadBalancingProcessor, Config config )
     {
-        super( namespace );
+        super( namespace, config );
         this.loadBalancingProcessor = loadBalancingProcessor;
     }
 
@@ -41,9 +41,8 @@ public class GetRoutingTableProcedureForMultiDC extends BaseGetRoutingTableProce
     }
 
     @Override
-    protected RoutingResult invoke( AnyValue[] input ) throws ProcedureException
+    protected RoutingResult invoke( String databaseName, MapValue routingContext ) throws ProcedureException
     {
-        MapValue clientContext = (MapValue) input[0];
-        return loadBalancingProcessor.run( clientContext );
+        return loadBalancingProcessor.run( databaseName, routingContext );
     }
 }

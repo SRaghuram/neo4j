@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
@@ -22,11 +21,6 @@ public class ReadReplicaTopology implements Topology<ReadReplicaInfo>
     public ReadReplicaTopology( Map<MemberId,ReadReplicaInfo> readReplicaMembers )
     {
         this.readReplicaMembers = readReplicaMembers;
-    }
-
-    public Collection<ReadReplicaInfo> allMemberInfo()
-    {
-        return readReplicaMembers.values();
     }
 
     @Override
