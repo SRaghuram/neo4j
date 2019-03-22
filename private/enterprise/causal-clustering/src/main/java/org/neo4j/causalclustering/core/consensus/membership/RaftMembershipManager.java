@@ -42,6 +42,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     private Set<MemberId> targetMembers;
 
     private final SendToMyself sendToMyself;
+    private final MemberId myself;
     private final RaftGroup.Builder<MemberId> memberSetBuilder;
     private final ReadableRaftLog raftLog;
     private final Log log;
@@ -59,11 +60,12 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
     private Set<Listener> listeners = new HashSet<>();
     private Set<MemberId> additionalReplicationMembers = new HashSet<>();
 
-    public RaftMembershipManager( SendToMyself sendToMyself, RaftGroup.Builder<MemberId> memberSetBuilder,
+    public RaftMembershipManager( SendToMyself sendToMyself, MemberId myself, RaftGroup.Builder<MemberId> memberSetBuilder,
             ReadableRaftLog raftLog, LogProvider logProvider, int minimumConsensusGroupSize, long electionTimeout,
             Clock clock, long catchupTimeout, StateStorage<RaftMembershipState> membershipStorage )
     {
         this.sendToMyself = sendToMyself;
+        this.myself = myself;
         this.memberSetBuilder = memberSetBuilder;
         this.raftLog = raftLog;
         this.minimumConsensusGroupSize = minimumConsensusGroupSize;
@@ -192,6 +194,7 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
         }
         Set<MemberId> superfluousMembers = new HashSet<>( votingMembers() );
         superfluousMembers.removeAll( targetMembers );
+        superfluousMembers.remove( myself );
 
         return superfluousMembers;
     }

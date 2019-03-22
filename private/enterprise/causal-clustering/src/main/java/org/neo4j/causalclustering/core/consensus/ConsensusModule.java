@@ -100,7 +100,7 @@ public class ConsensusModule
 
         SendToMyself leaderOnlyReplicator = new SendToMyself( myself, outbound );
 
-        raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, memberSetBuilder, raftLog, logProvider,
+        raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, myself, memberSetBuilder, raftLog, logProvider,
                 minimumConsensusGroupSize, leaderAvailabilityTimers.getElectionTimeout(), systemClock(), config.get( join_catch_up_timeout ).toMillis(),
                 raftMembershipStorage );
         platformModule.dependencies.satisfyDependency( raftMembershipManager );
