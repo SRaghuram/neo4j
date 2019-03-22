@@ -178,6 +178,6 @@ public class RunExportCommandIT
                     equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
         int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
         assertThat( jfrFlameGraphCount,
-                    equalTo( report.benchmarkGroupBenchmarkMetrics().toList().size() ) );
+                    equalTo( 0 ) );
     }
 }
