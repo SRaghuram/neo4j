@@ -5,32 +5,67 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, SyntaxException}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   private def dogSetup(): Unit = {
     val query =
-      """
+    """
         |CREATE (:Person {name:'Alice', id: 0}),
-        |       (:Person {name:'Bob', lastname: 'Bobson', id: 1})-[:HAS_DOG]->(:Dog {name:'Bob'}),
-        |       (:Person {name:'Chris', id:2})-[:HAS_DOG]->(:Dog {name:'Charlie'})
+        |       (:Person {name:'Bosse', lastname: 'Bobson', id: 1})-[:HAS_DOG]->(:Dog {name:'Bosse'}),
+        |       (:Dog {name:'Fido'})<-[:HAS_DOG]-(:Person {name:'Chris', id:2})-[:HAS_DOG]->(:Dog {name:'Ozzy'})
       """.stripMargin
 
     executeSingle(query)
   }
 
-  private def simpleSetup(): Unit = {
-    val node0 = createNode(Map("prop" -> 0))
-    val node1 = createNode(Map("prop" -> 1))
-    val node2 = createNode(Map("prop" -> 2))
+  // EXISTS without inner WHERE clause
 
-    relate(node0, node1)
-    relate(node1, node2)
+  test("simple exists without where clause") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE exists{
+        | MATCH(person)-[:HAS_DOG]->(:Dog)
+        | }
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map("person.name" -> "Bosse"), Map("person.name" -> "Chris")))
   }
 
-  test("Omit match syntax in exist query") {
+  test("exists without where clause but with predicate on outer match") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person{name:'Bosse'})
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
+  }
+
+  test("exists subquery with not findable inner pattern") {
 
     dogSetup()
 
@@ -38,42 +73,20 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
       """
         |MATCH (person:Person)
         |WHERE EXISTS {
-        |  (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name
+        |  MATCH (person)-[:HAS_HOUSE]->(:House)
         |}
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List())
   }
 
-
-  test("Unrelated inner pattern") {
-
-    dogSetup()
-
-    val query =
-      """
-        |PROFILE MATCH (alice:Person {name:'Alice'})
-        |WHERE EXISTS {
-        |  (person:Person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name
-        |}
-        |RETURN alice.name
-      """.stripMargin
-
-    val result = executeSingle(query)
-
-    println(result.executionPlanDescription())
-
-    //TODO check that Expand(ALL) produces only 1 Row (see Rows)
-
-    result.toList should equal(List(Map("alice.name" -> "Alice")))
-  }
+  // EXISTS with inner MATCH WHERE
 
   test("exists subquery with predicate") {
 
@@ -89,15 +102,16 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
 
   }
 
-  test("exists subquery with predicate 2") {
+  test("exists subquery with negative predicate") {
 
     dogSetup()
 
@@ -111,54 +125,12 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
     result.toList should equal(List(Map("person.name" -> "Chris")))
-  }
-
-  test("exists subquery with predicate 3") {
-
-    dogSetup()
-
-    val query =
-      """
-        |MATCH (person:Person)
-        |WHERE EXISTS {
-        |  MATCH (person)-[:HAS_HOUSE]->(:House)
-        |}
-        |RETURN person.name
-      """.stripMargin
-
-    val result = executeSingle(query)
-
-    println(result.executionPlanDescription())
-
-    result.toList should equal(List())
-  }
-
-  test("check if we leak variables to the outside") {
-
-    dogSetup()
-
-    val query =
-      """
-        |MATCH (person:Person)
-        |WHERE EXISTS {
-        |  MATCH (person)-[:HAS_DOG]->(dog :Dog)
-        |  WHERE person.name = dog.name
-        |}
-        |RETURN person.name, dog.name
-      """.stripMargin
-
-    try {
-      executeSingle(query)
-    }
-    catch {
-      case syn: SyntaxException if syn.getMessage.startsWith("Variable `dog` not defined") => // this is expected
-      case _ => fail()  // we are leaking
-    }
   }
 
   test("exists subquery with multiple predicates") {
@@ -170,110 +142,44 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |MATCH (person:Person)
         |WHERE EXISTS {
         |  MATCH (person)-[:HAS_DOG]->(dog)
-        |  WHERE person.name = dog.name AND dog.name = "Bob"
+        |  WHERE person.name = dog.name AND dog.name = "Bosse"
         |}
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
 
   }
 
-  test("predicates on outer and subquery 1") {
+  test("exists subquery with multiple predicates 2") {
 
     dogSetup()
 
     val query =
       """
-        |MATCH (person:Person{name:'Bob'})
+        |MATCH (dog:Dog)
         |WHERE EXISTS {
-        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name
+        |  MATCH (person{name:'Chris'})-[:HAS_DOG]->(dog)
+        |  WHERE dog.name < 'Karo'
         |}
-        |RETURN person.name
+        |RETURN dog.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List(Map("dog.name" -> "Fido")))
 
   }
 
-  test("predicates on outer and subquery 2") {
-
-    dogSetup()
-
-    val query =
-      """
-        |MATCH (person:Person)
-        |WHERE EXISTS {
-        |  MATCH (person{name:'Bob'})-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name
-        |}
-        |RETURN person.name
-      """.stripMargin
-
-    val result = executeSingle(query)
-
-    println(result.executionPlanDescription())
-
-    result.toList should equal(List(Map("person.name" -> "Bob")))
-
-  }
-
-  test("predicates on outer and subquery 3") {
-
-    dogSetup()
-
-    val query =
-      """
-        |MATCH (person:Person{name:'Bob'})
-        |WHERE EXISTS {
-        |  MATCH (person{lastname:'Bobson'})-[:HAS_DOG]->(dog)
-        |  WHERE person.name = dog.name
-        |}
-        |RETURN person.name
-      """.stripMargin
-
-    val result = executeSingle(query)
-
-    println(result.executionPlanDescription())
-
-    result.toList should equal(List(Map("person.name" -> "Bob")))
-
-  }
-
-  test("predicates on outer and subquery 4") {
-    // like 1 but predicate is unrelated to equality here
-
-    dogSetup()
-
-    val query =
-      """
-        |MATCH (person:Person{lastname:'Bobson'})
-        |WHERE EXISTS {
-        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name
-        |}
-        |RETURN person.name
-      """.stripMargin
-
-    val result = executeSingle(query)
-
-    println(result.executionPlanDescription())
-
-    result.toList should equal(List(Map("person.name" -> "Bob")))
-
-  }
-
-  test("predicates on outer and subquery 5") {
-    // like 2 but predicate is unrelated to equality here
+  test("exists subquery with multiple predicates 3") {
 
     dogSetup()
 
@@ -287,11 +193,35 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
+  }
+
+  test("exists subquery with predicates on both outer and inner query") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person{name:'Bosse'})
+        |WHERE EXISTS {
+        |  MATCH (person{lastname:'Bobson'})-[:HAS_DOG]->(dog)
+        |  WHERE person.name = dog.name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
 
   }
 
@@ -304,16 +234,17 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |MATCH (person:Person)
         |WHERE EXISTS {
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name AND person.lastname ='Bobson' AND person.id = 1
+        |  WHERE person.name = dog.name AND person.lastname ='Bobson' AND person.id < 2
         |}
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
 
   }
 
@@ -331,11 +262,12 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
 
   }
 
@@ -353,11 +285,99 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
 
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
+  }
+
+  test("Unrelated inner pattern") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (alice:Person {name:'Alice'})
+        |WHERE EXISTS {
+        |  (person:Person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name
+        |}
+        |RETURN alice.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("alice.name" -> "Alice")))
+  }
+
+  // Omitting the MATCH keyword
+
+  test("Omit match syntax in exist query") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |  (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+  }
+
+  // Other tests
+
+  test("ensure we don't leak variables to the outside") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name
+        |}
+        |RETURN person.name, dog.name
+      """.stripMargin
+
+    failWithError(Configs.All, query, errorType = Seq("SyntaxException"), message = Seq("Variable `dog` not defined"))
+  }
+
+  test("should support variable length pattern") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |  MATCH (person)-[*]->(dog)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse"), Map("person.name" -> "Chris")))
 
   }
 
@@ -370,18 +390,21 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |MATCH (person:Person)
         |WHERE EXISTS {
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name AND person.name = 'Bob' and dog.lastname = person.name
+        |  WHERE person.name = dog.name AND person.name = 'Bosse' and dog.lastname = person.name
         |}
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    val description = result.executionPlanDescription().find("Filter")
-    result.toList should equal(List())
-    description(0).toString should include("person.name = $`  AUTOSTRING0`")
-    description(1).toString should include("dog:Dog; dog.lastname = $`  AUTOSTRING0`; dog.name = $`  AUTOSTRING0`")
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    plan should includeSomewhere.aPlan("Filter").containingArgument("person.name = $`  AUTOSTRING0`")
+    plan should includeSomewhere.aPlan("Filter").containingArgument("dog:Dog", "dog.lastname = $`  AUTOSTRING0`", "dog.name = $`  AUTOSTRING0`")
   }
+
+  // EXISTS with simple node pattern in the MATCH
 
   test("simple node match in exists 1") {
 
@@ -397,9 +420,10 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
     result.toList should equal(List(Map("person.name" -> "Chris")))
 
   }
@@ -418,7 +442,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
@@ -440,13 +464,15 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("SemiApply")
-    result.toList should equal(List(Map()))
+    result.toList should equal(List())
 
   }
+
+  // EXISTS with nested subclauses
 
   test("Nesting 1") {
 
@@ -459,15 +485,16 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
         |  WHERE EXISTS {
         |    MATCH (dog)
-        |    WHERE dog.name = 'Charlie'
+        |    WHERE dog.name = 'Ozzy'
         |  }
         |}
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
     result.toList should equal(List(Map("person.name" -> "Chris")))
 
   }
@@ -483,18 +510,49 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
         |  WHERE EXISTS {
         |    MATCH (dog)<-[]-()
-        |    WHERE dog.name = 'Charlie'
+        |    WHERE dog.name = 'Ozzy'
         |  }
         |}
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
     result.toList should equal(List(Map("person.name" -> "Chris")))
 
   }
+
+  test("should handle several levels of nesting") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)-[]->()
+        |WHERE EXISTS {
+        |  MATCH (person)
+        |  WHERE person.id > 0 AND EXISTS {
+        |    MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |    WHERE EXISTS {
+        |     MATCH (dog)
+        |     WHERE dog.name = 'Ozzy'
+        |    }
+        |  }
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map("person.name" -> "Chris"), Map("person.name" -> "Chris")))
+
+  }
+
+  // NOT EXISTS
 
   test("NOT EXISTS should work") {
 
@@ -509,9 +567,10 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
-    println(result.executionPlanDescription())
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("AntiSemiApply")
 
     result.toList should equal(List(Map("person.name" -> "Alice")))
 
@@ -531,7 +590,10 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("AntiSemiApply")
 
     result.toList should equal(List(Map("person.name" -> "Bosse"), Map("person.name" -> "Chris")))
 
@@ -548,55 +610,18 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
         |  WHERE NOT EXISTS {
         |    MATCH (dog)
-        |    WHERE dog.name = 'Ozzy'
+        |    WHERE dog.name = 'Bosse'
         |  }
         |}
         |RETURN person.name
       """.stripMargin
 
-    val result = executeSingle(query)
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
 
     val plan = result.executionPlanDescription()
-    result.toList should equal(List(Map("person.name" -> "Bosse")))
-  }
-
-  test("new syntax without where clause in exists") {
-
-    dogSetup()
-
-    val query =
-      """
-        |MATCH (person:Person)
-        |WHERE exists{
-        | MATCH(person)-[:HAS_DOG]->(:Dog)
-        | }
-        |RETURN person.name
-      """.stripMargin
-
-    val result = executeSingle(query)
-
-    println(result.executionPlanDescription())
-    result.toList should equal(List(Map("person.name" -> "Bob"), Map("person.name" -> "Chris")))
-  }
-
-  test("new syntax without where clause in exists but with predicate on outer match") {
-
-    dogSetup()
-
-    val query =
-      """
-        |MATCH (person:Person{name:'Bob'})
-        |WHERE EXISTS {
-        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |}
-        |RETURN person.name
-      """.stripMargin
-
-    val result = executeSingle(query)
-
-    println(result.executionPlanDescription())
-
-    result.toList should equal(List(Map("person.name" -> "Bob")))
+    plan should includeSomewhere.aPlan("SemiApply")
+    plan should includeSomewhere.aPlan("AntiSemiApply")
+    result.toList should equal(List(Map("person.name" -> "Chris")))
 
   }
 }
