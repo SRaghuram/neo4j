@@ -74,7 +74,7 @@ public class ClusterBindingIT
         // WHEN
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
-        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
 
         cluster.shutdown();
 
@@ -92,7 +92,7 @@ public class ClusterBindingIT
         // WHEN
         cluster.start();
 
-        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
 
         DataCreator.createDataInOneTransaction( cluster, 1 );
 
@@ -150,7 +150,7 @@ public class ClusterBindingIT
         // THEN
         assertEquals( 3, cluster.healthyCoreMembers().size() );
 
-        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
         cluster.shutdown();
         assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
@@ -203,12 +203,12 @@ public class ClusterBindingIT
         // THEN
         assertEquals( 4, cluster.healthyCoreMembers().size() );
 
-        List<DatabaseLayout> databaseLayouts = databaseLAyouts( cluster.coreMembers() );
+        List<DatabaseLayout> databaseLayouts = databaseLayouts( cluster.coreMembers() );
         cluster.shutdown();
         assertAllStoresHaveTheSameStoreId( databaseLayouts, fs );
     }
 
-    private static List<DatabaseLayout> databaseLAyouts( Collection<CoreClusterMember> dbs )
+    private static List<DatabaseLayout> databaseLayouts( Collection<CoreClusterMember> dbs )
     {
         return dbs.stream().map( CoreClusterMember::databaseLayout ).collect( Collectors.toList() );
     }

@@ -54,7 +54,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.tooling.TransactionLogsInitializer;
+import org.neo4j.unsafe.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
 import org.neo4j.unsafe.impl.batchimport.BatchImporter;
 import org.neo4j.unsafe.impl.batchimport.Configuration;

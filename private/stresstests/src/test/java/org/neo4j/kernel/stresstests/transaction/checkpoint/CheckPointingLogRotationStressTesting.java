@@ -27,7 +27,7 @@ import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
-import org.neo4j.tooling.TransactionLogsInitializer;
+import org.neo4j.unsafe.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
