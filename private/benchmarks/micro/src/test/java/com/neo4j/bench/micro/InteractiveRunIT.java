@@ -173,8 +173,9 @@ public class InteractiveRunIT
         // (3) for each JFR recording file a FlameGraph should be created
         int jfrCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR );
         assertThat( jfrCount, equalTo( expectedBenchmarkCount ) );
-        int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
-        assertThat( jfrFlameGraphCount, equalTo( expectedBenchmarkCount ) );
+        //IN 4.0 we do NOT generate Flamegraphs
+        //int jfrFlameGraphCount = ProfilerTestUtil.recordingCountIn( profilerRecordingDirectory, RecordingType.JFR_FLAMEGRAPH );
+        //assertThat( jfrFlameGraphCount, equalTo( expectedBenchmarkCount ) );
 
         // expected number of stores are present
         try ( Stream<Path> paths = Files.list( storesDir.toPath() ) )
