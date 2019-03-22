@@ -40,7 +40,7 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
     @Override
     public String benchmarkGroup()
     {
-        return "misc";
+        return "cypher";
     }
 
     @ParamValues(
