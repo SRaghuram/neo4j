@@ -12,9 +12,9 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
-import org.neo4j.procedure.builtin.routing.CommunityRoutingProcedureInstaller;
+import org.neo4j.procedure.builtin.routing.SingleInstanceRoutingProcedureInstaller;
 
-public class ReadReplicaRoutingProcedureInstaller extends CommunityRoutingProcedureInstaller
+public class ReadReplicaRoutingProcedureInstaller extends SingleInstanceRoutingProcedureInstaller
 {
     public ReadReplicaRoutingProcedureInstaller( ConnectorPortRegister portRegister, Config config )
     {

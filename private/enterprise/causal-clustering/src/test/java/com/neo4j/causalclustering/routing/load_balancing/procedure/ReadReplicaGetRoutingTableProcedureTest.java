@@ -10,16 +10,16 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.helpers.AdvertisedSocketAddress;
-import org.neo4j.procedure.builtin.routing.CommunityGetRoutingTableProcedure;
-import org.neo4j.procedure.builtin.routing.CommunityGetRoutingTableProcedureTest;
+import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedure;
+import org.neo4j.procedure.builtin.routing.SingleInstanceGetRoutingTableProcedureTest;
 
 import static java.util.Collections.emptyList;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 
-class ReadReplicaGetRoutingTableProcedureTest extends CommunityGetRoutingTableProcedureTest
+class ReadReplicaGetRoutingTableProcedureTest extends SingleInstanceGetRoutingTableProcedureTest
 {
     @Override
-    protected CommunityGetRoutingTableProcedure newProcedure( ConnectorPortRegister portRegister, Config config )
+    protected SingleInstanceGetRoutingTableProcedure newProcedure( ConnectorPortRegister portRegister, Config config )
     {
         return new ReadReplicaGetRoutingTableProcedure( DEFAULT_NAMESPACE, portRegister, config );
     }
