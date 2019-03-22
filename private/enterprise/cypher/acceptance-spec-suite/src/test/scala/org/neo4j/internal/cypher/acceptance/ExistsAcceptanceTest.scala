@@ -430,6 +430,70 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   }
 
+  test("NOT EXISTS should work") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE NOT EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeSingle(query)
+
+    println(result.executionPlanDescription())
+
+    result.toList should equal(List(Map("person.name" -> "Alice")))
+
+  }
+
+  test("NOT EXISTS with single node should work") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE NOT EXISTS {
+        |  MATCH (person)
+        |  WHERE person.name = 'Alice'
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeSingle(query)
+
+    result.toList should equal(List(Map("person.name" -> "Bosse"), Map("person.name" -> "Chris")))
+
+  }
+
+  test("Nesting with NOT") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE NOT EXISTS {
+        |    MATCH (dog)
+        |    WHERE dog.name = 'Ozzy'
+        |  }
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeSingle(query)
+
+    val plan = result.executionPlanDescription()
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+  }
+
   test("new syntax without where clause in exists") {
 
     dogSetup()
