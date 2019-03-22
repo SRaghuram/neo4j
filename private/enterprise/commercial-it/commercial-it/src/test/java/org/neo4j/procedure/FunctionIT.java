@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -902,7 +903,7 @@ class FunctionIT
                 @Name( value = "boolean", defaultValue = "true" ) boolean aBoolean
         )
         {
-            return String.format( "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
+            return String.format( Locale.US, "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
         }
 
         @UserFunction
