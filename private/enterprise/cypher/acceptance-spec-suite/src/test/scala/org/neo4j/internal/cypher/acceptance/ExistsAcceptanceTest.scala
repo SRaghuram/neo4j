@@ -361,6 +361,28 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   }
 
+  test("transitive closure inside exists should still work its magic") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name AND person.name = 'Bob' and dog.lastname = person.name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeSingle(query)
+
+    val description = result.executionPlanDescription().find("Filter")
+    result.toList should equal(List())
+    description(0).toString should include("person.name = $`  AUTOSTRING0`")
+    description(1).toString should include("dog:Dog; dog.lastname = $`  AUTOSTRING0`; dog.name = $`  AUTOSTRING0`")
+  }
+
   test("simple node match in exists") {
 
     dogSetup()
