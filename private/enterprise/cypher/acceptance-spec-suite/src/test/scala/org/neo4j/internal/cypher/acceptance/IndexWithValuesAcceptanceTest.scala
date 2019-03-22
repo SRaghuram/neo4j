@@ -388,7 +388,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek")
+        includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
           .withExactVariables("n", "cached[n.prop1]", "cached[n.prop2]"))
     result.toList should equal(List(Map("n.prop1" -> 42, "n.prop2" -> 3), Map("n.prop1" -> 42, "n.prop2" -> 3)))
   }
@@ -399,7 +399,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
 
     result.executionPlanDescription() should (
       not(includeSomewhere.aPlan("Projection").withDBHits()) and
-        includeSomewhere.aPlan("NodeIndexSeek")
+        includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
           .withExactVariables("n", "cached[n.prop1]"))
     result.toList should equal(List(Map("n.prop1" -> 42), Map("n.prop1" -> 42)))
   }
