@@ -16,6 +16,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.HostnamePort;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -36,7 +37,7 @@ import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.O
 import static org.neo4j.configuration.connectors.Connector.ConnectorType.BOLT;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
-class CommunityRoutingProcedureIT extends BaseRoutingProcedureIT
+class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
 {
     private static final String CONNECTOR_NAME = "my_bolt";
 
@@ -58,7 +59,7 @@ class CommunityRoutingProcedureIT extends BaseRoutingProcedureIT
     void shouldContainRoutingProcedure()
     {
         AdvertisedSocketAddress advertisedBoltAddress = new AdvertisedSocketAddress( "neo4j.com", 7687 );
-        db = startCommunityDb( advertisedBoltAddress );
+        db = startDb( advertisedBoltAddress );
 
         List<AdvertisedSocketAddress> addresses = singletonList( advertisedBoltAddress );
         Duration ttl = Config.defaults().get( routing_ttl );
@@ -70,9 +71,14 @@ class CommunityRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldAllowRoutingDriverToReadAndWrite()
     {
-        db = startCommunityDb();
+        db = startDb();
 
         assertPossibleToReadAndWriteUsingRoutingDriver( boltAddress() );
+    }
+
+    protected GraphDatabaseFactory newGraphDatabaseFactory()
+    {
+        return new TestGraphDatabaseFactory();
     }
 
     private String boltAddress()
@@ -83,16 +89,16 @@ class CommunityRoutingProcedureIT extends BaseRoutingProcedureIT
         return address.toString();
     }
 
-    private GraphDatabaseAPI startCommunityDb()
+    private GraphDatabaseAPI startDb()
     {
-        return startCommunityDb( null );
+        return startDb( null );
     }
 
-    private GraphDatabaseAPI startCommunityDb( AdvertisedSocketAddress advertisedBoltAddress )
+    private GraphDatabaseAPI startDb( AdvertisedSocketAddress advertisedBoltAddress )
     {
         BoltConnector connector = new BoltConnector( CONNECTOR_NAME );
 
-        GraphDatabaseBuilder builder = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
+        GraphDatabaseBuilder builder = newGraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDirectory.storeDir() );
         builder.setConfig( auth_enabled, FALSE );
         builder.setConfig( connector.enabled, TRUE );
         builder.setConfig( connector.type, BOLT.toString() );

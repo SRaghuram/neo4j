@@ -79,6 +79,7 @@ public class CommercialEditionModule extends CommunityEditionModule
     @Override
     public void registerEditionSpecificProcedures( GlobalProcedures globalProcedures ) throws KernelException
     {
+        super.registerEditionSpecificProcedures( globalProcedures );
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
     }

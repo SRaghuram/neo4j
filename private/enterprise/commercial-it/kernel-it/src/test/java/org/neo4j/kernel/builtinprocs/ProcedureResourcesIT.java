@@ -307,6 +307,12 @@ public class ProcedureResourcesIT
         case "db.stats.clear":
             proc.withParam( "'QUERIES'" );
             break;
+        case "dbms.cluster.routing.getRoutingTable":
+            proc.withParam( "{}" );
+            break;
+        case "dbms.routing.getRoutingTable":
+            proc.withParam( "{}" );
+            break;
         default:
         }
         return proc;
