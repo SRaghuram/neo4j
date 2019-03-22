@@ -7,10 +7,8 @@ package org.neo4j.backup.clusteringsupport;
 
 import com.neo4j.backup.stores.BackupStore;
 import com.neo4j.backup.stores.BackupStoreWithSomeData;
-import com.neo4j.backup.stores.BackupStoreWithSomeDataButNoTransactionLogs;
 import com.neo4j.backup.stores.DefaultDatabasesBackup;
 import com.neo4j.backup.stores.EmptyBackupStore;
-import com.neo4j.backup.stores.EmptyBackupStoreWithoutTransactionLogs;
 import com.neo4j.backup.stores.NoStore;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -67,9 +65,7 @@ public class ClusterSeedingIT
         return new Object[][]{
                 {new NoStore(), true},
                 {new EmptyBackupStore(), false},
-                {new EmptyBackupStoreWithoutTransactionLogs(), false},
-                {new BackupStoreWithSomeData(), false},
-                {new BackupStoreWithSomeDataButNoTransactionLogs(), false}
+                {new BackupStoreWithSomeData(), false}
         };
     }
 

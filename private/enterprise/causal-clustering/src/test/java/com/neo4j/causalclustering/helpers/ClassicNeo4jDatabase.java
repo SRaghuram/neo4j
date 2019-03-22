@@ -64,6 +64,7 @@ public class ClassicNeo4jDatabase
 
         private String databaseName = DEFAULT_DATABASE_NAME;
         private boolean needRecover;
+        private boolean transactionLogsInDatabaseFolder;
         private int nrOfNodes = 10;
         private String recordFormat = Standard.LATEST_NAME;
         private File transactionLogsRootDirectoryAbsolute;
@@ -99,6 +100,12 @@ public class ClassicNeo4jDatabase
             return this;
         }
 
+        public Neo4jDatabaseBuilder transactionLogsInDatabaseFolder()
+        {
+            this.transactionLogsInDatabaseFolder = true;
+            return this;
+        }
+
         public Neo4jDatabaseBuilder amountOfNodes( int nrOfNodes )
         {
             this.nrOfNodes = nrOfNodes;
@@ -126,7 +133,7 @@ public class ClassicNeo4jDatabase
                     .newEmbeddedDatabaseBuilder( databaseDirectory )
                     .setConfig( GraphDatabaseSettings.record_format, recordFormat )
                     .setConfig( OnlineBackupSettings.online_backup_enabled, FALSE )
-                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, transactionLogsRootDirectoryAbsolute.getAbsolutePath() )
+                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, getTransactionLogsRoot() )
                     .newGraphDatabase();
 
             for ( int i = 0; i < (nrOfNodes / 2); i++ )
@@ -150,6 +157,12 @@ public class ClassicNeo4jDatabase
             }
 
             return new ClassicNeo4jDatabase( DatabaseLayout.of( databaseDirectory, () -> of( transactionLogsRootDirectoryAbsolute ) ) );
+        }
+
+        private String getTransactionLogsRoot()
+        {
+            File directory = transactionLogsInDatabaseFolder ? databasesRootDirectoryAbsolute : transactionLogsRootDirectoryAbsolute;
+            return directory.getAbsolutePath();
         }
 
         /**

@@ -15,12 +15,16 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
+
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -61,22 +65,31 @@ public class ClusterCommunityToEnterpriseIT
     public void shouldRestoreBySeedingAllMembers() throws Throwable
     {
         // given
-        GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDir.storeDir() )
+        GraphDatabaseService database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( testDir.databaseDir() )
                 .setConfig( GraphDatabaseSettings.allow_upgrade, Settings.TRUE )
                 .setConfig( GraphDatabaseSettings.record_format, HighLimit.NAME )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.FALSE.toString() )
                 .newGraphDatabase();
+        DatabaseLayout databaseLayout = ((GraphDatabaseAPI) database).databaseLayout();
         database.shutdown();
-        Config config = Config.defaults( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-        DbRepresentation before = DbRepresentation.of( testDir.storeDir(), config );
+        Config config = Config.builder().withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE ).withSetting(
+                GraphDatabaseSettings.transaction_logs_root_path, databaseLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() ).build();
+        DbRepresentation before = DbRepresentation.of( testDir.databaseDir(), config );
 
         // when
-        fsa.copyRecursively( testDir.databaseDir(), cluster.getCoreMemberById( 0 ).databaseLayout().databaseDirectory() );
-        fsa.copyRecursively( testDir.databaseDir(), cluster.getCoreMemberById( 1 ).databaseLayout().databaseDirectory() );
-        fsa.copyRecursively( testDir.databaseDir(), cluster.getCoreMemberById( 2 ).databaseLayout().databaseDirectory() );
+        copyStoreToCore( databaseLayout, 0 );
+        copyStoreToCore( databaseLayout, 1 );
+        copyStoreToCore( databaseLayout, 2 );
         cluster.start();
 
         // then
         dataMatchesEventually( before, cluster.coreMembers() );
+    }
+
+    private void copyStoreToCore( DatabaseLayout databaseLayout, int i ) throws IOException
+    {
+        DatabaseLayout coreLayout = cluster.getCoreMemberById( i ).databaseLayout();
+        fsa.copyRecursively( databaseLayout.databaseDirectory(), coreLayout.databaseDirectory() );
+        fsa.copyRecursively( databaseLayout.getTransactionLogsDirectory(), coreLayout.getTransactionLogsDirectory() );
     }
 }

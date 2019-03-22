@@ -16,6 +16,7 @@ import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -81,6 +82,7 @@ class CommercialGraphDatabaseBackupIT
         return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( storeDir )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( backupEnabled ) )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() )
                 .newGraphDatabase();
     }
 

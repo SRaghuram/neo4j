@@ -113,7 +113,9 @@ public class ConvertNonCausalClusteringStoreIT
     {
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            return ClassicNeo4jDatabase.builder( dbDir, fileSystem ).amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
+            return ClassicNeo4jDatabase.builder( dbDir, fileSystem )
+                    .transactionLogsInDatabaseFolder()
+                    .amountOfNodes( classicNodeCount ).recordFormats( recordFormat ).build();
         }
     }
 }

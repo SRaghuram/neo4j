@@ -1074,7 +1074,9 @@ class BackupIT
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path )
     {
-        return startDbWithoutOnlineBackup( path, record_format.getDefaultValue() );
+        Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE, record_format, record_format.getDefaultValue(),
+                transaction_logs_root_path, path.getParentFile().getAbsolutePath() );
+        return startDb( path, settings );
     }
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path, String recordFormatName )

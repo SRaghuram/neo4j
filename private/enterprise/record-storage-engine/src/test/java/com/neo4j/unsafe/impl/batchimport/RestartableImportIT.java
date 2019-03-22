@@ -15,12 +15,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -28,8 +28,8 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
+import org.neo4j.tooling.TransactionLogsInitializer;
 import org.neo4j.unsafe.impl.batchimport.BatchImporterFactory;
-import org.neo4j.unsafe.impl.batchimport.EmptyLogFilesInitializer;
 import org.neo4j.unsafe.impl.batchimport.input.Collector;
 import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
@@ -94,7 +94,7 @@ class RestartableImportIT
                 restartCount++;
             }
             while ( process.exitValue() != 0 );
-            GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
+            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
             try
             {
                 input( random.seed() ).verify( db );
@@ -131,7 +131,7 @@ class RestartableImportIT
         {
             BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.of( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
                     null, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
-                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, EmptyLogFilesInitializer.INSTANCE )
+                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
         }
         catch ( IllegalStateException e )
