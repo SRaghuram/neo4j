@@ -404,6 +404,29 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     plan should includeSomewhere.aPlan("Filter").containingArgument("dog:Dog", "dog.lastname = $`  AUTOSTRING0`", "dog.name = $`  AUTOSTRING0`")
   }
 
+  test("Should handle scoping and dependencies properly when subclause is in horizon") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (adog:Dog {name:'Ozzy'})
+        |WITH adog
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |    MATCH (person)-[:HAS_DOG]->(adog)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map("person.name" -> "Chris")))
+
+  }
+
   // EXISTS with simple node pattern in the MATCH
 
   test("simple node match in exists 1") {
