@@ -38,6 +38,8 @@ case class ExpandAllSlottedPipe(source: Pipe,
       inputRow: ExecutionContext =>
         val fromNode = getFromNodeFunction(inputRow)
 
+        println(fromNode)
+
         if (NullChecker.entityIsNull(fromNode))
           Iterator.empty
         else {
