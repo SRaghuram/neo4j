@@ -166,7 +166,8 @@ public class RunExportCommandIT
         assertThat( report.java().jvmArgs(), equalTo(
                 "-Xms2g -Xmx2g -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow -XX:+AlwaysPreTouch " +
                 "-XX:+UnlockExperimentalVMOptions " +
-                "-XX:+TrustFinalNonStaticFields -XX:+DisableExplicitGC -Djdk.tls.ephemeralDHKeySize=2048 ") );
+                "-XX:+TrustFinalNonStaticFields -XX:+DisableExplicitGC -Djdk.tls.ephemeralDHKeySize=2048 " +
+                "-Dunsupported.dbms.udc.source=tarball" ) );
         assertThat( report.testRun().build(), equalTo( 1L ) );
         HashMap<String,String> expectedBenchmarkConfig = new HashMap<>();
         expectedBenchmarkConfig.put( "com.neo4j.bench.micro.benchmarks.core.ReadById.format", "standard" );
