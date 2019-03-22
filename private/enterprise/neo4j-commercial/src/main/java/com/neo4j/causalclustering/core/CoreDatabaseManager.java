@@ -22,6 +22,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.logging.LogProvider;
@@ -51,14 +52,14 @@ public class CoreDatabaseManager extends ClusteredMultiDatabaseManager<CoreDatab
     }
 
     @Override
-    protected CoreDatabaseContext createNewDatabaseContext( String databaseName )
+    protected CoreDatabaseContext createNewDatabaseContext( DatabaseId databaseId )
     {
         DatabaseCoreStateComponents.LifecycleDependencies lifecycleDeps = new DatabaseCoreStateComponents.LifecycleDependencies();
         CommitProcessInstaller commitProcessInstaller = new CommitProcessInstaller();
-        coreStateService.get().create( databaseName, lifecycleDeps, commitProcessInstaller );
+        coreStateService.get().create( databaseId.name(), lifecycleDeps, commitProcessInstaller );
         //The database requires several cluster specific versions of kernel machines, created by the CoreStateService. However, some of those components need
         // a reference to the database at runtime, after it has started. Hence this circular pattern.
-        CoreDatabaseContext ctx = super.createNewDatabaseContext( databaseName );
+        CoreDatabaseContext ctx = super.createNewDatabaseContext( databaseId );
         commitProcessInstaller.registerInstallListener( ctx::setCommitProcess );
         lifecycleDeps.inject( ctx.database() );
         return ctx;

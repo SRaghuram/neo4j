@@ -131,7 +131,7 @@ public class CatchupProcessManager extends SafeLifecycle
     {
         log.info( "Starting " + this.getClass().getSimpleName() );
         catchupProcesses = clusteredDatabaseManager.registeredDatabases().entrySet().stream()
-                .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getValue() ) ) );
+                .collect( Collectors.toMap( e -> e.getKey().name(), e -> catchupProcessFactory.create( e.getValue() ) ) );
         txPulling.start();
         initTimer();
 

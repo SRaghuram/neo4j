@@ -5,14 +5,6 @@
  */
 package com.neo4j.causalclustering.catchup;
 
-import io.netty.channel.embedded.EmbeddedChannel;
-import org.hamcrest.CoreMatchers;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.io.IOException;
-import java.util.function.Function;
-
 import com.neo4j.causalclustering.catchup.storecopy.FileChunk;
 import com.neo4j.causalclustering.catchup.storecopy.FileHeader;
 import com.neo4j.causalclustering.catchup.storecopy.GetStoreIdResponse;
@@ -25,18 +17,27 @@ import com.neo4j.causalclustering.catchup.v1.CatchupProtocolServerInstallerV1;
 import com.neo4j.causalclustering.catchup.v1.storecopy.GetStoreIdRequest;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolClientInstallerV2;
 import com.neo4j.causalclustering.catchup.v2.CatchupProtocolServerInstallerV2;
-import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolClientInstallerV3;
 import com.neo4j.causalclustering.catchup.v3.storecopy.CatchupProtocolServerInstallerV3;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.handlers.VoidPipelineWrapperFactory;
 import com.neo4j.causalclustering.identity.StoreId;
 import com.neo4j.causalclustering.messaging.CatchupProtocolMessage;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.Protocol;
+import io.netty.channel.embedded.EmbeddedChannel;
+import org.hamcrest.CoreMatchers;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.io.IOException;
+import java.util.function.Function;
+
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
@@ -114,9 +115,11 @@ abstract class CommercialCatchupTest
                     public void onGetStoreIdResponse( GetStoreIdResponse response )
                     {
                         responseHandled = true;
-                        assertEquals( databaseManager.getDatabaseContext( DEFAULT_DB ).map( DatabaseContext::database ).map(
-                                db -> new StoreId( db.getStoreId().getCreationTime(), db.getStoreId().getRandomId(), db.getStoreId().getUpgradeTime(),
-                                        db.getStoreId().getUpgradeId() ) ).orElseThrow( IllegalStateException::new ), response.storeId() );
+                        assertEquals( databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DB ) )
+                                .map( DatabaseContext::database )
+                                .map( db -> new StoreId( db.getStoreId().getCreationTime(), db.getStoreId().getRandomId(), db.getStoreId().getUpgradeTime(),
+                                        db.getStoreId().getUpgradeId() ) )
+                                .orElseThrow( IllegalStateException::new ), response.storeId() );
                     }
                 } );
             }

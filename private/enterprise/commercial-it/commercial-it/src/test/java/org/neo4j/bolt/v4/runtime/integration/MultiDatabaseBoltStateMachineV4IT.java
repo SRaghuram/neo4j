@@ -27,6 +27,7 @@ import org.neo4j.bolt.v4.runtime.InTransactionState;
 import org.neo4j.bolt.v4.runtime.ReadyState;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.util.ValueUtils;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -52,8 +53,8 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         // Given
         DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.createDatabase( "first" );
-        databaseManager.createDatabase( "second" );
+        databaseManager.createDatabase( new DatabaseId( "first" ) );
+        databaseManager.createDatabase( new DatabaseId( "second" ) );
         BoltStateMachineV1 machine = newStateMachineInReadyState();
 
         // When
@@ -72,8 +73,8 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
     {
         // Given
         DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.createDatabase( "first" );
-        databaseManager.createDatabase( "second" );
+        databaseManager.createDatabase( new DatabaseId( "first" ) );
+        databaseManager.createDatabase( new DatabaseId( "second" ) );
         BoltStateMachineV1 machine = newStateMachineInReadyState();
 
         // When

@@ -23,15 +23,12 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdGenerator;
@@ -39,6 +36,7 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
@@ -161,7 +159,7 @@ public class CoreBootstrapper
 
     private void initializeSystemDatabaseIfNeeded()
     {
-        boolean systemDbStoreExists = clusteredDatabaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME )
+        boolean systemDbStoreExists = clusteredDatabaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) )
                 .map( this::isStorePresent )
                 .orElse( false );
 
@@ -185,7 +183,7 @@ public class CoreBootstrapper
                 //TODO This all needs to be overhauled
                 DatabaseManager<?> databaseManager =
                         ((GraphDatabaseAPI) temporaryDatabase.graphDatabaseService()).getDependencyResolver().resolveDependency( DatabaseManager.class );
-                GraphDatabaseFacade systemDatabaseFacade = databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME )
+                GraphDatabaseFacade systemDatabaseFacade = databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) )
                         .orElseThrow( () -> new IllegalStateException( SYSTEM_DATABASE_NAME + " database should exist." ) )
                         .databaseFacade();
                 systemDatabaseInitializer.initialize( systemDatabaseFacade );

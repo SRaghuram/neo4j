@@ -9,8 +9,8 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupServerHandler;
 import com.neo4j.causalclustering.catchup.MultiDatabaseCatchupServerHandler;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.ClusteredMultiDatabaseManager;
+import com.neo4j.causalclustering.common.ClusteringEditionModule;
 import com.neo4j.causalclustering.common.PipelineBuilders;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
@@ -57,6 +57,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.ReadOnly;
@@ -171,9 +172,9 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
     }
 
     @Override
-    public EditionDatabaseComponents createDatabaseComponents( String databaseName )
+    public EditionDatabaseComponents createDatabaseComponents( DatabaseId databaseId )
     {
-        return new ReadReplicaDatabaseComponents( globalModule, this, databaseName );
+        return new ReadReplicaDatabaseComponents( globalModule, this, databaseId.name() );
     }
 
     @Override
@@ -244,7 +245,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule
 
     protected void createDatabase( DatabaseManager<?> databaseManager, String databaseName ) throws DatabaseExistsException
     {
-        databaseManager.createDatabase( databaseName );
+        databaseManager.createDatabase( new DatabaseId( databaseName ) );
     }
 
     private DuplexPipelineWrapperFactory pipelineWrapperFactory()

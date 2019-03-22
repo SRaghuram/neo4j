@@ -17,6 +17,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthProviderFailedException;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 
@@ -182,7 +183,7 @@ public class ContextSwitchingSystemGraphQueryExecutor implements QueryExecutor
 
     private DatabaseContext getDb( String dbName )
     {
-        return databaseManager.getDatabaseContext( dbName )
+        return databaseManager.getDatabaseContext( new DatabaseId( dbName ) )
                 .orElseThrow( () -> new AuthProviderFailedException( "No database called `" + dbName + "` was found." ) );
     }
 }

@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbms.database;
 
-import org.eclipse.collections.impl.block.factory.Comparators;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -18,6 +17,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.kernel.database.DatabaseId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.inOrder;
@@ -33,20 +33,20 @@ class MultiDatabaseManagerTest
     private DatabaseContext neo;
     private DatabaseContext custom;
 
-    private void initDatabaseManager( Comparator<String> databasesOrdering ) throws Exception
+    private void initDatabaseManager( Comparator<DatabaseId> databasesOrdering ) throws Exception
     {
         databaseManager = new StubMultiDatabaseManager( databasesOrdering );
-        sys = databaseManager.createDatabase( SYSTEM_DATABASE_NAME );
-        neo = databaseManager.createDatabase( DEFAULT_DATABASE_NAME );
-        custom = databaseManager.createDatabase( CUSTOM_DATABASE_NAME );
+        sys = databaseManager.createDatabase( new DatabaseId( SYSTEM_DATABASE_NAME ) );
+        neo = databaseManager.createDatabase( new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        custom = databaseManager.createDatabase( new DatabaseId( CUSTOM_DATABASE_NAME ) );
         databaseManager.start();
     }
 
     private static Stream<Object[]> databaseOrderings()
     {
         return Stream.of(
-                new Object[] { "Natural order", Comparators.naturalOrder() },
-                new Object[] { "Reverse order", Comparators.reverseNaturalOrder() }
+                new Object[] { "Natural order", DatabaseId.comparator },
+                new Object[] { "Reverse order", DatabaseId.comparator.reversed() }
         );
     }
 
@@ -83,7 +83,7 @@ class MultiDatabaseManagerTest
 
     @ParameterizedTest( name = "{0}" )
     @MethodSource( "databaseOrderings" )
-    void ignoresCustomComparatorWhenOperatingOnSystemDatabase( String ignored,  Comparator<String> databasesOrdering ) throws Exception
+    void ignoresCustomComparatorWhenOperatingOnSystemDatabase( String ignored,  Comparator<DatabaseId> databasesOrdering ) throws Exception
     {
         // given
         initDatabaseManager( databasesOrdering );
@@ -96,20 +96,21 @@ class MultiDatabaseManagerTest
 
     @ParameterizedTest( name = "{0}" )
     @MethodSource( "databaseOrderings" )
-    void returnsDatabasesInCorrectOrder( String ignored, Comparator<String> databasesOrdering ) throws Exception
+    void returnsDatabasesInCorrectOrder( String ignored, Comparator<DatabaseId> databasesOrdering ) throws Exception
     {
         // given
         initDatabaseManager( databasesOrdering );
-        List<String> expectedNames = Stream.of( DEFAULT_DATABASE_NAME, CUSTOM_DATABASE_NAME )
+        List<DatabaseId> expectedDatabaseIds = Stream.of( DEFAULT_DATABASE_NAME, CUSTOM_DATABASE_NAME )
+                .map( DatabaseId::new )
                 .sorted( databasesOrdering )
                 .collect( Collectors.toList() );
-        expectedNames.add( 0, SYSTEM_DATABASE_NAME );
+        expectedDatabaseIds.add( 0, new DatabaseId( SYSTEM_DATABASE_NAME ) );
 
         // when
-        ArrayList<String> actualNames = new ArrayList<>( databaseManager.registeredDatabases().keySet() );
+        ArrayList<DatabaseId> actualDatabaseIds = new ArrayList<>( databaseManager.registeredDatabases().keySet() );
 
         // then
-        assertEquals( expectedNames, actualNames );
+        assertEquals( expectedDatabaseIds, actualDatabaseIds );
     }
 
 }

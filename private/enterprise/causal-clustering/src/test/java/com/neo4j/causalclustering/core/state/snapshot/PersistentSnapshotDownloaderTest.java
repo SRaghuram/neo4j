@@ -5,11 +5,10 @@
  */
 package com.neo4j.causalclustering.core.state.snapshot;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
-import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.storecopy.DatabaseShutdownException;
+import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.Panicker;
@@ -25,6 +24,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.neo4j.function.Predicates;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -157,7 +157,7 @@ class PersistentSnapshotDownloaderTest
     void shouldNotStartDownloadIfAlreadyCompleted() throws Exception
     {
         // given
-        ClusteredDatabaseContext defaultDatabase = clusteredDatabaseManager.getDatabaseContext( DEFAULT_DATABASE_NAME ).get();
+        ClusteredDatabaseContext defaultDatabase = clusteredDatabaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();

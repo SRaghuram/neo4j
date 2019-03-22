@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -37,12 +36,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 
 class ReadReplicaStartupProcess implements Lifecycle
 {
@@ -155,12 +154,12 @@ class ReadReplicaStartupProcess implements Lifecycle
         return resultEntry.getValue() == AsyncResult.SUCCESS;
     }
 
-    private CompletableFuture<Map<String,AsyncResult>> syncStoresWithUpstream( MemberId source, Map<String,? extends ClusteredDatabaseContext> dbsToSync )
+    private CompletableFuture<Map<String,AsyncResult>> syncStoresWithUpstream( MemberId source, Map<DatabaseId,? extends ClusteredDatabaseContext> dbsToSync )
     {
         CompletableFuture<Map<String,AsyncResult>> combinedFuture = CompletableFuture.completedFuture( new HashMap<>() );
         for ( var nameDbEntry : dbsToSync.entrySet() )
         {
-            String dbName = nameDbEntry.getKey();
+            String dbName = nameDbEntry.getKey().name();
             CompletableFuture<AsyncResult> stage =
                     CompletableFuture.supplyAsync( () -> doSyncStoreCopyWithUpstream( nameDbEntry.getValue(), source ), executor );
             combinedFuture = combinedFuture.thenCombineAsync( stage, ( stringAsyncResultMap, asyncResult ) ->

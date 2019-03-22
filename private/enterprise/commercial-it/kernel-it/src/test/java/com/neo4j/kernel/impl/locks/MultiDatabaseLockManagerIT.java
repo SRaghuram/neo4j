@@ -18,9 +18,9 @@ import java.util.concurrent.Executors;
 
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -95,7 +95,7 @@ class MultiDatabaseLockManagerIT
     {
         String secondDb = "second";
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        return databaseManager.createDatabase( secondDb ).databaseFacade();
+        return databaseManager.createDatabase( new DatabaseId( secondDb ) ).databaseFacade();
     }
 
     private static void lockNodeWithSameIdInAnotherDatabase( ExecutorService transactionExecutor, GraphDatabaseFacade facade, CountDownLatch latch )

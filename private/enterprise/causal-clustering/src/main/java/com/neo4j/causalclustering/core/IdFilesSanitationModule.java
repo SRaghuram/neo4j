@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.common.IdFilesDeleter;
 import java.util.Map;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -49,11 +50,11 @@ public class IdFilesSanitationModule extends LifecycleAdapter
             return;
         }
 
-        for ( Map.Entry<String,CoreDatabaseContext> dbEntry : databaseManager.registeredDatabases().entrySet() )
+        for ( Map.Entry<DatabaseId,CoreDatabaseContext> dbEntry : databaseManager.registeredDatabases().entrySet() )
         {
             if ( IdFilesDeleter.deleteIdFiles( dbEntry.getValue().databaseLayout(), fileSystem ) )
             {
-                log.info( format( "ID-files deleted for %s", dbEntry.getKey() ) );
+                log.info( format( "ID-files deleted for %s", dbEntry.getKey().name() ) );
             }
         }
     }

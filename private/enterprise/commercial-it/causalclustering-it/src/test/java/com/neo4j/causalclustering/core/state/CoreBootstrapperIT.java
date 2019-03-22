@@ -33,6 +33,7 @@ import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.log.ReadOnlyTransactionStore;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
@@ -310,10 +311,10 @@ class CoreBootstrapperIT
         /* The session state is initially empty. */
         assertEquals( new GlobalSessionTrackerState(), snapshot.get( CoreStateFiles.SESSION_TRACKER ) );
 
-        for ( Map.Entry<String,ClusteredDatabaseContext> databaseEntry : databaseService.registeredDatabases().entrySet() )
+        for ( Map.Entry<DatabaseId,ClusteredDatabaseContext> databaseEntry : databaseService.registeredDatabases().entrySet() )
         {
             verifyDatabaseSpecificState( snapshot::get, nodeCount );
-            if ( databaseEntry.getKey().equals( SYSTEM_DATABASE_NAME ) )
+            if ( databaseEntry.getKey().name().equals( SYSTEM_DATABASE_NAME ) )
             {
                 verifyDatabase( databaseEntry.getValue().databaseLayout(), pageCache, Config.defaults() );
             }

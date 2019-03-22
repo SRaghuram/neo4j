@@ -25,6 +25,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.transaction.log.LogicalTransactionStore;
 import org.neo4j.kernel.impl.transaction.log.TransactionCursor;
@@ -67,8 +68,8 @@ class SystemDatabaseIT
                 .setConfig( auth_provider, NATIVE_REALM_NAME )
                 .newGraphDatabase();
         databaseManager = getDatabaseManager( database );
-        defaultDb = getDatabaseByName( databaseManager, DEFAULT_DATABASE_NAME );
-        systemDb = getDatabaseByName( databaseManager, SYSTEM_DATABASE_NAME );
+        defaultDb = getDatabaseByName( databaseManager, new DatabaseId( DEFAULT_DATABASE_NAME ) );
+        systemDb = getDatabaseByName( databaseManager, new DatabaseId( SYSTEM_DATABASE_NAME ) );
     }
 
     @AfterEach
@@ -184,7 +185,7 @@ class SystemDatabaseIT
             File disabledSystemDbDirectory = testDirectory.databaseDir( "withSystemDd" );
             databaseWithSystemDb = new TestCommercialGraphDatabaseFactory().newEmbeddedDatabase( disabledSystemDbDirectory );
             DatabaseManager<?> databaseManager = getDatabaseManager( databaseWithSystemDb );
-            assertTrue( databaseManager.getDatabaseContext( SYSTEM_DATABASE_NAME ).isPresent() );
+            assertTrue( databaseManager.getDatabaseContext( new DatabaseId( SYSTEM_DATABASE_NAME ) ).isPresent() );
         }
         finally
         {
@@ -216,9 +217,9 @@ class SystemDatabaseIT
         }
     }
 
-    private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<?> databaseManager, String dbName )
+    private static GraphDatabaseFacade getDatabaseByName( DatabaseManager<?> databaseManager, DatabaseId databaseId )
     {
-        return databaseManager.getDatabaseContext( dbName ).orElseThrow( IllegalStateException::new ).databaseFacade();
+        return databaseManager.getDatabaseContext( databaseId ).orElseThrow( IllegalStateException::new ).databaseFacade();
     }
 
     private DatabaseManager<?> getDatabaseManager( GraphDatabaseService database )

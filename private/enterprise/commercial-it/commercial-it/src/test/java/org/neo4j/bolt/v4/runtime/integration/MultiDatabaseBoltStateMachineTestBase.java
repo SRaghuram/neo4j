@@ -20,6 +20,7 @@ import org.neo4j.bolt.v3.messaging.request.HelloMessage;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
@@ -45,9 +46,9 @@ abstract class MultiDatabaseBoltStateMachineTestBase
         return env.databaseManager();
     }
 
-    private String defaultDatabaseName()
+    private DatabaseId defaultDatabaseId()
     {
-        return env.defaultDatabaseName();
+        return new DatabaseId( env.defaultDatabaseName() );
     }
 
     @Test
@@ -107,7 +108,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     {
         BoltStateMachineV1 machine = newStateMachineInReadyState();
         DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.dropDatabase( defaultDatabaseName() );
+        databaseManager.dropDatabase( defaultDatabaseId() );
         runWithFailure( "RETURN 1", machine, Status.Database.DatabaseNotFound );
     }
 
@@ -115,7 +116,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     void shouldErrorIfDatabaseStopped() throws Throwable
     {
         DatabaseManager<?> databaseManager = databaseManager();
-        databaseManager.stopDatabase( defaultDatabaseName() );
+        databaseManager.stopDatabase( defaultDatabaseId() );
 
         BoltStateMachineV1 machine = newStateMachineInReadyState();
         runWithFailure( "RETURN 1", machine, Status.General.UnknownError );

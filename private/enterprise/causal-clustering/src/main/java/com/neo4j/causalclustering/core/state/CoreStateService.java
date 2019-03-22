@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core.state;
 
-import com.neo4j.causalclustering.core.CommitProcessInstaller;
-import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.SessionTracker;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
+import com.neo4j.causalclustering.core.CommitProcessInstaller;
 import com.neo4j.causalclustering.core.CoreDatabaseContext;
+import com.neo4j.causalclustering.core.ReplicationModule;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.replication.Replicator;
@@ -62,6 +62,7 @@ import org.neo4j.internal.id.configuration.IdTypeConfigurationProvider;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -147,8 +148,8 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
 
         idTypeConfigurationProvider = new CommercialIdTypeConfigurationProvider( config );
         idReuse = new IdReusabilityCondition( commandIndexTracker, raftMachine, myself );
-        Function<String,IdGeneratorFactory> idGeneratorProvider =
-                databaseName -> createIdGeneratorFactory( fs, logProvider, idTypeConfigurationProvider, databaseName );
+        Function<DatabaseId,IdGeneratorFactory> idGeneratorProvider =
+                databaseId -> createIdGeneratorFactory( fs, logProvider, idTypeConfigurationProvider, databaseId );
         idContextFactory = IdContextFactoryBuilder.of( idTypeConfigurationProvider, globalModule.getJobScheduler() )
                 .withIdGenerationFactoryProvider( idGeneratorProvider )
                 .withFactoryWrapper( generator -> new FreeIdFilteredIdGeneratorFactory( generator, idReuse ) ).build();
@@ -163,7 +164,7 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
 
         ReplicatedIdRangeAcquirer idRangeAcquirer = new ReplicatedIdRangeAcquirer( databaseName, replicator, idAllocationStateMachine, allocationSizes,
                 myself, logProvider );
-        DatabaseIdContext idContext = idContextFactory.createIdContext( databaseName );
+        DatabaseIdContext idContext = idContextFactory.createIdContext( new DatabaseId( databaseName ) );
 
         TokenRegistry relationshipTypeTokenRegistry = new TokenRegistry( TokenHolder.TYPE_RELATIONSHIP_TYPE );
         ReplicatedRelationshipTypeTokenHolder relationshipTypeTokenHolder = new ReplicatedRelationshipTypeTokenHolder( databaseName,
@@ -257,14 +258,14 @@ public class CoreStateService implements CoreStateRepository, CoreStateFactory
     }
 
     private IdGeneratorFactory createIdGeneratorFactory( FileSystemAbstraction fileSystem, final LogProvider logProvider,
-            IdTypeConfigurationProvider idTypeConfigurationProvider, String databaseName )
+            IdTypeConfigurationProvider idTypeConfigurationProvider, DatabaseId databaseId )
     {
         Function<String,ReplicatedIdRangeAcquirer> rangeAcquirerFn =
                 dbName -> getDatabaseState( dbName )
                         .map( DatabaseCoreStateComponents::rangeAcquirer )
-                        .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseName ) ) );
+                        .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseId ) ) );
 
-        return new ReplicatedIdGeneratorFactory( fileSystem, rangeAcquirerFn, logProvider, idTypeConfigurationProvider, databaseName, panicker );
+        return new ReplicatedIdGeneratorFactory( fileSystem, rangeAcquirerFn, logProvider, idTypeConfigurationProvider, databaseId.name(), panicker );
     }
 
     private Locks createLockManager( final Config config, Clock clock, final LogService logging,

@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.monitoring.Health;
 
 /**
@@ -22,9 +23,9 @@ public interface ClusteredDatabaseManager<DB extends ClusteredDatabaseContext> e
      */
     void stopForStoreCopy() throws Throwable;
 
-    Optional<DB> getDatabaseContext( String databaseName );
+    Optional<DB> getDatabaseContext( DatabaseId databaseId );
 
-    DB createDatabase( String databaseName ) throws DatabaseExistsException;
+    DB createDatabase( DatabaseId databaseId ) throws DatabaseExistsException;
 
     /**
      * This method asserts that a given database is healthy, and if it is not, attempts to throw an exception of type `E`
@@ -33,7 +34,7 @@ public interface ClusteredDatabaseManager<DB extends ClusteredDatabaseContext> e
      * @param <E> The type of exception we wish to be thrown if the database is unhealthy
      * @throws E if the database is unhealthy
      */
-    <E extends Throwable> void assertHealthy( String databaseName, Class<E> cause ) throws E;
+    <E extends Throwable> void assertHealthy( DatabaseId databaseId, Class<E> cause ) throws E;
 
     Health getAllHealthServices();
 }

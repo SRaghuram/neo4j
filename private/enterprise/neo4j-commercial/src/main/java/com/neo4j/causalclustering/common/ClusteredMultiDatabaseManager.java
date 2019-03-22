@@ -15,8 +15,6 @@ import java.util.Optional;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManagerException;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
-import org.neo4j.dbms.database.UnableToStartDatabaseException;
-import org.neo4j.dbms.database.UnableToStopDatabaseException;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.helpers.Exceptions;
@@ -26,11 +24,11 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityRequirement;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
-import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
-import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
@@ -141,14 +139,14 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
     }
 
     @Override
-    public Optional<DB> getDatabaseContext( String databaseName )
+    public Optional<DB> getDatabaseContext( DatabaseId databaseId )
     {
-        return Optional.ofNullable( databaseMap.get( databaseName ) );
+        return Optional.ofNullable( databaseMap.get( databaseId ) );
     }
 
-    protected DB createNewDatabaseContext( String databaseName )
+    protected DB createNewDatabaseContext( DatabaseId databaseId )
     {
-        return super.createNewDatabaseContext( databaseName );
+        return super.createNewDatabaseContext( databaseId );
     }
 
     @Override
@@ -175,18 +173,18 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         return globalHealths;
     }
 
-    public <EXCEPTION extends Throwable> void assertHealthy( String databaseName, Class<EXCEPTION> cause ) throws EXCEPTION
+    public <EXCEPTION extends Throwable> void assertHealthy( DatabaseId databaseId, Class<EXCEPTION> cause ) throws EXCEPTION
     {
-        getDatabaseHealth( databaseName ).orElseThrow( () ->
+        getDatabaseHealth( databaseId ).orElseThrow( () ->
                 Exceptions.disguiseException( cause,
-                        format( "Database %s not found!", databaseName ),
-                        new DatabaseNotFoundException( databaseName ) ) )
+                        format( "Database %s not found!", databaseId.name() ),
+                        new DatabaseNotFoundException( databaseId.name() ) ) )
                 .assertHealthy( cause );
     }
 
-    private Optional<Health> getDatabaseHealth( String databaseName )
+    private Optional<Health> getDatabaseHealth( DatabaseId databaseId )
     {
-        return Optional.ofNullable( databaseMap.get( databaseName ) ).map( db -> db.database().getDatabaseHealth() );
+        return Optional.ofNullable( databaseMap.get( databaseId ) ).map( db -> db.database().getDatabaseHealth() );
     }
 
     /*
@@ -194,26 +192,26 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         whilst our contexts are themselves lifecycles. Context's must be stopped *before* the underlying database, and started *after*.
      */
     @Override
-    protected void startDatabase( String databaseName, DB context )
+    protected void startDatabase( DatabaseId databaseId, DB context )
     {
         try
         {
-            super.startDatabase( databaseName, context );
+            super.startDatabase( databaseId, context );
             context.start();
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagerException( format( "Unable to start database %s", databaseName ), t );
+            throw new DatabaseManagerException( format( "Unable to start database %s", databaseId ), t );
         }
     }
 
     @Override
-    protected void stopDatabase( String databaseName, DB context )
+    protected void stopDatabase( DatabaseId databaseId, DB context )
     {
-        stopDatabase( databaseName, context, false );
+        stopDatabase( databaseId, context, false );
     }
 
-    private void stopDatabase( String databaseName, DB context, boolean storeCopying )
+    private void stopDatabase( DatabaseId databaseId, DB context, boolean storeCopying )
     {
         try
         {
@@ -222,26 +220,26 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
             {
                 context.stop();
             }
-            super.stopDatabase( databaseName, context );
+            super.stopDatabase( databaseId, context );
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagerException( format( "Unable to stop database %s", databaseName ), t );
+            throw new DatabaseManagerException( format( "Unable to stop database %s", databaseId ), t );
         }
     }
 
     @Override
-    protected void dropDatabase( String databaseName, DB context )
+    protected void dropDatabase( DatabaseId databaseId, DB context )
     {
         try
         {
             //TODO: Should clean up cluster state here for core members
             context.stop();
-            super.dropDatabase( databaseName, context );
+            super.dropDatabase( databaseId, context );
         }
         catch ( Throwable t )
         {
-            throw new DatabaseManagerException( format( "Unable to drop database %s", databaseName ), t );
+            throw new DatabaseManagerException( format( "Unable to drop database %s", databaseId ), t );
         }
     }
 }

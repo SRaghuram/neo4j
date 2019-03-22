@@ -16,6 +16,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.DatabaseEventHandlerAdapter;
 import org.neo4j.graphdb.event.ErrorState;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.monitoring.DatabaseHealth;
@@ -50,8 +51,8 @@ class MultiDatabasePanicIT
     void databasesPanicSeparately() throws DatabaseExistsException
     {
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( "first" ).databaseFacade();
-        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( "second" ).databaseFacade();
+        GraphDatabaseFacade firstDatabase = databaseManager.createDatabase( new DatabaseId( "first" ) ).databaseFacade();
+        GraphDatabaseFacade secondDatabase = databaseManager.createDatabase( new DatabaseId( "second" ) ).databaseFacade();
         PanicDatabaseEventListener firstPanicListener = new PanicDatabaseEventListener();
         PanicDatabaseEventListener secondPanicListener = new PanicDatabaseEventListener();
         firstDatabase.registerDatabaseEventHandler( firstPanicListener );

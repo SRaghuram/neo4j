@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 
 import java.util.Optional;
 
-import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 
 /**
  * The components needed to perform store copy and catchup operations for databases in Neo4j.
@@ -33,7 +33,7 @@ public class CatchupComponentsRepository
 
     public Optional<DatabaseCatchupComponents> componentsFor( String databaseName )
     {
-        return clusteredDatabaseManager.getDatabaseContext( databaseName ).map( ClusteredDatabaseContext::catchupComponents );
+        return clusteredDatabaseManager.getDatabaseContext( new DatabaseId( databaseName ) ).map( ClusteredDatabaseContext::catchupComponents );
     }
 
     /** Simple struct to make working with various per database catchup components a bit easier */

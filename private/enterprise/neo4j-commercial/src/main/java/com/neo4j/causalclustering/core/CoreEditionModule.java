@@ -102,6 +102,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.availability.CompositeDatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -308,9 +309,9 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     /* Component Factories */
     @Override
-    public EditionDatabaseComponents createDatabaseComponents( String databaseName )
+    public EditionDatabaseComponents createDatabaseComponents( DatabaseId databaseId )
     {
-        return new CoreDatabaseComponents( globalModule, this, databaseName );
+        return new CoreDatabaseComponents( globalModule, this, databaseId.name() );
     }
 
     private static MessageLogger<MemberId> createMessageLogger( Config config, LifeSupport life, MemberId myself )
@@ -477,7 +478,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
 
     private void createDatabase( DatabaseManager<?> databaseManager, String databaseName ) throws DatabaseExistsException
     {
-        databaseManager.createDatabase( databaseName );
+        databaseManager.createDatabase( new DatabaseId( databaseName ) );
     }
 
     private DuplexPipelineWrapperFactory pipelineWrapperFactory()

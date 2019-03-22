@@ -34,8 +34,9 @@ import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
-import org.neo4j.monitoring.DatabaseHealth;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.FakeClockJobScheduler;
@@ -73,7 +74,7 @@ public class CatchupProcessManagerTest
     public void before()
     {
         //Mock the components of CatchupComponentsRepository
-        databaseNames.forEach( name -> databaseService.registerDatabase( name, getMockDatabase( name ) ) );
+        databaseNames.forEach( name -> databaseService.registerDatabase( new DatabaseId( name ), getMockDatabase( name ) ) );
         DatabaseCatchupComponents components = new DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) );
 
         //Wire these mocked components to the ServerModule mock

@@ -38,6 +38,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.UserManager;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.AssertableLogProvider;
@@ -602,9 +603,9 @@ class SystemGraphRealmIT
         }
 
         @Override
-        public Optional<StandaloneDatabaseContext> getDatabaseContext( String name )
+        public Optional<StandaloneDatabaseContext> getDatabaseContext( DatabaseId databaseId )
         {
-            if ( SYSTEM_DATABASE_NAME.equals( name ) )
+            if ( SYSTEM_DATABASE_NAME.equals( databaseId.name() ) )
             {
                 DependencyResolver dependencyResolver = testSystemDb.getDependencyResolver();
                 Database database = dependencyResolver.resolveDependency( Database.class );
@@ -614,28 +615,28 @@ class SystemGraphRealmIT
         }
 
         @Override
-        public StandaloneDatabaseContext createDatabase( String databaseName )
+        public StandaloneDatabaseContext createDatabase( DatabaseId databaseId )
         {
             throw new UnsupportedOperationException( "Call to createDatabase not expected" );
         }
 
         @Override
-        public void dropDatabase( String databaseName )
+        public void dropDatabase( DatabaseId databaseId )
         {
         }
 
         @Override
-        public void stopDatabase( String databaseName )
+        public void stopDatabase( DatabaseId databaseId )
         {
         }
 
         @Override
-        public void startDatabase( String databaseName )
+        public void startDatabase( DatabaseId databaseId )
         {
         }
 
         @Override
-        public SortedMap<String,StandaloneDatabaseContext> registeredDatabases()
+        public SortedMap<DatabaseId,StandaloneDatabaseContext> registeredDatabases()
         {
             return Collections.emptySortedMap();
         }

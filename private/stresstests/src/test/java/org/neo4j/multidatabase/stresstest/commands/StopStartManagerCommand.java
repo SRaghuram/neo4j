@@ -8,19 +8,19 @@ package org.neo4j.multidatabase.stresstest.commands;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
+import org.neo4j.kernel.database.DatabaseId;
 
 public class StopStartManagerCommand extends DatabaseManagerCommand
 {
-    public StopStartManagerCommand( DatabaseManager<?> manager, String databaseName )
+    public StopStartManagerCommand( DatabaseManager<?> manager, DatabaseId databaseId )
     {
-        super( manager, databaseName );
+        super( manager, databaseId );
     }
 
     @Override
-    void execute( DatabaseManager<?> manager, String databaseName ) throws DatabaseExistsException, DatabaseNotFoundException
+    void execute( DatabaseManager<?> manager, DatabaseId databaseId ) throws DatabaseExistsException, DatabaseNotFoundException
     {
-        manager.stopDatabase( databaseName );
-        manager.startDatabase( databaseName );
+        manager.stopDatabase( databaseId );
+        manager.startDatabase( databaseId );
     }
 }

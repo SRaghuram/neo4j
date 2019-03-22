@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
 import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
@@ -39,7 +40,7 @@ public class StoreDownloaderTest
     private final AdvertisedSocketAddress primaryAddress = new AdvertisedSocketAddress( "primary", 1 );
     private final AdvertisedSocketAddress secondaryAddress = new AdvertisedSocketAddress( "secondary", 2 );
 
-    private final String databaseName = "target";
+    private final DatabaseId databaseId = new DatabaseId( "target" );
     private final org.neo4j.storageengine.api.StoreId storeId = randomKernelStoreId();
 
     private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
@@ -50,7 +51,7 @@ public class StoreDownloaderTest
     public void shouldReplaceMismatchedStoreIfEmpty() throws Exception
     {
         // given
-        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, true, storeId );
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, true, storeId );
 
         RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
         StoreId mismatchedStoreId = new StoreId( randomKernelStoreId() );
@@ -70,7 +71,7 @@ public class StoreDownloaderTest
     public void shouldNotReplaceMismatchedNonEmptyStore() throws Exception
     {
         // given
-        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, false, storeId );
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
 
         RemoteStore remoteStore = databaseContext.catchupComponents().remoteStore();
         StoreId mismatchedStoreId = new StoreId( randomKernelStoreId() );
@@ -90,7 +91,7 @@ public class StoreDownloaderTest
     public void shouldOnlyCatchupIfPossible() throws Exception
     {
         // given
-        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, false, storeId );
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
         RemoteStore remoteStore = mockRemoteSuccessfulStore( databaseContext );
 
         // when
@@ -107,7 +108,7 @@ public class StoreDownloaderTest
     public void shouldDownloadWholeStoreIfCannotCatchup() throws Exception
     {
         // given
-        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseName, false, storeId );
+        ClusteredDatabaseContext databaseContext = mockLocalDatabase( databaseId, false, storeId );
         RemoteStore remoteStore = mockRemoteUnsuccessfulStore( databaseContext );
         StoreCopyProcess storeCopyProcess = databaseContext.catchupComponents().storeCopyProcess();
 
@@ -140,10 +141,10 @@ public class StoreDownloaderTest
         }
     }
 
-    private ClusteredDatabaseContext mockLocalDatabase( String databaseName, boolean isEmpty, org.neo4j.storageengine.api.StoreId storeId )
+    private ClusteredDatabaseContext mockLocalDatabase( DatabaseId databaseId, boolean isEmpty, org.neo4j.storageengine.api.StoreId storeId )
     {
         StubClusteredDatabaseContext db = databaseManager.givenDatabaseWithConfig()
-                .withDatabaseName( databaseName )
+                .withDatabaseId( databaseId )
                 .withCatchupComponentsFactory( ignored ->
                         new CatchupComponentsRepository.DatabaseCatchupComponents( mock( RemoteStore.class ), mock( StoreCopyProcess.class ) ) )
                 .withKernelStoreId( storeId )

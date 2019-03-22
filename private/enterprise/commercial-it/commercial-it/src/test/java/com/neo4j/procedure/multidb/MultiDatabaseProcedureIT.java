@@ -24,6 +24,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.core.NodeProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -71,8 +72,8 @@ class MultiDatabaseProcedureIT
         String firstName = "first";
         String secondName = "second";
 
-        DatabaseContext firstDatabase = databaseManager.createDatabase( firstName );
-        DatabaseContext secondDatabase = databaseManager.createDatabase( secondName );
+        DatabaseContext firstDatabase = databaseManager.createDatabase( new DatabaseId( firstName ) );
+        DatabaseContext secondDatabase = databaseManager.createDatabase( new DatabaseId( secondName ) );
 
         GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
         GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();
@@ -96,8 +97,8 @@ class MultiDatabaseProcedureIT
         String firstName = "mapperFirst";
         String secondName = "mapperSecond";
 
-        DatabaseContext firstDatabase = databaseManager.createDatabase( firstName );
-        DatabaseContext secondDatabase = databaseManager.createDatabase( secondName );
+        DatabaseContext firstDatabase = databaseManager.createDatabase( new DatabaseId( firstName ) );
+        DatabaseContext secondDatabase = databaseManager.createDatabase( new DatabaseId( secondName ) );
 
         GraphDatabaseFacade firstFacade = firstDatabase.databaseFacade();
         GraphDatabaseFacade secondFacade = secondDatabase.databaseFacade();

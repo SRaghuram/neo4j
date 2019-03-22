@@ -34,6 +34,7 @@ import java.util.concurrent.Future;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.monitoring.Monitors;
@@ -85,7 +86,7 @@ public class CatchupPollingProcessTest
     @Before
     public void before() throws Throwable
     {
-        databaseService.registerDatabase( databaseName, clusteredDatabaseContext );
+        databaseService.registerDatabase( new DatabaseId( databaseName ), clusteredDatabaseContext );
         when( idStore.getLastCommittedTransactionId() ).thenReturn( BASE_TX_ID + 1 );
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
         when( catchupAddressProvider.primary() ).thenReturn( coreMemberAddress );

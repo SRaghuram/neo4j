@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.helpers.FakeJobScheduler;
 import com.neo4j.causalclustering.identity.StoreId;
-import org.neo4j.monitoring.CompositeDatabaseHealth;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -17,13 +16,15 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BooleanSupplier;
 
-import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.collection.Dependencies;
+import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.monitoring.CompositeDatabaseHealth;
 import org.neo4j.monitoring.Health;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.when;
 
 public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<ClusteredDatabaseContext>
 {
-    private SortedMap<String,ClusteredDatabaseContext> databases = new TreeMap<>();
+    private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>( DatabaseId.comparator );
     private boolean isStoppedForSomeReason;
     private CompositeDatabaseHealth globalDatabaseHealth;
 
@@ -54,20 +55,20 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
     }
 
     @Override
-    public Optional<ClusteredDatabaseContext> getDatabaseContext( String databaseName )
+    public Optional<ClusteredDatabaseContext> getDatabaseContext( DatabaseId databaseId )
     {
-        return Optional.ofNullable( databases.get( databaseName ) );
+        return Optional.ofNullable( databases.get( databaseId ) );
     }
 
     @Override
-    public StubClusteredDatabaseContext createDatabase( String databaseName )
+    public StubClusteredDatabaseContext createDatabase( DatabaseId databaseId )
     {
         throw new UnsupportedOperationException( "Can't register databases directly with the StubClusteredDatabaseManager" );
     }
 
-    public void registerDatabase( String databaseName, ClusteredDatabaseContext db )
+    public void registerDatabase( DatabaseId databaseId, ClusteredDatabaseContext db )
     {
-        databases.put( databaseName, db );
+        databases.put( databaseId, db );
     }
 
     public DatabaseContextConfig givenDatabaseWithConfig()
@@ -76,13 +77,13 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
     }
 
     @Override
-    public SortedMap<String,ClusteredDatabaseContext> registeredDatabases()
+    public SortedMap<DatabaseId,ClusteredDatabaseContext> registeredDatabases()
     {
         return Collections.unmodifiableSortedMap( databases );
     }
 
     @Override
-    public <E extends Throwable> void assertHealthy( String databaseName, Class<E> cause ) throws E
+    public <E extends Throwable> void assertHealthy( DatabaseId databaseId, Class<E> cause ) throws E
     { //no-op
     }
 
@@ -99,17 +100,17 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
 
     //TODO: change lifecycle management to be per database
     @Override
-    public void dropDatabase( String databaseName )
+    public void dropDatabase( DatabaseId databaseId )
     {
     }
 
     @Override
-    public void stopDatabase( String databaseName )
+    public void stopDatabase( DatabaseId databaseId )
     {
     }
 
     @Override
-    public void startDatabase( String databaseName )
+    public void startDatabase( DatabaseId databaseId )
     {
     }
 
@@ -139,7 +140,8 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
     private StubClusteredDatabaseContext stubDatabaseFromConfig( DatabaseContextConfig config )
     {
         Database db = mock( Database.class );
-        when( db.getDatabaseName() ).thenReturn( config.databaseName );
+        when( db.getDatabaseId() ).thenReturn( config.databaseId );
+        when( db.getDatabaseName() ).thenReturn( config.databaseId.name() );
         when( db.getDatabaseLayout() ).thenReturn( config.databaseLayout );
 
         StubClusteredDatabaseContext dbContext = new StubClusteredDatabaseContext( db, mock( GraphDatabaseFacade.class ), config.logProvider,
@@ -159,7 +161,7 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
 
     public class DatabaseContextConfig
     {
-        private String databaseName;
+        private DatabaseId databaseId;
         private DatabaseLayout databaseLayout;
         private LogProvider logProvider = NullLogProvider.getInstance();
         private BooleanSupplier isAvailable = StubClusteredDatabaseManager.this::globalAvailability;
@@ -173,10 +175,19 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         {
         }
 
+        public DatabaseContextConfig withDatabaseId( DatabaseId databaseId )
+        {
+            this.databaseId = databaseId;
+            return this;
+        }
+
+        /**
+         * TODO remove
+         */
+        @Deprecated
         public DatabaseContextConfig withDatabaseName( String databaseName )
         {
-            this.databaseName = databaseName;
-            return this;
+            return withDatabaseId( new DatabaseId( databaseName ) );
         }
 
         public DatabaseContextConfig withKernelStoreId( org.neo4j.storageengine.api.StoreId storeId )
@@ -230,10 +241,10 @@ public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<Cl
         public StubClusteredDatabaseContext register()
         {
             StubClusteredDatabaseContext dbContext = stubDatabaseFromConfig( this );
-            ClusteredDatabaseContext previous = databases.putIfAbsent( databaseName, dbContext );
+            ClusteredDatabaseContext previous = databases.putIfAbsent( databaseId, dbContext );
             if ( previous != null )
             {
-                throw new DatabaseExistsException( "Already had database with name " + databaseName );
+                throw new DatabaseExistsException( "Already had database with name " + databaseId.name() );
             }
             return dbContext;
         }

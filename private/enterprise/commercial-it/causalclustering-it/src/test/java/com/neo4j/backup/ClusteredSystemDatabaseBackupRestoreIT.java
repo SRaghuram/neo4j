@@ -29,7 +29,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.database.DatabaseContext;
@@ -39,6 +38,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.DbRepresentation;
@@ -195,7 +195,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
                 .getDependencyResolver()
                 .resolveDependency( CoreDatabaseManager.class );
 
-        return databaseManager.getDatabaseContext( GraphDatabaseSettings.SYSTEM_DATABASE_NAME )
+        return databaseManager.getDatabaseContext( new DatabaseId( GraphDatabaseSettings.SYSTEM_DATABASE_NAME ) )
                 .map( DatabaseContext::databaseFacade ).orElseThrow( IllegalStateException::new );
     }
 

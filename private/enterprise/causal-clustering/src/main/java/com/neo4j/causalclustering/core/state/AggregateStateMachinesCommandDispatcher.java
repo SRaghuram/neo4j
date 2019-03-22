@@ -17,6 +17,8 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 
 import java.util.function.Consumer;
 
+import org.neo4j.kernel.database.DatabaseId;
+
 class AggregateStateMachinesCommandDispatcher implements CommandDispatcher
 {
     private final ClusteredDatabaseManager<CoreDatabaseContext> databaseManager;
@@ -69,7 +71,7 @@ class AggregateStateMachinesCommandDispatcher implements CommandDispatcher
     {
         String databaseName = command.databaseName();
         //TODO: Move the healthy check to the CoreStateService. If its going to take a databaseManager as a param anyway.
-        databaseManager.assertHealthy( databaseName, IllegalStateException.class );
+        databaseManager.assertHealthy( new DatabaseId( databaseName ), IllegalStateException.class );
         DatabaseCoreStateComponents dbState = coreStateRepository.getDatabaseState( command.databaseName() )
                 .orElseThrow( () -> new IllegalStateException( String.format( "The replicated command %s specifies a database %s " +
                     "which does not exist or has not been initialised.", command, command.databaseName() ) ) );

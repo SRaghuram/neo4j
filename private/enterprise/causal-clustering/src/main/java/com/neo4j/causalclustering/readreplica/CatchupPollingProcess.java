@@ -15,8 +15,8 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreCopyProcess;
 import com.neo4j.causalclustering.catchup.tx.PullRequestMonitor;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponse;
 import com.neo4j.causalclustering.catchup.tx.TxStreamFinishedResponse;
-import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
+import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
 import com.neo4j.causalclustering.error_handling.Panicker;
 import com.neo4j.causalclustering.helper.Suspendable;
 import com.neo4j.causalclustering.identity.StoreId;
@@ -27,6 +27,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
 import org.neo4j.helpers.AdvertisedSocketAddress;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
@@ -80,7 +81,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         this.databaseName = databaseName;
         this.clusteredDatabaseManager = clusteredDatabaseManager;
         this.catchupAddressProvider = catchupAddressProvider;
-        this.clusteredDatabaseContext = clusteredDatabaseManager.getDatabaseContext( databaseName ).orElseThrow( IllegalStateException::new );
+        this.clusteredDatabaseContext = clusteredDatabaseManager.getDatabaseContext( new DatabaseId( databaseName ) ).orElseThrow( IllegalStateException::new );
         this.enableDisableOnStoreCopy = enableDisableOnSoreCopy;
         this.catchUpClient = catchUpClient;
         this.applier = applier;

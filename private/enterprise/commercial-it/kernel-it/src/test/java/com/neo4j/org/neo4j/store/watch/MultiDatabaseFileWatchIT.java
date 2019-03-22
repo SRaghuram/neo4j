@@ -20,9 +20,9 @@ import java.util.concurrent.CountDownLatch;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.watcher.FileWatchEventListener;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.util.watcher.FileSystemWatcherService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -51,9 +51,9 @@ class MultiDatabaseFileWatchIT
         logProvider = new AssertableLogProvider( true );
         database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider ).newEmbeddedDatabase( testDirectory.storeDir() );
         DatabaseManager<?> databaseManager = getDatabaseManager();
-        firstContext = databaseManager.createDatabase( "first" );
-        secondContext = databaseManager.createDatabase( "second" );
-        thirdContext = databaseManager.createDatabase( "third" );
+        firstContext = databaseManager.createDatabase( new DatabaseId( "first" ) );
+        secondContext = databaseManager.createDatabase( new DatabaseId( "second" ) );
+        thirdContext = databaseManager.createDatabase( new DatabaseId( "third" ) );
     }
 
     @AfterEach

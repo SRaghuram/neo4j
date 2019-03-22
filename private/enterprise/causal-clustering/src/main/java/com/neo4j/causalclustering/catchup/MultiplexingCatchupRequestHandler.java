@@ -14,6 +14,7 @@ import java.util.function.Function;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.LogProvider;
 
 /**
@@ -46,7 +47,7 @@ class MultiplexingCatchupRequestHandler<T extends CatchupProtocolMessage> extend
         String databaseName = request.databaseName();
 
         SimpleChannelInboundHandler<T> handler = databaseManager
-                .getDatabaseContext( databaseName )
+                .getDatabaseContext( new DatabaseId( databaseName ) )
                 .map( DatabaseContext::database )
                 .map( handlerFactory )
                 .orElseGet( () -> new UnknownDatabaseHandler<>( messageType, protocol, logProvider ) );

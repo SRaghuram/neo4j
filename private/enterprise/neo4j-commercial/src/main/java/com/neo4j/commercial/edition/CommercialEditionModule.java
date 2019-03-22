@@ -25,7 +25,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -45,6 +44,7 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
@@ -118,15 +118,15 @@ public class CommercialEditionModule extends CommunityEditionModule
     }
 
     @Override
-    protected Function<String,TokenHolders> createTokenHolderProvider( GlobalModule platform )
+    protected Function<DatabaseId,TokenHolders> createTokenHolderProvider( GlobalModule platform )
     {
         Config globalConfig = platform.getGlobalConfig();
-        return databaseName -> {
+        return databaseId -> {
             DatabaseManager<?> databaseManager = platform.getGlobalDependencies().resolveDependency( DatabaseManager.class );
             Supplier<Kernel> kernelSupplier = () ->
             {
-                DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseName )
-                        .orElseThrow( () -> new IllegalStateException( format( "Database %s not found.", databaseName ) ) );
+                DatabaseContext databaseContext = databaseManager.getDatabaseContext( databaseId )
+                        .orElseThrow( () -> new IllegalStateException( format( "Database %s not found.", databaseId.name() ) ) );
                 return databaseContext.dependencies().resolveDependency( Kernel.class );
             };
             return new TokenHolders(
@@ -158,13 +158,13 @@ public class CommercialEditionModule extends CommunityEditionModule
     private static void createCommercialEditionDatabases( DatabaseManager<?> databaseManager, Config config )
             throws DatabaseExistsException
     {
-        databaseManager.createDatabase( SYSTEM_DATABASE_NAME );
+        databaseManager.createDatabase( new DatabaseId( SYSTEM_DATABASE_NAME ) );
         createConfiguredDatabases( databaseManager, config );
     }
 
     private static void createConfiguredDatabases( DatabaseManager<?> databaseManager, Config config ) throws DatabaseExistsException
     {
-        databaseManager.createDatabase( config.get( GraphDatabaseSettings.default_database ) );
+        databaseManager.createDatabase( new DatabaseId( config.get( GraphDatabaseSettings.default_database ) ) );
     }
 
     @Override

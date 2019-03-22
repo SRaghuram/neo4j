@@ -18,6 +18,7 @@ import org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder;
 import org.neo4j.io.fs.watcher.DatabaseLayoutWatcher;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.api.CommitProcessFactory;
 import org.neo4j.kernel.impl.api.ReadOnlyTransactionCommitProcess;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
@@ -27,13 +28,10 @@ import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
-import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.ReadOnlyTokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
-import org.neo4j.monitoring.DatabaseHealth;
-import org.neo4j.logging.Log;
 
 public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
 {
@@ -57,7 +55,7 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
                 .withFileSystem( globalModule.getFileSystem() )
                 .build();
 
-        this.idContext = idContextFactory.createIdContext( databaseName );
+        this.idContext = idContextFactory.createIdContext( new DatabaseId( databaseName ) );
         this.tokenHolders = new TokenHolders(
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_PROPERTY_KEY ),
                 new DelegatingTokenHolder( new ReadOnlyTokenCreator(), TokenHolder.TYPE_LABEL ),

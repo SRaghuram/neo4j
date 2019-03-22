@@ -5,9 +5,7 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseContext;
 import com.neo4j.causalclustering.common.ClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.CoreDatabaseContext;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
@@ -28,6 +26,7 @@ import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -167,12 +166,13 @@ public class RaftReplicator implements Replicator, LeaderListener
 
     private void assertDatabaseAvailable( String databaseName ) throws UnavailableException
     {
-        Optional<DatabaseAvailabilityGuard> databaseAvailabilityGuard = databaseManager.getDatabaseContext( databaseName )
+        var databaseId = new DatabaseId( databaseName );
+        Optional<DatabaseAvailabilityGuard> databaseAvailabilityGuard = databaseManager.getDatabaseContext( databaseId )
                 .map( DatabaseContext::database )
                 .map( Database::getDatabaseAvailabilityGuard );
 
         databaseAvailabilityGuard.orElseThrow( IllegalStateException::new ).await( availabilityTimeoutMillis );
-        databaseManager.assertHealthy( databaseName, IllegalStateException.class );
+        databaseManager.assertHealthy( databaseId, IllegalStateException.class );
     }
 
     private void assertAllDatabasesAvailable() throws UnavailableException

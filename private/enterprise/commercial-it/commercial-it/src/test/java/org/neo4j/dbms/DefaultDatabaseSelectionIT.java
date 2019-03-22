@@ -15,13 +15,12 @@ import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -135,8 +134,8 @@ class DefaultDatabaseSelectionIT
     private void checkDatabaseNames( GraphDatabaseService database, String defaultDatabaseName )
     {
         DatabaseManager<?> databaseManager = getDatabaseManager( database );
-        Set<String> databases = databaseManager.registeredDatabases().keySet();
-        assertThat( databases, containsInAnyOrder( defaultDatabaseName, "system" ) );
+        Set<DatabaseId> databases = databaseManager.registeredDatabases().keySet();
+        assertThat( databases, containsInAnyOrder( new DatabaseId( defaultDatabaseName ), new DatabaseId( "system" ) ) );
     }
 
     private void prepareLegacyStandalone( String databaseName ) throws IOException

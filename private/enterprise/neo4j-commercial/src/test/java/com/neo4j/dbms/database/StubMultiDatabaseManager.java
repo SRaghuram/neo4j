@@ -10,6 +10,7 @@ import java.util.Comparator;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.database.Database;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.NullLogger;
 
@@ -19,7 +20,7 @@ import static org.mockito.Mockito.when;
 
 public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseContext>
 {
-    StubMultiDatabaseManager( Comparator<String> databasesOrdering )
+    StubMultiDatabaseManager( Comparator<DatabaseId> databasesOrdering )
     {
         super( null, null, NullLogger.getInstance(), null, databasesOrdering );
     }
@@ -30,10 +31,10 @@ public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseConte
     }
 
     @Override
-    protected DatabaseContext createNewDatabaseContext( String databaseName )
+    protected DatabaseContext createNewDatabaseContext( DatabaseId databaseId )
     {
         Database db = mock( Database.class );
-        when( db.getDatabaseName() ).thenReturn( databaseName );
+        when( db.getDatabaseId() ).thenReturn( databaseId );
         return databaseContextFactory( db, mock( GraphDatabaseFacade.class ) );
     }
 

@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.function.Function;
 
-import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.logging.NullLogProvider;

@@ -17,6 +17,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
@@ -24,7 +25,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -39,7 +39,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 @ExtendWith( TestDirectoryExtension.class )
 class MultiDatabaseManagerIT
 {
-    private static final String CUSTOM_DATABASE_NAME = "customDatabaseName";
+    private static final DatabaseId CUSTOM_DATABASE_ID = new DatabaseId( "customDatabaseName" );
 
     @Inject
     private TestDirectory testDirectory;
@@ -52,7 +52,7 @@ class MultiDatabaseManagerIT
     {
         logProvider = new AssertableLogProvider( true );
         database = new TestCommercialGraphDatabaseFactory().setInternalLogProvider( logProvider )
-                .newEmbeddedDatabase( testDirectory.databaseLayout( CUSTOM_DATABASE_NAME ).databaseDirectory() );
+                .newEmbeddedDatabase( testDirectory.databaseLayout( CUSTOM_DATABASE_ID.name() ).databaseDirectory() );
         databaseManager = getDatabaseManager();
     }
 
@@ -65,17 +65,17 @@ class MultiDatabaseManagerIT
     @Test
     void createDatabase() throws DatabaseExistsException
     {
-        String databaseName = "testDatabase";
-        GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseName ).databaseFacade();
+        DatabaseId databaseId = new DatabaseId( "testDatabase" );
+        GraphDatabaseFacade database1 = databaseManager.createDatabase( databaseId ).databaseFacade();
 
         assertNotNull( database1 );
-        assertEquals( databaseName, database1.databaseLayout().getDatabaseName() );
+        assertEquals( databaseId.name(), database1.databaseLayout().getDatabaseName() );
     }
 
     @Test
     void failToCreateDatabasesWithSameName() throws DatabaseExistsException
     {
-        String uniqueDatabaseName = "uniqueDatabaseName";
+        DatabaseId uniqueDatabaseName = new DatabaseId( "uniqueDatabaseName" );
         databaseManager.createDatabase( uniqueDatabaseName );
 
         assertThrows( DatabaseExistsException.class, () -> databaseManager.createDatabase( uniqueDatabaseName ) );
@@ -87,14 +87,14 @@ class MultiDatabaseManagerIT
     @Test
     void failToStartUnknownDatabase()
     {
-        String unknownDatabase = "unknownDatabase";
+        DatabaseId unknownDatabase = new DatabaseId( "unknownDatabase" );
         assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
     }
 
     @Test
     void failToStartDroppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String databaseToDrop = "databaseToDrop";
+        DatabaseId databaseToDrop = new DatabaseId( "databaseToDrop" );
         databaseManager.createDatabase( databaseToDrop );
         databaseManager.dropDatabase( databaseToDrop );
 
@@ -104,7 +104,7 @@ class MultiDatabaseManagerIT
     @Test
     void startStartedDatabase() throws DatabaseExistsException
     {
-        String multiStartDatabase = "multiStartDatabase";
+        DatabaseId multiStartDatabase = new DatabaseId( "multiStartDatabase" );
         databaseManager.createDatabase( multiStartDatabase );
 
         assertDoesNotThrow( () -> databaseManager.startDatabase( multiStartDatabase ) );
@@ -116,7 +116,7 @@ class MultiDatabaseManagerIT
     @Test
     void stopStartDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String startStopDatabase = "startStopDatabase";
+        DatabaseId startStopDatabase = new DatabaseId( "startStopDatabase" );
         databaseManager.createDatabase( startStopDatabase );
         for ( int i = 0; i < 10; i++ )
         {
@@ -129,7 +129,7 @@ class MultiDatabaseManagerIT
     @Test
     void failToCreateDatabaseWithStoppedDatabaseName() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String stoppedDatabase = "stoppedDatabase";
+        DatabaseId stoppedDatabase = new DatabaseId( "stoppedDatabase" );
         databaseManager.createDatabase( stoppedDatabase );
 
         databaseManager.stopDatabase( stoppedDatabase );
@@ -140,7 +140,7 @@ class MultiDatabaseManagerIT
     @Test
     void stopStoppedDatabaseIsFine() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String stoppedDatabase = "stoppedDatabase";
+        DatabaseId stoppedDatabase = new DatabaseId( "stoppedDatabase" );
 
         databaseManager.createDatabase( stoppedDatabase );
         databaseManager.stopDatabase( stoppedDatabase );
@@ -151,7 +151,7 @@ class MultiDatabaseManagerIT
     @Test
     void recreateDatabaseWithSameName() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String databaseToRecreate = "databaseToRecreate";
+        DatabaseId databaseToRecreate = new DatabaseId( "databaseToRecreate" );
 
         databaseManager.createDatabase( databaseToRecreate );
 
@@ -165,7 +165,7 @@ class MultiDatabaseManagerIT
     @Test
     void dropStartedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String startedDatabase = "startedDatabase";
+        DatabaseId startedDatabase = new DatabaseId( "startedDatabase" );
 
         databaseManager.createDatabase( startedDatabase );
         databaseManager.dropDatabase( startedDatabase );
@@ -175,7 +175,7 @@ class MultiDatabaseManagerIT
     @Test
     void dropStoppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String stoppedDatabase = "stoppedDatabase";
+        DatabaseId stoppedDatabase = new DatabaseId( "stoppedDatabase" );
 
         databaseManager.createDatabase( stoppedDatabase );
         databaseManager.stopDatabase( stoppedDatabase );
@@ -187,7 +187,7 @@ class MultiDatabaseManagerIT
     @Test
     void dropRemovesDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String databaseToDrop = "databaseToDrop";
+        DatabaseId databaseToDrop = new DatabaseId( "databaseToDrop" );
         DatabaseContext database = databaseManager.createDatabase( databaseToDrop );
 
         DatabaseLayout databaseLayout = database.database().getDatabaseLayout();
@@ -203,7 +203,7 @@ class MultiDatabaseManagerIT
     @Test
     void stopDoesNotRemovesDatabaseFiles() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String databaseToStop = "databaseToStop";
+        DatabaseId databaseToStop = new DatabaseId( "databaseToStop" );
         DatabaseContext database = databaseManager.createDatabase( databaseToStop );
 
         DatabaseLayout databaseLayout = database.database().getDatabaseLayout();
@@ -218,21 +218,21 @@ class MultiDatabaseManagerIT
     @Test
     void failToDropUnknownDatabase()
     {
-        String unknownDatabase = "unknownDatabase";
+        DatabaseId unknownDatabase = new DatabaseId( "unknownDatabase" );
         assertThrows( DatabaseNotFoundException.class, () -> databaseManager.dropDatabase( unknownDatabase ) );
     }
 
     @Test
     void failToStopUnknownDatabase()
     {
-        String unknownDatabase = "unknownDatabase";
+        DatabaseId unknownDatabase = new DatabaseId( "unknownDatabase" );
         assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( unknownDatabase ) );
     }
 
     @Test
     void failToStopDroppedDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String testDatabase = "testDatabase";
+        DatabaseId testDatabase = new DatabaseId( "testDatabase" );
         databaseManager.createDatabase( testDatabase );
         databaseManager.dropDatabase( testDatabase );
         assertThrows( DatabaseNotFoundException.class, () -> databaseManager.stopDatabase( testDatabase ) );
@@ -241,21 +241,21 @@ class MultiDatabaseManagerIT
     @Test
     void lookupNotExistingDatabase()
     {
-        var database = databaseManager.getDatabaseContext( "testDatabase" );
+        var database = databaseManager.getDatabaseContext( new DatabaseId( "testDatabase" ) );
         assertFalse( database.isPresent() );
     }
 
     @Test
     void lookupExistingDatabase()
     {
-        var database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_NAME );
+        var database = databaseManager.getDatabaseContext( CUSTOM_DATABASE_ID );
         assertTrue( database.isPresent() );
     }
 
     @Test
     void createAndStopDatabase() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String databaseName = "databaseToShutdown";
+        DatabaseId databaseName = new DatabaseId( "databaseToShutdown" );
         DatabaseContext context = databaseManager.createDatabase( databaseName );
 
         var databaseLookup = databaseManager.getDatabaseContext( databaseName );
@@ -269,7 +269,7 @@ class MultiDatabaseManagerIT
     @Test
     void logAboutDatabaseCreationAndStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        String logTestDb = "logTestDb";
+        DatabaseId logTestDb = new DatabaseId( "logTestDb" );
         databaseManager.createDatabase( logTestDb );
         databaseManager.stopDatabase( logTestDb );
         logProvider.assertLogStringContains( "Creating 'logTestDb' database." );
@@ -281,15 +281,16 @@ class MultiDatabaseManagerIT
     {
         var initialDatabases = databaseManager.registeredDatabases();
         assertEquals( 2, initialDatabases.size() );
-        assertTrue( initialDatabases.containsKey( CUSTOM_DATABASE_NAME ) );
-        String myAnotherDatabase = "myAnotherDatabase";
-        String aMyAnotherDatabase = "aMyAnotherDatabase";
+        assertTrue( initialDatabases.containsKey( CUSTOM_DATABASE_ID ) );
+        DatabaseId myAnotherDatabase = new DatabaseId( "myAnotherDatabase" );
+        DatabaseId aMyAnotherDatabase = new DatabaseId( "aMyAnotherDatabase" );
         databaseManager.createDatabase( myAnotherDatabase );
         databaseManager.createDatabase( aMyAnotherDatabase );
         var postCreationDatabases = databaseManager.registeredDatabases();
         assertEquals( 4, postCreationDatabases.size() );
 
-        assertThat( postCreationDatabases.keySet(), contains( SYSTEM_DATABASE_NAME, aMyAnotherDatabase, CUSTOM_DATABASE_NAME, myAnotherDatabase) );
+        assertThat( postCreationDatabases.keySet(),
+                contains( new DatabaseId( SYSTEM_DATABASE_NAME ), aMyAnotherDatabase, CUSTOM_DATABASE_ID, myAnotherDatabase) );
     }
 
     @Test
