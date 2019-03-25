@@ -50,7 +50,7 @@ public class EmbeddedCypherRunner implements QueryRunner
                     query.copyWith( EXECUTE ).queryString(),
                     query.benchmarkGroup(),
                     query.benchmark(),
-                    query.parameters(),
+                    query.parameters().create( forkDirectory ),
                     forkDirectory,
                     // run at least one 'EXPLAIN' query to populate query caches
                     isSafeToWarmup( query ) ? warmupControl : single(),

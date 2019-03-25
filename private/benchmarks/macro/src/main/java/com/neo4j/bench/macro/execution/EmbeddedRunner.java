@@ -17,7 +17,6 @@ import com.neo4j.bench.macro.execution.database.Database;
 import com.neo4j.bench.macro.execution.measurement.MeasurementControl;
 import com.neo4j.bench.macro.execution.measurement.Results;
 import com.neo4j.bench.macro.execution.measurement.Results.Phase;
-import com.neo4j.bench.macro.workload.Parameters;
 import com.neo4j.bench.macro.workload.ParametersReader;
 import com.neo4j.bench.macro.workload.QueryString;
 
@@ -44,7 +43,7 @@ public class EmbeddedRunner
                             QueryString queryString,
                             BenchmarkGroup benchmarkGroup,
                             Benchmark benchmark,
-                            Parameters parameters,
+                            ParametersReader parametersReader,
                             ForkDirectory forkDirectory,
                             MeasurementControl warmupControl,
                             MeasurementControl measurementControl ) throws Exception
@@ -72,7 +71,7 @@ public class EmbeddedRunner
                 try ( Results.ResultsWriter warmupResultsWriter = Results.newWriter( forkDirectory, Phase.WARMUP, NANOSECONDS ) )
                 {
                     System.out.println( format( "Performing warmup (%s). Policy: %s", warmupQueryString.executionMode(), warmupControl.description() ) );
-                    execute( warmupQueryString, parameters.create( forkDirectory ), warmupControl, database.db(), warmupResultsWriter );
+                    execute( warmupQueryString, parametersReader, warmupControl, database.db(), warmupResultsWriter );
                 }
 
                 /*
@@ -104,7 +103,7 @@ public class EmbeddedRunner
             try ( Results.ResultsWriter measurementResultsWriter = Results.newWriter( forkDirectory, Phase.MEASUREMENT, NANOSECONDS ) )
             {
                 System.out.println( format( "Performing measurement (%s). Policy: %s", queryString.executionMode(), measurementControl.description() ) );
-                execute( queryString, parameters.create( forkDirectory ), measurementControl, database.db(), measurementResultsWriter );
+                execute( queryString, parametersReader, measurementControl, database.db(), measurementResultsWriter );
             }
 
             /*
@@ -150,6 +149,11 @@ public class EmbeddedRunner
 
                 tx.success();
             }
+        }
+        if ( !measurementControl.isComplete() )
+        {
+            throw new RuntimeException( "Run finished before it was supposed to.\n" +
+                                        "Probably it ran out of parameters" );
         }
     }
 
