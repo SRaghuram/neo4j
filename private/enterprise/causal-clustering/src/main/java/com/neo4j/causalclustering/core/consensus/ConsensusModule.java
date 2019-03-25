@@ -33,11 +33,10 @@ import com.neo4j.causalclustering.discovery.RaftCoreTopologyConnector;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 
 import java.io.File;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.collection.Dependencies;
@@ -78,9 +77,7 @@ public class ConsensusModule
 
         LogProvider logProvider = logService.getInternalLogProvider();
 
-        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = new HashMap<>();
-        marshals.put( 1, CoreReplicatedContentMarshalFactory.marshalV1( defaultDatabaseName ) );
-        marshals.put( 2, CoreReplicatedContentMarshalFactory.marshalV2() );
+        Map<Integer,ChannelMarshal<ReplicatedContent>> marshals = Map.of( 2, new CoreReplicatedContentMarshalV2() );
 
         JobScheduler jobScheduler = globalModule.getJobScheduler();
         RaftLog underlyingLog = createRaftLog( globalConfig, globalLife, fileSystem, layout, marshals, logProvider, jobScheduler, defaultDatabaseName );

@@ -68,20 +68,20 @@ public class SupportedProtocolCreatorTest
         ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.versions(), contains( 1, 2 ) );
+        assertThat( supportedRaftProtocol.versions(), contains( 2 ) );
     }
 
     @Test
     public void shouldReturnConfiguredRaftProtocolVersions()
     {
         // given
-        Config config = Config.defaults( CausalClusteringSettings.raft_implementations, "1" );
+        Config config = Config.defaults( CausalClusteringSettings.raft_implementations, "2" );
 
         // when
         ApplicationSupportedProtocols supportedRaftProtocol = new SupportedProtocolCreator( config, log ).getSupportedRaftProtocolsFromConfiguration();
 
         // then
-        assertThat( supportedRaftProtocol.versions(), contains( 1 ) );
+        assertThat( supportedRaftProtocol.versions(), contains( 2 ) );
     }
 
     @Test( expected = IllegalArgumentException.class )

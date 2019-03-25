@@ -30,10 +30,6 @@ import java.util.List;
 
 public class ReplicatedContentCodec implements Codec<ReplicatedContent>
 {
-    ReplicatedContentCodec()
-    {
-    }
-
     @Override
     public void encode( ReplicatedContent type, List<Object> output ) throws IOException
     {

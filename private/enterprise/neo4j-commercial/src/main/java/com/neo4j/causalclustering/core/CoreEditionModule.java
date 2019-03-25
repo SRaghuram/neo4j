@@ -16,7 +16,6 @@ import com.neo4j.causalclustering.core.consensus.ConsensusModule;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolClientInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientInstallerV2;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.replication.ReplicationBenchmarkProcedure;
@@ -84,6 +83,7 @@ import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -119,7 +119,6 @@ import org.neo4j.procedure.commercial.builtin.EnterpriseBuiltInProcedures;
 import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.time.Clocks;
 
-import static java.util.Arrays.asList;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
@@ -213,8 +212,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
                 new ModifierProtocolRepository( Protocol.ModifierProtocols.values(), supportedModifierProtocols );
 
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository = new ProtocolInstallerRepository<>(
-                asList( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ),
-                        new RaftProtocolClientInstallerV1.Factory( pipelineBuilders.client(), logProvider ) ),
+                List.of( new RaftProtocolClientInstallerV2.Factory( pipelineBuilders.client(), logProvider ) ),
                 ModifierProtocolInstaller.allClientInstallers );
 
         Duration handshakeTimeout = globalConfig.get( CausalClusteringSettings.handshake_timeout );

@@ -21,21 +21,21 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.BoundedNetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import io.netty.buffer.ByteBuf;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @RunWith( Parameterized.class )
-public class CoreReplicatedContentMarshallingTestV1
+public class CoreReplicatedContentMarshallingTestV2
 {
     @Rule
     public final Buffers buffers = new Buffers();
@@ -48,10 +48,8 @@ public class CoreReplicatedContentMarshallingTestV1
     {
         String databaseName = DEFAULT_DATABASE_NAME;
         return new ReplicatedContent[]{new DummyRequest( new byte[]{1, 2, 3} ), ReplicatedTransaction.from( new byte[16 * 1024], databaseName ),
-                new MemberIdSet( new HashSet<MemberId>()
-                {{
-                    add( new MemberId( UUID.randomUUID() ) );
-                }} ), new ReplicatedTokenRequest( databaseName, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
+                new MemberIdSet( Set.of( new MemberId( UUID.randomUUID() ) ) ),
+                new ReplicatedTokenRequest( databaseName, TokenType.LABEL, "token", new byte[]{'c', 'o', 5} ), new NewLeaderBarrier(),
                 new ReplicatedLockTokenRequest( new MemberId( UUID.randomUUID() ), 2, databaseName ), new DistributedOperation(
                 new DistributedOperation( ReplicatedTransaction.from( new byte[]{1, 2, 3, 4, 5, 6}, databaseName ),
                         new GlobalSession( UUID.randomUUID(), new MemberId( UUID.randomUUID() ) ), new LocalOperationId( 1, 2 ) ),
@@ -61,7 +59,7 @@ public class CoreReplicatedContentMarshallingTestV1
     @Test
     public void shouldSerializeAndDeserialize() throws Exception
     {
-        ChannelMarshal<ReplicatedContent> coreReplicatedContentMarshal = CoreReplicatedContentMarshalFactory.marshalV1( DEFAULT_DATABASE_NAME );
+        ChannelMarshal<ReplicatedContent> coreReplicatedContentMarshal = new CoreReplicatedContentMarshalV2();
         ByteBuf buffer = buffers.buffer();
         BoundedNetworkWritableChannel channel = new BoundedNetworkWritableChannel( buffer );
         coreReplicatedContentMarshal.marshal( replicatedContent, channel );

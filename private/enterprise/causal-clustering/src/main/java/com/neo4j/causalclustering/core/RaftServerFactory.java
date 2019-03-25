@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessageNettyHandler;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantClusterIdAwareMessage;
-import com.neo4j.causalclustering.core.consensus.protocol.v1.RaftProtocolServerInstallerV1;
 import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolServerInstallerV2;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.logging.MessageLogger;
@@ -27,6 +26,7 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import io.netty.channel.ChannelInboundHandler;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
@@ -34,9 +34,6 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.helpers.ListenSocketAddress;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.Group;
-
-import static java.util.Arrays.asList;
-import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
 
 /**
  * Factory to create a global Raft server that listens to incoming messages
@@ -79,11 +76,8 @@ public class RaftServerFactory
         RaftMessageNettyHandler nettyHandler = new RaftMessageNettyHandler( logProvider );
         RaftProtocolServerInstallerV2.Factory raftProtocolServerInstallerV2 =
                 new RaftProtocolServerInstallerV2.Factory( nettyHandler, pipelineBuilderFactory, logProvider );
-        RaftProtocolServerInstallerV1.Factory raftProtocolServerInstallerV1 =
-                new RaftProtocolServerInstallerV1.Factory( nettyHandler, pipelineBuilderFactory, config.get( default_database ),
-                        logProvider );
         ProtocolInstallerRepository<ProtocolInstaller.Orientation.Server> protocolInstallerRepository =
-                new ProtocolInstallerRepository<>( asList( raftProtocolServerInstallerV1, raftProtocolServerInstallerV2 ),
+                new ProtocolInstallerRepository<>( List.of( raftProtocolServerInstallerV2 ),
                         ModifierProtocolInstaller.allServerInstallers );
 
         HandshakeServerInitializer handshakeServerInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,

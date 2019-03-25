@@ -62,7 +62,7 @@ public interface Protocol<IMPL extends Comparable<IMPL>>
 
     enum ApplicationProtocols implements ApplicationProtocol
     {
-        RAFT_1( ApplicationProtocolCategory.RAFT, 1 ),
+        // support for raft V1 was removed in neo4j 4.0
         RAFT_2( ApplicationProtocolCategory.RAFT, 2 ),
 
         // support for catchup V1 and V2 was removed in neo4j 4.0

@@ -18,10 +18,10 @@ import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.NetworkReadableClosableChannelNetty4;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,12 +40,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 
-public class CoreReplicatedContentMarshalV1Test
+class CoreReplicatedContentMarshalV2Test
 {
-    private final ChannelMarshal<ReplicatedContent> marshal = CoreReplicatedContentMarshalFactory.marshalV1( DEFAULT_DATABASE_NAME );
+    private final ChannelMarshal<ReplicatedContent> marshal = new CoreReplicatedContentMarshalV2();
 
     @Test
-    public void shouldMarshalTransactionReference() throws Exception
+    void shouldMarshalTransactionReference() throws Exception
     {
         ByteBuf buffer = Unpooled.buffer();
         PhysicalTransactionRepresentation representation =
@@ -58,7 +58,7 @@ public class CoreReplicatedContentMarshalV1Test
     }
 
     @Test
-    public void shouldMarshalTransactionReferenceWithMissingHeader() throws Exception
+    void shouldMarshalTransactionReferenceWithMissingHeader() throws Exception
     {
         ByteBuf buffer = Unpooled.buffer();
         PhysicalTransactionRepresentation representation =
@@ -70,7 +70,7 @@ public class CoreReplicatedContentMarshalV1Test
     }
 
     @Test
-    public void shouldMarshalMemberSet() throws Exception
+    void shouldMarshalMemberSet() throws Exception
     {
         ByteBuf buffer = Unpooled.buffer();
         ReplicatedContent message = new MemberIdSet( asSet(
@@ -82,7 +82,7 @@ public class CoreReplicatedContentMarshalV1Test
     }
 
     @Test
-    public void shouldMarshalIdRangeRequest() throws Exception
+    void shouldMarshalIdRangeRequest() throws Exception
     {
         ByteBuf buffer = Unpooled.buffer();
         ReplicatedContent message = new ReplicatedIdAllocationRequest(
@@ -92,7 +92,7 @@ public class CoreReplicatedContentMarshalV1Test
     }
 
     @Test
-    public void shouldMarshalTokenRequest() throws Exception
+    void shouldMarshalTokenRequest() throws Exception
     {
         ByteBuf buffer = Unpooled.buffer();
 

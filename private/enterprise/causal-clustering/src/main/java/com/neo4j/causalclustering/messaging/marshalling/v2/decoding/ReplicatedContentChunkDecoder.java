@@ -7,7 +7,7 @@ package com.neo4j.causalclustering.messaging.marshalling.v2.decoding;
 
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.messaging.marshalling.Codec;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
+import com.neo4j.causalclustering.messaging.marshalling.ReplicatedContentCodec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,7 +17,7 @@ import java.util.List;
 
 public class ReplicatedContentChunkDecoder extends ByteToMessageDecoder
 {
-    private final Codec<ReplicatedContent> codec = CoreReplicatedContentMarshalFactory.codecV2();
+    private final Codec<ReplicatedContent> codec = new ReplicatedContentCodec();
     private boolean expectingNewContent = true;
     private boolean isLast;
 

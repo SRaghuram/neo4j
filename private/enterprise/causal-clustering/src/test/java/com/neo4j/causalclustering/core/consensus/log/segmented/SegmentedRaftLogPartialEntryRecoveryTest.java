@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.core.state.machines.token.ReplicatedTokenReque
 import com.neo4j.causalclustering.core.state.machines.token.TokenType;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalFactory;
+import com.neo4j.causalclustering.messaging.marshalling.CoreReplicatedContentMarshalV2;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -37,7 +37,6 @@ import org.neo4j.time.Clocks;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 /**
@@ -54,7 +53,6 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private TestDirectory testDirectory;
 
     private File logDirectory;
-    private final String databaseName = DEFAULT_DATABASE_NAME;
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
     {
@@ -63,16 +61,15 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         LogProvider logProvider = getInstance();
         CoreLogPruningStrategy pruningStrategy =
                 new CoreLogPruningStrategyFactory( "100 entries", logProvider ).newInstance();
-        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> CoreReplicatedContentMarshalFactory.marshalV1( databaseName ),
+        return new SegmentedRaftLog( fs, logDirectory, rotateAtSize, ignored -> new CoreReplicatedContentMarshalV2(),
                 logProvider, 8, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy );
     }
 
     private RecoveryProtocol createRecoveryProtocol()
     {
         FileNames fileNames = new FileNames( logDirectory );
-        // TODO: Marshal map
         return new RecoveryProtocol( fs, fileNames, new ReaderPool( 8, getInstance(), fileNames, fs, Clocks.fakeClock() ),
-                ignored -> CoreReplicatedContentMarshalFactory.marshalV1( databaseName ), getInstance() );
+                ignored -> new CoreReplicatedContentMarshalV2(), getInstance() );
     }
 
     @Test
