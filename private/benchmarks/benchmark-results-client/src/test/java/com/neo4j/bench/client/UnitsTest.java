@@ -5,14 +5,21 @@
  */
 package com.neo4j.bench.client;
 
+import com.neo4j.bench.client.model.Benchmark.Mode;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.TimeUnit;
+
 import static com.neo4j.bench.client.Units.conversionFactor;
+import static com.neo4j.bench.client.Units.convertValueTo;
+import static com.neo4j.bench.client.Units.findSaneUnit;
 import static com.neo4j.bench.client.Units.toAbbreviation;
+import static com.neo4j.bench.client.Units.toLargerValueUnit;
+import static com.neo4j.bench.client.Units.toSmallerValueUnit;
 import static com.neo4j.bench.client.Units.toTimeUnit;
 import static com.neo4j.bench.client.model.Benchmark.Mode.LATENCY;
+import static com.neo4j.bench.client.model.Benchmark.Mode.SINGLE_SHOT;
 import static com.neo4j.bench.client.model.Benchmark.Mode.THROUGHPUT;
-
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -23,6 +30,73 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class UnitsTest
 {
+    @Test
+    public void shouldReturnUnitForMinMaxValue()
+    {
+        // throughput
+        assertThat( Units.minValueUnit( SECONDS, MILLISECONDS, THROUGHPUT ), equalTo( MILLISECONDS ) );
+        assertThat( Units.maxValueUnit( SECONDS, MILLISECONDS, THROUGHPUT ), equalTo( SECONDS ) );
+        // latency
+        assertThat( Units.minValueUnit( SECONDS, MILLISECONDS, LATENCY ), equalTo( SECONDS ) );
+        assertThat( Units.maxValueUnit( SECONDS, MILLISECONDS, LATENCY ), equalTo( MILLISECONDS ) );
+    }
+
+    @Test
+    public void shouldFindSaneUnit()
+    {
+        // Throughput low value
+        double originalValue = 0.01;
+        TimeUnit originalUnit = MILLISECONDS;
+        Mode mode = THROUGHPUT;
+        TimeUnit expectedUnit = SECONDS;
+
+        TimeUnit saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertThat( convertValueTo( originalValue, originalUnit, saneUnit, mode ), equalTo( 10.0 ) );
+
+        // Throughput high value
+        originalValue = 1001;
+        originalUnit = MILLISECONDS;
+        mode = THROUGHPUT;
+        expectedUnit = MICROSECONDS;
+
+        saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertWithinPercent( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1.001, 0.001 );
+
+        // Latency low value
+        originalValue = 0.01;
+        originalUnit = MILLISECONDS;
+        mode = LATENCY;
+        expectedUnit = MICROSECONDS;
+
+        saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertThat( convertValueTo( originalValue, originalUnit, saneUnit, mode ), equalTo( 10.0 ) );
+
+        // Latency high value
+        originalValue = 1001;
+        originalUnit = MILLISECONDS;
+        mode = LATENCY;
+        expectedUnit = SECONDS;
+
+        saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertWithinPercent( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1.001, 0.001 );
+    }
+
+    @Test
+    public void shouldConvertToSmallerOrLargerValueUnit()
+    {
+        assertThat( toSmallerValueUnit( MILLISECONDS, LATENCY ), equalTo( SECONDS ) );
+        assertThat( toSmallerValueUnit( MILLISECONDS, SINGLE_SHOT ), equalTo( SECONDS ) );
+        assertThat( toSmallerValueUnit( MILLISECONDS, THROUGHPUT ), equalTo( MICROSECONDS ) );
+
+        assertThat( toLargerValueUnit( MILLISECONDS, LATENCY ), equalTo( MICROSECONDS ) );
+        assertThat( toLargerValueUnit( MILLISECONDS, SINGLE_SHOT ), equalTo( MICROSECONDS ) );
+        assertThat( toLargerValueUnit( MILLISECONDS, THROUGHPUT ), equalTo( SECONDS ) );
+    }
+
     @Test
     public void shouldAbbreviate()
     {

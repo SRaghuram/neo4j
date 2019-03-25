@@ -5,13 +5,19 @@
  */
 package com.neo4j.bench.client.model;
 
+import com.neo4j.bench.client.Units;
+
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.toList;
+import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 
 public class BenchmarkGroupBenchmarkMetricsPrinter
 {
@@ -30,29 +36,30 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
     public String toPrettyString( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
     {
         assertNotEmpty( results, errors );
-        int longestGroupName = longestGroup( results, errors );
-        int longestBenchmarkName = longestBenchmark( results, errors );
 
-        RowWriter rowWriter = verbose
-                              ? new VerboseRowWriter( longestGroupName, longestBenchmarkName )
-                              : new ConciseRowWriter( longestGroupName, longestBenchmarkName );
+        RowWriter rowWriter = verbose ? new VerboseRowWriter() : new ConciseRowWriter();
 
-        StringBuilder sb = new StringBuilder();
-        sb.append( rowWriter.prettyHeader() ).append( "\n" );
-
-        for ( BenchmarkGroupBenchmark benchmark : results.benchmarkGroupBenchmarks().stream()
-                                                         .sorted( new BenchmarkGroupBenchmarkComparator() )
-                                                         .collect( toList() ) )
+        List<String[]> rows = new ArrayList<>();
+        for ( BenchmarkGroupBenchmark benchmark : results.benchmarkGroupBenchmarks() )
         {
             Metrics metrics = results.getMetricsFor( benchmark ).metrics();
-            sb.append( rowWriter.prettyDataRow( benchmark.benchmarkGroup().name(), benchmark.benchmark().name(), metrics ) ).append( "\n" );
+            rows.add( rowWriter.registerDataRow( benchmark.benchmarkGroup(), benchmark.benchmark(), metrics ) );
         }
-
         for ( TestRunError error : errors )
         {
-            sb.append( rowWriter.prettyErrorRow( error.groupName(), error.benchmarkName() ) ).append( "\n" );
+            rows.add( rowWriter.registerErrorRow( error.groupName(), error.benchmarkName() ) );
         }
+        rows.sort( new RowComparator() );
 
+        StringBuilder sb = new StringBuilder();
+        sb.append( rowWriter.separator() ).append( "\n" );
+        sb.append( rowWriter.prettyHeader() ).append( "\n" );
+        sb.append( rowWriter.separator() ).append( "\n" );
+        for ( String[] row : rows )
+        {
+            sb.append( rowWriter.prettyRow( row ) ).append( "\n" );
+        }
+        sb.append( rowWriter.separator() ).append( "\n" );
         return sb.toString();
     }
 
@@ -60,141 +67,166 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
     {
         if ( results.benchmarkGroupBenchmarks().isEmpty() && errors.isEmpty() )
         {
-            // TODO added as sanity check for now, in reality this should never happen
+            // Just a sanity check, in reality this should never happen -- hence the sanity check
             throw new RuntimeException( "No results or errors to print!" );
         }
     }
 
-    private int longestGroup( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
+    private static final DecimalFormat INT_FORMAT = new DecimalFormat( "###,###,###,##0" );
+    private static final DecimalFormat FLT_FORMAT = new DecimalFormat( "###,###,###,##0.00" );
+    private static final String ERROR = "---";
+
+    private abstract static class RowWriter
     {
-        return Math.max( longestStringIn( results.benchmarkGroupBenchmarks().stream()
-                                                 .map( BenchmarkGroupBenchmark::benchmarkGroup )
-                                                 .map( BenchmarkGroup::name ) ),
-                         longestStringIn( errors.stream().map( TestRunError::groupName ) ) );
-    }
+        private final String[] headers = headers();
+        private final int[] columnWidths = Arrays.stream( headers ).mapToInt( String::length ).toArray();
+        private final int columnPadding = 2;
+        private String format;
+        private String separator;
 
-    private int longestBenchmark( BenchmarkGroupBenchmarkMetrics results, List<TestRunError> errors )
-    {
-        return Math.max( longestStringIn( results.benchmarkGroupBenchmarks().stream()
-                                                 .map( BenchmarkGroupBenchmark::benchmark )
-                                                 .map( Benchmark::name ) ),
-                         longestStringIn( errors.stream().map( TestRunError::benchmarkName ) ) );
-    }
+        abstract String[] headers();
 
-    private static int longestStringIn( Stream<String> strings )
-    {
-        return strings.mapToInt( String::length ).max().orElse( 0 );
-    }
+        /**
+         * Will not be called until all rows have been converted to arrays, i.e., after format has been set.
+         * Will be called once per data row.
+         *
+         * @return data row
+         */
+        abstract String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit originalUnit, TimeUnit saneUnit );
 
-    private static final DecimalFormat MEAN_FORMAT = new DecimalFormat( "###,###,##0.00" );
-
-    private interface RowWriter
-    {
-        String prettyHeader();
-
-        String prettyDataRow( String group, String benchmark, Metrics metrics );
-
-        String prettyErrorRow( String group, String benchmark );
-    }
-
-    private static class ConciseRowWriter implements RowWriter
-    {
-        private final String format;
-
-        private ConciseRowWriter( int longestGroupName, int longestBenchmarkName )
+        String[] registerErrorRow( String group, String benchmark )
         {
-            this.format = "%1$-" + longestGroupName + "s   %2$-" + longestBenchmarkName + "s   %3$-10s %4$-10s %5$-10s";
-        }
-
-        @Override
-        public String prettyHeader()
-        {
-            return String.format( format, "Group", "Benchmark", "Count", "Mean", "Unit" );
-        }
-
-        @Override
-        public String prettyDataRow( String group, String benchmark, Metrics metrics )
-        {
-            return String.format( format,
-                                  group,
-                                  benchmark,
-                                  metrics.toMap().get( Metrics.SAMPLE_SIZE ),
-                                  MEAN_FORMAT.format( metrics.toMap().get( Metrics.MEAN ) ),
-                                  metrics.toMap().get( Metrics.UNIT ) );
-        }
-
-        @Override
-        public String prettyErrorRow( String group, String benchmark )
-        {
-            return String.format( format,
-                                  group,
-                                  benchmark,
-                                  "<error>",
-                                  "<error>",
-                                  "<error>" );
-        }
-    }
-
-    private static class VerboseRowWriter implements RowWriter
-    {
-        private final String format;
-
-        private VerboseRowWriter( int longestGroupName, int longestBenchmarkName )
-        {
-            this.format = "%1$-" + longestGroupName + "s   %2$-" + longestBenchmarkName + "s   %3$-10s %4$-10s %5$-10s %6$-10s %7$-10s %8$-10s %9$-10s";
-        }
-
-        @Override
-        public String prettyHeader()
-        {
-            return String.format( format, "Group", "Benchmark", "Count", "Mean", "Min", "Median", "90th", "Max", "Unit" );
-        }
-
-        @Override
-        public String prettyDataRow( String group, String benchmark, Metrics metrics )
-        {
-            return String.format( format,
-                                  group,
-                                  benchmark,
-                                  metrics.toMap().get( Metrics.SAMPLE_SIZE ),
-                                  MEAN_FORMAT.format( metrics.toMap().get( Metrics.MEAN ) ),
-                                  ((Number) metrics.toMap().get( Metrics.MIN )).longValue(),
-                                  ((Number) metrics.toMap().get( Metrics.PERCENTILE_50 )).longValue(),
-                                  ((Number) metrics.toMap().get( Metrics.PERCENTILE_90 )).longValue(),
-                                  ((Number) metrics.toMap().get( Metrics.MAX )).longValue(),
-                                  metrics.toMap().get( Metrics.UNIT ) );
-        }
-
-        @Override
-        public String prettyErrorRow( String group, String benchmark )
-        {
-            return String.format( format,
-                                  group,
-                                  benchmark,
-                                  "<error>",
-                                  "<error>",
-                                  "<error>",
-                                  "<error>",
-                                  "<error>",
-                                  "<error>",
-                                  "<error>" );
-        }
-    }
-
-    private static class BenchmarkGroupBenchmarkComparator implements Comparator<BenchmarkGroupBenchmark>
-    {
-        @Override
-        public int compare( BenchmarkGroupBenchmark o1, BenchmarkGroupBenchmark o2 )
-        {
-            int groupCompare = o1.benchmarkGroup().name().compareTo( o2.benchmarkGroup().name() );
-            if ( 0 != groupCompare )
+            String[] row = new String[headers.length];
+            row[0] = group;
+            row[1] = benchmark;
+            for ( int i = 2; i < row.length; i++ )
             {
-                return groupCompare;
+                row[i] = ERROR;
             }
-            else
+            return updateWidths( row );
+        }
+
+        String[] registerDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
+        {
+            TimeUnit unit = Units.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
+
+            // compute unit at which mean is in range [1,1000]
+            double mean = (double) metrics.toMap().get( Metrics.MEAN );
+            TimeUnit saneUnit = Units.findSaneUnit( mean, unit, benchmark.mode(), 1, 1000 );
+
+            String[] row = createDataRow( group, benchmark, metrics, unit, saneUnit );
+            return updateWidths( row );
+        }
+
+        private String[] updateWidths( String[] row )
+        {
+            for ( int i = 0; i < row.length; i++ )
             {
-                return o1.benchmark().name().compareTo( o2.benchmark().name() );
+                columnWidths[i] = Math.max( columnWidths[i], row[i].length() );
             }
+            return row;
+        }
+
+        /**
+         * Will not be called until all rows have been converted to arrays, i.e., after format has been set.
+         * Will be called exactly once.
+         *
+         * @return formatted headers
+         */
+        String prettyHeader()
+        {
+            // Left justify names
+            String nameColumnFormats = IntStream.range( 0, 2 )
+                                                .mapToObj( i -> "%" + (i + 1) + "$-" + (columnWidths[i] + columnPadding) + "s" )
+                                                .collect( joining( "" ) );
+            // Right justify everything else
+            String resultColumnFormats = IntStream.range( 2, columnWidths.length )
+                                                  .mapToObj( i -> "%" + (i + 1) + "$" + (columnWidths[i] + columnPadding) + "s" )
+                                                  .collect( joining( "" ) );
+            format = nameColumnFormats + resultColumnFormats;
+            return format( format, (Object[]) headers );
+        }
+
+        String separator()
+        {
+            if ( separator == null )
+            {
+                int totalWidth = Arrays.stream( columnWidths )
+                                       .map( columnWidth -> columnWidth + columnPadding )
+                                       .sum();
+                separator = IntStream.range( 0, totalWidth ).mapToObj( i -> "-" ).collect( joining( "" ) );
+            }
+            return separator;
+        }
+
+        String prettyRow( String[] row )
+        {
+            return format( format, (Object[]) row );
+        }
+    }
+
+    private static class ConciseRowWriter extends RowWriter
+    {
+        @Override
+        String[] headers()
+        {
+            return new String[]{"Group", "Benchmark", "Count", "Mean", "Unit"};
+        }
+
+        @Override
+        public String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
+        {
+            return new String[]{
+                    group.name(),
+                    benchmark.name(),
+                    INT_FORMAT.format( metrics.toMap().get( Metrics.SAMPLE_SIZE ) ),
+                    FLT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
+                    Units.toAbbreviation( saneUnit, benchmark.mode() )};
+        }
+    }
+
+    private static class VerboseRowWriter extends RowWriter
+    {
+        @Override
+        String[] headers()
+        {
+            return new String[]{"Group", "Benchmark", "Count", "Mean", "Min", "Median", "90th", "Max", "Unit"};
+        }
+
+        @Override
+        String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
+        {
+            return new String[]{
+                    group.name(),
+                    benchmark.name(),
+                    INT_FORMAT.format( metrics.toMap().get( Metrics.SAMPLE_SIZE ) ),
+                    FLT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MIN ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.PERCENTILE_50 ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.PERCENTILE_90 ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MAX ), unit, saneUnit, benchmark.mode() ) ),
+                    Units.toAbbreviation( saneUnit, benchmark.mode() )};
+        }
+    }
+
+    private static class RowComparator implements Comparator<String[]>
+    {
+        @Override
+        public int compare( String[] o1, String[] o2 )
+        {
+            return innerCompare( o1, o2, 0 );
+        }
+
+        private int innerCompare( String[] o1, String[] o2, int offset )
+        {
+            if ( offset >= o1.length )
+            {
+                return 0;
+            }
+            int columnCompare = o1[offset].compareTo( o2[offset] );
+            return (0 != columnCompare)
+                   ? columnCompare
+                   : innerCompare( o1, o2, ++offset );
         }
     }
 }
