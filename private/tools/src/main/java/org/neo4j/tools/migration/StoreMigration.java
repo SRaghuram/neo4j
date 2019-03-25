@@ -55,7 +55,6 @@ import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFac
 /**
  * Stand alone tool for migrating/upgrading a neo4j database from one version to the next.
  */
-//: TODO introduce abstract tool class as soon as we will have several tools in tools module
 public class StoreMigration
 {
     private static final String HELP_FLAG = "help";

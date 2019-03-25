@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -41,7 +40,6 @@ class CompositeConstraintIT
     {
         GraphDatabaseService database = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( testDirectory.databaseDir() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, testDirectory.storeDir().getAbsolutePath() )
                 .newGraphDatabase();
 
         Label label = Label.label( "label" );

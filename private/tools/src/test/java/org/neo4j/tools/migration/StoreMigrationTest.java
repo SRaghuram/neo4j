@@ -43,6 +43,7 @@ class StoreMigrationTest
         GraphDatabaseService database = new TestGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( directory.databaseDir() )
                 .setConfig( GraphDatabaseSettings.logs_directory, directory.directory( "logs" ).getAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, directory.storeDir().getAbsolutePath() )
                 .newGraphDatabase();
         try ( Transaction transaction = database.beginTx() )
         {

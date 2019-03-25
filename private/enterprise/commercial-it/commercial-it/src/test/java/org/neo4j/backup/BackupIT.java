@@ -39,7 +39,6 @@ import org.neo4j.backup.impl.OnlineBackupContext;
 import org.neo4j.backup.impl.OnlineBackupExecutor;
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
@@ -1074,7 +1073,8 @@ class BackupIT
 
     private GraphDatabaseService startDbWithoutOnlineBackup( File path )
     {
-        Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE, record_format, record_format.getDefaultValue(),
+        Map<Setting<?>,String> settings = Maps.mutable.of( online_backup_enabled, FALSE,
+                record_format, record_format.getDefaultValue(),
                 transaction_logs_root_path, path.getParentFile().getAbsolutePath() );
         return startDb( path, settings );
     }
@@ -1104,7 +1104,7 @@ class BackupIT
     {
         Config config = Config.builder()
                 .withSetting( online_backup_enabled, FALSE )
-                .withSetting( GraphDatabaseSettings.default_database, backupDatabasePath.getName() ).build();
+                .withSetting( transaction_logs_root_path, backupDatabasePath.getParentFile().getAbsolutePath() ).build();
         return DbRepresentation.of( backupDatabasePath, config );
     }
 

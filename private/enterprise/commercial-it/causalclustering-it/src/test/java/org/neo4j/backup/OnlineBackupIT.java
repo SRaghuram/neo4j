@@ -212,7 +212,7 @@ class OnlineBackupIT
 
     private DbRepresentation backupDbRepresentation()
     {
-        return DbRepresentation.of( defaultDbBackupDir.toFile() );
+        return DbRepresentation.of( DatabaseLayout.of( defaultDbBackupDir.toFile() ) );
     }
 
     private void writeRandomData()

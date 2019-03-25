@@ -33,7 +33,6 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.helpers.collection.Iterables.single;
 import static org.neo4j.helpers.collection.MapUtil.map;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
@@ -89,7 +88,6 @@ public class BatchInsertEnterpriseIT
         // THEN
         GraphDatabaseService db = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( directory.databaseDir() )
-                .setConfig( transaction_logs_root_path, directory.storeDir().getAbsolutePath() )
                 .newGraphDatabase();
 
         try ( Transaction tx = db.beginTx() )

@@ -48,6 +48,7 @@ import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.Log;
@@ -126,7 +127,7 @@ class BackupRetriesIT
         executor.executeBackup( context );
 
         // backup produced a correct store
-        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( backupsDir.resolve( DB_NAME ).toFile() ) );
+        assertEquals( DbRepresentation.of( db ), DbRepresentation.of( DatabaseLayout.of( backupsDir.resolve( DB_NAME ).toFile() ) ) );
 
         // all used channels should be closed after backup is done
         assertAll( "All channels should be closed after backup " + channels,

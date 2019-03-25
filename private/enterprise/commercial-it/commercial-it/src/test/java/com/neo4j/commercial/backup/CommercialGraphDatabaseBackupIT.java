@@ -6,7 +6,6 @@
 package com.neo4j.commercial.backup;
 
 import com.neo4j.backup.BackupTestUtil;
-import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -16,9 +15,9 @@ import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -26,8 +25,10 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.helpers.CausalClusteringTestHelpers.backupAddress;
+import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.graphdb.Label.label;
 
 @ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
@@ -57,7 +58,7 @@ class CommercialGraphDatabaseBackupIT
         File backupDir = performBackup( testDirectory.databaseDir() );
         db.shutdown();
 
-        db = newCommercialDb( backupDir, false );
+        db = newCommercialBackupDb( backupDir, false );
         verifyNodes( nodeCount );
 
         db.shutdown();
@@ -79,11 +80,21 @@ class CommercialGraphDatabaseBackupIT
 
     private GraphDatabaseAPI newCommercialDb( File storeDir, boolean backupEnabled )
     {
-        return (GraphDatabaseAPI) new TestCommercialGraphDatabaseFactory()
-                .newEmbeddedDatabaseBuilder( storeDir )
-                .setConfig( OnlineBackupSettings.online_backup_enabled, Boolean.toString( backupEnabled ) )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() )
+        return (GraphDatabaseAPI) defaultCommercialBuilder( storeDir, backupEnabled )
                 .newGraphDatabase();
+    }
+
+    private GraphDatabaseAPI newCommercialBackupDb( File storeDir, boolean backupEnabled )
+    {
+        return (GraphDatabaseAPI) defaultCommercialBuilder( storeDir, backupEnabled )
+                .setConfig( transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() )
+                .newGraphDatabase();
+    }
+
+    private GraphDatabaseBuilder defaultCommercialBuilder( File storeDir, boolean backupEnabled )
+    {
+        return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( storeDir )
+                .setConfig( online_backup_enabled, Boolean.toString( backupEnabled ) );
     }
 
     private static void createNodes( GraphDatabaseService db, int count )

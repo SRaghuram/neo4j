@@ -262,7 +262,7 @@ public class TransactionLogCatchUpWriterTest
         }
 
         // we don't have log files after a store copy
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fsRule.get() ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fsRule.get() ).build();
         //noinspection ResultOfMethodCallIgnored
         logFiles.accept( ( file, version ) -> file.delete() );
 

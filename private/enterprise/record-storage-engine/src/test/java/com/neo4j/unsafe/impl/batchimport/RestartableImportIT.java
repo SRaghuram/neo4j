@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -94,7 +95,9 @@ class RestartableImportIT
                 restartCount++;
             }
             while ( process.exitValue() != 0 );
-            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabase( databaseDirectory );
+            GraphDatabaseService db = new TestGraphDatabaseFactory().newEmbeddedDatabaseBuilder( databaseDirectory )
+                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, databaseDirectory.getParentFile().getAbsolutePath() )
+                    .newGraphDatabase();
             try
             {
                 input( random.seed() ).verify( db );

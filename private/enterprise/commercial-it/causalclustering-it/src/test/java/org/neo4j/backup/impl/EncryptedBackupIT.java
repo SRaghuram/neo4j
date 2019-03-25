@@ -49,6 +49,7 @@ import org.neo4j.configuration.ssl.PemSslPolicyConfig;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.ssl.SslResourceBuilder;
 import org.neo4j.test.DbRepresentation;
@@ -329,7 +330,8 @@ class EncryptedBackupIT
             assertEquals( 0, exitCode );
 
             // and data matches
-            assertEquals( DbRepresentation.of( cluster.awaitLeader().database() ), DbRepresentation.of( new File( backupHome, DEFAULT_DATABASE_NAME ) ) );
+            assertEquals( DbRepresentation.of( cluster.awaitLeader().database() ),
+                    DbRepresentation.of( DatabaseLayout.of( backupHome, DEFAULT_DATABASE_NAME ) ) );
         }
 
         private static void shouldNotBeSuccessful( IntSupplier backupClient )

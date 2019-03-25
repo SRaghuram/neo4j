@@ -164,6 +164,7 @@ public class StoreUpgradeIT
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( logs_directory, testDir.directory( "logs" ).getAbsolutePath() );
             GraphDatabaseService db = builder.newGraphDatabase();
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
             {
                 checkInstance( store, (GraphDatabaseAPI) db );
@@ -174,7 +175,7 @@ public class StoreUpgradeIT
                 db.shutdown();
             }
 
-            assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
+            assertConsistentStore( databaseLayout );
         }
 
         @Test
@@ -377,6 +378,7 @@ public class StoreUpgradeIT
             builder.setConfig( allow_upgrade, "true" );
             builder.setConfig( GraphDatabaseSettings.record_format, store.getFormatFamily() );
             GraphDatabaseService db = builder.newGraphDatabase();
+            DatabaseLayout databaseLayout = ((GraphDatabaseAPI) db).databaseLayout();
             try
             {
                 checkInstance( store, (GraphDatabaseAPI) db );
@@ -387,7 +389,7 @@ public class StoreUpgradeIT
                 db.shutdown();
             }
 
-            assertConsistentStore( DatabaseLayout.of( databaseDirectory ) );
+            assertConsistentStore( databaseLayout );
         }
     }
 

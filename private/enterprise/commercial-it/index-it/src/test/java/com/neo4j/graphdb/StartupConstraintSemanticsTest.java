@@ -21,7 +21,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 
 @ExtendWith( TestDirectoryExtension.class )
 class StartupConstraintSemanticsTest
@@ -122,7 +121,6 @@ class StartupConstraintSemanticsTest
     private GraphDatabaseService getCommercialDatabase()
     {
         return new TestCommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dir.databaseDir() )
-                .setConfig( transaction_logs_root_path, dir.storeDir().getAbsolutePath() )
                 .newGraphDatabase();
     }
 }

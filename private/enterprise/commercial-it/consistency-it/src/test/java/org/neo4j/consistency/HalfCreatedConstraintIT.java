@@ -53,7 +53,6 @@ class HalfCreatedConstraintIT
 
         GraphDatabaseService database = new TestCommercialGraphDatabaseFactory()
                 .newEmbeddedDatabaseBuilder( databaseLayout.databaseDirectory() )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, databaseLayout.getStoreLayout().storeDirectory().getAbsolutePath() )
                 .newGraphDatabase();
         try
         {

@@ -39,6 +39,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.configuration.LayoutConfig.of;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder.logFilesBasedOnlyBuilder;
@@ -146,9 +148,10 @@ class RestoreDatabaseCommandIT
         DatabaseLayout toLayout = directory.databaseLayout( toStoreDirectory );
         int fromNodeCount = 10;
         int toNodeCount = 20;
+        config.augment( transaction_logs_root_path, toLayout.getTransactionLogsDirectory().getParentFile().getAbsolutePath() );
 
         createDbAt( fromLayout.databaseDirectory(), fromNodeCount );
-        createDbAt( toLayout.databaseDirectory(), toNodeCount );
+        createDbAt( toLayout, toNodeCount );
 
         // when
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true ).execute();
@@ -175,7 +178,7 @@ class RestoreDatabaseCommandIT
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
         File customTxLogDirectory = directory.directory( "customLogicalLog" );
         String customTransactionLogDirectory = customTxLogDirectory.getAbsolutePath();
-        config.augmentDefaults( GraphDatabaseSettings.transaction_logs_root_path, customTransactionLogDirectory );
+        config.augmentDefaults( transaction_logs_root_path, customTransactionLogDirectory );
 
         DatabaseLayout fromLayout = directory.databaseLayout( fromStoreDirectory );
         DatabaseLayout toLayout = directory.databaseLayout( toStoreDirectory, of( config ) );
@@ -190,11 +193,12 @@ class RestoreDatabaseCommandIT
         // when
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true ).execute();
 
-        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.getTransactionLogsDirectory(), fileSystem ).build();
+        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem ).build();
         LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem ).build();
         LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory(), fileSystem ).build();
         assertThat( toStoreLogFiles.logFiles(), emptyArray() );
         assertThat( customLogLocationLogFiles.logFiles(), arrayWithSize( 1 ) );
+        assertThat( fromStoreLogFiles.getLogFileForVersion( 0 ).length(), greaterThan( 0L ) );
         assertEquals( fromStoreLogFiles.getLogFileForVersion( 0 ).length(),
                 customLogLocationLogFiles.getLogFileForVersion( 0 ).length() );
     }
@@ -208,7 +212,7 @@ class RestoreDatabaseCommandIT
         File relativeLogDirectory = directory.directory( "relativeDirectory" );
 
         Config config = configWith( directory.absolutePath().getAbsolutePath() );
-        config.augment( GraphDatabaseSettings.transaction_logs_root_path, relativeLogDirectory.getAbsolutePath() );
+        config.augment( transaction_logs_root_path, relativeLogDirectory.getAbsolutePath() );
 
         createDbAt( fromPath, 10 );
 
@@ -261,11 +265,18 @@ class RestoreDatabaseCommandIT
         db.shutdown();
     }
 
+    private void createDbAt( DatabaseLayout toLayout, int toNodeCount )
+    {
+        GraphDatabaseService db = createDatabase( toLayout.databaseDirectory(), toLayout.getTransactionLogsDirectory().getParentFile() );
+        createTestData( toNodeCount, db );
+        db.shutdown();
+    }
+
     private GraphDatabaseService createDatabase( File path )
     {
         return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, path.getParentFile().getAbsolutePath() )
+                .setConfig( transaction_logs_root_path, path.getParentFile().getAbsolutePath() )
                 .newGraphDatabase();
     }
 
@@ -273,7 +284,7 @@ class RestoreDatabaseCommandIT
     {
         return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( path )
                 .setConfig( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )
-                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, transactionRootLocation.getAbsolutePath() )
+                .setConfig( transaction_logs_root_path, transactionRootLocation.getAbsolutePath() )
                 .newGraphDatabase();
     }
 

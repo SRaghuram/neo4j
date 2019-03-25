@@ -450,7 +450,7 @@ class OnlineBackupCommandCcIT
     {
         Config config = Config.defaults();
         config.augment( OnlineBackupSettings.online_backup_enabled, Settings.FALSE );
-        return DbRepresentation.of( DatabaseLayout.of( backupDir, databaseName ).databaseDirectory(), config );
+        return DbRepresentation.of( DatabaseLayout.of( backupDir, databaseName ), config );
     }
 
     private int runBackupToolAndGetExitCode( String address, String databaseName )
