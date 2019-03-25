@@ -14,8 +14,8 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     val query =
     """
         |CREATE (:Person {name:'Alice', id: 0}),
-        |       (:Person {name:'Bosse', lastname: 'Bobson', id: 1})-[:HAS_DOG]->(:Dog {name:'Bosse'}),
-        |       (:Dog {name:'Fido'})<-[:HAS_DOG]-(:Person {name:'Chris', id:2})-[:HAS_DOG]->(:Dog {name:'Ozzy'})
+        |       (:Person {name:'Bosse', lastname: 'Bobson', id: 1})-[:HAS_DOG {since: 2016}]->(:Dog {name:'Bosse'}),
+        |       (:Dog {name:'Fido'})<-[:HAS_DOG {since: 2010}]-(:Person {name:'Chris', id:2})-[:HAS_DOG {since: 2018}]->(:Dog {name:'Ozzy'})
       """.stripMargin
 
     executeSingle(query)
@@ -314,6 +314,76 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     plan should includeSomewhere.aPlan("SemiApply")
 
     result.toList should equal(List(Map("alice.name" -> "Alice")))
+  }
+
+  // Relationship predicates
+
+  test("should handle relationship predicate") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        |    MATCH (person)-[h:HAS_DOG]->(dog:Dog)
+        |    WHERE h.since < 2016
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map("person.name" -> "Chris")))
+
+  }
+
+  test("should handle relationship predicate linking inner and outer relationship") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (person:Person)-[r]->()
+        |WHERE EXISTS {
+        |    MATCH ()-[h:HAS_DOG]->(dog :Dog {name:'Bosse'})
+        |    WHERE h.since = r.since
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
+  }
+
+  test("should handle more complex relationship predicate") {
+
+    dogSetup()
+
+    val query =
+      """
+        |MATCH (adog:Dog {name:'Ozzy'})
+        |WITH adog
+        |MATCH ()-[r]->()
+        |WHERE EXISTS {
+        |    MATCH (person)-[h:HAS_DOG]->(adog)
+        |    WHERE id(h) = id(r)
+        |}
+        |RETURN adog.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    result.toList should equal(List(Map("adog.name" -> "Ozzy")))
+
   }
 
   // Omitting the MATCH keyword
