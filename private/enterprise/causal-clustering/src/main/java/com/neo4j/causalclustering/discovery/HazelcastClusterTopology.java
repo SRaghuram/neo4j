@@ -29,7 +29,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
 import org.neo4j.helpers.collection.CollectorsUtil;
@@ -197,7 +196,7 @@ public final class HazelcastClusterTopology
         Stream<String> readReplicaHzIds = simpleAttrMaps.get( READ_REPLICA_BOLT_ADDRESS_MAP ).keySet().stream();
 
         Map<MemberId,ReadReplicaInfo> validatedReadReplicas = readReplicaHzIds
-                .flatMap( hzId -> Streams.ofNullable( buildReadReplicaFromAttrMap( hzId, simpleAttrMaps, serverGroupsMap, log ) ) )
+                .flatMap( hzId -> Stream.ofNullable( buildReadReplicaFromAttrMap( hzId, simpleAttrMaps, serverGroupsMap, log ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
         return validatedReadReplicas;

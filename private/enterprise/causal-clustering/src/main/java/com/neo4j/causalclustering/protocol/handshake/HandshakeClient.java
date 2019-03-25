@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.helpers.collection.Pair;
 
 public class HandshakeClient implements ClientMessageHandler
@@ -147,7 +146,7 @@ public class HandshakeClient implements ClientMessageHandler
             List<Protocol.ModifierProtocol> agreedModifierProtocols = negotiatedModifierProtocols
                     .stream()
                     .map( Pair::other )
-                    .flatMap( Streams::ofOptional )
+                    .flatMap( opt -> opt.stream() )
                     .collect( Collectors.toList() );
 
             protocolStack = new ProtocolStack( negotiatedApplicationProtocol, agreedModifierProtocols );

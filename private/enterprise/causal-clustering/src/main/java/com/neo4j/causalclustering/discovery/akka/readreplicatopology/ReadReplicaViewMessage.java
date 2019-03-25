@@ -11,12 +11,10 @@ import com.neo4j.causalclustering.discovery.ReadReplicaTopology;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.helpers.collection.CollectorsUtil;
 import org.neo4j.helpers.collection.Pair;
 
@@ -28,12 +26,12 @@ class ReadReplicaViewMessage
 
     ReadReplicaViewMessage( Map<ActorRef,ReadReplicaViewRecord> clusterClientReadReplicas )
     {
-        this.clusterClientReadReplicas = Collections.unmodifiableMap( new HashMap<>( clusterClientReadReplicas ) );
+        this.clusterClientReadReplicas = Map.copyOf( clusterClientReadReplicas );
     }
 
     Stream<ActorRef> topologyClient( ActorRef clusterClient )
     {
-        return Streams.ofNullable( clusterClientReadReplicas.get( clusterClient ) )
+        return Stream.ofNullable( clusterClientReadReplicas.get( clusterClient ) )
                 .map( ReadReplicaViewRecord::topologyClientActorRef );
     }
 

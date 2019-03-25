@@ -52,7 +52,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
@@ -95,7 +94,7 @@ public class NettyInstalledProtocolsIT
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
     private static Parameters raft1WithCompressionModifier( Optional<ModifierProtocol> protocol )
     {
-        List<String> versions = Streams.ofOptional( protocol ).map( Protocol::implementation ).collect( Collectors.toList() );
+        List<String> versions = protocol.stream().map( Protocol::implementation ).collect( Collectors.toList() );
         return new Parameters( "Raft 1, modifiers: " + protocol, new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_1.implementation() ) ),
                 singletonList( new ModifierSupportedProtocols( COMPRESSION, versions ) ) );
     }
@@ -103,7 +102,7 @@ public class NettyInstalledProtocolsIT
     @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
     private static Parameters raft2WithCompressionModifiers( Optional<ModifierProtocol> protocol )
     {
-        List<String> versions = Streams.ofOptional( protocol ).map( Protocol::implementation ).collect( Collectors.toList() );
+        List<String> versions = protocol.stream().map( Protocol::implementation ).collect( Collectors.toList() );
         return new Parameters( "Raft 2, modifiers: " + protocol, new ApplicationSupportedProtocols( RAFT, singletonList( RAFT_2.implementation() ) ),
                 singletonList( new ModifierSupportedProtocols( COMPRESSION, versions ) ) );
     }

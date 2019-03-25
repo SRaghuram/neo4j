@@ -18,7 +18,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.neo4j.collection.Streams;
 import org.neo4j.helpers.collection.Pair;
 
 public abstract class ProtocolRepository<U extends Comparable<U>,T extends Protocol<U>>
@@ -55,7 +54,7 @@ public abstract class ProtocolRepository<U extends Comparable<U>,T extends Proto
         return versions
                 .stream()
                 .map( version -> select( protocolName, version ) )
-                .flatMap( Streams::ofOptional )
+                .flatMap( opt -> opt.stream() )
                 .max( comparator.apply( protocolName ) );
     }
 
