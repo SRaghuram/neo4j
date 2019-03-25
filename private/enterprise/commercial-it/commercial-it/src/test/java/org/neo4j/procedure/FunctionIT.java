@@ -903,7 +903,7 @@ class FunctionIT
                 @Name( value = "boolean", defaultValue = "true" ) boolean aBoolean
         )
         {
-            return String.format( Locale.US, "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
+            return String.format( Locale.ROOT, "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
         }
 
         @UserFunction
