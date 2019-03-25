@@ -21,6 +21,7 @@ import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 
 @ExtendWith( EphemeralFileSystemExtension.class )
@@ -51,9 +52,15 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
     @Test
     void shouldOmitDBMSQueriesInDbStatsRetrieve()
     {
+        // given
         String secret = "abc123";
         String sillySecret = ".changePassword(\\'si\"lly\\')";
         String otherSillySecret = "other$silly";
+        assertSuccess( adminSubject, "CALL db.stats.stop('QUERIES')", ResourceIterator::close );
+        assertSuccess( adminSubject, "CALL db.stats.clear('QUERIES')", ResourceIterator::close );
+        assertNoQueries( "CALL db.stats.retrieve('QUERIES')" );
+
+        // when
         assertSuccess( adminSubject, "CALL db.stats.collect('QUERIES')", ResourceIterator::close );
         assertEmpty( adminSubject, format( "CALL dbms.security.changePassword('%s')", secret ) );
         assertEmpty( adminSubject, format( "CALL dbms.security.changeUserPassword('readSubject', '%s')", secret ) );
@@ -73,6 +80,8 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
                                              "CALL dbms.security.changeUserPassword('readSubject','%s') RETURN 1",
                                              sillySecret, otherSillySecret ), ResourceIterator::close );
         assertSuccess( adminSubject, "CALL db.stats.stop('QUERIES')", ResourceIterator::close );
+
+        // then
         assertNoQueries( "CALL db.stats.retrieve('QUERIES')" );
         assertNoQueries( "CALL db.stats.retrieveAllAnonymized('graphToken')" );
     }
@@ -87,7 +96,7 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
                                    .map( dataMap -> (String) dataMap.get( "query" ) )
                                    .collect( Collectors.toList() );
 
-                           assertThat( queryTexts.size(), equalTo( 0 ) );
+                           assertThat( queryTexts, containsInAnyOrder( ) );
                        } );
     }
 }
