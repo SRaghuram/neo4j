@@ -322,7 +322,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     public void grantPrivilegeToRole( String roleName, DatabasePrivilege dbPrivilege ) throws InvalidArgumentsException
     {
         assertNotPredefinedRoleName( roleName );
-        // TODO not sure where to expand the privileges
         for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
         {
             systemGraphOperations.grantPrivilegeToRole( roleName, privilege, dbPrivilege.getDbName() );

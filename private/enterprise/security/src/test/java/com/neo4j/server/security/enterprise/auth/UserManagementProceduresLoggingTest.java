@@ -6,6 +6,8 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
 import com.neo4j.server.security.enterprise.systemgraph.QueryExecutor;
@@ -33,10 +35,12 @@ import org.neo4j.server.security.auth.BasicPasswordPolicy;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
-import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
@@ -512,6 +516,116 @@ class UserManagementProceduresLoggingTest
     }
 
     @Test
+    void shouldLogGrantPrivilege() throws Exception
+    {
+        // Given
+        authProcedures.createRole( "foo" );
+        log.clear();
+
+        // When
+        authProcedures.grantPrivilegeToRole( "foo", "read", "graph", "*" );
+
+        // Then
+        log.assertExactly( info( "[admin]: granted `%s` privilege on `%s` for role `%s`", Action.READ, Resource.GRAPH, "foo" ) );
+    }
+
+    @Test
+    void shouldLogFailureToGrantPrivilege() throws Exception
+    {
+        // Given
+        authProcedures.createRole( "foo" );
+        log.clear();
+
+        // When
+        InvalidArgumentsException exception =
+                assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "bar", "read", "graph", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "Role 'bar' does not exist." ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "bar", "graph", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "bar is not a valid action" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "write", "bar", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "bar is not a valid resource" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.grantPrivilegeToRole( "foo", "execute", "schema", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "Invalid combination of action (execute) and resource (schema)" ) );
+
+        // Then
+        log.assertExactly(
+                error( "[admin]: tried to grant `%s` privilege on `%s` for role `%s`: %s", Action.READ, Resource.GRAPH, "bar", "Role 'bar' does not exist." )
+        );
+    }
+
+    @Test
+    void shouldLogUnauthorizedGrantPrivilege() throws Exception
+    {
+        // Given
+        authProcedures.createRole( "foo" );
+        setSubject( matsContext );
+        log.clear();
+
+        // When
+        catchAuthorizationViolation( () -> authProcedures.grantPrivilegeToRole( "foo", "write", "graph", "*" ) );
+
+        // Then
+        log.assertExactly(
+                error( "[mats]: tried to grant `%s` privilege on `%s` for role `%s`: %s", Action.WRITE, Resource.GRAPH, "foo", "Permission denied." )
+        );
+    }
+
+    @Test
+    void shouldLogRevokePrivilege() throws Exception
+    {
+        // Given
+        authProcedures.createRole( "foo" );
+        log.clear();
+
+        // When
+        authProcedures.revokePrivilegeFromRole( "foo", "read", "graph", "*" );
+
+        // Then
+        log.assertExactly( info( "[admin]: revoked `%s` privilege on `%s` for role `%s`", Action.READ, Resource.GRAPH, "foo" ) );
+    }
+
+    @Test
+    void shouldLogFailureToRevokePrivilege() throws Exception
+    {
+        // Given
+        authProcedures.createRole( "foo" );
+        log.clear();
+
+        // When
+        InvalidArgumentsException exception =
+                assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "bar", "read", "graph", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "Role 'bar' does not exist." ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "bar", "graph", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "bar is not a valid action" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "write", "bar", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "bar is not a valid resource" ) );
+        exception = assertThrows( InvalidArgumentsException.class, () -> authProcedures.revokePrivilegeFromRole( "foo", "execute", "schema", "*" ) );
+        assertThat( exception.getMessage(), equalTo( "Invalid combination of action (execute) and resource (schema)" ) );
+
+        // Then
+        log.assertExactly(
+                error( "[admin]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", Action.READ, Resource.GRAPH, "bar", "Role 'bar' does not exist." )
+        );
+    }
+
+    @Test
+    void shouldLogUnauthorizedRevokePrivilege() throws Exception
+    {
+        // Given
+        authProcedures.createRole( "foo" );
+        setSubject( matsContext );
+        log.clear();
+
+        // When
+        catchAuthorizationViolation( () -> authProcedures.revokePrivilegeFromRole( "foo", "write", "graph", "*" ) );
+
+        // Then
+        log.assertExactly(
+                error( "[mats]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", Action.WRITE, Resource.GRAPH, "foo", "Permission denied." )
+        );
+    }
+
+    @Test
     void shouldLogIfUnexpectedErrorTerminatingTransactions() throws Exception
     {
         // Given
@@ -622,7 +736,7 @@ class UserManagementProceduresLoggingTest
         assertException( f, AuthorizationViolationException.class );
     }
 
-    private AssertableLogProvider.LogMatcher info( String message, String... arguments )
+    private AssertableLogProvider.LogMatcher info( String message, Object... arguments )
     {
         if ( arguments.length == 0 )
         {
@@ -631,7 +745,7 @@ class UserManagementProceduresLoggingTest
         return inLog( this.getClass() ).info( message, (Object[]) arguments );
     }
 
-    private AssertableLogProvider.LogMatcher error( String message, String... arguments )
+    private AssertableLogProvider.LogMatcher error( String message, Object... arguments )
     {
         return inLog( this.getClass() ).error( message, (Object[]) arguments );
     }

@@ -21,7 +21,28 @@ public class ResourcePrivilege
 
     public ResourcePrivilege( String action, String resource ) throws InvalidArgumentsException
     {
-        this( Action.valueOf( action.toUpperCase() ), Resource.valueOf( resource.toUpperCase() ) );
+        Action asAction;
+        Resource asResource;
+        try
+        {
+            asAction = Action.valueOf( action.toUpperCase() );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            throw new InvalidArgumentsException( action + " is not a valid action" );
+        }
+        try
+        {
+            asResource = Resource.valueOf( resource.toUpperCase() );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            throw new InvalidArgumentsException( resource + " is not a valid resource" );
+        }
+
+        this.action = asAction;
+        this.resource = asResource;
+        assertValidPrivilege();
     }
 
     private void assertValidPrivilege() throws InvalidArgumentsException
