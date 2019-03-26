@@ -7,10 +7,8 @@ package com.neo4j.bench.client;
 
 import com.neo4j.bench.client.model.Benchmark.Mode;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.collect.Lists.newArrayList;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -19,8 +17,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class Units
 {
-    private static final List<TimeUnit> UNITS = newArrayList( NANOSECONDS, MICROSECONDS, MILLISECONDS, SECONDS );
-
     public static String toAbbreviation( TimeUnit timeUnit, Mode mode )
     {
         return (mode.equals( Mode.THROUGHPUT ))
@@ -116,6 +112,22 @@ public class Units
         }
     }
 
+    private static boolean hasSmallerValueUnit( TimeUnit unit, Mode mode )
+    {
+        switch ( mode )
+        {
+        // 1000000 us/op == 1000 ms/op == 1 s/op
+        case LATENCY:
+        case SINGLE_SHOT:
+            return unit.ordinal() < SECONDS.ordinal();
+        // 1 op/us == 1000 op/ms == 1000000 op/s
+        case THROUGHPUT:
+            return unit.ordinal() > NANOSECONDS.ordinal();
+        default:
+            throw new IllegalArgumentException( format( "Unable to convert %s %s to smaller unit", unit.name(), mode.name() ) );
+        }
+    }
+
     public static TimeUnit toLargerValueUnit( TimeUnit unit, Mode mode )
     {
         switch ( mode )
@@ -129,6 +141,22 @@ public class Units
             return largerUnit( unit );
         default:
             throw new IllegalArgumentException( format( "Unable to convert %s %s to smaller unit", unit.name(), mode.name() ) );
+        }
+    }
+
+    private static boolean hasLargerValueUnit( TimeUnit unit, Mode mode )
+    {
+        switch ( mode )
+        {
+        // 1000000 us/op == 1000 ms/op == 1 s/op
+        case LATENCY:
+        case SINGLE_SHOT:
+            return unit.ordinal() > NANOSECONDS.ordinal();
+        // 1 op/us == 1000 op/ms == 1000000 op/s
+        case THROUGHPUT:
+            return unit.ordinal() < SECONDS.ordinal();
+        default:
+            throw new IllegalArgumentException( format( "Unsupported mode: %s", mode.name() ) );
         }
     }
 
@@ -164,7 +192,7 @@ public class Units
     // conversion factor is necessary because TimeUnit convert can only deal with long values
     public static double conversionFactor( TimeUnit from, TimeUnit to, Mode mode )
     {
-        double factor = (UNITS.indexOf( from ) > UNITS.indexOf( to ))
+        double factor = (from.ordinal() > to.ordinal())
                         ? to.convert( 1, from )
                         : 1D / from.convert( 1, to );
         return (mode.equals( Mode.THROUGHPUT )) ? 1D / factor : factor;
@@ -180,12 +208,12 @@ public class Units
      */
     public static TimeUnit findSaneUnit( double value, TimeUnit unit, Mode mode, double min, double max )
     {
-        while ( value < min )
+        while ( value < min && Units.hasLargerValueUnit( unit, mode ) )
         {
             value = value * 1000;
             unit = Units.toLargerValueUnit( unit, mode );
         }
-        while ( value > max )
+        while ( value > max && Units.hasSmallerValueUnit( unit, mode ) )
         {
             value = value / 1000;
             unit = Units.toSmallerValueUnit( unit, mode );

@@ -87,6 +87,50 @@ public class UnitsTest
     }
 
     @Test
+    public void shouldFindSaneUnitAtLimit()
+    {
+        // Throughput low value
+        double originalValue = 0.01;
+        TimeUnit originalUnit = SECONDS;
+        Mode mode = THROUGHPUT;
+        TimeUnit expectedUnit = SECONDS;
+
+        TimeUnit saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertThat( convertValueTo( originalValue, originalUnit, saneUnit, mode ), equalTo( 0.01 ) );
+
+        // Throughput high value
+        originalValue = 1001;
+        originalUnit = NANOSECONDS;
+        mode = THROUGHPUT;
+        expectedUnit = NANOSECONDS;
+
+        saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertEquals( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1001, 0.0001 );
+
+        // Latency low value
+        originalValue = 0.01;
+        originalUnit = NANOSECONDS;
+        mode = LATENCY;
+        expectedUnit = NANOSECONDS;
+
+        saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertThat( convertValueTo( originalValue, originalUnit, saneUnit, mode ), equalTo( 0.01 ) );
+
+        // Latency high value
+        originalValue = 1001;
+        originalUnit = SECONDS;
+        mode = LATENCY;
+        expectedUnit = SECONDS;
+
+        saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
+        assertThat( saneUnit, equalTo( expectedUnit ) );
+        assertEquals( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1001, 0.0001 );
+    }
+
+    @Test
     public void shouldConvertToSmallerOrLargerValueUnit()
     {
         assertThat( toSmallerValueUnit( MILLISECONDS, LATENCY ), equalTo( SECONDS ) );
