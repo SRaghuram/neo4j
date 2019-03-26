@@ -38,6 +38,13 @@ public class RaftCoreTopologyConnector extends LifecycleAdapter implements CoreT
     }
 
     @Override
+    public void stop()
+    {
+        raftMachine.unregisterListener( this );
+        coreTopologyService.removeLocalCoreTopologyListener( this );
+    }
+
+    @Override
     public synchronized void onCoreTopologyChange( CoreTopology coreTopology )
     {
         Set<MemberId> targetMembers = coreTopology.members().keySet();
