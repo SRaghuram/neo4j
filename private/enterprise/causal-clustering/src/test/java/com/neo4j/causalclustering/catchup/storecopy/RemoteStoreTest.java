@@ -29,8 +29,6 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.service.Services;
-import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 
 import static com.neo4j.causalclustering.catchup.CatchupAddressProvider.fromSingleAddress;
@@ -234,7 +232,7 @@ class RemoteStoreTest
     {
         RemoteStore remoteStore =
                 new RemoteStore( NullLogProvider.getInstance(), mock( FileSystemAbstraction.class ), null, storeCopyClient, txPullClient, factory( writer ),
-                        config, new Monitors(), selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ) );
+                        config, new Monitors(), selectStorageEngine() );
 
         remoteStore.copy( catchupAddressProvider, storeId, databaseLayout, true );
     }

@@ -103,6 +103,6 @@ public class StoreFiles
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( fs, pageCache, databaseLayout );
-        return selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ).storeId( dependencies );
+        return selectStorageEngine().storeId( dependencies );
     }
 }

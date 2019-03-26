@@ -18,8 +18,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
-import org.neo4j.service.Services;
-import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -50,7 +48,7 @@ class CommitStateHelperTest
                 txLogLocation.getAbsolutePath() ).build();
         File storeDir = testDirectory.storeDir();
         databaseLayout = DatabaseLayout.of( storeDir, LayoutConfig.of( config ), config.get( GraphDatabaseSettings.default_database ) );
-        commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine( Services.loadAll( StorageEngineFactory.class ) ) );
+        commitStateHelper = new CommitStateHelper( pageCache, fsa, config, selectStorageEngine() );
     }
 
     @Test
