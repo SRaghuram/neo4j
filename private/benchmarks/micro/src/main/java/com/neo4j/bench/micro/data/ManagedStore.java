@@ -15,6 +15,7 @@ import com.neo4j.commercial.edition.factory.CommercialGraphDatabaseFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.FileUtils;
@@ -76,6 +77,7 @@ public class ManagedStore
     public static GraphDatabaseService newDb( Path dbPath, Path config )
     {
         GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbPath.toFile() );
+        builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, dbPath.getParent().toAbsolutePath().toString() );
         if ( null != config )
         {
             builder = builder.loadPropertiesFromFile( config.toFile().getAbsolutePath() );

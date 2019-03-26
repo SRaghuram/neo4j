@@ -25,11 +25,10 @@ import io.findify.s3mock.S3Mock;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -61,18 +60,17 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.io.FileMatchers.anExistingFile;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.io.FileMatchers.anExistingFile;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith( TestDirectoryExtension.class )
-public class EndToEndIT
+class EndToEndIT
 {
     private static final String RUN_REPORT_BENCHMARKS_SH = "run-report-benchmarks.sh";
 
@@ -81,12 +79,12 @@ public class EndToEndIT
             CommercialNeo4jExtension.builder().withConfig( GraphDatabaseSettings.auth_enabled, Settings.FALSE ).build();
 
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     private URI boltUri;
 
     @BeforeEach
-    public void setUp( GraphDatabaseService databaseService )
+    void setUp( GraphDatabaseService databaseService )
     {
         HostnamePort address = ((GraphDatabaseAPI) databaseService).getDependencyResolver()
                 .resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
@@ -94,7 +92,7 @@ public class EndToEndIT
     }
 
     @AfterEach
-    public void cleanUpDb( GraphDatabaseService databaseService )
+    void cleanUpDb( GraphDatabaseService databaseService )
     {
         // this is hacky HACK, needs to be fixed in Neo4jExtension
         databaseService.execute( "MATCH (n) DETACH DELETE n" ).close();
@@ -102,7 +100,7 @@ public class EndToEndIT
 
     @Test
     @Tag( "endtoend" )
-    public void runReportBenchmarks() throws Exception
+    void runReportBenchmarks() throws Exception
     {
 
         System.out.println("Working Directory = " +
@@ -310,8 +308,8 @@ public class EndToEndIT
 
         // all expected recordings
         long expectedRecordingsCount = profilers.stream()
-            .flatMap( profiler -> profiler.allRecordingTypes().stream() )
-            .count();
+            .mapToLong( profiler -> profiler.allRecordingTypes().size() )
+            .sum();
 
         long existingRecordingsCount = profilers.stream()
             .flatMap( profiler -> profiler.allRecordingTypes().stream() )

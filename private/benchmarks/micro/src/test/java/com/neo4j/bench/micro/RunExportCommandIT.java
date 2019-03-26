@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -43,14 +44,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@ExtendWith( TestDirectoryExtension.class )
-public class RunExportCommandIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class RunExportCommandIT
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void shouldThrowExceptionWhenNoBenchmarkIsEnabled() throws Exception
+    void shouldThrowExceptionWhenNoBenchmarkIsEnabled()
     {
         assertThrows( RuntimeException.class, () ->
         {
@@ -102,7 +103,7 @@ public class RunExportCommandIT
     }
 
     @Test
-    public void shouldRunWithMinimalConfigurationWithSingleBenchmarkFromConfigFile() throws Exception
+    void shouldRunWithMinimalConfigurationWithSingleBenchmarkFromConfigFile() throws Exception
     {
         // Create empty Neo4j configuration file
         File neo4jConfigFile = createTempFile( temporaryFolder.absolutePath() );

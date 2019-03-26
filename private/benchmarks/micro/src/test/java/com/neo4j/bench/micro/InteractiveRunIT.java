@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -44,14 +45,14 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-@ExtendWith( TestDirectoryExtension.class )
-public class InteractiveRunIT
+@ExtendWith( {TestDirectoryExtension.class, SuppressOutputExtension.class} )
+class InteractiveRunIT
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
     @Test
-    public void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
+    void shouldRunExactlyOneMethodOfBenchmarkClass() throws Exception
     {
         Class benchmark = ReadById.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -63,7 +64,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunAllMethodsOfBenchmarkClass() throws Exception
+    void shouldRunAllMethodsOfBenchmarkClass() throws Exception
     {
         Class benchmark = AllNodesScan.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -74,7 +75,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunAllMethodsOfGroupBenchmarkClass() throws Exception
+    void shouldRunAllMethodsOfGroupBenchmarkClass() throws Exception
     {
         Class benchmark = ConcurrentReadWriteLabelsV2.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -85,7 +86,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunConstantDataConstantAugment() throws Exception
+    void shouldRunConstantDataConstantAugment() throws Exception
     {
         Class benchmark = ConstantDataConstantAugment.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -96,7 +97,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunConstantDataVariableAugment() throws Exception
+    void shouldRunConstantDataVariableAugment() throws Exception
     {
         Class benchmark = ConstantDataVariableAugment.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -107,7 +108,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldRunBenchmarkThatIsDisabledByDefault() throws Exception
+    void shouldRunBenchmarkThatIsDisabledByDefault() throws Exception
     {
         Class benchmark = DefaultDisabled.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation() );
@@ -118,7 +119,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldNotThrowExceptionWhenErrorPolicyIsSkip() throws Exception
+    void shouldNotThrowExceptionWhenErrorPolicyIsSkip() throws Exception
     {
         Class benchmark = AlwaysCrashes.class;
         // no benchmarks will complete, so no profiler recordings will be created
@@ -130,7 +131,7 @@ public class InteractiveRunIT
     }
 
     @Test
-    public void shouldThrowExceptionWhenErrorPolicyIsFail()
+    void shouldThrowExceptionWhenErrorPolicyIsFail()
     {
         Class benchmark = AlwaysCrashes.class;
         // no benchmarks will complete, so no profiler recordings will be created
@@ -180,11 +181,7 @@ public class InteractiveRunIT
             List<String> pathNames = paths
                     .filter( Files::isDirectory )
                     .filter( Stores::isTopLevelDir )
-                    .map( p ->
-                          {
-                              System.out.println( "DB : " + p );
-                              return p;
-                          } )
+                    .peek( p -> System.out.println( "DB : " + p ) )
                     .map( Path::toString )
                     .collect( toList() );
             assertThat( "Found: " + pathNames, pathNames.size(), equalTo( expectedStoreCount ) );
