@@ -31,6 +31,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.virtual.MapValue;
 
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -103,7 +104,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
     private List<AdvertisedSocketAddress> writeEndpoints( String databaseName )
     {
-        return leaderService.getLeaderBoltAddress( databaseName ).stream().collect( toList() );
+        return leaderService.getLeaderBoltAddress( databaseName ).map( List::of ).orElse( emptyList() );
     }
 
     private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy, String databaseName )
