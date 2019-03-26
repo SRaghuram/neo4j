@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
@@ -269,8 +268,6 @@ public class CoreBootstrapper
      */
     private void appendNullTransactionLogEntryToSetRaftIndexToMinusOne( DatabaseLayout databaseLayout, Config config ) throws IOException
     {
-        Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( pageCache, databaseLayout, fs, config );
         TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( pageCache, databaseLayout );
         LogFiles logFiles = LogFilesBuilder
                 .activeFilesBuilder( databaseLayout, fs, pageCache )
@@ -296,7 +293,7 @@ public class CoreBootstrapper
             channel.prepareForFlush().flush();
         }
 
-        try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies ) )
+        try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, config, pageCache ) )
         {
             transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
                     logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );

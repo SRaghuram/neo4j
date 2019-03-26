@@ -59,9 +59,10 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         this.log = logProvider.getLog( getClass() );
         this.asPartOfStoreCopy = asPartOfStoreCopy;
         this.rotateTransactionsManually = forceTransactionRotations;
+        final Config configWithoutSpecificStoreFormat = configWithoutSpecificStoreFormat( config );
         Dependencies dependencies = new Dependencies();
-        dependencies.satisfyDependencies( databaseLayout, fs, pageCache, configWithoutSpecificStoreFormat( config ) );
-        metaDataStore = storageEngineFactory.transactionMetaDataStore( dependencies );
+        dependencies.satisfyDependencies( databaseLayout, fs, pageCache, configWithoutSpecificStoreFormat );
+        metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, pageCache );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )
                 .withConfig( customisedConfig( config, keepTxLogsInStoreDir, forceTransactionRotations ) )
