@@ -46,7 +46,7 @@ public class DefaultLeaderService implements LeaderService
     }
 
     @Override
-    public Optional<AdvertisedSocketAddress> getLeaderAddress( String databaseName )
+    public Optional<AdvertisedSocketAddress> getLeaderBoltAddress( String databaseName )
     {
         return getLeaderId( databaseName ).flatMap( this::resolveBoltAddress );
     }

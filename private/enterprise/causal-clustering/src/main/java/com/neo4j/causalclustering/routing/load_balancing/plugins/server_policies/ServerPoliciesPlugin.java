@@ -103,7 +103,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 
     private List<AdvertisedSocketAddress> writeEndpoints( String databaseName )
     {
-        return leaderService.getLeaderAddress( databaseName ).stream().collect( toList() );
+        return leaderService.getLeaderBoltAddress( databaseName ).stream().collect( toList() );
     }
 
     private List<AdvertisedSocketAddress> readEndpoints( CoreTopology coreTopology, ReadReplicaTopology rrTopology, Policy policy, String databaseName )

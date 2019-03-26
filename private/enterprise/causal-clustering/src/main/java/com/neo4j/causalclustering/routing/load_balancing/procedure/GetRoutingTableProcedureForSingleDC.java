@@ -82,7 +82,7 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private List<AdvertisedSocketAddress> writeEndpoints( String databaseName )
     {
-        var optionalLeaderAddress = leaderService.getLeaderAddress( databaseName );
+        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseName );
         if ( optionalLeaderAddress.isEmpty() )
         {
             log.debug( "No leader server found. This can happen during a leader switch. No write end points available" );
@@ -106,7 +106,7 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 
     private Stream<AdvertisedSocketAddress> coreReadEndPoints( String databaseName )
     {
-        var optionalLeaderAddress = leaderService.getLeaderAddress( databaseName );
+        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( databaseName );
         var coreServerInfos = coreTopologyFor( databaseName ).members().values();
         var coreAddresses = coreServerInfos.stream().map( ClientConnector::boltAddress );
 

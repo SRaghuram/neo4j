@@ -15,5 +15,5 @@ public interface LeaderService
 {
     Optional<MemberId> getLeaderId( String databaseName );
 
-    Optional<AdvertisedSocketAddress> getLeaderAddress( String databaseName );
+    Optional<AdvertisedSocketAddress> getLeaderBoltAddress( String databaseName );
 }
