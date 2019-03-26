@@ -25,7 +25,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     private final String localDBName;
     private final boolean refusesToBeLeader;
 
-    private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
     private volatile ReadReplicaTopology readReplicaTopology = ReadReplicaTopology.EMPTY;
     private volatile CoreTopology coreTopology = CoreTopology.EMPTY;
     private volatile ReadReplicaTopology localReadReplicaTopology = ReadReplicaTopology.EMPTY;
@@ -60,16 +59,9 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public void setLeader0( LeaderInfo newLeader )
+    public void setLeader0( LeaderInfo newLeader, String dbName )
     {
-        leaderInfo =  newLeader;
-        sharedDiscoveryService.casLeaders( newLeader, localDBName );
-    }
-
-    @Override
-    public LeaderInfo getLeader()
-    {
-        return leaderInfo;
+        sharedDiscoveryService.casLeaders( newLeader, dbName );
     }
 
     @Override
@@ -151,9 +143,9 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
+    public void handleStepDown0( LeaderInfo steppingDown, String dbName )
     {
-        sharedDiscoveryService.casLeaders( steppingDown, localDBName );
+        sharedDiscoveryService.casLeaders( steppingDown, dbName );
     }
 
     public MemberId getMemberId()
@@ -190,6 +182,6 @@ class SharedDiscoveryCoreClient extends AbstractCoreTopologyService implements C
     public String toString()
     {
         return "SharedDiscoveryCoreClient{" + "myself=" + myself + ", coreServerInfo=" + coreServerInfo + ", refusesToBeLeader=" + refusesToBeLeader +
-                ", localDBName='" + localDBName + '\'' + ", leaderInfo=" + leaderInfo + ", coreTopology=" + coreTopology + '}';
+               ", localDBName='" + localDBName + '\'' + ", coreTopology=" + coreTopology + '}';
     }
 }

@@ -55,7 +55,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     private final TopologyState topologyState;
     private final ExecutorService executor;
     private final Clock clock;
-    private volatile LeaderInfo leaderInfo = LeaderInfo.INITIAL;
 
     public AkkaCoreTopologyService( Config config, MemberId myself, ActorSystemLifecycle actorSystemLifecycle, LogProvider logProvider,
             LogProvider userLogProvider, RetryStrategy topologyServiceRetryStrategy, ExecutorService executor, Clock clock )
@@ -157,12 +156,6 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
         }
     }
 
-    @Override
-    public LeaderInfo getLeader()
-    {
-        return leaderInfo;
-    }
-
     @VisibleForTesting
     public synchronized void restart()
     {
@@ -188,19 +181,18 @@ public class AkkaCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo leaderInfo )
+    public void setLeader0( LeaderInfo leaderInfo, String dbName )
     {
-        this.leaderInfo = leaderInfo;
         if ( leaderInfo.memberId() != null || leaderInfo.isSteppingDown() )
         {
-            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, localDBName() ), noSender() ) );
+            directoryActorRef.ifPresent( actor -> actor.tell( new LeaderInfoSettingMessage( leaderInfo, dbName ), noSender() ) );
         }
     }
 
     @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
+    public void handleStepDown0( LeaderInfo steppingDown, String dbName )
     {
-        setLeader0( steppingDown );
+        setLeader0( steppingDown, dbName );
     }
 
     @Override

@@ -31,10 +31,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.helpers.AdvertisedSocketAddress;
@@ -80,9 +78,6 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
 
     private JobHandle refreshJob;
 
-    private final AtomicReference<LeaderInfo> leaderInfo = new AtomicReference<>( LeaderInfo.INITIAL );
-    private final AtomicReference<Optional<LeaderInfo>> stepDownInfo = new AtomicReference<>( Optional.empty() );
-
     private volatile HazelcastInstance hazelcastInstance;
 
     private volatile Map<MemberId,AdvertisedSocketAddress> catchupAddressMap = new HashMap<>();
@@ -117,21 +112,15 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
     }
 
     @Override
-    public void setLeader0( LeaderInfo newLeaderInfo )
+    public void setLeader0( LeaderInfo newLeaderInfo, String dbName )
     {
-        leaderInfo.set( newLeaderInfo );
+        // do nothing, leader info is updated periodically with #refreshRoles()
     }
 
     @Override
-    public LeaderInfo getLeader()
+    public void handleStepDown0( LeaderInfo steppingDown, String dbName )
     {
-        return leaderInfo.get();
-    }
-
-    @Override
-    public void handleStepDown0( LeaderInfo steppingDown )
-    {
-        stepDownInfo.set( Optional.of( steppingDown ) );
+        // do nothing, leader info is updated periodically with #refreshRoles()
     }
 
     @Override
@@ -359,17 +348,21 @@ public class HazelcastCoreTopologyService extends AbstractCoreTopologyService
     private void refreshRoles() throws InterruptedException
     {
         waitOnHazelcastInstanceCreation();
-        LeaderInfo localLeaderInfo = leaderInfo.get();
-        Optional<LeaderInfo> localStepDownInfo = stepDownInfo.get();
 
-        if ( localStepDownInfo.isPresent() )
+        Map<String,LeaderInfo> localLeadersByDatabaseName = getLocalLeadersByDatabaseName();
+        for ( Map.Entry<String,LeaderInfo> entry : localLeadersByDatabaseName.entrySet() )
         {
-            HazelcastClusterTopology.casLeaders( hazelcastInstance, localStepDownInfo.get(), localDBName, log );
-            stepDownInfo.compareAndSet( localStepDownInfo, Optional.empty() );
-        }
-        else if ( localLeaderInfo.memberId() != null && localLeaderInfo.memberId().equals( myself ) )
-        {
-            HazelcastClusterTopology.casLeaders( hazelcastInstance, localLeaderInfo, localDBName, log );
+            String dbName = entry.getKey();
+            LeaderInfo localLeaderInfo = entry.getValue();
+
+            if ( localLeaderInfo.isSteppingDown() )
+            {
+                HazelcastClusterTopology.casLeaders( hazelcastInstance, localLeaderInfo, dbName, log );
+            }
+            else if ( localLeaderInfo.memberId() != null && localLeaderInfo.memberId().equals( myself ) )
+            {
+                HazelcastClusterTopology.casLeaders( hazelcastInstance, localLeaderInfo, dbName, log );
+            }
         }
 
         coreRoles = HazelcastClusterTopology.getCoreRoles( hazelcastInstance, allCoreServers().members().keySet() );
