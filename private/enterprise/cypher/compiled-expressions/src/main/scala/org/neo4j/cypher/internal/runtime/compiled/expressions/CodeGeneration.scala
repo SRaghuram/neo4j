@@ -9,6 +9,7 @@ import org.neo4j.codegen
 import org.neo4j.codegen.CodeGenerator.generateCode
 import org.neo4j.codegen.Expression.{constant, getStatic, invoke, invokeSuper, newInitializedArray}
 import org.neo4j.codegen.FieldReference.{field, staticField}
+import org.neo4j.codegen.MethodDeclaration
 import org.neo4j.codegen.MethodDeclaration.method
 import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen.Parameter.param
@@ -65,12 +66,19 @@ object CodeGeneration {
 
   private def className(): String = "Expression" + System.nanoTime()
 
+  def compileClass(c: ClassDeclaration): Class[_] = {
+    val handle = compileClassDeclaration(c)
+    val clazz = handle.loadAnonymousClass()
+    setConstants(clazz, c.fields)
+    clazz
+  }
+
   def compileExpression(expression: IntermediateExpression): CompiledExpression = {
     val handle = using(generator.generateClass(PACKAGE_NAME, className(), EXPRESSION)) { clazz: ClassGenerator =>
 
       generateConstructor(clazz, expression.fields)
       using(clazz.generate(EVALUATE_METHOD)) { block =>
-        expression.variables.distinct.foreach{ v =>
+        expression.variables.distinct.foreach { v =>
           block.assign(v.typ, v.name, compileExpression(v.value, block))
         }
         val noValue = getStatic(staticField(classOf[Values], classOf[Value], "NO_VALUE"))
@@ -148,7 +156,7 @@ object CodeGeneration {
     clazz.getConstructor().newInstance().asInstanceOf[CompiledGroupingExpression]
   }
 
-  private def setConstants(clazz: Class[_], fields: Seq[Field]): Unit = {
+  def setConstants(clazz: Class[_], fields: Seq[Field]): Unit = {
     fields.distinct.foreach {
       case StaticField(_, name, Some(value)) =>
         clazz.getDeclaredField(name).set(null, value)
@@ -156,7 +164,7 @@ object CodeGeneration {
     }
   }
 
-  private def generateConstructor(clazz: ClassGenerator, fields: Seq[Field]): Unit = {
+  def generateConstructor(clazz: ClassGenerator, fields: Seq[Field]): Unit = {
     using(clazz.generateConstructor()) { block =>
       block.expression(invokeSuper(OBJECT))
       fields.distinct.foreach {
@@ -188,7 +196,7 @@ object CodeGeneration {
       val invocation = invoke(compileExpression(target, block), method.asReference,
                               params.map(p => compileExpression(p, block)): _*)
 
-      if (method.output.isVoid) block.expression(invocation)
+      if (method.returnType.isVoid) block.expression(invocation)
       else block.expression(Expression.pop(invocation))
       Expression.EMPTY
 
@@ -326,4 +334,45 @@ object CodeGeneration {
         compileExpression(inner, block)
       } else Expression.EMPTY
   }
+
+  private def compileClassDeclaration(c: ClassDeclaration): codegen.ClassHandle = {
+    val handle = using(generator.generateClass(c.extendsClass.getOrElse(TypeReference.OBJECT), c.packageName, c.className, c.implementsInterfaces: _*)) { clazz: ClassGenerator =>
+      //clazz.generateConstructor(generateParametersWithNames(c.constructor.constructor.params): _*)
+      generateConstructor(clazz, c.fields)
+      c.methods.foreach { m =>
+        compileMethodDeclaration(clazz, m)
+      }
+      clazz.handle()
+    }
+    handle
+  }
+
+  private def compileMethodDeclaration(clazz: ClassGenerator, m: MethodDecl): Unit = {
+    val parametersWithNames = generateParametersWithNames(m.method.params)
+    using(clazz.generateMethod(m.method.returnType, m.method.name, parametersWithNames: _*)) { block =>
+      m.localVariables.distinct.foreach { v =>
+        block.assign(v.typ, v.name, compileExpression(v.value, block))
+      }
+      if (m.method.returnType == TypeReference.VOID) {
+        block.expression(compileExpression(m.body, block))
+      }
+      else {
+        block.returns(compileExpression(m.body, block))
+      }
+    }
+  }
+
+  private def generateParametersWithNames(params: Seq[TypeReference]): Seq[Parameter] = {
+    var i = 0
+    val parametersWithNames = params.map { typ =>
+      i += 1
+      param(typ, s"param$i")
+    }
+    parametersWithNames
+  }
+
+  final val PARAM1 = "param1"
+  final val PARAM2 = "param2"
+  final val PARAM3 = "param3"
+  final val PARAM4 = "param4"
 }

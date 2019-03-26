@@ -5,11 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
+import org.neo4j.values.AnyValue
 
 /**
   * Input to use for starting an operator task.
@@ -205,6 +206,38 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
   }
 
   override def producingWorkUnitEvent: WorkUnitEvent = inputMorsel.producingWorkUnitEvent
+}
+
+abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOperatorTaskWithMorsel {
+  override def operate(output: MorselExecutionContext,
+                       context: QueryContext,
+                       state: QueryState,
+                       resources: QueryResources): Unit = {
+    // For compiled expressions to work they assume that some local variables exists with certain names
+    // as defined by the CompiledExpression.evaluate() interface
+    operate(output, context, state.params, resources.expressionCursors, resources.expressionVariables(state.nExpressionSlots), resources)
+  }
+
+  /**
+    * The implementation of this method is done by code generation
+    *
+    * It is currently required to include the same parameter names as CompiledExpression.evaluate()
+    * to play well with compiled expressions (where they are defined as static constants).
+    * If we expose a way to inject the IntermediateRepresentation for these variable accesses into
+    * the expression compiler we can eliminate this abstract class delegation of the operate() call.
+    *
+    * AnyValue evaluate( ExecutionContext context,
+    *                    DbAccess dbAccess,
+    *                    AnyValue[] params,
+    *                    ExpressionCursors cursors,
+    *                    AnyValue[] expressionVariables );
+    */
+  def operate(context: MorselExecutionContext,
+              dbAccess: DbAccess,
+              params: Array[AnyValue],
+              cursors: ExpressionCursors,
+              expressionVariables: Array[AnyValue],
+              resources: QueryResources): Unit
 }
 
 /**

@@ -213,7 +213,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       val constant = staticConstant[TextValue](namer.nextVariableName().toUpperCase, Values.stringValue(s.value))
       Some(IntermediateExpression(getStatic[TextValue](constant.name), Seq(constant), Seq.empty, Set.empty))
     case _: Null => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
-    case _: True => Some(IntermediateExpression(truthValue, Seq.empty, Seq.empty, Set.empty))
+    case _: True => Some(IntermediateExpression(trueValue, Seq.empty, Seq.empty, Set.empty))
     case _: False => Some(IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty))
     case ListLiteral(args) =>
       val in = args.flatMap(compileExpression)
@@ -401,7 +401,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
               // }
               declare[Value](isMatch),
               assign(isMatch, nullCheck(inner)(inner.ir)),
-              condition(equal(load(isMatch), truthValue))(
+              condition(equal(load(isMatch), trueValue))(
                 assign(matches, add(load(matches), constant(1)))
               ),
               // if (isMatch == Values.NO_VALUE)
@@ -471,7 +471,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           // while( isMatch != Values.TRUE, && listIterator.hasNext() )
           // {
           //    AnyValue currentValue = listIterator.next();
-          loop(and(notEqual(load(isMatch), truthValue),
+          loop(and(notEqual(load(isMatch), trueValue),
                    invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
             block(Seq(
               declare[AnyValue](currentValue),
@@ -492,7 +492,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           },
           // }
           // return (isNull && isMatch != Values.TRUE) ? Values.NO_VALUE : Values.booleanValue(isMatch == Values.FALSE);
-          ternary(and(load(isNull), notEqual(load(isMatch), truthValue)),
+          ternary(and(load(isNull), notEqual(load(isMatch), trueValue)),
                   noValue,
                   invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"), equal(load(isMatch), falseValue)))
         )
@@ -544,7 +544,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           //    AnyValue currentValue = listIterator.next();
           declare[java.util.Iterator[AnyValue]](iterVariable),
           assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(and(notEqual(load(isMatch), truthValue),
+          loop(and(notEqual(load(isMatch), trueValue),
                    invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
             block(Seq(
               declare[AnyValue](currentValue),
@@ -565,7 +565,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           },
           // }
           // return (isNull && isMatch != Values.TRUE) ? Values.NO_VALUE : isMatch;
-          ternary(and(load(isNull), notEqual(load(isMatch), truthValue)),
+          ternary(and(load(isNull), notEqual(load(isMatch), trueValue)),
                   noValue,
                   load(isMatch))
         )
@@ -601,14 +601,14 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           declare[ListValue](listVar),
           assign(listVar, invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), collection.ir)),
           declare[Value](isMatch),
-          assign(isMatch, truthValue),
+          assign(isMatch, trueValue),
           // Iterator<AnyValue> listIterator = list.iterator();
           // while( isMatch==Values.TRUE && listIterator.hasNext())
           // {
           //    AnyValue currentValue = listIterator.next();
           declare[java.util.Iterator[AnyValue]](iterVariable),
           assign(iterVariable, invoke(load(listVar), method[ListValue, java.util.Iterator[AnyValue]]("iterator"))),
-          loop(and(equal(load(isMatch), truthValue),
+          loop(and(equal(load(isMatch), trueValue),
                    invoke(load(iterVariable), method[java.util.Iterator[AnyValue], Boolean]("hasNext")))) {
             block(Seq(
               declare[AnyValue](currentValue),
@@ -718,7 +718,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         }
 
       for (e <- compiled) yield e match {
-        case Nil => IntermediateExpression(truthValue, Seq.empty, Seq.empty,
+        case Nil => IntermediateExpression(trueValue, Seq.empty, Seq.empty,
                                            Set.empty) //this will not really happen because of rewriters etc
         case (a, isPredicate) :: Nil => if (isPredicate) a else coerceToPredicate(a)
         case list =>
@@ -757,7 +757,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         }
 
       for (e <- compiled) yield e match {
-        case Nil => IntermediateExpression(truthValue, Seq.empty, Seq.empty,
+        case Nil => IntermediateExpression(trueValue, Seq.empty, Seq.empty,
                                            Set.empty) //this will not really happen because of rewriters etc
         case (a, isPredicate) :: Nil => if (isPredicate) a else coerceToPredicate(a)
         case list =>
@@ -871,13 +871,13 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     case expressions.IsNull(test) =>
       for (e <- compileExpression(test)) yield {
         IntermediateExpression(
-          ternary(equal(nullCheck(e)(e.ir), noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
+          ternary(equal(nullCheck(e)(e.ir), noValue), trueValue, falseValue), e.fields, e.variables, Set.empty)
       }
 
     case expressions.IsNotNull(test) =>
       for (e <- compileExpression(test)) yield {
         IntermediateExpression(
-          ternary(notEqual(nullCheck(e)(e.ir), noValue), truthValue, falseValue), e.fields, e.variables, Set.empty)
+          ternary(notEqual(nullCheck(e)(e.ir), noValue), trueValue, falseValue), e.fields, e.variables, Set.empty)
       }
 
     case LessThan(lhs, rhs) =>
@@ -958,7 +958,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val setField = staticConstant[util.HashSet[AnyValue]](namer.nextVariableName(), set)
         IntermediateExpression(
           ternary(invoke(getStatic[util.HashSet[AnyValue]](setField.name), method[util.Set[AnyValue], Boolean, Object]("contains"), l.ir),
-                  truthValue, onNotFound), l.fields :+ setField, l.variables, l.nullCheck)
+                  trueValue, onNotFound), l.fields :+ setField, l.variables, l.nullCheck)
       }
 
     case In(lhs, rhs) =>
@@ -1160,7 +1160,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val returnVariable = namer.nextVariableName()
         val local = variable[AnyValue](returnVariable, constant(null))
         val ops = caseExpression(returnVariable, checks.map(_.ir), loads.map(_.ir), default.ir,
-                        toCheck => equal(toCheck, truthValue))
+                        toCheck => equal(toCheck, trueValue))
         Some(IntermediateExpression(ops,
                                     checks.flatMap(_.fields) ++ loads.flatMap(_.fields) ++ default.fields,
                                     checks.flatMap(_.variables) ++ loads.flatMap(_.variables) ++ default
@@ -1242,7 +1242,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
           ternary(
           invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
                  getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR),
-            truthValue, falseValue), Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
+            trueValue, falseValue), Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case NodePropertyExistsLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
@@ -1253,7 +1253,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         ternary(
         invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
                getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR),
-          truthValue, falseValue)), Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
+          trueValue, falseValue)), Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
@@ -1286,7 +1286,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         ternary(
           invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
                  getLongAt(offset), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-          truthValue,
+          trueValue,
           falseValue), Seq.empty, Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty)
       )
 
@@ -1299,7 +1299,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         ternary(
         invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
                getLongAt(offset), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-        truthValue,
+        trueValue,
         falseValue)), Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case HasLabels(nodeExpression, labels)  if labels.nonEmpty =>
@@ -1315,7 +1315,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
         val predicate: IntermediateRepresentation = ternary(tokensAndNames.map { token =>
           invokeStatic(method[CypherFunctions, Boolean, AnyValue, Int, DbAccess, NodeCursor]("hasLabel"),
                        node.ir, loadField(token._1), DB_ACCESS, NODE_CURSOR)
-        }.reduceLeft(and), truthValue, falseValue)
+        }.reduceLeft(and), trueValue, falseValue)
 
         IntermediateExpression(block(init :+ predicate:_*),
           node.fields ++ tokensAndNames.map(_._1), node.variables :+ vNODE_CURSOR, node.nullCheck)
@@ -1416,7 +1416,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
            r <- compileExpression(rhs)
       } yield
         IntermediateExpression(
-          ternary(invoke(l.ir, method[AnyValue, Boolean, AnyRef]("equals"), r.ir), truthValue, falseValue),
+          ternary(invoke(l.ir, method[AnyValue, Boolean, AnyRef]("equals"), r.ir), trueValue, falseValue),
           l.fields ++ r.fields, l.variables ++ r.variables, Set.empty)
 
     case NullCheck(offset, inner) =>
@@ -1429,7 +1429,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       compileExpression(inner).map(i => i.copy(nullCheck = i.nullCheck + equal(getLongAt(offset), constant(-1L))))
 
     case IsPrimitiveNull(offset) =>
-      Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), truthValue, falseValue),
+      Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), trueValue, falseValue),
                                   Seq.empty, Seq.empty, Set.empty))
 
     case _ => None
@@ -1843,6 +1843,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
 
   private def getLongAt(offset: Int): IntermediateRepresentation =
     invoke(LOAD_CONTEXT, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
+    //load(variableThatMapsToLongSlot(offset))
 
   private def getRefAt(offset: Int): IntermediateRepresentation =
     invoke(LOAD_CONTEXT, method[ExecutionContext, AnyValue, Int]("getRefAt"),
@@ -1855,12 +1856,6 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
   private def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
-
-  private def nullCheck(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
-    val checks = expressions.foldLeft(Set.empty[IntermediateRepresentation])((acc, current) => acc ++ current.nullCheck)
-    if (checks.nonEmpty) ternary(checks.reduceLeft(or), noValue, onNotNull)
-    else onNotNull
-  }
 
   private def coerceToPredicate(e: IntermediateExpression) = IntermediateExpression(
     invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), e.ir), e.fields, e.variables, e.nullCheck)
@@ -1997,7 +1992,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
     * return seenNull ? NO_VALUE : returnValue;
     */
   private def generateOrs(expressions: List[IntermediateExpression]): IntermediateExpression =
-    generateCompositeBoolean(expressions, truthValue)
+    generateCompositeBoolean(expressions, trueValue)
 
   private def generateCompositeBoolean(expressions: List[IntermediateExpression], breakValue: IntermediateRepresentation): IntermediateExpression = {
     //do we need to do nullchecks
@@ -2207,7 +2202,7 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
             // {
             //    filtered.add(currentValue);
             // }
-            condition(equal(load(isFiltered), truthValue))(
+            condition(equal(load(isFiltered), trueValue))(
               invokeSideEffect(load(filteredVars), method[java.util.ArrayList[_], Boolean, Object]("add"),
                                load(currentValue))
             )): _*)
@@ -2529,6 +2524,38 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
   private def loadExpressionVariable(ev: ExpressionVariable): IntermediateRepresentation = {
     arrayLoad(load("expressionVariables"), ev.offset)
   }
+
+//  /**
+//    * Generate the code to assign local variables with the following names
+//    * so as to emulate this interface method call:
+//    * This could be replaced by injecting these into the constructor of IntermediateCodeGeneration instead
+//    *
+//    * AnyValue evaluate( ExecutionContext context,
+//    *                    DbAccess dbAccess,
+//    *                    AnyValue[] params,
+//    *                    ExpressionCursors cursors,
+//    *                    AnyValue[] expressionVariables );
+//    */
+//  def prepareCompiledExpressionExecution(//loadContext: IntermediateRepresentation,
+//                                         dbAccess: IntermediateRepresentation,
+//                                         params: IntermediateRepresentation,
+//                                         cursors: IntermediateRepresentation,
+//                                         expressionVariable: IntermediateRepresentation): Unit = {
+//    block(
+//      //declareAndAssignVariable("context", loadContext),
+//      declareAndAssignVariable("dbAccess", dbAccess),
+//      declareAndAssignVariable("params", params),
+//      declareAndAssignVariable("cursors", cursors),
+//      declareAndAssignVariable("expressionVariable", expressionVariable)
+//    )
+//  }
+//
+//  private def declareAndAssignVariable[TYPE](name: String, valueExpression: IntermediateRepresentation): IntermediateRepresentation = {
+//    block(
+//      declare[TYPE](name),
+//      assign(name, valueExpression)
+//    )
+//  }
 }
 
 object IntermediateCodeGeneration {

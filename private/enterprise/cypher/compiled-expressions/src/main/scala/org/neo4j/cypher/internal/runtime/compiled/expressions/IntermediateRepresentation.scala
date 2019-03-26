@@ -342,14 +342,35 @@ case class InstanceOf(typ: TypeReference, expression: IntermediateRepresentation
   * Defines a method
   *
   * @param owner  the owner of the method
-  * @param output output type to the method
+  * @param returnType output type to the method
   * @param name   the name of the method
   * @param params the parameter types of the method
   */
-case class Method(owner: TypeReference, output: TypeReference, name: String, params: TypeReference*) {
+case class Method(owner: TypeReference, returnType: TypeReference, name: String, params: TypeReference*) {
 
-  def asReference: MethodReference = MethodReference.methodReference(owner, output, name, params: _*)
+  def asReference: MethodReference = MethodReference.methodReference(owner, returnType, name, params: _*)
 }
+
+case class ClassDeclaration(packageName: String,
+                            className: String,
+                            extendsClass: Option[TypeReference],
+                            implementsInterfaces: Seq[TypeReference],
+                            //constructor: ConstructorDeclaration,
+                            fields: Seq[Field],
+                            methods: Seq[MethodDecl])
+
+//case class MethodDeclaration(methodName: String,
+//                             owner: ClassDeclaration,
+//                             returnType: TypeReference,
+//                             parameters: Seq[Parameter],
+//                             body: IntermediateRepresentation) extends IntermediateRepresentation
+
+case class MethodDecl(method: Method,
+                      body: IntermediateRepresentation,
+                      localVariables: Seq[LocalVariable] = Seq.empty)
+
+case class ConstructorDeclaration(constructor: Constructor,
+                                  body: IntermediateRepresentation)
 
 case class IntermediateExpression(ir: IntermediateRepresentation, fields: Seq[Field],
                                   variables: Seq[LocalVariable], nullCheck: Set[IntermediateRepresentation])
@@ -379,6 +400,8 @@ object IntermediateRepresentation {
       base
     }
   }
+
+  def typeRefOf[TYPE](implicit typ: Manifest[TYPE]): TypeReference = typeRef(typ)
 
   def field[TYPE](name: String)(implicit typ: Manifest[TYPE]) = InstanceField(typeRef(typ), name)
 
@@ -466,7 +489,7 @@ object IntermediateRepresentation {
 
   def noValue: IntermediateRepresentation = getStatic[Values, Value]("NO_VALUE")
 
-  def truthValue: IntermediateRepresentation = getStatic[Values, BooleanValue]("TRUE")
+  def trueValue: IntermediateRepresentation = getStatic[Values, BooleanValue]("TRUE")
 
   def falseValue: IntermediateRepresentation =  getStatic[Values, BooleanValue]("FALSE")
 
@@ -538,4 +561,10 @@ object IntermediateRepresentation {
   def not(test: IntermediateRepresentation) = Not(test)
 
   def oneTime(expression: IntermediateRepresentation): IntermediateRepresentation = OneTime(expression)(used = false)
+
+  def nullCheck(expressions: IntermediateExpression*)(onNotNull: IntermediateRepresentation): IntermediateRepresentation = {
+    val checks = expressions.foldLeft(Set.empty[IntermediateRepresentation])((acc, current) => acc ++ current.nullCheck)
+    if (checks.nonEmpty) ternary(checks.reduceLeft(or), noValue, onNotNull)
+    else onNotNull
+  }
 }

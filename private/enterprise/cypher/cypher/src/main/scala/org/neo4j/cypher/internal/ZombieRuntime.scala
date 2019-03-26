@@ -60,21 +60,28 @@ object ZombieRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
     pipelineBuilder.build(physicalPlan.logicalPlan)
     val operatorFactory = new OperatorFactory(physicalPlan, converters, true, queryIndexes)
 
+    //=======================================================
+    val fuseOperators = new FuseOperators(operatorFactory, physicalPlan, converters, true, queryIndexes)
+
     val executablePipelines =
       for (p <- pipelineBuilder.pipelines) yield {
-        val headOperator = operatorFactory.create(p.headPlan)
-        val middleOperators = p.middlePlans.flatMap(operatorFactory.createMiddle)
-        val produceResultOperator = p.produceResults.map(operatorFactory.createProduceResults)
+        val maybeExecutablePipeline = fuseOperators.compilePipeline(p)
+        maybeExecutablePipeline.getOrElse {
+          val headOperator = operatorFactory.create(p.headPlan)
+          val middleOperators = p.middlePlans.flatMap(operatorFactory.createMiddle)
+          val produceResultOperator = p.produceResults.map(operatorFactory.createProduceResults)
 
-        ExecutablePipeline(p.id,
-                           headOperator,
-                           middleOperators,
-                           produceResultOperator,
-                           p.serial,
-                           physicalPlan.slotConfigurations(p.headPlan.id),
-                           p.inputBuffer,
-                           p.outputBuffer)
+          ExecutablePipeline(p.id,
+                             headOperator,
+                             middleOperators,
+                             produceResultOperator,
+                             p.serial,
+                             physicalPlan.slotConfigurations(p.headPlan.id),
+                             p.inputBuffer,
+                             p.outputBuffer)
+        }
       }
+    //=======================================================
 
     val executor = context.runtimeEnvironment.getQueryExecutor(context.debugOptions)
 
