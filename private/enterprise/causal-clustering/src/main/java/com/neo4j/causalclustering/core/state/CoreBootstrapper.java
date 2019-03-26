@@ -271,7 +271,7 @@ public class CoreBootstrapper
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( pageCache, databaseLayout, fs, config );
-        TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( dependencies );
+        TransactionIdStore readOnlyTransactionIdStore = storageEngineFactory.readOnlyTransactionIdStore( pageCache, databaseLayout );
         LogFiles logFiles = LogFilesBuilder
                 .activeFilesBuilder( databaseLayout, fs, pageCache )
                 .withConfig( config )
