@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import java.util.function.Consumer
-
 import org.neo4j.codegen
 import org.neo4j.codegen.CodeGenerator.generateCode
 import org.neo4j.codegen.Expression.{constant, getStatic, invoke, invokeSuper, newInitializedArray}
@@ -89,7 +87,7 @@ object CodeGeneration {
     val clazz = handle.loadAnonymousClass()
     setConstants(clazz, expression.fields)
 
-    clazz.newInstance().asInstanceOf[CompiledExpression]
+    clazz.getConstructor().newInstance().asInstanceOf[CompiledExpression]
   }
 
   def compileProjection(expression: IntermediateExpression): CompiledProjection = {
@@ -106,7 +104,7 @@ object CodeGeneration {
     }
     val clazz = handle.loadAnonymousClass()
     setConstants(clazz, expression.fields)
-    clazz.newInstance().asInstanceOf[CompiledProjection]
+    clazz.getConstructor().newInstance().asInstanceOf[CompiledProjection]
   }
 
   def compileGroupingExpression(grouping: IntermediateGroupingExpression): CompiledGroupingExpression = {
@@ -147,7 +145,7 @@ object CodeGeneration {
     }
     val clazz = handle.loadAnonymousClass()
     setConstants(clazz, grouping.projectKey.fields ++ grouping.computeKey.fields ++ grouping.getKey.fields)
-    clazz.newInstance().asInstanceOf[CompiledGroupingExpression]
+    clazz.getConstructor().newInstance().asInstanceOf[CompiledGroupingExpression]
   }
 
   private def setConstants(clazz: Class[_], fields: Seq[Field]): Unit = {
@@ -273,11 +271,8 @@ object CodeGeneration {
       using(block.ifStatement(compileExpression(test, block)))(compileExpression(onTrue, _))
 
     case Condition(test, onTrue, Some(onFalse)) =>
-      block.ifElseStatement(compileExpression(test, block), new Consumer[CodeBlock] {
-        override def accept(t: CodeBlock): Unit = compileExpression(onTrue, t)
-      }, new Consumer[CodeBlock] {
-        override def accept(f: CodeBlock): Unit = compileExpression(onFalse, f)
-      })
+      block.ifElseStatement(compileExpression(test, block), (t: CodeBlock) => compileExpression(onTrue, t),
+                            (f: CodeBlock) => compileExpression(onFalse, f))
       Expression.EMPTY
 
     //typ name;
@@ -291,11 +286,9 @@ object CodeGeneration {
 
     //try {ops} catch(exception name)(onError)
     case TryCatch(ops, onError, exception, name) =>
-      block.tryCatch(new Consumer[CodeBlock] {
-        override def accept(mainBlock: CodeBlock): Unit = compileExpression(ops, mainBlock)
-      }, new Consumer[CodeBlock] {
-        override def accept(errorBlock: CodeBlock): Unit = compileExpression(onError, errorBlock)
-      }, Parameter.param(exception, name))
+      block.tryCatch((mainBlock: CodeBlock) => compileExpression(ops, mainBlock),
+                     (errorBlock: CodeBlock) => compileExpression(onError, errorBlock),
+                     param(exception, name))
       Expression.EMPTY
 
     //throw error
