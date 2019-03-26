@@ -30,7 +30,7 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[ExecutionContext],
                                       state: QueryState): Iterator[ExecutionContext] = {
     new PrefetchingIterator[ExecutionContext] {
-      private val seen = Sets.mutable.empty[LongArray]()
+      private var seen = Sets.mutable.empty[LongArray]()
       private var currentOrderedGroupingValue: LongArray = _
 
       override def produceNext(): Option[ExecutionContext] = {
@@ -42,7 +42,7 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
 
           if (currentOrderedGroupingValue == null || currentOrderedGroupingValue != orderedGroupingValue) {
             currentOrderedGroupingValue = orderedGroupingValue
-            seen.clear()
+            seen = Sets.mutable.empty[LongArray]()
           }
 
           if (seen.add(groupingValue)) {
