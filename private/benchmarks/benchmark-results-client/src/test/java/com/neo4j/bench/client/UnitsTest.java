@@ -106,7 +106,7 @@ public class UnitsTest
 
         saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
         assertThat( saneUnit, equalTo( expectedUnit ) );
-        assertEquals( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1001, 0.0001 );
+        assertWithinPercent( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1001, 0.001 );
 
         // Latency low value
         originalValue = 0.01;
@@ -126,7 +126,7 @@ public class UnitsTest
 
         saneUnit = findSaneUnit( originalValue, originalUnit, mode, 1, 1000 );
         assertThat( saneUnit, equalTo( expectedUnit ) );
-        assertEquals( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1001, 0.0001 );
+        assertWithinPercent( convertValueTo( originalValue, originalUnit, saneUnit, mode ), 1001, 0.001 );
     }
 
     @Test
