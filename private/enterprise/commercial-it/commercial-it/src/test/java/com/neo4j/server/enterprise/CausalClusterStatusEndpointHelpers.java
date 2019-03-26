@@ -32,7 +32,6 @@ import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class CausalClusterStatusEndpointHelpers
 {
@@ -84,11 +83,6 @@ class CausalClusterStatusEndpointHelpers
 
     static String getStatusRaw( String address )
     {
-        return getStatusRaw( address, null );
-    }
-
-    private static String getStatusRaw( String address, Integer expectedStatus )
-    {
         var request = HttpRequest.newBuilder( URI.create( address ) )
                 .header( ACCEPT, APPLICATION_JSON )
                 .GET()
@@ -97,10 +91,6 @@ class CausalClusterStatusEndpointHelpers
         try
         {
             var response = newHttpClient().send( request, ofString() );
-            if ( expectedStatus != null )
-            {
-                assertEquals( expectedStatus, response.statusCode() );
-            }
             return response.body();
         }
         catch ( IOException e )
