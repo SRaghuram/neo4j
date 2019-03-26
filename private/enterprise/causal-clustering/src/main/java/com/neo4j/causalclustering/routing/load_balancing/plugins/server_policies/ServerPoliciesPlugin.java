@@ -125,6 +125,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
                 MemberId leaderId = optionalLeaderId.get();
                 validCores = validCores.stream().filter( memberId -> !memberId.equals( leaderId ) ).collect( Collectors.toSet() );
             }
+            // leader might become available a bit later and we might end up using it for reading during this ttl, should be fine in general
 
             for ( MemberId validCore : validCores )
             {
