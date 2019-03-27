@@ -5,10 +5,8 @@
  */
 package com.neo4j.dbms.database;
 
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.Optional;
-import java.util.SortedMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
@@ -25,12 +23,17 @@ import static java.util.Objects.requireNonNull;
 
 public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends AbstractDatabaseManager<DB>
 {
-    protected final ConcurrentSkipListMap<String,DB> databaseMap = new ConcurrentSkipListMap<>();
     protected volatile boolean started;
 
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade graphDatabaseFacade )
     {
         super( globalModule, edition, log, graphDatabaseFacade );
+    }
+
+    public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade graphDatabaseFacade,
+            Comparator<String> databasesOrdering )
+    {
+        super( globalModule, edition, log, graphDatabaseFacade, databasesOrdering );
     }
 
     @Override
@@ -118,12 +121,6 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     public void shutdown()
     {
         databaseMap.clear();
-    }
-
-    @Override
-    public SortedMap<String,DB> registeredDatabases()
-    {
-        return Collections.unmodifiableSortedMap( databaseMap );
     }
 
     protected void dropDatabase( String databaseName, DB context )

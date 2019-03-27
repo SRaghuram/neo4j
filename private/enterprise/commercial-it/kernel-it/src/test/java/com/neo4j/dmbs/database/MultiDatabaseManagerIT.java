@@ -11,16 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Optional;
-
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.dbms.database.DatabaseManagerException;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
-import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -30,8 +24,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -294,11 +287,7 @@ class MultiDatabaseManagerIT
         var postCreationDatabases = databaseManager.registeredDatabases();
         assertEquals( 4, postCreationDatabases.size() );
 
-        ArrayList<String> postCreationDatabasesNames = new ArrayList<>( postCreationDatabases.keySet() );
-        assertEquals( aMyAnotherDatabase, postCreationDatabasesNames.get( 0 ) );
-        assertEquals( CUSTOM_DATABASE_NAME, postCreationDatabasesNames.get( 1 ) );
-        assertEquals( myAnotherDatabase, postCreationDatabasesNames.get( 2 ) );
-        assertEquals( SYSTEM_DATABASE_NAME, postCreationDatabasesNames.get( 3 ) );
+        assertTrue( postCreationDatabases.keySet().containsAll( asList( myAnotherDatabase, aMyAnotherDatabase, CUSTOM_DATABASE_NAME, SYSTEM_DATABASE_NAME ) ) );
     }
 
     @Test
