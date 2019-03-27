@@ -37,7 +37,7 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     CoreDatabaseComponents( GlobalModule globalModule, CoreEditionModule editionModule, DatabaseId databaseId )
     {
         this.editionModule = editionModule;
-        CoreStateService coreStateService = editionModule.coreStateComponents();
+        CoreStateService coreStateService = editionModule.coreStateService();
         databaseState = coreStateService.getDatabaseState( databaseId )
                 .orElseThrow( () -> new IllegalStateException( String.format( "There is no state found for the database %s", databaseId.name() ) ) );
         statementLocksFactory = new StatementLocksFactorySelector( databaseState.lockManager(), globalModule.getGlobalConfig(),

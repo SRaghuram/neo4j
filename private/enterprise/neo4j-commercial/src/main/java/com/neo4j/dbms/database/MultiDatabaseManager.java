@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseNotFoundException;
-import org.neo4j.dmbs.database.AbstractDatabaseManager;
+import org.neo4j.dbms.database.AbstractDatabaseManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;

@@ -10,5 +10,5 @@ import com.neo4j.causalclustering.core.state.CoreStateService;
 
 public abstract class AbstractCoreEditionModule extends ClusteringEditionModule
 {
-    abstract CoreStateService coreStateComponents();
+    abstract CoreStateService coreStateService();
 }

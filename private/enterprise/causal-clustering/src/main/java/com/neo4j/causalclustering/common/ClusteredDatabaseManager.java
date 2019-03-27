@@ -5,9 +5,6 @@
  */
 package com.neo4j.causalclustering.common;
 
-import java.util.Optional;
-
-import org.neo4j.dbms.database.DatabaseExistsException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
@@ -22,10 +19,6 @@ public interface ClusteredDatabaseManager<DB extends ClusteredDatabaseContext> e
      * Stop all databases in order to perform a store copy. This will raise a {@link DatabaseAvailabilityGuard} with a more human-readable blocking requirement.
      */
     void stopForStoreCopy() throws Throwable;
-
-    Optional<DB> getDatabaseContext( DatabaseId databaseId );
-
-    DB createDatabase( DatabaseId databaseId ) throws DatabaseExistsException;
 
     /**
      * This method asserts that a given database is healthy, and if it is not, attempts to throw an exception of type `E`

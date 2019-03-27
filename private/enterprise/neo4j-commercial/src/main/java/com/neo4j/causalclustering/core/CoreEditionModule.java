@@ -277,7 +277,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     }
 
     @Override
-    CoreStateService coreStateComponents()
+    CoreStateService coreStateService()
     {
         return coreStateService;
     }
@@ -449,7 +449,7 @@ public class CoreEditionModule extends AbstractCoreEditionModule
     public DatabaseManager<CoreDatabaseContext> createDatabaseManager( GraphDatabaseFacade facade, GlobalModule platform, Log log )
     {
         ClusteredMultiDatabaseManager<CoreDatabaseContext> databaseManager = new CoreDatabaseManager( platform, this, log, facade,
-                this::coreStateComponents, catchupComponentsProvider::createDatabaseComponents, globalModule.getGlobalAvailabilityGuard(),
+                this::coreStateService, catchupComponentsProvider::createDatabaseComponents, globalModule.getGlobalAvailabilityGuard(),
                 platform.getFileSystem(), platform.getPageCache(), logProvider, platform.getGlobalConfig(), globalHealth );
         createDatabaseManagerDependentModules( databaseManager );
         return databaseManager;
