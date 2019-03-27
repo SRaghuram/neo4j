@@ -149,9 +149,11 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
 
     Seq(
+      ("n.name = 'Joe' AND n.surname = 'Soap'", "(equality,equality)", false, false, "", Set(Map("n" -> n1))),
       ("n.name = 'Joe' AND n.surname STARTS WITH 'So'", "(equality,range)", false, false, "", Set(Map("n" -> n1))),
       ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", false, true, ".*cached\\[n.surname\\] STARTSWITH .*", Set(Map("n" -> n1))),
       ("n.name <= 'Je' AND exists(n.surname)", "(range,exists)", false, false, "", Set(Map("n" -> n3))),
+      ("exists(n.name) AND n.surname > 'S'", "", true, true, ".*cached\\[n.surname\\] > .*", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3))),
       ("exists(n.name) AND exists(n.surname)", "", true, false, "", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3)))
     ).foreach {
       case (predicates, seekString, useScan, shouldFilter, filterArgument, resultSet) =>
@@ -172,6 +174,338 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
         result.toComparableResult.toSet should equal(resultSet)
     }
+  }
+
+  test("should use composite index for LockingUniqueIndexSeek for nodes in earlier match using indexScan") {
+    graph.createNodeKeyConstraint("User", "name", "surname")
+    val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
+    val n2 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
+    val n3 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+
+    Seq(
+      ("exists(n.name) AND n.surname > 'S'", true, Seq(".*cached\\[n.surname\\] > .*".r), Set(Map("n" -> n1, "s" -> n2), Map("n" -> n2, "s" -> n2), Map("n" -> n3, "s" -> n2))),
+      ("exists(n.name) AND exists(n.surname)", false, Seq.empty, Set(Map("n" -> n1, "s" -> n2), Map("n" -> n2, "s" -> n2), Map("n" -> n3, "s" -> n2)))
+    ).foreach {
+      case (predicates, shouldFilter, filterArguments, resultSet) =>
+        val query =
+          s"""MATCH (n:User), (s:User {name: 'Joe', surname: 'Smoke'})
+             |WHERE $predicates
+             |MERGE (n)-[:Knows]->(s)
+             |RETURN n, s""".stripMargin
+
+        val result = executeWith(Configs.InterpretedAndSlotted, query,
+          planComparisonStrategy = ComparePlansWithAssertion(plan => {
+            val scanPlan =
+              if (shouldFilter)
+                aPlan("Filter").containingArgumentRegex(filterArguments: _*)
+                  .onTopOf(aPlan("NodeIndexScan").containingArgument(":User(name,surname)"))
+              else
+                aPlan("NodeIndexScan").containingArgument(":User(name,surname)")
+
+            plan should includeSomewhere.aPlan("CartesianProduct")
+              .withLHS(scanPlan)
+              .withRHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                .containingArgument(":User(name,surname)"))
+          }))
+
+        result.toComparableResult.toSet should equal(resultSet)
+    }
+  }
+
+  test("should use composite index for LockingUniqueIndexSeek for nodes in earlier match with ranges") {
+    graph.createNodeKeyConstraint("User", "name", "surname")
+    val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
+    val n2 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
+    val n3 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+
+    Seq(
+      ("n.name = 'Joe' AND n.surname STARTS WITH 'So'", "(equality,range)", false, "", Set(Map("n" -> n1, "s" -> n2))),
+      ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", true, ".*cached\\[n.surname\\] STARTSWITH .*", Set(Map("n" -> n1, "s" -> n2))),
+      ("n.name <= 'Je' AND exists(n.surname)", "(range,exists)", false, "", Set(Map("n" -> n3, "s" -> n2))),
+    ).foreach {
+      case (predicates, seekString, shouldFilter, filterArgument, resultSet) =>
+        val query =
+          s"""MATCH (n:User), (s:User {name: 'Joe', surname: 'Smoke'})
+             |WHERE $predicates
+             |MERGE (n)-[:Knows]->(s)
+             |RETURN n, s""".stripMargin
+
+        val result = executeWith(Configs.InterpretedAndSlotted, query,
+          planComparisonStrategy = ComparePlansWithAssertion(plan => {
+            val lhs =
+              if (shouldFilter)
+                aPlan("Filter").containingArgumentRegex(filterArgument.r)
+                  .onTopOf(aPlan(s"NodeUniqueIndexSeek$seekString").containingArgument(":User(name,surname)"))
+              else
+                aPlan(s"NodeUniqueIndexSeek$seekString").containingArgument(":User(name,surname)")
+
+            plan should includeSomewhere.aPlan("CartesianProduct")
+              .withLHS(lhs)
+              .withRHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                .containingArgument(":User(name,surname)"))
+          }))
+
+        result.toComparableResult.toSet should equal(resultSet)
+    }
+  }
+
+  test("should use composite index for LockingUniqueIndexSeek when one bound node with single value") {
+    graph.createNodeKeyConstraint("User", "name", "surname")
+    val n2 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+
+    val query =
+      """PROFILE
+         |MATCH (n:User)
+         |WHERE n.name = 'Jake' AND n.surname = 'Soap'
+         |MERGE (n)-[r:Knows {different: $diff}]->(s:User {name: $name, surname: 'Smoke'})
+         |RETURN n, r.different""".stripMargin
+
+    val resultCreate = executeWith(Configs.InterpretedAndSlotted, query, params = Map("name" -> "Joe", "diff" -> 1),
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        plan should includeSomewhere.aPlan("Apply")
+          .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+            .containingArgument(":User(name,surname)")
+            .withRows(1)
+            .withExactVariables("n")
+          )
+          .withRHS(
+            includeSomewhere.aPlan("LockNodes")
+              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                .containingArgument(":User(name,surname)")
+                .withRows(0)
+                .withExactVariables("s")
+              )
+          )
+          .withRHS(
+            includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+              .containingArgument(":User(name,surname)")
+              .withRows(0)
+              .withExactVariables("s", "n")
+          )
+      }))
+
+    val n1 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Smoke"), "User")
+    relate(n2, n1, "Knows", Map("different" -> 2))
+
+    val resultMatch = executeWith(Configs.InterpretedAndSlotted, query, params = Map("name" -> "Jake", "diff" -> 2),
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        plan should includeSomewhere.aPlan("Apply")
+          .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+            .containingArgument(":User(name,surname)")
+            .withRows(1)
+            .withExactVariables("n")
+          )
+          .withRHS(
+            includeSomewhere.aPlan("LockNodes")
+              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                .containingArgument(":User(name,surname)")
+                .withRows(0)
+                .withDBHits(0)
+                .withExactVariables("s")
+              )
+          )
+          .withRHS(
+            includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+              .containingArgument(":User(name,surname)")
+              .withRows(1)
+              .withExactVariables("s", "n")
+          )
+      }))
+
+    resultCreate.toComparableResult.toSet should equal(Set(Map("n" -> n2, "r.different" -> 1)))
+    resultMatch.toComparableResult.toSet should equal(Set(Map("n" -> n2, "r.different" -> 2)))
+  }
+
+  test("should use composite index for LockingUniqueIndexSeek when one bound node with more than one value") {
+    graph.createNodeKeyConstraint("User", "name", "surname")
+    val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
+    val n2 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
+    val n3 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+    val r1 = relate(n1, n3, "Knows")
+    val r2 = relate(n2, n3, "Knows")
+
+    val query =
+      """PROFILE
+         |MATCH (n:User)
+         |WHERE n.name = 'Joe' AND n.surname >= 'S'
+         |MERGE (n)-[r:Knows]->(s:User {name: 'Jake', surname: 'Soap'})
+         |RETURN n, r, s""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        plan should includeSomewhere.aPlan("Apply")
+          .withLHS(aPlan("NodeUniqueIndexSeek(equality,range)")
+            .containingArgument(":User(name,surname)")
+            .withRows(2)
+            .withExactVariables("n")
+          )
+          .withRHS(
+            includeSomewhere.aPlan("LockNodes")
+              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                .containingArgument(":User(name,surname)")
+                .withRows(0)
+                .withDBHits(0)
+                .withExactVariables("s")
+              )
+          )
+          .withRHS(
+            includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                .containingArgument(":User(name,surname)")
+                .withRows(2)
+              .withExactVariables("s", "n")
+          )
+      }))
+
+    result.toComparableResult.toSet should equal(Set(Map("n" -> n1, "r" -> r1, "s" -> n3), Map("n" -> n2, "r" -> r2, "s" -> n3)))
+  }
+
+  test("should use composite index for LockingUniqueIndexSeek when matching") {
+    graph.createNodeKeyConstraint("User", "name", "surname")
+    createLabeledNode(Map("name" -> "Joe", "surname" -> "Soap"), "User")
+    val n1 = createLabeledNode(Map("name" -> "Joe", "surname" -> "Smoke"), "User")
+    val n2 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+    val r = relate(n2, n1, "Knows")
+
+    val query =
+      """
+         |MERGE (n:User {name: 'Jake', surname: 'Soap'})-[r:Knows]->(s:User {name: 'Joe', surname: 'Smoke'})
+         |RETURN n, r, s""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        plan should includeSomewhere.aPlan("CartesianProduct")
+          .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+            .containingArgument(":User(name,surname)")
+            .withExactVariables("n")
+          )
+          .withRHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+            .containingArgument(":User(name,surname)")
+            .withExactVariables("s")
+          )
+      }))
+
+    result.toComparableResult.toSet should equal(Set(Map("n" -> n2, "r" -> r, "s" -> n1)))
+  }
+
+  test("should use composite index for LockingUniqueIndexSeek when creating") {
+    graph.createNodeKeyConstraint("User", "name", "surname")
+
+    val query =
+      """PROFILE
+         |MERGE (n:User {name: 'Jake', surname: 'Soap'})-[:Knows]->(s:User {name: 'Joe', surname: 'Smoke'})
+         |RETURN n.name + ' ' + n.surname AS nname, s.name + ' ' + s.surname AS sname""".stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        // Get the same rhs but two different lhs
+        // for only InterpretedRuntime or only SlottedRuntime the Expand(all)-plan is chosen
+        // for InterpretedAndSlotted the chosen plan is
+        //    the plan with Cartesian product for interpreted
+        //    and Expand(all) for slotted
+        // for index and query on just :User(name) all runtime combinations get the Expand(all)-plan
+        plan should (
+          includeSomewhere.aPlan("AntiConditionalApply")
+            .withRHS(
+              aPlan("MergeCreateRelationship")
+                .withRows(1)
+                .onTopOf(
+                  aPlan("MergeCreateNode")
+                    .withRows(1)
+                    .onTopOf(
+                      aPlan("MergeCreateNode")
+                        .withRows(1)
+                    )
+                )
+            )
+          and (
+            includeSomewhere.aPlan("AntiConditionalApply")
+              .withLHS(
+                includeSomewhere.aPlan("Expand(Into)")
+                  .containingArgument("(n)-[:Knows]->(s)")
+                  .withRows(0)
+                  .withDBHits(0)
+                  .onTopOf(aPlan("CartesianProduct")
+                    .withRows(0)
+                    .withDBHits(0)
+                    .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                      .containingArgument(":User(name,surname)")
+                      .withRows(0)
+                      .withExactVariables("n", "cached[n.name]", "cached[n.surname]")
+                    )
+                    .withRHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                      .containingArgument(":User(name,surname)")
+                      .withRows(0)
+                      .withExactVariables("s", "cached[s.name]", "cached[s.surname]")
+                    )
+                  )
+              )
+            or
+            includeSomewhere.aPlan("AntiConditionalApply")
+              .withLHS(
+                includeSomewhere.aPlan("Filter")
+                  .containingArgumentRegex(".*s.name = .*".r, ".*s.surname = .*".r, ".*:User.*".r)
+                  .withRows(0)
+                  .withDBHits(0)
+                  .onTopOf(aPlan("Expand(All)")
+                    .containingArgument("(n)-[:Knows]->(s)")
+                    .withRows(0)
+                    .withDBHits(0)
+                    .onTopOf(
+                      aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                        .containingArgument(":User(name,surname)")
+                        .withRows(0)
+                        .withExactVariables("n", "cached[n.name]", "cached[n.surname]")
+                    )
+                  )
+              )
+          )
+        )
+      }))
+
+    result.toComparableResult should equal(Seq(Map("sname" -> "Joe Smoke", "nname" -> "Jake Soap")))
+  }
+
+  test("should be able to return values from merge for composite index") {
+    graph.createNodeKeyConstraint("User", "name", "surname")
+    val n1 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Smoke"), "User")
+    val n2 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
+    relate(n2, n1, "Knows")
+
+    val query =
+      """PROFILE
+        |MATCH (n:User)
+        |WHERE n.name = 'Jake' AND n.surname = 'Soap'
+        |MERGE (n)-[:Knows]->(s:User {name: 'Jake', surname: 'Smoke'})
+        |RETURN s.name + ' ' + s.surname AS name""".stripMargin
+
+    // This fails on slotted (falls back on interpreted)
+    // because both NodeUniqueIndexSeek on s tries to cache s.name and s.surname
+    // it behaves the same for index and query on just :User(surname)
+    val result = executeWith(Configs.InterpretedRuntime, query,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+        plan should includeSomewhere.aPlan("Apply")
+          .withLHS(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+            .containingArgument(":User(name,surname)")
+            .withRows(1)
+            .withExactVariables("n")
+          )
+          .withRHS(
+            includeSomewhere.aPlan("LockNodes")
+              .onTopOf(aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                .containingArgument(":User(name,surname)")
+                .withRows(0)
+                .withExactVariables("s", "cached[s.name]", "cached[s.surname]", "n")
+              )
+          )
+          .withRHS(
+            includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+              .containingArgument(":User(name,surname)")
+              .withRows(1)
+              .withExactVariables("s", "cached[s.name]", "cached[s.surname]", "n")
+          )
+      }))
+
+    result.toComparableResult should equal(Seq(Map("name" -> "Jake Smoke")))
   }
 
   test("should use composite index with combined equality and existence predicates") {
