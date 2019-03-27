@@ -9,12 +9,10 @@ import org.neo4j.codegen
 import org.neo4j.codegen.CodeGenerator.generateCode
 import org.neo4j.codegen.Expression.{constant, getStatic, invoke, invokeSuper, newInitializedArray}
 import org.neo4j.codegen.FieldReference.{field, staticField}
-import org.neo4j.codegen.MethodDeclaration
 import org.neo4j.codegen.MethodDeclaration.method
 import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen.Parameter.param
 import org.neo4j.codegen.TypeReference.OBJECT
-import org.neo4j.codegen._
 import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
@@ -36,33 +34,33 @@ object CodeGeneration {
   private val EXPRESSION = classOf[CompiledExpression]
   private val PROJECTION = classOf[CompiledProjection]
   private val GROUPING_EXPRESSION = classOf[CompiledGroupingExpression]
-  private val EVALUATE_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",
-                                                                  param(classOf[ExecutionContext], "context"),
-                                                                  param(classOf[DbAccess], "dbAccess"),
-                                                                  param(classOf[Array[AnyValue]], "params"),
-                                                                  param(classOf[ExpressionCursors], "cursors"),
-                                                                  param(classOf[Array[AnyValue]], "expressionVariables"))
-
-  private val PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "project",
-                                                                 param(classOf[ExecutionContext], "context"),
-                                                                 param(classOf[DbAccess], "dbAccess"),
-                                                                 param(classOf[Array[AnyValue]], "params"),
-                                                                 param(classOf[ExpressionCursors], "cursors"),
-                                                                 param(classOf[Array[AnyValue]], "expressionVariables"))
-
-  private val GROUPING_KEY_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "computeGroupingKey",
-                                                                      param(classOf[ExecutionContext], "context"),
-                                                                      param(classOf[DbAccess], "dbAccess"),
-                                                                      param(classOf[Array[AnyValue]], "params"),
-                                                                      param(classOf[ExpressionCursors], "cursors"),
-                                                                      param(classOf[Array[AnyValue]], "expressionVariables"))
-
-  private val GROUPING_PROJECT_METHOD: MethodDeclaration.Builder = method(classOf[Unit], "projectGroupingKey",
+  private val EVALUATE_METHOD: codegen.MethodDeclaration.Builder = method(classOf[AnyValue], "evaluate",
                                                                           param(classOf[ExecutionContext], "context"),
-                                                                          param(classOf[AnyValue], "key"))
+                                                                          param(classOf[DbAccess], "dbAccess"),
+                                                                          param(classOf[Array[AnyValue]], "params"),
+                                                                          param(classOf[ExpressionCursors], "cursors"),
+                                                                          param(classOf[Array[AnyValue]], "expressionVariables"))
 
-  private val GROUPING_GET_METHOD: MethodDeclaration.Builder = method(classOf[AnyValue], "getGroupingKey",
-                                                                      param(classOf[ExecutionContext], "context"))
+  private val PROJECT_METHOD: codegen.MethodDeclaration.Builder = method(classOf[Unit], "project",
+                                                                         param(classOf[ExecutionContext], "context"),
+                                                                         param(classOf[DbAccess], "dbAccess"),
+                                                                         param(classOf[Array[AnyValue]], "params"),
+                                                                         param(classOf[ExpressionCursors], "cursors"),
+                                                                         param(classOf[Array[AnyValue]], "expressionVariables"))
+
+  private val GROUPING_KEY_METHOD: codegen.MethodDeclaration.Builder = method(classOf[AnyValue], "computeGroupingKey",
+                                                                              param(classOf[ExecutionContext], "context"),
+                                                                              param(classOf[DbAccess], "dbAccess"),
+                                                                              param(classOf[Array[AnyValue]], "params"),
+                                                                              param(classOf[ExpressionCursors], "cursors"),
+                                                                              param(classOf[Array[AnyValue]], "expressionVariables"))
+
+  private val GROUPING_PROJECT_METHOD: codegen.MethodDeclaration.Builder = method(classOf[Unit], "projectGroupingKey",
+                                                                                  param(classOf[ExecutionContext], "context"),
+                                                                                  param(classOf[AnyValue], "key"))
+
+  private val GROUPING_GET_METHOD: codegen.MethodDeclaration.Builder = method(classOf[AnyValue], "getGroupingKey",
+                                                                              param(classOf[ExecutionContext], "context"))
 
   private def className(): String = "Expression" + System.nanoTime()
 
@@ -74,7 +72,7 @@ object CodeGeneration {
   }
 
   def compileExpression(expression: IntermediateExpression): CompiledExpression = {
-    val handle = using(generator.generateClass(PACKAGE_NAME, className(), EXPRESSION)) { clazz: ClassGenerator =>
+    val handle = using(generator.generateClass(PACKAGE_NAME, className(), EXPRESSION)) { clazz: codegen.ClassGenerator =>
 
       generateConstructor(clazz, expression.fields)
       using(clazz.generate(EVALUATE_METHOD)) { block =>
@@ -84,9 +82,9 @@ object CodeGeneration {
         val noValue = getStatic(staticField(classOf[Values], classOf[Value], "NO_VALUE"))
         if (expression.nullCheck.nonEmpty) {
           val test = expression.nullCheck.map(e => compileExpression(e, block))
-            .reduceLeft((acc, current) => Expression.or(acc, current))
+            .reduceLeft((acc, current) => codegen.Expression.or(acc, current))
 
-          block.returns(Expression.ternary(test, noValue, compileExpression(expression.ir, block)))
+          block.returns(codegen.Expression.ternary(test, noValue, compileExpression(expression.ir, block)))
         } else block.returns(compileExpression(expression.ir, block))
       }
       clazz.handle()
@@ -99,7 +97,7 @@ object CodeGeneration {
   }
 
   def compileProjection(expression: IntermediateExpression): CompiledProjection = {
-    val handle = using(generator.generateClass(PACKAGE_NAME, className(), PROJECTION)) { clazz: ClassGenerator =>
+    val handle = using(generator.generateClass(PACKAGE_NAME, className(), PROJECTION)) { clazz: codegen.ClassGenerator =>
 
       generateConstructor(clazz, expression.fields)
       using(clazz.generate(PROJECT_METHOD)) { block =>
@@ -116,7 +114,7 @@ object CodeGeneration {
   }
 
   def compileGroupingExpression(grouping: IntermediateGroupingExpression): CompiledGroupingExpression = {
-    val handle = using(generator.generateClass(PACKAGE_NAME, className(), GROUPING_EXPRESSION)) { clazz: ClassGenerator =>
+    val handle = using(generator.generateClass(PACKAGE_NAME, className(), GROUPING_EXPRESSION)) { clazz: codegen.ClassGenerator =>
 
       generateConstructor(clazz, grouping.computeKey.fields ++ grouping.projectKey.fields ++ grouping.getKey.fields)
       using(clazz.generate(GROUPING_PROJECT_METHOD)) { block =>
@@ -132,9 +130,9 @@ object CodeGeneration {
         val noValue = getStatic(staticField(classOf[Values], classOf[Value], "NO_VALUE"))
         if (grouping.computeKey.nullCheck.nonEmpty) {
           val test = grouping.computeKey.nullCheck.map(e => compileExpression(e, block))
-            .reduceLeft((acc, current) => Expression.or(acc, current))
+            .reduceLeft((acc, current) => codegen.Expression.or(acc, current))
 
-          block.returns(Expression.ternary(test, noValue, compileExpression(grouping.computeKey.ir, block)))
+          block.returns(codegen.Expression.ternary(test, noValue, compileExpression(grouping.computeKey.ir, block)))
         } else block.returns(compileExpression(grouping.computeKey.ir, block))
       }
       using(clazz.generate(GROUPING_GET_METHOD)) { block =>
@@ -144,9 +142,9 @@ object CodeGeneration {
         val noValue = getStatic(staticField(classOf[Values], classOf[Value], "NO_VALUE"))
         if (grouping.getKey.nullCheck.nonEmpty) {
           val test = grouping.getKey.nullCheck.map(e => compileExpression(e, block))
-            .reduceLeft((acc, current) => Expression.or(acc, current))
+            .reduceLeft((acc, current) => codegen.Expression.or(acc, current))
 
-          block.returns(Expression.ternary(test, noValue, compileExpression(grouping.getKey.ir, block)))
+          block.returns(codegen.Expression.ternary(test, noValue, compileExpression(grouping.getKey.ir, block)))
         } else block.returns(compileExpression(grouping.getKey.ir, block))
       }
       clazz.handle()
@@ -164,8 +162,8 @@ object CodeGeneration {
     }
   }
 
-  def generateConstructor(clazz: ClassGenerator, fields: Seq[Field]): Unit = {
-    using(clazz.generateConstructor()) { block =>
+  def generateConstructor(clazz: codegen.ClassGenerator, fields: Seq[Field], params: Seq[Parameter] = Seq.empty): Unit = {
+    using(clazz.generateConstructor(params.map(_.asCodeGen): _*)) { block =>
       block.expression(invokeSuper(OBJECT))
       fields.distinct.foreach {
         case InstanceField(typ, name, initializer) =>
@@ -184,7 +182,7 @@ object CodeGeneration {
     else generateCode(classOf[CompiledExpression].getClassLoader, BYTECODE)
   }
 
-  private def compileExpression(ir: IntermediateRepresentation, block: CodeBlock): codegen.Expression = ir match {
+  private def compileExpression(ir: IntermediateRepresentation, block: codegen.CodeBlock): codegen.Expression = ir match {
     //Foo.method(p1, p2,...)
     case InvokeStatic(method, params) =>
       invoke(method.asReference, params.map(p => compileExpression(p, block)): _*)
@@ -197,17 +195,21 @@ object CodeGeneration {
                               params.map(p => compileExpression(p, block)): _*)
 
       if (method.returnType.isVoid) block.expression(invocation)
-      else block.expression(Expression.pop(invocation))
-      Expression.EMPTY
+      else block.expression(codegen.Expression.pop(invocation))
+      codegen.Expression.EMPTY
 
     //loads local variable by name
     case Load(variable) => block.load(variable)
+
     //loads field
-    case LoadField(f) => Expression.get(block.self(), field(block.owner(), f.typ, f.name))
+    case LoadField(f) =>
+      codegen.Expression.get(block.self(), field(block.owner(), f.typ, f.name))
+
     //sets a field
     case SetField(f, v) =>
       block.put(block.self(), field(block.owner(), f.typ, f.name), compileExpression(v, block))
-      Expression.EMPTY
+      codegen.Expression.EMPTY
+
     //Values.longValue(value)
     case Integer(value) =>
       invoke(methodReference(VALUES, LONG,
@@ -228,60 +230,60 @@ object CodeGeneration {
 
     // array[offset] = value
     case ArraySet(array, offset, value) =>
-      block.expression(Expression.arraySet(compileExpression(array, block), constant(offset), compileExpression(value, block)))
-      Expression.EMPTY
+      block.expression(codegen.Expression.arraySet(compileExpression(array, block), constant(offset), compileExpression(value, block)))
+      codegen.Expression.EMPTY
 
     // array[offset]
-    case ArrayLoad(array, offset) => Expression.arrayLoad(compileExpression(array, block), constant(offset))
+    case ArrayLoad(array, offset) => codegen.Expression.arrayLoad(compileExpression(array, block), constant(offset))
 
     //Foo.BAR
     case GetStatic(owner, typ, name) => getStatic(staticField(owner.getOrElse(block.owner()), typ, name))
 
     //condition ? onTrue : onFalse
     case Ternary(condition, onTrue, onFalse) =>
-      Expression.ternary(compileExpression(condition, block),
+      codegen.Expression.ternary(compileExpression(condition, block),
                          compileExpression(onTrue, block),
                          compileExpression(onFalse, block))
 
     //lhs + rhs
     case Add(lhs, rhs) =>
-      Expression.add(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.add(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //lhs - rhs
     case Subtract(lhs, rhs) =>
-      Expression.subtract(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.subtract(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //lhs < rhs
     case Lt(lhs, rhs) =>
-      Expression.lt(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.lt(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //lhs > rhs
     case Gt(lhs, rhs) =>
-      Expression.gt(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.gt(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //lhs == rhs
     case Eq(lhs, rhs) =>
-      Expression.equal(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.equal(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //lhs != rhs
     case NotEq(lhs, rhs) =>
-      Expression.notEqual(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.notEqual(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //test == null
-    case IsNull(test) => Expression.isNull(compileExpression(test, block))
+    case IsNull(test) => codegen.Expression.isNull(compileExpression(test, block))
 
     //run multiple ops in a block, the value of the block is the last expression
     case Block(ops) =>
-      if (ops.isEmpty) Expression.EMPTY else ops.map(compileExpression(_, block)).last
+      if (ops.isEmpty) codegen.Expression.EMPTY else ops.map(compileExpression(_, block)).last
 
     //if (test) {onTrue}
     case Condition(test, onTrue, None) =>
       using(block.ifStatement(compileExpression(test, block)))(compileExpression(onTrue, _))
 
     case Condition(test, onTrue, Some(onFalse)) =>
-      block.ifElseStatement(compileExpression(test, block), (t: CodeBlock) => compileExpression(onTrue, t),
-                            (f: CodeBlock) => compileExpression(onFalse, f))
-      Expression.EMPTY
+      block.ifElseStatement(compileExpression(test, block), (t: codegen.CodeBlock) => compileExpression(onTrue, t),
+                            (f: codegen.CodeBlock) => compileExpression(onFalse, f))
+      codegen.Expression.EMPTY
 
     //typ name;
     case DeclareLocalVariable(typ, name) =>
@@ -290,55 +292,55 @@ object CodeGeneration {
     //name = value;
     case AssignToLocalVariable(name, value) =>
       block.assign(block.local(name), compileExpression(value, block))
-      Expression.EMPTY
+      codegen.Expression.EMPTY
 
     //try {ops} catch(exception name)(onError)
     case TryCatch(ops, onError, exception, name) =>
-      block.tryCatch((mainBlock: CodeBlock) => compileExpression(ops, mainBlock),
-                     (errorBlock: CodeBlock) => compileExpression(onError, errorBlock),
+      block.tryCatch((mainBlock: codegen.CodeBlock) => compileExpression(ops, mainBlock),
+                     (errorBlock: codegen.CodeBlock) => compileExpression(onError, errorBlock),
                      param(exception, name))
-      Expression.EMPTY
+      codegen.Expression.EMPTY
 
     //throw error
     case Throw(error) =>
       block.throwException(compileExpression(error, block))
-      Expression.EMPTY
+      codegen.Expression.EMPTY
 
     //lhs && rhs
     case BooleanAnd(lhs, rhs) =>
-      Expression.and(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.and(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //lhs && rhs
     case BooleanOr(lhs, rhs) =>
-      Expression.or(compileExpression(lhs, block), compileExpression(rhs, block))
+      codegen.Expression.or(compileExpression(lhs, block), compileExpression(rhs, block))
 
     //new Foo(args[0], args[1], ...)
     case NewInstance(constructor, args) =>
-      Expression.invoke(Expression.newInstance(constructor.owner), constructor.asReference, args.map(compileExpression(_, block)):_*)
+      codegen.Expression.invoke(codegen.Expression.newInstance(constructor.owner), constructor.asReference, args.map(compileExpression(_, block)):_*)
 
     //while(test) { body }
     case Loop(test, body) =>
       using(block.whileLoop(compileExpression(test, block)))(compileExpression(body, _))
 
     // (to) expressions
-    case Cast(to, expression) => Expression.cast(to, compileExpression(expression, block))
+    case Cast(to, expression) => codegen.Expression.cast(to, compileExpression(expression, block))
 
     //  expressions instance of t
-    case InstanceOf(typ, expression) => Expression.instanceOf(typ, compileExpression(expression, block))
+    case InstanceOf(typ, expression) => codegen.Expression.instanceOf(typ, compileExpression(expression, block))
 
-    case Not(test) => Expression.not(compileExpression(test, block))
+    case Not(test) => codegen.Expression.not(compileExpression(test, block))
 
     case e@OneTime(inner) =>
       if (!e.isUsed) {
         e.use()
         compileExpression(inner, block)
-      } else Expression.EMPTY
+      } else codegen.Expression.EMPTY
   }
 
   private def compileClassDeclaration(c: ClassDeclaration): codegen.ClassHandle = {
-    val handle = using(generator.generateClass(c.extendsClass.getOrElse(TypeReference.OBJECT), c.packageName, c.className, c.implementsInterfaces: _*)) { clazz: ClassGenerator =>
+    val handle = using(generator.generateClass(c.extendsClass.getOrElse(codegen.TypeReference.OBJECT), c.packageName, c.className, c.implementsInterfaces: _*)) { clazz: codegen.ClassGenerator =>
       //clazz.generateConstructor(generateParametersWithNames(c.constructor.constructor.params): _*)
-      generateConstructor(clazz, c.fields)
+      generateConstructor(clazz, c.fields, c.constructorParameters)
       c.methods.foreach { m =>
         compileMethodDeclaration(clazz, m)
       }
@@ -347,13 +349,12 @@ object CodeGeneration {
     handle
   }
 
-  private def compileMethodDeclaration(clazz: ClassGenerator, m: MethodDecl): Unit = {
-    val parametersWithNames = generateParametersWithNames(m.method.params)
-    using(clazz.generateMethod(m.method.returnType, m.method.name, parametersWithNames: _*)) { block =>
+  private def compileMethodDeclaration(clazz: codegen.ClassGenerator, m: MethodDeclaration): Unit = {
+    using(clazz.generateMethod(m.returnType, m.methodName, m.parameters.map(_.asCodeGen): _*)) { block =>
       m.localVariables.distinct.foreach { v =>
         block.assign(v.typ, v.name, compileExpression(v.value, block))
       }
-      if (m.method.returnType == TypeReference.VOID) {
+      if (m.returnType == codegen.TypeReference.VOID) {
         block.expression(compileExpression(m.body, block))
       }
       else {
@@ -361,18 +362,4 @@ object CodeGeneration {
       }
     }
   }
-
-  private def generateParametersWithNames(params: Seq[TypeReference]): Seq[Parameter] = {
-    var i = 0
-    val parametersWithNames = params.map { typ =>
-      i += 1
-      param(typ, s"param$i")
-    }
-    parametersWithNames
-  }
-
-  final val PARAM1 = "param1"
-  final val PARAM2 = "param2"
-  final val PARAM3 = "param3"
-  final val PARAM4 = "param4"
 }

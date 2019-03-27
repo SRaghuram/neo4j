@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import org.neo4j.codegen.{MethodReference, TypeReference}
+import org.neo4j.codegen
 import org.neo4j.values.storable._
 
 /**
@@ -98,7 +98,7 @@ case class Constant(value: Any) extends IntermediateRepresentation
   *
   * @param values the values of the array
   */
-case class ArrayLiteral(typ: TypeReference, values: Array[IntermediateRepresentation]) extends IntermediateRepresentation
+case class ArrayLiteral(typ: codegen.TypeReference, values: Array[IntermediateRepresentation]) extends IntermediateRepresentation
 
 /**
   * Load a value from an array
@@ -233,7 +233,7 @@ case class Loop(test: IntermediateRepresentation, body: IntermediateRepresentati
   * @param typ the type of the variable
   * @param name the name of the variable
   */
-case class DeclareLocalVariable(typ: TypeReference, name: String) extends IntermediateRepresentation
+case class DeclareLocalVariable(typ: codegen.TypeReference, name: String) extends IntermediateRepresentation
 
 /**
   * Assign a variable to a value.
@@ -263,7 +263,7 @@ case class AssignToLocalVariable(name: String, value: IntermediateRepresentation
   * @param exception the type of the exception
   * @param name the name of the caught exception
   */
-case class TryCatch(ops: IntermediateRepresentation, onError: IntermediateRepresentation, exception: TypeReference, name: String) extends IntermediateRepresentation
+case class TryCatch(ops: IntermediateRepresentation, onError: IntermediateRepresentation, exception: codegen.TypeReference, name: String) extends IntermediateRepresentation
 
 /**
   * Throw an error
@@ -297,7 +297,7 @@ case class BooleanOr(lhs: IntermediateRepresentation, rhs: IntermediateRepresent
   * @param output The type of the static field
   * @param name The name of the static field
   */
-case class GetStatic(owner: Option[TypeReference], output: TypeReference, name: String) extends IntermediateRepresentation
+case class GetStatic(owner: Option[codegen.TypeReference], output: codegen.TypeReference, name: String) extends IntermediateRepresentation
 
 /**
   * Instantiate a new object
@@ -318,10 +318,10 @@ case class OneTime(inner: IntermediateRepresentation)(private var used: Boolean)
   * @param owner the owner of the constructor, or the object to be instantiated
   * @param params the parameter to the constructor
   */
-case class Constructor(owner: TypeReference, params: Seq[TypeReference]) {
-  def asReference: MethodReference =
-    if (params.isEmpty) MethodReference.constructorReference(owner)
-    else MethodReference.constructorReference(owner, params:_*)
+case class Constructor(owner: codegen.TypeReference, params: Seq[codegen.TypeReference]) {
+  def asReference: codegen.MethodReference =
+    if (params.isEmpty) codegen.MethodReference.constructorReference(owner)
+    else codegen.MethodReference.constructorReference(owner, params:_*)
 }
 
 /**
@@ -329,14 +329,14 @@ case class Constructor(owner: TypeReference, params: Seq[TypeReference]) {
   * @param to the type to cast to
   * @param expression the expression to cast
   */
-case class Cast(to: TypeReference, expression: IntermediateRepresentation) extends IntermediateRepresentation
+case class Cast(to: codegen.TypeReference, expression: IntermediateRepresentation) extends IntermediateRepresentation
 
 /**
   * Instance of check if the given expression has the given type
   * @param typ does expression have this type
   * @param expression the expression to check
   */
-case class InstanceOf(typ: TypeReference, expression: IntermediateRepresentation) extends IntermediateRepresentation
+case class InstanceOf(typ: codegen.TypeReference, expression: IntermediateRepresentation) extends IntermediateRepresentation
 
 /**
   * Defines a method
@@ -346,28 +346,30 @@ case class InstanceOf(typ: TypeReference, expression: IntermediateRepresentation
   * @param name   the name of the method
   * @param params the parameter types of the method
   */
-case class Method(owner: TypeReference, returnType: TypeReference, name: String, params: TypeReference*) {
+case class Method(owner: codegen.TypeReference, returnType: codegen.TypeReference, name: String, params: codegen.TypeReference*) {
 
-  def asReference: MethodReference = MethodReference.methodReference(owner, returnType, name, params: _*)
+  def asReference: codegen.MethodReference = codegen.MethodReference.methodReference(owner, returnType, name, params: _*)
+}
+
+case class Parameter(typ: codegen.TypeReference, name: String) {
+  def asCodeGen: codegen.Parameter = codegen.Parameter.param(typ, name)
 }
 
 case class ClassDeclaration(packageName: String,
                             className: String,
-                            extendsClass: Option[TypeReference],
-                            implementsInterfaces: Seq[TypeReference],
+                            extendsClass: Option[codegen.TypeReference],
+                            implementsInterfaces: Seq[codegen.TypeReference],
                             //constructor: ConstructorDeclaration,
+                            constructorParameters: Seq[Parameter],
                             fields: Seq[Field],
-                            methods: Seq[MethodDecl])
+                            methods: Seq[MethodDeclaration])
 
-//case class MethodDeclaration(methodName: String,
-//                             owner: ClassDeclaration,
-//                             returnType: TypeReference,
-//                             parameters: Seq[Parameter],
-//                             body: IntermediateRepresentation) extends IntermediateRepresentation
-
-case class MethodDecl(method: Method,
-                      body: IntermediateRepresentation,
-                      localVariables: Seq[LocalVariable] = Seq.empty)
+case class MethodDeclaration(methodName: String,
+                             owner: codegen.TypeReference,
+                             returnType: codegen.TypeReference,
+                             parameters: Seq[Parameter],
+                             body: IntermediateRepresentation,
+                             localVariables: Seq[LocalVariable] = Seq.empty) extends IntermediateRepresentation
 
 case class ConstructorDeclaration(constructor: Constructor,
                                   body: IntermediateRepresentation)
@@ -378,30 +380,30 @@ case class IntermediateExpression(ir: IntermediateRepresentation, fields: Seq[Fi
 case class IntermediateGroupingExpression(projectKey: IntermediateExpression, computeKey: IntermediateExpression,
                                           getKey: IntermediateExpression)
 sealed trait Field {
-  def typ: TypeReference
+  def typ: codegen.TypeReference
   def name: String
 }
 
-case class InstanceField(typ: TypeReference, name: String, initializer: Option[IntermediateRepresentation] = None) extends Field
-case class StaticField(typ: TypeReference, name: String, value: Option[Any] = None) extends Field
+case class InstanceField(typ: codegen.TypeReference, name: String, initializer: Option[IntermediateRepresentation] = None) extends Field
+case class StaticField(typ: codegen.TypeReference, name: String, value: Option[Any] = None) extends Field
 
-case class LocalVariable(typ: TypeReference, name: String, value: IntermediateRepresentation)
+case class LocalVariable(typ: codegen.TypeReference, name: String, value: IntermediateRepresentation)
 
 /**
   * Defines a simple dsl to facilitate constructing intermediate representation
   */
 object IntermediateRepresentation {
-  def typeRef(manifest: Manifest[_]): TypeReference = {
+  def typeRef(manifest: Manifest[_]): codegen.TypeReference = {
     val arguments = manifest.typeArguments
-    val base = TypeReference.typeReference(manifest.runtimeClass)
+    val base = codegen.TypeReference.typeReference(manifest.runtimeClass)
     if (arguments.nonEmpty && !manifest.runtimeClass.isArray) {
-      TypeReference.parameterizedType(base, arguments.map(typeRef): _*)
+      codegen.TypeReference.parameterizedType(base, arguments.map(typeRef): _*)
     } else {
       base
     }
   }
 
-  def typeRefOf[TYPE](implicit typ: Manifest[TYPE]): TypeReference = typeRef(typ)
+  def typeRefOf[TYPE](implicit typ: Manifest[TYPE]): codegen.TypeReference = typeRef(typ)
 
   def field[TYPE](name: String)(implicit typ: Manifest[TYPE]) = InstanceField(typeRef(typ), name)
 
@@ -452,6 +454,8 @@ object IntermediateRepresentation {
                                                        in2: Manifest[IN2], in3: Manifest[IN3], in4: Manifest[IN4], in5: Manifest[IN5],
                                                        in6: Manifest[IN6], in7: Manifest[IN7]) =
     Method(typeRef(owner), typeRef(out), name, typeRef(in1), typeRef(in2), typeRef(in3), typeRef(in4), typeRef(in5), typeRef(in6), typeRef(in7))
+
+  def param[TYPE](name: String)(implicit typ: Manifest[TYPE]): Parameter = Parameter(typeRef(typ), name)
 
   def constructor[OWNER](implicit owner: Manifest[OWNER]) = Constructor(typeRef(owner), Seq.empty)
 
@@ -540,7 +544,7 @@ object IntermediateRepresentation {
 
   def declare[TYPE](name: String)(implicit typ: Manifest[TYPE]) = DeclareLocalVariable(typeRef(typ), name)
 
-  def declare(typeReference: TypeReference, name: String) = DeclareLocalVariable(typeReference, name)
+  def declare(typeReference: codegen.TypeReference, name: String) = DeclareLocalVariable(typeReference, name)
 
   def assign(name: String, value: IntermediateRepresentation) = AssignToLocalVariable(name, value)
 
