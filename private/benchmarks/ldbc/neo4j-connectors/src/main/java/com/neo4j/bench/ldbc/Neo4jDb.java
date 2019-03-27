@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.Connector;
 import org.neo4j.driver.v1.AuthToken;
@@ -423,6 +424,7 @@ public class Neo4jDb extends Db
     private static GraphDatabaseBuilder newDbBuilder( File dbDir, File configFile )
     {
         GraphDatabaseBuilder builder = new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( dbDir );
+        builder.setConfig( GraphDatabaseSettings.transaction_logs_root_path, dbDir.getParentFile().getAbsolutePath() );
         if ( null != configFile )
         {
             builder = builder.loadPropertiesFromFile( configFile.getAbsolutePath() );
@@ -432,9 +434,7 @@ public class Neo4jDb extends Db
 
     public static GraphDatabaseBuilder newDbBuilderForBolt( File dbDir, File configFile, URI uri )
     {
-        String withoutProtocol = uri.toString().substring(
-                uri.toString().indexOf( "://" ) + 3,
-                uri.toString().length() );
+        String withoutProtocol = uri.toString().substring( uri.toString().indexOf( "://" ) + 3 );
         int portIndex = withoutProtocol.lastIndexOf( ":" );
         int port = Integer.parseInt( withoutProtocol.substring( portIndex + 1, withoutProtocol.length() ) );
         return newDbBuilderForBolt(

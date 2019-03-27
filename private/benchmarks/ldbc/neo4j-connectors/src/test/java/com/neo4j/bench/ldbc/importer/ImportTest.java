@@ -20,54 +20,55 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
-import java.util.Random;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.consistency.ConsistencyCheckService;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.configuration.Config;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
+import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bench.client.util.TestDirectorySupport.createTempDirectory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( TestDirectoryExtension.class )
-public class ImportTest
+@ExtendWith( {TestDirectoryExtension.class, RandomExtension.class} )
+class ImportTest
 {
     @Inject
-    public TestDirectory temporaryFolder;
+    private TestDirectory temporaryFolder;
 
-    private static final Random RANDOM = new Random( System.currentTimeMillis() );
+    @Inject
+    private RandomRule randomRule;
 
-    private static boolean withUnique()
+    private boolean withUnique()
     {
-        return Math.abs( RANDOM.nextInt() ) % 2 == 0;
+        return Math.abs( randomRule.nextInt() ) % 2 == 0;
     }
 
-    private static boolean withMandatory()
+    private boolean withMandatory()
     {
-        return Math.abs( RANDOM.nextInt() ) % 2 == 0;
+        return Math.abs( randomRule.nextInt() ) % 2 == 0;
     }
 
     @Test
-    public void shouldLoadDatasetUsingDefaultImporterWithoutMandatoryConstraints() throws Exception
+    void shouldLoadDatasetUsingDefaultImporterWithoutMandatoryConstraints() throws Exception
     {
         doShouldLoadDatasetUsingDefaultImporter( false );
     }
 
     @Test
-    public void shouldLoadDatasetUsingDefaultImporterWithMandatoryConstraints() throws Exception
+    void shouldLoadDatasetUsingDefaultImporterWithMandatoryConstraints() throws Exception
     {
         doShouldLoadDatasetUsingDefaultImporter( true );
     }
@@ -121,7 +122,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldThrowExceptionWhenUsingDefaultImporterAndMissingDbDir() throws Exception
+    void shouldThrowExceptionWhenUsingDefaultImporterAndMissingDbDir() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -145,11 +146,11 @@ public class ImportTest
                 args = Utils.copyArrayAndAddElement( args, ImportCommand.CMD_WITH_MANDATORY );
             }
             LdbcCli.main( args );
-        });
+        } );
     }
 
     @Test
-    public void shouldThrowExceptionWhenUsingDefaultImporterAndMissingCsvDir() throws Exception
+    void shouldThrowExceptionWhenUsingDefaultImporterAndMissingCsvDir() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -173,11 +174,11 @@ public class ImportTest
                 args = Utils.copyArrayAndAddElement( args, ImportCommand.CMD_WITH_MANDATORY );
             }
             LdbcCli.main( args );
-        });
+        } );
     }
 
     @Test
-    public void shouldThrowExceptionWhenUsingDefaultImporterAndMissingIsLongDateFlag() throws Exception
+    void shouldThrowExceptionWhenUsingDefaultImporterAndMissingIsLongDateFlag() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -207,11 +208,11 @@ public class ImportTest
                     withUnique,
                     withMandatory,
                     true );
-        });
+        } );
     }
 
     @Test
-    public void shouldImporterUsingBatchForRegularWithCsvStringDateNeo4jUtcDate() throws Exception
+    void shouldImporterUsingBatchForRegularWithCsvStringDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -252,7 +253,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingBatchForRegularWithCsvStringDateNeo4jNumEncodedDate() throws Exception
+    void shouldImportUsingBatchForRegularWithCsvStringDateNeo4jNumEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -293,7 +294,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingBatchForRegularWithCsvUtcDateNeo4jUtcDate() throws Exception
+    void shouldImportUsingBatchForRegularWithCsvUtcDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -334,7 +335,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingBatchForRegularWithCsvUtcDateNeo4jNumEncodedDate() throws Exception
+    void shouldImportUsingBatchForRegularWithCsvUtcDateNeo4jNumEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -375,7 +376,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingBatchForDense1WithCsvStringDateNeo4jUtcDate() throws Exception
+    void shouldImportUsingBatchForDense1WithCsvStringDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -418,7 +419,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingBatchForDense1WithCsvStringDateNeo4jEncodedDate() throws Exception
+    void shouldImportUsingBatchForDense1WithCsvStringDateNeo4jEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -461,7 +462,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingBatchForDense1WithCsvUtcDateNeo4jUtcDate() throws Exception
+    void shouldImportUsingBatchForDense1WithCsvUtcDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -504,7 +505,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingBatchForDense1WithCsvUtcDateNeo4jNumEncodedDate() throws Exception
+    void shouldImportUsingBatchForDense1WithCsvUtcDateNeo4jNumEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -547,7 +548,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForRegularWithCsvStringDateNeo4jUtcDate() throws Exception
+    void shouldImportUsingParallelForRegularWithCsvStringDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -585,7 +586,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForRegularWithCsvStringDateNeo4jNumEncodedDate() throws Exception
+    void shouldImportUsingParallelForRegularWithCsvStringDateNeo4jNumEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -623,7 +624,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForRegularWithCsvUtcDateNeo4jUtcDate() throws Exception
+    void shouldImportUsingParallelForRegularWithCsvUtcDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -661,7 +662,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForRegularWithCsvUtcDateNeo4jNumEncodedDate() throws Exception
+    void shouldImportUsingParallelForRegularWithCsvUtcDateNeo4jNumEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -699,7 +700,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForDense1WithCsvStringDateNeo4jUtcDate() throws Exception
+    void shouldImportUsingParallelForDense1WithCsvStringDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -739,7 +740,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForDense1WithCsvStringDateNeo4jEncodedDate() throws Exception
+    void shouldImportUsingParallelForDense1WithCsvStringDateNeo4jEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -779,7 +780,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForDense1WithCsvUtcDateNeo4jUtcDate() throws Exception
+    void shouldImportUsingParallelForDense1WithCsvUtcDateNeo4jUtcDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -819,7 +820,7 @@ public class ImportTest
     }
 
     @Test
-    public void shouldImportUsingParallelForDense1WithCsvUtcDateNeo4jNumEncodedDate() throws Exception
+    void shouldImportUsingParallelForDense1WithCsvUtcDateNeo4jNumEncodedDate() throws Exception
     {
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
@@ -873,7 +874,6 @@ public class ImportTest
             assertThat(
                     metadata.commentHasCreatorMinDateAtResolution(),
                     equalTo( dateUtil.dateCodec().encodedDateTimeToEncodedDateAtResolution( 20100110010000000L ) ) );
-
         }
         if ( metadata.hasCommentHasCreatorMaxDateAtResolution() )
         {
@@ -924,7 +924,7 @@ public class ImportTest
         db.shutdown();
     }
 
-    private void assertConsistentStore( File dbDir ) throws ConsistencyCheckIncompleteException, IOException
+    private void assertConsistentStore( File dbDir ) throws ConsistencyCheckIncompleteException
     {
         ConsistencyCheckService.Result result = new ConsistencyCheckService( new Date() )
                 .runFullConsistencyCheck(

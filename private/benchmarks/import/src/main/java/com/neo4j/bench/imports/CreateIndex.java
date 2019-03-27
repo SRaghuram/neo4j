@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
@@ -25,9 +26,13 @@ import org.neo4j.helpers.Args;
 
 public class CreateIndex
 {
-    private void run( String storeDir, List<String> indexPatterns )
+    private void run( String storeDirString, List<String> indexPatterns )
     {
-        GraphDatabaseService db = new CommercialGraphDatabaseFactory().newEmbeddedDatabase( new File( storeDir ) );
+        var storeDir = new File( storeDirString );
+        GraphDatabaseService db = new CommercialGraphDatabaseFactory()
+                .newEmbeddedDatabaseBuilder( storeDir )
+                .setConfig( GraphDatabaseSettings.transaction_logs_root_path, storeDir.getParentFile().getAbsolutePath() )
+                .newGraphDatabase();
         try
         {
             Map<IndexDefinition,Integer> indexes = new HashMap<>();
@@ -64,7 +69,7 @@ public class CreateIndex
                     catch ( IllegalStateException e )
                     {
                         if ( !(e.getMessage().contains( "Expected index to come online within a reasonable time" ) ||
-                                e.getMessage().contains( "Expected all indexes to come online within a reasonable time" )) )
+                               e.getMessage().contains( "Expected all indexes to come online within a reasonable time" )) )
                         {
                             throw e;
                         }

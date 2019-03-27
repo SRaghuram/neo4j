@@ -19,6 +19,7 @@ import java.util.List;
 import org.neo4j.commandline.admin.CommandFailed;
 import org.neo4j.commandline.admin.IncorrectUsage;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
@@ -132,9 +133,13 @@ public class Database implements AutoCloseable
         switch ( edition )
         {
         case COMMUNITY:
-            return new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
+            return new GraphDatabaseFactory()
+                    .newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() )
+                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() );
         case ENTERPRISE:
-            return new CommercialGraphDatabaseFactory().newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() );
+            return new CommercialGraphDatabaseFactory()
+                    .newEmbeddedDatabaseBuilder( store.graphDbDirectory().toFile() )
+                    .setConfig( GraphDatabaseSettings.transaction_logs_root_path, store.topLevelDirectory().toAbsolutePath().toString() );
         default:
             throw new RuntimeException( "Unrecognized edition: " + edition );
         }
@@ -162,12 +167,12 @@ public class Database implements AutoCloseable
             db.schema()
               .getIndexes()
               .forEach( index ->
-              {
-                  if ( !index.isConstraintIndex() )
-                  {
-                      entries.add( new Schema.IndexSchemaEntry( index.getLabel(), Lists.newArrayList( index.getPropertyKeys() ) ) );
-                  }
-              } );
+                        {
+                            if ( !index.isConstraintIndex() )
+                            {
+                                entries.add( new Schema.IndexSchemaEntry( index.getLabel(), Lists.newArrayList( index.getPropertyKeys() ) ) );
+                            }
+                        } );
 
             return new Schema( entries );
         }
