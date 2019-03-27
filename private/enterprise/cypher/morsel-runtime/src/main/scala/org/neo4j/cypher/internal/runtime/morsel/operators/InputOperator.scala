@@ -26,7 +26,7 @@ class InputOperator(val workIdentity: WorkIdentity,
   }
 
   /**
-    * A [[InputTask]] reserves new batches from the InputStream, until there are no more batches.
+    * An [[InputTask]] reserves new batches from the InputStream, until there are no more batches.
     */
   class InputTask(input: InputDataStream) extends ContinuableOperatorTask {
 

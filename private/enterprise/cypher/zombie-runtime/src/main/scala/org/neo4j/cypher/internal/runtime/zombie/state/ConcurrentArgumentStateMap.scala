@@ -120,15 +120,20 @@ class StateController[STATE <: ArgumentState](id: String, val state: STATE) {
 
   def update(morsel: MorselExecutionContext, onState: (STATE, MorselExecutionContext) => Unit): Unit = {
     lock.lock()
-    onState(state, morsel)
-    lock.unlock()
+    try {
+      onState(state, morsel)
+    } finally {
+      lock.unlock()
+    }
   }
 
   def compute[U](onArgument: STATE => U): U = {
     lock.lock()
-    val u = onArgument(state)
-    lock.unlock()
-    u
+    try {
+      onArgument(state)
+    } finally {
+      lock.unlock()
+    }
   }
 
   override def toString: String = {

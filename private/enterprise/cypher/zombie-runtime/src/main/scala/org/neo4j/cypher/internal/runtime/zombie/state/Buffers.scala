@@ -33,7 +33,8 @@ class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
       throw new IllegalStateException(s"Could not find downstream argumentStateBuffer with id $reducePlanId")
     }
 
-    for (i <- array.indices.reverse) {
+    var i = array.length - 1
+    while (i >= 0) {
       val bufferDefinition = bufferDefinitions(i)
       val reducers = bufferDefinition.reducers
       val workCancellers = bufferDefinition.workCancellers
@@ -66,6 +67,7 @@ class Buffers(bufferDefinitions: IndexedSeq[BufferDefinition],
                              argumentStateMaps,
                              stateFactory.newBuffer())
         }
+      i -= 1
     }
     array
   }

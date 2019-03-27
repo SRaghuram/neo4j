@@ -11,19 +11,22 @@ import org.neo4j.cypher.internal.runtime.morsel.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.zombie.{ExecutablePipeline, ExecutionState, PipelineState}
 import org.neo4j.util.Preconditions
 
-class PipelineExecutions(pipelines: Seq[ExecutablePipeline],
+class PipelineExecutions(pipelines: IndexedSeq[ExecutablePipeline],
                          executionState: ExecutionState,
                          queryContext: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources) {
 
-  for (i <- pipelines.indices)
-    Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
-
-  private val pipelineStates =
-    for (pipeline <- pipelines.toArray) yield {
-      pipeline.createState(executionState, queryContext, queryState, resources)
+  private val pipelineStates = {
+    val states = new Array[PipelineState](pipelines.length)
+    var i = 0
+    while (i < states.length) {
+      Preconditions.checkState(i == pipelines(i).id.x, "Pipeline id does not match offset!")
+      states(i) = pipelines(i).createState(executionState, queryContext, queryState, resources)
+      i += 1
     }
+    states
+  }
 
   def pipelineState(pipelineId: PipelineId): PipelineState = pipelineStates(pipelineId.x)
 
