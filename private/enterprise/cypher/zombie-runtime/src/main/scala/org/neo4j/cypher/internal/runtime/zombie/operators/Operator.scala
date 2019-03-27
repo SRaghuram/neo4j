@@ -5,11 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
+import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.AnyValue
 
 /**
@@ -209,13 +210,24 @@ trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
 }
 
 abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOperatorTaskWithMorsel {
+  protected val dataRead: org.neo4j.internal.kernel.api.Read
+
   override def operate(output: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
     // For compiled expressions to work they assume that some local variables exists with certain names
     // as defined by the CompiledExpression.evaluate() interface
-    operate(output, context, state.params, resources.expressionCursors, resources.expressionVariables(state.nExpressionSlots), resources)
+    operate(
+      //--- Names used by compiled expressions
+      context = output,
+      dbAccess = context,
+      params = state.params,
+      cursors = resources.expressionCursors,
+      expressionVariables = resources.expressionVariables(state.nExpressionSlots),
+      //--- Additional operator codegen dependencies
+      nodeCursorPool = resources.cursorPools.nodeCursorPool
+    )
   }
 
   /**
@@ -237,7 +249,7 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
               params: Array[AnyValue],
               cursors: ExpressionCursors,
               expressionVariables: Array[AnyValue],
-              resources: QueryResources): Unit
+              nodeCursorPool: CursorPool[NodeCursor]): Unit
 }
 
 /**

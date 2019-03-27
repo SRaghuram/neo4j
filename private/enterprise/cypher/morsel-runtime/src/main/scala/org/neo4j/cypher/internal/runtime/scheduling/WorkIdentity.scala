@@ -11,8 +11,8 @@ object WorkIdentity {
   def fromPlan(plan: LogicalPlan): WorkIdentity =
     WorkIdentityImpl(plan.id.x, plan.getClass.getSimpleName)
 
-  def fromFusedPlans(headPlan: LogicalPlan, middlePlans: Iterable[LogicalPlan]): WorkIdentity = {
-    WorkIdentityImpl(headPlan.id.x, s"Fused($headPlan${middlePlans.mkString(",", ",", "")})")
+  def fromFusedPlans(fusedPlans: Iterable[LogicalPlan]): WorkIdentity = {
+    WorkIdentityImpl(fusedPlans.head.id.x, s"Fused(${fusedPlans.mkString(",")})")
   }
 }
 

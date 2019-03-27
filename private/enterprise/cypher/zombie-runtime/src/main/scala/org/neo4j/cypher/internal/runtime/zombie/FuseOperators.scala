@@ -11,14 +11,16 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generat
 import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, Pipeline, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
-import org.neo4j.cypher.internal.runtime.{QueryContext, QueryIndexes}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext, QueryIndexes}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.morsel.{CursorPool, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.zombie.ContinuableOperatorTaskWithMorselGenerator.CompiledTaskFactory
 import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.{NodeCursor, Read}
+import org.neo4j.values.AnyValue
 
 class FuseOperators(operatorFactory: OperatorFactory,
                     physicalPlan: PhysicalPlan,
@@ -49,45 +51,59 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val expressionCompiler = new IntermediateCodeGeneration(slots) // NOTE: We assume slots is the same within an entire pipeline
     generateSlotAccessorFunctions(slots)
 
-    val workIdentity = WorkIdentity.fromFusedPlans(headPlan, middlePlans)
-
+    // Fold plans in reverse to build-up code generation templates with inner templates
+    // Then generate create the taskFactory from the headPlan template
     // Some stateless operators cannot be fused, e.g. SortPreOperator
     // Return these to be built as separate operators
-    val remainingMiddlePlans: List[LogicalPlan] = middlePlans.toList
 
-    // TODO: Fold plans in reverse to build-up templates with inner templates
-    //       Then create the taskFactory from the headPlan template
     // E.g. HeadPlan, Seq(MiddlePlan1, MiddlePlan2)
-    // MiddlePlan2 -> Template1()
+    // MiddlePlan2 -> Template1(innermostTemplate)
     // MiddlePlan1 -> Template2(inner=Template1)
     // HeadPlan    -> Template3(inner=Template2)
     val innermostTemplate = new DelegateOperatorTaskTemplate
 
-    var reversePlans = middlePlans.foldLeft(List(headPlan))((acc, p) => p :: acc)
+    val reversePlans = middlePlans.foldLeft(List(headPlan))((acc, p) => p :: acc)
 
-    val operatorTaskTemplate = reversePlans.foldLeft(innermostTemplate: OperatorTaskTemplate)((acc, p) => p match {
-      case plans.AllNodesScan(nodeVariableName, _) =>
-        val argumentSize = physicalPlan.argumentSizes(id)
-        new SerialAllNodeScanTemplate(acc, innermostTemplate, nodeVariableName, slots.getLongOffsetFor(nodeVariableName), argumentSize)
+    val (operatorTaskTemplate, fusedPlans, unhandledPlans) =
+      reversePlans.foldLeft((innermostTemplate: OperatorTaskTemplate, List.empty[LogicalPlan], List.empty[LogicalPlan])) {
+        case ((innerTemplate, fusedPlans, unhandledPlans), p) => p match {
+          case plans.AllNodesScan(nodeVariableName, _) =>
+            val argumentSize = physicalPlan.argumentSizes(id)
+            (new SerialAllNodeScanTemplate(innerTemplate, innermostTemplate, nodeVariableName, slots.getLongOffsetFor(nodeVariableName), argumentSize),
+              p :: fusedPlans, unhandledPlans)
 
-      case plans.Selection(predicate, _) =>
-        val compiledPredicate: IntermediateExpression = expressionCompiler.compileExpression(predicate).getOrElse(
-          return (None, middlePlans)
-        )
-        new FilterOperatorTemplate(acc, compiledPredicate)
+          case plans.Selection(predicate, _) =>
+            val compiledPredicate: IntermediateExpression = expressionCompiler.compileExpression(predicate).getOrElse(
+              return (None, middlePlans)
+            )
+            (new FilterOperatorTemplate(innerTemplate, compiledPredicate), p :: fusedPlans, unhandledPlans)
 
-    })
+          case _ =>
+            // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
+            (innermostTemplate, List.empty, p :: unhandledPlans)
+        }
+      }
 
-    val operatorTaskWithMorselTemplate = operatorTaskTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
+    // Did we find any sequence of operators that we can fuse with the headPlan?
+    if (fusedPlans.length < 1 /* TODO: This should be 2, but we allow 1 for debugging */) {
+      (None, middlePlans)
+    }
+    else {
+      // Yes! Generate a class and an operator with a task factory that produces tasks based on the generated class
+      println(s"@@@ Fused plans $fusedPlans") // TODO: Disable debug print
 
-    val taskFactory = ContinuableOperatorTaskWithMorselGenerator.generateTaskFactory(operatorTaskWithMorselTemplate)
-    (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), remainingMiddlePlans)
+      val workIdentity = WorkIdentity.fromFusedPlans(fusedPlans)
+      val operatorTaskWithMorselTemplate = operatorTaskTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
+
+      val taskFactory = ContinuableOperatorTaskWithMorselGenerator.generateClassAndTaskFactory(operatorTaskWithMorselTemplate)
+      (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), unhandledPlans)
+    }
   }
 }
 
 
 class CompiledStreamingOperator(val workIdentity: WorkIdentity,
-                                val taskFactory: MorselParallelizer => IndexedSeq[ContinuableOperatorTaskWithMorsel]) extends StreamingOperator {
+                                val taskFactory: CompiledTaskFactory) extends StreamingOperator {
   /**
     * Initialize new tasks for this operator. This code path let's operators create
     * multiple output rows for each row in `inputMorsel`.
@@ -96,7 +112,7 @@ class CompiledStreamingOperator(val workIdentity: WorkIdentity,
                                    state: QueryState,
                                    inputMorsel: MorselParallelizer,
                                    resources: QueryResources): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
-    taskFactory(inputMorsel)
+    taskFactory(context.transactionalContext.dataRead, inputMorsel)
   }
 }
 
@@ -104,17 +120,18 @@ object ContinuableOperatorTaskWithMorselGenerator {
   private val PACKAGE_NAME = "org.neo4j.codegen"
   private def className(): String = "Operator" + System.nanoTime()
 
-  private def generateClass(template: ContinuableOperatorTaskWithMorselTemplate): Class[_] =
-    CodeGeneration.compileClass(template.genClassDeclaration(PACKAGE_NAME, className())
-  )
+  type CompiledTaskFactory = (Read, MorselParallelizer) => IndexedSeq[ContinuableOperatorTaskWithMorsel]
 
-  def generateTaskFactory(template: ContinuableOperatorTaskWithMorselTemplate): MorselParallelizer => IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
+  def generateClassAndTaskFactory(template: ContinuableOperatorTaskWithMorselTemplate): CompiledTaskFactory = {
     val clazz = generateClass(template)
-    val constructor = clazz.getDeclaredConstructor(classOf[MorselExecutionContext])
-    inputMorsel: MorselParallelizer => {
-      IndexedSeq(constructor.newInstance(inputMorsel.nextCopy).asInstanceOf[ContinuableOperatorTaskWithMorsel])
+    val constructor = clazz.getDeclaredConstructor(classOf[Read], classOf[MorselExecutionContext])
+    (dataRead: org.neo4j.internal.kernel.api.Read, inputMorsel: MorselParallelizer) => {
+      IndexedSeq(constructor.newInstance(dataRead, inputMorsel.nextCopy).asInstanceOf[ContinuableOperatorTaskWithMorsel])
     }
   }
+
+  private def generateClass(template: ContinuableOperatorTaskWithMorselTemplate): Class[_] =
+    CodeGeneration.compileClass(template.genClassDeclaration(PACKAGE_NAME, className()))
 }
 
 trait OperatorTaskTemplate {
@@ -164,6 +181,8 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate, predicate: Interme
 
 
 trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
+  import OperatorCodeGenTemplates._
+
   // TODO: Use methods of actual interface to generate declaration?
   override def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
     // TODO: Use genFields inst
@@ -174,30 +193,39 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
     ClassDeclaration(packageName, className,
       extendsClass = Some(typeRefOf[CompiledContinuableOperatorTaskWithMorsel]),
       implementsInterfaces = Seq.empty,
-//      constructor = ConstructorDeclaration(
-//        IntermediateRepresentation.constructor[CompiledContinuableOperatorTaskWithMorsel, MorselExecutionContext],
-//        body = {
-//          // TODO: Call super constructor
-//          // TODO: Extract utility method or automate codegen for constructor completely based on `fields`
-//          val fieldInitializations = new ArrayBuffer[IntermediateRepresentation]
-//          var i = 1
-//          instanceFields.foreach { f =>
-//            fieldInitializations += setField(f, load(s"param$i")) // TODO: No hardcoded name, use utility
-//            i += 1
-//          }
-//          Block(fieldInitializations)
-//        }
-//      ),
+      constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
       fields = fields,
       methods = Seq(
-        MethodDecl(
-          method[ContinuableOperatorTaskWithMorsel, Unit, MorselExecutionContext, QueryContext, QueryState, QueryResources]("operate"),
+        MethodDeclaration("operate",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[Unit],
+          Seq(param[MorselExecutionContext]("context"),
+              param[DbAccess]("dbAccess"),
+              param[Array[AnyValue]]("params"),
+              param[ExpressionCursors]("cursors"),
+              param[Array[AnyValue]]("expressionVariables"),
+              param[CursorPool[NodeCursor]]("nodeCursorPool")
+          ),
           body = genOperate,
-          localVariables = localVariables
+          localVariables
         ),
-        MethodDecl(
-          method[ContinuableOperatorTaskWithMorsel, Boolean]("canContinue"),
+        MethodDeclaration("canContinue",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[Boolean],
+          parameters = Seq.empty,
           body = genCanContinue
+        ),
+        MethodDeclaration("dataRead",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[Read],
+          parameters = Seq.empty,
+          body = loadField(DATA_READ)
+        ),
+        MethodDeclaration("inputMorsel",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[MorselExecutionContext],
+          parameters = Seq.empty,
+          body = loadField(INPUT_MORSEL)
         )
       )
     )
@@ -211,10 +239,11 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 }
 
 abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTemplate {
- import InputLoopTaskTemplate._
+  import OperatorCodeGenTemplates._
+
   //override val inputMorsel: MorselExecutionContext
   override def genFields: Seq[Field] = {
-    Seq(INPUT_MORSEL, INNER_LOOP)
+    Seq(DATA_READ, INPUT_MORSEL, INNER_LOOP)
   }
 
   //override def canContinue: Boolean
@@ -306,22 +335,12 @@ abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTe
   protected def genCloseInnerLoop: IntermediateRepresentation
 }
 
-object InputLoopTaskTemplate {
-  val INPUT_MORSEL = field[MorselExecutionContext]("inputMorsel")
-  val INNER_LOOP = field[Boolean]("innerLoop", constant(false))
-  val INPUT_ROW_IS_VALID = invoke(loadField(INPUT_MORSEL), method[MorselExecutionContext, Boolean]("isValidRow"))
-  val OUTPUT_ROW_IS_VALID = invoke(load("context"), method[MorselExecutionContext, Boolean]("isValidRow"))
-  val OUTPUT_ROW_FINISHED_WRITING = invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("finishedWriting"))
-  val INPUT_ROW_MOVE_TO_NEXT = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselExecutionContext, Unit]("moveToNextRow"))
-}
-
 class SerialAllNodeScanTemplate(val inner: OperatorTaskTemplate,
                                 val innermost: DelegateOperatorTaskTemplate,
                                 val nodeVarName: String,
                                 val offset: Int,
                                 val argumentSize: SlotConfiguration.Size) extends InputLoopTaskTemplate {
-  import SerialAllNodeScanTemplate._
-  import InputLoopTaskTemplate._
+  import OperatorCodeGenTemplates._
 
   // Setup the innermost output template
   innermost.delegate = new OperatorTaskTemplate {
@@ -345,9 +364,11 @@ class SerialAllNodeScanTemplate(val inner: OperatorTaskTemplate,
     //context.transactionalContext.dataRead.allNodesScan(cursor)
     //true
 
-    setField(CURSOR, ALLOCATE_NODE_CURSOR)
-    ALL_NODE_SCAN
-    constant(true)
+    block(
+      setField(CURSOR, ALLOCATE_NODE_CURSOR),
+      ALL_NODE_SCAN,
+      constant(true)
+    )
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {
@@ -359,7 +380,7 @@ class SerialAllNodeScanTemplate(val inner: OperatorTaskTemplate,
     //}
     loop(and(OUTPUT_ROW_IS_VALID, invoke(loadField(CURSOR), method[NodeCursor, Boolean]("next"))))(
       block(
-        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit]("copyFrom"),
+        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, Int, Int]("copyFrom"),
           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences)),
         invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit]("setLongAt"),
           constant(offset), invoke(loadField(CURSOR), method[NodeCursor, Long]("nodeReference"))),
@@ -371,30 +392,41 @@ class SerialAllNodeScanTemplate(val inner: OperatorTaskTemplate,
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     //resources.cursorPools.nodeCursorPool.free(cursor)
     //cursor = null
-    FREE_NODE_CURSOR
-    setField(CURSOR, constant(null))
+    block(
+      FREE_NODE_CURSOR,
+      setField(CURSOR, constant(null))
+    )
   }
 }
 
-object SerialAllNodeScanTemplate {
-  val CURSOR = field[NodeCursor]("cursor")
-  val OUTPUT_ROW = load("context")
-  val OUTPUT_ROW_MOVE_TO_NEXT = invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("moveToNextRow"))
+object OperatorCodeGenTemplates {
+  // Constructor parameters
+  val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
+  val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselExecutionContext]("inputMorsel")
 
-  val ALLOCATE_NODE_CURSOR = invokeStatic(method[SerialAllNodeScanTemplate, NodeCursor]("allocateNodeCursor"))
-  def allocateNodeCursor(resources: QueryResources): NodeCursor = {
-    resources.cursorPools.nodeCursorPool.allocate()
-  }
+  // Fields
+  val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
+  val CURSOR: InstanceField = field[NodeCursor]("cursor")
+  val INPUT_MORSEL: InstanceField = field[MorselExecutionContext]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
+  val INNER_LOOP: InstanceField = field[Boolean]("innerLoop", constant(false))
 
-  val FREE_NODE_CURSOR = invokeStatic(method[SerialAllNodeScanTemplate, Unit, QueryResources, NodeCursor]("freeNodeCursor"),
-                                      load("resources"), loadField(CURSOR))
-  def freeNodeCursor(resources: QueryResources, cursor: NodeCursor): Unit = {
-    resources.cursorPools.nodeCursorPool.free(cursor)
-  }
+  // IntermediateRepresentation code
+  val OUTPUT_ROW: IntermediateRepresentation =
+    load("context")
 
-  val ALL_NODE_SCAN = invokeStatic(method[SerialAllNodeScanTemplate, Unit, QueryContext, NodeCursor]("allNodeScan"),
-                                   load("queryContext"), loadField(CURSOR))
-  def allNodeScan(queryContext: QueryContext, cursor: NodeCursor): Unit = {
-    queryContext.transactionalContext.dataRead.allNodesScan(cursor)
-  }
+  val OUTPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation =
+    invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("moveToNextRow"))
+
+  val ALLOCATE_NODE_CURSOR: IntermediateRepresentation =
+    invoke(load("nodeCursorPool"), method[CursorPool[NodeCursor], NodeCursor]("allocate"))
+
+  val FREE_NODE_CURSOR: IntermediateRepresentation =
+    invokeSideEffect(load("nodeCursorPool"), method[CursorPool[NodeCursor], Unit, NodeCursor]("free"), loadField(CURSOR))
+
+  val ALL_NODE_SCAN: IntermediateRepresentation = invokeSideEffect(loadField(DATA_READ), method[Read, Unit, NodeCursor]("allNodesScan"), loadField(CURSOR))
+
+  val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(loadField(INPUT_MORSEL), method[MorselExecutionContext, Boolean]("isValidRow"))
+  val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(load("context"), method[MorselExecutionContext, Boolean]("isValidRow"))
+  val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("finishedWriting"))
+  val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselExecutionContext, Unit]("moveToNextRow"))
 }
