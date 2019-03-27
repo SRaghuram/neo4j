@@ -129,7 +129,7 @@ public class EmbeddedRunner
                                         ? NoTx::new
                                         : () -> new RealTx( db.beginTx() );
         measurementControl.reset();
-        while ( !measurementControl.isComplete() )
+        while ( !measurementControl.isComplete() && parameters.hasNext() )
         {
             String queryForThisIteration = queryString.value();
             try ( TxWrapper tx = txCreator.get() )
@@ -149,6 +149,11 @@ public class EmbeddedRunner
 
                 tx.success();
             }
+        }
+        if ( !measurementControl.isComplete() )
+        {
+            throw new RuntimeException( "Run finished before it was supposed to.\n" +
+                                        "Probably it ran out of parameters" );
         }
     }
 
