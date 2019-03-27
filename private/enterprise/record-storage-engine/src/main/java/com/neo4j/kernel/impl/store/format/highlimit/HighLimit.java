@@ -49,7 +49,7 @@ public class HighLimit extends BaseRecordFormats
                 RecordStorageCapability.SECONDARY_RECORD_UNITS,
                 RecordStorageCapability.FLEXIBLE_SCHEMA_STORE,
                 RecordStorageCapability.INTERNAL_TOKENS,
-                LuceneCapability.LUCENE_7 );
+                LuceneCapability.LUCENE_8 );
     }
 
     @Override
