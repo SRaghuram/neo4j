@@ -10,29 +10,27 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 
 class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  private def dogSetup(): Unit = {
-    val query =
-    """
+  protected override def initTest(): Unit = {
+    super.initTest()
+    executeSingle(
+      """
         |CREATE (:Person {name:'Alice', id: 0}),
         |       (:Person {name:'Bosse', lastname: 'Bobson', id: 1})-[:HAS_DOG {since: 2016}]->(:Dog {name:'Bosse'}),
         |       (:Dog {name:'Fido'})<-[:HAS_DOG {since: 2010}]-(:Person {name:'Chris', id:2})-[:HAS_DOG {since: 2018}]->(:Dog {name:'Ozzy'})
       """.stripMargin
-
-    executeSingle(query)
+    )
   }
 
   // EXISTS without inner WHERE clause
 
   test("simple exists without where clause") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
-        |WHERE exists{
-        | MATCH(person)-[:HAS_DOG]->(:Dog)
-        | }
+        |WHERE EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(:Dog)
+        |}
         |RETURN person.name
       """.stripMargin
 
@@ -45,11 +43,9 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("exists without where clause but with predicate on outer match") {
 
-    dogSetup()
-
     val query =
       """
-        |MATCH (person:Person{name:'Bosse'})
+        |MATCH (person:Person {name:'Bosse'})
         |WHERE EXISTS {
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
         |}
@@ -66,8 +62,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("exists subquery with not findable inner pattern") {
-
-    dogSetup()
 
     val query =
       """
@@ -90,8 +84,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("exists subquery with predicate") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -113,8 +105,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("exists subquery with negative predicate") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -134,8 +124,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("exists subquery with multiple predicates") {
-
-    dogSetup()
 
     val query =
       """
@@ -158,13 +146,11 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("exists subquery with multiple predicates 2") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (dog:Dog)
         |WHERE EXISTS {
-        |  MATCH (person{name:'Chris'})-[:HAS_DOG]->(dog)
+        |  MATCH (person {name:'Chris'})-[:HAS_DOG]->(dog)
         |  WHERE dog.name < 'Karo'
         |}
         |RETURN dog.name
@@ -181,13 +167,11 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("exists subquery with multiple predicates 3") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
         |WHERE EXISTS {
-        |  MATCH (person{lastname:'Bobson'})-[:HAS_DOG]->(dog:Dog)
+        |  MATCH (person {lastname:'Bobson'})-[:HAS_DOG]->(dog:Dog)
         |  WHERE person.name = dog.name
         |}
         |RETURN person.name
@@ -204,13 +188,11 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("exists subquery with predicates on both outer and inner query") {
 
-    dogSetup()
-
     val query =
       """
-        |MATCH (person:Person{name:'Bosse'})
+        |MATCH (person:Person {name:'Bosse'})
         |WHERE EXISTS {
-        |  MATCH (person{lastname:'Bobson'})-[:HAS_DOG]->(dog)
+        |  MATCH (person {lastname:'Bobson'})-[:HAS_DOG]->(dog)
         |  WHERE person.name = dog.name
         |}
         |RETURN person.name
@@ -227,14 +209,12 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("complexer predicates 1") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
         |WHERE EXISTS {
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name AND person.lastname ='Bobson' AND person.id < 2
+        |  WHERE person.name = dog.name AND person.lastname = 'Bobson' AND person.id < 2
         |}
         |RETURN person.name
       """.stripMargin
@@ -250,14 +230,12 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("complexer predicates 2") {
 
-    dogSetup()
-
     val query =
       """
-        |MATCH (person:Person{id:1})
+        |MATCH (person:Person {id:1})
         |WHERE EXISTS {
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE person.name = dog.name AND person.lastname ='Bobson'
+        |  WHERE person.name = dog.name AND person.lastname = 'Bobson'
         |}
         |RETURN person.name
       """.stripMargin
@@ -273,14 +251,12 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("complexer predicates 3") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
         |WHERE EXISTS {
         |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
-        |  WHERE NOT person.name = dog.name OR person.lastname ='Bobson'
+        |  WHERE NOT person.name = dog.name OR person.lastname = 'Bobson'
         |} AND person.id = 1
         |RETURN person.name
       """.stripMargin
@@ -295,8 +271,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("Unrelated inner pattern") {
-
-    dogSetup()
 
     val query =
       """
@@ -320,8 +294,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("should handle relationship predicate") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -342,8 +314,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("should handle relationship predicate linking inner and outer relationship") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)-[r]->()
@@ -363,8 +333,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("should handle more complex relationship predicate") {
-
-    dogSetup()
 
     val query =
       """
@@ -390,8 +358,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("Omit match syntax in exist query") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -414,8 +380,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("ensure we don't leak variables to the outside") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -430,8 +394,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("should support variable length pattern") {
-
-    dogSetup()
 
     val query =
       """
@@ -453,8 +415,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("transitive closure inside exists should still work its magic") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -475,8 +435,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("Should handle scoping and dependencies properly when subclause is in horizon") {
-
-    dogSetup()
 
     val query =
       """
@@ -501,8 +459,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("simple node match in exists 1") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -523,13 +479,11 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("simple node match in exists 2") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
         |WHERE EXISTS {
-        |  MATCH (person{id:2})
+        |  MATCH (person {id:2})
         |  WHERE person.name = 'Chris'
         |}
         |RETURN person.name
@@ -545,13 +499,11 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("simple node match in exists that will return false") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
         |WHERE EXISTS {
-        |  MATCH (person{id:3})
+        |  MATCH (person {id:3})
         |  WHERE person.name = 'Chris'
         |}
         |RETURN person.name
@@ -568,8 +520,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   // EXISTS with nested subclauses
 
   test("Nesting 1") {
-
-    dogSetup()
 
     val query =
       """
@@ -594,8 +544,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("Nesting 2") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -618,8 +566,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("should handle several levels of nesting") {
-
-    dogSetup()
 
     val query =
       """
@@ -649,8 +595,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("NOT EXISTS should work") {
 
-    dogSetup()
-
     val query =
       """
         |MATCH (person:Person)
@@ -670,8 +614,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("NOT EXISTS with single node should work") {
-
-    dogSetup()
 
     val query =
       """
@@ -693,8 +635,6 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
   }
 
   test("Nesting with NOT") {
-
-    dogSetup()
 
     val query =
       """
