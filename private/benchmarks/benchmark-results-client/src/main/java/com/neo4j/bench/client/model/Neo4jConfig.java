@@ -29,7 +29,8 @@ public class Neo4jConfig
 
     public static Neo4jConfig withDefaults()
     {
-        return empty().withSetting( OnlineBackupSettings.online_backup_enabled, "false" );
+        return empty().withSetting( OnlineBackupSettings.online_backup_enabled, "false" )
+                      .withSetting( GraphDatabaseSettings.fail_on_missing_files, "false" );
     }
 
     public static Neo4jConfig empty()
