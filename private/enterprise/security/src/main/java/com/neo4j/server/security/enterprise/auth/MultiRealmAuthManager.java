@@ -336,7 +336,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
 
     Set<DatabasePrivilege> getPermissions( Set<String> roles )
     {
-        return userManager.getPrivilegeForRoles( roles );
+        return userManager.getPrivilegesForRoles( roles );
     }
 
     IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.PropertyKeyIdLookup tokenLookup )

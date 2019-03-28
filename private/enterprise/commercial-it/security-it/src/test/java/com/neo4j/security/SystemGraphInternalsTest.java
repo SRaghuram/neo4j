@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
-import java.util.Set;
 
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -35,9 +34,8 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.neo4j.test.assertion.Assert.assertException;
@@ -48,6 +46,7 @@ class SystemGraphInternalsTest
     private GraphDatabaseService database;
     private ContextSwitchingSystemGraphQueryExecutor systemGraphExecutor;
     private SystemGraphRealm realm;
+    private String activeDbName;
 
     @Inject
     private TestDirectory testDirectory;
@@ -60,7 +59,7 @@ class SystemGraphInternalsTest
         final GraphDatabaseBuilder builder = factory.newEmbeddedDatabaseBuilder( storeDir );
         builder.setConfig( SecuritySettings.auth_provider, SecuritySettings.NATIVE_REALM_NAME );
         database = builder.newGraphDatabase();
-        String activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
+        activeDbName = ((GraphDatabaseFacade) database).databaseLayout().getDatabaseName();
         DatabaseManager<?> databaseManager = getDatabaseManager();
         systemGraphExecutor = new ContextSwitchingSystemGraphQueryExecutor( databaseManager, activeDbName );
         AssertableLogProvider log = new AssertableLogProvider();
@@ -104,48 +103,13 @@ class SystemGraphInternalsTest
     }
 
     @Test
-    void shouldNotShareDbRoleNodeBetweenUsersWithSameRole() throws Exception
+    void shouldShareRoleNodeBetweenUsersWithSameRole() throws Exception
     {
         long roleNodeCount = nbrOfRoleNodes();
         long userNodeCount = nbrOfUserNodes();
         setupTwoReaders();
-        assertEquals( 0, nbrOfDbRoleNodes() );
         assertEquals( roleNodeCount, nbrOfRoleNodes() );
         assertEquals( userNodeCount + 2, nbrOfUserNodes() );
-    }
-
-    @Test
-    void shouldRemoveDbRoleNodeWhenUserIsDeleted() throws Exception
-    {
-        setupTwoReaders();
-
-        realm.deleteUser( "Neo" );
-        assertEquals( 0, nbrOfDbRoleNodes() );
-
-        realm.deleteUser( "Trinity" );
-        assertEquals( 0, nbrOfDbRoleNodes() );
-    }
-
-    @Test
-    void shouldRemoveDbRoleNodeWhenUserIsUnassigned() throws Exception
-    {
-       setupTwoReaders();
-
-       realm.removeRoleFromUser( READER, "Neo" );
-       assertEquals( 0, nbrOfDbRoleNodes() );
-
-       realm.removeRoleFromUser( READER, "Trinity" );
-       assertEquals( 0, nbrOfDbRoleNodes() );
-    }
-
-    @Test
-    void shouldRemoveDbRoleNodeWhenDeletingRole() throws Exception
-    {
-        realm.newRole( "tmpRole", "neo4j" );
-        assertEquals( 0, nbrOfDbRoleNodes() );
-
-        realm.deleteRole( "tmpRole" );
-        assertEquals( 0, nbrOfDbRoleNodes() );
     }
 
     @Test
@@ -157,41 +121,23 @@ class SystemGraphInternalsTest
     }
 
     @Test
-    void shouldShowPrivilegesForUser() throws Exception
+    void shouldSilentlyIgnoreAlreadyGrantedPrivilege() throws Exception
     {
+        // Given
         realm.newUser( "Neo", password( "abc" ), false );
         realm.newRole( "custom", "Neo" );
+        DatabasePrivilege dbPriv1 = new DatabasePrivilege( "*" );
+        dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        realm.grantPrivilegeToRole( "custom", dbPriv1 );
+        long privilegeNodes = nbrOfPrivilegeNodes();
+        long resourceNodes = nbrOfResourceNodes();
 
-        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "Neo" );
-        assertTrue( privileges.isEmpty() );
+        // When
+        realm.grantPrivilegeToRole( "custom", dbPriv1 );
 
-        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
-        realm.grantPrivilegeToRole( "custom", dbPriv );
-        privileges = realm.showPrivilegesForUser( "Neo" );
-        DatabasePrivilege databasePrivilege = new DatabasePrivilege( "*" );
-        databasePrivilege.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
-        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
-    }
-
-    @Test
-    void shouldShowAdminPrivileges() throws Exception
-    {
-        realm.newUser( "Neo", password( "abc" ), false );
-        realm.newRole( "custom", "Neo" );
-
-        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "Neo" );
-        assertTrue( privileges.isEmpty() );
-
-        realm.setAdmin( "custom", true );
-        privileges = realm.showPrivilegesForUser( "Neo" );
-        DatabasePrivilege databasePrivilege = new DatabasePrivilege( "*" );
-        databasePrivilege.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ) );
-        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
-
-        realm.setAdmin( "custom", false );
-        privileges = realm.showPrivilegesForUser( "Neo" );
-        assertTrue( privileges.isEmpty() );
+        // Then
+        assertThat( privilegeNodes, equalTo( nbrOfPrivilegeNodes() ) );
+        assertThat( resourceNodes, equalTo( nbrOfResourceNodes() ) );
     }
 
     private void setupTwoReaders() throws InvalidArgumentsException
@@ -230,12 +176,6 @@ class SystemGraphInternalsTest
     private long nbrOfUserNodes()
     {
         String query = "MATCH (u:User) RETURN count(u)";
-        return systemGraphExecutor.executeQueryLong( query );
-    }
-
-    private long nbrOfDbRoleNodes()
-    {
-        String query = "MATCH (dbr:DbRole) RETURN count(dbr)";
         return systemGraphExecutor.executeQueryLong( query );
     }
 }

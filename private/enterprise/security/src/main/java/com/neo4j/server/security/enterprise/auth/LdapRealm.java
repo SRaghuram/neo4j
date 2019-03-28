@@ -101,7 +101,6 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
         this.securityLog = securityLog;
         this.secureHasher = secureHasher;
         setName( SecuritySettings.LDAP_REALM_NAME );
-        setRolePermissionResolver( PredefinedRolesBuilder.rolePermissionResolver );
         configureRealm( config );
         if ( isAuthenticationCachingEnabled() )
         {
@@ -643,7 +642,7 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     }
 
     @Override
-    public void initialize() throws Exception
+    public void initialize()
     {
         if ( authorizationEnabled )
         {
@@ -653,12 +652,12 @@ public class LdapRealm extends DefaultLdapRealm implements RealmLifecycle, Shiro
     }
 
     @Override
-    public void start() throws Exception
+    public void start()
     {
     }
 
     @Override
-    public void stop() throws Exception
+    public void stop()
     {
     }
 

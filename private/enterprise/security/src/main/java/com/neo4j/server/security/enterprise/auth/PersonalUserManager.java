@@ -272,16 +272,16 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.grantPrivilegeToRole( roleName, dbPrivilege );
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
-                securityLog.info( subject, "granted `%s` privilege on `%s` for role `%s`",
-                        privilege.getAction(), privilege.getResource(), roleName );
+                securityLog.info( subject, "granted `%s` privilege on `%s` for database `%s` to role `%s`",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName );
             }
         }
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
-                securityLog.error( subject, "tried to grant `%s` privilege on `%s` for role `%s`: %s",
-                        privilege.getAction(), privilege.getResource(), roleName, e.getMessage() );
+                securityLog.error( subject, "tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName, e.getMessage() );
             }
             throw e;
         }
@@ -297,16 +297,16 @@ class PersonalUserManager implements EnterpriseUserManager
             userManager.revokePrivilegeFromRole( roleName, dbPrivilege );
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
-                securityLog.info( subject, "revoked `%s` privilege on `%s` for role `%s`",
-                        privilege.getAction(), privilege.getResource(), roleName );
+                securityLog.info( subject, "revoked `%s` privilege on `%s` for database `%s` from role `%s`",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName );
             }
         }
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
         {
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
-                securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for role `%s`: %s",
-                        privilege.getAction(), privilege.getResource(), roleName, e.getMessage() );
+                securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
+                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName, e.getMessage() );
             }
             throw e;
         }
@@ -328,10 +328,10 @@ class PersonalUserManager implements EnterpriseUserManager
     }
 
     @Override
-    public Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+    public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         assertUserManager();
-        return userManager.getPrivilegeForRoles( roles );
+        return userManager.getPrivilegesForRoles( roles );
     }
 
     @Override

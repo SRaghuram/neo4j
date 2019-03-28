@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth.plugin;
 
-import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthToken;
@@ -68,8 +67,6 @@ public class PluginRealm extends AuthorizingRealm implements RealmLifecycle, Shi
 
         // Synchronize this default value with the javadoc for AuthProviderOperations.setAuthorizationCachingEnabled
         setAuthorizationCachingEnabled( true );
-
-        setRolePermissionResolver( PredefinedRolesBuilder.rolePermissionResolver );
     }
 
     public PluginRealm( AuthenticationPlugin authenticationPlugin, AuthorizationPlugin authorizationPlugin,

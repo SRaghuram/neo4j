@@ -247,32 +247,27 @@ public class SystemGraphInitializer
         if ( PredefinedRolesBuilder.roles.containsKey( roleName ) )
         {
             SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
-            if ( isPermitted( simpleRole, StandardCommercialLoginContext.ADMIN ) )
+            if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ), "*" );
             }
-            if ( isPermitted( simpleRole, StandardCommercialLoginContext.SCHEMA_WRITE ) )
+            if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ), "*" );
             }
-            if ( isPermitted( simpleRole, StandardCommercialLoginContext.TOKEN_CREATE ) )
+            if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.TOKEN ), "*" );
             }
-            if ( isPermitted( simpleRole, StandardCommercialLoginContext.WRITE ) )
+            if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ), "*" );
             }
-            if ( isPermitted( simpleRole, StandardCommercialLoginContext.READ ) )
+            if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
                 systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, Resource.GRAPH ), "*" );
             }
         }
-    }
-
-    private boolean isPermitted( SimpleRole role, String permission )
-    {
-        return role.isPermitted( new WildcardPermission( permission ) );
     }
 
     private void migrateFromFlatFileRealm() throws Exception

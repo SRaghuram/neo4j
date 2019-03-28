@@ -67,11 +67,9 @@ public class SystemGraphOperations
     AuthorizationInfo doGetAuthorizationInfo( String username )
     {
         MutableBoolean existingUser = new MutableBoolean( false );
-        MutableBoolean isAdmin = new MutableBoolean( false );
         MutableBoolean passwordChangeRequired = new MutableBoolean( false );
         MutableBoolean suspended = new MutableBoolean( false );
         Set<String> roleNames = new TreeSet<>();
-        Set<String> permissions = new TreeSet<>();
 
         String query =
                 "MATCH (u:User {name: $username}) " +
@@ -107,15 +105,7 @@ public class SystemGraphOperations
             return new SimpleAuthorizationInfo();
         }
 
-        SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo( roleNames );
-        authorizationInfo.addStringPermissions( permissions );
-
-        if ( isAdmin.isTrue() )
-        {
-            authorizationInfo.addStringPermission( "system:*" );
-        }
-
-        return authorizationInfo;
+        return new SimpleAuthorizationInfo( roleNames );
     }
 
     void suspendUser( String username ) throws InvalidArgumentsException
@@ -226,10 +216,11 @@ public class SystemGraphOperations
                 "dbName", dbName
         );
 
-        queryExecutor.executeQueryWithParamCheck( "MERGE (:Resource {type: $resource}) RETURN 0", params );
-        String query = "MATCH (r:Role {name: $roleName}), (res:Resource {type: $resource}), (db:Database {name: $dbName}) " +
-                        "MERGE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
-                        "MERGE (p)-[:SCOPE]-(db) RETURN 0";
+        String query =
+                "MERGE (res:Resource {type: $resource}) WITH res " +
+                "MATCH (r:Role {name: $roleName}), (db:Database {name: $dbName}) " +
+                "MERGE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
+                "MERGE (p)-[:SCOPE]->(db) RETURN 0";
         boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
 
         if ( !success )
@@ -249,7 +240,7 @@ public class SystemGraphOperations
                 "dbName", dbName
         );
         String query =
-                "MATCH (role:Role)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource), (p)-[:SCOPE]-(db:Database) " +
+                "MATCH (role:Role)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource), (p)-[:SCOPE]->(db:Database) " +
                 "WHERE role.name = $roleName AND p.action = $action AND res.type = $resource AND db.name = $dbName " +
                 "DETACH DELETE p RETURN 0";
         queryExecutor.executeQueryWithParamCheck( query, params );
@@ -265,12 +256,10 @@ public class SystemGraphOperations
     Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
     {
         String query =
-                "MATCH (r:Role) " +
+                "MATCH (r:Role)-[:GRANTED]->(p:Privilege)-[:SCOPE]->(db:Database) " +
                 "WHERE r.name IN $roles " +
-                "MATCH (r)-[:GRANTED]->(p:Privilege)-[:SCOPE]-(db:Database) " +
                 "OPTIONAL MATCH (p)-[:APPLIES_TO]->(res) " +
-                "WITH DISTINCT db.name AS dbname, res.type AS resource, p.action AS action, res " +
-                "RETURN dbname, action, resource ORDER BY resource";
+                "RETURN db.name AS dbname, p.action AS action, res.type AS resource ORDER BY resource";
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 

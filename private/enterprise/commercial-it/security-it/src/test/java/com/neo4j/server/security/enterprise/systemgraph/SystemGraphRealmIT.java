@@ -50,6 +50,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
@@ -377,7 +378,7 @@ class SystemGraphRealmIT
                 .build(), securityLog, dbManager );
 
         // When
-        Set<DatabasePrivilege> privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.READER ) );
+        Set<DatabasePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );
 
         // Then
         DatabasePrivilege expected = new DatabasePrivilege( "*" );
@@ -385,28 +386,28 @@ class SystemGraphRealmIT
         assertThat( privileges, contains( expected ) );
 
         // When
-        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );
+        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );
 
         // Then
         expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
         assertThat( privileges, contains( expected ) );
 
         // When
-        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) );
+        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) );
 
         // Then
         expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.TOKEN ) );
         assertThat( privileges, contains( expected ) );
 
         // When
-        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) );
+        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) );
 
         // Then
         expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ) );
         assertThat( privileges, contains( expected ) );
 
         // When
-        privileges = realm.getPrivilegeForRoles( Collections.singleton( PredefinedRoles.ADMIN ) );
+        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ADMIN ) );
 
         // Then
         expected.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ) );
@@ -438,8 +439,8 @@ class SystemGraphRealmIT
         realm.grantPrivilegeToRole( "role", rolePriv );
 
         // Then
-        assertThat( realm.getPrivilegeForRoles( singleton( "custom" ) ), contains( customPriv ) );
-        assertThat( realm.getPrivilegeForRoles( singleton( "role" ) ), contains( rolePriv ) );
+        assertThat( realm.getPrivilegesForRoles( singleton( "custom" ) ), contains( customPriv ) );
+        assertThat( realm.getPrivilegesForRoles( singleton( "role" ) ), contains( rolePriv ) );
     }
 
     @Test
@@ -462,13 +463,13 @@ class SystemGraphRealmIT
         dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ) );
 
         // Then
-        assertThat( realm.getPrivilegeForRoles( singleton( "CustomAdmin" ) ), contains( dbPriv ) );
+        assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), contains( dbPriv ) );
 
         // When
         realm.setAdmin( "CustomAdmin", false );
 
         // Then
-        assertThat( realm.getPrivilegeForRoles( singleton( "CustomAdmin" ) ), empty() );
+        assertThat( realm.getPrivilegesForRoles( singleton( "CustomAdmin" ) ), empty() );
     }
 
     @Test
@@ -494,6 +495,82 @@ class SystemGraphRealmIT
             // Then
             assertThat( e.getMessage(), equalTo( "Role 'custom' does not exist." ) );
         }
+    }
+
+    @Test
+    void shouldGetCorrectPrivilegesForMultipleDatabases() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .migrateRole( "custom", "bob" )
+                .build(), securityLog, dbManager );
+
+        DatabasePrivilege dbPriv1 = new DatabasePrivilege( "*" );
+        dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        dbPriv1.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        dbPriv1.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ) );
+
+        DatabasePrivilege dbPriv2 = new DatabasePrivilege( DEFAULT_DATABASE_NAME );
+        dbPriv2.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        dbPriv2.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+
+        realm.grantPrivilegeToRole( "custom", dbPriv1 );
+        realm.grantPrivilegeToRole( "custom", dbPriv2 );
+
+        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
+
+        assertThat( privileges, containsInAnyOrder( dbPriv1, dbPriv2 ) );
+    }
+
+    @Test
+    void shouldShowPrivilegesForUser() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .migrateRole( "custom", "bob" )
+                .build(), securityLog, dbManager );
+
+        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
+        assertTrue( privileges.isEmpty() );
+
+        DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
+        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        realm.grantPrivilegeToRole( "custom", dbPriv );
+        privileges = realm.showPrivilegesForUser( "bob" );
+        DatabasePrivilege databasePrivilege = new DatabasePrivilege( "*" );
+        databasePrivilege.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
+    }
+
+    @Test
+    void shouldShowAdminPrivileges() throws Throwable
+    {
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
+                .shouldNotPerformImport()
+                .mayPerformMigration()
+                .migrateUsers( "alice", "bob" )
+                .migrateRole( PredefinedRoles.ADMIN, "alice" )
+                .migrateRole( "custom", "bob" )
+                .build(), securityLog, dbManager );
+
+        Set<DatabasePrivilege> privileges = realm.showPrivilegesForUser( "bob" );
+        assertTrue( privileges.isEmpty() );
+
+        realm.setAdmin( "custom", true );
+        privileges = realm.showPrivilegesForUser( "bob" );
+        DatabasePrivilege databasePrivilege = new DatabasePrivilege( "*" );
+        databasePrivilege.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ) );
+        assertThat( privileges, containsInAnyOrder( databasePrivilege ) );
+
+        realm.setAdmin( "custom", false );
+        privileges = realm.showPrivilegesForUser( "bob" );
+        assertTrue( privileges.isEmpty() );
     }
 
     private AuthorizationInfo getAuthSnapshot( SystemGraphRealm realm, String username )

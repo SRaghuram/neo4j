@@ -12,7 +12,6 @@ public class DatabasePrivilege
 {
     private final String dbname;
     private Set<ResourcePrivilege> privileges = new HashSet<>();
-    private boolean isAdmin;
 
     public DatabasePrivilege( String dbname )
     {
@@ -43,10 +42,6 @@ public class DatabasePrivilege
         {
             sb.append( privilege.toString() );
         }
-        if ( isAdmin )
-        {
-            sb.append( "(admin)" );
-        }
         sb.append( " }" );
         return sb.toString();
     }
@@ -54,13 +49,7 @@ public class DatabasePrivilege
     @Override
     public int hashCode()
     {
-        int hashCode = dbname.hashCode();
-        hashCode += 31 * privileges.hashCode();
-        if ( isAdmin )
-        {
-            hashCode *= 7;
-        }
-        return hashCode;
+        return dbname.hashCode() + 31 * privileges.hashCode();
     }
 
     @Override
@@ -69,7 +58,7 @@ public class DatabasePrivilege
         if ( obj instanceof DatabasePrivilege )
         {
             DatabasePrivilege other = (DatabasePrivilege) obj;
-            return other.dbname.equals( this.dbname ) && other.privileges.equals( this.privileges ) && other.isAdmin == this.isAdmin;
+            return other.dbname.equals( this.dbname ) && other.privileges.equals( this.privileges );
         }
         return false;
     }
@@ -77,15 +66,5 @@ public class DatabasePrivilege
     public String getDbName()
     {
         return this.dbname;
-    }
-
-    public void setAdmin( boolean setToAdmin )
-    {
-        isAdmin = setToAdmin;
-    }
-
-    public boolean isAdmin()
-    {
-        return isAdmin;
     }
 }

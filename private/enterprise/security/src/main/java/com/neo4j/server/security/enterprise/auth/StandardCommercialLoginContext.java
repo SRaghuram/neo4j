@@ -24,12 +24,6 @@ import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
 public class StandardCommercialLoginContext implements CommercialLoginContext
 {
-    public static final String ADMIN = "system:*";
-    public static final String SCHEMA_WRITE = "database:%s:write:schema";
-    public static final String TOKEN_CREATE = "database:%s:write:token";
-    public static final String WRITE = "database:%s:write:graph";
-    public static final String READ = "database:%s:read:graph";
-
     private final MultiRealmAuthManager authManager;
     private final ShiroSubject shiroSubject;
     private final NeoShiroSubject neoShiroSubject;

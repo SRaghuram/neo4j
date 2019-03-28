@@ -96,11 +96,6 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     @Override
     public void start() throws Exception
     {
-        // TODO think about this
-//        if ( !authenticationEnabled && !authorizationEnabled )
-//        {
-//            return;
-//        }
         if ( initOnStart )
         {
             systemGraphInitializer.initializeSystemGraph();
@@ -108,7 +103,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
-    public void stop() throws Exception
+    public void stop()
     {
     }
 
@@ -347,7 +342,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
     }
 
     @Override
-    public Set<DatabasePrivilege> getPrivilegeForRoles( Set<String> roles )
+    public Set<DatabasePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
         return systemGraphOperations.getPrivilegeForRoles( roles );
     }

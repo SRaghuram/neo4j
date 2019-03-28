@@ -114,9 +114,7 @@ public class ResourcePrivilege
     @Override
     public int hashCode()
     {
-        int hash = 7 * action.hashCode();
-        hash += 7 * resource.hashCode();
-        return hash;
+        return action.hashCode() + 31 * resource.hashCode();
     }
 
     @Override

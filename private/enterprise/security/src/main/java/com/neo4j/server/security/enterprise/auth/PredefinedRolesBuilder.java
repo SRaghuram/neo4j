@@ -22,11 +22,11 @@ import static org.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 
 public class PredefinedRolesBuilder implements RolesBuilder
 {
-    private static final WildcardPermission SYSTEM = new WildcardPermission( "system:*" );
-    private static final WildcardPermission SCHEMA = new WildcardPermission( "database:*:*:schema" );
-    private static final WildcardPermission TOKEN = new WildcardPermission( "database:*:*:token" );
-    private static final WildcardPermission WRITE = new WildcardPermission( "database:*:write:graph" );
-    private static final WildcardPermission READ = new WildcardPermission( "database:*:read:graph" );
+    public static final WildcardPermission SYSTEM = new WildcardPermission( "system:*" );
+    public static final WildcardPermission SCHEMA = new WildcardPermission( "database:*:*:schema" );
+    public static final WildcardPermission TOKEN = new WildcardPermission( "database:*:*:token" );
+    public static final WildcardPermission WRITE = new WildcardPermission( "database:*:write:graph" );
+    public static final WildcardPermission READ = new WildcardPermission( "database:*:read:graph" );
 
     private static final Map<String,SimpleRole> innerRoles = staticBuildRoles();
     public static final Map<String,SimpleRole> roles = Collections.unmodifiableMap( innerRoles );

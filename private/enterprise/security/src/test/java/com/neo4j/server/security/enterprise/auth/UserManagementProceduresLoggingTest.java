@@ -61,7 +61,7 @@ class UserManagementProceduresLoggingTest
         SecurityLog securityLog = new SecurityLog( log.getLog( getClass() ) );
 
         SystemGraphImportOptions importOptions =
-                new SystemGraphImportOptions( false, true, true, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
+                new SystemGraphImportOptions( false, false, true, false, InMemoryUserRepository::new, InMemoryRoleRepository::new, InMemoryUserRepository::new,
                         InMemoryRoleRepository::new, InMemoryUserRepository::new, InMemoryUserRepository::new );
 
         InMemorySystemGraphOperations ops = new InMemorySystemGraphOperations( secureHasher );
@@ -526,7 +526,7 @@ class UserManagementProceduresLoggingTest
         authProcedures.grantPrivilegeToRole( "foo", "read", "graph", "*" );
 
         // Then
-        log.assertExactly( info( "[admin]: granted `%s` privilege on `%s` for role `%s`", Action.READ, Resource.GRAPH, "foo" ) );
+        log.assertExactly( info( "[admin]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, Resource.GRAPH, "*", "foo" ) );
     }
 
     @Test
@@ -549,7 +549,8 @@ class UserManagementProceduresLoggingTest
 
         // Then
         log.assertExactly(
-                error( "[admin]: tried to grant `%s` privilege on `%s` for role `%s`: %s", Action.READ, Resource.GRAPH, "bar", "Role 'bar' does not exist." )
+                error( "[admin]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
+                        Action.READ, Resource.GRAPH, "*", "bar", "Role 'bar' does not exist." )
         );
     }
 
@@ -566,7 +567,8 @@ class UserManagementProceduresLoggingTest
 
         // Then
         log.assertExactly(
-                error( "[mats]: tried to grant `%s` privilege on `%s` for role `%s`: %s", Action.WRITE, Resource.GRAPH, "foo", "Permission denied." )
+                error( "[mats]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
+                        Action.WRITE, Resource.GRAPH, "*", "foo", "Permission denied." )
         );
     }
 
@@ -581,7 +583,7 @@ class UserManagementProceduresLoggingTest
         authProcedures.revokePrivilegeFromRole( "foo", "read", "graph", "*" );
 
         // Then
-        log.assertExactly( info( "[admin]: revoked `%s` privilege on `%s` for role `%s`", Action.READ, Resource.GRAPH, "foo" ) );
+        log.assertExactly( info( "[admin]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, Resource.GRAPH, "*", "foo" ) );
     }
 
     @Test
@@ -604,7 +606,8 @@ class UserManagementProceduresLoggingTest
 
         // Then
         log.assertExactly(
-                error( "[admin]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", Action.READ, Resource.GRAPH, "bar", "Role 'bar' does not exist." )
+                error( "[admin]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
+                        Action.READ, Resource.GRAPH, "*", "bar", "Role 'bar' does not exist." )
         );
     }
 
@@ -621,7 +624,8 @@ class UserManagementProceduresLoggingTest
 
         // Then
         log.assertExactly(
-                error( "[mats]: tried to revoke `%s` privilege on `%s` for role `%s`: %s", Action.WRITE, Resource.GRAPH, "foo", "Permission denied." )
+                error( "[mats]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
+                        Action.WRITE, Resource.GRAPH, "*", "foo", "Permission denied." )
         );
     }
 
