@@ -119,6 +119,24 @@ public class StubClusteredDatabaseContext extends LifecycleAdapter implements Cl
     }
 
     @Override
+    public void fail( Throwable t )
+    {
+
+    }
+
+    @Override
+    public boolean isFailed()
+    {
+        return false;
+    }
+
+    @Override
+    public Throwable failureCause()
+    {
+        return null;
+    }
+
+    @Override
     public CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents()
     {
         return catchupComponents;

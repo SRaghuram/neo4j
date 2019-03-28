@@ -9,9 +9,13 @@ import com.neo4j.test.TestCommercialGraphDatabaseFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.TestDirectoryExtension;
@@ -20,7 +24,8 @@ import org.neo4j.test.rule.TestDirectory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( TestDirectoryExtension.class )
 class StartupConstraintSemanticsTest
@@ -100,12 +105,10 @@ class StartupConstraintSemanticsTest
         try
         {
             graphDb = getCommunityDatabase();
-            fail( "should have failed to start!" );
-        }
-        // then
-        catch ( Exception e )
-        {
-            Throwable error = Exceptions.rootCause( e );
+            DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency( DatabaseManager.class );
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
+            assertTrue( databaseContext.isFailed() );
+            Throwable error = Exceptions.rootCause( databaseContext.failureCause() );
             assertThat( error, instanceOf( IllegalStateException.class ) );
             assertEquals( errorMessage, error.getMessage() );
         }

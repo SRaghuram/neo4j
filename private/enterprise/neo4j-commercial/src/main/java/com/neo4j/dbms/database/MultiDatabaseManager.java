@@ -5,7 +5,6 @@
  */
 package com.neo4j.dbms.database;
 
-import java.util.Comparator;
 import java.util.Optional;
 
 import org.neo4j.dbms.database.DatabaseContext;
@@ -18,7 +17,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Logger;
-import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
 
@@ -29,13 +27,6 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
     public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade graphDatabaseFacade )
     {
         super( globalModule, edition, log, graphDatabaseFacade );
-    }
-
-    @VisibleForTesting
-    MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade graphDatabaseFacade,
-            Comparator<DatabaseId> databasesOrdering )
-    {
-        super( globalModule, edition, log, graphDatabaseFacade, databasesOrdering );
     }
 
     @Override

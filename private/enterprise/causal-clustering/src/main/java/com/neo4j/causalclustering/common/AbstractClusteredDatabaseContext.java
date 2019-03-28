@@ -41,6 +41,7 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
     private final LogFiles txLogs;
     private final Database database;
     private final GraphDatabaseFacade facade;
+    private volatile Throwable failureCause;
     private final CatchupComponentsRepository.DatabaseCatchupComponents catchupComponents;
 
     private volatile StoreId storeId;
@@ -136,6 +137,24 @@ public abstract class AbstractClusteredDatabaseContext extends LifecycleAdapter 
     public void delete() throws IOException
     {
         storeFiles.delete( databaseLayout, txLogs );
+    }
+
+    @Override
+    public void fail( Throwable failureCause )
+    {
+        this.failureCause = failureCause;
+    }
+
+    @Override
+    public Throwable failureCause()
+    {
+        return failureCause;
+    }
+
+    @Override
+    public boolean isFailed()
+    {
+        return failureCause != null;
     }
 
     /**

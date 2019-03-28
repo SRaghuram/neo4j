@@ -102,7 +102,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
         if ( started )
         {
             started = false;
-            forEachDatabase( ( name, db ) -> stopDatabase( name, db, storeCopying ), true );
+            forEachDatabase( databaseMap.descendingMap(), ( name, db ) -> stopDatabase( name, db, storeCopying ) );
         }
     }
 
@@ -114,7 +114,7 @@ public class ClusteredMultiDatabaseManager<DB extends ClusteredDatabaseContext> 
             return;
         }
         started = true;
-        forEachDatabase( this::startDatabase, false );
+        forEachDatabase( databaseMap, this::startDatabase );
         dropAvailabilityGuard();
     }
 

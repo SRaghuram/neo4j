@@ -22,6 +22,8 @@ import java.util.function.Consumer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.Settings;
+import org.neo4j.dbms.database.DatabaseContext;
+import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -29,11 +31,13 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader.UnexpectedUpgradingStoreFormatException;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.TestGraphDatabaseFactory;
@@ -48,7 +52,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @ExtendWith( {DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class RecordFormatsMigrationIT
@@ -99,8 +104,18 @@ class RecordFormatsMigrationIT
         executeAndStopDb( startDb( HighLimit.NAME ), RecordFormatsMigrationIT::createNode );
         assertLatestHighLimitStore();
 
-        Exception exception = assertThrows( Exception.class, this::startStandardFormatDb );
-        assertThat( getRootCause( exception ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
+        GraphDatabaseService database = startStandardFormatDb();
+        try
+        {
+            DatabaseManager<?> databaseManager = ((GraphDatabaseAPI) database).getDependencyResolver().resolveDependency( DatabaseManager.class );
+            DatabaseContext databaseContext = databaseManager.getDatabaseContext( new DatabaseId( DEFAULT_DATABASE_NAME ) ).get();
+            assertTrue( databaseContext.isFailed() );
+            assertThat( getRootCause( databaseContext.failureCause() ), instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
+        }
+        finally
+        {
+            database.shutdown();
+        }
         assertLatestHighLimitStore();
     }
 

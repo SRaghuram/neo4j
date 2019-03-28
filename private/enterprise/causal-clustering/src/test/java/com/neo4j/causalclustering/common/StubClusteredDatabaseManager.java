@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 
 public class StubClusteredDatabaseManager implements ClusteredDatabaseManager<ClusteredDatabaseContext>
 {
-    private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>( DatabaseId.comparator );
+    private SortedMap<DatabaseId,ClusteredDatabaseContext> databases = new TreeMap<>( DatabaseId.DATABASE_ID_COMPARATOR );
     private boolean isStoppedForSomeReason;
     private CompositeDatabaseHealth globalDatabaseHealth;
 

@@ -5,8 +5,6 @@
  */
 package com.neo4j.dbms.database;
 
-import java.util.Comparator;
-
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.StandaloneDatabaseContext;
 import org.neo4j.kernel.database.Database;
@@ -20,14 +18,9 @@ import static org.mockito.Mockito.when;
 
 public class StubMultiDatabaseManager extends MultiDatabaseManager<DatabaseContext>
 {
-    StubMultiDatabaseManager( Comparator<DatabaseId> databasesOrdering )
-    {
-        super( null, null, NullLogger.getInstance(), null, databasesOrdering );
-    }
-
     StubMultiDatabaseManager()
     {
-        this( null );
+        super( null, null, NullLogger.getInstance(), null );
     }
 
     @Override
