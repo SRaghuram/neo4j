@@ -12,6 +12,7 @@ import org.neo4j.codegen.FieldReference.{field, staticField}
 import org.neo4j.codegen.MethodDeclaration.method
 import org.neo4j.codegen.MethodReference.methodReference
 import org.neo4j.codegen.Parameter.param
+import org.neo4j.codegen.TypeReference
 import org.neo4j.codegen.TypeReference.OBJECT
 import org.neo4j.codegen.bytecode.ByteCode.BYTECODE
 import org.neo4j.codegen.source.SourceCode.{PRINT_SOURCE, SOURCECODE}
@@ -162,9 +163,10 @@ object CodeGeneration {
     }
   }
 
-  def generateConstructor(clazz: codegen.ClassGenerator, fields: Seq[Field], params: Seq[Parameter] = Seq.empty): Unit = {
+  def generateConstructor(clazz: codegen.ClassGenerator, fields: Seq[Field], params: Seq[Parameter] = Seq.empty,
+                          parent: Option[TypeReference] = None): Unit = {
     using(clazz.generateConstructor(params.map(_.asCodeGen): _*)) { block =>
-      block.expression(invokeSuper(OBJECT))
+      block.expression(invokeSuper(parent.getOrElse(OBJECT)))
       fields.distinct.foreach {
         case InstanceField(typ, name, initializer) =>
           val reference = clazz.field(typ, name)
@@ -340,7 +342,7 @@ object CodeGeneration {
   private def compileClassDeclaration(c: ClassDeclaration): codegen.ClassHandle = {
     val handle = using(generator.generateClass(c.extendsClass.getOrElse(codegen.TypeReference.OBJECT), c.packageName, c.className, c.implementsInterfaces: _*)) { clazz: codegen.ClassGenerator =>
       //clazz.generateConstructor(generateParametersWithNames(c.constructor.constructor.params): _*)
-      generateConstructor(clazz, c.fields, c.constructorParameters)
+      generateConstructor(clazz, c.fields, c.constructorParameters, c.extendsClass)
       c.methods.foreach { m =>
         compileMethodDeclaration(clazz, m)
       }
