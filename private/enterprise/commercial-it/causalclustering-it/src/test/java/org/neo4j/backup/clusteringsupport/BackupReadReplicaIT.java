@@ -20,6 +20,7 @@ import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Settings;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
@@ -86,7 +87,7 @@ class BackupReadReplicaIT
         DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
         // Verify that backed up database can be started and compare representation
-        DbRepresentation backupRepresentation = DbRepresentation.of( new File( backupsDir, DEFAULT_DATABASE_NAME ) );
+        DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupsDir, DEFAULT_DATABASE_NAME ) ) );
         assertEquals( beforeChange, backupRepresentation );
         assertNotEquals( backupRepresentation, afterChange );
     }

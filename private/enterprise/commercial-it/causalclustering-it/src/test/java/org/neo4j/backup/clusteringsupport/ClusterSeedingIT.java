@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.rule.SuppressOutput;
@@ -126,7 +127,7 @@ public class ClusterSeedingIT
         {
             DefaultDatabasesBackup backups = backupsOpt.get();
             Config config = Config.defaults( GraphDatabaseSettings.default_database, backups.defaultDb().getName() );
-            dataMatchesEventually( DbRepresentation.of( backups.defaultDb(), config ), cluster.coreMembers() );
+            dataMatchesEventually( DbRepresentation.of( DatabaseLayout.of( backups.defaultDb() ), config ), cluster.coreMembers() );
         }
         assertEquals( shouldStoreCopy, fileCopyDetector.hasDetectedAnyFileCopied() );
     }

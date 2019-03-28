@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -70,7 +71,7 @@ class BackupCoreIT
             DbRepresentation afterChange = DbRepresentation.of( createSomeData( cluster ) );
 
             // Verify that old data is back
-            DbRepresentation backupRepresentation = DbRepresentation.of( coreDefaultDbBackupDir );
+            DbRepresentation backupRepresentation = DbRepresentation.of( DatabaseLayout.of( coreDefaultDbBackupDir ) );
             assertEquals( beforeChange, backupRepresentation );
             assertNotEquals( backupRepresentation, afterChange );
         }

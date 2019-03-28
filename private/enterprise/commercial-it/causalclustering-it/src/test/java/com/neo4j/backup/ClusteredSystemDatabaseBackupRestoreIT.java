@@ -38,6 +38,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.restore.RestoreDatabaseCommand;
 import org.neo4j.test.DbRepresentation;
@@ -52,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@ExtendWith( {SuppressOutputExtension.class, TestDirectoryExtension.class, DefaultFileSystemExtension.class} )
+@ExtendWith( {SuppressOutputExtension.class, DefaultFileSystemExtension.class, TestDirectoryExtension.class} )
 class ClusteredSystemDatabaseBackupRestoreIT
 {
     @Inject
@@ -91,7 +92,7 @@ class ClusteredSystemDatabaseBackupRestoreIT
         String leaderAddress = leader.settingValue( backupAddress );
 
         assertTrue( runBackupSameJvm( backupLocation, leaderAddress, databaseName ) );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( new File( backupLocation, databaseName ) );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupLocation, databaseName ) ) );
         assertEquals( DbRepresentation.of( getSystemDatabase( cluster ) ), backupDbRepresentation );
 
         cluster.coreTx( ( db, tx ) ->

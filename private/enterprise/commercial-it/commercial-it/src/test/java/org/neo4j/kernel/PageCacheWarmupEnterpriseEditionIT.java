@@ -149,7 +149,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
     @Test
     public void cacheProfilesMustBeIncludedInOfflineBackups() throws Exception
     {
-        File data = testDirectory.cleanDirectory( "data" );
+        File data = testDirectory.directory( "data" );
         File logs = new File( data, DEFAULT_TX_LOGS_ROOT_DIR_NAME );
         db.withSetting( MetricsSettings.metricsEnabled, Settings.FALSE )
           .withSetting( OnlineBackupSettings.online_backup_enabled, Settings.FALSE )

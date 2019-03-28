@@ -23,6 +23,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -82,7 +83,7 @@ class AdminToolCausalClusterBackupIT
         assertEquals( 0, exitCode );
 
         DbRepresentation leaderDbRepresentation = DbRepresentation.of( leader.database() );
-        DbRepresentation backupDbRepresentation = DbRepresentation.of( new File( backupDir, DEFAULT_DATABASE_NAME ), tempDbConfig() );
+        DbRepresentation backupDbRepresentation = DbRepresentation.of( DatabaseLayout.of( new File( backupDir, DEFAULT_DATABASE_NAME ) ), tempDbConfig() );
         assertEquals( leaderDbRepresentation, backupDbRepresentation );
     }
 
