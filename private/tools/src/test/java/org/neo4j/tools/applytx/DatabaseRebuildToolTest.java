@@ -154,7 +154,7 @@ class DatabaseRebuildToolTest
                 out, NULL_PRINT_STREAM );
 
         // WHEN
-        tool.run( "--from", fromLayout.getTransactionLogsDirectory().getAbsolutePath(), "--to", toLayout.databaseDirectory().getAbsolutePath(), "-i" );
+        tool.run( "--from", fromLayout.databaseDirectory().getAbsolutePath(), "--to", toLayout.databaseDirectory().getAbsolutePath(), "-i" );
 
         // THEN
         out.flush();
