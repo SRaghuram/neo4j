@@ -273,7 +273,7 @@ class PersonalUserManager implements EnterpriseUserManager
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
                 securityLog.info( subject, "granted `%s` privilege on `%s` for database `%s` to role `%s`",
-                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName );
+                        privilege.getAction(), privilege.getResource().toString(), dbPrivilege.getDbName(), roleName );
             }
         }
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
@@ -281,7 +281,7 @@ class PersonalUserManager implements EnterpriseUserManager
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
                 securityLog.error( subject, "tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
-                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName, e.getMessage() );
+                        privilege.getAction(), privilege.getResource().toString(), dbPrivilege.getDbName(), roleName, e.getMessage() );
             }
             throw e;
         }
@@ -298,7 +298,7 @@ class PersonalUserManager implements EnterpriseUserManager
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
                 securityLog.info( subject, "revoked `%s` privilege on `%s` for database `%s` from role `%s`",
-                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName );
+                        privilege.getAction(), privilege.getResource().toString(), dbPrivilege.getDbName(), roleName );
             }
         }
         catch ( AuthorizationViolationException | InvalidArgumentsException e )
@@ -306,7 +306,7 @@ class PersonalUserManager implements EnterpriseUserManager
             for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
             {
                 securityLog.error( subject, "tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
-                        privilege.getAction(), privilege.getResource(), dbPrivilege.getDbName(), roleName, e.getMessage() );
+                        privilege.getAction(), privilege.getResource().toString(), dbPrivilege.getDbName(), roleName, e.getMessage() );
             }
             throw e;
         }

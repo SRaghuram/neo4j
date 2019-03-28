@@ -220,7 +220,7 @@ public abstract class ProcedureInteractionTestBase<S>
         return Stream.concat( Arrays.stream( strs ), Arrays.stream( moreStr ) ).toArray( String[]::new );
     }
 
-    List<String> listOf( String... values )
+    protected List<String> listOf( String... values )
     {
         return Stream.of( values ).collect( toList() );
     }
@@ -429,7 +429,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertThat( err, equalTo( "" ) );
     }
 
-    void assertSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
+    protected void assertSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         assertSuccess( subject, call, null, resultConsumer );
     }
@@ -474,7 +474,7 @@ public abstract class ProcedureInteractionTestBase<S>
         return r.stream().map( s -> s.get( key ) ).collect( toList() );
     }
 
-    void assertKeyIs( ResourceIterator<Map<String,Object>> r, String key, Object... items )
+    protected void assertKeyIs( ResourceIterator<Map<String,Object>> r, String key, Object... items )
     {
         assertKeyIsArray( r, key, items );
     }
@@ -486,7 +486,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertThat( results, containsInAnyOrder( Arrays.stream( items ).map( this::valueOf ).toArray() ) );
     }
 
-    static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
+    protected static void assertKeyIsMap( ResourceIterator<Map<String,Object>> r, String keyKey, String valueKey,
             Object expected )
     {
         if ( expected instanceof MapValue )

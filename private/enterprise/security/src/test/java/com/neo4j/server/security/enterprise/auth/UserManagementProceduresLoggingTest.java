@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.InMemorySystemGraphOperations;
 
@@ -528,7 +527,7 @@ class UserManagementProceduresLoggingTest
         authProcedures.grantPrivilegeToRole( "foo", "read", "graph", "*" );
 
         // Then
-        log.assertExactly( info( "[admin]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, Resource.GRAPH, "*", "foo" ) );
+        log.assertExactly( info( "[admin]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, "graph", "*", "foo" ) );
     }
 
     @Test
@@ -552,7 +551,7 @@ class UserManagementProceduresLoggingTest
         // Then
         log.assertExactly(
                 error( "[admin]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
-                        Action.READ, Resource.GRAPH, "*", "bar", "Role 'bar' does not exist." )
+                        Action.READ, "graph", "*", "bar", "Role 'bar' does not exist." )
         );
     }
 
@@ -570,7 +569,7 @@ class UserManagementProceduresLoggingTest
         // Then
         log.assertExactly(
                 error( "[mats]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
-                        Action.WRITE, Resource.GRAPH, "*", "foo", "Permission denied." )
+                        Action.WRITE, "graph", "*", "foo", "Permission denied." )
         );
     }
 
@@ -585,7 +584,7 @@ class UserManagementProceduresLoggingTest
         authProcedures.revokePrivilegeFromRole( "foo", "read", "graph", "*" );
 
         // Then
-        log.assertExactly( info( "[admin]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, Resource.GRAPH, "*", "foo" ) );
+        log.assertExactly( info( "[admin]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, "graph", "*", "foo" ) );
     }
 
     @Test
@@ -609,7 +608,7 @@ class UserManagementProceduresLoggingTest
         // Then
         log.assertExactly(
                 error( "[admin]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
-                        Action.READ, Resource.GRAPH, "*", "bar", "Role 'bar' does not exist." )
+                        Action.READ, "graph", "*", "bar", "Role 'bar' does not exist." )
         );
     }
 
@@ -627,7 +626,7 @@ class UserManagementProceduresLoggingTest
         // Then
         log.assertExactly(
                 error( "[mats]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
-                        Action.WRITE, Resource.GRAPH, "*", "foo", "Permission denied." )
+                        Action.WRITE, "graph", "*", "foo", "Permission denied." )
         );
     }
 

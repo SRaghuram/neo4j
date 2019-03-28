@@ -8,8 +8,6 @@ package com.neo4j.server.security.enterprise.systemgraph;
 import com.neo4j.server.security.enterprise.CommercialSecurityModule;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import org.neo4j.server.security.auth.SecureHasher;
@@ -203,23 +201,23 @@ public class SystemGraphInitializer extends BasicSystemGraphInitializer
             SimpleRole simpleRole = PredefinedRolesBuilder.roles.get( roleName );
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ), "*" );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( "write", "system" ), "*" );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SCHEMA ), "*" );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( "write", "schema" ), "*" );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.TOKEN ), "*" );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( "write", "token" ), "*" );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.WRITE ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.GRAPH ), "*" );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( "write", "graph" ), "*" );
             }
             if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
             {
-                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.READ, Resource.GRAPH ), "*" );
+                systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( "read", "graph" ), "*" );
             }
         }
     }

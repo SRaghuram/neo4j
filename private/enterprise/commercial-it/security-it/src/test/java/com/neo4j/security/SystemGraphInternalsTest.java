@@ -7,8 +7,6 @@ package com.neo4j.security;
 
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -130,7 +128,7 @@ class SystemGraphInternalsTest
         realm.newUser( "Neo", password( "abc" ), false );
         realm.newRole( "custom", "Neo" );
         DatabasePrivilege dbPriv1 = new DatabasePrivilege( "*" );
-        dbPriv1.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        dbPriv1.addPrivilege( new ResourcePrivilege( "read", "graph" ) );
         realm.grantPrivilegeToRole( "custom", dbPriv1 );
         long privilegeNodes = nbrOfPrivilegeNodes();
         long resourceNodes = nbrOfResourceNodes();

@@ -6,8 +6,6 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.CommercialLoginContext;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -49,7 +47,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( "read", "graph" ) );
         userManager.grantPrivilegeToRole( "CustomRead", dbPriv );
 
         // Then
@@ -75,8 +73,8 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( "read", "graph" ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( "write", "graph" ) );
         userManager.grantPrivilegeToRole( roleName, dbPriv );
 
         // Then
@@ -85,7 +83,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
 
         // When
         dbPriv = new DatabasePrivilege( "*" );
-        dbPriv.addPrivilege( new ResourcePrivilege( Action.WRITE, Resource.GRAPH ) );
+        dbPriv.addPrivilege( new ResourcePrivilege( "write", "graph" ) );
         userManager.revokePrivilegeFromRole( roleName, dbPriv );
 
         // Then
@@ -113,7 +111,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
     void shouldNotAllowChangingBuiltinRoles() throws InvalidArgumentsException
     {
         DatabasePrivilege privilege = new DatabasePrivilege( "*" );
-        privilege.addPrivilege( new ResourcePrivilege( Action.READ, Resource.GRAPH ) );
+        privilege.addPrivilege( new ResourcePrivilege( "read", "graph" ) );
 
         for ( String role : Arrays.asList( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR,
                 PredefinedRoles.READER ) )

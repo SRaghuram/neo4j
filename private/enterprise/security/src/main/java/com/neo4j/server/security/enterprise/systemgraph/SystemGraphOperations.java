@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.auth.DatabasePrivilege;
+import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import org.neo4j.server.security.auth.SecureHasher;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -185,15 +186,18 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
 
     void grantPrivilegeToRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
     {
+        Resource resource = resourcePrivilege.getResource();
         Map<String,Object> params = map(
                 "roleName", roleName,
                 "action", resourcePrivilege.getAction().toString(),
-                "resource", resourcePrivilege.getResource().toString(),
+                "resource", resource.cypherType(),
+                "arg1", resource.getArg1(),
+                "arg2", resource.getArg2(),
                 "dbName", dbName
         );
 
         String query =
-                "MERGE (res:Resource {type: $resource}) WITH res " +
+                "MERGE (res:Resource {type: $resource, arg1: $arg1, arg2: $arg2}) WITH res " +
                 "MATCH (r:Role {name: $roleName}), (db:Database {name: $dbName}) " +
                 "MERGE (r)-[:GRANTED]->(p:Privilege {action: $action})-[:APPLIES_TO]->(res) " +
                 "MERGE (p)-[:SCOPE]->(db) RETURN 0";
@@ -209,17 +213,27 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
     void revokePrivilegeFromRole( String roleName, ResourcePrivilege resourcePrivilege, String dbName ) throws InvalidArgumentsException
     {
         assertRoleExists( roleName ); // This throws InvalidArgumentException if role does not exist
+        Resource resource = resourcePrivilege.getResource();
         Map<String,Object> params = map(
                 "roleName", roleName,
                 "action", resourcePrivilege.getAction().toString(),
-                "resource", resourcePrivilege.getResource().toString(),
+                "resource", resource.cypherType(),
+                "arg1", resource.getArg1(),
+                "arg2", resource.getArg2(),
                 "dbName", dbName
         );
         String query =
                 "MATCH (role:Role)-[:GRANTED]->(p:Privilege)-[:APPLIES_TO]->(res:Resource), (p)-[:SCOPE]->(db:Database) " +
-                "WHERE role.name = $roleName AND p.action = $action AND res.type = $resource AND db.name = $dbName " +
+                "WHERE role.name = $roleName AND p.action = $action AND db.name = $dbName AND " +
+                "res.type = $resource AND res.arg1 = $arg1 AND res.arg2 = $arg2 " +
                 "DETACH DELETE p RETURN 0";
-        queryExecutor.executeQueryWithParamCheck( query, params );
+        boolean success = queryExecutor.executeQueryWithParamCheck( query, params );
+
+        if ( !success )
+        {
+            assertRoleExists( roleName );
+            assertDbExists( dbName );
+        }
     }
 
     Set<DatabasePrivilege> showPrivilegesForUser( String username ) throws InvalidArgumentsException
@@ -235,7 +249,7 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
                 "MATCH (r:Role)-[:GRANTED]->(p:Privilege)-[:SCOPE]->(db:Database) " +
                 "WHERE r.name IN $roles " +
                 "OPTIONAL MATCH (p)-[:APPLIES_TO]->(res) " +
-                "RETURN db.name AS dbname, p.action AS action, res.type AS resource ORDER BY resource";
+                "RETURN db.name AS dbname, p.action AS action, res.type AS resource, res.arg1 AS arg1, res.arg2 AS arg2 ORDER BY resource";
 
         Map<String, DatabasePrivilege> results = new HashMap<>();
 
@@ -251,14 +265,18 @@ public class SystemGraphOperations extends BasicSystemGraphOperations
             DatabasePrivilege dbpriv = results.getOrDefault( dbName, new DatabasePrivilege( dbName ) );
 
             AnyValue actionValue = row.fields()[1];
-            AnyValue resourceValue = row.fields()[2];
-            if ( actionValue != NO_VALUE && resourceValue != NO_VALUE )
+            AnyValue resourceTypeValue = row.fields()[2];
+            AnyValue resourceArg1Value = row.fields()[3];
+            AnyValue resourceArg2Value = row.fields()[4];
+            if ( actionValue != NO_VALUE && resourceTypeValue != NO_VALUE )
             {
                 String action = ((TextValue) actionValue).stringValue();
-                String resource = ((TextValue) resourceValue).stringValue();
+                String resource = ((TextValue) resourceTypeValue).stringValue();
+                String arg1 = resourceArg1Value == NO_VALUE ? null : ((TextValue) resourceArg1Value).stringValue();
+                String arg2 = resourceArg2Value == NO_VALUE ? null : ((TextValue) resourceArg2Value).stringValue();
                 try
                 {
-                    ResourcePrivilege privilege = new ResourcePrivilege( action, resource );
+                    ResourcePrivilege privilege = new ResourcePrivilege( action, resource, arg1, arg2 );
                     dbpriv.addPrivilege( privilege );
                     results.put( dbName, dbpriv );
                 }

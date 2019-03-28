@@ -228,10 +228,11 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             {
                 for ( ResourcePrivilege privilege : dbPrivilege.getPrivileges() )
                 {
+                    Resource resource = privilege.getResource();
                     switch ( privilege.getAction() )
                     {
                     case READ:
-                        switch ( privilege.getResource() )
+                        switch ( resource.type() )
                         {
                         case TOKEN:
                         case SCHEMA:
@@ -245,7 +246,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         }
                         break;
                     case WRITE:
-                        switch ( privilege.getResource() )
+                        switch ( resource.type() )
                         {
                         case GRAPH:
                             write = true;
@@ -265,7 +266,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         }
                         break;
                     case EXECUTE:
-                        switch ( privilege.getResource() )
+                        switch ( resource.type() )
                         {
                         case GRAPH:
                         case TOKEN:

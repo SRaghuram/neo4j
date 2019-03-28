@@ -16,82 +16,30 @@ public class ResourcePrivilege
     {
         this.action = action;
         this.resource = resource;
-        assertValidPrivilege();
+        resource.assertValidCombination( action );
     }
 
     public ResourcePrivilege( String action, String resource ) throws InvalidArgumentsException
     {
-        Action asAction;
-        Resource asResource;
+        this( action, resource, null, null );
+    }
+
+    public ResourcePrivilege( String action, String resource, String arg1 ) throws InvalidArgumentsException
+    {
+        this( action, resource, arg1, null );
+    }
+
+    public ResourcePrivilege( String action, String resource, String arg1, String arg2 ) throws InvalidArgumentsException
+    {
         try
         {
-            asAction = Action.valueOf( action.toUpperCase() );
+            this.action = Action.valueOf( action.toUpperCase() );
+            this.resource = com.neo4j.server.security.enterprise.auth.Resource.parse( resource, arg1, arg2 );
+            this.resource.assertValidCombination( this.action );
         }
         catch ( IllegalArgumentException e )
         {
             throw new InvalidArgumentsException( action + " is not a valid action" );
-        }
-        try
-        {
-            asResource = Resource.valueOf( resource.toUpperCase() );
-        }
-        catch ( IllegalArgumentException e )
-        {
-            throw new InvalidArgumentsException( resource + " is not a valid resource" );
-        }
-
-        this.action = asAction;
-        this.resource = asResource;
-        assertValidPrivilege();
-    }
-
-    private void assertValidPrivilege() throws InvalidArgumentsException
-    {
-        switch ( action )
-        {
-        case READ:
-            switch ( resource )
-            {
-            case GRAPH:
-                break;
-            case TOKEN:
-            case SCHEMA:
-            case SYSTEM:
-            case PROCEDURE:
-            default:
-                throw new InvalidArgumentsException(
-                        String.format( "Invalid combination of action (%s) and resource (%s)", action.toString(), resource.toString() ) );
-            }
-            break;
-        case WRITE:
-            switch ( resource )
-            {
-            case GRAPH:
-            case TOKEN:
-            case SCHEMA:
-            case SYSTEM:
-                break;
-            case PROCEDURE:
-            default:
-                throw new InvalidArgumentsException(
-                        String.format( "Invalid combination of action (%s) and resource (%s)", action.toString(), resource.toString() ) );
-            }
-            break;
-        case EXECUTE:
-            switch ( resource )
-            {
-            case PROCEDURE:
-                break;
-            case GRAPH:
-            case TOKEN:
-            case SCHEMA:
-            case SYSTEM:
-            default:
-                throw new InvalidArgumentsException(
-                        String.format( "Invalid combination of action (%s) and resource (%s)", action.toString(), resource.toString() ) );
-            }
-            break;
-        default:
         }
     }
 
@@ -134,22 +82,6 @@ public class ResourcePrivilege
         READ,
         WRITE,
         EXECUTE;
-
-        @Override
-        public String toString()
-        {
-            return super.toString().toLowerCase();
-        }
-    }
-
-    // Type of resource a privilege applies to
-    public enum Resource
-    {
-        GRAPH,
-        SCHEMA,
-        TOKEN,
-        PROCEDURE,
-        SYSTEM;
 
         @Override
         public String toString()

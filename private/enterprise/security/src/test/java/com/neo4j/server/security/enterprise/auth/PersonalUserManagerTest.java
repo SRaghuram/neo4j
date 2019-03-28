@@ -6,7 +6,6 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,8 +75,8 @@ class PersonalUserManagerTest
         userManager.newRole( ROLE_NAME );
         log.clear();
 
-        userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) );
-        log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, Resource.GRAPH, "*", ROLE_NAME ) );
+        userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( "read", "graph" ) );
+        log.assertExactly( info( "[Alice]: granted `%s` privilege on `%s` for database `%s` to role `%s`", Action.READ, "graph", "*", ROLE_NAME ) );
     }
 
     @Test
@@ -87,9 +86,9 @@ class PersonalUserManagerTest
         log.clear();
         evilUserManager.setFailNextCall();
 
-        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        catchInvalidArguments( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
         log.assertExactly( error( "[Alice]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
-                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "assignPrivilegeToRoleException" )
+                Action.READ, "graph", "*", ROLE_NAME, "assignPrivilegeToRoleException" )
         );
     }
 
@@ -99,9 +98,9 @@ class PersonalUserManagerTest
         PersonalUserManager userManager = getUserManager( "Bob", false );
         log.clear();
 
-        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        catchAuthorizationViolation( () -> userManager.grantPrivilegeToRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
         log.assertExactly( error( "[Bob]: tried to grant `%s` privilege on `%s` for database `%s` to role `%s`: %s",
-                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "Permission denied." ) );
+                Action.READ, "graph", "*", ROLE_NAME, "Permission denied." ) );
     }
 
     @Test
@@ -111,8 +110,8 @@ class PersonalUserManagerTest
         userManager.newRole( ROLE_NAME );
         log.clear();
 
-        userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) );
-        log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, Resource.GRAPH, "*", ROLE_NAME ) );
+        userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( "read", "graph" ) );
+        log.assertExactly( info( "[Alice]: revoked `%s` privilege on `%s` for database `%s` from role `%s`", Action.READ, "graph", "*", ROLE_NAME ) );
     }
 
     @Test
@@ -122,9 +121,9 @@ class PersonalUserManagerTest
         log.clear();
         evilUserManager.setFailNextCall();
 
-        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        catchInvalidArguments( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
         log.assertExactly( error( "[Alice]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
-                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "revokePrivilegeFromRoleException" )
+                Action.READ, "graph", "*", ROLE_NAME, "revokePrivilegeFromRoleException" )
         );
     }
 
@@ -134,9 +133,9 @@ class PersonalUserManagerTest
         PersonalUserManager userManager = getUserManager( "Bob", false );
         log.clear();
 
-        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( Action.READ, Resource.GRAPH ) ) );
+        catchAuthorizationViolation( () -> userManager.revokePrivilegeFromRole( ROLE_NAME, createPrivilege( "read", "graph" ) ) );
         log.assertExactly( error( "[Bob]: tried to revoke `%s` privilege on `%s` for database `%s` from role `%s`: %s",
-                Action.READ, Resource.GRAPH, "*", ROLE_NAME, "Permission denied." ) );
+                Action.READ, "graph", "*", ROLE_NAME, "Permission denied." ) );
     }
 
     @Test
@@ -193,7 +192,7 @@ class PersonalUserManagerTest
                 error( "[Alice]: tried to show privileges for user `%s`: %s", "IDoNotExist", "showPrivilegesForUserException" ) );
     }
 
-    private DatabasePrivilege createPrivilege( Action action, Resource resource ) throws InvalidArgumentsException
+    private DatabasePrivilege createPrivilege( String action, String resource ) throws InvalidArgumentsException
     {
         DatabasePrivilege dbPriv = new DatabasePrivilege( "*" );
         dbPriv.addPrivilege( new ResourcePrivilege( action, resource ) );

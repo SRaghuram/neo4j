@@ -10,8 +10,6 @@ import com.neo4j.server.security.enterprise.auth.EnterpriseUserManager;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Action;
-import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.Resource;
 import org.neo4j.server.security.auth.SecureHasher;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
@@ -175,11 +173,11 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         assertNotPredefinedRoleName( roleName );
         if ( setToAdmin )
         {
-            systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ), "*" );
+            systemGraphOperations.grantPrivilegeToRole( roleName, new ResourcePrivilege( "write", "system" ), "*" );
         }
         else
         {
-            systemGraphOperations.revokePrivilegeFromRole( roleName, new ResourcePrivilege( Action.WRITE, Resource.SYSTEM ), "*" );
+            systemGraphOperations.revokePrivilegeFromRole( roleName, new ResourcePrivilege( "write", "system" ), "*" );
         }
         clearCachedAuthorizationInfo();
     }
