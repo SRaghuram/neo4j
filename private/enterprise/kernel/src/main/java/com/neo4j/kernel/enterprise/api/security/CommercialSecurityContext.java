@@ -34,7 +34,7 @@ public class CommercialSecurityContext extends SecurityContext
     }
 
     @Override
-    public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
+    public CommercialSecurityContext authorize( IdLookup idLookup, String dbName )
     {
         return this;
     }

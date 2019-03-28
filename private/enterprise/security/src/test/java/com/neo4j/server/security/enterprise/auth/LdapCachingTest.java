@@ -42,7 +42,7 @@ class LdapCachingTest
     private TestRealm testRealm;
     private FakeTicker fakeTicker;
 
-    private final LoginContext.PropertyKeyIdLookup token = s -> -1;
+    private final LoginContext.IdLookup token = LoginContext.IdLookup.EMPTY;
 
     @BeforeEach
     void setup() throws Throwable

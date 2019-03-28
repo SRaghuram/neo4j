@@ -16,7 +16,7 @@ public interface CommercialLoginContext extends LoginContext
     Set<String> roles();
 
     @Override
-    CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName );
+    CommercialSecurityContext authorize( IdLookup idLookup, String dbName );
 
     CommercialLoginContext AUTH_DISABLED = new CommercialLoginContext()
     {
@@ -33,7 +33,7 @@ public interface CommercialLoginContext extends LoginContext
         }
 
         @Override
-        public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
+        public CommercialSecurityContext authorize( IdLookup idLookup, String dbName )
         {
             return CommercialSecurityContext.AUTH_DISABLED;
         }

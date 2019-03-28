@@ -41,7 +41,7 @@ import static org.neo4j.server.security.auth.SecurityTestUtils.password;
 
 class CommercialLoginContextTest
 {
-    private static final LoginContext.PropertyKeyIdLookup token = prop -> -1;
+    private static final LoginContext.IdLookup token = LoginContext.IdLookup.EMPTY;
     private static final String user = "user";
 
     private MultiRealmAuthManager authManager;

@@ -100,7 +100,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
         return new CommercialLoginContext()
         {
             @Override
-            public CommercialSecurityContext authorize( PropertyKeyIdLookup propertyKeyIdLookup, String dbName )
+            public CommercialSecurityContext authorize( IdLookup idLookup, String dbName )
             {
                 return new CommercialSecurityContext( subject(), inner.mode(), Collections.emptySet(), false );
             }
@@ -111,7 +111,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
                 return Collections.emptySet();
             }
 
-            SecurityContext inner = AnonymousContext.none().authorize( s -> -1, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+            SecurityContext inner = AnonymousContext.none().authorize( IdLookup.EMPTY, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
             @Override
             public AuthSubject subject()

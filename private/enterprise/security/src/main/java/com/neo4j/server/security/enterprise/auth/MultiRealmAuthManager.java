@@ -340,7 +340,7 @@ public class MultiRealmAuthManager implements CommercialAuthAndUserManager
         return userManager.getPrivilegesForRoles( roles );
     }
 
-    IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.PropertyKeyIdLookup tokenLookup )
+    IntPredicate getPropertyPermissions( Set<String> roles, LoginContext.IdLookup tokenLookup )
     {
         if ( propertyAuthorization )
         {

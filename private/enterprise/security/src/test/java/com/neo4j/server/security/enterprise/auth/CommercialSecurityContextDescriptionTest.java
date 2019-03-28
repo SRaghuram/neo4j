@@ -29,7 +29,7 @@ public class CommercialSecurityContextDescriptionTest
     public MultiRealmAuthManagerRule authManagerRule = new MultiRealmAuthManagerRule();
 
     private EnterpriseUserManager manager;
-    private final LoginContext.PropertyKeyIdLookup token = s -> -1;
+    private final LoginContext.IdLookup token = LoginContext.IdLookup.EMPTY;
 
     @Before
     public void setUp() throws Throwable

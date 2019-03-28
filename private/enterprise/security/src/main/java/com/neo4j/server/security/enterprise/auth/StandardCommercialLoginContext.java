@@ -41,7 +41,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         return neoShiroSubject;
     }
 
-    private StandardAccessMode mode( PropertyKeyIdLookup resolver, String dbName )
+    private StandardAccessMode mode( IdLookup resolver, String dbName )
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
@@ -63,9 +63,9 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
     }
 
     @Override
-    public CommercialSecurityContext authorize( PropertyKeyIdLookup resolver, String dbName )
+    public CommercialSecurityContext authorize( IdLookup idLookup, String dbName )
     {
-        StandardAccessMode mode = mode( resolver, dbName );
+        StandardAccessMode mode = mode( idLookup, dbName );
         return new CommercialSecurityContext( neoShiroSubject, mode, mode.roles, mode.isAdmin() );
     }
 
@@ -88,7 +88,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                 .collect( Collectors.toSet() );
     }
 
-    private IntPredicate queryForPropertyPermissions( PropertyKeyIdLookup resolver )
+    private IntPredicate queryForPropertyPermissions( IdLookup resolver )
     {
         return authManager.getPropertyPermissions( roles(), resolver );
     }
