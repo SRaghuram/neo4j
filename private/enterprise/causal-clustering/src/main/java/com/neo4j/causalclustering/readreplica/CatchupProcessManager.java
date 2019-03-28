@@ -129,6 +129,7 @@ public class CatchupProcessManager extends SafeLifecycle
     @Override
     public void start0() throws Exception
     {
+        log.info( "Starting " + this.getClass().getSimpleName() );
         catchupProcesses = clusteredDatabaseManager.registeredDatabases().entrySet().stream()
                 .collect( Collectors.toMap( Map.Entry::getKey, e -> catchupProcessFactory.create( e.getValue() ) ) );
         txPulling.start();
@@ -160,6 +161,7 @@ public class CatchupProcessManager extends SafeLifecycle
     @Override
     public void stop0()
     {
+        log.info( "Shutting down " + this.getClass().getSimpleName() );
         timer.kill( Timer.CancelMode.SYNC_WAIT );
         txPulling.stop();
     }
