@@ -115,7 +115,7 @@ case class ArrayLoad(array: IntermediateRepresentation, offset: Int) extends Int
   * @param offset offset to set at
   * @param value value to set
   */
-case class ArraySet(array: IntermediateRepresentation, offset: Int, value: IntermediateRepresentation) extends IntermediateRepresentation
+case class ArraySet(array: IntermediateRepresentation, offset: IntermediateRepresentation, value: IntermediateRepresentation) extends IntermediateRepresentation
 
 /**
   * Defines ternary expression, i.e. {{{condition ? onTrue : onFalse}}}
@@ -194,6 +194,11 @@ case class IsNull(test: IntermediateRepresentation) extends IntermediateRepresen
   * @param ops the operations to perform in the block
   */
 case class Block(ops: Seq[IntermediateRepresentation]) extends IntermediateRepresentation
+
+/**
+  * Noop
+  */
+case object Noop extends IntermediateRepresentation
 
 /**
   * A conditon executes the operation if the test evaluates to true.
@@ -306,6 +311,13 @@ case class GetStatic(owner: Option[codegen.TypeReference], output: codegen.TypeR
   */
 case class NewInstance(constructor: Constructor, params: Seq[IntermediateRepresentation]) extends IntermediateRepresentation
 
+/**
+  * Instantiate a new array
+  * @param baseType the type of the array elements
+  * @param size
+  */
+case class NewArray(baseType: codegen.TypeReference, size: Int) extends IntermediateRepresentation
+
 case class OneTime(inner: IntermediateRepresentation)(private var used: Boolean) extends IntermediateRepresentation {
   def isUsed: Boolean = used
   def use(): Unit = {
@@ -361,6 +373,7 @@ case class ClassDeclaration(packageName: String,
                             implementsInterfaces: Seq[codegen.TypeReference],
                             //constructor: ConstructorDeclaration,
                             constructorParameters: Seq[Parameter],
+                            initializationCode: IntermediateRepresentation,
                             fields: Seq[Field],
                             methods: Seq[MethodDeclaration])
 
@@ -505,8 +518,11 @@ object IntermediateRepresentation {
   def arrayLoad(array: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     ArrayLoad(array, offset)
 
+//  def arraySet(array: IntermediateRepresentation, offset: IntermediateRepresentation, value: IntermediateRepresentation): IntermediateRepresentation =
+//    ArraySet(array, offset, value)
+
   def arraySet(array: IntermediateRepresentation, offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    ArraySet(array, offset, value)
+    ArraySet(array, constant(offset), value)
 
   def ternary(condition: IntermediateRepresentation,
               onTrue: IntermediateRepresentation,
@@ -531,6 +547,8 @@ object IntermediateRepresentation {
     NotEq(lhs, rhs)
 
   def block(ops: IntermediateRepresentation*): IntermediateRepresentation = Block(ops)
+
+  def noop(): IntermediateRepresentation = Noop
 
   def condition(test: IntermediateRepresentation)
                (onTrue: IntermediateRepresentation): IntermediateRepresentation = Condition(test, onTrue)
@@ -561,6 +579,8 @@ object IntermediateRepresentation {
   def isNull(test: IntermediateRepresentation): IntermediateRepresentation = IsNull(test)
 
   def newInstance(constructor: Constructor, params: IntermediateRepresentation*) = NewInstance(constructor, params)
+
+  def newArray(baseType: codegen.TypeReference, size: Int) = NewArray(baseType, size)
 
   def not(test: IntermediateRepresentation) = Not(test)
 

@@ -42,7 +42,7 @@ class CallingThreadQueryExecutor(morselSize: Int, transactionBinder: Transaction
                                 transactionBinder,
                                 numberOfWorkers = 1,
                                 nExpressionSlots,
-                                inputDataStream)
+                                inputDataStream) // TODO: Add prePopulateResults
 
     val executionState = TheExecutionState.build(stateDefinition, executablePipelines, StandardStateFactory, this)
     val pipelineExecutions = new PipelineExecutions(executablePipelines, executionState, queryContext, queryState, resources)

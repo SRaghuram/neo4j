@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.zombie.ContinuableOperatorTaskWithMorse
 import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.util.InternalException
+import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.{Cursor, NodeCursor, Read}
 import org.neo4j.values.AnyValue
 
@@ -30,11 +31,11 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
   def compilePipeline(p: Pipeline): Option[ExecutablePipeline] = {
     // First, try to fuse as many middle operators as possible into the head operator
-    val (maybeHeadOperator, remainingMiddlePlans) = fuseOperators(p.headPlan, p.middlePlans)
+    val (maybeHeadOperator, unhandledMiddlePlans, unhandledProduceResult) = fuseOperators(p.headPlan, p.middlePlans, p.produceResults)
 
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan))
-    val middleOperators = remainingMiddlePlans.flatMap(operatorFactory.createMiddle)
-    val produceResultOperator = p.produceResults.map(operatorFactory.createProduceResults)
+    val middleOperators = unhandledMiddlePlans.flatMap(operatorFactory.createMiddle)
+    val produceResultOperator = unhandledProduceResult.map(operatorFactory.createProduceResults)
     Some(ExecutablePipeline(p.id,
       headOperator,
       middleOperators,
@@ -45,7 +46,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       p.outputBuffer))
   }
 
-  private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan]): (Option[Operator], Seq[LogicalPlan]) = {
+  private def fuseOperators(headPlan: LogicalPlan, middlePlans: Seq[LogicalPlan], produceResult: Option[ProduceResult]): (Option[Operator], Seq[LogicalPlan], Option[ProduceResult]) = {
     val id = headPlan.id
     val slots = physicalPlan.slotConfigurations(id)
     val expressionCompiler = new IntermediateCodeGeneration(slots) // NOTE: We assume slots is the same within an entire pipeline
@@ -62,31 +63,33 @@ class FuseOperators(operatorFactory: OperatorFactory,
     // HeadPlan    -> Template3(inner=Template2)
     val innermostTemplate = new DelegateOperatorTaskTemplate
 
+    val innerTemplate = produceResult.map(p => new ProduceResultOperatorTaskTemplate(innermostTemplate, p.columns, slots)).getOrElse(innermostTemplate)
     val reversePlans = middlePlans.foldLeft(List(headPlan))((acc, p) => p :: acc)
 
-    val (operatorTaskTemplate, fusedPlans, unhandledPlans) =
-      reversePlans.foldLeft((innermostTemplate: OperatorTaskTemplate, List.empty[LogicalPlan], List.empty[LogicalPlan])) {
-        case ((innerTemplate, fusedPlans, unhandledPlans), p) => p match {
+    //noinspection VariablePatternShadow
+    val (operatorTaskTemplate, fusedPlans, unhandledPlans, unhandledProduceResult) =
+      reversePlans.foldLeft((innerTemplate: OperatorTaskTemplate, produceResult.toList: List[LogicalPlan], List.empty[LogicalPlan], None: Option[ProduceResult])) {
+        case ((innerTemplate, fusedPlans, unhandledPlans, unhandledProduceResult), p) => p match {
           case plans.AllNodesScan(nodeVariableName, _) =>
             val argumentSize = physicalPlan.argumentSizes(id)
             (new SerialAllNodeScanTemplate(innerTemplate, innermostTemplate, nodeVariableName, slots.getLongOffsetFor(nodeVariableName), argumentSize),
-              p :: fusedPlans, unhandledPlans)
+              p :: fusedPlans, unhandledPlans, unhandledProduceResult)
 
           case plans.Selection(predicate, _) =>
             val compiledPredicate: IntermediateExpression = expressionCompiler.compileExpression(predicate).getOrElse(
-              return (None, middlePlans)
+              return (None, middlePlans, unhandledProduceResult)
             )
-            (new FilterOperatorTemplate(innerTemplate, compiledPredicate), p :: fusedPlans, unhandledPlans)
+            (new FilterOperatorTemplate(innerTemplate, compiledPredicate), p :: fusedPlans, unhandledPlans, unhandledProduceResult)
 
           case _ =>
             // We cannot handle this plan. Start over from scratch (discard any previously fused plans)
-            (innermostTemplate, List.empty, p :: unhandledPlans)
+            (innermostTemplate, List.empty, p :: unhandledPlans, produceResult)
         }
       }
 
     // Did we find any sequence of operators that we can fuse with the headPlan?
     if (fusedPlans.length < 1 /* TODO: This should be 2, but we allow 1 for debugging */) {
-      (None, middlePlans)
+      (None, middlePlans, produceResult)
     }
     else {
       // Yes! Generate a class and an operator with a task factory that produces tasks based on the generated class
@@ -96,7 +99,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val operatorTaskWithMorselTemplate = operatorTaskTemplate.asInstanceOf[ContinuableOperatorTaskWithMorselTemplate]
 
       val taskFactory = ContinuableOperatorTaskWithMorselGenerator.generateClassAndTaskFactory(operatorTaskWithMorselTemplate)
-      (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), unhandledPlans)
+      (Some(new CompiledStreamingOperator(workIdentity, taskFactory)), unhandledPlans, unhandledProduceResult)
     }
   }
 }
@@ -135,16 +138,86 @@ object ContinuableOperatorTaskWithMorselGenerator {
 }
 
 trait OperatorTaskTemplate {
-  def genOperate: IntermediateRepresentation
   def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
     throw new InternalException("Illegal start operator template")
   }
 
-  // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.
+  def genInit: IntermediateRepresentation = noop
+
+  //def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit
+  // TODO: Make separate genOperate and genOperateSingleRow methods to distinguish
+  // streaming (loop over the whole output morsel) and stateless (processing a single row inlined into outer loop) usage
+  def genOperate: IntermediateRepresentation
+
+  // TODO: Create implementations of these in the base class that handles the recursive inner.genFields logic etc.?
   def genFields: Seq[Field]
   def genLocalVariables: Seq[LocalVariable]
 }
 
+trait ContinuableOperatorTaskTemplate extends OperatorTaskTemplate {
+  //override def canContinue: Boolean
+  def genCanContinue: IntermediateRepresentation
+}
+
+trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskTemplate {
+  import OperatorCodeGenTemplates._
+
+  // We let the generated class extend the abstract class CompiledContinuableOperatorTaskWithMorsel(which extends ContinuableOperatorTaskWithMorsel),
+  // which implements the close() and produceWorkUnit() methods from the ContinuableOperatorTask
+
+  // TODO: Use methods of actual interface to generate declaration?
+  override def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
+    val fields = genFields
+    val localVariables = genLocalVariables
+
+    ClassDeclaration(packageName, className,
+      extendsClass = Some(typeRefOf[CompiledContinuableOperatorTaskWithMorsel]),
+      implementsInterfaces = Seq.empty,
+      constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
+      initializationCode = genInit,
+      fields = fields,
+      methods = Seq(
+        MethodDeclaration("operateCompiled",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[Unit],
+          Seq(param[MorselExecutionContext]("context"),
+              param[DbAccess]("dbAccess"),
+              param[Array[AnyValue]]("params"),
+              param[ExpressionCursors]("cursors"),
+              param[Array[AnyValue]]("expressionVariables"),
+              param[CursorPool[NodeCursor]]("nodeCursorPool"),
+              param[QueryResultVisitor[_ <: Exception]]("resultVisitor")
+              //param[QueryResultVisitor[_]]("resultVisitor")
+          ),
+          body = genOperate,
+          localVariables
+        ),
+        MethodDeclaration("canContinue",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[Boolean],
+          parameters = Seq.empty,
+          body = genCanContinue
+        ),
+        // This is only needed because we extend an abstract scala class containing `val dataRead`
+        MethodDeclaration("dataRead",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[Read],
+          parameters = Seq.empty,
+          body = loadField(DATA_READ)
+        ),
+        // This is only needed because we extend an abstract scala class containing `val inputMorsel`
+        MethodDeclaration("inputMorsel",
+          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
+          returnType = typeRefOf[MorselExecutionContext],
+          parameters = Seq.empty,
+          body = loadField(INPUT_MORSEL)
+        )
+      )
+    )
+  }
+}
+
+// Used for innermost
 class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null) extends OperatorTaskTemplate {
   override def genOperate: IntermediateRepresentation = {
     delegate.genOperate
@@ -154,16 +227,11 @@ class DelegateOperatorTaskTemplate(var delegate: OperatorTaskTemplate = null) ex
   override def genLocalVariables: Seq[LocalVariable] = delegate.genLocalVariables
 }
 
-/*
-    AnyValue evaluate( ExecutionContext context,
-                       DbAccess dbAccess, // OldQueryContext
-                       AnyValue[] params,
-                       ExpressionCursors cursors,
-                       AnyValue[] expressionVariables );
-
- */
-
 class FilterOperatorTemplate(val inner: OperatorTaskTemplate, predicate: IntermediateExpression) extends OperatorTaskTemplate {
+  override def genInit: IntermediateRepresentation = {
+    inner.genInit
+  }
+
   override def genOperate: IntermediateRepresentation = {
     condition(equal(nullCheck(predicate)(predicate.ir), trueValue)) (
       inner.genOperate
@@ -177,65 +245,6 @@ class FilterOperatorTemplate(val inner: OperatorTaskTemplate, predicate: Interme
   override def genFields: Seq[Field] = {
     predicate.fields ++ inner.genFields
   }
-}
-
-
-trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
-  import OperatorCodeGenTemplates._
-
-  // TODO: Use methods of actual interface to generate declaration?
-  override def genClassDeclaration(packageName: String, className: String): ClassDeclaration = {
-    // TODO: Use genFields inst
-    //val inputMorselField = field[MorselExecutionContext]("inputMorsel")
-    val fields = genFields
-    val localVariables = genLocalVariables
-
-    ClassDeclaration(packageName, className,
-      extendsClass = Some(typeRefOf[CompiledContinuableOperatorTaskWithMorsel]),
-      implementsInterfaces = Seq.empty,
-      constructorParameters = Seq(DATA_READ_CONSTRUCTOR_PARAMETER, INPUT_MORSEL_CONSTRUCTOR_PARAMETER),
-      fields = fields,
-      methods = Seq(
-        MethodDeclaration("operate",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
-          returnType = typeRefOf[Unit],
-          Seq(param[MorselExecutionContext]("context"),
-              param[DbAccess]("dbAccess"),
-              param[Array[AnyValue]]("params"),
-              param[ExpressionCursors]("cursors"),
-              param[Array[AnyValue]]("expressionVariables"),
-              param[CursorPool[NodeCursor]]("nodeCursorPool")
-          ),
-          body = genOperate,
-          localVariables
-        ),
-        MethodDeclaration("canContinue",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
-          returnType = typeRefOf[Boolean],
-          parameters = Seq.empty,
-          body = genCanContinue
-        ),
-        MethodDeclaration("dataRead",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
-          returnType = typeRefOf[Read],
-          parameters = Seq.empty,
-          body = loadField(DATA_READ)
-        ),
-        MethodDeclaration("inputMorsel",
-          owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
-          returnType = typeRefOf[MorselExecutionContext],
-          parameters = Seq.empty,
-          body = loadField(INPUT_MORSEL)
-        )
-      )
-    )
-  }
-
-  //def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit
-  def genOperate: IntermediateRepresentation
-
-  //override def canContinue: Boolean
-  def genCanContinue: IntermediateRepresentation
 }
 
 abstract class InputLoopTaskTemplate extends ContinuableOperatorTaskWithMorselTemplate {
@@ -351,8 +360,12 @@ class SerialAllNodeScanTemplate(val inner: OperatorTaskTemplate,
     override def genLocalVariables: Seq[LocalVariable] = Seq.empty
   }
 
+  override def genInit: IntermediateRepresentation = {
+    inner.genInit
+  }
+
   override def genFields: Seq[Field] = {
-    super.genFields ++ inner.genFields :+ CURSOR
+    (super.genFields :+ CURSOR) ++ inner.genFields
   }
 
   override def genLocalVariables: Seq[LocalVariable] = {
@@ -416,6 +429,9 @@ object OperatorCodeGenTemplates {
 
   val OUTPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation =
     invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("moveToNextRow"))
+
+  val DB_ACCESS: IntermediateRepresentation =
+    load("dbAccess")
 
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation =
     invoke(load("nodeCursorPool"), method[CursorPool[_], Cursor]("allocate"))

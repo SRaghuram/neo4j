@@ -38,6 +38,25 @@ abstract class ZombieTestSuite(edition: Edition[EnterpriseRuntimeContext]) exten
     runtimeResult should beColumns("x").withRows(expected)
   }
 
+  test("should handle allNodeScan and filter") {
+    // given
+    val nodes = nodeGraph(11)
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .filter(Seq(
+        greaterThanOrEqual(function("id", varFor("x")), literalInt(3))))
+      .allNodeScan("x")
+      .build()
+
+    val runtimeResult = execute(logicalQuery, runtime)
+
+    // then
+    val expected = for { n <- nodes if n.getId >= 3 } yield Array(n)
+    runtimeResult should beColumns("x").withRows(expected)
+  }
+
   test("should handle expand") {
     // given
     val (nodes, rels) = circleGraph(10000)

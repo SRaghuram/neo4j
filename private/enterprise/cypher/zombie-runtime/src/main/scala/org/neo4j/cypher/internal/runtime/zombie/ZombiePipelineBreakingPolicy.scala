@@ -25,7 +25,8 @@ object ZombiePipelineBreakingPolicy extends PipelineBreakingPolicy {
       => true
 
       case _: ProduceResult |
-           _: Limit
+           _: Limit |
+           _: Selection
         => false
 
       // 2 child operators

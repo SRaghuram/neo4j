@@ -14,7 +14,7 @@ import org.neo4j.values.AnyValue
   * The query state of the morsel runtime
   */
 case class QueryState(params: Array[AnyValue],
-                      visitor: QueryResultVisitor[_],
+                      visitor: QueryResultVisitor[_ <: Exception],
                       morselSize: Int,
                       queryIndexes: Array[IndexReadSession],
                       transactionBinder: TransactionBinder, // hack until we stop prePopulate from using NodeProxy logic

@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
+import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.AnyValue
 
@@ -218,15 +219,17 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
                        resources: QueryResources): Unit = {
     // For compiled expressions to work they assume that some local variables exists with certain names
     // as defined by the CompiledExpression.evaluate() interface
-    operate(
+    operateCompiled(
       //--- Names used by compiled expressions
-      context = output,
+      output,
       dbAccess = context,
       params = state.params,
       cursors = resources.expressionCursors,
       expressionVariables = resources.expressionVariables(state.nExpressionSlots),
       //--- Additional operator codegen dependencies
-      nodeCursorPool = resources.cursorPools.nodeCursorPool
+      nodeCursorPool = resources.cursorPools.nodeCursorPool,
+      //--- Additional produce result codegen dependencies
+      resultVisitor = state.visitor
     )
   }
 
@@ -244,12 +247,13 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
     *                    ExpressionCursors cursors,
     *                    AnyValue[] expressionVariables );
     */
-  def operate(context: MorselExecutionContext,
-              dbAccess: DbAccess,
-              params: Array[AnyValue],
-              cursors: ExpressionCursors,
-              expressionVariables: Array[AnyValue],
-              nodeCursorPool: CursorPool[NodeCursor]): Unit
+  def operateCompiled(context: MorselExecutionContext,
+                      dbAccess: DbAccess,
+                      params: Array[AnyValue],
+                      cursors: ExpressionCursors,
+                      expressionVariables: Array[AnyValue],
+                      nodeCursorPool: CursorPool[NodeCursor],
+                      resultVisitor: QueryResultVisitor[_ <: Exception]): Unit
 }
 
 /**

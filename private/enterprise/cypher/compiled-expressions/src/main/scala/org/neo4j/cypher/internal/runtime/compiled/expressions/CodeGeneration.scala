@@ -164,6 +164,7 @@ object CodeGeneration {
   }
 
   def generateConstructor(clazz: codegen.ClassGenerator, fields: Seq[Field], params: Seq[Parameter] = Seq.empty,
+                          initializationCode: codegen.CodeBlock => codegen.Expression = _ => codegen.Expression.EMPTY,
                           parent: Option[TypeReference] = None): Unit = {
     using(clazz.generateConstructor(params.map(_.asCodeGen): _*)) { block =>
       block.expression(invokeSuper(parent.getOrElse(OBJECT)))
@@ -176,6 +177,7 @@ object CodeGeneration {
         case StaticField(typ, name, _) =>
           clazz.publicStaticField(typ, name)
       }
+      initializationCode(block)
     }
   }
 
@@ -232,7 +234,7 @@ object CodeGeneration {
 
     // array[offset] = value
     case ArraySet(array, offset, value) =>
-      block.expression(codegen.Expression.arraySet(compileExpression(array, block), constant(offset), compileExpression(value, block)))
+      block.expression(codegen.Expression.arraySet(compileExpression(array, block), compileExpression(offset, block), compileExpression(value, block)))
       codegen.Expression.EMPTY
 
     // array[offset]
@@ -320,6 +322,10 @@ object CodeGeneration {
     case NewInstance(constructor, args) =>
       codegen.Expression.invoke(codegen.Expression.newInstance(constructor.owner), constructor.asReference, args.map(compileExpression(_, block)):_*)
 
+    //new Foo[5]
+    case NewArray(baseType, size) =>
+      codegen.Expression.newArray(baseType, size)
+
     //while(test) { body }
     case Loop(test, body) =>
       using(block.whileLoop(compileExpression(test, block)))(compileExpression(body, _))
@@ -337,12 +343,19 @@ object CodeGeneration {
         e.use()
         compileExpression(inner, block)
       } else codegen.Expression.EMPTY
+
+    case Noop =>
+      codegen.Expression.EMPTY
   }
 
   private def compileClassDeclaration(c: ClassDeclaration): codegen.ClassHandle = {
     val handle = using(generator.generateClass(c.extendsClass.getOrElse(codegen.TypeReference.OBJECT), c.packageName, c.className, c.implementsInterfaces: _*)) { clazz: codegen.ClassGenerator =>
       //clazz.generateConstructor(generateParametersWithNames(c.constructor.constructor.params): _*)
-      generateConstructor(clazz, c.fields, c.constructorParameters, c.extendsClass)
+      generateConstructor(clazz,
+                          c.fields,
+                          c.constructorParameters,
+                          block => compileExpression(c.initializationCode, block),
+                          c.extendsClass)
       c.methods.foreach { m =>
         compileMethodDeclaration(clazz, m)
       }
