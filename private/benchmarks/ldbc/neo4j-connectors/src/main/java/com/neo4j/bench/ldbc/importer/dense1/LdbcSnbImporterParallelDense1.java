@@ -939,9 +939,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         lifeSupport.start();
         Config dbConfig = null == importerProperties ? Config.defaults() : Config.defaults( MapUtils.loadPropertiesToMap( importerProperties ) );
         dbConfig.augment( GraphDatabaseSettings.dense_node_threshold, String.valueOf( denseNodeThreshold ) );
-        Collector badCollector =
-                Collectors.badCollector( System.out, tagClassesFiles.stream().map( path -> (int) path.toFile().length() ).mapToInt( i -> i ).sum(),
-                        Collectors.collect( true, false, false ) );
+        Collector badCollector = Collector.EMPTY;
         BatchImporter batchImporter = new ParallelBatchImporter(
                 DatabaseLayout.of( dbDir ),
                 new DefaultFileSystemAbstraction(),
