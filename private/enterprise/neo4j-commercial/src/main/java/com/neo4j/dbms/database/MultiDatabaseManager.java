@@ -17,6 +17,7 @@ import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Logger;
+import org.neo4j.util.VisibleForTesting;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -30,7 +31,8 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         super( globalModule, edition, log, graphDatabaseFacade );
     }
 
-    public MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade graphDatabaseFacade,
+    @VisibleForTesting
+    MultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, Logger log, GraphDatabaseFacade graphDatabaseFacade,
             Comparator<String> databasesOrdering )
     {
         super( globalModule, edition, log, graphDatabaseFacade, databasesOrdering );

@@ -25,6 +25,8 @@ import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Arrays.asList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -287,7 +289,7 @@ class MultiDatabaseManagerIT
         var postCreationDatabases = databaseManager.registeredDatabases();
         assertEquals( 4, postCreationDatabases.size() );
 
-        assertTrue( postCreationDatabases.keySet().containsAll( asList( myAnotherDatabase, aMyAnotherDatabase, CUSTOM_DATABASE_NAME, SYSTEM_DATABASE_NAME ) ) );
+        assertThat( postCreationDatabases.keySet(), contains( SYSTEM_DATABASE_NAME, aMyAnotherDatabase, CUSTOM_DATABASE_NAME, myAnotherDatabase) );
     }
 
     @Test
