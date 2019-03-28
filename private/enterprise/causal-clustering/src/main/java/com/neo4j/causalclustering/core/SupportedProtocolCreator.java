@@ -127,7 +127,7 @@ public class SupportedProtocolCreator
                 .map( impl -> Pair.of( impl, finder.apply( impl ) ) )
                 .peek( protocolWithImplementation -> logUnknownProtocol( category, protocolWithImplementation ) )
                 .map( Pair::other )
-                .flatMap( opt -> opt.stream() )
+                .flatMap( Optional::stream )
                 .map( Protocol::implementation )
                 .collect( Collectors.toList() );
     }

@@ -54,7 +54,7 @@ public abstract class ProtocolRepository<U extends Comparable<U>,T extends Proto
         return versions
                 .stream()
                 .map( version -> select( protocolName, version ) )
-                .flatMap( opt -> opt.stream() )
+                .flatMap( Optional::stream )
                 .max( comparator.apply( protocolName ) );
     }
 

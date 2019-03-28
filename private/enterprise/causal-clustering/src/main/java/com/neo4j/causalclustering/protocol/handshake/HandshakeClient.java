@@ -146,7 +146,7 @@ public class HandshakeClient implements ClientMessageHandler
             List<Protocol.ModifierProtocol> agreedModifierProtocols = negotiatedModifierProtocols
                     .stream()
                     .map( Pair::other )
-                    .flatMap( opt -> opt.stream() )
+                    .flatMap( Optional::stream )
                     .collect( Collectors.toList() );
 
             protocolStack = new ProtocolStack( negotiatedApplicationProtocol, agreedModifierProtocols );

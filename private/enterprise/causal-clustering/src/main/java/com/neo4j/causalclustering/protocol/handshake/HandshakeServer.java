@@ -130,7 +130,7 @@ public class HandshakeServer implements ServerMessageHandler
         List<Protocol.ModifierProtocol> switchOverModifiers = switchOverRequest.modifierProtocols()
                 .stream()
                 .map( pair -> modifierProtocolRepository.select( pair.first(), pair.other() ) )
-                .flatMap( opt -> opt.stream() )
+                .flatMap( Optional::stream )
                 .collect( Collectors.toList() );
 
         if ( !switchOverProtocol.isPresent() )
