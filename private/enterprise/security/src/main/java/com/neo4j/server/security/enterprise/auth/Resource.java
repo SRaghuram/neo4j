@@ -80,7 +80,7 @@ public interface Resource
         @Override
         public boolean equals( Object obj )
         {
-            return ( obj instanceof DatabaseResource );
+            return obj instanceof DatabaseResource;
         }
 
         @Override
@@ -202,7 +202,7 @@ public interface Resource
         @Override
         public boolean equals( Object obj )
         {
-            return ( obj instanceof TokenResource );
+            return obj instanceof TokenResource;
         }
     }
 
@@ -244,7 +244,7 @@ public interface Resource
         @Override
         public boolean equals( Object obj )
         {
-            return ( obj instanceof SchemaResource );
+            return obj instanceof SchemaResource;
         }
     }
 
@@ -286,7 +286,7 @@ public interface Resource
         @Override
         public boolean equals( Object obj )
         {
-            return ( obj instanceof SystemResource );
+            return obj instanceof SystemResource;
         }
     }
 
@@ -349,7 +349,7 @@ public interface Resource
         @Override
         public boolean equals( Object obj )
         {
-            return ( obj instanceof ProcedureResource );
+            return obj instanceof ProcedureResource;
         }
     }
 

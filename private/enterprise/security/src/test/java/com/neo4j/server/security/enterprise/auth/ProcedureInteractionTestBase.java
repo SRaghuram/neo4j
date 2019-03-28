@@ -410,7 +410,7 @@ public abstract class ProcedureInteractionTestBase<S>
         String err = assertCallEmpty( subject, call, null );
         if ( StringUtils.isEmpty( partOfErrorMsg ) )
         {
-            assertThat( err, not( equalTo( "" ) ) );
+            assertThat( "Should have failed with an error message", err, not( equalTo( "" ) ) );
         }
         else
         {

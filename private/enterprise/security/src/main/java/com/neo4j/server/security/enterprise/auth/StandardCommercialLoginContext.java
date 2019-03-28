@@ -10,13 +10,16 @@ import com.neo4j.kernel.enterprise.api.security.CommercialSecurityContext;
 import org.apache.shiro.authz.AuthorizationInfo;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
@@ -46,7 +49,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         Set<String> roles = queryForRoleNames();
-        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles );
+        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver );
 
         Set<DatabasePrivilege> privileges = authManager.getPermissions( roles );
         for ( DatabasePrivilege privilege : privileges )
@@ -96,16 +99,19 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
     private static class StandardAccessMode implements AccessMode
     {
         private final boolean allowsReads;
+        private final boolean allowsReadAllLabels;
         private final boolean allowsWrites;
         private final boolean allowsSchemaWrites;
         private final boolean allowsTokenCreates;
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
+        private final Set<Integer> whitelistedLabels;
         private final IntPredicate propertyPermissions;
         private final boolean isAdmin;
 
         StandardAccessMode( boolean allowsReads, boolean allowsWrites, boolean allowsTokenCreates, boolean allowsSchemaWrites,
-                boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions )
+                boolean isAdmin, boolean passwordChangeRequired, Set<String> roles, IntPredicate propertyPermissions, boolean allowsReadAllLabels,
+                Set<Integer> whitelistedLabels )
         {
             this.allowsReads = allowsReads;
             this.allowsWrites = allowsWrites;
@@ -115,6 +121,8 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             this.passwordChangeRequired = passwordChangeRequired;
             this.roles = roles;
             this.propertyPermissions = propertyPermissions;
+            this.whitelistedLabels = whitelistedLabels;
+            this.allowsReadAllLabels = allowsReadAllLabels;
         }
 
         @Override
@@ -139,6 +147,23 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
         public boolean allowsSchemaWrites()
         {
             return allowsSchemaWrites;
+        }
+
+        @Override
+        public boolean allowsReadAllLabels()
+        {
+            return allowsReadAllLabels;
+        }
+
+        @Override
+        public boolean allowsReadLabels( IntStream labels )
+        {
+            if ( allowsReadAllLabels )
+            {
+                return true;
+            }
+            // it is enough to have allows on one label to read the node
+            return labels.anyMatch( whitelistedLabels::contains );
         }
 
         @Override
@@ -190,6 +215,7 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private final boolean isAuthenticated;
             private final boolean passwordChangeRequired;
             private final Set<String> roles;
+            private final IdLookup resolver;
 
             private boolean read;
             private boolean write;
@@ -197,12 +223,16 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
             private boolean schema;
             private boolean admin;
             private IntPredicate propertyPermissions;
+            private boolean allowReadAllNodes;
+            private Set<Integer> allowedLabels;
 
-            Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles )
+            Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver )
             {
                 this.isAuthenticated = isAuthenticated;
                 this.passwordChangeRequired = passwordChangeRequired;
                 this.roles = roles;
+                this.resolver = resolver;
+                allowedLabels = new HashSet<>();
             }
 
             void addPropertyPermissions( IntPredicate propertyPermissions )
@@ -221,7 +251,9 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                         isAuthenticated && admin,
                         passwordChangeRequired,
                         roles,
-                        propertyPermissions );
+                        propertyPermissions,
+                        allowReadAllNodes,
+                        allowedLabels );
             }
 
             void addPrivileges( DatabasePrivilege dbPrivilege )
@@ -241,6 +273,28 @@ public class StandardCommercialLoginContext implements CommercialLoginContext
                             break;
                         case GRAPH:
                             read = true;
+                            if ( resource instanceof Resource.LabelResource )
+                            {
+                                String label = resource.getArg1();
+                                if ( label.isEmpty() )
+                                {
+                                    allowReadAllNodes = true;
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        allowedLabels.add( resolver.getOrCreateLabelId( label ) );
+                                    }
+                                    catch ( KernelException ignored )
+                                    {
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                allowReadAllNodes = true;
+                            }
                             break;
                         default:
                         }
