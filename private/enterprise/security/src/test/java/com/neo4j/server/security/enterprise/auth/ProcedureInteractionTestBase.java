@@ -120,7 +120,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     private final String EMPTY_ROLE = "empty";
 
-    protected S adminSubject;
+    S adminSubject;
     S schemaSubject;
     S writeSubject;
     S editorSubject;
@@ -227,7 +227,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     //------------- Helper functions---------------
 
-    protected void testSuccessfulRead( S subject, Object count )
+    void testSuccessfulRead( S subject, Object count )
     {
         assertSuccess( subject, "MATCH (n) RETURN count(n) as count", r ->
         {
@@ -237,7 +237,7 @@ public abstract class ProcedureInteractionTestBase<S>
         } );
     }
 
-    protected void testFailRead( S subject, int count )
+    void testFailRead( S subject, int count )
     {
         testFailRead( subject, count, READ_OPS_NOT_ALLOWED );
     }
@@ -252,7 +252,7 @@ public abstract class ProcedureInteractionTestBase<S>
         assertEmpty( subject, "CREATE (:Node)" );
     }
 
-    protected void testFailWrite( S subject )
+    void testFailWrite( S subject )
     {
         testFailWrite( subject, WRITE_OPS_NOT_ALLOWED );
     }
@@ -418,12 +418,12 @@ public abstract class ProcedureInteractionTestBase<S>
         }
     }
 
-    protected void assertEmpty( S subject, String call )
+    void assertEmpty( S subject, String call )
     {
         assertEmpty( subject, call, null );
     }
 
-    protected void assertEmpty( S subject, String call, Map<String, Object> params )
+    void assertEmpty( S subject, String call, Map<String,Object> params )
     {
         String err = assertCallEmpty( subject, call, params );
         assertThat( err, equalTo( "" ) );
@@ -594,7 +594,7 @@ public abstract class ProcedureInteractionTestBase<S>
         ).collect( Collectors.toMap( r -> r.username, r -> r.activeTransactions ) );
     }
 
-    protected Object toRawValue( Object value )
+    Object toRawValue( Object value )
     {
         if ( value instanceof AnyValue )
         {
