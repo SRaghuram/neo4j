@@ -44,8 +44,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.graphdb.Label;
-import org.neo4j.unsafe.batchinsert.BatchInserter;
 
 import static com.neo4j.bench.ldbc.cli.LdbcCli.EMPTY_MAP;
 import static java.lang.String.format;

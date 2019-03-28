@@ -7,16 +7,16 @@ package org.neo4j.kernel.stresstests.transaction.checkpoint;
 
 import java.util.function.ToIntFunction;
 
-import org.neo4j.unsafe.impl.batchimport.GeneratingInputIterator;
-import org.neo4j.unsafe.impl.batchimport.InputIterable;
-import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.Group;
-import org.neo4j.unsafe.impl.batchimport.input.IdType;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
-import org.neo4j.unsafe.impl.batchimport.input.ReadableGroups;
+import org.neo4j.internal.batchimport.GeneratingInputIterator;
+import org.neo4j.internal.batchimport.InputIterable;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.input.Group;
+import org.neo4j.internal.batchimport.input.IdType;
+import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.input.ReadableGroups;
 import org.neo4j.values.storable.Value;
 
-import static org.neo4j.unsafe.impl.batchimport.input.Input.knownEstimates;
+import static org.neo4j.internal.batchimport.input.Input.knownEstimates;
 
 public class NodeCountInputs implements Input
 {

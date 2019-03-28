@@ -26,10 +26,10 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.batchinsert.BatchInserter;
+import org.neo4j.batchinsert.BatchInserters;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.unsafe.batchinsert.BatchInserter;
-import org.neo4j.unsafe.batchinsert.BatchInserters;
 
 import static java.lang.String.format;
 

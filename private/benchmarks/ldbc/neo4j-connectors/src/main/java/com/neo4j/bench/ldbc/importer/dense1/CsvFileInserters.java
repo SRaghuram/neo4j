@@ -49,9 +49,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.neo4j.batchinsert.BatchInserter;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.unsafe.batchinsert.BatchInserter;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;

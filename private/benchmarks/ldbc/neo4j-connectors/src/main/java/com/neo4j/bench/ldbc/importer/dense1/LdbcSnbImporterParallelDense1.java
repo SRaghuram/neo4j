@@ -41,10 +41,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.csv.reader.Extractors;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.internal.batchimport.AdditionalInitialIds;
+import org.neo4j.internal.batchimport.BatchImporter;
+import org.neo4j.internal.batchimport.ParallelBatchImporter;
+import org.neo4j.internal.batchimport.input.Collector;
+import org.neo4j.internal.batchimport.input.Collectors;
+import org.neo4j.internal.batchimport.input.Group;
+import org.neo4j.internal.batchimport.input.Groups;
+import org.neo4j.internal.batchimport.input.IdType;
+import org.neo4j.internal.batchimport.input.Input;
+import org.neo4j.internal.batchimport.input.InputEntityDecorators;
+import org.neo4j.internal.batchimport.input.csv.Configuration;
+import org.neo4j.internal.batchimport.input.csv.CsvInput;
+import org.neo4j.internal.batchimport.input.csv.DataFactories;
+import org.neo4j.internal.batchimport.input.csv.DataFactory;
+import org.neo4j.internal.batchimport.input.csv.Header;
+import org.neo4j.internal.batchimport.input.csv.Type;
+import org.neo4j.internal.batchimport.staging.ExecutionMonitors;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -54,24 +72,6 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.unsafe.batchinsert.internal.TransactionLogsInitializer;
-import org.neo4j.unsafe.impl.batchimport.AdditionalInitialIds;
-import org.neo4j.unsafe.impl.batchimport.BatchImporter;
-import org.neo4j.unsafe.impl.batchimport.Configuration;
-import org.neo4j.unsafe.impl.batchimport.ParallelBatchImporter;
-import org.neo4j.unsafe.impl.batchimport.input.Collector;
-import org.neo4j.unsafe.impl.batchimport.input.Collectors;
-import org.neo4j.unsafe.impl.batchimport.input.Group;
-import org.neo4j.unsafe.impl.batchimport.input.Groups;
-import org.neo4j.unsafe.impl.batchimport.input.IdType;
-import org.neo4j.unsafe.impl.batchimport.input.Input;
-import org.neo4j.unsafe.impl.batchimport.input.InputEntityDecorators;
-import org.neo4j.unsafe.impl.batchimport.input.csv.CsvInput;
-import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactories;
-import org.neo4j.unsafe.impl.batchimport.input.csv.DataFactory;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Header;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Type;
-import org.neo4j.unsafe.impl.batchimport.staging.ExecutionMonitors;
 
 import static com.neo4j.bench.ldbc.Domain.Forum;
 import static com.neo4j.bench.ldbc.Domain.HasMember;
@@ -91,7 +91,7 @@ import static com.neo4j.bench.ldbc.Domain.WorksAt;
 import static com.neo4j.bench.ldbc.connection.ImportDateUtil.createFor;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static org.neo4j.unsafe.impl.batchimport.ImportLogic.NO_MONITOR;
+import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 
 public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 {
@@ -154,8 +154,8 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
 
         Extractors extractors = new Extractors( ';' );
 
-        org.neo4j.unsafe.impl.batchimport.input.csv.Configuration configuration =
-                new org.neo4j.unsafe.impl.batchimport.input.csv.Configuration.Default()
+        Configuration configuration =
+                new Configuration.Default()
                 {
                     @Override
                     public char delimiter()
@@ -920,7 +920,7 @@ public class LdbcSnbImporterParallelDense1 extends LdbcSnbImporter
         // note: assumes input factories are called in order they are given, and two times: first->last, first->last
 
         int denseNodeThreshold = 1;
-        Configuration batchImporterConfiguration = new LdbcImporterConfig();
+        org.neo4j.internal.batchimport.Configuration batchImporterConfiguration = new LdbcImporterConfig();
 
         Input input = new CsvInput(
                 nodeDataFactories,

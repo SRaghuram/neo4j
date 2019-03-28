@@ -13,8 +13,8 @@ import java.text.ParseException;
 import java.util.Calendar;
 import java.util.function.Supplier;
 
-import org.neo4j.unsafe.impl.batchimport.input.InputEntityVisitor;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
+import org.neo4j.internal.batchimport.input.InputEntityVisitor;
+import org.neo4j.internal.batchimport.input.csv.Decorator;
 
 public class PersonDecorator implements Decorator
 {

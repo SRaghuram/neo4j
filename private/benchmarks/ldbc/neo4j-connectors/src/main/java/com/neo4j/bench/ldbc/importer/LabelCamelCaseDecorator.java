@@ -9,8 +9,8 @@ import com.google.common.base.CaseFormat;
 
 import java.util.Arrays;
 
-import org.neo4j.unsafe.impl.batchimport.input.InputEntityVisitor;
-import org.neo4j.unsafe.impl.batchimport.input.csv.Decorator;
+import org.neo4j.internal.batchimport.input.InputEntityVisitor;
+import org.neo4j.internal.batchimport.input.csv.Decorator;
 
 public class LabelCamelCaseDecorator implements Decorator
 {
