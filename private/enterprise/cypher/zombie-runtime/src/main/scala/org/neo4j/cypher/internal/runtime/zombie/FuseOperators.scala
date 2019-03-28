@@ -9,9 +9,9 @@ import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, Pipeline, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.compiled.expressions._
+import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext, QueryIndexes}
+import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.morsel.{CursorPool, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.zombie.ContinuableOperatorTaskWithMorse
 import org.neo4j.cypher.internal.runtime.zombie.operators._
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.v4_0.util.InternalException
-import org.neo4j.internal.kernel.api.{NodeCursor, Read}
+import org.neo4j.internal.kernel.api.{Cursor, NodeCursor, Read}
 import org.neo4j.values.AnyValue
 
 class FuseOperators(operatorFactory: OperatorFactory,
@@ -380,9 +380,9 @@ class SerialAllNodeScanTemplate(val inner: OperatorTaskTemplate,
     //}
     loop(and(OUTPUT_ROW_IS_VALID, invoke(loadField(CURSOR), method[NodeCursor, Boolean]("next"))))(
       block(
-        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, Int, Int]("copyFrom"),
+        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
           loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences)),
-        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit]("setLongAt"),
+        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, Int, Long]("setLongAt"),
           constant(offset), invoke(loadField(CURSOR), method[NodeCursor, Long]("nodeReference"))),
         inner.genOperate
       )
@@ -418,10 +418,10 @@ object OperatorCodeGenTemplates {
     invokeSideEffect(load("context"), method[MorselExecutionContext, Unit]("moveToNextRow"))
 
   val ALLOCATE_NODE_CURSOR: IntermediateRepresentation =
-    invoke(load("nodeCursorPool"), method[CursorPool[NodeCursor], NodeCursor]("allocate"))
+    invoke(load("nodeCursorPool"), method[CursorPool[_], Cursor]("allocate"))
 
   val FREE_NODE_CURSOR: IntermediateRepresentation =
-    invokeSideEffect(load("nodeCursorPool"), method[CursorPool[NodeCursor], Unit, NodeCursor]("free"), loadField(CURSOR))
+    invokeSideEffect(load("nodeCursorPool"), method[CursorPool[NodeCursor], Unit, Cursor]("free"), loadField(CURSOR))
 
   val ALL_NODE_SCAN: IntermediateRepresentation = invokeSideEffect(loadField(DATA_READ), method[Read, Unit, NodeCursor]("allNodesScan"), loadField(CURSOR))
 
