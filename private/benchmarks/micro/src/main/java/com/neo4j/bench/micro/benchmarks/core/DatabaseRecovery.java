@@ -160,7 +160,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         if ( checkpointPosition != null )
         {
             File highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
-            try ( StoreChannel storeChannel = fileSystem.create( highestLogFile ) )
+            try ( StoreChannel storeChannel = fileSystem.write( highestLogFile ) )
             {
                 storeChannel.truncate( checkpointPosition.getByteOffset() );
             }
