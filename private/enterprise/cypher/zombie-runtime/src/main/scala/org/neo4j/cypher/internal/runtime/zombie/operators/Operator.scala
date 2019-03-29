@@ -5,11 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.zombie.{ArgumentStateCreator, ArgumentStateMap, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExpressionCursors, QueryContext}
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.values.AnyValue
@@ -247,13 +247,14 @@ abstract class CompiledContinuableOperatorTaskWithMorsel extends ContinuableOper
     *                    ExpressionCursors cursors,
     *                    AnyValue[] expressionVariables );
     */
-  def operateCompiled(context: MorselExecutionContext,
-                      dbAccess: DbAccess,
-                      params: Array[AnyValue],
-                      cursors: ExpressionCursors,
-                      expressionVariables: Array[AnyValue],
-                      nodeCursorPool: CursorPool[NodeCursor],
-                      resultVisitor: QueryResultVisitor[_ <: Exception]): Unit
+  @throws[Exception]
+  def operateCompiled[E <: Exception](context: MorselExecutionContext,
+                                      dbAccess: DbAccess,
+                                      params: Array[AnyValue],
+                                      cursors: ExpressionCursors,
+                                      expressionVariables: Array[AnyValue],
+                                      nodeCursorPool: CursorPool[NodeCursor],
+                                      resultVisitor: QueryResultVisitor[E]): Unit
 }
 
 /**

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import org.neo4j.codegen
+import org.neo4j.codegen.TypeReference
 import org.neo4j.values.storable._
 
 /**
@@ -382,7 +383,9 @@ case class MethodDeclaration(methodName: String,
                              returnType: codegen.TypeReference,
                              parameters: Seq[Parameter],
                              body: IntermediateRepresentation,
-                             localVariables: Seq[LocalVariable] = Seq.empty) extends IntermediateRepresentation
+                             localVariables: Seq[LocalVariable] = Seq.empty,
+                             parameterizedWith: Option[(String, codegen.TypeReference.Bound)] = None,
+                             throws: Option[TypeReference] = None)
 
 case class ConstructorDeclaration(constructor: Constructor,
                                   body: IntermediateRepresentation)
@@ -469,6 +472,15 @@ object IntermediateRepresentation {
     Method(typeRef(owner), typeRef(out), name, typeRef(in1), typeRef(in2), typeRef(in3), typeRef(in4), typeRef(in5), typeRef(in6), typeRef(in7))
 
   def param[TYPE](name: String)(implicit typ: Manifest[TYPE]): Parameter = Parameter(typeRef(typ), name)
+
+  def param(name: String, typeReference: TypeReference): Parameter = Parameter(typeReference, name)
+
+  def parameterizedType(base: TypeReference, typ: TypeReference):TypeReference =
+    TypeReference.parameterizedType(base, typ)
+
+  def typeParam(name: String): TypeReference = TypeReference.typeParameter(name)
+
+  def extending[TYPE] (implicit typ: Manifest[TYPE]): TypeReference.Bound = TypeReference.extending(typeRef(typ))
 
   def constructor[OWNER](implicit owner: Manifest[OWNER]) = Constructor(typeRef(owner), Seq.empty)
 

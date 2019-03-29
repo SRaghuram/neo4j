@@ -161,7 +161,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
     block(
       project,
       // We should actually check the return value and exit the loop if the visitor returns false to fulfill the contract, but morsel runtime doesn't do that currently
-      invokeSideEffect(load("resultVisitor"), method[QueryResultVisitor[_], Boolean, QueryResult.Record]("visit"), loadField(RESULT_RECORD)),
+      invokeSideEffect(load("resultVisitor"), method[QueryResultVisitor[Exception], Boolean, QueryResult.Record]("visit"), loadField(RESULT_RECORD)),
       inner.genOperate
     )
   }

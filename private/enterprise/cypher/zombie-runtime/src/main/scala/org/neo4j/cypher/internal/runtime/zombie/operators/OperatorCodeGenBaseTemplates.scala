@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation.{loadField, noop, param, typeRefOf}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.v4_0.util.InternalException
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
 import org.neo4j.internal.kernel.api.{NodeCursor, Read}
 import org.neo4j.values.AnyValue
-
 
 class CompiledStreamingOperator(val workIdentity: WorkIdentity,
                                 val taskFactory: CompiledTaskFactory) extends StreamingOperator {
@@ -97,16 +96,17 @@ trait ContinuableOperatorTaskWithMorselTemplate extends ContinuableOperatorTaskT
           owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],
           returnType = typeRefOf[Unit],
           Seq(param[MorselExecutionContext]("context"),
-            param[DbAccess]("dbAccess"),
-            param[Array[AnyValue]]("params"),
-            param[ExpressionCursors]("cursors"),
-            param[Array[AnyValue]]("expressionVariables"),
-            param[CursorPool[NodeCursor]]("nodeCursorPool"),
-            param[QueryResultVisitor[_ <: Exception]]("resultVisitor")
-            //param[QueryResultVisitor[_]]("resultVisitor")
+              param[DbAccess]("dbAccess"),
+              param[Array[AnyValue]]("params"),
+              param[ExpressionCursors]("cursors"),
+              param[Array[AnyValue]]("expressionVariables"),
+              param[CursorPool[NodeCursor]]("nodeCursorPool"),
+              param("resultVisitor", parameterizedType(typeRefOf[QueryResultVisitor[_]], typeParam("E")))
           ),
           body = genOperate,
-          localVariables
+          localVariables = localVariables,
+          parameterizedWith = Some(("E", extending[Exception])),
+          throws = Some(typeParam("E"))
         ),
         MethodDeclaration("canContinue",
           owner = typeRefOf[CompiledContinuableOperatorTaskWithMorsel],

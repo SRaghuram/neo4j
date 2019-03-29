@@ -365,7 +365,14 @@ object CodeGeneration {
   }
 
   private def compileMethodDeclaration(clazz: codegen.ClassGenerator, m: MethodDeclaration): Unit = {
-    using(clazz.generateMethod(m.returnType, m.methodName, m.parameters.map(_.asCodeGen): _*)) { block =>
+    val method = codegen.MethodDeclaration.method(m.returnType, m.methodName,
+                                     m.parameters.map(_.asCodeGen): _*)
+    m.parameterizedWith.foreach {
+      case (name, bound) => method.parameterizedWith(name, bound)
+    }
+    m.throws.foreach(method.throwsException)
+
+    using(clazz.generate(method)) { block =>
       m.localVariables.distinct.foreach { v =>
         block.assign(v.typ, v.name, compileExpression(v.value, block))
       }
