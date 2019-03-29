@@ -48,6 +48,7 @@ import io.airlift.airline.OptionType;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -337,13 +338,13 @@ public class RunWorkloadCommand implements Runnable
             System.out.println( "Verifying store..." );
             try ( Store store = Store.createFrom( storeDir.toPath() ) )
             {
-                Path neo4jTmpConfigPath = new File( "neo4j_conf_tmp.conf" ).toPath();
-                neo4jConfig.writeAsProperties( neo4jTmpConfigPath );
-                Database.verifySchema( store, neo4jEdition, neo4jTmpConfigPath, workload.expectedSchema() );
+                Path effectiveNeo4jConf = Paths.get("effective_neo4j.conf" );
+                neo4jConfig.writeAsProperties( effectiveNeo4jConf );
+                Database.verifySchema( store, neo4jEdition, effectiveNeo4jConf, workload.expectedSchema() );
                 if ( recreateSchema )
                 {
                     System.out.println( "Preparing to recreate schema..." );
-                    Database.recreateSchema( store, neo4jEdition, neo4jTmpConfigPath, workload.expectedSchema() );
+                    Database.recreateSchema( store, neo4jEdition, effectiveNeo4jConf, workload.expectedSchema() );
                 }
                 System.out.println( "Store verified\n" );
                 Database.verifyStoreFormat( store.graphDbDirectory().toFile() );
