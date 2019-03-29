@@ -6,7 +6,9 @@
 package org.neo4j.cypher.internal.runtime.zombie.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateRepresentation._
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.morsel._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
@@ -136,4 +138,71 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     override def canContinue: Boolean = _canContinue
   }
 
+}
+
+class SingleThreadedAllNodeScanTaskTemplate(val inner: OperatorTaskTemplate,
+                                            val innermost: DelegateOperatorTaskTemplate,
+                                            val nodeVarName: String,
+                                            val offset: Int,
+                                            val argumentSize: SlotConfiguration.Size) extends InputLoopTaskTemplate {
+  import OperatorCodeGenHelperTemplates._
+
+  // Setup the innermost output template
+  innermost.delegate = new OperatorTaskTemplate {
+    override def genOperate: IntermediateRepresentation = {
+      OUTPUT_ROW_MOVE_TO_NEXT
+    }
+    override def genFields: Seq[Field] = Seq.empty
+    override def genLocalVariables: Seq[LocalVariable] = Seq.empty
+  }
+
+  override def genInit: IntermediateRepresentation = {
+    inner.genInit
+  }
+
+  override def genFields: Seq[Field] = {
+    (super.genFields :+ CURSOR) ++ inner.genFields
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = {
+    inner.genLocalVariables
+  }
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+    //cursor = resources.cursorPools.nodeCursorPool.allocate()
+    //context.transactionalContext.dataRead.allNodesScan(cursor)
+    //true
+    block(
+      setField(CURSOR, ALLOCATE_NODE_CURSOR),
+      ALL_NODE_SCAN,
+      constant(true)
+    )
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    //while (outputRow.isValidRow && cursor.next()) {
+    //  outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+    //  outputRow.setLongAt(offset, cursor.nodeReference())
+    //  <<< inner.genOperate() >>>
+    //  //outputRow.moveToNextRow() // <- This needs to move to the innermost level
+    //}
+    loop(and(OUTPUT_ROW_IS_VALID, invoke(loadField(CURSOR), method[NodeCursor, Boolean]("next"))))(
+      block(
+        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+          loadField(INPUT_MORSEL), constant(argumentSize.nLongs), constant(argumentSize.nReferences)),
+        invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit, Int, Long]("setLongAt"),
+          constant(offset), invoke(loadField(CURSOR), method[NodeCursor, Long]("nodeReference"))),
+        inner.genOperate
+      )
+    )
+  }
+
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    //resources.cursorPools.nodeCursorPool.free(cursor)
+    //cursor = null
+    block(
+      FREE_NODE_CURSOR,
+      setField(CURSOR, constant(null))
+    )
+  }
 }

@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.morsel.{MorselExecutionContext, QueryRe
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.slotted.{ArrayResultExecutionContextFactory, SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.zombie.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.zombie.{ContinuableOperatorTaskTemplate, OperatorCodeGenTemplates, OperatorTaskTemplate}
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.{InternalException, symbols}
 import org.neo4j.cypher.result.QueryResult
@@ -123,7 +122,7 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate, columns
     constant(false) // will be true sometimes for reactive results
   }
 
-  import OperatorCodeGenTemplates._
+  import OperatorCodeGenHelperTemplates._
 
   // This operates on a single row only
   override def genOperate: IntermediateRepresentation = {

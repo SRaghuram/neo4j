@@ -1841,21 +1841,24 @@ class IntermediateCodeGeneration(slots: SlotConfiguration) {
       None
   }
 
-  private def getLongAt(offset: Int): IntermediateRepresentation =
+  //==================================================================================================
+  // ExecutionContext accessors. Can be overridden to use a different kind of
+  protected def getLongAt(offset: Int): IntermediateRepresentation =
     invoke(LOAD_CONTEXT, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
     //load(variableThatMapsToLongSlot(offset))
 
-  private def getRefAt(offset: Int): IntermediateRepresentation =
+  protected def getRefAt(offset: Int): IntermediateRepresentation =
     invoke(LOAD_CONTEXT, method[ExecutionContext, AnyValue, Int]("getRefAt"),
            constant(offset))
 
-  private def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+  protected def setRefAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
-  private def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
+  protected def setLongAt(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
+  //==================================================================================================
 
   private def coerceToPredicate(e: IntermediateExpression) = IntermediateExpression(
     invokeStatic(method[CypherBoolean, Value, AnyValue]("coerceToBoolean"), e.ir), e.fields, e.variables, e.nullCheck)
