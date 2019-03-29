@@ -70,7 +70,7 @@ public class ThroughputMonitor extends LifecycleAdapter
     @Override
     public void stop()
     {
-        job.cancel( false );
+        job.cancel();
 
         // After cancelling the job, no new jobs will be scheduled.
         // We drain the semaphore, blocking if necessary, to ensure that any on-going job will finish, and no enqueued jobs will start.
