@@ -657,4 +657,59 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     result.toList should equal(List(Map("person.name" -> "Chris")))
 
   }
+
+  // Multiple patterns in the inner MATCH not yet supported
+
+  test("multiple patterns in outer MATCH should be supported") {
+    val query =
+      """
+        |MATCH (person:Person), (dog:Dog)
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog)
+        |  WHERE NOT EXISTS {
+        |    MATCH (dog)
+        |    WHERE dog.name = 'Bosse'
+        |  }
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+    plan should includeSomewhere.aPlan("AntiSemiApply")
+    result.toList should equal(List(Map("person.name" -> "Chris"), Map("person.name" -> "Chris")))
+
+  }
+
+  test("multiple patterns in inner MATCH should fail with syntax error") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        | MATCH (person), (car:Car)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val expectedErrorMsg = "Multiple patterns are not supported for MATCH inside an EXISTS subclause."
+    failWithError(Configs.All, query, Seq(expectedErrorMsg), Seq("SyntaxException"))
+  }
+
+  test("multiple patterns in inner MATCH with WHERE should fail with syntax error") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        | MATCH (person), (person)-[:HAS_DOG]->(dog:Dog)
+        | WHERE dog.name = "Bosse"
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val expectedErrorMsg = "Multiple patterns are not supported for MATCH inside an EXISTS subclause."
+    failWithError(Configs.All, query, Seq(expectedErrorMsg), Seq("SyntaxException"))
+  }
+
 }
