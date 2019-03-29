@@ -712,4 +712,65 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     failWithError(Configs.All, query, Seq(expectedErrorMsg), Seq("SyntaxException"))
   }
 
+  // More unsupported EXISTS subqueries
+
+  test("RETURN in inner MATCH should fail with syntax error at parsing") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        | MATCH (person), (person)-[:HAS_DOG]->(dog:Dog)
+        | RETURN dog.name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    failWithError(Configs.All, query, errorType = Seq("SyntaxException"))
+  }
+
+  test("inner query with MATCH -> WHERE -> WITH -> WHERE should fail with syntax error at parsing") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        | WHERE person.name = 'Chris'
+        | WITH dog
+        | WHERE dog.name = 'Ozzy'
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    failWithError(Configs.All, query, errorType = Seq("SyntaxException"))
+  }
+
+  test("inner query with horizon should fail with syntax error at parsing") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        | MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        | WITH dog
+        | MATCH (dog {name: 'Ozzy'})
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    failWithError(Configs.All, query, errorType = Seq("SyntaxException"))
+  }
+
+  test("inner query with UNWIND should fail with syntax error at parsing") {
+    val query =
+      """
+        |MATCH (person:Person)
+        |WHERE EXISTS {
+        | UNWIND $dogNames AS name
+        |   MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |   WHERE dog.name = name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    failWithError(Configs.All, query, params = Map("dogNames" -> Seq("Fido", "Bosse")), errorType = Seq("SyntaxException"))
+  }
 }
