@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 
 import static org.neo4j.io.IOUtils.closeAll;
 
@@ -25,7 +24,7 @@ public class StreamToDisk implements StoreFileStream
 
     static StreamToDisk fromFile( FileSystemAbstraction fsa, File file ) throws IOException
     {
-        return new StreamToDisk( fsa.open( file, OpenMode.READ_WRITE ) );
+        return new StreamToDisk( fsa.create( file ) );
     }
 
     private StreamToDisk( WritableByteChannel writableByteChannel, AutoCloseable... closeables )

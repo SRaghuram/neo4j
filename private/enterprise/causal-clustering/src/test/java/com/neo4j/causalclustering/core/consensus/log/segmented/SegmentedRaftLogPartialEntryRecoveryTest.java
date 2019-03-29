@@ -25,7 +25,6 @@ import java.util.UUID;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
@@ -160,13 +159,13 @@ class SegmentedRaftLogPartialEntryRecoveryTest
         String logFilename = recoveryState.segments.last().getFilename();
         recoveryState.segments.close();
         File logFile = new File( logDirectory, logFilename );
-        StoreChannel lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+        StoreChannel lastFile = fs.create( logFile );
         long currentSize = lastFile.size();
         lastFile.close();
 
         // When
         // We induce an incomplete entry at the end of the last file
-        lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+        lastFile = fs.create( logFile );
         lastFile.truncate( currentSize - 1 );
         lastFile.close();
 
@@ -201,13 +200,13 @@ class SegmentedRaftLogPartialEntryRecoveryTest
     private void truncateAndRecover( File logFile, long truncateDownToSize )
             throws IOException, DamagedLogStorageException, DisposedException
     {
-        StoreChannel lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+        StoreChannel lastFile = fs.create( logFile );
         long currentSize = lastFile.size();
         lastFile.close();
         RecoveryProtocol recovery;
         while ( currentSize-- > truncateDownToSize )
         {
-            lastFile = fs.open( logFile, OpenMode.READ_WRITE );
+            lastFile = fs.create( logFile );
             lastFile.truncate( currentSize );
             lastFile.close();
             recovery = createRecoveryProtocol();

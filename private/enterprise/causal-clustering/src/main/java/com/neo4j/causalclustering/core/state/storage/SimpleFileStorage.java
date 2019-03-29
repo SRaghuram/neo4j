@@ -10,15 +10,17 @@ import com.neo4j.causalclustering.messaging.marshalling.ChannelMarshal;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FlushableChannel;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.ReadAheadChannel;
 import org.neo4j.io.fs.ReadableClosableChannel;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import static java.nio.file.StandardOpenOption.READ;
 
 public class SimpleFileStorage<T> implements SimpleStorage<T>
 {
@@ -44,7 +46,7 @@ public class SimpleFileStorage<T> implements SimpleStorage<T>
     @Override
     public T readState() throws IOException
     {
-        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fileSystem.open( file, OpenMode.READ ) ) )
+        try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fileSystem.open( file, Set.of( READ ) ) ) )
         {
             return marshal.unmarshal( channel );
         }

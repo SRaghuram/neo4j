@@ -13,10 +13,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.fs.WritableChannel;
@@ -29,6 +29,7 @@ import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
+import static java.nio.file.StandardOpenOption.READ;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -130,7 +131,7 @@ class DurableStateStorageTest
          * should nevertheless be correct
          */
         ByteBuffer forReadingBackIn = ByteBuffer.allocate( 10_000 );
-        StoreChannel lastWrittenTo = fileSystem.open( stateFileA(), OpenMode.READ );
+        StoreChannel lastWrittenTo = fileSystem.open( stateFileA(), Set.of( READ ) );
         lastWrittenTo.read( forReadingBackIn );
         forReadingBackIn.flip();
 

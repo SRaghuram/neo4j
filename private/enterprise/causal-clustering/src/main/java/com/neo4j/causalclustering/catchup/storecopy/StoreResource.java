@@ -9,9 +9,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Objects;
+import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
+
+import static java.nio.file.StandardOpenOption.READ;
 
 class StoreResource
 {
@@ -30,7 +32,7 @@ class StoreResource
 
     ReadableByteChannel open() throws IOException
     {
-        return fs.open( file, OpenMode.READ );
+        return fs.open( file, Set.of( READ ) );
     }
 
     public String path()

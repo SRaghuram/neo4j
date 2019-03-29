@@ -17,7 +17,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -372,7 +371,7 @@ class StoreFilesTest
     private File createFile( File file ) throws IOException
     {
         fs.mkdirs( file.getParentFile() );
-        fs.open( file, OpenMode.READ_WRITE ).close();
+        fs.create( file ).close();
         assertTrue( fs.fileExists( file ) );
         return file;
     }

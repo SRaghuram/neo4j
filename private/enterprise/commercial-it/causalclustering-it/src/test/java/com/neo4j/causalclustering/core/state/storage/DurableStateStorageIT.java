@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Set;
 
 import org.neo4j.adversaries.CountingAdversary;
 import org.neo4j.adversaries.MethodGuardedAdversary;
@@ -21,7 +22,6 @@ import org.neo4j.adversaries.fs.AdversarialFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.EphemeralFileSystemAbstraction;
 import org.neo4j.graphdb.mockfs.SelectiveFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.NullLogProvider;
@@ -171,7 +171,7 @@ class DurableStateStorageIT
 
         // We create a new state that will attempt recovery. The AFS will make it fail on open() of one of the files
         MethodGuardedAdversary adversary = new MethodGuardedAdversary( new CountingAdversary( 1, true ),
-                FileSystemAbstraction.class.getMethod( "open", File.class, OpenMode.class ) );
+                FileSystemAbstraction.class.getMethod( "open", File.class, Set.class ) );
         AdversarialFileSystemAbstraction adversarialFs = new AdversarialFileSystemAbstraction( adversary, fs );
 
         Exception error = assertThrows( Exception.class, () -> new LongState( adversarialFs, dir, 14 ) );

@@ -8,11 +8,12 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Set;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 
+import static java.nio.file.StandardOpenOption.READ;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -28,7 +29,7 @@ public class ReaderTest
     public void shouldCloseChannelOnClose() throws Exception
     {
         // given
-        when( fsa.open( file, OpenMode.READ ) ).thenReturn( channel );
+        when( fsa.open( file, Set.of( READ ) ) ).thenReturn( channel );
         Reader reader = new Reader( fsa, file, 0 );
 
         // when

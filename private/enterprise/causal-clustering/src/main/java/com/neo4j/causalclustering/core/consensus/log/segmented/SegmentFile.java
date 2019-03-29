@@ -18,7 +18,6 @@ import java.io.IOException;
 import org.neo4j.cursor.EmptyIOCursor;
 import org.neo4j.cursor.IOCursor;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.PhysicalFlushableChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.logging.Log;
@@ -127,7 +126,7 @@ class SegmentFile implements AutoCloseable
                 throw new IOException( "Writer has been closed" );
             }
 
-            StoreChannel channel = fileSystem.open( file, OpenMode.READ_WRITE );
+            StoreChannel channel = fileSystem.create( file );
             channel.position( channel.size() );
             bufferedWriter = new PhysicalFlushableChannel( channel );
         }

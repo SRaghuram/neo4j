@@ -29,7 +29,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.fs.OpenMode;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.ReadableLogChannel;
@@ -161,7 +160,7 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         if ( checkpointPosition != null )
         {
             File highestLogFile = logFiles.getLogFileForVersion( logFiles.getHighestLogVersion() );
-            try ( StoreChannel storeChannel = fileSystem.open( highestLogFile, OpenMode.READ_WRITE ) )
+            try ( StoreChannel storeChannel = fileSystem.create( highestLogFile ) )
             {
                 storeChannel.truncate( checkpointPosition.getByteOffset() );
             }
