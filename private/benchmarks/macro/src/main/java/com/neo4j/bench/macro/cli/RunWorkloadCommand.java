@@ -337,11 +337,13 @@ public class RunWorkloadCommand implements Runnable
             System.out.println( "Verifying store..." );
             try ( Store store = Store.createFrom( storeDir.toPath() ) )
             {
-                Database.verifySchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
+                Path neo4jTmpConfigPath = new File( "neo4j_conf_tmp.conf" ).toPath();
+                neo4jConfig.writeAsProperties( neo4jTmpConfigPath );
+                Database.verifySchema( store, neo4jEdition, neo4jTmpConfigPath, workload.expectedSchema() );
                 if ( recreateSchema )
                 {
                     System.out.println( "Preparing to recreate schema..." );
-                    Database.recreateSchema( store, neo4jEdition, neo4jConfigPath, workload.expectedSchema() );
+                    Database.recreateSchema( store, neo4jEdition, neo4jTmpConfigPath, workload.expectedSchema() );
                 }
                 System.out.println( "Store verified\n" );
                 Database.verifyStoreFormat( store.graphDbDirectory().toFile() );
