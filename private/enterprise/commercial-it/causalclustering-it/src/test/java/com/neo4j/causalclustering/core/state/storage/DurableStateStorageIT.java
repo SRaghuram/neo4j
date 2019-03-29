@@ -175,8 +175,8 @@ class DurableStateStorageIT
 
         Exception error = assertThrows( Exception.class, () -> new LongState( adversarialFs, dir, 14 ) );
 
-        // stack trace should contain open()
-        ensureStackTraceContainsExpectedMethod( error.getCause().getStackTrace(), "open" );
+        // stack trace should contain read()
+        ensureStackTraceContainsExpectedMethod( error.getCause().getStackTrace(), "read" );
 
         // Recovery over the normal filesystem after a failed recovery should proceed correctly
         try ( LongState recoveredState = new LongState( fs, dir, 14 ) )

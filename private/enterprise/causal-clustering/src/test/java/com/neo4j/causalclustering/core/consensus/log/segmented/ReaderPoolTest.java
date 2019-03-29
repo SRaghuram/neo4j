@@ -5,10 +5,9 @@
  */
 package com.neo4j.causalclustering.core.consensus.log.segmented;
 
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -17,9 +16,10 @@ import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.neo4j.helpers.collection.Iterators.asSet;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class ReaderPoolTest
+class ReaderPoolTest
 {
     private final File base = new File( "base" );
     private final FileNames fileNames = new FileNames( base );
@@ -36,20 +36,20 @@ public class ReaderPoolTest
 
     private ReaderPool pool = new ReaderPool( 2, getInstance(), fileNames, fsa, clock );
 
-    @Before
-    public void before()
+    @BeforeEach
+    void before()
     {
         fsa.mkdirs( base );
     }
 
-    @After
-    public void tearDown() throws Exception
+    @AfterEach
+    void tearDown() throws Exception
     {
         fsa.close();
     }
 
     @Test
-    public void shouldReacquireReaderFromPool() throws Exception
+    void shouldReacquireReaderFromPool() throws Exception
     {
         // given
         Reader reader = pool.acquire( 0, 0 );
@@ -59,12 +59,12 @@ public class ReaderPoolTest
         Reader newReader = pool.acquire( 0, 0 );
 
         // then
-        verify( fsa ).open( any(), any() );
+        verify( fsa ).write( any() );
         assertThat( reader, is( newReader ) );
     }
 
     @Test
-    public void shouldPruneOldReaders() throws Exception
+    void shouldPruneOldReaders() throws Exception
     {
         // given
         Reader readerA = spy( pool.acquire( 0, 0 ) );
@@ -85,7 +85,7 @@ public class ReaderPoolTest
     }
 
     @Test
-    public void shouldNotReturnPrunedReaders() throws Exception
+    void shouldNotReturnPrunedReaders() throws Exception
     {
         Reader readerA = pool.acquire( 0, 0 );
         Reader readerB = pool.acquire( 0, 0 );
@@ -101,11 +101,11 @@ public class ReaderPoolTest
         Reader readerD = pool.acquire( 0, 0 );
 
         // then
-        assertThat( asSet( readerC, readerD ), not( Matchers.containsInAnyOrder( readerA, readerB ) ) );
+        assertThat( asSet( readerC, readerD ), not( containsInAnyOrder( readerA, readerB ) ) );
     }
 
     @Test
-    public void shouldDisposeSuperfluousReaders() throws Exception
+    void shouldDisposeSuperfluousReaders() throws Exception
     {
         // given
         Reader readerA = spy( pool.acquire( 0, 0 ) );
@@ -128,7 +128,7 @@ public class ReaderPoolTest
     }
 
     @Test
-    public void shouldDisposeAllReleasedReaders() throws Exception
+    void shouldDisposeAllReleasedReaders() throws Exception
     {
         // given
         Reader readerA = spy( pool.acquire( 0, 0 ) );
@@ -149,7 +149,7 @@ public class ReaderPoolTest
     }
 
     @Test
-    public void shouldPruneReadersOfVersion() throws Exception
+    void shouldPruneReadersOfVersion() throws Exception
     {
         // given
         pool = new ReaderPool( 8, getInstance(), fileNames, fsa, clock );

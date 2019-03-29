@@ -40,6 +40,10 @@ public class StateStorage
 
     public Pair<String,byte[]> get() throws IOException
     {
+        if ( !stateFile.exists() )
+        {
+            return Pair.of( NO_STATE, EMPTY_BYTE_ARRAY );
+        }
         try ( ReadableClosableChannel channel = new ReadAheadChannel<>( fs.read( stateFile ) ) )
         {
             String name = readString( channel );
